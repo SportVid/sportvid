@@ -10,7 +10,7 @@
 <script>
 import { mapStores } from "pinia";
 import ShotCard from "@/components/ShotCard.vue";
-import { useShotStore } from "@/store/shot";
+import { useShotStore } from "@/stores/shot";
 export default {
   methods: {
     scrollToHighlightedChild(childID) {

@@ -1,89 +1,93 @@
 <template>
   <v-dialog v-model="show" max-width="1000">
-    <template v-slot:activator="{ on }">
-      <slot name="activator" v-bind="on">
-        <v-btn v-on="on" text block large>
-          <v-icon left>{{ "mdi-pencil" }}</v-icon>
-          {{ $t("modal.video.rename.link") }}
-        </v-btn>
-      </slot>
+    <template v-slot:activator="{ props }">
+      <v-btn v-bind="props" variant="outlined" class="ml-n2">
+        <v-icon class="mr-1">{{ "mdi-pencil" }}</v-icon>
+        {{ $t("modal.video.rename.link") }}
+      </v-btn>
     </template>
-    <v-card>
-      <v-card-title class="mb-2">
-        {{ $t("modal.video.rename.title") }}
 
-        <v-btn icon @click.native="show = false" absolute top right>
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
-      </v-card-title>
-      <v-card-text>
-        <v-text-field
-          :label="$t('modal.video.rename.name')"
-          prepend-icon="mdi-pencil"
-          v-model="name"
-        ></v-text-field>
+    <v-card>
+      <v-toolbar color="primary" dark class="pl-4">
+        {{ $t("modal.video.rename.title") }}
+      </v-toolbar>
+      
+      <v-card-text class="pt-4">
+          <v-text-field
+            v-model="name"
+            :label="$t('modal.video.rename.name')"
+            prepend-icon="mdi-pencil"
+            variant="underlined"
+            clearable
+          ></v-text-field>
+          
+          <v-btn class="mr-4 ml-10" @click="submit" :disabled="isSubmitting || !name">
+            {{ $t("modal.video.rename.update") }}
+          </v-btn>
+          <v-btn @click="show = false">
+            {{ $t("modal.video.rename.close") }}
+          </v-btn>
       </v-card-text>
-      <v-card-actions class="pt-0">
-        <v-btn class="mr-4" @click="submit" :disabled="isSubmitting || !name">
-          {{ $t("modal.video.rename.update") }}
-        </v-btn>
-        <v-btn @click="show = false">{{
-          $t("modal.video.rename.close")
-        }}</v-btn>
-      </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 
 <script>
-import { mapStores } from "pinia";
-import { useVideoStore } from "@/store/video";
+import { ref, computed, watch } from 'vue';
+import { useVideoStore } from '@/stores/video';
 
 export default {
-  props: ["video"],
-  data() {
-    return {
-      show: false,
-      isSubmitting: false,
-      nameProxy: null,
-      items: [],
-    };
+  props: {
+    video: {
+      type: [String, Number],
+      required: true,
+    },
   },
-  computed: {
-    name: {
+  setup(props, { emit }) {
+    const videoStore = useVideoStore();
+    const show = ref(false);
+    const isSubmitting = ref(false);
+    const nameProxy = ref(null);
+
+    const name = computed({
       get() {
-        const name = this.videoStore.get(this.video).name;
-        return this.nameProxy === null ? name : this.nameProxy;
+        const videoData = videoStore.get(props.video);
+        const name = videoData ? videoData.name : '';
+        return nameProxy.value === null ? name : nameProxy.value;
       },
       set(val) {
-        this.nameProxy = val;
+        nameProxy.value = val;
       },
-    },
-    ...mapStores(useVideoStore),
-  },
-  methods: {
-    async submit() {
-      if (this.isSubmitting) {
+    });
+
+    const submit = async () => {
+      if (isSubmitting.value) {
         return;
       }
-      this.isSubmitting = true;
+      isSubmitting.value = true;
 
-      await this.videoStore.rename({
-        videoId: this.video,
-        name: this.name,
+      await videoStore.rename({
+        videoId: props.video,
+        name: name.value,
       });
 
-      this.isSubmitting = false;
-      this.show = false;
-    },
-  },
-  watch: {
-    show(value) {
+      isSubmitting.value = false;
+      show.value = false;
+    };
+
+    watch(show, (value) => {
       if (value) {
-        this.nameProxy = null;
-        this.$emit("close");
+        nameProxy.value = null;
+        emit('close');
       }
-    },
+    });
+
+    return {
+      show,
+      isSubmitting,
+      name,
+      submit,
+    };
   },
 };
 </script>

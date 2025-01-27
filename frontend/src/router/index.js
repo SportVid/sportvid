@@ -1,18 +1,23 @@
-import Vue from 'vue';
-import VueRouter from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router';
 import Home from '@/views/Home.vue';
-import VideoAnalysis from '@/views/VideoAnalysis.vue';
+import VideoAnalysis from '@/views/Analysis.vue';
 
+const routes = [
+    {
+        path: '/',
+        name: 'Home',
+        component: Home
+    },
+    {
+        path: '/video-analysis',
+        name: 'VideoAnalysis',
+        component: VideoAnalysis
+    }
+  ];
 
-Vue.use(VueRouter);
-const router = new VueRouter({
-  mode: 'history',
-  base: process.env.BASE_URL,
-  routes: [
-    { path: '/', name: 'Home', component: Home },
-    { path: '/videoanalysis/:id', name: 'VideoAnalysis', component: VideoAnalysis },
-    // { path: '*', name: 'NotFound', component: NotFound },
-  ],
+const router = createRouter({
+    history: createWebHistory(process.env.BASE_URL),
+    routes,
 });
 
 export default router;

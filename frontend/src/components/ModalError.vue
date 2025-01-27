@@ -4,7 +4,7 @@
       <v-card-title class="mb-2">
         {{ $t("modal.error.title") }}
 
-        <v-btn icon @click="clearError()" absolute right>
+        <v-btn icon @click="clearError" absolute right>
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-card-title>
@@ -12,48 +12,46 @@
         {{ errorMessage }}
       </v-card-text>
       <v-card-actions class="pt-0">
-        <v-btn @click="clearError()">{{ $t("modal.error.close") }}</v-btn>
+        <v-btn @click="clearError">{{ $t("modal.error.close") }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 
 <script>
-import { mapStores } from "pinia";
-import { useErrorStore } from "@/store/error";
+import { ref, computed, watch } from "vue";
+import { useErrorStore } from "@/stores/error";
 
 export default {
-  data() {
+  setup() {
+    const dialog = ref(false);
+
+    const errorStore = useErrorStore();
+
+    const errorDate = computed(() => errorStore.error_date);
+    const errorComponent = computed(() => errorStore.error_component);
+    const errorMessage = computed(() => errorStore.errorMessage);
+    const error = computed(() => errorStore.error);
+
+    const clearError = () => {
+      dialog.value = false;
+      errorStore.clearError(); 
+    };
+
+    watch(error, (value) => {
+      if (value) {
+        dialog.value = true;
+      }
+    });
+
     return {
-      dialog: false,
+      dialog,
+      errorDate,
+      errorComponent,
+      errorMessage,
+      error,
+      clearError,
     };
   },
-  computed: {
-    errorDate() {
-      return this.errorStore.error_date;
-    },
-    errorComponent() {
-      return this.errorStore.error_component;
-    },
-    errorMessage() {
-      return this.errorStore.errorMessage;
-    },
-    error() {
-      return this.errorStore.error;
-    },
-    ...mapStores(useErrorStore),
-  },
-  methods: {
-    clearError() {
-      this.dialog = false;
-    },
-  },
-  watch: {
-    error(value) {
-      if (value) {
-        this.dialog = true;
-      }
-    }
-  }
 };
 </script>

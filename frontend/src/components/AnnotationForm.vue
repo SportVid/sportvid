@@ -10,7 +10,7 @@
           required
         ></v-text-field>
 
-        <v-btn class="mr-4" :disabled="disabled" @click="annotate_segment">
+        <v-btn class="mr-4" :disabled="disabled" @click="annotateSegment">
           Upload
         </v-btn>
         <v-btn @click="dialog = false">Close</v-btn>
@@ -19,20 +19,26 @@
   </v-card>
 </template>
 
-
 <script>
+import { ref } from 'vue';
+
 export default {
-  data() {
-    return {
-      annotation: {},
+  setup() {
+    const annotation = ref({ label: '' });
+    const dialog = ref(false);
+    const disabled = ref(false);
+
+    const annotateSegment = () => {
+      console.log(annotation.value);
+      dialog.value = false;
     };
-  },
-  computed: {},
-  methods: {
-    annotate_segment() {
-      console.log(this.annotation);
-      this.dialog = false;
-    },
+
+    return {
+      annotation,
+      dialog,
+      disabled,
+      annotateSegment,
+    };
   },
 };
 </script>

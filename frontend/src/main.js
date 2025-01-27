@@ -1,40 +1,33 @@
-import Vue from 'vue'
-import App from './App.vue'
-import vuetify from '@/plugins/vuetify';
-// import store from '@/store';
-import i18n from '@/plugins/i18n';
+import { createApp } from 'vue';
+import App from './App.vue';
+import { vuetify } from '@/plugins/vuetify';
+import { i18n } from '@/plugins/i18n';
+import auth from '@/plugins/auth'
+import '@/styles/custom.css';
 
-import './styles/custom.css';
-
-import { createPinia, PiniaVuePlugin } from 'pinia'
-import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
-import { useUserStore } from "@/store/user"
-
-
-Vue.use(PiniaVuePlugin)
-const pinia = createPinia()
-pinia.use(piniaPluginPersistedstate)
-
-
-
+import { createPinia } from 'pinia';
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import router from '@/router';
+import { useUserStore } from '@/stores/user';
 
-var app = Vue.extend({
+const pinia = createPinia();
+pinia.use(piniaPluginPersistedstate);
 
+const app = createApp(App);
+
+app.mixin({
   async created() {
-    const userStore = useUserStore()
-    await userStore.getCSRFToken()
-    await userStore.getUserData()
+    const userStore = useUserStore();
+    await userStore.getCSRFToken();
+    await userStore.getUserData();
   },
-})
+});
 
-new app({
-  pinia,
-  vuetify,
-  router,
-  i18n,
-  render: h => h(App),
-}).$mount('#app')
+app.use(vuetify);
+app.use(pinia);
+app.use(router);
+app.use(i18n);
+app.use(auth);
 
-import Router from "vue-router";
-Vue.use(Router)
+app.mount('#app');
+

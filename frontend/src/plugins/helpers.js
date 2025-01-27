@@ -1,4 +1,3 @@
-
 export function keyInObj(key, obj) {
   if (typeof obj !== 'object') return false;
   return Object.prototype.hasOwnProperty.call(obj, key);
@@ -12,10 +11,10 @@ export function lsplit(x, sep, maxsplit) {
   if (x.length) result.push(x.join(sep));
   return result;
 }
-export function getHash(x) {
-  const md5 = require('crypto').createHash('md5');
-  return md5.update(JSON.stringify(x)).digest('hex');
-}
+// export function getHash(x) {
+//   const md5 = require('crypto').createHash('md5');
+//   return md5.update(JSON.stringify(x)).digest('hex');
+// }
 export function repPlace(x, y) {
   const string = y.replace(
     /{(\w+)}/g,

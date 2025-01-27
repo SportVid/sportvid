@@ -1,72 +1,86 @@
 <template>
-  <v-list-item-content class="account justify-center pa-10">
-    <div class="mx-auto text-center">
-      <v-avatar color="secondary">
-        <span class="white--text text-h5">{{ initials }}</span>
-      </v-avatar>
-
-      <h3 class="mt-5">{{ username }}</h3>
-      <p class="text-caption clip mt-2 mb-0" style="max-width: 170px">
-        {{ email }}
-      </p>
-      <p class="text-caption mb-0">
-        <i>{{ joined }}</i>
-      </p>
-    </div>
-
-    <div class="v-btn--absolute v-btn--right v-btn--top">
+  <v-list min-width="250">
+    <v-container class="d-flex justify-end align-start">
       <v-btn
         :title="$t('user.logout.title')"
-        class="mr-n2 mt-n2"
+        class="mr-n3 mt-n5 mb-n5"
         @click="logout"
         icon
+        variant="text"
+        color="grey"
       >
         <v-icon>mdi-logout-variant</v-icon>
       </v-btn>
-    </div>
-  </v-list-item-content>
+    </v-container>
+
+    <v-list-item class="account justify-center pb-6 pl-6 pr-6 pt-0 mt-n2">
+      <div class="mx-auto text-center">
+        <v-avatar size="large" :style="{ backgroundColor: `#457B9D80` }">
+          <span class="text-white text-h5">{{ initials }}</span>
+        </v-avatar>
+
+        <h3 class="mt-4">{{ username }}</h3>
+        <p class="text-caption clip mt-2 mb-0" style="max-width: 200px">
+          {{ email }}
+        </p>
+        <p class="text-caption mb-0">
+          <i>{{ joined }}</i>
+        </p>
+      </div>
+    </v-list-item>
+  </v-list>
 </template>
 
 <script>
+import { computed } from 'vue';
+import { useRoute } from "vue-router";
+import { useUserStore } from "@/stores/user";
 import { repPlace } from "../plugins/helpers";
+import { useI18n } from "vue-i18n";
 
-import { mapStores } from "pinia";
-import { useUserStore } from "@/store/user";
 export default {
-  methods: {
-    async logout() {
-      const loggedOut = await this.userStore.logout();
-      if (loggedOut) {
-        this.$router.push({ name: 'Home' });
-      }
-    },
-  },
-  computed: {
-    username() {
-      return this.userStore.username;
-    },
-    email() {
-      return this.userStore.email;
-    },
-    date() {
-      return this.userStore.date;
-    },
-    nDays() {
-      const date = new Date(this.date);
-      const diffInMs = new Date() - date;
+  setup() {
+    const { t } = useI18n();
+    const userStore = useUserStore();
+
+    const username = computed(() => userStore.username);
+    const email = computed(() => userStore.email);
+    const date = computed(() => userStore.date);
+
+    const nDays = computed(() => {
+      const dateObj = new Date(date.value);
+      const diffInMs = new Date() - dateObj;
       return Math.round(diffInMs / (1000 * 60 * 60 * 24));
-    },
-    joined() {
-      let text = this.$t("user.menu.joined");
-      return repPlace({ n_days: this.nDays }, text);
-    },
-    initials() {
-      return this.username.slice(0, 2);
-    },
-    ...mapStores(useUserStore),
+    });
+
+    const joined = computed(() => {
+      const text = "Joined {n_days} days ago"
+      return repPlace({ n_days: nDays.value }, text);
+    });
+
+    const initials = computed(() => username.value.slice(0, 2));
+
+    const logout = async () => {
+      const loggedOut = await userStore.logout();
+      if (loggedOut) {
+        const route = useRoute();
+        route.push({ name: 'Home' });
+      }
+    };
+
+    return {
+      username,
+      email,
+      date,
+      nDays,
+      joined,
+      initials,
+      logout,
+    };
   },
 };
 </script>
+
 <style>
 .v-list-item__content.account {
   min-width: 250px;

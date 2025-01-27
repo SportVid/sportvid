@@ -21,60 +21,70 @@
   </v-row>
 </template>
 
-
 <script>
-import TimeMixin from "../mixins/time";
-
-import { mapStores } from "pinia";
-import { usePlayerStore } from "../store/player";
-import { useTimelineSegmentAnnotationStore } from "../store/timeline_segment_annotation";
-import { useAnnotationStore } from "../store/annotation";
-import { useTimelineSegmentStore } from "../store/timeline_segment";
-import { useTimelineStore } from "../store/timeline";
-
-
+import { ref, computed, onMounted } from 'vue';
+import { usePlayerStore } from '../stores/player';
+import { useTimelineSegmentAnnotationStore } from '../stores/timeline_segment_annotation';
+import { useAnnotationStore } from '../stores/annotation';
+import { useTimelineSegmentStore } from '../stores/timeline_segment';
+import { useTimelineStore } from '../stores/timeline';
+import TimeMixin from '../mixins/time';
+import { mapStores } from 'pinia';
 
 export default {
-  mixins: [TimeMixin],
-  computed: {
-    annotations() {
+  setup() {
+    // Pinia Stores
+    const playerStore = usePlayerStore();
+    const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
+    const annotationStore = useAnnotationStore();
+    const timelineSegmentStore = useTimelineSegmentStore();
+    const timelineStore = useTimelineStore();
+
+    // Reaktive Variablen für Zeit und Annotationen
+    const time = computed(() => playerStore.currentTime);
+    const annotations = computed(() => {
       const annotationsMap = {};
-      this.timelineSegmentAnnotationStore.all.forEach(annotation => {
-        const timelineSegment = this.timelineSegmentStore.get(annotation.timeline_segment_id);
-        const annotationData = this.annotationStore.get(annotation.annotation_id);
+      timelineSegmentAnnotationStore.all.forEach((annotation) => {
+        const timelineSegment = timelineSegmentStore.get(annotation.timeline_segment_id);
+        const annotationData = annotationStore.get(annotation.annotation_id);
 
         annotationsMap[annotation.id] = {
           name: annotationData ? annotationData.name : null,
-          timeline_name: this.timelineStore.get(timelineSegment.timeline_id).name,
+          timeline_name: timelineStore.get(timelineSegment.timeline_id).name,
           color: annotationData ? annotationData.color : "white",
           id: annotation.id,
           start: timelineSegment ? timelineSegment.start : 0,
-          end: timelineSegment ? timelineSegment.end : 0
+          end: timelineSegment ? timelineSegment.end : 0,
         };
       });
-
       return annotationsMap;
-    },
-    annotationsByTime() {
+    });
+
+    const annotationsByTime = computed(() => {
       let lut = {};
-      for (let t = 0; t < Math.ceil(this.playerStore.videoDuration); t++) {
+      for (let t = 0; t < Math.ceil(playerStore.videoDuration); t++) {
         lut[t] = [];
-        for (const annotation of Object.values(this.annotations)) {
+        for (const annotation of Object.values(annotations.value)) {
           if (annotation.start <= t && t < annotation.end) {
             lut[t].push(annotation.id);
           }
         }
       }
       return lut;
-    },
-    current_annotations() {
-      const time = Math.round(this.time);
-      return this.annotationsByTime[time].map((id) => this.annotations[id]);
-    },
-    time() {
-      return this.playerStore.currentTime;
-    },
-    ...mapStores(usePlayerStore, useAnnotationStore, useTimelineStore, useTimelineSegmentAnnotationStore, useTimelineSegmentStore),
-  }
+    });
+
+    const current_annotations = computed(() => {
+      const currentTime = Math.round(time.value);
+      return annotationsByTime.value[currentTime]?.map((id) => annotations.value[id]) || [];
+    });
+
+    // Rückgabe von Computed Properties und Stores für das Template
+    return {
+      time,
+      current_annotations,
+      ...mapStores(usePlayerStore, useAnnotationStore, useTimelineStore, useTimelineSegmentAnnotationStore, useTimelineSegmentStore),
+    };
+  },
+  mixins: [TimeMixin],
 };
 </script>

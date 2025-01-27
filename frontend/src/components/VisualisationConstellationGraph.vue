@@ -118,9 +118,9 @@
 
 <script>
 import { mapStores } from "pinia";
-import { useTimelineStore } from "@/store/timeline";
-import { useShotStore } from "@/store/shot";
-import { useClusterTimelineItemStore } from "../store/cluster_timeline_item";
+import { useTimelineStore } from "@/stores/timeline";
+import { useShotStore } from "@/stores/shot";
+import { useClusterTimelineItemStore } from "../stores/cluster_timeline_item";
 import { Network } from "vis-network";
 import { DataSet } from "vis-data";
 import VisualizationGraph from "./VisualizationGraph.vue";

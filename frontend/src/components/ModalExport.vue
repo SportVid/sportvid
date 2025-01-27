@@ -10,25 +10,21 @@
       </v-card-title>
       <v-card-text>
         <v-tabs vertical class="tabs-left">
-          <v-tab v-for="export_format in export_formats_sorted" :key="export_format.name">
+          <v-tab v-for="export_format in exportFormatsSorted" :key="export_format.name">
             <v-icon left> {{ export_format.icon }} </v-icon>
             <span class="text-button">{{ export_format.name }}</span>
           </v-tab>
-          <v-tab-item v-for="export_format in export_formats_sorted" :key="export_format.name">
+          <v-tab-item v-for="export_format in exportFormatsSorted" :key="export_format.name">
             <v-card flat height="100%">
               <v-card-title>{{ export_format.name }} </v-card-title>
               <v-card-text>
-                <Parameters :videoIds="[videoId]" :parameters="export_format.parameters">
-                </Parameters>
+                <Parameters :videoIds="[videoId]" :parameters="export_format.parameters" />
               </v-card-text>
 
               <v-card-actions class="pt-0">
-                <v-btn @click="
-                  downloadExport(
-                    export_format.export,
-                    export_format.parameters
-                  )
-                  ">{{ $t("modal.export.export") }}</v-btn>
+                <v-btn @click="downloadExport(export_format.export, export_format.parameters)">
+                  {{ $t("modal.export.export") }}
+                </v-btn>
               </v-card-actions>
             </v-card>
           </v-tab-item>
@@ -42,118 +38,116 @@
 </template>
 
 <script>
+import { ref, computed, watch } from "vue";
+import { useVideoStore } from "@/stores/video";
+import { usePlayerStore } from "@/stores/player";
 import Parameters from "./Parameters.vue";
-import { mapStores } from "pinia";
-import { useVideoStore } from "@/store/video";
-import { usePlayerStore } from "@/store/player";
 
 export default {
   props: ["value"],
-  data() {
-    return {
-      dialog: false,
-      export_formats: [
-        {
-          name: this.$t("modal.export.merged_csv.export_name"),
-          icon: "mdi-file",
-          export: "merged_csv",
-          parameters: [
-            {
-              field: "checkbox",
-              name: "merge_timeline",
-              value: true,
-              text: this.$t("modal.export.merged_csv.timeline_merge"),
-            },
-            {
-              field: "checkbox",
-              name: "use_timestamps",
-              value: true,
-              text: this.$t("modal.export.merged_csv.use_timestamps"),
-            },
-            {
-              field: "checkbox",
-              name: "use_seconds",
-              value: true,
-              text: this.$t("modal.export.merged_csv.use_seconds"),
-            },
-            {
-              field: "checkbox",
-              name: "include_category",
-              value: true,
-              text: this.$t("modal.export.merged_csv.include_category"),
-            },
-            {
-              field: "checkbox",
-              name: "split_places",
-              value: true,
-              text: this.$t("modal.export.merged_csv.split_places"),
-            },
-          ],
-        },
-        {
-          name: this.$t("modal.export.individual_csv.export_name"),
-          icon: "mdi-file",
-          export: "individual_csv",
-          parameters: [
-            {
-              field: "checkbox",
-              name: "use_timestamps",
-              value: true,
-              text: this.$t("modal.export.individual_csv.use_timestamps"),
-            },
-            {
-              field: "checkbox",
-              name: "use_seconds",
-              value: true,
-              text: this.$t("modal.export.individual_csv.use_seconds"),
-            },
-            {
-              field: "checkbox",
-              name: "include_category",
-              value: true,
-              text: this.$t("modal.export.individual_csv.include_category"),
-            },
-          ],
-        },
-        {
-          name: this.$t("modal.export.elan.export_name"),
-          icon: "mdi-file",
-          export: "elan",
-          parameters: [
-            {
-              field: "select_timeline",
-              name: "shot_timeline_id",
-              text: this.$t("modal.plugin.shot_timeline_name"),
-              hint: this.$t("modal.plugin.shot_timeline_hint"),
-            },
-            {
-              field: "buttongroup",
-              text: this.$t("modal.plugin.aggregation.method"),
-              name: "aggregation",
-              value: 0,
-              buttons: [
-                this.$t("modal.plugin.aggregation.max"),
-                this.$t("modal.plugin.aggregation.min"),
-                this.$t("modal.plugin.aggregation.mean"),
-              ],
-            },
-          ],
-        },
-      ],
-    };
-  },
-  computed: {
-    videoId() {
-      return this.playerStore.videoId;
-    },
-    export_formats_sorted() {
-      return this.export_formats.slice(0).sort((a, b) => a.name.localeCompare(b.name));
-    },
-    ...mapStores(useVideoStore, usePlayerStore),
-  },
-  methods: {
-    async downloadExport(format, parameters) {
-      parameters = parameters.map((e) => {
+  setup(props, { emit }) {
+    const videoStore = useVideoStore();
+    const playerStore = usePlayerStore();
+
+    const dialog = ref(false);
+
+    const exportFormats = ref([
+      {
+        name: $t("modal.export.merged_csv.export_name"),
+        icon: "mdi-file",
+        export: "merged_csv",
+        parameters: [
+          {
+            field: "checkbox",
+            name: "merge_timeline",
+            value: true,
+            text: $t("modal.export.merged_csv.timeline_merge"),
+          },
+          {
+            field: "checkbox",
+            name: "use_timestamps",
+            value: true,
+            text: $t("modal.export.merged_csv.use_timestamps"),
+          },
+          {
+            field: "checkbox",
+            name: "use_seconds",
+            value: true,
+            text: $t("modal.export.merged_csv.use_seconds"),
+          },
+          {
+            field: "checkbox",
+            name: "include_category",
+            value: true,
+            text: $t("modal.export.merged_csv.include_category"),
+          },
+          {
+            field: "checkbox",
+            name: "split_places",
+            value: true,
+            text: $t("modal.export.merged_csv.split_places"),
+          },
+        ],
+      },
+      {
+        name: $t("modal.export.individual_csv.export_name"),
+        icon: "mdi-file",
+        export: "individual_csv",
+        parameters: [
+          {
+            field: "checkbox",
+            name: "use_timestamps",
+            value: true,
+            text: $t("modal.export.individual_csv.use_timestamps"),
+          },
+          {
+            field: "checkbox",
+            name: "use_seconds",
+            value: true,
+            text: $t("modal.export.individual_csv.use_seconds"),
+          },
+          {
+            field: "checkbox",
+            name: "include_category",
+            value: true,
+            text: $t("modal.export.individual_csv.include_category"),
+          },
+        ],
+      },
+      {
+        name: $t("modal.export.elan.export_name"),
+        icon: "mdi-file",
+        export: "elan",
+        parameters: [
+          {
+            field: "select_timeline",
+            name: "shot_timeline_id",
+            text: $t("modal.plugin.shot_timeline_name"),
+            hint: $t("modal.plugin.shot_timeline_hint"),
+          },
+          {
+            field: "buttongroup",
+            text: $t("modal.plugin.aggregation.method"),
+            name: "aggregation",
+            value: 0,
+            buttons: [
+              $t("modal.plugin.aggregation.max"),
+              $t("modal.plugin.aggregation.min"),
+              $t("modal.plugin.aggregation.mean"),
+            ],
+          },
+        ],
+      },
+    ]);
+
+    const videoId = computed(() => playerStore.videoId);
+
+    const exportFormatsSorted = computed(() =>
+      exportFormats.value.slice().sort((a, b) => a.name.localeCompare(b.name))
+    );
+
+    const downloadExport = async (format, parameters) => {
+      const processedParams = parameters.map((e) => {
         if ("file" in e) {
           return { name: e.name, file: e.file };
         } else if (e.name === "shot_timeline_id") {
@@ -162,22 +156,32 @@ export default {
           return { name: e.name, value: e.value };
         }
       });
-      this.videoStore
-        .export({ format: format, parameters: parameters })
-        .then(() => {
-          this.dialog = false;
-        });
-    },
-  },
-  watch: {
-    dialog(value) {
-      this.$emit("input", value);
-    },
-    value(value) {
-      if (value) {
-        this.dialog = true;
+      await videoStore.export({ format, parameters: processedParams });
+      dialog.value = false;
+    };
+
+    watch(
+      () => dialog.value,
+      (newValue) => {
+        emit("input", newValue);
       }
-    },
+    );
+
+    watch(
+      () => props.value,
+      (newValue) => {
+        if (newValue) {
+          dialog.value = true;
+        }
+      }
+    );
+
+    return {
+      dialog,
+      exportFormatsSorted,
+      videoId,
+      downloadExport,
+    };
   },
   components: { Parameters },
 };

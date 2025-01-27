@@ -1,13 +1,13 @@
 {
   "welcome": {
-    "title": "TIB AV-Analytics",
-    "text": "Welcome to the TIB AV-Analytics (TIB-AV-A) video analysis platform for scholarly video analysis and film science.",
+    "title": "SportVid",
+    "text": "Welcome to the SportVid video analysis platform for scholarly video analysis and sports science.",
     "demo_title": "Video Demonstration",
-    "demo_text": "We are currently preparing a video that demonstrates the features of TIB-AV-A and explains how to use it to simplify the onboarding process. It is expected to be available by March 3 at the latest.",
+    "demo_text": "We are currently preparing a video that demonstrates the features of SportVid and explains how to use it to simplify the onboarding process. It is expected to be available by 2027 at the latest.",
     "login_title": "Need an account?",
-    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" -> \"Register\") or request one by writing an E-Mail to matthias.springstein@tib.eu with a short explanation of your intended usecase.",
+    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an E-Mail to xyz@123.de with a short explanation of your intended usecase.",
     "format_title": "Video File Support",
-    "format_text": "Please note that TIB-AV-A currently only supports the analysis of <span style='font-weight: bold;'>mp4 video files</span> to avoid long processing times due to transcoding videos on our server."
+    "format_text": "Please note that SportVid currently only supports the analysis of <span style='font-weight: bold;'>mp4 video files</span> to avoid long processing times due to transcoding videos on our server."
   },
   "plugin": {
     "menu": {
@@ -76,8 +76,16 @@
       "rename": {
         "title": "Rename Video",
         "link": "Rename",
-        "name": "Video Name",
+        "name": "Video Title",
         "update": "Rename",
+        "close": "Close"
+      },
+      "upload": {
+        "title": "Upload new Video",
+        "link": "Upload new Video",
+        "input": "Select a video file [mp4]",
+        "name": "Video Title",
+        "update": "Upload",
         "close": "Close"
       }
     },
@@ -411,10 +419,14 @@
     },
     "register": {
       "title": "Register",
+      "text": "Already have an account?",
       "rules": {
         "min": "Min. 5 characters.",
         "max": "Max. 50 characters."
       }
     }
+  },
+  "field": {
+    "required": "This field is required."
   }
 }

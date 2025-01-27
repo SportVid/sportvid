@@ -1,57 +1,76 @@
 <template>
   <v-dialog v-model="dialog" max-width="350px">
     <v-card class="login">
-      <v-card-title>
-        {{ $t("user.login.title") }}
-
-        <v-btn icon @click="dialog = false" absolute right>
+      <v-card-title class="d-flex justify-space-between align-center mb-n6">
+        <span class="ms-2 text-primary">{{ $t("user.login.title") }}</span>
+        
+        <v-btn 
+          icon 
+          @click="dialog = false" 
+          variant="text" 
+          class="mr-n2" 
+          color="grey"
+        >
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-card-title>
-
+        
       <v-card-text>
         <v-text-field
           v-model="user.name"
           :placeholder="$t('user.name')"
           prepend-icon="mdi-account"
           counter="50"
+          persistent-counter
           :rules="[checkLength]"
+          variant="underlined"
           clearable
         ></v-text-field>
 
         <v-text-field
           v-model="user.password"
-          :append-icon="
-            showPassword ? 'mdi-eye-outline' : 'mdi-eye-off-outline'
-          "
+          :append-inner-icon="showPassword ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
           :placeholder="$t('user.password')"
           prepend-icon="mdi-lock"
-          @click:append="showPassword = !showPassword"
+          @click:append-inner="showPassword = !showPassword"
           :type="showPassword ? 'text' : 'password'"
           counter="50"
+          persistent-counter
           :rules="[checkLength]"
+          variant="underlined"
           clearable
         ></v-text-field>
-        <p v-if="error_message.length>0" class="text-uppercase font-weight-bold red--text">Error: {{ error_message }}</p>
+        <p 
+          v-if="errorMessage.length>0" 
+          class="text-uppercase font-weight-bold text-red"
+        >
+          Error: {{ errorMessage }}
+        </p>
       </v-card-text>
 
-      <v-card-actions class="px-6 pt-2">
+      <v-card-actions class="px-6 mt-n2">
         <v-btn
           @click="login"
           :disabled="disabled"
-          color="accent"
+          :class="{
+            'text-white': disabled,
+            'bg-grey': disabled,
+            'text-white': !disabled,
+            'bg-accent': !disabled,
+          }"
           block
           rounded
           depressed
+          variant="tonal"
         >
           {{ $t("user.login.title") }}
         </v-btn>
       </v-card-actions>
 
-      <div class="grey--text px-6 pb-6" style="text-align: center">
+      <div class="text-grey px-4 pb-4 pt-2" style="text-align: center">
         {{ $t("user.login.text") }}
 
-        <a @click="showModalRegister = true">
+        <a @click="showModalRegister = true" style="color: #1D3557; cursor: pointer">
           {{ $t("user.register.title") }}
         </a>
 
@@ -64,76 +83,93 @@
 </template>
 
 <script>
+import { ref, reactive, computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import UserRegister from "@/components/UserRegister.vue";
-
-import { mapStores } from "pinia";
-import { useUserStore } from "@/store/user";
+import { useUserStore } from "@/stores/user"; 
 
 export default {
-  props: ["value"],
-  data() {
-    return {
-      user: {},
-      dialog: false,
-      showPassword: false,
-      showModalRegister: false,
-      error_message: ""
-    };
-  },
-  methods: {
-    async login() {
-      const status = await this.userStore.login(this.user);
-      console.log(status)
-      if (status.status === "ok") {
-        this.dialog = false;
-        this.error_message = "";
-      } else {
-        this.error_message = status.message;
-      }
-    },
-    checkLength(value) {
-      if (value) {
-        if (value.length < 5) {
-          return this.$t("user.login.rules.min");
-        }
-
-        if (value.length > 50) {
-          return this.$t("user.login.rules.max");
-        }
-
-        return true;
-      }
-
-      return this.$t("field.required");
-    },
-  },
-  computed: {
-    disabled() {
-      if (Object.keys(this.user).length) {
-        const total = Object.values(this.user).reduce(
-          (t, value) => t + (this.checkLength(value) === true),
-          0
-        );
-
-        if (total === 2) return false;
-      }
-
-      return true;
-    },
-    ...mapStores(useUserStore),
-  },
-  watch: {
-    dialog(value) {
-      this.$emit("input", value);
-    },
-    value(value) {
-      if (value) {
-        this.dialog = true;
-      }
+  props: {
+    modelValue: {
+      type: Boolean,
+      default: false,
     },
   },
   components: {
     UserRegister,
+  },
+  setup(props, { emit }) {
+    const { t } = useI18n();
+    const userStore = useUserStore();
+
+    const user = reactive({});
+    const dialog = ref(props.modelValue);
+    const showPassword = ref(false);
+    const showModalRegister = ref(false);
+    const errorMessage = ref("");
+
+    const login = async () => {
+      const status = await userStore.login(user);
+      console.log(status);
+      if (status.status === "ok") {
+        dialog.value = false;
+        errorMessage.value = "";
+      } else {
+        errorMessage.value = status.message;
+      }
+    };
+
+    const checkLength = (value) => {
+      if (value) {
+        if (value.length < 5) {
+          return t("user.login.rules.min");
+        }
+        if (value.length > 50) {
+          return t("user.login.rules.max");
+        }
+        return true;
+      }
+      return t("field.required");
+    };
+
+    const disabled = computed(() => {
+      if (Object.keys(user).length) {
+        const total = Object.values(user).reduce(
+          (t, value) => t + (checkLength(value) === true),
+          0
+        );
+        return total !== 2;
+      }
+      return true;
+    });
+
+    // Watchers
+    watch(
+      () => dialog.value,
+      (value) => {
+        emit("update:modelValue", value);
+      }
+    );
+
+    watch(
+      () => props.modelValue,
+      (value) => {
+        if (value) {
+          dialog.value = true;
+        }
+      }
+    );
+
+    return {
+      user,
+      dialog,
+      showPassword,
+      showModalRegister,
+      errorMessage,
+      login,
+      checkLength,
+      disabled,
+    };
   },
 };
 </script>

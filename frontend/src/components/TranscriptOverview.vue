@@ -33,7 +33,7 @@
 <script>
 import { mapStores } from "pinia";
 import TranscriptCard from "@/components/TranscriptCard.vue";
-import { useTimelineSegmentAnnotationStore } from "@/store/timeline_segment_annotation";
+import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
 
 export default {
   data() {

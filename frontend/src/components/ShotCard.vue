@@ -33,7 +33,7 @@
 import TimeMixin from "../mixins/time";
 
 import { mapStores } from "pinia";
-import { usePlayerStore } from "@/store/player";
+import { usePlayerStore } from "@/stores/player";
 
 export default {
   mixins: [TimeMixin],

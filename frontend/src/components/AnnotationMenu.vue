@@ -1,9 +1,8 @@
 <template>
   <div>
     <v-menu min-width="175" offset-y bottom left>
-      <!-- open-on-hover close-delay -->
-      <template v-slot:activator="{ attrs }">
-        <v-btn tile text v-bind="attrs" @click="showModalShortcut = true" class="ml-n2">
+      <template v-slot:activator="{ props }">
+        <v-btn tile text v-bind="props" @click="showModalShortcut = true" class="ml-n2">
           <v-icon color="primary">mdi-label-multiple-outline</v-icon>
           Shortcuts
         </v-btn>
@@ -15,38 +14,33 @@
 </template>
 
 <script>
+import { ref, computed } from 'vue';
 import ModalShortcut from "@/components/ModalShortcut.vue";
-
-import { mapStores } from "pinia";
-import { useUserStore } from "@/store/user";
-import { usePlayerStore } from "@/store/player";
+import { useUserStore } from "@/stores/user";
+import { usePlayerStore } from "@/stores/player";
 
 export default {
-  data() {
+  setup() {
+    const showModalShortcut = ref(false);  
+    const userStore = useUserStore();      
+    const playerStore = usePlayerStore();  
+
+    const videoId = computed(() => playerStore.videoId);  
+    const loggedIn = computed(() => userStore.loggedIn);  
+
     return {
-      showModalExport: false,
-      showModalPlugin: false,
-      showModalShortcut: false,
+      showModalShortcut, 
+      videoId,     
+      loggedIn, 
     };
   },
-  computed: {
-    videoId() {
-      const videoId = this.playerStore.videoId;
-      return videoId;
-    },
-    loggedIn() {
-      return this.userStore.loggedIn;
-    },
-
-    ...mapStores(useUserStore, usePlayerStore),
-  },
   components: {
-    ModalShortcut,
+    ModalShortcut, 
   },
 };
 </script>
 
-<style>
+<style scoped>
 .v-menu__content .v-btn:not(.accent) {
   text-transform: capitalize;
   justify-content: left;

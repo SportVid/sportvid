@@ -3,9 +3,9 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt update --fix-missing -y && apt install python3-pip npm git libsndfile1-dev python3-numba python3-opencv python3-psycopg2 python3-numpy ffmpeg  libmariadbclient-dev-compat imagemagick python3-sklearn -y
+RUN apt install wget
 
-
-EXPOSE 5000
+EXPOSE 8000
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1

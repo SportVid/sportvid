@@ -14,7 +14,7 @@
               <v-card>
                 <v-card-title class="mb-2">
                   {{ $t("modal.timeline.rename.title") }}
-                  <v-btn icon @click.native="show = false" absolute top right>
+                  <v-btn icon @click="show = false" absolute top right>
                     <v-icon>mdi-close</v-icon>
                   </v-btn>
                 </v-card-title>
@@ -26,9 +26,7 @@
                   <v-btn class="mr-4" @click="renameCluster" :disabled="renaming || !cluster.name">
                     {{ $t("modal.timeline.rename.update") }}
                   </v-btn>
-                  <v-btn @click="show = false">{{
-                    $t("modal.timeline.rename.close")
-                  }}</v-btn>
+                  <v-btn @click="show = false">{{ $t("modal.timeline.rename.close") }}</v-btn>
                 </v-card-actions>
               </v-card>
             </v-dialog>
@@ -43,7 +41,7 @@
       <v-col cols="8" style="width: 100%">
         <div class="image-container"
           style="width: 100%; gap: 10px; overflow-x: auto; justify-content: flex-start; display:flex; flex-direction: row;">
-          <v-img v-for="thumb in this.thumbnails" :key="thumb.id" :src="thumb.image_path" contain
+          <v-img v-for="thumb in thumbnails" :key="thumb.id" :src="thumb.image_path" contain
             style="cursor: pointer; height: 100px; max-width: 100px;" @click="goToFace(thumb.time)"></v-img>
         </div>
       </v-col>
@@ -57,8 +55,7 @@
           </template>
           <v-list>
             <v-list-item>
-              <ClusterExploration :cluster="cluster" :allClusters="allClusters" @deleteCluster="deleteCluster">
-              </ClusterExploration>
+              <ClusterExploration :cluster="cluster" :allClusters="allClusters" @deleteCluster="deleteCluster"></ClusterExploration>
             </v-list-item>
             <v-list-item>
               <v-btn text @click="createTimeline">
@@ -68,24 +65,17 @@
             </v-list-item>
             <v-list-item>
               <v-btn text @click="deleteCluster">
-                <v-icon left>{{ "mdi-trash-can-outline" }}</v-icon>{{
-                  $t("button.deleteCluster") }}
+                <v-icon left>{{ "mdi-trash-can-outline" }}</v-icon>{{ $t("button.deleteCluster") }}
               </v-btn>
             </v-list-item>
             <v-list-item>
-
-              <v-dialog
-                v-model="mergeDialog"
-                width="500"
-                :scrollable="false"
-              >
+              <v-dialog v-model="mergeDialog" width="500" :scrollable="false">
                 <template v-slot:activator="{ on, attrs }">
-                  <v-btn :disabled="mergableClusters.length==0" text v-bind="attrs" v-on="on">
+                  <v-btn :disabled="mergableClusters.length == 0" text v-bind="attrs" v-on="on">
                     <v-icon left>{{ "mdi-merge" }}</v-icon>
                     Merge Cluster
                   </v-btn>
                 </template>
-
                 <v-card style="max-height:80vh; overflow-y: auto;">
                   <v-card-title class="text-h5 grey lighten-2">
                     You can merge this cluster with one of the other clusters. Select one below:
@@ -93,14 +83,8 @@
                   <v-card-text>
                     <v-list dense>
                       <v-subheader>Clusters</v-subheader>
-                      <v-list-item-group
-                        v-model="toMergeCluster"
-                        color="primary"
-                      >
-                        <v-list-item
-                          v-for="cluster in mergableClusters"
-                          :key="cluster.id"
-                        >
+                      <v-list-item-group v-model="toMergeCluster" color="primary">
+                        <v-list-item v-for="cluster in mergableClusters" :key="cluster.id">
                           <v-list-item-content>
                             <v-list-item-title>{{ cluster.name }}</v-list-item-title>
                           </v-list-item-content>
@@ -110,26 +94,12 @@
                   </v-card-text>
                   <v-divider></v-divider>
                   <v-card-actions>
-                    <v-btn
-                      color="primary"
-                      text
-                      @click="cancelMergeClusters"
-                    >
-                      Cancel
-                    </v-btn>
+                    <v-btn color="primary" text @click="cancelMergeClusters">Cancel</v-btn>
                     <v-spacer></v-spacer>
-                    <v-btn
-                      color="primary"
-                      text
-                      :disabled="toMergeCluster === undefined"
-                      @click="mergeClusters"
-                    >
-                      Merge
-                    </v-btn>
+                    <v-btn color="primary" text :disabled="toMergeCluster === undefined" @click="mergeClusters">Merge</v-btn>
                   </v-card-actions>
                 </v-card>
               </v-dialog>
-
             </v-list-item>
           </v-list>
         </v-menu>
@@ -139,129 +109,149 @@
 </template>
 
 <script>
-import TimeMixin from "../mixins/time";
-
-import { mapStores } from "pinia";
-import { usePlayerStore } from "@/store/player";
-import { useClusterTimelineItemStore } from "@/store/cluster_timeline_item";
-import { useTimelineStore } from "@/store/timeline";
-import { usePluginRunStore } from "@/store/plugin_run";
+import { ref, computed, onMounted } from 'vue';
+import { usePlayerStore } from "@/stores/player";
+import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
+import { usePluginRunStore } from "@/stores/plugin_run";
 import ClusterExploration from "@/components/ClusterExploration.vue";
 
 export default {
-  mixins: [TimeMixin],
-  props: ["cluster", "allClusters", 'type_name'],
-  data() {
-    return {
-      // card shows loading animation while the faceidentification plugin runs
-      loading: false,
-      show: false,
-      renaming: false, // during renaming, we do not want to create new ClusterTimelineItems in the watcher
-      isSubmitting: false,
-      showDotMenu: false,
-      mergeDialog: false,
-      toMergeCluster: undefined,
-      renameValue: this.cluster.name
-    }
-  },
-  mounted() {
-    if (this.showDotMenu) {
-      this.showDotMenu = false;
-    }
-  },
-  methods: {
-    async renameCluster() {
-      if (this.renaming) {
-        return;
-      }
-      this.renaming = true;
+  props: ['cluster', 'allClusters', 'type_name'],
+  setup(props) {
+    const playerStore = usePlayerStore();
+    const pluginRunStore = usePluginRunStore();
+    const clusterTimelineItemStore = useClusterTimelineItemStore();
 
-      await this.clusterTimelineItemStore.rename({
-        cluster_id: this.cluster.cluster_id,
-        name: this.renameValue,
+    const loading = ref(false);
+    const show = ref(false);
+    const renaming = ref(false);
+    const isSubmitting = ref(false);
+    const showDotMenu = ref(false);
+    const mergeDialog = ref(false);
+    const toMergeCluster = ref(undefined);
+    const renameValue = ref(props.cluster.name);
+
+    const firstOccurence = computed(() => {
+      if (props.cluster.items.length > 0) {
+        return get_timecode(props.cluster.items[0].time);
+      }
+      return 0;
+    });
+
+    const lastOccurence = computed(() => {
+      if (props.cluster.items.length > 0) {
+        return get_timecode(props.cluster.items.at(-1).time);
+      }
+      return 0;
+    });
+
+    const mergableClusters = computed(() => {
+      return props.allClusters.filter(c => c.id !== props.cluster.id);
+    });
+
+    const thumbnails = computed(() => {
+      return props.cluster.items.reduce((arr, item, i) => {
+        if (i % Math.ceil(props.cluster.items.length / 4) === 0) {
+          arr.push(item);
+        }
+        return arr;
+      }, []);
+    });
+
+    const renameCluster = async () => {
+      if (renaming.value) return;
+      renaming.value = true;
+
+      await clusterTimelineItemStore.rename({
+        cluster_id: props.cluster.cluster_id,
+        name: renameValue.value,
       });
 
-      this.renaming = false;
-      this.show = false;
-      this.showDotMenu = false;
-    },
-    async deleteCluster() {
-      if (this.isSubmitting) {
-        return;
-      }
-      this.isSubmitting = true;
+      renaming.value = false;
+      show.value = false;
+      showDotMenu.value = false;
+    };
 
-      // remove cluster from store
-      await this.clusterTimelineItemStore.delete(this.cluster.cluster_id);
+    const deleteCluster = async () => {
+      if (isSubmitting.value) return;
+      isSubmitting.value = true;
+
+      await clusterTimelineItemStore.delete(props.cluster.cluster_id);
       // delete this card
-      this.$emit("childDeleted", this.cluster.cluster_id);
-      this.isSubmitting = false;
-      this.show = false;
-      this.showDotMenu = false;
-    },
-    mergeClusters() {
-      this.clusterTimelineItemStore.merge({
-        cluster_from_id: this.cluster.cluster_id, 
-        cluster_to_id: this.mergableClusters[this.toMergeCluster].cluster_id
+      // Emits event to remove this cluster from parent
+      emit("childDeleted", props.cluster.cluster_id);
+
+      isSubmitting.value = false;
+      show.value = false;
+      showDotMenu.value = false;
+    };
+
+    const mergeClusters = () => {
+      clusterTimelineItemStore.merge({
+        cluster_from_id: props.cluster.cluster_id,
+        cluster_to_id: mergableClusters.value[toMergeCluster.value].cluster_id,
       });
-      this.mergeDialog = false;
-      this.showDotMenu = false;
-    },
-    cancelMergeClusters() {
-      this.mergeDialog = false;
-      this.showDotMenu = false;
-    },
-    async createTimeline() {
-      this.loading = true;
+      mergeDialog.value = false;
+      showDotMenu.value = false;
+    };
+
+    const cancelMergeClusters = () => {
+      mergeDialog.value = false;
+      showDotMenu.value = false;
+    };
+
+    const createTimeline = () => {
+      loading.value = true;
       let parameters = [
         {
           name: "timeline",
-          value: this.cluster.name,
+          value: props.cluster.name,
         },
         {
           name: "cluster_timeline_item_id",
-          value: this.cluster.id
-        }
+          value: props.cluster.id,
+        },
       ];
 
-      this.pluginRunStore
-        .submit({ plugin: "cluster_to_scalar", parameters: parameters })
+      pluginRunStore.submit({ plugin: "cluster_to_scalar", parameters })
         .then(() => {
-          this.loading = false;
+          loading.value = false;
         });
-      this.showDotMenu = false;
-    },
-    goToFace(time) {
-      this.playerStore.setTargetTime(time);
-    },
 
-  },
-  computed: {
-    firstOccurence() {
-      if (this.cluster.items.length > 0) {
-        return this.get_timecode(this.cluster.items[0].time);
+      showDotMenu.value = false;
+    };
+
+    const goToFace = (time) => {
+      playerStore.setTargetTime(time);
+    };
+
+    // OnMounted lifecycle hook
+    onMounted(() => {
+      if (showDotMenu.value) {
+        showDotMenu.value = false;
       }
-      return 0;
-    },
-    lastOccurence() {
-      if (this.cluster.items.length > 0) {
-        return this.get_timecode(this.cluster.items.at(-1).time);
-      }
-      return 0;
-    },
-    mergableClusters() {
-      return this.allClusters.filter((c) => c.id !== this.cluster.id);
-    },
-    thumbnails() {
-      // sample 4 elements
-      return this.cluster.items.reduce((arr, item, i) => {
-        if (i % Math.ceil(this.cluster.items.length/4) == 0) {
-          arr.push(item);
-        } 
-        return arr;
-      }, []);
-    },
-    ...mapStores(usePlayerStore, usePluginRunStore, useClusterTimelineItemStore, useTimelineStore),
+    });
+
+    return {
+      loading,
+      show,
+      renaming,
+      isSubmitting,
+      showDotMenu,
+      mergeDialog,
+      toMergeCluster,
+      renameValue,
+      firstOccurence,
+      lastOccurence,
+      mergableClusters,
+      thumbnails,
+      renameCluster,
+      deleteCluster,
+      mergeClusters,
+      cancelMergeClusters,
+      createTimeline,
+      goToFace,
+    };
   },
   components: {
     ClusterExploration,
@@ -269,7 +259,7 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .image-contaniner {
   overflow-x: auto;
   white-space: nowrap;

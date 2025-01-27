@@ -4,9 +4,9 @@
 
 <script>
 import { mapStores } from "pinia";
-import { usePluginRunResultStore } from "@/store/plugin_run_result";
-import { useTimelineStore } from "@/store/timeline";
-import { usePlayerStore } from "@/store/player";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
+import { useTimelineStore } from "@/stores/timeline";
+import { usePlayerStore } from "@/stores/player";
 import * as Plotly from "plotly.js";
 
 

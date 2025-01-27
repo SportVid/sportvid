@@ -11,17 +11,25 @@
 </template>
 
 <script>
+import { computed, defineComponent } from 'vue';
 import ClusterItemCard from "@/components/ClusterItemCard.vue";
 
-export default {
-  props: [ 'clusters', 'name' ],
-  computed: {
-    clustersLength() {
-      return this.clusters.length;
-    },
-  },
+export default defineComponent({
   components: {
-    ClusterItemCard,
+    ClusterItemCard
+  },
+  props: {
+    clusters: Array,
+    name: String
+  },
+  setup(props) {
+    const clustersLength = computed(() => props.clusters.length);
+    
+    return {
+      clustersLength,
+      clusters: props.clusters,
+      name: props.name
+    };
   }
-};
+});
 </script>

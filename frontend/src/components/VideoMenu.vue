@@ -18,8 +18,8 @@
 import ModalExport from "@/components/ModalExport.vue";
 
 import { mapStores } from "pinia";
-import { useUserStore } from "@/store/user";
-import { usePlayerStore } from "@/store/player";
+import { useUserStore } from "@/stores/user";
+import { usePlayerStore } from "@/stores/player";
 
 export default {
   data() {

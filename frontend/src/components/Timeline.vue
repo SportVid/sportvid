@@ -220,14 +220,14 @@ import {
 import * as PIXI from "pixi.js";
 
 import { mapStores } from "pinia";
-import { useTimelineStore } from "@/store/timeline";
-import { useTimelineSegmentStore } from "@/store/timeline_segment";
-import { useTimelineSegmentAnnotationStore } from "@/store/timeline_segment_annotation";
-import { useAnnotationStore } from "@/store/annotation";
-import { useAnnotationCategoryStore } from "@/store/annotation_category";
-import { usePlayerStore } from "@/store/player";
-import { useVideoStore } from "@/store/video";
-import { usePluginRunResultStore } from "@/store/plugin_run_result";
+import { useTimelineStore } from "@/stores/timeline";
+import { useTimelineSegmentStore } from "@/stores/timeline_segment";
+import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
+import { useAnnotationStore } from "@/stores/annotation";
+import { useAnnotationCategoryStore } from "@/stores/annotation_category";
+import { usePlayerStore } from "@/stores/player";
+import { useVideoStore } from "@/stores/video";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 
 export default {
   mixins: [TimeMixin],

@@ -1,195 +1,195 @@
 <template>
-  <v-app>
-    <v-main>
-      <v-container v-if="userStore.loggedIn" class="py-8 px-6" fluid>
-        <v-row justify="center">
-          <v-col cols="2">
-            <ModalVideoUpload />
-          </v-col>
-          <v-col cols="2">
-            <v-btn :disabled="selectedVideosIds.length == 0" @click="showModalPlugin = true" class="ma-6">
-              <v-icon color="primary">mdi-plus</v-icon>
-              Run Batch Plugin
-            </v-btn>
-            <ModalPlugin v-model="showModalPlugin" :videoIds="selectedVideosIds" />
-          </v-col>
-        </v-row>
-
-        <v-container class="d-flex flex-wrap video-gallery align-content-center">
-          <v-card elevation="2" width="420px" :loading="item.loading" v-for="item in videos" :key="item.id">
-            <v-card-title class="video-overview-title">{{ item.name }}</v-card-title>
-            <v-card-text>
-              <div>Video ID: {{ item.id }}</div>
-              <div>
-                Length:
-                {{ get_display_time(item.duration) }}
-              </div>
-              <div>Uploaded: {{ item.date.slice(0, 10) }}</div>
-              <div>Timelines: {{ item.num_timelines }}</div>
-
-              <v-card-actions class="actions">
-                <v-btn outlined @click="showVideo(item.id)">
-                  <v-icon>{{ "mdi-movie-search-outline" }}</v-icon> Analyse
-                </v-btn>
-                <ModalVideoRename :video="item.id">
-                  <template v-slot:activator="on">
-                    <v-btn outlined v-on="on">
-                      <v-icon left>{{ "mdi-pencil" }}</v-icon>
-                      {{ $t("modal.video.rename.link") }}
-                    </v-btn>
-                  </template>
-                </ModalVideoRename>
-                <!-- <ModalVideoRename :video="item.id" /> -->
-                <v-btn color="red" outlined @click="deleteVideo(item.id)">
-                  <v-icon>{{ "mdi-trash-can-outline" }}</v-icon> Delete
-                </v-btn>
-                <v-checkbox
-                  v-model="selectedVideos[item.id]"
-                  color="primary"
-                  class="ms-2"
-                ></v-checkbox>
-              </v-card-actions>
-            </v-card-text>
-            <v-progress-linear :value="videosProgress[item.id]"></v-progress-linear>
-          </v-card>
-        </v-container>
-      </v-container>
-      <v-container v-else>
-        <v-col justify="space-around">
-          <v-card class="welcome pa-5">
-            <v-card-title>
-              <h1 class="text-h2">{{ $t("welcome.title") }}</h1>
-            </v-card-title>
-
-            <v-card-text>
-              <p v-html="$t('welcome.text')"></p>
-              <h2 class="text-h5 mb-2">{{ $t("welcome.demo_title") }}</h2>
-              <p>
-                <video id = "welcome-video" controls>
-                  <source
-                    src="https://tib.eu/cloud/s/sMmqWqWYict3Zpb/download/TIB-AV-A_Einfuehrung_2.mp4"
-                    type="video/mp4"
-                  />
-                </video>
-              </p>
-              <h2 class="text-h5 mb-1 mt-4">{{ $t("welcome.login_title") }}</h2>
-              <p v-html="$t('welcome.login_text')"></p>
-              <h2 class="text-h5 mb-1 mt-4">{{ $t("welcome.format_title") }}</h2>
-              <p v-html="$t('welcome.format_text')"></p>
-            </v-card-text>
-          </v-card>
+  <v-main>
+    <v-container v-if="!userStore.loggedIn" class="py-8 px-6" fluid>
+      <v-row justify="center">
+        <v-col cols="2">
+          <ModalVideoUpload />
         </v-col>
+        <v-col cols="2">
+          <v-btn 
+            class="ma-6" 
+            :disabled="selectedVideosIds.length == 0" 
+            @click="showModalPlugin = true"
+          >
+            <v-icon color="primary">mdi-plus</v-icon>
+            Run Batch Plugin
+          </v-btn>
+        </v-col>
+      </v-row>
+
+      <v-container class="d-flex flex-wrap video-gallery align-content-center">
+        <v-card 
+          elevation="2" 
+          width="420px"
+          :loading="item.loading" 
+          v-for="item in videos" 
+          :key="item.id"
+        >
+          <v-card-title class="video-overview-title mt-2 mb-2">
+            {{ item.name }}
+          </v-card-title>
+          <v-card-text>
+            <div>Video ID: {{ item.id }}</div>
+            <div>Length: {{ getDisplayTime(item.duration) }}</div>
+            <div>Uploaded: {{ item.date.slice(0, 10) }}</div>
+            <div>Timelines: {{ item.num_timelines }}</div>
+
+            <v-card-actions class="actions mt-n4 mb-n4">
+              <v-btn variant="outlined" class="ml-n2" @click="showVideo(item.id)">
+                <v-icon class="mr-1">
+                  {{ "mdi-movie-search-outline" }}
+                </v-icon>
+                Analyse
+              </v-btn>
+
+              <ModalVideoRename :video="item.id" />
+
+              <v-btn color="red" variant="outlined" @click="deleteVideo(item.id)">
+                <v-icon class="mr-1">
+                  {{ "mdi-trash-can-outline" }}
+                </v-icon>
+                Delete
+              </v-btn>
+              <v-checkbox
+                v-model="selectedVideos[item.id]"
+                color="primary"
+                class="pt-5 ml-n1"
+              ></v-checkbox>
+            </v-card-actions>
+          </v-card-text>
+          <v-progress-linear :value="videosProgress[item.id]"></v-progress-linear>
+        </v-card>
       </v-container>
-    </v-main>
-  </v-app>
+    </v-container>
+
+    <v-container v-else>
+      <v-col justify="space-around">
+        <v-card class="welcome pa-5" elevation="3">
+          <v-card-title>
+            <h1 class="text-h2 mb-4 text-primary">{{ $t("welcome.title") }}</h1>
+          </v-card-title>
+
+          <v-card-text>
+            <p v-html="$t('welcome.text')" class="mb-4"></p>
+            <h2 class="text-h5 mb-2">{{ $t("welcome.demo_title") }}</h2>
+            <p>
+              <video id = "welcome-video" controls>
+                <source
+                  src="https://tib.eu/cloud/s/sMmqWqWYict3Zpb/download/TIB-AV-A_Einfuehrung_2.mp4"
+                  type="video/mp4"
+                />
+              </video>
+            </p>
+            <h2 class="text-h5 mb-1 mt-4">{{ $t("welcome.login_title") }}</h2>
+            <p v-html="$t('welcome.login_text')"></p>
+            <h2 class="text-h5 mb-1 mt-4">{{ $t("welcome.format_title") }}</h2>
+            <p v-html="$t('welcome.format_text')"></p>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-container>
+  </v-main>
 </template>
 
 <script>
-import Vue from "vue";
-import router from "../router";
+import { ref, computed, onMounted, watch } from "vue";
+import { useRouter } from "vue-router";
+import { useVideoStore } from "@/stores/video";
+import { useUserStore } from "@/stores/user";
+import { usePluginRunStore } from "@/stores/plugin_run";
+import { useTimelineStore } from "@/stores/timeline";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalVideoUpload from "@/components/ModalVideoUpload.vue";
 import ModalVideoRename from "@/components/ModalVideoRename.vue";
-import TimeMixin from "../mixins/time";
-import { mapStores } from "pinia";
-import { useVideoStore } from "@/store/video.js";
-import { useUserStore } from "@/store/user.js";
-import { usePluginRunStore } from "@/store/plugin_run.js";
-import { useTimelineStore } from "@/store/timeline";
-import { usePluginRunResultStore } from "../store/plugin_run_result";
+import { getDisplayTime } from "@/plugins/time";
 
 export default {
-  mixins: [TimeMixin],
-  data() {
-    return {
-      showModalPlugin: false,
-      selectedVideos: {},
-      fetchPluginTimer: null,
-    }
-  },
-  mounted() {
-    this.fetchData();
-  },
-  beforeDestroy() {
-    if (this.fetchPluginTimer) {
-      clearInterval(this.fetchPluginTimer);
-    }
-  },
-  methods: {
-    deleteVideo(video_id) {
-      this.videoStore.delete(video_id);
-    },
-    showVideo(video_id) {
-      router.push({ path: `/videoanalysis/${video_id}` });
-    },
-    async fetchData(fetchTimelines = false) {
-      await this.videoStore.fetchAll();
-      await this.pluginRunStore.fetchAll({ addResults: false, });
-      if (fetchTimelines) {
-        await this.timelineStore.fetchAll({ addResultsType: true });
-      }
-    }
-  },
-  computed: {
-    videos() {
-      return this.videoStore.all;
-    },
-    selectedVideosIds() {
-      return Object.entries(this.selectedVideos).filter((e) => e[1]).map((e) => e[0]);
-    },
-    videosProgress() {
-      const progress = {}
-      for (const vid of this.videos) {
-        const runs = this.pluginRunStore.forVideo(vid.id);
-        progress[vid.id] = runs.filter((r) => r.status !== 'RUNNING' && r.status !== 'QUEUED').length * 100 / runs.length;
-      }
-      return progress
-    },
-    ...mapStores(useVideoStore, usePluginRunStore, useUserStore, useTimelineStore, usePluginRunResultStore),
-  },
-  watch: {
-    "userStore.loggedIn": function(value, oldValue) {
-      if (!oldValue && value) {
-        // fetch user's videos after login
-        this.fetchData();
-      }
-    },
-    'pluginRunStore.pluginInProgress': {
-      immediate: true,
-      handler(newState) {
-        if (newState) {
-          this.fetchPluginTimer = setInterval(
-            function () {
-              this.fetchData();
-            }.bind(this),
-            2000
-          );
-        } else {
-          clearInterval(this.fetchPluginTimer);
-        } 
-      }
-    },
-    videosProgress(newState, oldState) {
-      if (Object.keys(newState).some(k => oldState && (!(k in oldState) || newState[k] !== oldState[k]))) {
-        // already fetch partial progress and not just when all plugins are finished
-        this.fetchData(true);
-      }
-    },
-    videos(newState, oldState) {
-      if (newState.length !== oldState.length) {
-        for (const vid of newState.filter(v => !oldState.includes(v))) {
-          Vue.set(this.selectedVideos, vid.id, false);
-        }
-        for (const vid of oldState.filter(v => !newState.includes(v))) {
-          Vue.delete(this.selectedVideos, vid.id);
-        }
-      }
-    }
-  },
   components: {
     ModalVideoUpload,
     ModalVideoRename,
-    ModalPlugin
+    ModalPlugin,
+  },
+  setup() {
+    const router = useRouter();
+    const videoStore = useVideoStore();
+    const userStore = useUserStore();
+    const pluginRunStore = usePluginRunStore();
+    const timelineStore = useTimelineStore();
+    const pluginRunResultStore = usePluginRunResultStore();
+
+    const showModalPlugin = ref(false);
+    const selectedVideos = ref({});
+    const fetchPluginTimer = ref(null);
+
+    const videos = computed(() => videoStore.all);
+    const selectedVideosIds = computed(() =>
+      Object.entries(selectedVideos.value)
+        .filter(([, isSelected]) => isSelected)
+        .map(([id]) => id)
+    );
+
+    const videosProgress = computed(() => {
+      const progress = {};
+      videos.value.forEach((video) => {
+        const runs = pluginRunStore.forVideo(video.id);
+        progress[video.id] =
+          (runs.filter((r) => r.status !== "RUNNING" && r.status !== "QUEUED").length / runs.length) *
+          100;
+      });
+      return progress;
+    });
+
+    const fetchData = async (fetchTimelines = false) => {
+      await videoStore.fetchAll();
+      await pluginRunStore.fetchAll({ addResults: false });
+      if (fetchTimelines) {
+        await timelineStore.fetchAll({ addResultsType: true });
+      }
+    };
+
+    const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
+    const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
+
+    onMounted(() => {
+      fetchData();
+    });
+
+    watch(
+      () => userStore.loggedIn,
+      (newValue, oldValue) => {
+        if (!oldValue && newValue) {
+          fetchData();
+        }
+      }
+    );
+
+    watch(
+      () => pluginRunStore.pluginInProgress,
+      (newState) => {
+        if (newState) {
+          fetchPluginTimer.value = setInterval(() => {
+            fetchData();
+          }, 2000);
+        } else if (fetchPluginTimer.value) {
+          clearInterval(fetchPluginTimer.value);
+        }
+      },
+      { immediate: true }
+    );
+
+    return {
+      videos,
+      selectedVideos,
+      selectedVideosIds,
+      videosProgress,
+      showModalPlugin,
+      deleteVideo,
+      showVideo,
+      fetchData,
+      userStore,
+      getDisplayTime,
+    };
   },
 };
 </script>

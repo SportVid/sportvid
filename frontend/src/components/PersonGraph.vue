@@ -58,8 +58,8 @@ import "vis";
 import { Network } from "vis-network";
 import { DataSet } from "vis-data";
 import { mapStores } from "pinia";
-import { useShotStore } from "@/store/shot";
-import { useClusterTimelineItemStore } from "../store/cluster_timeline_item";
+import { useShotStore } from "@/stores/shot";
+import { useClusterTimelineItemStore } from "../stores/cluster_timeline_item";
 
 export default {
     data() {

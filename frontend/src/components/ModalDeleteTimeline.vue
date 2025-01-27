@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="show" max-width="1000">
-    <template v-slot:activator="{ on }">
-      <v-btn v-on="on" text block large>
+    <template v-slot:activator="{ props }">
+      <v-btn v-bind="props" text block large>
         <v-icon left>{{ "mdi-trash-can-outline" }}</v-icon>
         {{ $t("modal.timeline.delete.link") }}
       </v-btn>
@@ -9,8 +9,7 @@
     <v-card>
       <v-card-title class="mb-2">
         {{ $t("modal.timeline.delete.title") }}
-
-        <v-btn icon @click.native="show = false" absolute top right>
+        <v-btn icon @click="show = false" absolute top right>
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-card-title>
@@ -28,42 +27,44 @@
 </template>
 
 <script>
-import { mapStores } from "pinia";
-import { useTimelineStore } from "@/store/timeline";
+import { ref, watch } from "vue";
+import { useTimelineStore } from "@/stores/timeline";
 
 export default {
-  props: ["timeline"],
-  data() {
-    return {
-      show: false,
-      isSubmitting: false,
-    };
+  props: {
+    timeline: {
+      type: Object,
+      required: true,
+    },
   },
-  computed: {
-    ...mapStores(useTimelineStore),
-  },
-  methods: {
-    async submit() {
-      if (this.isSubmitting) {
+  setup(props, { emit }) {
+    const timelineStore = useTimelineStore(); 
+    const show = ref(false);
+    const isSubmitting = ref(false);
+
+    const submit = async () => {
+      if (isSubmitting.value) {
         return;
       }
-      this.isSubmitting = true;
+      isSubmitting.value = true;
 
-      await this.timelineStore.delete(this.timeline);
+      await timelineStore.delete(props.timeline);
 
-      this.isSubmitting = false;
-      this.show = false;
-    },
-  },
-  watch: {
-    show(value) {
+      isSubmitting.value = false;
+      show.value = false;
+    };
+
+    watch(show, (value) => {
       if (value) {
-        this.$emit("close");
+        emit("close");
       }
-    },
+    });
+
+    return {
+      show,
+      isSubmitting,
+      submit,
+    };
   },
 };
 </script>
-
-
-

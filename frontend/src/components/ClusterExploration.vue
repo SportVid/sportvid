@@ -1,14 +1,14 @@
 <template>
   <div>
     <v-dialog v-model="show" width="90%" persistent>
-      <template v-slot:activator="{ on, attrs }">
-        <v-btn v-bind="attrs" v-on="on" text block large>
+      <template v-slot:activator="{ props }">
+        <v-btn v-bind="props" text block large>
           <v-icon left>{{ "mdi-eye-outline" }}</v-icon>
           {{ $t("button.edit") }}
         </v-btn>
       </template>
       <v-card v-show="show" class="canvasContainer" ref="canvasContainer">
-        <v-card-title>Cluster {{ this.cluster.name }} </v-card-title>
+        <v-card-title>Cluster {{ cluster.name }} </v-card-title>
         <v-card-subtitle>Click on images to mark them for deletion. There are {{ cluster.items.length }} images in total.</v-card-subtitle>
         <v-virtual-scroll
           :items="items"
@@ -60,7 +60,7 @@
           Confirm
         </v-card-title>
         <v-card-text>
-          Delete {{ this.markedForDeletion.length }} images from Cluster "{{ this.cluster.name }}"?
+          Delete {{ markedForDeletion.length }} images from Cluster "{{ cluster.name }}"?
           <v-card-text style="color: red" v-if="allImagesMarked"> <b>You selected all images. This removes the
               cluster.</b></v-card-text>
         </v-card-text>
@@ -124,103 +124,32 @@
 </template>
 
 <script>
-import { mapStores } from "pinia";
-import { useClusterTimelineItemStore } from '../store/cluster_timeline_item';
-import { useShotStore } from '../store/shot';
+import { ref, computed, watch, onMounted } from "vue";
+import { useClusterTimelineItemStore } from '../stores/cluster_timeline_item';
+import { useShotStore } from '../stores/shot';
 
 export default {
   props: ["cluster", "allClusters"],
-  data() {
-    return {
-      show: false,
-      showConfirmation: false,
-      showNewCluster: false,
-      newClusterName: '',
-      showMove: false,
-      toMoveCluster: undefined,
-      markedForDeletion: [],
-      items: []
-    };
-  },
-  methods: {
-    showItems(item) {
-      item.show = true;
-      item.visibleImages = item.images;
-    },
-    marked(imageUrl) {
-      return this.markedForDeletion.includes(imageUrl);
-    },
-    mark(imageUrl) {
-      if (this.marked(imageUrl)) {
-        this.markedForDeletion = this.markedForDeletion.filter((e) => e != imageUrl);
-      } else {
-        this.markedForDeletion.push(imageUrl);
-      }
-    },
-    borderStyle(imageUrl) {
-      if (this.marked(imageUrl)) {
-        return 'border: 5px solid red'
-      }
-      return ''
-    },
-    async applyMove() {
-      const marked_items = this.cluster.items.filter((i) => this.markedForDeletion.includes(i.image_path))
-                                             .map((i) => i.id);
-      await this.clusterTimelineItemStore.moveItemsToCluster(
-        this.cluster.cluster_id,
-        marked_items,
-        this.allClustersButSelf[this.toMoveCluster].cluster_id
-      );
-      this.show = false;
-      this.markedForDeletion = [];
-      this.showMove = false;
-      if (this.allImagesMarked) {
-        this.$emit("deleteCluster");
-      }
-    },
-    async applyNewCluster() {
-      const marked_items = this.cluster.items.filter((i) => this.markedForDeletion.includes(i.image_path))
-                                             .map((i) => i.id);
-      const newCluster = await this.clusterTimelineItemStore.create(
-        this.newClusterName,
-        this.cluster.video,
-        this.cluster.plugin_run,
-        this.cluster.type
-      )
-      if (newCluster) {
-        await this.clusterTimelineItemStore.moveItemsToCluster(
-          this.cluster.cluster_id,
-          marked_items,
-          newCluster.cluster_id
-        );
-      }
-      this.show = false;
-      this.markedForDeletion = [];
-      this.newClusterName = '';
-      this.showNewCluster = false;
-      if (this.allImagesMarked) {
-        this.$emit("deleteCluster");
-      }
-    },
-    async applyDeletion() {
-      const item_ids_to_delete = this.cluster.items.filter((i) => this.markedForDeletion.includes(i.image_path))
-                                                   .map((i) => i.id);
-      await this.clusterTimelineItemStore.deleteItems(this.cluster.cluster_id, item_ids_to_delete);
+  setup(props) {
+    const show = ref(false);
+    const showConfirmation = ref(false);
+    const showNewCluster = ref(false);
+    const newClusterName = ref('');
+    const showMove = ref(false);
+    const toMoveCluster = ref(undefined);
+    const markedForDeletion = ref([]);
+    const items = ref([]);
 
-      this.markedForDeletion = [];
-      this.showConfirmation = false;
-      this.show = false;
-      if (this.allImagesMarked) {
-        this.$emit("deleteCluster");
-      }
-    },
-    abort() {
-      this.markedForDeletion = [];
-      this.show = false;
-    },
-    generateItems() {
-      this.items = this.shotStore.shots.map((shot, i) => {
-        const images = this.cluster.items.filter((i) => Math.round(shot.start) <= Math.round(i.time) && Math.round(i.time) < Math.round(shot.end)).map((i) => i.image_path);
+    const clusterTimelineItemStore = useClusterTimelineItemStore();
+    const shotStore = useShotStore();
+
+    const allImagesMarked = computed(() => markedForDeletion.value.length === items.value.length);
+    const imagesSelectedForDeletion = computed(() => markedForDeletion.value.length > 0);
+    const allClustersButSelf = computed(() => props.allClusters.filter(c => c.id !== props.cluster.id));
+
+    const generateItems = () => {
+      items.value = shotStore.shots.map((shot, i) => {
+        const images = props.cluster.items.filter((i) => Math.round(shot.start) <= Math.round(i.time) && Math.round(i.time) < Math.round(shot.end)).map((i) => i.image_path);
         return {
           name: "Shot " + i,
           images: images,
@@ -230,30 +159,124 @@ export default {
           show: images.length <= 5
         };
       }).filter((s) => s.images.length > 0);
-    },
-  },
-  created() {
-    this.generateItems();
-  },
-  computed: {
-    allImagesMarked() {
-      return this.markedForDeletion.length === this.items.length;
-    },
-    imagesSelectedForDeletion() {
-      return this.markedForDeletion.length > 0;
-    },
-    allClustersButSelf() {
-      return this.allClusters.filter((c) => c.id !== this.cluster.id);
-    },
-    ...mapStores(useClusterTimelineItemStore, useShotStore),
-  },
-  watch: {
-    'shotStore.shots': function() {
-      this.generateItems();
-    },
-    'cluster.items': function() {
-      this.generateItems();
-    }
+    };
+
+    const showItems = (item) => {
+      item.show = true;
+      item.visibleImages = item.images;
+    };
+
+    const marked = (imageUrl) => {
+      return markedForDeletion.value.includes(imageUrl);
+    };
+
+    const mark = (imageUrl) => {
+      if (marked(imageUrl)) {
+        markedForDeletion.value = markedForDeletion.value.filter((e) => e != imageUrl);
+      } else {
+        markedForDeletion.value.push(imageUrl);
+      }
+    };
+
+    const borderStyle = (imageUrl) => {
+      if (marked(imageUrl)) {
+        return 'border: 5px solid red';
+      }
+      return '';
+    };
+
+    const applyMove = async () => {
+      const marked_items = props.cluster.items.filter((i) => markedForDeletion.value.includes(i.image_path))
+                                               .map((i) => i.id);
+      await clusterTimelineItemStore.moveItemsToCluster(
+        props.cluster.cluster_id,
+        marked_items,
+        allClustersButSelf.value[toMoveCluster.value].cluster_id
+      );
+      show.value = false;
+      markedForDeletion.value = [];
+      showMove.value = false;
+      if (allImagesMarked.value) {
+        this.$emit("deleteCluster");
+      }
+    };
+
+    const applyNewCluster = async () => {
+      const marked_items = props.cluster.items.filter((i) => markedForDeletion.value.includes(i.image_path))
+                                               .map((i) => i.id);
+      const newCluster = await clusterTimelineItemStore.create(
+        newClusterName.value,
+        props.cluster.video,
+        props.cluster.plugin_run,
+        props.cluster.type
+      )
+      if (newCluster) {
+        await clusterTimelineItemStore.moveItemsToCluster(
+          props.cluster.cluster_id,
+          marked_items,
+          newCluster.cluster_id
+        );
+      }
+      show.value = false;
+      markedForDeletion.value = [];
+      newClusterName.value = '';
+      showNewCluster.value = false;
+      if (allImagesMarked.value) {
+        this.$emit("deleteCluster");
+      }
+    };
+
+    const applyDeletion = async () => {
+      const item_ids_to_delete = props.cluster.items.filter((i) => markedForDeletion.value.includes(i.image_path))
+                                                   .map((i) => i.id);
+      await clusterTimelineItemStore.deleteItems(props.cluster.cluster_id, item_ids_to_delete);
+
+      markedForDeletion.value = [];
+      showConfirmation.value = false;
+      show.value = false;
+      if (allImagesMarked.value) {
+        this.$emit("deleteCluster");
+      }
+    };
+
+    const abort = () => {
+      markedForDeletion.value = [];
+      show.value = false;
+    };
+
+    onMounted(() => {
+      generateItems();
+    });
+
+    watch(() => shotStore.shots, () => {
+      generateItems();
+    });
+
+    watch(() => props.cluster.items, () => {
+      generateItems();
+    });
+
+    return {
+      show,
+      showConfirmation,
+      showNewCluster,
+      newClusterName,
+      showMove,
+      toMoveCluster,
+      markedForDeletion,
+      items,
+      allImagesMarked,
+      imagesSelectedForDeletion,
+      allClustersButSelf,
+      generateItems,
+      showItems,
+      mark,
+      borderStyle,
+      applyMove,
+      applyNewCluster,
+      applyDeletion,
+      abort
+    };
   }
 };
 </script>

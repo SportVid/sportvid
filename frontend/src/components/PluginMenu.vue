@@ -18,9 +18,9 @@
 import ModalPlugin from "@/components/ModalPlugin.vue";
 
 import { mapStores } from "pinia";
-import { usePlayerStore } from "@/store/player";
-import { usePluginRunStore } from "@/store/plugin_run";
-import { usePluginRunResultStore } from "@/store/plugin_run_result";
+import { usePlayerStore } from "@/stores/player";
+import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 
 export default {
   data() {

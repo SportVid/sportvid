@@ -71,9 +71,9 @@
 <script>
 import Vue from "vue";
 import { mapStores } from "pinia";
-import { useAnnotationShortcutStore } from "@/store/annotation_shortcut";
-import { useShortcutStore } from "@/store/shortcut";
-import { useAnnotationStore } from "@/store/annotation";
+import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
+import { useShortcutStore } from "@/stores/shortcut";
+import { useAnnotationStore } from "@/stores/annotation";
 
 export default {
   props: ["value"],

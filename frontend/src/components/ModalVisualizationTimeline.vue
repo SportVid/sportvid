@@ -69,8 +69,8 @@
 
 <script>
 import { mapStores } from "pinia";
-import { useTimelineStore } from "@/store/timeline";
-import { usePluginRunResultStore } from "@/store/plugin_run_result";
+import { useTimelineStore } from "@/stores/timeline";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { scalarToString } from "@/plugins/draw/utils";
 
 export default {

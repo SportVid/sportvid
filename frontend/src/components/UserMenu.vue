@@ -1,17 +1,17 @@
 <template>
   <div>
-    <v-menu v-model="menu" min-width="175" offset-y bottom left>
-      <template v-slot:activator="{ attrs, on: menu }">
-        <v-btn
-          tile
-          text
-          v-bind="attrs"
-          v-on="menu"
-          class="ml-n2"
+    <v-menu v-model="menu" location="bottom right"  offset-y>
+      <template v-slot:activator="{ props }">
+        <v-btn 
+          tile 
+          text 
+          v-bind="props" 
+          class="ml-n4 pl-6 pr-6" 
           :title="$t('user.menu.title')"
         >
-          <v-icon color="primary">mdi-account-circle</v-icon>
-
+          <v-icon size="x-large" color="primary" class="mr-1">
+            mdi-account-circle
+          </v-icon>
           <v-badge v-if="loggedIn" color="accent" dot> {{ username }} </v-badge>
           <span v-else> Login </span>
         </v-btn>
@@ -19,66 +19,76 @@
 
       <UserAccount v-if="loggedIn" />
 
-      <v-list v-else class="pa-0">
+      <v-list v-else min-width="175" class="pa-0">
         <v-list-item @click="showModalLogin = true">
           <v-list-item-title>{{ $t("user.login.title") }}</v-list-item-title>
         </v-list-item>
-
         <v-list-item @click="showModalRegister = true">
           <v-list-item-title>{{ $t("user.register.title") }}</v-list-item-title>
         </v-list-item>
       </v-list>
     </v-menu>
+
     <UserLogin v-model="showModalLogin">
       <activator />
     </UserLogin>
     <UserRegister v-model="showModalRegister">
       <activator />
-    </UserRegister>
+    </UserRegister>  
   </div>
 </template>
 
 <script>
+import { ref, computed } from 'vue'; 
+import { useUserStore } from "@/stores/user";
 import UserLogin from "@/components/UserLogin.vue";
-import UserAccount from "@/components/UserAccount.vue";
 import UserRegister from "@/components/UserRegister.vue";
-
-import { mapStores } from "pinia";
-import { useUserStore } from "@/store/user";
+import UserAccount from "@/components/UserAccount.vue";
 
 export default {
-  data() {
-    return {
-      menu: false,
-      showModalLogin: false,
-      showModalRegister: false,
-    };
-  },
-  computed: {
-    username() {
-      return this.userStore.username;
-    },
-    loggedIn() {
-      return this.userStore.loggedIn;
-    },
-
-    ...mapStores(useUserStore),
-  },
   components: {
     UserLogin,
-    UserAccount,
     UserRegister,
+    UserAccount
+  },
+  setup() {
+    const menu = ref(false);
+    const showModalLogin = ref(false);
+    const showModalRegister = ref(false);
+
+    const userStore = useUserStore();
+
+    const username = computed(() => userStore.username);
+    const loggedIn = computed(() => userStore.loggedIn);
+
+    return {
+      menu,
+      showModalLogin,
+      showModalRegister,
+      username,
+      loggedIn,
+    };
   },
 };
 </script>
 
 <style>
-.v-menu__content .v-btn:not(.accent) {
-  text-transform: capitalize;
-  justify-content: left;
+.v-list-item__content.account {
+  min-width: 250px;
+  letter-spacing: 0.0892857143em;
+  border-bottom: 1px solid #f5f5f5;
 }
 
-.v-btn:not(.v-btn--round).v-size--large {
-  height: 48px;
+.v-menu__content .account .v-btn:not(.accent) {
+  justify-content: center;
+}
+
+.v-application .v-avatar.secondary {
+  background-color: rgba(69, 123, 157, 0.54) !important;
+  border-color: rgba(69, 123, 157, 0.54) !important;
+}
+
+.account {
+  background-color: rgb(255, 255, 255) !important;
 }
 </style>

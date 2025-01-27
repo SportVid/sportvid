@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="show" max-width="1000">
-    <template v-slot:activator="{ on }">
-      <v-btn v-on="on" text block large>
+    <template v-slot:activator="{ props }">
+      <v-btn v-bind="props" text block large>
         <v-icon left>{{ "mdi-pencil" }}</v-icon>
         {{ $t("modal.timeline.rename.link") }}
       </v-btn>
@@ -9,8 +9,8 @@
     <v-card>
       <v-card-title class="mb-2">
         {{ $t("modal.timeline.rename.title") }}
-
-        <v-btn icon @click.native="show = false" absolute top right>
+        
+        <v-btn icon @click="closeDialog" absolute top right>
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-card-title>
@@ -25,63 +25,71 @@
         <v-btn class="mr-4" @click="submit" :disabled="isSubmitting || !name">
           {{ $t("modal.timeline.rename.update") }}
         </v-btn>
-        <v-btn @click="show = false">{{
-          $t("modal.timeline.rename.close")
-        }}</v-btn>
+        <v-btn @click="closeDialog">{{ $t("modal.timeline.rename.close") }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 
 <script>
-import { mapStores } from "pinia";
-import { useTimelineStore } from "@/store/timeline";
+import { ref, computed, watch } from "vue";
+import { useTimelineStore } from "@/stores/timeline";
 
 export default {
   props: ["timeline"],
-  data() {
-    return {
-      show: false,
-      isSubmitting: false,
-      nameProxy: null,
-      items: [],
-    };
-  },
-  computed: {
-    name: {
+  
+  setup(props) {
+    const show = ref(false);
+    const isSubmitting = ref(false);
+    const nameProxy = ref(null);
+    
+    const timelineStore = useTimelineStore();
+    
+    const name = computed({
       get() {
-        const name = this.timelineStore.get(this.timeline).name;
-        return this.nameProxy === null ? name : this.nameProxy;
+        const name = timelineStore.get(props.timeline).name;
+        return nameProxy.value === null ? name : nameProxy.value;
       },
-      set(val) {
-        this.nameProxy = val;
-      },
-    },
-    ...mapStores(useTimelineStore),
-  },
-  methods: {
-    async submit() {
-      if (this.isSubmitting) {
-        return;
+      set(value) {
+        nameProxy.value = value;
       }
-      this.isSubmitting = true;
+    });
 
-      await this.timelineStore.rename({
-        timelineId: this.timeline,
-        name: this.name,
+    const submit = async () => {
+      if (isSubmitting.value) return;
+      isSubmitting.value = true;
+
+      await timelineStore.rename({
+        timelineId: props.timeline,
+        name: name.value,
       });
 
-      this.isSubmitting = false;
-      this.show = false;
-    },
-  },
-  watch: {
-    show(value) {
+      isSubmitting.value = false;
+      show.value = false;
+    };
+
+    watch(show, (value) => {
       if (value) {
-        this.nameProxy = null;
-        this.$emit("close");
+        nameProxy.value = null;
+        emitClose();
       }
-    },
-  },
+    });
+
+    const closeDialog = () => {
+      show.value = false;
+    };
+
+    const emitClose = () => {
+      props.$emit("close");
+    };
+
+    return {
+      show,
+      isSubmitting,
+      name,
+      submit,
+      closeDialog,
+    };
+  }
 };
 </script>

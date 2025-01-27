@@ -19,7 +19,7 @@ import TimeMixin from "../mixins/time";
 import * as d3 from 'd3';
 import cloud from 'd3-cloud';
 import { mapStores } from "pinia";
-import { useTimelineSegmentAnnotationStore } from "@/store/timeline_segment_annotation";
+import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
 
 export default {
   mixins: [TimeMixin],

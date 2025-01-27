@@ -1,64 +1,81 @@
 <template>
   <v-app id="tibava">
-    <v-app-bar app>
-      <img :title="appName" src="./assets/logo_tib.svg" height="40" />
-      <v-toolbar-title style="padding-right: 50px">AV-Analytics</v-toolbar-title>
+    <v-app-bar>
+      <img 
+        :title="appName" 
+        src="./assets/logo_tib_dshs.png" 
+        height="50" 
+        class="ml-2 mr-n2" 
+      />
+      <v-toolbar-title class="pr-12">SportVid</v-toolbar-title>
 
-      <v-btn tile text class="ml-n2" to="/">
-        <v-icon left color="primary">mdi-movie</v-icon>
+      <v-btn tile text to="/">
+        <v-icon color="primary" class="mr-1">mdi-movie</v-icon>
         Videos
       </v-btn>
 
+      <v-btn tile text to="/video-analysis">
+        <v-icon color="primary" class="mr-1">mdi-movie</v-icon>
+        Analysis
+      </v-btn>
+
       <v-spacer></v-spacer>
-      <PluginMenu style="margin-right: 10px;" v-if="videoView" />
-      <History style="margin-right: 10px;" v-if="videoView" />
-      <AnnotationMenu style="margin-right: 10px;" v-if="videoView" />
-      <VideoMenu style="margin-right: 10px;" v-if="videoView" />
+      <v-btn class="mr-2" v-if="videoView">PluginMenu</v-btn>
+      <v-btn class="mr-2" v-if="videoView">History</v-btn>
+      <v-btn class="mr-2" v-if="videoView">AnnotationMenu</v-btn>
+      <v-btn class="mr-4" v-if="videoView">VideoMenu</v-btn>
       <UserMenu />
     </v-app-bar>
     <router-view />
-    <ModalError />
+    <!-- <ModalError /> -->
   </v-app>
 </template>
 
 <script>
-import UserMenu from "@/components/UserMenu.vue";
-import VideoMenu from "@/components/VideoMenu.vue";
-import PluginMenu from "@/components/PluginMenu.vue";
-import AnnotationMenu from "@/components/AnnotationMenu.vue";
-import History from "./components/History.vue";
-import ModalError from "./components/ModalError.vue";
+import { computed } from "vue";
+import { useRoute } from "vue-router";
+import { useUserStore } from "@/stores/user";
+import { usePlayerStore } from "@/stores/player";
+import { useErrorStore } from "@/stores/error";
 
-import { mapStores } from "pinia";
-import { useUserStore } from "@/store/user";
-import { usePlayerStore } from "@/store/player";
-import { useErrorStore } from "@/store/error";
+import UserMenu from "@/components/UserMenu.vue";
+// import VideoMenu from "@/components/VideoMenu.vue";
+// import PluginMenu from "@/components/PluginMenu.vue";
+// import AnnotationMenu from "@/components/AnnotationMenu.vue";
+// import History from "./components/History.vue";
+// import ModalError from "./components/ModalError.vue";
 
 export default {
-  data() {
-    return {
-      appName: process.env.VUE_APP_NAME,
-    };
-  },
-  computed: {
-    loggedIn() {
-      return this.userStore.loggedIn;
-    },
-    videoView() {
-      return this.$route.name === 'VideoAnalysis';
-    },
-
-    ...mapStores(useUserStore, usePlayerStore, useErrorStore),
-  },
   components: {
     UserMenu,
-    VideoMenu,
-    PluginMenu,
-    AnnotationMenu,
-    History,
-    ModalError
+    // VideoMenu,
+    // PluginMenu,
+    // AnnotationMenu,
+    // History,
+    // ModalError
   },
-};
+  setup() {
+    const appName = process.env.VUE_APP_NAME;
+
+    const route = useRoute();
+
+    const userStore = useUserStore();
+    const playerStore = usePlayerStore();
+    const errorStore = useErrorStore();
+
+    const loggedIn = computed(() => userStore.loggedIn);
+    const videoView = computed(() => route.name === "VideoAnalysis");
+
+    return {
+      appName,
+      loggedIn,
+      videoView,
+      userStore,
+      playerStore,
+      errorStore,
+    };
+  }
+}
 </script>
 
 <style>
@@ -68,6 +85,5 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   text-align: left;
   color: #2c3e50;
-  /* margin-top: 0px; */
 }
 </style>
