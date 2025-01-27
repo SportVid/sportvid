@@ -1,4 +1,4 @@
-# TIB-AV-A
+# SportVid
 
 <!-- ![](images/iart-salvator.png) -->
 
@@ -24,8 +24,8 @@
 ### Setup process
 1. Clone the TIB-AV-A repository including submodules:
     ```sh
-    git clone --recurse-submodules https://github.com/TIBHannover/tibava.git
-    cd tibava
+    git clone https://github.com/SportVid/sportvid.git
+    cd sportvid
     ```
 
 2. Download and extract models:
