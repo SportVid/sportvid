@@ -1,6 +1,6 @@
 <template>
   <v-main>
-    <v-container v-if="!userStore.loggedIn" class="py-8 px-6" fluid>
+    <v-container v-if="userStore.loggedIn" class="py-8 px-6" fluid>
       <v-row justify="center">
         <v-col cols="2">
           <ModalVideoUpload />
