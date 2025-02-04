@@ -77,18 +77,6 @@
           {{ $t("user.register.title") }}
         </v-btn>
       </v-card-actions>
-
-      <div class="text-grey px-4 pb-4 pt-2" style="text-align: center">
-        {{ $t("user.register.text") }}
-
-        <a @click="showModalLogin = true" style="color: #1D3557; cursor: pointer">
-          {{ $t("user.login.title") }}
-        </a>
-
-        <UserLogin v-model="showModalLogin">
-          <activator />
-        </UserLogin>
-      </div>
     </v-card>
   </v-dialog>
 </template>
@@ -96,7 +84,6 @@
 <script>
 import { reactive, ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import UserLogin from "@/components/UserLogin.vue";
 import { useUserStore } from "@/stores/user";
 
 export default {
@@ -106,9 +93,6 @@ export default {
       default: false,
     },
   },
-  components: {
-    UserLogin,
-  },
   setup(props, { emit }) {
     const { t } = useI18n();
     const userStore = useUserStore();
@@ -116,7 +100,6 @@ export default {
     const user = reactive({});
     const dialog = ref(props.modelValue);
     const showPassword = ref(false);
-    const showModalLogin = ref(false);
     const errorMessage = ref("");
 
     const register = async () => {
@@ -169,12 +152,29 @@ export default {
       user,
       dialog,
       showPassword,
-      showModalLogin,
       errorMessage,
       register,
       checkLength,
-      disabled,
+      disabled
     };
   },
 };
 </script>
+
+<style>
+.v-card.register .v-btn.login {
+  min-width: auto !important;
+  text-transform: capitalize;
+  display: inline-block;
+  letter-spacing: 0;
+  font-size: 1rem;
+  padding: 0 2px;
+  height: 20px;
+}
+
+.v-card.register .v-btn.login:before,
+.v-card.register .v-btn.login:hover:before,
+.v-card.register .v-btn.login:focus:before {
+  background-color: transparent;
+}
+</style>

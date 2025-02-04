@@ -9,7 +9,7 @@ const routes = [
         component: Home
     },
     {
-        path: '/video-analysis',
+        path: '/video-analysis/:id',
         name: 'VideoAnalysis',
         component: VideoAnalysis
     }

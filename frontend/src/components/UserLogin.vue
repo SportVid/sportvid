@@ -73,11 +73,8 @@
         <a @click="showModalRegister = true" style="color: #1D3557; cursor: pointer">
           {{ $t("user.register.title") }}
         </a>
-
-        <UserRegister v-model="showModalRegister">
-          <activator />
-        </UserRegister>
       </div>
+      <UserRegister v-model="showModalRegister" />
     </v-card>
   </v-dialog>
 </template>
@@ -143,7 +140,6 @@ export default {
       return true;
     });
 
-    // Watchers
     watch(
       () => dialog.value,
       (value) => {

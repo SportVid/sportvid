@@ -33,7 +33,7 @@
 
 <script>
 import { computed } from 'vue';
-import { useRoute } from "vue-router";
+import { useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import { repPlace } from "../plugins/helpers";
 import { useI18n } from "vue-i18n";
@@ -42,6 +42,7 @@ export default {
   setup() {
     const { t } = useI18n();
     const userStore = useUserStore();
+    const router = useRouter();
 
     const username = computed(() => userStore.username);
     const email = computed(() => userStore.email);
@@ -63,8 +64,7 @@ export default {
     const logout = async () => {
       const loggedOut = await userStore.logout();
       if (loggedOut) {
-        const route = useRoute();
-        route.push({ name: 'Home' });
+        router.push({ name: 'Home' });
       }
     };
 

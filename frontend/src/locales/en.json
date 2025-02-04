@@ -5,9 +5,9 @@
     "demo_title": "Video Demonstration",
     "demo_text": "We are currently preparing a video that demonstrates the features of SportVid and explains how to use it to simplify the onboarding process. It is expected to be available by 2027 at the latest.",
     "login_title": "Need an account?",
-    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an E-Mail to xyz@123.de with a short explanation of your intended usecase.",
+    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an E-Mail to {'xyz@123.de'} with a short explanation of your intended usecase.",
     "format_title": "Video File Support",
-    "format_text": "Please note that SportVid currently only supports the analysis of <span style='font-weight: bold;'>mp4 video files</span> to avoid long processing times due to transcoding videos on our server."
+    "format_text": "Please note that SportVid currently only supports the analysis of mp4 video files to avoid long processing times due to transcoding videos on our server."
   },
   "plugin": {
     "menu": {

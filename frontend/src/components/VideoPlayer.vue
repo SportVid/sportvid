@@ -1,14 +1,17 @@
 <template>
   <v-container class="d-flex flex-column">
-    <v-row ref="videocontainer" class="video-container">
-      <video 
-        controls
+    <v-row ref="videoContainer" class="video-container">
+      <video
         class="video-player" 
-        ref="video"
+        ref="videoElement"
+        v-on:play="onPlay"
+        v-on:pause="onPause"
+        v-on:ended="onEnded"
+        v-on:canplay="onCanPlay"
+        v-on:loadeddata="onLoadedData"
+        v-on:timeupdate="onTimeUpdate"
         :src="playerStore.videoUrl"
-      >
-        <!-- <source src="" type="video/mp4" /> -->
-      </video>
+      ></video>
     </v-row>
 
     <v-row class="video-control mt-6">
@@ -34,9 +37,8 @@
         <v-icon v-if="syncTime"> mdi-link</v-icon>
         <v-icon v-else> mdi-link-off</v-icon>
       </v-btn>
-      <div class="time-code flex-grow-1 flex-shrink-0">
-        <!-- {{ getTimecode(currentTime) }} -->
-          CurrentTime
+      <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
+        {{ getTimecode(currentTime) }}
       </div>
 
       <v-menu offset-y top>
@@ -46,7 +48,11 @@
           </v-btn>
         </template>
         <v-list>
-          <v-list-item v-for="(item, index) in speeds" :key="index">
+          <v-list-item 
+            v-for="(item, index) in speeds" 
+            :key="index"
+            class="speed-item"
+          >
             <v-list-item-title v-on:click="onSpeedChange(index)">{{
               item.title
             }}</v-list-item-title>
@@ -61,8 +67,8 @@
         <v-icon v-else-if="volume == 0"> mdi-volume-mute </v-icon>
       </v-btn>
       <v-slider
-        :value="volume"
-        @input="onVolumeChange"
+        v-model="volume"
+        @update:model-value="onVolumeChange"
         max="100" 
         min="0" 
         hide-details
@@ -74,6 +80,8 @@
     <v-row>
       <v-slider
         class="progress-bar"
+        v-model="progress"
+        @update:model-value="onSeek"
         hide-details
         color="primary"
         :thumb-size="15"
@@ -85,14 +93,24 @@
 <script>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { usePlayerStore } from "@/stores/player";
- import { getDisplayTime, getTimecode } from "@/plugins/time";
+import { getDisplayTime, getTimecode } from "@/plugins/time";
 
 export default {
-  setup() {
+  emits: ["loadedData", "canPlay"],
+
+  setup(props, { emit }) {
     const videoElement = ref(null);
     const videoContainer = ref(null);
 
     const playerStore = usePlayerStore();
+
+    const volume = computed(() => playerStore.volume);
+    const ended = computed(() => playerStore.ended);
+    const currentTime = computed(() => playerStore.currentTime);
+    const duration = computed(() => playerStore.videoDuration);
+    const syncTime = computed(() => playerStore.syncTime);
+    const playing = computed(() => playerStore.playing);
+    const targetTime = computed(() => playerStore.targetTime);
 
     const currentSpeed = ref({ title: '1.00', value: 1.0 });
     const speeds = [
@@ -116,9 +134,9 @@ export default {
     };
 
     onMounted(() => {
-      if (videoContainer.value) {
+      if (videoContainer.value.$el) {
         observer = new IntersectionObserver(toggleStickyVideo, { threshold: [threshold] });
-        observer.observe(videoContainer.value);
+        observer.observe(videoContainer.value.$el);
       }
     });
 
@@ -173,23 +191,25 @@ export default {
     };
 
     const onToggleVolume = () => playerStore.toggleMute();
-    const onVolumeChange = (volume) => playerStore.setVolume(volume);
+    const onVolumeChange = (newVolume) => playerStore.setVolume(newVolume);
 
-    const onLoadedData = () => playerStore.setLoadedData(true);
-    const onCanPlay = () => playerStore.setCanPlay(true);
+    const onLoadedData = () => {
+      emit("loadedData");
+    };
+
+    const onCanPlay = () => {
+      emit("canPlay");
+    };
 
     const progress = computed(() => {
       if (duration.value <= 0) return 0;
-      return playerStore.currentTime / playerStore.videoDuration;
+      return (playerStore.currentTime / playerStore.videoDuration) * 100;
     });
 
-    const volume = computed(() => playerStore.volume);
-    const ended = computed(() => playerStore.ended);
-    const currentTime = computed(() => playerStore.currentTime);
-    const duration = computed(() => playerStore.videoDuration);
-    const syncTime = computed(() => playerStore.syncTime);
-    const playing = computed(() => playerStore.playing);
-    const targetTime = computed(() => playerStore.targetTime);
+    watch(progress, (newProgress) => {
+      progress.value = newProgress;
+      emit("update-slider", newProgress); 
+    });
 
     watch(targetTime, (newTargetTime) => {
       const delta = 1 / playerStore.videoFPS;
@@ -224,6 +244,7 @@ export default {
       volume,
       ended,
       currentTime,
+      syncTime,
       duration,
       playing,
       toggle,
@@ -287,5 +308,13 @@ export default {
   justify-content: center;
   max-height: 100%;
   min-height: 480px;
+}
+
+.speed-item {
+  cursor: pointer;
+}
+
+.speed-item:hover {
+  background-color: #f0f0f0; /* Markiere das Element bei Hover */
 }
 </style>

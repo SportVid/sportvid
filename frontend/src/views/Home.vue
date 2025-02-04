@@ -7,13 +7,14 @@
         </v-col>
         <v-col cols="2">
           <v-btn 
-            class="ma-6" 
+            class="mt-6" 
             :disabled="selectedVideosIds.length == 0" 
             @click="showModalPlugin = true"
           >
             <v-icon color="primary">mdi-plus</v-icon>
             Run Batch Plugin
           </v-btn>
+          <!-- <ModalPlugin v-model="showModalPlugin" :videoIds="selectedVideosIds" /> -->
         </v-col>
       </v-row>
 
@@ -21,8 +22,8 @@
         <v-card 
           elevation="2" 
           width="420px"
-          :loading="item.loading" 
-          v-for="item in videos" 
+          v-for="item in videos"
+          :loading="item.loading"  
           :key="item.id"
         >
           <v-card-title class="video-overview-title mt-2 mb-2">
@@ -57,7 +58,7 @@
               ></v-checkbox>
             </v-card-actions>
           </v-card-text>
-          <v-progress-linear :value="videosProgress[item.id]"></v-progress-linear>
+          <!-- <v-progress-linear :value="videosProgress[item.id]"></v-progress-linear> -->
         </v-card>
       </v-container>
     </v-container>
@@ -96,9 +97,9 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
-import { usePluginRunStore } from "@/stores/plugin_run";
-import { useTimelineStore } from "@/stores/timeline";
-import { usePluginRunResultStore } from "@/stores/plugin_run_result";
+// import { usePluginRunStore } from "@/stores/plugin_run";
+// import { useTimelineStore } from "@/stores/timeline";
+// import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalVideoUpload from "@/components/ModalVideoUpload.vue";
 import ModalVideoRename from "@/components/ModalVideoRename.vue";
@@ -114,9 +115,9 @@ export default {
     const router = useRouter();
     const videoStore = useVideoStore();
     const userStore = useUserStore();
-    const pluginRunStore = usePluginRunStore();
-    const timelineStore = useTimelineStore();
-    const pluginRunResultStore = usePluginRunResultStore();
+    // const pluginRunStore = usePluginRunStore();
+    // const timelineStore = useTimelineStore();
+    // const pluginRunResultStore = usePluginRunResultStore();
 
     const showModalPlugin = ref(false);
     const selectedVideos = ref({});
@@ -142,10 +143,10 @@ export default {
 
     const fetchData = async (fetchTimelines = false) => {
       await videoStore.fetchAll();
-      await pluginRunStore.fetchAll({ addResults: false });
-      if (fetchTimelines) {
-        await timelineStore.fetchAll({ addResultsType: true });
-      }
+      // await pluginRunStore.fetchAll({ addResults: false });
+      // if (fetchTimelines) {
+      //   await timelineStore.fetchAll({ addResultsType: true });
+      // }
     };
 
     const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
@@ -164,19 +165,19 @@ export default {
       }
     );
 
-    watch(
-      () => pluginRunStore.pluginInProgress,
-      (newState) => {
-        if (newState) {
-          fetchPluginTimer.value = setInterval(() => {
-            fetchData();
-          }, 2000);
-        } else if (fetchPluginTimer.value) {
-          clearInterval(fetchPluginTimer.value);
-        }
-      },
-      { immediate: true }
-    );
+    // watch(
+    //   () => pluginRunStore.pluginInProgress,
+    //   (newState) => {
+    //     if (newState) {
+    //       fetchPluginTimer.value = setInterval(() => {
+    //         fetchData();
+    //       }, 2000);
+    //     } else if (fetchPluginTimer.value) {
+    //       clearInterval(fetchPluginTimer.value);
+    //     }
+    //   },
+    //   { immediate: true }
+    // );
 
     return {
       videos,

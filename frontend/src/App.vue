@@ -14,11 +14,6 @@
         Videos
       </v-btn>
 
-      <v-btn tile text to="/video-analysis">
-        <v-icon color="primary" class="mr-1">mdi-movie</v-icon>
-        Analysis
-      </v-btn>
-
       <v-spacer></v-spacer>
       <v-btn class="mr-2" v-if="videoView">PluginMenu</v-btn>
       <v-btn class="mr-2" v-if="videoView">History</v-btn>

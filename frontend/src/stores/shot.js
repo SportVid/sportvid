@@ -12,6 +12,7 @@ import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 export const useShotStore = defineStore("shot", () => {
   const isLoading = ref(false);
   const selectedShots = ref(null);
+  const playerStore = usePlayerStore();
 
   const shotsList = computed(() => {
     const timelineStore = useTimelineStore();

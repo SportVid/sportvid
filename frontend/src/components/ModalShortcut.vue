@@ -12,8 +12,7 @@
           hide-details
           class="mt-0 pt-0"
         ></v-text-field>
-
-        <v-btn icon @click="dialog = false" >
+        <v-btn icon @click="dialog = false">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-card-title>
@@ -25,21 +24,15 @@
           class="elevation-1"
           :search="search"
         >
-          <template v-slot:item.name="{ item }">
+          <template v-slot:item_name="{ item }">
             <v-chip class="annotation-chip">
-              <v-btn
-                disable
-                icon
-                x-small
-                :color="item.color"
-                class="mr-1"
-              >
-                <v-icon>{{ "mdi-palette" }}</v-icon>
+              <v-btn disable icon x-small :color="item.color" class="mr-1">
+                <v-icon>mdi-palette</v-icon>
               </v-btn>
               {{ item.name }}
             </v-chip>
           </template>
-          <template v-slot:item.actions="{ item }">
+          <template v-slot:item_actions="{ item }">
             <v-text-field
               solo
               flat
@@ -59,7 +52,7 @@
         </v-data-table>
       </v-card-text>
       <v-card-actions class="pt-0">
-        <v-btn class="mr-4" @click="submit" :disable="isSubmitting">
+        <v-btn class="mr-4" @click="submit" :disabled="isSubmitting">
           {{ $t("modal.shortcut.update") }}
         </v-btn>
         <v-btn @click="dialog = false">{{ $t("modal.shortcut.close") }}</v-btn>
@@ -69,119 +62,100 @@
 </template>
 
 <script>
-import Vue from "vue";
-import { mapStores } from "pinia";
+import { reactive, ref, computed, watch } from "vue";
 import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
 import { useShortcutStore } from "@/stores/shortcut";
 import { useAnnotationStore } from "@/stores/annotation";
 
 export default {
   props: ["value"],
-  data() {
-    return {
-      dialog: false,
-      isSubmitting: false,
-      items: [],
-      search: '',
-      headers: [
-        { text: "Annotation", value: "name" },
-        { text: "Shortcut", sortable: false, value: "actions" },
-      ],
-    };
-  },
-  computed: {
-    annotations() {
-      return this.annotationStore.nonTranscripts;
-    },
-    annotationShortcuts() {
-      return this.annotationShortcutStore.all;
-    },
-    shortcuts() {
-      const shortcuts = this.shortcutStore.all;
-      return shortcuts;
-    },
-    ...mapStores(
-      useAnnotationShortcutStore,
-      useShortcutStore,
-      useAnnotationStore
-    ),
-  },
-  methods: {
-    onKeydown(item, event) {
+  setup(props, { emit }) {
+    const dialog = ref(false);
+    const isSubmitting = ref(false);
+    const search = ref("");
+    const items = ref([]);
+
+    const annotationShortcutStore = useAnnotationShortcutStore();
+    const shortcutStore = useShortcutStore();
+    const annotationStore = useAnnotationStore();
+
+    const headers = reactive([
+      { text: "Annotation", value: "name" },
+      { text: "Shortcut", sortable: false, value: "actions" },
+    ]);
+
+    const annotations = computed(() => annotationStore.nonTranscripts);
+    const annotationShortcuts = computed(() => annotationShortcutStore.all);
+    const shortcuts = computed(() => shortcutStore.all);
+
+    const onKeydown = (item, event) => {
       event.preventDefault();
       let newKeys = [];
-      if (event.ctrlKey) {
-        newKeys.push("Ctrl");
-      }
-      if (event.shiftKey) {
-        newKeys.push("Shift");
-      }
+      if (event.ctrlKey) newKeys.push("Ctrl");
+      if (event.shiftKey) newKeys.push("Shift");
       const lowerChar = event.key.toLowerCase();
-      if (lowerChar.length === 1) {
-        newKeys.push(lowerChar);
+      if (lowerChar.length === 1) newKeys.push(lowerChar);
+      item.keys = newKeys;
+    };
+
+    const clear = (item) => {
+      item.keys = [];
+    };
+
+    const submit = async () => {
+      if (isSubmitting.value) return;
+      isSubmitting.value = true;
+      const shortcutsData = items.value.map(e => ({ id: e.id, keys: e.keys }));
+      await annotationShortcutStore.update({ annotationShortcuts: shortcutsData });
+      isSubmitting.value = false;
+      dialog.value = false;
+    };
+
+    watch(
+      () => dialog.value,
+      (value) => {
+        if (value) {
+          items.value = annotations.value.map(e => ({ ...e }));
+          const lutAnnotationShortcuts = Object.fromEntries(
+            annotationShortcuts.value.map(e => [e.annotation_id, e])
+          );
+          const lutShortcuts = Object.fromEntries(
+            shortcuts.value.map(e => [e.id, e])
+          );
+          items.value.forEach(e => {
+            if (lutAnnotationShortcuts[e.id]) {
+              const annotationShortcut = lutAnnotationShortcuts[e.id];
+              e.keys = lutShortcuts[annotationShortcut.shortcut_id]?.keys || [];
+            } else {
+              e.keys = [];
+            }
+          });
+        }
+        emit("input", value);
       }
-      const newShortcut = { ...item, ...{ keys: newKeys } };
-      Vue.set(this.items, this.items.indexOf(item), newShortcut);
-    },
-    clear(item) {
-      const newShortcut = { ...item, ...{ keys: [] } };
-      Vue.set(this.items, this.items.indexOf(item), newShortcut);
-    },
+    );
 
-    async submit() {
-      if (this.isSubmitting) {
-        return;
+    watch(
+      () => props.value,
+      (value) => {
+        if (value) dialog.value = true;
       }
-      this.isSubmitting = true;
-      const shortcuts = this.items.map((e) => {
-        return { id: e.id, keys: e.keys };
-      });
+    );
 
-      await this.annotationShortcutStore.update({
-        annotationShortcuts: shortcuts,
-      });
-
-      this.isSubmitting = false;
-      this.dialog = false;
-    },
-  },
-  watch: {
-    dialog(value) {
-      if (value) {
-        this.items = this.annotations;
-
-        let lutAnnotationShortcuts = {};
-
-        this.annotationShortcuts.forEach((e) => {
-          lutAnnotationShortcuts[e.annotation_id] = e;
-        });
-
-        let lutShortcuts = {};
-
-        this.shortcuts.forEach((e) => {
-          lutShortcuts[e.id] = e;
-        });
-
-        this.items.forEach((e) => {
-          if (lutAnnotationShortcuts[e.id] == null) {
-            e.keys = [];
-          } else {
-            const annotationShortcut = lutAnnotationShortcuts[e.id];
-            const shortcut = lutShortcuts[annotationShortcut.shortcut_id];
-            e.keys = shortcut.keys;
-          }
-        });
-      }
-      this.$emit("input", value);
-    },
-    value(value) {
-      if (value) {
-        this.dialog = true;
-      }
-    },
+    return {
+      dialog,
+      isSubmitting,
+      search,
+      items,
+      headers,
+      onKeydown,
+      clear,
+      submit,
+    };
   },
 };
 </script>
+
 <style>
 .annotation-chip {
   height: auto !important;

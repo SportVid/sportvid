@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-menu v-model="menu" location="bottom right"  offset-y>
+    <v-menu location="bottom right"  offset-y>
       <template v-slot:activator="{ props }">
         <v-btn 
           tile 
@@ -12,7 +12,7 @@
           <v-icon size="x-large" color="primary" class="mr-1">
             mdi-account-circle
           </v-icon>
-          <v-badge v-if="loggedIn" color="accent" dot> {{ username }} </v-badge>
+          <span v-if="loggedIn" color="accent">{{ username }}</span>
           <span v-else> Login </span>
         </v-btn>
       </template>
@@ -29,12 +29,9 @@
       </v-list>
     </v-menu>
 
-    <UserLogin v-model="showModalLogin">
-      <activator />
-    </UserLogin>
-    <UserRegister v-model="showModalRegister">
-      <activator />
-    </UserRegister>  
+    <UserRegister v-model="showModalRegister" />
+    <UserLogin v-model="showModalLogin" />
+    
   </div>
 </template>
 
@@ -52,7 +49,6 @@ export default {
     UserAccount
   },
   setup() {
-    const menu = ref(false);
     const showModalLogin = ref(false);
     const showModalRegister = ref(false);
 
@@ -62,11 +58,10 @@ export default {
     const loggedIn = computed(() => userStore.loggedIn);
 
     return {
-      menu,
       showModalLogin,
       showModalRegister,
       username,
-      loggedIn,
+      loggedIn
     };
   },
 };

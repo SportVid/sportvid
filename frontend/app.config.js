@@ -1,7 +1,7 @@
 module.exports = {
-  API_LOCATION: "http://localhost:8000",
+  API_LOCATION: "http://localhost:8010",
   THUMBNAIL_LOCATION: "http://localhost/thumbnails",
-   // DEFAULT_AGGREGATION_FIELDS: [
+  // DEFAULT_AGGREGATION_FIELDS: [
   //   'meta.depicts', 'meta.genre', 'meta.location',
   //   'meta.medium', 'meta.object_type', 'meta.institution',
   //   'meta.artist_name', 'origin.name',

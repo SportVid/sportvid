@@ -14,14 +14,16 @@
 
             <v-row class="flex-grow-1">
               <v-col>
-                <VideoPlayer />
+                <VideoPlayer 
+                  @resize="onVideoResize"
+                />
               </v-col>
             </v-row>
           </v-card>
         </v-col>
 
         <v-col cols="6">
-          <div v-if="!isLoading" class="loading-container">
+          <div v-if="isLoading" class="loading-container">
             <div class="spinner"> 
               <i class="mdi mdi-loading mdi-spin"></i>
             </div>
@@ -41,14 +43,27 @@
               />
             </div>
             <div
-                v-for="(position, index) in positions"
-                :key="index"
-                class="position-marker"
-                :style="{
-                  top: `${position.y}%`,
-                  left: `${position.x}%`
-                }"
-              ></div>
+              v-for="(position, index) in positions[currentFrame]"
+              :key="index"
+              class="position-marker"
+              :style="{
+                top: `${position.y}%`,
+                left: `${position.x}%`
+              }"
+            ></div>
+
+            <v-slider
+              class="mx-10 mb-2 mt-n4"
+              v-model="currentFrame"
+              @update:model-value="updateFrame"
+              hide-details
+              color="primary"
+              :thumb-size="15"
+              min="0"
+              max="2"
+              show-ticks="always"
+              step="1"
+            ></v-slider>
           </v-card>
         </v-col>
       </v-row>
@@ -57,7 +72,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
@@ -88,10 +103,26 @@ export default {
     const route = useRoute();
 
     const positions = ref([
-      { x: 0, y: 0 } // Beispiel: Spieler 1
-      // { x: 50, y: 40 }, // Beispiel: Spieler 2
-      // { x: 70, y: 80 }, // Beispiel: Spieler 3
+      [
+        { x: 60, y: 50 }, // Frame 1: Original
+        { x: 50, y: 40 },
+        { x: 70, y: 80 },
+      ],
+      [
+        { x: 65, y: 45 }, // Frame 2: leicht verschoben
+        { x: 55, y: 35 },
+        { x: 75, y: 75 },
+      ],
+      [
+        { x: 55, y: 55 }, // Frame 3: anders verschoben
+        { x: 45, y: 45 },
+        { x: 65, y: 85 },
+      ],
     ]);
+    const currentFrame = ref(0);
+    const updateFrame = (newIndex) => {
+      currentFrame.value = newIndex;
+    };
 
     const videoStore = useVideoStore();
     // const pluginRunStore = usePluginRunStore();
@@ -200,7 +231,7 @@ export default {
     // });
 
     const onVideoResize = () => {
-      const resultCardHeight =
+      resultCardHeight.value =
         resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
     };
 
@@ -210,12 +241,13 @@ export default {
     //   }
     // };
 
-    const fetchData = async ({ addResults = true }) => {
-      await videoStore.fetch({
-        videoId: route.params.id,
-        addResults,
-      });
-    };
+
+    // const fetchData = async ({ addResults = true }) => {
+    //   await videoStore.fetch({
+    //     videoId: route.params.id,
+    //     addResults,
+    //   });
+    // };
 
     // const fetchPlugin = async () => {
     //   await pluginRunStore.fetchForVideo({
@@ -352,20 +384,56 @@ export default {
       () => isLoading,
       (value) => {
         if (!value) {
-          resultCardHeight =
+          resultCardHeight.value =
             resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
         }
       }
     );
 
+    // onMounted(async () => {
+    //   await fetchData({ addResults: true });
+    //   isLoading = false;
+
+    //   console.log(playerStore.videoUrl);
+    // });
+
+    // onMounted(async () => {
+    //   try {
+    //     await fetchData({ addResults: true });
+    //     isLoading.value = false;
+    //     console.log(playerStore.videoUrl);
+    //   } catch (error) {
+    //     isLoading.value = false;
+    //     console.log(playerStore.videoUrl);
+    //     console.error("Fehler im mounted Hook:", error);
+        
+    //   }
+    // });
+
     onMounted(async () => {
-      await fetchData({ addResults: true });
-      isLoading = false;
+      try {
+        await fetchData({ addResults: true });
+      } catch (error) {
+        console.error('Fehler beim Laden der Daten:', error);
+      } finally {
+        isLoading.value = false;
+      }
     });
 
-    onMounted(() => {
-      console.log(playerStore.videoUrl);
-    });
+    const fetchData = async ({ addResults = true }) => {
+      try {
+        const data = await videoStore.fetch({
+          videoId: route.params.id,
+          addResults,
+        });
+        
+        if (!data) {
+          throw new Error('Daten konnten nicht abgerufen werden.');
+        }
+      } catch (error) {
+        console.error('Fehler beim Abrufen der Daten:', error);
+      }
+    };
 
     return {
       positions,
@@ -395,11 +463,13 @@ export default {
       // placeClusteringList,
       // selectedTimeline,
       // shotsList,
-      // onVideoResize,
+      onVideoResize,
       // onAnnotateSegment,
       fetchData,
       // fetchPlugin,
       // onKeyDown,
+      currentFrame,
+      updateFrame
     };
   },
   components: {

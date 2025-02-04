@@ -46,7 +46,7 @@
 
             <v-progress-linear
               v-if="isUploading"
-              :value="uploadingProgress"
+              v-model="uploadingProgress"
               class="mb-4 mt-n4"></v-progress-linear>
 
             <v-btn class="mr-4" :disabled="disabled" @click="uploadVideo">
@@ -73,7 +73,7 @@
 </template>
 
 <script>
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import { useVideoUploadStore } from "@/stores/video_upload";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
