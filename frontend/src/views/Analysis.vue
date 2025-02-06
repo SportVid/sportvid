@@ -29,41 +29,63 @@
             </div>
             <div class="loading-text">Loading...</div>
           </div>
-          <v-card v-else elevation="2" ref="resultCard">
-            <div class="sticky-tabs-bar">
+          <v-card 
+            v-else 
+            class="d-flex flex-column flex-nowrap px-2" 
+            elevation="2" 
+            ref="resultCard"
+          >
+            <v-row class="sticky-tabs-bar" justify="center">
               <v-tabs align-tabs="center" v-model="tab">
                 <v-tab>Pitch</v-tab>
               </v-tabs>
-            </div>
+            </v-row>
             
-            <div class="soccer-field mt-n2">
-              <img
-                src="../assets/pitch.png"
-                class="soccer-image"
-              />
-            </div>
-            <div
-              v-for="(position, index) in positions[currentFrame]"
-              :key="index"
-              class="position-marker"
-              :style="{
-                top: `${position.y}%`,
-                left: `${position.x}%`
-              }"
-            ></div>
+            <v-row class="flex-grow-1">
+              <v-col>
+                <v-container class="d-flex flex-column">
+                  <v-row>
+                    <img
+                      src="../assets/pitch_2.png"
+                      class="soccer-image mt-6"
+                    />
 
-            <v-slider
-              class="mx-10 mb-2 mt-n4"
-              v-model="currentFrame"
-              @update:model-value="updateFrame"
-              hide-details
-              color="primary"
-              :thumb-size="15"
-              min="0"
-              max="2"
-              show-ticks="always"
-              step="1"
-            ></v-slider>
+                    <div
+                      v-for="(position, index) in positions[sliderValue]"
+                      :key="index"
+                      class="position-marker"
+                      :style="{
+                        top: `${position.y}%`,
+                        left: `${position.x}%`
+                      }"
+                    ></div>
+                  </v-row>
+
+                  <v-row class="video-control mt-10">
+                    <v-btn @click="toggleSliderSync" size="small">
+                      <v-icon v-if="playerStore.isSynced"> mdi-link-off</v-icon>
+                      <v-icon v-else> mdi-link</v-icon>
+                    </v-btn>
+                    <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
+                      {{ getTimecode(sliderValue) }}
+                    </div>
+                  </v-row>
+
+                  <v-row class="mt-4">
+                    <v-slider
+                      v-model="sliderValue"
+                      @update:model-value="updateFrame"
+                      hide-details
+                      color="primary"
+                      :thumb-size="15"
+                      :max="99"
+                      :step="1"
+                      :disabled="playerStore.isSynced"
+                    ></v-slider>
+                  </v-row>
+                </v-container>
+              </v-col>
+            </v-row>
           </v-card>
         </v-col>
       </v-row>
@@ -72,7 +94,7 @@
 </template>
 
 <script>
-import { ref, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
@@ -87,6 +109,7 @@ import { usePlayerStore } from "@/stores/player";
 // import * as Keyboard from "../plugins/keyboard";
 
 import VideoPlayer from "@/components/VideoPlayer.vue";
+import { getTimecode } from "@/plugins/time";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import Timeline from "@/components/Timeline.vue";
 // import TimeSelector from "@/components/TimeSelector.vue";
@@ -102,27 +125,14 @@ export default {
   setup() {
     const route = useRoute();
 
-    const positions = ref([
-      [
-        { x: 60, y: 50 }, // Frame 1: Original
-        { x: 50, y: 40 },
-        { x: 70, y: 80 },
-      ],
-      [
-        { x: 65, y: 45 }, // Frame 2: leicht verschoben
-        { x: 55, y: 35 },
-        { x: 75, y: 75 },
-      ],
-      [
-        { x: 55, y: 55 }, // Frame 3: anders verschoben
-        { x: 45, y: 45 },
-        { x: 65, y: 85 },
-      ],
-    ]);
-    const currentFrame = ref(0);
-    const updateFrame = (newIndex) => {
-      currentFrame.value = newIndex;
-    };
+    const positions = ref(
+      Array.from({ length: 100 }, (_, frameIndex) =>
+        Array.from({ length: 3 }, (_, pointIndex) => ({
+          x: 20 + frameIndex * 0.5 + pointIndex * 2, // Dynamisch generierte Werte
+          y: 20 + frameIndex * 0.5 + pointIndex * 2, // Dynamisch generierte Werte
+        }))
+      )
+    );
 
     const videoStore = useVideoStore();
     // const pluginRunStore = usePluginRunStore();
@@ -148,6 +158,27 @@ export default {
     // const annotationDialog = ref({ show: false });
     const isLoading = ref(true);
     const resultCardHeight = ref(0);
+
+    const currentFrame = ref(0);
+    const updateFrame = (newIndex) => {
+      currentFrame.value = newIndex;
+    };
+    const toggleSliderSync = () => {
+      playerStore.isSynced = !playerStore.isSynced;
+    }
+    const currentTime = computed(() => playerStore.currentTime);
+
+    const sliderValue = computed({
+      get: () => {
+        return playerStore.isSynced ? Math.round(currentTime.value) : currentFrame.value;
+      },
+      set: (value) => {
+        if (!playerStore.isSynced) {
+          currentFrame.value = value;
+          updateFrame(value);
+        }
+      }
+    });
 
     // const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
     // const timelines = computed(() => timelineStore.forVideo(route.params.id));
@@ -469,7 +500,11 @@ export default {
       // fetchPlugin,
       // onKeyDown,
       currentFrame,
-      updateFrame
+      updateFrame,
+      toggleSliderSync,
+      currentTime,
+      sliderValue,
+      getTimecode
     };
   },
   components: {
@@ -534,11 +569,11 @@ export default {
 }
 
 .soccer-field {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 16px; /* Abstand zu den Tabs */
-  width: 100%; /* Nimmt die volle Breite der v-card ein */
+  position: relative;
+  width: 100%;
+  max-width: 600px;  /* Beispielgröße für das Bild */
+  height: 400px;
+  margin: auto;
 }
 
 .soccer-image {

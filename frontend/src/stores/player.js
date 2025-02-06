@@ -9,6 +9,7 @@ export const usePlayerStore = defineStore("player", () => {
   const targetTime = ref(0.0);
   const playing = ref(false);
   const ended = ref(false);
+  const isSynced = ref(false);
 
   const hiddenVolume = ref(1.0);
   const mute = ref(false);
@@ -21,7 +22,6 @@ export const usePlayerStore = defineStore("player", () => {
   });
   const isLoading = ref(false);
 
-  // Getters
   const videoDuration = computed(() => {
     return video.value && "duration" in video.value ? video.value.duration : 0.0;
   });
@@ -73,6 +73,10 @@ export const usePlayerStore = defineStore("player", () => {
 
   const toggleMute = () => {
     mute.value = !mute.value;
+  };
+
+  const toggleSliderSync = () => {
+    isSynced.value = !isSynced.value;
   };
 
   const setTargetTime = (time) => {
@@ -134,6 +138,7 @@ export const usePlayerStore = defineStore("player", () => {
     videoId,
     videoUrl,
     volume,
+    isSynced,
     clearStore,
     setSelectedTimeRangeStart,
     setSelectedTimeRangeEnd,
@@ -146,5 +151,6 @@ export const usePlayerStore = defineStore("player", () => {
     setPlaying,
     togglePlaying,
     fetchVideo,
+    toggleSliderSync
   };
 });

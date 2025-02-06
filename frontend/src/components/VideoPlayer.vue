@@ -32,7 +32,7 @@
       </v-btn>
       <v-btn @click="deltaSeek(1)" size="small">
         <v-icon> mdi-skip-forward</v-icon>
-      </v-btn>
+      </v-btn> 
       <v-btn @click="toggleSyncTime()" size="small">
         <v-icon v-if="syncTime"> mdi-link</v-icon>
         <v-icon v-else> mdi-link-off</v-icon>
@@ -85,7 +85,7 @@
         hide-details
         color="primary"
         :thumb-size="15"
-        ></v-slider>
+      ></v-slider>
     </v-row>
   </v-container>
 </template>
@@ -93,7 +93,7 @@
 <script>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { usePlayerStore } from "@/stores/player";
-import { getDisplayTime, getTimecode } from "@/plugins/time";
+import { getTimecode } from "@/plugins/time";
 
 export default {
   emits: ["loadedData", "canPlay"],
@@ -206,10 +206,23 @@ export default {
       return (playerStore.currentTime / playerStore.videoDuration) * 100;
     });
 
-    watch(progress, (newProgress) => {
-      progress.value = newProgress;
-      emit("update-slider", newProgress); 
-    });
+    // watch(progress, (newProgress) => {
+    //   progress.value = newProgress;
+    //   emit("update-slider", newProgress); 
+    // });
+    // watch(progress, (newProgress) => {
+    //   if (playerStore.isSynced) {
+    //     const newTime = (playerStore.videoDuration * newProgress) / 100;
+    //     playerStore.setCurrentTime(newTime);
+    //   }
+    // });
+
+    // watch(() => playerStore.currentTime, (newTime) => {
+    //   if (!playerStore.isSynced) {
+    //     const newProgress = (newTime / playerStore.videoDuration) * 100;
+    //     progress.value = newProgress;
+    //   }
+    // });
 
     watch(targetTime, (newTargetTime) => {
       const delta = 1 / playerStore.videoFPS;
@@ -260,9 +273,8 @@ export default {
       onVolumeChange,
       onLoadedData,
       onCanPlay,
-      getDisplayTime,
       getTimecode,
-      playerStore
+      playerStore,
     };
   },
 };
