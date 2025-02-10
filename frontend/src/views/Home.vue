@@ -14,7 +14,7 @@
             <v-icon color="primary">mdi-plus</v-icon>
             Run Batch Plugin
           </v-btn>
-          <!-- <ModalPlugin v-model="showModalPlugin" :videoIds="selectedVideosIds" /> -->
+          <ModalPlugin v-model="showModalPlugin" :videoIds="selectedVideosIds" />
         </v-col>
       </v-row>
 

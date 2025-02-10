@@ -2,7 +2,7 @@
   <v-container class="d-flex flex-column">
     <v-row ref="videoContainer" class="video-container">
       <video
-        class="video-player" 
+        class="video-video"
         ref="videoElement"
         v-on:play="onPlay"
         v-on:pause="onPause"
@@ -53,9 +53,9 @@
             :key="index"
             class="speed-item"
           >
-            <v-list-item-title v-on:click="onSpeedChange(index)">{{
-              item.title
-            }}</v-list-item-title>
+            <v-list-item-title v-on:click="onSpeedChange(index)">
+              {{ item.title }}
+            </v-list-item-title>
           </v-list-item>
         </v-list>
       </v-menu>
@@ -281,7 +281,7 @@ export default {
 </script>
 
 <style>
-.sticky-video {
+/* .sticky-video {
   position: fixed;
   height: auto !important;
   width: 15vw !important;
@@ -289,37 +289,20 @@ export default {
   min-height: unset !important;
   top: 80px;
   right: 15px;
-}
-.video-player {
+} */
+ 
+.video-video {
   max-width: 100%;
-  height: 100%;
   max-height: 100%;
-  min-height: 480px;
-  background-color: black;
 }
 
 .video-control {
   gap: 5px;
-  /* margin-top: 5px;
-  margin-bottom: 0px; */
-  /* max-width: 100%; */
-}
-
-.video-control > .progress-bar {
-  margin-top: auto;
-  margin-bottom: auto;
 }
 
 .video-control > .time-code {
   margin-top: auto;
   margin-bottom: auto;
-}
-
-.video-container {
-  background-color: black;
-  justify-content: center;
-  max-height: 100%;
-  min-height: 480px;
 }
 
 .speed-item {
