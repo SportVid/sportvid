@@ -4,36 +4,33 @@
       <v-toolbar color="primary" dark class="pl-4">
         {{ $t("modal.plugin.title") }}
         </v-toolbar>
-      <v-card-text>
+      <v-card-text style="overflow: hidden;">
         <v-row>
-          <v-col cols="3">
+          <v-col cols="3" class="ml-n3">
             <v-text-field 
-              v-model="search" 
+              v-model="searchPlugin" 
               label="Search Plugin" 
               class="searchField"
               variant="solo-filled"
-              hide-details 
+              hide-details
               clearable
-              clear-icon="mdi-close-circle-outline">
-            </v-text-field>
+              clear-icon="mdi-close-circle-outline"
+            ></v-text-field>
 
             <v-treeview
-              class="mt-2"
-              :items="plugins_sorted"
-              :search="search"
-              :active.sync="active"
-              :open.sync="open"
-              activatable
-              style="cursor: pointer; overflow-y: scroll; height: 500px;" 
+              v-model="activeNode" 
+              class="mt-2 pr-4 treeview"
+              :items="pluginsSorted"
+              :search="searchPlugin"
+              item-value="id"
+              item-title="name"
+              style="cursor: pointer; overflow-y: auto; height: 55vh;"
             >
               <template v-slot:prepend="{ item }">
                 <v-icon v-if="!item.children || item.children.length === 0">
                   {{ item.icon }}
                 </v-icon>
               </template> 
-              <template v-slot:label="{ item }">
-                {{ item.title }}
-              </template>
             </v-treeview>
           </v-col>
 
@@ -42,29 +39,38 @@
           <v-col cols="9">
             <div 
               v-if="!selected" 
-              class="text-h6 text-grey font-weight-light" 
-              style="text-align: center; height: 60vh"
+              class="text-h4 text-grey font-weight-light" 
+              style="
+                display: flex; 
+                justify-content: center; 
+                align-items: center; 
+                height: 60vh;
+              "
             >
               {{ $t("modal.plugin.search.select") }}
             </div>
             <v-card 
               v-else 
               :key="selected.id" 
-              class="mx-auto overflow-y-auto" 
-              style="max-height: calc(80vh - 50px);"
+              class="mx-auto" 
+              style="height: 60vh;"
               flat
             >
               <v-card-title class="mb-0"> {{ selected.name }} </v-card-title>
-              <!-- <v-card-text>
-                <div 
-                  class="" 
+
+              <v-card-text 
+                style="flex-grow: 1; overflow-y: auto; max-height: calc(60vh - 10vh);"
+              >
+                <div
                   style="padding-bottom: 2em;" 
                   v-html="selected.description"
                 ></div>
+
                 <Parameters 
                   :parameters="selected.parameters" 
                   :videoIds="videoIds"
                 ></Parameters>
+
                 <v-expansion-panels 
                   v-if="selected.optional_parameters && selected.optional_parameters.length > 0"
                 >
@@ -81,12 +87,13 @@
                     </v-expansion-panel-content>
                   </v-expansion-panel>
                 </v-expansion-panels>
-              </v-card-text> -->
+              </v-card-text>
             </v-card>
             <v-row>
                 <v-spacer></v-spacer>
                   <v-btn 
-                  :disabled="!selected" 
+                  :disabled="!selected"
+                  class="mr-4" 
                   @click="runPlugin(
                     selected.plugin,
                     selected.parameters,
@@ -105,7 +112,7 @@
 </template>
 
 <script>
-import { ref, reactive, computed, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { mapStores } from "pinia";
 import { usePluginRunStore } from "@/stores/plugin_run";
@@ -123,17 +130,15 @@ export default {
   setup(props, { emit }) {
     const dialog = ref(props.modelValue);
     const { t } = useI18n();
-    const search = ref(null);
-    const open = ref([1, 2]);
-    const active = ref([]);
-
-    const plugins = reactive([
+    const searchPlugin = ref(null);
+    const activeNode = ref([]);
+    const plugins = ref([
       {
         id: 1,
-        title: t("modal.plugin.groups.audio"),
+        name: t("modal.plugin.groups.audio"),
         children: [
           {
-            title: t("modal.plugin.audio_rms.plugin_name"),
+            name: t("modal.plugin.audio_rms.plugin_name"),
             description: t("modal.plugin.audio_rms.plugin_description"),
             icon: "mdi-waveform",
             plugin: "audio_rms",
@@ -159,7 +164,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.audio_frequency.plugin_name"),
+            name: t("modal.plugin.audio_frequency.plugin_name"),
             description: t("modal.plugin.audio_frequency.plugin_description"),
             icon: "mdi-waveform",
             plugin: "audio_freq",
@@ -194,7 +199,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.audio_waveform.plugin_name"),
+            name: t("modal.plugin.audio_waveform.plugin_name"),
             description: t("modal.plugin.audio_waveform.plugin_description"),
             icon: "mdi-waveform",
             plugin: "audio_amp",
@@ -220,7 +225,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.whisper.plugin_name"),
+            name: t("modal.plugin.whisper.plugin_name"),
             description: t("modal.plugin.whisper.plugin_description"),
             icon: "mdi-waveform",
             plugin: "whisper",
@@ -232,10 +237,10 @@ export default {
       },
       {
         id: 2,
-        title: t("modal.plugin.groups.face"),
+        name: t("modal.plugin.groups.face"),
         children: [
           {
-            title: t("modal.plugin.face_clustering.plugin_name"),
+            name: t("modal.plugin.face_clustering.plugin_name"),
             description: t("modal.plugin.face_clustering.plugin_description"),
             icon: "mdi-ungroup",
             plugin: "face_clustering",
@@ -303,7 +308,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.face_identification.plugin_name"),
+            name: t("modal.plugin.face_identification.plugin_name"),
             description: t("modal.plugin.face_identification.plugin_description"),
             icon: "mdi-account-search",
             plugin: "insightface_identification",
@@ -342,7 +347,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.faceemotion.plugin_name"),
+            name: t("modal.plugin.faceemotion.plugin_name"),
             description: t("modal.plugin.faceemotion.plugin_description"),
             icon: "mdi-emoticon-happy-outline",
             plugin: "deepface_emotion",
@@ -386,7 +391,7 @@ export default {
             ],
           },
           // {
-          //   title: t("modal.plugin.facesize.plugin_name"),
+          //   name: t("modal.plugin.facesize.plugin_name"),
           //   icon: "mdi-face-recognition",
           //   plugin: "insightface_facesize",
           //   id: 204,
@@ -422,10 +427,10 @@ export default {
       },
       {
         id: 3,
-        title: t("modal.plugin.groups.color"),
+        name: t("modal.plugin.groups.color"),
         children: [
           {
-            title: t("modal.plugin.color_analysis.plugin_name"),
+            name: t("modal.plugin.color_analysis.plugin_name"),
             description: t("modal.plugin.color_analysis.plugin_description"),
             icon: "mdi-palette",
             plugin: "color_analysis",
@@ -478,7 +483,7 @@ export default {
             ],
           },
           {
-            title: t(
+            name: t(
               "modal.plugin.color_brightness_analysis.plugin_name"
             ),
             description: t("modal.plugin.color_brightness_analysis.plugin_description"),
@@ -517,10 +522,10 @@ export default {
       },
       {
         id: 4,
-        title: t("modal.plugin.groups.identification"),
+        name: t("modal.plugin.groups.identification"),
         children: [
           {
-            title: t("modal.plugin.clip.plugin_name"),
+            name: t("modal.plugin.clip.plugin_name"),
             description: t("modal.plugin.clip.plugin_description"),
             icon: "mdi-eye",
             plugin: "clip",
@@ -552,7 +557,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.clip_ontology.plugin_name"),
+            name: t("modal.plugin.clip_ontology.plugin_name"),
             description: t("modal.plugin.clip_ontology.plugin_description"),
             icon: "mdi-eye",
             plugin: "clip_ontology",
@@ -593,7 +598,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.x_clip.plugin_name"),
+            name: t("modal.plugin.x_clip.plugin_name"),
             description: t("modal.plugin.x_clip.plugin_description"),
             icon: "mdi-eye",
             plugin: "x_clip",
@@ -625,7 +630,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.places_classification.plugin_name"),
+            name: t("modal.plugin.places_classification.plugin_name"),
             description: t("modal.plugin.places_classification.plugin_description"),
             icon: "mdi-map-marker",
             plugin: "places_classification",
@@ -661,7 +666,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.place_clustering.plugin_name"),
+            name: t("modal.plugin.place_clustering.plugin_name"),
             description: t("modal.plugin.place_clustering.plugin_description"),
             icon: "mdi-ungroup",
             plugin: "place_clustering",
@@ -713,7 +718,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.blip.plugin_name"),
+            name: t("modal.plugin.blip.plugin_name"),
             description: t("modal.plugin.blip.plugin_description"),
             icon: "mdi-eye",
             plugin: "blip_vqa",
@@ -744,7 +749,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.ocr.plugin_name"),
+            name: t("modal.plugin.ocr.plugin_name"),
             icon: "mdi-text-shadow",
             plugin: "ocr_video_detector_onnx",
             id: 407,
@@ -778,10 +783,10 @@ export default {
       },
       {
         id: 5,
-        title: t("modal.plugin.groups.shot"),
+        name: t("modal.plugin.groups.shot"),
         children: [
           {
-            title: t("modal.plugin.shot_detection.plugin_name"),
+            name: t("modal.plugin.shot_detection.plugin_name"),
             description: t("modal.plugin.shot_detection.plugin_description"),
             icon: "mdi-arrow-expand-horizontal",
             plugin: "shotdetection",
@@ -807,7 +812,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.shot_density.plugin_name"),
+            name: t("modal.plugin.shot_density.plugin_name"),
             description: t("modal.plugin.shot_density.plugin_description"),
             icon: "mdi-sine-wave",
             plugin: "shot_density",
@@ -847,7 +852,7 @@ export default {
             ],
           },
           {
-            title: t(
+            name: t(
               "modal.plugin.shot_type_classification.plugin_name"
             ),
             description: t("modal.plugin.shot_type_classification.plugin_description"),
@@ -883,7 +888,7 @@ export default {
             ],
           },
           {
-            title: t("modal.plugin.shot_scalar_annotation.plugin_name"),
+            name: t("modal.plugin.shot_scalar_annotation.plugin_name"),
             description: t("modal.plugin.shot_scalar_annotation.plugin_description"),
             icon: "mdi-label-outline",
             plugin: "shot_scalar_annotation",
@@ -913,7 +918,7 @@ export default {
             optional_parameters: [],
           },
           {
-            title: t("modal.plugin.thumbnail.plugin_name"),
+            name: t("modal.plugin.thumbnail.plugin_name"),
             description: t("modal.plugin.thumbnail.plugin_description"),
             icon: "mdi-image-multiple",
             plugin: "thumbnail",
@@ -925,10 +930,10 @@ export default {
       },
       {
         id: 6,
-        title: t("modal.plugin.groups.aggregation"),
+        name: t("modal.plugin.groups.aggregation"),
         children: [
           {
-            title: t("modal.plugin.aggregation.plugin_name"),
+            name: t("modal.plugin.aggregation.plugin_name"),
             description: t("modal.plugin.aggregation.plugin_description"),
             icon: "mdi-sigma",
             plugin: "aggregate_scalar",
@@ -961,7 +966,7 @@ export default {
             ],
             optional_parameters: [],
           }, {
-            title: t("modal.plugin.invert.plugin_name"),
+            name: t("modal.plugin.invert.plugin_name"),
             description: t("modal.plugin.invert.plugin_description"),
             icon: "mdi-numeric-negative-1",
             plugin: "invert_scalar",
@@ -986,17 +991,17 @@ export default {
       },
     ]);
 
-    const plugins_sorted = computed(() => {
-      return plugins.slice(0).sort((a, b) => a.title.localeCompare(b.title));
+    const pluginsSorted = computed(() => {
+      return plugins.value.slice(0).sort((a, b) => a.name.localeCompare(b.name));
     });
 
     const selected = computed(() => {
-      if (!active.value.length) return undefined;
+      if (!activeNode.value.length) return undefined;
 
-      const id = active.value[0];
+      const id = activeNode.value[0];
       if (id < 100) return undefined;
 
-      let plugin_group = plugins.find((group) => group.id === parseInt(id / 100));
+      let plugin_group = plugins.value.find((group) => group.id === parseInt(id / 100));
       let plugin = plugin_group?.children.find((plugin) => plugin.id === id);
 
       return plugin;
@@ -1058,10 +1063,9 @@ export default {
 
     return {
       dialog,
-      search,
-      open,
-      active,
-      plugins_sorted,
+      searchPlugin,
+      activeNode,
+      pluginsSorted,
       selected,
       runPlugin
     };
