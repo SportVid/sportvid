@@ -1,9 +1,8 @@
 <template>
   <div>
-    <v-menu min-width="175" offset-y bottom left>
-      <!-- open-on-hover close-delay -->
-      <template v-slot:activator="{ attrs }">
-        <v-btn tile text v-bind="attrs" @click="showModalPlugin = true" class="ml-n2">
+    <v-menu min-width="175">
+      <template v-slot:activator="{ props }">
+        <v-btn v-bind="props" @click="showModalPlugin = true">
           <v-icon color="primary">mdi-plus</v-icon>
           Run Plugin
         </v-btn>
@@ -15,135 +14,94 @@
 </template>
 
 <script>
+import { ref, computed } from "vue";
 import ModalPlugin from "@/components/ModalPlugin.vue";
-
-import { mapStores } from "pinia";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 
 export default {
-  data() {
-    return {
-      showModalPlugin: false,
-    };
-  },
-  methods: {
-    progressColor(status) {
-      if (status === "ERROR") {
-        return "red";
-      }
-      if (status === "RUNNING") {
-        return "blue";
-      }
-      if (status === "DONE") {
-        return "green";
-      }
-      return "yellow";
-    },
-    indeterminate(status) {
-      if (status === "QUEUED") {
-        return true;
-      }
-      if (status === "WAITING") {
-        return true;
-      }
-      return false;
-    },
-    pluginStatus(status) {
-      if (status === "UNKNOWN") {
-        return this.$t("modal.plugin.status.unknown");
-      }
-      if (status === "ERROR") {
-        return this.$t("modal.plugin.status.error");
-      }
-      if (status === "DONE") {
-        return this.$t("modal.plugin.status.done");
-      }
-      if (status === "RUNNING") {
-        return this.$t("modal.plugin.status.running");
-      }
-      if (status === "QUEUED") {
-        return this.$t("modal.plugin.status.queued");
-      }
-      if (status === "WAITING") {
-        return this.$t("modal.plugin.status.waiting");
-      }
-      return status;
-    },
-    pluginName(type) {
-      if (type === "aggregate_scalar") {
-        return this.$t("modal.plugin.aggregation.plugin_name");
-      }
-      if (type === "audio_amp") {
-        return this.$t("modal.plugin.audio_waveform.plugin_name");
-      }
-      if (type === "audio_freq") {
-        return this.$t("modal.plugin.audio_frequency.plugin_name");
-      }
-      if (type === "clip") {
-        return this.$t("modal.plugin.clip.plugin_name");
-      }
-      if (type === "color_analysis") {
-        return this.$t("modal.plugin.color_analysis.plugin_name");
-      }
-      if (type === "facedetection") {
-        return this.$t("modal.plugin.facedetection.plugin_name");
-      }
-      if (type === "face_clustering") {
-        return this.$t("modal.plugin.face_clustering.plugin_name");
-      }
-      if (type === "deepface_emotion") {
-        return this.$t("modal.plugin.faceemotion.plugin_name");
-      }
-      if (type === "insightface_facesize") {
-        return this.$t("modal.plugin.facesize.plugin_name");
-      }
-      if (type === "places_classification") {
-        return this.$t("modal.plugin.places_classification.plugin_name");
-      }
-      if (type === "shotdetection") {
-        return this.$t("modal.plugin.shot_detection.plugin_name");
-      }
-      if (type === "shot_density") {
-        return this.$t("modal.plugin.shot_density.plugin_name");
-      }
-      if (type === "shot_type_classification") {
-        return this.$t("modal.plugin.shot_type_classification.plugin_name");
-      }
-      if (type === "thumbnail") {
-        return this.$t("modal.plugin.thumbnail.plugin_name");
-      }
-      return type;
-    },
-  },
-  computed: {
-    videoId() {
-      return this.playerStore.videoId;
-    },
-    loggedIn() {
-      return this.userStore.loggedIn;
-    },
-    pluginRuns() {
-      const pluginRuns = this.pluginRunStore
-        .forVideo(this.playerStore.videoId)
-        .map((e) => {
-          e.data = Date.parse(e.date);
-          return e;
-        })
-        .sort((a, b) => a - b);
-      return pluginRuns;
-    },
-    numRunningPlugins() {
-      return this.pluginRuns.filter((e) => {
-        return e.status !== "DONE" && e.status !== "ERROR";
-      }).length;
-    },
-
-    ...mapStores(usePlayerStore, usePluginRunStore, usePluginRunResultStore),
-  },
   components: {
     ModalPlugin,
+  },
+  setup() {
+    const showModalPlugin = ref(false);
+
+    const playerStore = usePlayerStore();
+    const pluginRunStore = usePluginRunStore();
+    const pluginRunResultStore = usePluginRunResultStore();
+
+    const videoId = computed(() => playerStore.videoId);
+    const loggedIn = computed(() => playerStore.loggedIn);
+
+    const pluginRuns = computed(() => {
+      return pluginRunStore
+        .forVideo(playerStore.videoId)
+        .map((e) => ({
+          ...e,
+          date: Date.parse(e.date),
+        }))
+        .sort((a, b) => a.date - b.date);
+    });
+
+    const numRunningPlugins = computed(() =>
+      pluginRuns.value.filter((e) => e.status !== "DONE" && e.status !== "ERROR").length
+    );
+
+    const progressColor = (status) => {
+      const colors = {
+        ERROR: "red",
+        RUNNING: "blue",
+        DONE: "green",
+      };
+      return colors[status] || "yellow";
+    };
+
+    const indeterminate = (status) => ["QUEUED", "WAITING"].includes(status);
+
+    const pluginStatus = (status) => {
+      const statusMap = {
+        UNKNOWN: "modal.plugin.status.unknown",
+        ERROR: "modal.plugin.status.error",
+        DONE: "modal.plugin.status.done",
+        RUNNING: "modal.plugin.status.running",
+        QUEUED: "modal.plugin.status.queued",
+        WAITING: "modal.plugin.status.waiting",
+      };
+      return statusMap[status] ? $t(statusMap[status]) : status;
+    };
+
+    const pluginName = (type) => {
+      const pluginMap = {
+        aggregate_scalar: "modal.plugin.aggregation.plugin_name",
+        audio_amp: "modal.plugin.audio_waveform.plugin_name",
+        audio_freq: "modal.plugin.audio_frequency.plugin_name",
+        clip: "modal.plugin.clip.plugin_name",
+        color_analysis: "modal.plugin.color_analysis.plugin_name",
+        facedetection: "modal.plugin.facedetection.plugin_name",
+        face_clustering: "modal.plugin.face_clustering.plugin_name",
+        deepface_emotion: "modal.plugin.faceemotion.plugin_name",
+        insightface_facesize: "modal.plugin.facesize.plugin_name",
+        places_classification: "modal.plugin.places_classification.plugin_name",
+        shotdetection: "modal.plugin.shot_detection.plugin_name",
+        shot_density: "modal.plugin.shot_density.plugin_name",
+        shot_type_classification: "modal.plugin.shot_type_classification.plugin_name",
+        thumbnail: "modal.plugin.thumbnail.plugin_name",
+      };
+      return pluginMap[type] ? $t(pluginMap[type]) : type;
+    };
+
+    return {
+      showModalPlugin,
+      videoId,
+      loggedIn,
+      pluginRuns,
+      numRunningPlugins,
+      progressColor,
+      indeterminate,
+      pluginStatus,
+      pluginName,
+    };
   },
 };
 </script>

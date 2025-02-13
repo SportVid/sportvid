@@ -15,14 +15,14 @@
       </v-btn>
 
       <v-spacer></v-spacer>
-      <v-btn class="mr-2" v-if="videoView">PluginMenu</v-btn>
-      <v-btn class="mr-2" v-if="videoView">History</v-btn>
+      <PluginMenu style="margin-right: 10px;" v-if="videoView" />
+      <History style="margin-right: 10px;" v-if="videoView" />
       <v-btn class="mr-2" v-if="videoView">AnnotationMenu</v-btn>
       <v-btn class="mr-4" v-if="videoView">VideoMenu</v-btn>
       <UserMenu />
     </v-app-bar>
     <router-view />
-    <!-- <ModalError /> -->
+    <ModalError />
   </v-app>
 </template>
 
@@ -35,19 +35,19 @@ import { useErrorStore } from "@/stores/error";
 
 import UserMenu from "@/components/UserMenu.vue";
 // import VideoMenu from "@/components/VideoMenu.vue";
-// import PluginMenu from "@/components/PluginMenu.vue";
+import PluginMenu from "@/components/PluginMenu.vue";
 // import AnnotationMenu from "@/components/AnnotationMenu.vue";
-// import History from "./components/History.vue";
-// import ModalError from "./components/ModalError.vue";
+import History from "./components/History.vue";
+import ModalError from "./components/ModalError.vue";
 
 export default {
   components: {
     UserMenu,
     // VideoMenu,
-    // PluginMenu,
+    PluginMenu,
     // AnnotationMenu,
-    // History,
-    // ModalError
+    History,
+    ModalError
   },
   setup() {
     const appName = process.env.VUE_APP_NAME;

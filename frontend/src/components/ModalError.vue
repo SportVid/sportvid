@@ -1,18 +1,14 @@
 <template>
   <v-dialog v-model="dialog" max-width="90%">
     <v-card>
-      <v-card-title class="mb-2">
-        {{ $t("modal.error.title") }}
-
-        <v-btn icon @click="clearError" absolute right>
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+      <v-card-title class="mt-2 ml-2">
+        <span class="text-accent">{{ $t("modal.error.title") }}</span>
       </v-card-title>
       <v-card-text>
         {{ errorMessage }}
       </v-card-text>
-      <v-card-actions class="pt-0">
-        <v-btn @click="clearError">{{ $t("modal.error.close") }}</v-btn>
+      <v-card-actions class="mb-2 mr-2">
+        <v-btn @click="clearError" variant="elevated">{{ $t("modal.error.close") }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -35,7 +31,6 @@ export default {
 
     const clearError = () => {
       dialog.value = false;
-      errorStore.clearError(); 
     };
 
     watch(error, (value) => {

@@ -2,9 +2,7 @@
   <div>
     <v-menu location="bottom right"  offset-y>
       <template v-slot:activator="{ props }">
-        <v-btn 
-          tile 
-          text 
+        <v-btn
           v-bind="props" 
           class="ml-n4 pl-6 pr-6" 
           :title="$t('user.menu.title')"

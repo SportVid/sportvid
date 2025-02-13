@@ -47,7 +47,8 @@
             <v-progress-linear
               v-if="isUploading"
               v-model="uploadingProgress"
-              class="mb-4 mt-n4"></v-progress-linear>
+              class="mb-4 mt-n4"
+            ></v-progress-linear>
 
             <v-btn class="mr-4" :disabled="disabled" @click="uploadVideo">
               {{ $t("modal.video.upload.update") }}

@@ -58,7 +58,7 @@
               ></v-checkbox>
             </v-card-actions>
           </v-card-text>
-          <!-- <v-progress-linear :value="videosProgress[item.id]"></v-progress-linear> -->
+          <v-progress-linear v-model="videosProgress[item.id]" />
         </v-card>
       </v-container>
     </v-container>
@@ -97,9 +97,8 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
-// import { usePluginRunStore } from "@/stores/plugin_run";
-// import { useTimelineStore } from "@/stores/timeline";
-// import { usePluginRunResultStore } from "@/stores/plugin_run_result";
+import { usePluginRunStore } from "@/stores/plugin_run";
+import { useTimelineStore } from "@/stores/timeline";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalVideoUpload from "@/components/ModalVideoUpload.vue";
 import ModalVideoRename from "@/components/ModalVideoRename.vue";
@@ -115,9 +114,8 @@ export default {
     const router = useRouter();
     const videoStore = useVideoStore();
     const userStore = useUserStore();
-    // const pluginRunStore = usePluginRunStore();
-    // const timelineStore = useTimelineStore();
-    // const pluginRunResultStore = usePluginRunResultStore();
+    const pluginRunStore = usePluginRunStore();
+    const timelineStore = useTimelineStore();
 
     const showModalPlugin = ref(false);
     const selectedVideos = ref({});
@@ -143,10 +141,10 @@ export default {
 
     const fetchData = async (fetchTimelines = false) => {
       await videoStore.fetchAll();
-      // await pluginRunStore.fetchAll({ addResults: false });
-      // if (fetchTimelines) {
-      //   await timelineStore.fetchAll({ addResultsType: true });
-      // }
+      await pluginRunStore.fetchAll({ addResults: false });
+      if (fetchTimelines) {
+        await timelineStore.fetchAll({ addResultsType: true });
+      }
     };
 
     const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
@@ -165,19 +163,19 @@ export default {
       }
     );
 
-    // watch(
-    //   () => pluginRunStore.pluginInProgress,
-    //   (newState) => {
-    //     if (newState) {
-    //       fetchPluginTimer.value = setInterval(() => {
-    //         fetchData();
-    //       }, 2000);
-    //     } else if (fetchPluginTimer.value) {
-    //       clearInterval(fetchPluginTimer.value);
-    //     }
-    //   },
-    //   { immediate: true }
-    // );
+    watch(
+      () => pluginRunStore.pluginInProgress,
+      (newState) => {
+        if (newState) {
+          fetchPluginTimer.value = setInterval(() => {
+            fetchData();
+          }, 2000);
+        } else if (fetchPluginTimer.value) {
+          clearInterval(fetchPluginTimer.value);
+        }
+      },
+      { immediate: true }
+    );
 
     return {
       videos,

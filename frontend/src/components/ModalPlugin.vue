@@ -114,7 +114,6 @@
 <script>
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { mapStores } from "pinia";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import Parameters from "./Parameters.vue";
 
@@ -1007,7 +1006,7 @@ export default {
       return plugin;
     });
 
-    const { pluginRunStore } = mapStores(usePluginRunStore);
+    const pluginRunStore = usePluginRunStore();
 
     const runPlugin = async (plugin, parameters, optional_parameters) => {
       parameters = [...parameters, ...optional_parameters];
