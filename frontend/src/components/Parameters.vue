@@ -8,13 +8,13 @@
         v-if="parameter.field == 'select_options'" :key="parameter.name"></v-select>
 
       <v-select v-model="parameter.value" :items="shot_timelines" :label="parameter.text" :hint="parameter.hint"
-        item-text="name" item-value="ids" v-if="parameter.field == 'select_timeline' && shot_timelines.length > 0"
-        :key="parameter.name" persistent-hint></v-select>
+        item-text="name" item-value="ids" v-if="parameter.field == 'select_timeline' "
+        :key="parameter.name" persistent-hint variant="underlined"></v-select>
 
       <v-select v-model="parameter.value" :items="scalar_timelines" :label="parameter.text" :hint="parameter.hint"
         item-text="name" item-value="ids" v-if="parameter.field == 'select_scalar_timelines' &&
       scalar_timelines.length > 0
-      " :key="parameter.name" multiple persistent-hint></v-select>
+      " :key="parameter.name" multiple persistent-hint ></v-select>
 
       <v-select v-model="parameter.value" :items="scalar_timelines" :label="parameter.text" :hint="parameter.hint"
         item-text="name" item-value="ids" v-if="parameter.field == 'select_scalar_timeline' &&
@@ -38,12 +38,12 @@
         </v-slider>
       </div>
 
-      <div v-if="parameter.field == 'buttongroup'" :key="parameter.name">
-        <p>
+      <div v-if="parameter.field == 'buttongroup'" :key="parameter.name" class="mt-8">
+        <p class="mb-2">
           {{ parameter.text }}
         </p>
-        <v-btn-toggle v-model="parameter.value" :label="parameter.text" tile group mandatory>
-          <v-btn v-for="button in parameter.buttons" :key="button">
+        <v-btn-toggle v-model="parameter.value" :label="parameter.text" tile group mandatory class="ml-n2">
+          <v-btn v-for="button in parameter.buttons" :key="button" elevation="2" class="mx-2 my-2" dark color="primary">
             {{ button }}
           </v-btn>
         </v-btn-toggle>
@@ -62,7 +62,7 @@
       </div>
 
       <div v-if="parameter.field == 'checkbox'" :key="parameter.name">
-        <v-checkbox v-model="parameter.value" :label="parameter.text" :hint="parameter.hint" hide-details>
+        <v-checkbox v-model="parameter.value" :label="parameter.text" :hint="parameter.hint" hide-details density="compact" class="ml-2 checkbox-label-spacing">
         </v-checkbox>
       </div>
     </template>
@@ -122,3 +122,9 @@ export default {
   },
 };
 </script>
+
+<style>
+.checkbox-label-spacing .v-label {
+  margin-left: 6px;
+}
+</style>

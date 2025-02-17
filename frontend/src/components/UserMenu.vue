@@ -4,7 +4,7 @@
       <template v-slot:activator="{ props }">
         <v-btn
           v-bind="props" 
-          class="ml-n4 pl-6 pr-6" 
+          class="pl-4 pr-4 mr-4" 
           :title="$t('user.menu.title')"
         >
           <v-icon size="x-large" color="primary" class="mr-1">

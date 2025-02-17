@@ -1,9 +1,21 @@
 <template>
   <v-dialog v-model="dialog" max-width="90%" style="height: 85vh;">
     <v-card>
-      <v-toolbar color="primary" dark class="pl-4">
-        {{ $t("modal.plugin.title") }}
+      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
+          {{ $t("modal.plugin.title") }}
+
+          <v-spacer></v-spacer>
+
+          <v-btn 
+            icon 
+            @click="dialog = false" 
+            variant="plain" 
+            color="grey"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
         </v-toolbar>
+      
       <v-card-text style="overflow: hidden;">
         <v-row>
           <v-col cols="3" class="ml-n3">
@@ -56,10 +68,10 @@
               style="height: 60vh;"
               flat
             >
-              <v-card-title class="mb-0"> {{ selected.name }} </v-card-title>
+              <v-card-title class="mb-0">{{ selected.name }}</v-card-title>
 
               <v-card-text 
-                style="flex-grow: 1; overflow-y: auto; max-height: calc(60vh - 10vh);"
+                style="flex-grow: 1; overflow-y: auto; max-height: 50vh;"
               >
                 <div
                   style="padding-bottom: 2em;" 
@@ -89,21 +101,20 @@
                 </v-expansion-panels>
               </v-card-text>
             </v-card>
+
             <v-row>
-                <v-spacer></v-spacer>
-                  <v-btn 
-                  :disabled="!selected"
-                  class="mr-4" 
-                  @click="runPlugin(
-                    selected.plugin,
-                    selected.parameters,
-                    selected.optional_parameters
-                  )"
-                >
-                  {{ $t("modal.plugin.run") }}
-                </v-btn>
-                <v-btn @click="dialog = false">{{ $t("modal.plugin.close") }}</v-btn>
-              </v-row>
+              <v-spacer></v-spacer>
+              <v-btn 
+                v-if="selected"
+                @click="runPlugin(
+                  selected.plugin,
+                  selected.parameters,
+                  selected.optional_parameters
+                )"
+              >
+                {{ $t("modal.plugin.run") }}
+              </v-btn>
+            </v-row>
           </v-col>
         </v-row>        
       </v-card-text>      

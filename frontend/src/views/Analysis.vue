@@ -1,5 +1,5 @@
 <template>
-  <v-main class="main" tabindex="0" ref="main">
+  <v-main class="main" tabindex="0" ref="main" @click="handleClickOutsideButton">
     <v-container fluid>
       <v-row class="ma-n2">
         <v-col cols="6">
@@ -45,17 +45,33 @@
             <v-row class="flex-grow-1">
               <v-col>
                 <VideoVisualizer />
+                <v-btn
+                  :color="isButtonActive ? 'red' : 'grey'"
+                  dark
+                  icon="mdi-circle-medium"
+                  variant="icon"
+                  @click="toggleButton"
+                  class="custom-button"
+                >
+                </v-btn>
               </v-col>
             </v-row>
           </v-card>
         </v-col>
+      </v-row>
+
+      <v-row> 
+        <v-spacer></v-spacer>
+        <div :disabled="isButtonActive" class="mr-16">
+          Mouse X: {{ mouseX }} px, Mouse Y: {{ mouseY }} px
+        </div>
       </v-row>
     </v-container>
   </v-main>
 </template>
 
 <script>
-import { ref, onMounted, watch } from "vue";
+import { ref, reactive, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
@@ -84,6 +100,32 @@ import VideoVisualizer from "@/components/VideoVisualizer.vue";
 
 export default {
   setup() {
+    const isButtonActive = ref(false); // Button aktiv/inaktiv
+    const mouseX = ref(null); // X-Koordinate der Maus
+    const mouseY = ref(null); // Y-Koordinate der Maus
+    const position = ref(null); // Speichert die Position des Klicks
+
+    // Toggle Button Aktivierung
+    const toggleButton = (event) => {
+      // Verhindern, dass der Button sofort nach Klick auf sich selbst deaktiviert wird
+      event.stopPropagation();
+      isButtonActive.value = !isButtonActive.value;
+    };
+
+    // Klick auf den Bildschirm (außerhalb des Buttons) - Position speichern
+    const handleClickOutsideButton = (event) => {
+      if (isButtonActive.value) {
+        // Speichern der Position
+        mouseX.value = event.clientX; // X-Position des Klicks
+        mouseY.value = event.clientY; // Y-Position des Klicks
+        position.value = { x: mouseX.value, y: mouseY.value }; // Speichern der Position
+
+        // Button wieder deaktivieren, nachdem die Position gespeichert wurde
+        isButtonActive.value = false;
+      }
+    };
+
+
     const route = useRoute();
 
     const videoStore = useVideoStore();
@@ -428,7 +470,13 @@ export default {
       // onAnnotateSegment,
       fetchData,
       // fetchPlugin,
-      // onKeyDown
+      // onKeyDown,
+      isButtonActive,
+      toggleButton,
+      mouseX,
+      mouseY,
+      position,
+      handleClickOutsideButton,
     };
   },
   components: {
@@ -491,5 +539,12 @@ export default {
 .loading-text {
   margin-top: 10px;
   font-size: 18px;
+}
+
+.custom-button {
+  position: absolute; /* Absolute Positionierung */
+  top: 36px; /* Abstand von oben */
+  right: -11px; /* Abstand von rechts */
+  z-index: 10;
 }
 </style>

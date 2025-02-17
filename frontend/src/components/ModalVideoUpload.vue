@@ -15,8 +15,19 @@
       </template>
 
       <v-card>
-        <v-toolbar color="primary" dark class="pl-4">
+        <v-toolbar color="primary" dark class="pl-4 pr-1 text-h6">
           {{ $t("modal.video.upload.title") }}
+
+          <v-spacer></v-spacer>
+
+          <v-btn 
+            icon 
+            @click="dialog = false" 
+            variant="plain" 
+            color="grey"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
         </v-toolbar>
 
         <v-card-text class="pt-4">
@@ -27,7 +38,11 @@
               persistent-counter 
               variant="underlined" 
               :label="$t('modal.video.upload.name')"
-              required></v-text-field>
+              required
+              clearable
+              clear-icon="mdi-close-circle-outline"
+            ></v-text-field>
+
             <v-file-input
               v-model="video.file"
               :rules="[validateFile]"
@@ -37,24 +52,22 @@
               class="mt-2"
             ></v-file-input>
 
+            <v-progress-linear
+              v-if="isUploading"
+              v-model="uploadingProgress"
+              class="mt-n4 ml-10 mb-4"
+              style="max-width: calc(100% - 40px);"
+            ></v-progress-linear>
+
             <v-checkbox
               v-model="checkbox" 
               label="Do you agree with the terms of services?" 
               required 
-              class="mt-0">
+              class="mt-n2">
             </v-checkbox>
 
-            <v-progress-linear
-              v-if="isUploading"
-              v-model="uploadingProgress"
-              class="mb-4 mt-n4"
-            ></v-progress-linear>
-
-            <v-btn class="mr-4" :disabled="disabled" @click="uploadVideo">
+            <v-btn class="mr-4 mt-n4" :disabled="disabled" @click="uploadVideo">
               {{ $t("modal.video.upload.update") }}
-            </v-btn>
-            <v-btn @click="dialog = false">
-              {{ $t("modal.video.upload.close") }}
             </v-btn>
           </v-form>
         </v-card-text>

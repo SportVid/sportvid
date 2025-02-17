@@ -5,20 +5,19 @@
         :title="appName" 
         src="./assets/logo_tib_dshs.png" 
         height="50" 
-        class="ml-2 mr-n2" 
+        class="ml-4" 
       />
       <v-toolbar-title class="pr-12">SportVid</v-toolbar-title>
 
-      <v-btn tile text to="/">
-        <v-icon color="primary" class="mr-1">mdi-movie</v-icon>
+      <v-btn v-if="videoView" to="/">
+        <v-icon color="primary">mdi-movie</v-icon>
         Videos
       </v-btn>
-
-      <v-spacer></v-spacer>
-      <PluginMenu style="margin-right: 10px;" v-if="videoView" />
-      <History style="margin-right: 10px;" v-if="videoView" />
-      <v-btn class="mr-2" v-if="videoView">AnnotationMenu</v-btn>
-      <v-btn class="mr-4" v-if="videoView">VideoMenu</v-btn>
+      <PluginMenu v-if="videoView" />
+      <History v-if="videoView" />
+      <AnnotationMenu v-if="videoView" />
+      <VideoMenu v-if="videoView" />
+      <v-divider vertical inset class="mx-2"></v-divider>
       <UserMenu />
     </v-app-bar>
     <router-view />
@@ -34,18 +33,18 @@ import { usePlayerStore } from "@/stores/player";
 import { useErrorStore } from "@/stores/error";
 
 import UserMenu from "@/components/UserMenu.vue";
-// import VideoMenu from "@/components/VideoMenu.vue";
+import VideoMenu from "@/components/VideoMenu.vue";
 import PluginMenu from "@/components/PluginMenu.vue";
-// import AnnotationMenu from "@/components/AnnotationMenu.vue";
+import AnnotationMenu from "@/components/AnnotationMenu.vue";
 import History from "./components/History.vue";
 import ModalError from "./components/ModalError.vue";
 
 export default {
   components: {
     UserMenu,
-    // VideoMenu,
+    VideoMenu,
     PluginMenu,
-    // AnnotationMenu,
+    AnnotationMenu,
     History,
     ModalError
   },

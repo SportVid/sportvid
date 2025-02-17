@@ -1,9 +1,8 @@
 <template>
   <div>
     <v-menu min-width="175" offset-y bottom left>
-      <!-- open-on-hover close-delay -->
-      <template v-slot:activator="{ attrs }">
-        <v-btn tile text v-bind="attrs" @click="showModalExport = true" class="ml-n2">
+      <template v-slot:activator="{ props }">
+        <v-btn v-bind="props" @click="showModalExport = true">
           <v-icon color="primary">mdi-swap-vertical-bold</v-icon>
           Export
         </v-btn>
@@ -15,31 +14,29 @@
 </template>
 
 <script>
-import ModalExport from "@/components/ModalExport.vue";
-
-import { mapStores } from "pinia";
+import { ref, computed } from "vue";
 import { useUserStore } from "@/stores/user";
 import { usePlayerStore } from "@/stores/player";
+import ModalExport from "@/components/ModalExport.vue";
 
 export default {
-  data() {
-    return {
-      showModalExport: false,
-    };
-  },
-  computed: {
-    videoId() {
-      const videoId = this.playerStore.videoId;
-      return videoId;
-    },
-    loggedIn() {
-      return this.userStore.loggedIn;
-    },
-
-    ...mapStores(useUserStore, usePlayerStore),
-  },
   components: {
     ModalExport,
+  },
+  setup() {
+    const userStore = useUserStore();
+    const playerStore = usePlayerStore();
+
+    const showModalExport = ref(false);
+
+    const videoId = computed(() => playerStore.videoId);
+    const loggedIn = computed(() => userStore.loggedIn);
+
+    return {
+      showModalExport,
+      videoId,
+      loggedIn,
+    };
   },
 };
 </script>

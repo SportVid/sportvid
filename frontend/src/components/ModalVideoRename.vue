@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="show" max-width="1000">
+  <v-dialog v-model="show" max-width="800">
     <template v-slot:activator="{ props }">
       <v-btn v-bind="props" variant="outlined" class="ml-n2">
         <v-icon class="mr-1">{{ "mdi-pencil" }}</v-icon>
@@ -8,24 +8,32 @@
     </template>
 
     <v-card>
-      <v-toolbar color="primary" dark class="pl-4">
-        {{ $t("modal.video.rename.title") }}
-      </v-toolbar>
+      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
+          {{ $t("modal.video.rename.title") }}
+
+          <v-spacer></v-spacer>
+
+          <v-btn 
+            icon 
+            @click="show = false"
+            variant="plain" 
+            color="grey"
+          >
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-toolbar>
       
-      <v-card-text class="pt-4">
+      <v-card-text class="pt-4 d-flex align-center">
           <v-text-field
             v-model="name"
             :label="$t('modal.video.rename.name')"
             prepend-icon="mdi-pencil"
             variant="underlined"
-            clearable
+            class="mr-6"
           ></v-text-field>
           
-          <v-btn class="mr-4 ml-10" @click="submit" :disabled="isSubmitting || !name">
+          <v-btn class="" @click="submit" :disabled="isSubmitting || !name">
             {{ $t("modal.video.rename.update") }}
-          </v-btn>
-          <v-btn @click="show = false">
-            {{ $t("modal.video.rename.close") }}
           </v-btn>
       </v-card-text>
     </v-card>

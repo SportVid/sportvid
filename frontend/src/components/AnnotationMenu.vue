@@ -2,14 +2,14 @@
   <div>
     <v-menu min-width="175" offset-y bottom left>
       <template v-slot:activator="{ props }">
-        <v-btn tile text v-bind="props" @click="showModalShortcut = true" class="ml-n2">
+        <v-btn v-bind="props" @click="showModalShortcut = true">
           <v-icon color="primary">mdi-label-multiple-outline</v-icon>
           Shortcuts
         </v-btn>
       </template>
     </v-menu>
 
-    <ModalShortcut v-model="showModalShortcut"> </ModalShortcut>
+    <ModalShortcut v-model="showModalShortcut" />
   </div>
 </template>
 

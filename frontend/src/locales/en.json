@@ -100,7 +100,7 @@
         "split_places": "Show places categories in separate columns"
       },
       "individual_csv": {
-        "export_name": "Individual CSVs",
+        "export_name": "Individual CSV",
         "use_timestamps": "Use timestamps",
         "use_seconds": "Use seconds",
         "include_category": "Include category"
@@ -112,7 +112,8 @@
         "export_name": "ELAN"
       },
       "export": "export",
-      "close": "close"
+      "close": "close",
+      "select": "Select Export"
     },
     "analyse": {
       "title": "Analyse"
@@ -143,9 +144,9 @@
       "run": "Start Plugin",
       "timeline_name": "Timeline Name",
       "shot_timeline_name": "Shot Boundaries from Timeline",
-      "shot_timeline_hint": "*The annotations are created based on the shot boundaries of the selected timeline",
+      "shot_timeline_hint": "Annotations are created based on shot boundaries of the selected timeline.",
       "scalar_timeline_name": "Select Timeline",
-      "scalar_timeline_hint": "*The scalar values of the selected timelines will be aggregated",
+      "scalar_timeline_hint": "*The scalar values of the selected timelines will be aggregated.",
       "fps": "Frames per Second (FPS)",
       "normalize": "Normalize Results?",
       "aggregation": {
@@ -396,6 +397,10 @@
       "move": "Move",
       "new_cluster": "New Cluster",
       "move_existing": "Move to existing Cluster"
+    },
+    "history": {
+      "close": "Close",
+      "title": "History"
     }
   },
   "user": {

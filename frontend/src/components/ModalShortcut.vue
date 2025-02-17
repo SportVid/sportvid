@@ -1,22 +1,31 @@
 <template>
-  <v-dialog v-model="dialog" max-width="1000" @keydown.esc="dialog = false">
+  <v-dialog v-model="dialog" max-width="1000">
     <v-card>
-      <v-card-title class="mb-2">
+      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("modal.shortcut.title") }}
+
         <v-spacer></v-spacer>
-        <v-text-field
-          v-model="search"
-          append-icon="mdi-magnify"
-          label="Search"
-          single-line
-          hide-details
-          class="mt-0 pt-0"
-        ></v-text-field>
-        <v-btn icon @click="dialog = false">
+
+        <v-btn 
+          icon 
+          @click="dialog = false" 
+          variant="plain" 
+          color="grey"
+        >
           <v-icon>mdi-close</v-icon>
         </v-btn>
-      </v-card-title>
+      </v-toolbar>
+
       <v-card-text>
+        <v-text-field
+          v-model="search"
+          append-inner-icon="mdi-magnify"
+          label="Search"
+          variant="underlined"
+          hide-details
+          class="mt-n2 mb-4"
+        ></v-text-field>
+
         <v-data-table
           :headers="headers"
           :items="items"
@@ -24,39 +33,40 @@
           class="elevation-1"
           :search="search"
         >
-          <template v-slot:item_name="{ item }">
+          <template v-slot:item.name="{ value }">
             <v-chip class="annotation-chip">
-              <v-btn disable icon x-small :color="item.color" class="mr-1">
+              <v-btn disable icon x-small :color="value.color" class="mr-1">
                 <v-icon>mdi-palette</v-icon>
               </v-btn>
-              {{ item.name }}
+              {{ value.name }}
             </v-chip>
           </template>
-          <template v-slot:item_actions="{ item }">
+
+          <template v-slot:item.actions="{ value }">
             <v-text-field
               solo
               flat
               single-line
               hide-details
-              @keydown="onKeydown(item, $event)"
-              @click:append-outer="clear(item)"
+              @keydown="onKeydown(value, $event)"
+              @click:append-outer="clear(value)"
               append-outer-icon="mdi-close"
             >
               <template v-slot:prepend-inner>
-                <v-chip v-for="key in item.keys" :key="key">
+                <v-chip v-for="key in value.keys" :key="key">
                   <span>{{ key }}</span>
                 </v-chip>
               </template>
             </v-text-field>
           </template>
         </v-data-table>
-      </v-card-text>
-      <v-card-actions class="pt-0">
-        <v-btn class="mr-4" @click="submit" :disabled="isSubmitting">
-          {{ $t("modal.shortcut.update") }}
-        </v-btn>
-        <v-btn @click="dialog = false">{{ $t("modal.shortcut.close") }}</v-btn>
-      </v-card-actions>
+
+        <v-row class="mt-6 justify-center">
+          <v-btn class="mt-n2" @click="submit" :disabled="isSubmitting">
+            {{ $t("modal.shortcut.update") }}
+          </v-btn>
+        </v-row>
+      </v-card-text>  
     </v-card>
   </v-dialog>
 </template>
@@ -68,9 +78,14 @@ import { useShortcutStore } from "@/stores/shortcut";
 import { useAnnotationStore } from "@/stores/annotation";
 
 export default {
-  props: ["value"],
+  props: {
+    modelValue: {
+      type: Boolean,
+      default: false,
+    },
+  },
   setup(props, { emit }) {
-    const dialog = ref(false);
+    const dialog = ref(props.modelValue);
     const isSubmitting = ref(false);
     const search = ref("");
     const items = ref([]);
@@ -80,8 +95,8 @@ export default {
     const annotationStore = useAnnotationStore();
 
     const headers = reactive([
-      { text: "Annotation", value: "name" },
-      { text: "Shortcut", sortable: false, value: "actions" },
+      { title: "Annotation", key: "name" },
+      { title: "Shortcut", sortable: false, key: "actions" },
     ]);
 
     const annotations = computed(() => annotationStore.nonTranscripts);
@@ -108,11 +123,11 @@ export default {
       const shortcutsData = items.value.map(e => ({ id: e.id, keys: e.keys }));
       await annotationShortcutStore.update({ annotationShortcuts: shortcutsData });
       isSubmitting.value = false;
-      dialog.value = false;
+      dialog.modelValue = false;
     };
 
     watch(
-      () => dialog.value,
+      () => dialog.modelValue,
       (value) => {
         if (value) {
           items.value = annotations.value.map(e => ({ ...e }));
@@ -136,9 +151,18 @@ export default {
     );
 
     watch(
-      () => props.value,
+      () => dialog.value,
       (value) => {
-        if (value) dialog.value = true;
+        emit("update:modelValue", value);
+      }
+    );
+
+    watch(
+      () => props.modelValue,
+      (value) => {
+        if (value) {
+          dialog.value = true;
+        }
       }
     );
 

@@ -2,10 +2,10 @@
   <v-main>
     <v-container v-if="userStore.loggedIn" class="py-8 px-6" fluid>
       <v-row justify="center">
-        <v-col cols="2">
+        <v-col cols="10" md="3" class="d-flex flex-column align-center">
           <ModalVideoUpload />
         </v-col>
-        <v-col cols="2">
+        <v-col cols="10" md="3" class="d-flex flex-column align-center">
           <v-btn 
             class="mt-6" 
             :disabled="selectedVideosIds.length == 0" 

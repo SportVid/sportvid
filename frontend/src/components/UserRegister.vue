@@ -1,21 +1,21 @@
 <template>
   <v-dialog v-model="dialog" max-width="350px">
     <v-card class="register">
-      <v-card-title class="d-flex justify-space-between align-center mb-n6">
-        <span class="ms-2 text-primary">{{ $t("user.register.title") }}</span>
-
+      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
+        {{ $t("user.register.title") }}
+        <v-spacer></v-spacer>
         <v-btn 
           icon 
           @click="dialog = false" 
-          variant="text" 
-          class="mr-n2" 
+          variant="plain" 
           color="grey"
         >
           <v-icon>mdi-close</v-icon>
         </v-btn>
-      </v-card-title>
 
-      <v-card-text>
+      </v-toolbar>
+
+      <v-card-text class="mt-n2">
         <v-text-field
           v-model="user.name"
           :placeholder="$t('user.name')"
@@ -25,6 +25,7 @@
           :rules="[checkLength]"
           variant="underlined"
           clearable
+          clear-icon="mdi-close-circle-outline"
         ></v-text-field>
 
         <v-text-field
@@ -36,6 +37,7 @@
           :rules="[checkLength]"
           variant="underlined"
           clearable
+          clear-icon="mdi-close-circle-outline"
         ></v-text-field>
 
         <v-text-field
@@ -59,15 +61,14 @@
         </p>
       </v-card-text>
 
-      <v-card-actions class="px-6 mt-n2">
+      <v-card-actions class="px-6 mt-n4 mb-2">
         <v-btn
           @click="register"
           :disabled="disabled"
           :class="{
-            'text-white': disabled,
+            'text-white': disabled || !disabled,
             'bg-grey': disabled,
-            'text-white': !disabled,
-            'bg-accent': !disabled,
+            'bg-primary': !disabled,
           }"
           block
           rounded
