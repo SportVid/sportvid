@@ -4,6 +4,44 @@ http_options:
   port: 8000
 
 applications:
+  - name: bytetrack
+    route_prefix: /bytetrack
+    import_path: main:app_builder
+    args:
+      model: bytetrack
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        autoscaling_config:
+          min_replicas: 0
+        ray_actor_options:
+          num_cpus: 2
+          runtime_env:
+            pip:
+              # version with corrected numpy.float aliases (original repo: https://github.com/ifzhang/ByteTrack.git)
+              - git+https://github.com/kXborg/ByteTrack.git
+              - numpy
+              - torch>=1.7
+              - opencv_python
+              - loguru
+              - scikit-image
+              - tqdm
+              - torchvision>=0.10.0
+              - Pillow
+              - thop
+              - ninja
+              - tabulate
+              - tensorboard
+              - lap
+              - motmetrics
+              - filterpy
+              - h5py
+
+              - cython-bbox
+              - pycocotools
+
+
   - name: video_to_audio
     route_prefix: /video_to_audio
     import_path: main:app_builder
