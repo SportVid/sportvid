@@ -999,6 +999,31 @@ export default {
           },
         ],
       },
+      {
+        id: 7,
+        name: t("modal.plugin.groups.tracking"),
+        children: [
+          {
+            name: t("modal.plugin.bytetrack.plugin_name"),
+            description: t("modal.plugin.bytetrack.plugin_description"),
+            icon: "mdi-image-multiple",
+            plugin: "bytetrack",
+            id: 701,
+            parameters: [
+              {
+                field: "slider",
+                min: 5,
+                max: 60,
+                value: 25,
+                step: 5,
+                name: "fps",
+                text: t("modal.plugin.fps"),
+              },
+            ],
+            optional_parameters: [],
+          },
+        ],
+      },
     ]);
 
     const pluginsSorted = computed(() => {

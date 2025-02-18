@@ -129,7 +129,8 @@
         "color": "Color Analysis",
         "face": "Face Analysis",
         "identification": "Concept Recognition",
-        "shot": "Shot Analysis"
+        "shot": "Shot Analysis",
+        "tracking": "Player and Object Tracking"
       },
       "status": {
         "unknown": "Unknown",
@@ -161,6 +162,13 @@
         "min": "Minimum",
         "prod": "Product"
       },
+
+      "bytetrack": {
+        "plugin_name": "ByteTrack",
+        "plugin_description": "This plugin performs multi-object tracking (MOT). It uses the 'bytetrack_x_mot17' model from https://github.com/ifzhang/ByteTrack.",
+        "timeline_name": "ByteTrack"
+      },
+
       "audio_waveform": {
         "plugin_name": "Audio Waveform",
         "plugin_description": "This plugin computes the waveform of the audio signal for basic sound analysis.",
