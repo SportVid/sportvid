@@ -74,7 +74,8 @@ sudo docker-compose exec frontend npm run serve
    3. Register your class with a unique name using the decorator `@AnalyserPluginManager.export("your_plugin_name")`
    4. Specify Input and Output data types in objects `requires` and `provides` (can be found in `analyser/data_python/src/plugins/`)
    5. Import needed packages and load models inside the `call` method
-   6. Add your new plugin to `analyser/inference_ray/deploy.yml` and to `analyser/inference_ray/deploy.cuda.yml` by adding:
+   6. If used models aren't downloaded automatically, place them in a subdirectory of `/data/models/` and access them with `/models/...`. (Models should be added to models cloud storage bucket later)
+   7. Add your new plugin to `analyser/inference_ray/deploy.yml` and to `analyser/inference_ray/deploy.cuda.yml` by adding:
    ```
    - name: your_plugin_name
     route_prefix: /your_plugin_name
