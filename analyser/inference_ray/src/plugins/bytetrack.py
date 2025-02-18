@@ -72,7 +72,6 @@ class Predictor(object):
         img_info["height"] = height
         img_info["width"] = width
         img_info["raw_img"] = img
-
         img, ratio = preproc(img, self.test_size, self.rgb_means, self.std)
         img_info["ratio"] = ratio
         img = torch.from_numpy(img).unsqueeze(0).float().to(self.device)
@@ -162,6 +161,8 @@ class ByteTrack(
                 for frame in annotated_frames:
                     output_img_data.save_image(frame)
                 self.update_callbacks(callbacks, progress=1.0)
+
+                #TODO maybe change annotated frames to video/ or remove it if not needed for memory efficiency
                 return {
                     "tracklets": output_data,
                     "annotated_frames": output_img_data,
@@ -194,7 +195,7 @@ class ByteTrack(
         from yolox.utils.visualize import plot_tracking
         from yolox.tracker.byte_tracker import BYTETracker
 
-        tracker = BYTETracker(args, frame_rate=30)
+        tracker = BYTETracker(args, frame_rate=args.fps)
 
         results = []
         annotated_frames = []
