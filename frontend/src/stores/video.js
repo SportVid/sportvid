@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import axios from "../plugins/axios";
 import config from "../../app.config";
+import { Buffer } from 'buffer';
 import { usePlayerStore } from "@/stores/player";
 import { useAnnotationStore } from "./annotation";
 import { useAnnotationCategoryStore } from "./annotation_category";
