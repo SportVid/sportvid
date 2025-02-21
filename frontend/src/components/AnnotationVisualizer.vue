@@ -1,12 +1,28 @@
 <template>
   <v-container class="d-flex flex-column">
-    <div v-if="isAnyButtonActive" class="overlay"></div>
+    <div v-if="isAnyMarkerActive" class="overlay"></div>
 
     <v-row ref="visualizerContainer" class="visualizer-container mt-n1">
-      <img
-        class="visualizer-image"
-        :src="currentSport.pitchImage"
-      />
+      <div class="mx-4">
+        <img
+          ref="pitchImage"
+          class="visualizer-image"
+          :src="currentSport.pitchImage"
+          @load="setMarkerPosition"
+        />
+
+        <v-btn
+          v-for="marker in referenceMarker"
+          :key="marker.id"
+          :color="marker.active ? 'red' : 'grey'"
+          icon="mdi-circle"
+          variant="plain"
+          @click="(event) => toggleMarker(event, marker.id)"
+          :style="markerPosition[marker.id]"
+          style="position: absolute; z-index: 10; height: 15px; width: 15px;"
+        >
+        </v-btn>
+      </div>
     </v-row>
 
     <v-row class="video-control mt-6">
@@ -28,47 +44,28 @@
           </v-list-item>
         </v-list>
       </v-menu>
-      
-      <!-- <v-btn
-        v-for="button in buttons"
-        :key="button.id"
-        :color="button.active ? 'red' : 'grey'"
-        dark
-        icon="mdi-circle-medium"
-        variant="icon"
-        @click="(event) => toggleButton(event, button.id)"
-        class="custom-button"
-        :style="{ top: button.top + 'px', right: button.right + 'px' }"
-      >
-      </v-btn> -->
-      <v-btn
-        v-for="button in buttons"
-        :key="button.id"
-        :color="button.active ? 'red' : 'grey'"
-        
-        @click="(event) => toggleButton(event, button.id)"
-        class="custom-button"
-        :style="{ 
-          top: button.top + 'px', 
-          right: button.right + 'px',
-        }"
-        style="position: absolute; z-index: 10;"
-        fab
-        height=35
-        rounded="xl"
-        size="x-small"
-      >
-        {{ button.id }}
+
+      <v-btn size="small" @click="viewMarker">
+        View Marker
       </v-btn>
+
+      <!-- <div
+        v-for="marker in referenceMarker"
+        v-if="showMarker"
+        :key="marker.id"
+        class="position-marker"
+        :style="getMarkerPosition(marker)"
+      ></div> -->
     </v-row>
+
     <v-row> 
         <v-list class="ma-2">
-          <v-list-item v-for="button in buttons" :key="button.id">
+          <v-list-item v-for="marker in referenceMarker" :key="marker.id">
             <v-list-item-content>
               <v-list-item-title>
-                {{ button.name }} ({{ button.id }}): 
-                <span v-if="button.coords.x !== null && button.coords.y !== null">
-                  (X: {{ button.coords.x }} px, Y: {{ button.coords.y }} px, Z: {{ button.coords.z }} px)
+                {{ marker.name }}: 
+                <span v-if="marker.videoCoords.x !== null && marker.videoCoords.y !== null && marker.videoCoords.z !== null">
+                  (X: {{ marker.videoCoords.x }} px, Y: {{ marker.videoCoords.y }} px, Z: {{ marker.videoCoords.z }} px)
                 </span>
                 <span v-else> Noch nicht gesetzt </span>
               </v-list-item-title>
@@ -80,9 +77,8 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
-import { getTimecode } from "@/plugins/time";
 
 export default {
   setup() {
@@ -99,104 +95,97 @@ export default {
       currentSport.value = sports[idx];
     };
 
-    const positions = ref(
-      Array.from({ length: 100 }, (_, frameIndex) =>
-        Array.from({ length: 3 }, (_, pointIndex) => ({
-          x: 20 + frameIndex * 0.5 + pointIndex * 2,
-          y: 20 + frameIndex * 0.5 + pointIndex * 2,
-        }))
-      )
-    );
-
-    const currentFrame = ref(0);
-    const updateFrame = (newIndex) => {
-      currentFrame.value = newIndex;
-    };
-    const toggleSliderSync = () => {
-      playerStore.isSynced = !playerStore.isSynced;
-    }
-    const currentTime = computed(() => playerStore.currentTime);
-
-    const sliderValue = computed({
-      get: () => {
-        return playerStore.isSynced ? Math.round(currentTime.value) : currentFrame.value;
-      },
-      set: (value) => {
-        if (!playerStore.isSynced) {
-          currentFrame.value = value;
-          updateFrame(value);
-        }
-      }
-    });
-
-    const buttons = ref([
+    const pitchImage = ref(null);
+    const markerPosition = ref({ top: null, left: null });
+    const referenceMarker = ref([
       { 
-        name: 'Oben links', 
-        id: '1', 
-        top: -12, 
-        right: 682, 
+        name: 'Top-left', 
+        id: '1',
         active: false, 
-        coords: { x: null, y: null, z: null } 
+        compAreaCoords: { top: 0, left: 0 },
+        videoCoords: { x: null, y: null, z: null } 
       },
       { 
-        name: 'Oben rechts', 
-        id: '2', 
-        top: -12, 
-        right: -20, 
+        name: 'Top-right', 
+        id: '2',
         active: false, 
-        coords: { x: null, y: null, z: null } 
+        compAreaCoords: { top: 0, left: 1 },
+        videoCoords: { x: null, y: null, z: null } 
       },
       { 
-        name: 'Mittelpunkt', 
-        id: '3', 
-        top: 217, 
-        right: 332, 
+        name: 'Kick-off', 
+        id: '3',
         active: false, 
-        coords: { x: null, y: null, z: null } 
+        compAreaCoords: { top: 0.5, left: 0.5 },
+        videoCoords: { x: null, y: null, z: null } 
       },
       { 
-        name: 'Unten links', 
-        id: '4', 
-        top: 446, 
-        right: 682, 
+        name: 'Bottom-left', 
+        id: '4',
         active: false, 
-        coords: { x: null, y: null, z: null } 
+        compAreaCoords: { top: 1, left: 0 },
+        videoCoords: { x: null, y: null, z: null } 
       },
       { 
-        name: 'Unten rechts', 
-        id: '5', 
-        top: 446, 
-        right: -20, 
+        name: 'Bottom-right', 
+        id: '5',
         active: false, 
-        coords: { x: null, y: null, z: null } 
+        compAreaCoords: { top: 1, left: 1 },
+        videoCoords: { x: null, y: null, z: null } 
       },
     ]);
 
-    const toggleButton = (event, id) => {
+    const toggleMarker = (event, id) => {
       event.stopPropagation();
       
-      buttons.value = buttons.value.map(button => ({
-        ...button,
-        active: button.id === id ? !button.active : false
+      referenceMarker.value = referenceMarker.value.map(marker => ({
+        ...marker,
+        active: marker.id === id ? !marker.active : false
       }));
     };
 
-    const handleClickOutsideButton = (event) => {
-      const activeButton = buttons.value.find(button => button.active);
-      if (!activeButton) return;
+    const handleClickOutsideMarker = (event) => {
+      const activeMarker = referenceMarker.value.find(marker => marker.active);
+      if (!activeMarker) return;
 
-      activeButton.coords = { x: event.clientX, y: event.clientY };
-      activeButton.active = false;
+      activeMarker.videoCoords = { x: event.clientX, y: event.clientY };
+      activeMarker.active = false;
     };
 
-    const isAnyButtonActive = computed(() => buttons.value.some(button => button.active));
+    const setMarkerPosition = () => {
+      nextTick(() => {
+        if (pitchImage.value) {
+          const rect = pitchImage.value.getBoundingClientRect();
+          markerPosition.value = referenceMarker.value.reduce((acc, marker) => {
+            acc[marker.id] = {
+              top: `${marker.compAreaCoords.top * rect.height}px`,
+              left: `${marker.compAreaCoords.left * rect.width}px`,
+            };
+            return acc;
+          }, {});
+        }
+      });
+    };
+    const handleResize = () => {
+      setMarkerPosition();
+    };
+
+    const isAnyMarkerActive = computed(() => referenceMarker.value.some(marker => marker.active));
+
+    const showMarker = ref(false);
+    const viewMarker = () => {
+      showMarker.value = !showMarker.value;
+    };
 
     onMounted(() => {
-      window.addEventListener('click', handleClickOutsideButton);
+      window.addEventListener("resize", handleResize);
+      window.addEventListener('click', handleClickOutsideMarker);
+      setMarkerPosition();
     });
 
     onUnmounted(() => {
-      window.removeEventListener('click', handleClickOutsideButton);
+      window.removeEventListener('click', handleClickOutsideMarker);
+      window.removeEventListener("resize", handleResize);
     });
 
     return {
@@ -204,26 +193,23 @@ export default {
       currentSport,
       sports,
       onSportChange,
-      positions,
-      currentFrame,
-      updateFrame,
-      toggleSliderSync,
-      currentTime,
-      sliderValue,
-      getTimecode,
-      toggleButton,
-      buttons,
-      isAnyButtonActive,
+      toggleMarker,
+      referenceMarker,
+      isAnyMarkerActive,
+      viewMarker,
+      showMarker,
+      pitchImage,
+      setMarkerPosition,
+      markerPosition
     }
   }
 }
-  
 </script>
 
 <style>
 .visualizer-container {
   height: 100%;
-  justify-content: center
+  justify-content: center;
 }
 
 .visualizer-image {
