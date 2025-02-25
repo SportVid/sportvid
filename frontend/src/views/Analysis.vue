@@ -16,9 +16,7 @@
 
             <v-row class="flex-grow-1">
               <v-col>
-                <VideoPlayer 
-                  @resize="onVideoResize"
-                />
+                <VideoPlayer @resize="onVideoResize" />
               </v-col>
             </v-row>
           </v-card>
@@ -43,7 +41,7 @@
                 v-model="tab">
                 <v-tab
                   v-for="analysisTab in analysisTabs"
-                  :key="analysisTab.name"
+                  :key="analysisTab.id"
                 >
                   <span>{{ analysisTab.name }}</span>
                 </v-tab>
@@ -55,10 +53,10 @@
                 <v-tabs-window v-model="tab">
                   <v-tabs-window-item
                     v-for="analysisTab in analysisTabs"
-                    :key="analysisTab.name"
+                    :key="analysisTab.id"
                   >
-                    <CompAreaVisualizer v-if="analysisTab.name === 'Position Data'"/>
-                    <AnnotationVisualizer v-if="analysisTab.name === 'Annotation'"/>
+                    <CompAreaVisualizer v-if="analysisTab.name === 'Position Data'" />
+                    <AnnotationVisualizer v-if="analysisTab.name === 'Annotation'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -75,6 +73,7 @@ import { ref, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
+import { useMarkerStore } from "@/stores/marker";
 // import { usePluginRunStore } from "@/stores/plugin_run";
 // import { useTimelineStore } from "@/stores/timeline";
 // import { useTimelineSegmentStore } from "@/stores/timeline_segment";
@@ -102,8 +101,8 @@ import AnnotationVisualizer from "@/components/AnnotationVisualizer.vue";
 export default {
   setup() {
     const analysisTabs = ref([
-      { name: "Position Data" },
-      { name: "Annotation" },
+      { id: "1", name: "Position Data" },
+      { id: "2", name: "Annotation" },
     ]);
 
     const route = useRoute();
@@ -111,6 +110,7 @@ export default {
     const videoStore = useVideoStore();
     // const pluginRunStore = usePluginRunStore();
     const playerStore = usePlayerStore();
+    const markerStore = useMarkerStore();
     // const timelineStore = useTimelineStore();
     // const timelineSegmentStore = useTimelineSegmentStore();
     // const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
@@ -214,9 +214,11 @@ export default {
     //   },
     // });
 
-    const onVideoResize = () => {
+    const onVideoResize = (size) => {
       resultCardHeight.value =
         resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
+
+    videoStore.setVideoSize(size); 
     };
 
     // const onAnnotateSegment = () => {
@@ -418,6 +420,16 @@ export default {
         console.error('Fehler beim Abrufen der Daten:', error);
       }
     };
+
+    watch(tab, (newTab) => {
+      const currentTab = analysisTabs.value[newTab]?.name;
+      
+      if (currentTab === "Annotation") {
+        markerStore.showReferenceMarker = true;
+      } else {
+        markerStore.showReferenceMarker = false;
+      }
+    });
 
     return {
       playerStore,

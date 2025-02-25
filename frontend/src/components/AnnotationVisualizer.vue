@@ -1,31 +1,47 @@
 <template>
   <v-container class="d-flex flex-column">
-    <div v-if="isAnyMarkerActive" class="overlay"></div>
+    <div v-if="markerStore.isAnyMarkerActive" ref="overlay" class="overlay" @click="markerStore.setReferenceMarker"></div>
 
     <v-row ref="visualizerContainer" class="visualizer-container mt-n1">
-      <div class="mx-4">
+      <div class="mx-4" @click="handleMarkerClick">
         <img
-          ref="pitchImage"
+          ref="compAreaElement"
           class="visualizer-image"
           :src="currentSport.pitchImage"
-          @load="setMarkerPosition"
         />
 
         <v-btn
-          v-for="marker in referenceMarker"
-          :key="marker.id"
-          :color="marker.active ? 'red' : 'grey'"
+          v-for="m in marker"
+          :key="m.id"
+          :color="(m.active || markerStore.hoveredReferenceMarker === m.id) ? 'red' : 'grey'"
           icon="mdi-circle"
           variant="plain"
-          @click="(event) => toggleMarker(event, marker.id)"
-          :style="markerPosition[marker.id]"
-          style="position: absolute; z-index: 10; height: 15px; width: 15px;"
-        >
-        </v-btn>
+          @click="(event) => markerStore.toggleMarker(event, m.id)"
+          :style="{
+            top: (m.compAreaCoordsRel.y * compAreaStore.compAreaSize.height) + 'px',
+            left: (m.compAreaCoordsRel.x * compAreaStore.compAreaSize.width) + 'px'
+          }"
+          style="position: absolute;  z-index: 10; transform: translate(-8%, -25%);"
+        />
+
+        <v-btn
+          v-for="m in marker"
+          v-show="showDeleteButton"
+          :key="'delete-' + m.id"
+          color="red"
+          icon="mdi-close"
+          variant="text"
+          @click="markerStore.deleteMarker(m.id)"
+          :style="{
+            top: (m.compAreaCoordsRel.y * compAreaStore.compAreaSize.height) + 'px',
+            left: (m.compAreaCoordsRel.x * compAreaStore.compAreaSize.width) + 'px',
+          }"
+          style="position: absolute; z-index: 11; transform: translate(-8%, -25%) scale(0.8);"
+        />
       </div>
     </v-row>
 
-    <v-row class="video-control mt-6">
+    <v-row class="video-control mt-7 mx-1">
       <v-menu offset-y top>
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
@@ -45,27 +61,41 @@
         </v-list>
       </v-menu>
 
-      <v-btn size="small" @click="viewMarker">
-        View Marker
+      <v-spacer></v-spacer>
+
+      <v-btn 
+        size="small" 
+        @click="markerStore.viewReferenceMarker" 
+        :color="markerStore.showReferenceMarker ? 'primary' : 'white'"
+      >
+        View Ref-Marker
       </v-btn>
 
-      <!-- <div
-        v-for="marker in referenceMarker"
-        v-if="showMarker"
-        :key="marker.id"
-        class="position-marker"
-        :style="getMarkerPosition(marker)"
-      ></div> -->
+      <v-btn 
+        size="small" 
+        @click="markerStore.addMarker"
+        :color="markerStore.isAddingMarker ? 'primary' : 'white'"
+      >
+        Add Marker
+      </v-btn>
+
+      <v-btn 
+        size="small" 
+        @click="showDeleteButton = !showDeleteButton"
+        :color="showDeleteButton ? 'primary' : 'white'"
+      >
+        Delete Marker
+      </v-btn>
     </v-row>
 
     <v-row> 
         <v-list class="ma-2">
-          <v-list-item v-for="marker in referenceMarker" :key="marker.id">
+          <v-list-item v-for="m in marker" :key="m.id">
             <v-list-item-content>
               <v-list-item-title>
-                {{ marker.name }}: 
-                <span v-if="marker.videoCoords.x !== null && marker.videoCoords.y !== null && marker.videoCoords.z !== null">
-                  (X: {{ marker.videoCoords.x }} px, Y: {{ marker.videoCoords.y }} px, Z: {{ marker.videoCoords.z }} px)
+                {{ m.name }}: 
+                <span v-if="m.videoCoordsRel.x !== null && m.videoCoordsRel.y !== null && m.videoCoordsRel.z !== null">
+                  (X: {{ m.videoCoordsRel.x }} px, Y: {{ m.videoCoordsRel.y }} px, Z: {{ m.videoCoordsRel.z }} px)
                 </span>
                 <span v-else> Noch nicht gesetzt </span>
               </v-list-item-title>
@@ -78,129 +108,105 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
-import { usePlayerStore } from "@/stores/player";
+import { useVideoStore } from "@/stores/video";
+import { useCompAreaStore } from "@/stores/comp_area";
+import { useMarkerStore } from "@/stores/marker";
 
 export default {
-  setup() {
-    const playerStore = usePlayerStore();
+  emits: ["resize"],
+  setup(_, { emit }) {
+    const videoStore = useVideoStore();
+    const compAreaStore = useCompAreaStore();
+    const markerStore = useMarkerStore();
 
+    const compAreaElement = ref(null);
     const currentSport = ref({ title: 'Soccer', pitchImage: require('../assets/pitch_soccer.png') });
+    
     const sports = [
       { title: 'Soccer', pitchImage: require('../assets/pitch_soccer.png') },
       { title: 'Handball', pitchImage: require('../assets/pitch_handball.png') },
       { title: 'Basketball', pitchImage: require('../assets/pitch_basketball.png') },
       { title: 'Climbing', pitchImage: require('../assets/pitch_climbing.png') },
     ];
+
     const onSportChange = (idx) => {
       currentSport.value = sports[idx];
     };
+  
+    const marker = computed(() => markerStore.marker);
 
-    const pitchImage = ref(null);
-    const markerPosition = ref({ top: null, left: null });
-    const referenceMarker = ref([
-      { 
-        name: 'Top-left', 
-        id: '1',
-        active: false, 
-        compAreaCoords: { top: 0, left: 0 },
-        videoCoords: { x: null, y: null, z: null } 
-      },
-      { 
-        name: 'Top-right', 
-        id: '2',
-        active: false, 
-        compAreaCoords: { top: 0, left: 1 },
-        videoCoords: { x: null, y: null, z: null } 
-      },
-      { 
-        name: 'Kick-off', 
-        id: '3',
-        active: false, 
-        compAreaCoords: { top: 0.5, left: 0.5 },
-        videoCoords: { x: null, y: null, z: null } 
-      },
-      { 
-        name: 'Bottom-left', 
-        id: '4',
-        active: false, 
-        compAreaCoords: { top: 1, left: 0 },
-        videoCoords: { x: null, y: null, z: null } 
-      },
-      { 
-        name: 'Bottom-right', 
-        id: '5',
-        active: false, 
-        compAreaCoords: { top: 1, left: 1 },
-        videoCoords: { x: null, y: null, z: null } 
-      },
-    ]);
+    const showDeleteButton = ref(false);
 
-    const toggleMarker = (event, id) => {
-      event.stopPropagation();
-      
-      referenceMarker.value = referenceMarker.value.map(marker => ({
-        ...marker,
-        active: marker.id === id ? !marker.active : false
-      }));
-    };
-
-    const handleClickOutsideMarker = (event) => {
-      const activeMarker = referenceMarker.value.find(marker => marker.active);
-      if (!activeMarker) return;
-
-      activeMarker.videoCoords = { x: event.clientX, y: event.clientY };
-      activeMarker.active = false;
-    };
-
-    const setMarkerPosition = () => {
+    const overlay = ref(null);
+ 
+    const updateCompAreaSize = () => {
       nextTick(() => {
-        if (pitchImage.value) {
-          const rect = pitchImage.value.getBoundingClientRect();
-          markerPosition.value = referenceMarker.value.reduce((acc, marker) => {
-            acc[marker.id] = {
-              top: `${marker.compAreaCoords.top * rect.height}px`,
-              left: `${marker.compAreaCoords.left * rect.width}px`,
-            };
-            return acc;
-          }, {});
+        if (compAreaElement.value) {
+          const rect = compAreaElement.value.getBoundingClientRect();
+          const size = {
+            width: rect.width,
+            height: rect.height,
+            top: rect.top,
+            left: rect.left,
+          };
+
+          compAreaStore.setCompAreaSize(size);
+          emit("resize", size);
         }
       });
     };
+
     const handleResize = () => {
-      setMarkerPosition();
+      updateCompAreaSize();
     };
 
-    const isAnyMarkerActive = computed(() => referenceMarker.value.some(marker => marker.active));
-
-    const showMarker = ref(false);
-    const viewMarker = () => {
-      showMarker.value = !showMarker.value;
+    const handleClickOverlay = (event) => {
+      const activeMarker = marker.value.find(m => m.active);
+      if (!activeMarker || !overlay.value) return;
+      if (!overlay.value.contains(event.target)) return;
     };
+
+    const handleMarkerClick = (event) => {
+      if (!markerStore.isAddingMarker || !compAreaElement.value) return;
+
+      const clickX = (event.clientX - compAreaStore.compAreaSize.left) / compAreaStore.compAreaSize.width;
+      const clickY = (event.clientY - compAreaStore.compAreaSize.top) / compAreaStore.compAreaSize.height;
+
+      markerStore.setMarkerPosition(clickX, clickY);
+    };
+
+    // const addMarkerAtClick = (event) => {
+    //   if (!compAreaElement.value) return;
+      
+    //   const clickX = (event.clientX - compAreaStore.compAreaSize.left) / compAreaStore.compAreaSize.width;
+    //   const clickY = (event.clientY - compAreaStore.compAreaSize.top) / compAreaStore.compAreaSize.height;
+
+    //   markerStore.addMarker(clickX, clickY);
+    // };
 
     onMounted(() => {
+      updateCompAreaSize();
+      window.addEventListener('click', handleClickOverlay);
       window.addEventListener("resize", handleResize);
-      window.addEventListener('click', handleClickOutsideMarker);
-      setMarkerPosition();
     });
 
     onUnmounted(() => {
-      window.removeEventListener('click', handleClickOutsideMarker);
+      window.removeEventListener('click', handleClickOverlay);
       window.removeEventListener("resize", handleResize);
     });
 
     return {
-      playerStore,
+      videoStore,
+      compAreaStore,
+      markerStore,
       currentSport,
       sports,
       onSportChange,
-      toggleMarker,
-      referenceMarker,
-      isAnyMarkerActive,
-      viewMarker,
-      showMarker,
-      pitchImage,
-      setMarkerPosition,
-      markerPosition
+      marker,
+      compAreaElement,
+      updateCompAreaSize,
+      handleMarkerClick,
+      showDeleteButton
     }
   }
 }
@@ -217,14 +223,14 @@ export default {
   max-height: 100%;
 }
 
-.position-marker {
-  position: absolute;
+.marker-position {
+  position: fixed;
   width: 10px;
   height: 10px;
   background-color: red;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  pointer-events: none;
+  z-index: 10;
 }
 
 .video-control {
@@ -251,7 +257,7 @@ export default {
   width: 100%;
   height: calc(100vh - 64px);
   background: rgba(255, 255, 255, 0.5);
-  z-index: 1000;
+  z-index: 5;
   pointer-events: auto;
   border: 4px solid red;
 }

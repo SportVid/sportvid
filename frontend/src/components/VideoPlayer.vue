@@ -1,17 +1,34 @@
 <template>
   <v-container class="d-flex flex-column">
     <v-row ref="videoContainer" class="video-container">
-      <video
-        class="video-video"
-        ref="videoElement"
-        v-on:play="onPlay"
-        v-on:pause="onPause"
-        v-on:ended="onEnded"
-        v-on:canplay="onCanPlay"
-        v-on:loadeddata="onLoadedData"
-        v-on:timeupdate="onTimeUpdate"
-        :src="playerStore.videoUrl"
-      ></video>
+      <div>
+        <video
+          class="video-video"
+          ref="videoElement"
+          v-on:play="onPlay"
+          v-on:pause="onPause"
+          v-on:ended="onEnded"
+          v-on:canplay="onCanPlay"
+          v-on:loadeddata="onLoadedData"
+          v-on:timeupdate="onTimeUpdate"
+          @loadedmetadata="updateVideoSize"
+          :src="playerStore.videoUrl"
+        ></video>
+
+        <div
+          v-for="m in markerStore.filteredMarker"
+          v-show="markerStore.showReferenceMarker"
+          :key="m.id"
+          :style="{
+            top: (m.videoCoordsRel.y * videoStore.videoSize.height) + videoStore.videoSize.top + 'px',
+            left: (m.videoCoordsRel.x * videoStore.videoSize.width) + videoStore.videoSize.left + 'px'
+          }"
+          @mouseenter="markerStore.hoveredReferenceMarker = m.id"
+          @mouseleave="markerStore.hoveredReferenceMarker = null"
+          class="reference-marker-position"
+        ></div>
+      </div>
+      
     </v-row>
 
     <v-row class="video-control mt-6">
@@ -91,18 +108,22 @@
 </template>
 
 <script>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, onBeforeUnmount } from "vue";
 import { usePlayerStore } from "@/stores/player";
+import { useVideoStore } from "@/stores/video";
+import { useMarkerStore } from "@/stores/marker";
 import { getTimecode } from "@/plugins/time";
 
 export default {
-  emits: ["loadedData", "canPlay"],
-
+  props: ["showReferenceMarker"],
+  emits: ["loadedData", "canPlay", "resize"],
   setup(props, { emit }) {
     const videoElement = ref(null);
     const videoContainer = ref(null);
 
     const playerStore = usePlayerStore();
+    const videoStore = useVideoStore();
+    const markerStore = useMarkerStore();
 
     const volume = computed(() => playerStore.volume);
     const ended = computed(() => playerStore.ended);
@@ -206,6 +227,40 @@ export default {
       return (playerStore.currentTime / playerStore.videoDuration) * 100;
     });
 
+    const showReferenceMarker = props.showReferenceMarker
+
+    const updateVideoSize = () => {
+      nextTick(() => {
+        if (videoElement.value) {
+          const rect = videoElement.value.getBoundingClientRect();
+          const size = {
+            width: rect.width,
+            height: rect.height,
+            top: rect.top,
+            left: rect.left,
+          };
+
+          videoStore.setVideoSize(size);
+          emit("resize", size);
+        }
+      });
+    };
+
+    const handleResize = () => {
+      updateVideoSize();
+    };
+
+    onMounted(() => {
+      updateVideoSize();
+      window.addEventListener("resize", handleResize);
+      window.addEventListener("scroll", handleResize);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleResize);
+    });
+
     // watch(progress, (newProgress) => {
     //   progress.value = newProgress;
     //   emit("update-slider", newProgress); 
@@ -275,6 +330,10 @@ export default {
       onCanPlay,
       getTimecode,
       playerStore,
+      updateVideoSize,
+      markerStore,
+      videoStore,
+      showReferenceMarker
     };
   },
 };
@@ -310,6 +369,16 @@ export default {
 }
 
 .speed-item:hover {
-  background-color: #f0f0f0; /* Markiere das Element bei Hover */
+  background-color: #f0f0f0;
+}
+
+.reference-marker-position {
+  position: fixed;
+  width: 12px;
+  height: 12px;
+  background-color: red;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
 }
 </style>

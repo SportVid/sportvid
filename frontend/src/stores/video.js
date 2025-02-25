@@ -228,6 +228,12 @@ export const useVideoStore = defineStore('video', () => {
     }
   };
 
+  const videoSize = ref({ width: 0, height: 0, top: 0, left: 0 });
+
+  const setVideoSize = (size) => {
+    videoSize.value = size;
+  };
+
   return {
     videos,
     videoList,
@@ -243,5 +249,7 @@ export const useVideoStore = defineStore('video', () => {
     rename,
     deleteVideo,
     exportVideo,
+    videoSize,
+    setVideoSize,
   };
 });

@@ -9,7 +9,7 @@
       <div
         v-for="(position, index) in positions[sliderValue]"
         :key="index"
-        class="position-marker"
+        class="data-point-position"
         :style="{
           top: `${position.y}%`,
           left: `${position.x}%`
@@ -141,7 +141,7 @@ export default {
   max-height: 100%;
 }
 
-.position-marker {
+.data-point-position {
   position: absolute;
   width: 10px;
   height: 10px;
