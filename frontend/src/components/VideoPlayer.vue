@@ -1,43 +1,42 @@
 <template>
   <v-container class="d-flex flex-column">
-    <v-row ref="videoContainer" class="video-container">
-      <div>
-        <video
-          class="video-video"
-          ref="videoElement"
-          v-on:play="onPlay"
-          v-on:pause="onPause"
-          v-on:ended="onEnded"
-          v-on:canplay="onCanPlay"
-          v-on:loadeddata="onLoadedData"
-          v-on:timeupdate="onTimeUpdate"
-          @loadedmetadata="updateVideoSize"
-          :src="playerStore.videoUrl"
-        ></video>
+    <v-row ref="videoContainer">
+      <video
+        class="video-video"
+        ref="videoElement"
+        v-on:play="onPlay"
+        v-on:pause="onPause"
+        v-on:ended="onEnded"
+        v-on:canplay="onCanPlay"
+        v-on:loadeddata="onLoadedData"
+        v-on:timeupdate="onTimeUpdate"
+        @loadedmetadata="updateVideoSize"
+        :src="playerStore.videoUrl"
+      />
 
-        <div
-          v-for="m in markerStore.filteredMarker"
-          v-show="markerStore.showReferenceMarker"
-          :key="m.id"
-          :style="{
-            top: (m.videoCoordsRel.y * videoStore.videoSize.height) + videoStore.videoSize.top + 'px',
-            left: (m.videoCoordsRel.x * videoStore.videoSize.width) + videoStore.videoSize.left + 'px'
-          }"
-          @mouseenter="markerStore.hoveredReferenceMarker = m.id"
-          @mouseleave="markerStore.hoveredReferenceMarker = null"
-          class="reference-marker-position"
-        ></div>
-      </div>
-      
+      <div
+        v-for="m in markerStore.filteredReferenceMarker"
+        v-show="markerStore.showReferenceMarker"
+        :key="m.id"
+        :style="{
+          top: m.videoCoordsRel.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
+          left: m.videoCoordsRel.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
+        }"
+        @mouseenter="markerStore.hoveredReferenceMarker = m.id"
+        @mouseleave="markerStore.hoveredReferenceMarker = null"
+        class="reference-marker-position"
+      />
     </v-row>
 
     <v-row class="video-control mt-6">
       <v-btn @click="deltaSeek(-1)" size="small">
         <v-icon>mdi-skip-backward</v-icon>
       </v-btn>
+
       <v-btn @click="deltaSeek(-0.01)" size="small">
         <v-icon>mdi-skip-previous</v-icon>
       </v-btn>
+
       <v-btn @click="toggle" size="small">
         <v-icon v-if="ended"> mdi-restart</v-icon>
         <v-icon v-else-if="playing"> mdi-pause</v-icon>
@@ -47,13 +46,16 @@
       <v-btn @click="deltaSeek(0.01)" size="small">
         <v-icon> mdi-skip-next</v-icon>
       </v-btn>
+
       <v-btn @click="deltaSeek(1)" size="small">
         <v-icon> mdi-skip-forward</v-icon>
-      </v-btn> 
+      </v-btn>
+
       <v-btn @click="toggleSyncTime()" size="small">
         <v-icon v-if="syncTime"> mdi-link</v-icon>
         <v-icon v-else> mdi-link-off</v-icon>
       </v-btn>
+
       <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
         {{ getTimecode(currentTime) }}
       </div>
@@ -65,11 +67,7 @@
           </v-btn>
         </template>
         <v-list>
-          <v-list-item 
-            v-for="(item, index) in speeds" 
-            :key="index"
-            class="speed-item"
-          >
+          <v-list-item v-for="(item, index) in speeds" :key="index" class="speed-item">
             <v-list-item-title v-on:click="onSpeedChange(index)">
               {{ item.title }}
             </v-list-item-title>
@@ -78,20 +76,21 @@
       </v-menu>
 
       <v-btn @click="onToggleVolume" size="small">
-        <v-icon v-if="volume > 66"> mdi-volume-high </v-icon>
-        <v-icon v-else-if="volume > 33"> mdi-volume-medium </v-icon>
-        <v-icon v-else-if="volume > 0"> mdi-volume-low </v-icon>
-        <v-icon v-else-if="volume == 0"> mdi-volume-mute </v-icon>
+        <v-icon v-if="volume > 66">mdi-volume-high</v-icon>
+        <v-icon v-else-if="volume > 33">mdi-volume-medium</v-icon>
+        <v-icon v-else-if="volume > 0">mdi-volume-low</v-icon>
+        <v-icon v-else-if="volume == 0">mdi-volume-mute</v-icon>
       </v-btn>
+
       <v-slider
         v-model="volume"
         @update:model-value="onVolumeChange"
-        max="100" 
-        min="0" 
+        max="100"
+        min="0"
         hide-details
         color="primary"
         :thumb-size="15"
-      ></v-slider>
+      />
     </v-row>
 
     <v-row>
@@ -102,7 +101,7 @@
         hide-details
         color="primary"
         :thumb-size="15"
-      ></v-slider>
+      />
     </v-row>
   </v-container>
 </template>
@@ -133,16 +132,16 @@ export default {
     const playing = computed(() => playerStore.playing);
     const targetTime = computed(() => playerStore.targetTime);
 
-    const currentSpeed = ref({ title: '1.00', value: 1.0 });
+    const currentSpeed = ref({ title: "1.00", value: 1.0 });
     const speeds = [
-      { title: '0.25', value: 0.25 },
-      { title: '0.50', value: 0.5 },
-      { title: '0.75', value: 0.75 },
-      { title: '1.00', value: 1.0 },
-      { title: '1.25', value: 1.25 },
-      { title: '1.50', value: 1.5 },
-      { title: '1.75', value: 1.75 },
-      { title: '2.00', value: 2.0 },
+      { title: "0.25", value: 0.25 },
+      { title: "0.50", value: 0.5 },
+      { title: "0.75", value: 0.75 },
+      { title: "1.00", value: 1.0 },
+      { title: "1.25", value: 1.25 },
+      { title: "1.50", value: 1.5 },
+      { title: "1.75", value: 1.75 },
+      { title: "2.00", value: 2.0 },
     ];
 
     let observer = null;
@@ -150,7 +149,7 @@ export default {
 
     const toggleStickyVideo = ([entry]) => {
       if (videoElement.value) {
-        videoElement.value.classList.toggle('sticky-video', entry.intersectionRatio < threshold);
+        videoElement.value.classList.toggle("sticky-video", entry.intersectionRatio < threshold);
       }
     };
 
@@ -227,7 +226,7 @@ export default {
       return (playerStore.currentTime / playerStore.videoDuration) * 100;
     });
 
-    const showReferenceMarker = props.showReferenceMarker
+    const showReferenceMarker = props.showReferenceMarker;
 
     const updateVideoSize = () => {
       nextTick(() => {
@@ -263,7 +262,7 @@ export default {
 
     // watch(progress, (newProgress) => {
     //   progress.value = newProgress;
-    //   emit("update-slider", newProgress); 
+    //   emit("update-slider", newProgress);
     // });
     // watch(progress, (newProgress) => {
     //   if (playerStore.isSynced) {
@@ -333,14 +332,14 @@ export default {
       updateVideoSize,
       markerStore,
       videoStore,
-      showReferenceMarker
+      showReferenceMarker,
     };
   },
 };
 </script>
 
 <style>
-/* .sticky-video {
+.sticky-video {
   position: fixed;
   height: auto !important;
   width: 15vw !important;
@@ -348,8 +347,8 @@ export default {
   min-height: unset !important;
   top: 80px;
   right: 15px;
-} */
- 
+}
+
 .video-video {
   max-width: 100%;
   max-height: 100%;

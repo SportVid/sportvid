@@ -3,19 +3,10 @@
     <v-card class="login">
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("user.login.title") }}
-
-        <v-spacer></v-spacer>
-
-        <v-btn 
-          icon 
-          @click="dialog = false" 
-          variant="plain" 
-          color="grey"
-        >
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        <v-spacer />
+        <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
       </v-toolbar>
-        
+
       <v-card-text class="mt-n2">
         <v-text-field
           v-model="user.name"
@@ -27,7 +18,7 @@
           variant="underlined"
           clearable
           clear-icon="mdi-close-circle-outline"
-        ></v-text-field>
+        />
 
         <v-text-field
           v-model="user.password"
@@ -42,11 +33,9 @@
           variant="underlined"
           clearable
           clear-icon="mdi-close-circle-outline"
-        ></v-text-field>
-        <p 
-          v-if="errorMessage.length>0" 
-          class="text-uppercase font-weight-bold text-red"
-        >
+        />
+
+        <p v-if="errorMessage.length > 0" class="text-uppercase font-weight-bold text-red">
           Error: {{ errorMessage }}
         </p>
       </v-card-text>
@@ -72,7 +61,7 @@
       <div class="text-grey px-4 pb-4 pt-2" style="text-align: center">
         {{ $t("user.login.text") }}
 
-        <a @click="showModalRegister = true" style="color: #1D3557; cursor: pointer">
+        <a @click="showModalRegister = true" style="color: #1d3557; cursor: pointer">
           {{ $t("user.register.title") }}
         </a>
       </div>
@@ -85,7 +74,7 @@
 import { ref, reactive, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import UserRegister from "@/components/UserRegister.vue";
-import { useUserStore } from "@/stores/user"; 
+import { useUserStore } from "@/stores/user";
 
 export default {
   props: {

@@ -115,9 +115,6 @@
       "close": "close",
       "select": "Select Export"
     },
-    "analyse": {
-      "title": "Analyse"
-    },
     "plugin": {
       "search": {
         "prompt": "Search Plugin",
@@ -433,5 +430,29 @@
   },
   "field": {
     "required": "This field is required."
+  },
+  "app_bar": {
+    "plattform_name": "SportVid",
+    "video_view": "Videos",
+    "plugin_menu": "Run Plugin",
+    "history_menu": "History",
+    "shortcut_menu": "Shortcuts",
+    "export_menu": "Export",
+    "user_menu": "Login"
+  },
+  "video_view": {
+    "run_plugin": "Run Batch Plugin",
+    "analysis": "Analyse",
+    "delete": "Delete",
+    "rename": "Rename",
+    "video_id": "Video ID:",
+    "length": "Length:",
+    "uploaded": "Uploaded:",
+    "timelines": "Timelines:"
+  },
+  "annotation_vis": {
+    "view_ref_marker": "View Ref Marker",
+    "add_marker": "Add Marker",
+    "delete_marker": "Delete Marker"
   }
 }

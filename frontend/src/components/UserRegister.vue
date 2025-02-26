@@ -3,16 +3,8 @@
     <v-card class="register">
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("user.register.title") }}
-        <v-spacer></v-spacer>
-        <v-btn 
-          icon 
-          @click="dialog = false" 
-          variant="plain" 
-          color="grey"
-        >
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
-
+        <v-spacer />
+        <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
       </v-toolbar>
 
       <v-card-text class="mt-n2">
@@ -26,7 +18,7 @@
           variant="underlined"
           clearable
           clear-icon="mdi-close-circle-outline"
-        ></v-text-field>
+        />
 
         <v-text-field
           v-model="user.email"
@@ -38,7 +30,7 @@
           variant="underlined"
           clearable
           clear-icon="mdi-close-circle-outline"
-        ></v-text-field>
+        />
 
         <v-text-field
           v-model="user.password"
@@ -52,11 +44,9 @@
           :rules="[checkLength]"
           variant="underlined"
           clearable
-        ></v-text-field>
-        <p 
-          v-if="errorMessage.length>0" 
-          class="text-uppercase font-weight-bold text-red"
-        >
+        />
+
+        <p v-if="errorMessage.length > 0" class="text-uppercase font-weight-bold text-red">
           Error: {{ errorMessage }}
         </p>
       </v-card-text>
@@ -156,7 +146,7 @@ export default {
       errorMessage,
       register,
       checkLength,
-      disabled
+      disabled,
     };
   },
 };

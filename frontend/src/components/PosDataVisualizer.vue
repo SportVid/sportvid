@@ -1,10 +1,7 @@
 <template>
   <v-container class="d-flex flex-column">
     <v-row ref="visualizerContainer" class="visualizer-container mt-n1">
-      <img
-        class="visualizer-image"
-        :src="currentSport.pitchImage"
-      />
+      <img class="visualizer-image" :src="currentSport.pitchImage" />
 
       <div
         v-for="(position, index) in positions[sliderValue]"
@@ -12,9 +9,9 @@
         class="data-point-position"
         :style="{
           top: `${position.y}%`,
-          left: `${position.x}%`
+          left: `${position.x}%`,
         }"
-      ></div>
+      />
     </v-row>
 
     <v-row class="video-control mt-6">
@@ -25,11 +22,7 @@
           </v-btn>
         </template>
         <v-list>
-          <v-list-item 
-            v-for="(item, index) in sports" 
-            :key="index"
-            class="sport-item"
-          >
+          <v-list-item v-for="(item, index) in sports" :key="index" class="sport-item">
             <v-list-item-title v-on:click="onSportChange(index)">
               {{ item.title }}
             </v-list-item-title>
@@ -57,7 +50,7 @@
         :max="99"
         :step="1"
         :disabled="playerStore.isSynced"
-      ></v-slider>
+      />
     </v-row>
   </v-container>
 </template>
@@ -71,12 +64,15 @@ export default {
   setup() {
     const playerStore = usePlayerStore();
 
-    const currentSport = ref({ title: 'Soccer', pitchImage: require('../assets/pitch_soccer.png') });
+    const currentSport = ref({
+      title: "Soccer",
+      pitchImage: require("../assets/pitch_soccer.png"),
+    });
     const sports = [
-      { title: 'Soccer', pitchImage: require('../assets/pitch_soccer.png') },
-      { title: 'Handball', pitchImage: require('../assets/pitch_handball.png') },
-      { title: 'Basketball', pitchImage: require('../assets/pitch_basketball.png') },
-      { title: 'Climbing', pitchImage: require('../assets/pitch_climbing.png') },
+      { title: "Soccer", pitchImage: require("../assets/pitch_soccer.png") },
+      { title: "Handball", pitchImage: require("../assets/pitch_handball.png") },
+      { title: "Basketball", pitchImage: require("../assets/pitch_basketball.png") },
+      { title: "Climbing", pitchImage: require("../assets/pitch_climbing.png") },
     ];
     const onSportChange = (idx) => {
       currentSport.value = sports[idx];
@@ -97,7 +93,7 @@ export default {
     };
     const toggleSliderSync = () => {
       playerStore.isSynced = !playerStore.isSynced;
-    }
+    };
     const currentTime = computed(() => playerStore.currentTime);
 
     const sliderValue = computed({
@@ -109,7 +105,7 @@ export default {
           currentFrame.value = value;
           updateFrame(value);
         }
-      }
+      },
     });
 
     return {
@@ -123,17 +119,16 @@ export default {
       toggleSliderSync,
       currentTime,
       sliderValue,
-      getTimecode
-    }
-  }
-}
-  
+      getTimecode,
+    };
+  },
+};
 </script>
 
 <style>
 .visualizer-container {
   height: 100%;
-  justify-content: center
+  justify-content: center;
 }
 
 .visualizer-image {

@@ -1,9 +1,11 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useVideoStore } from "./video";
+import { useCompAreaStore } from "./comp_area";
 
 export const useMarkerStore = defineStore("marker", () => {
   const videoStore = useVideoStore();
+  const compAreaStore = useCompAreaStore();
 
   const showReferenceMarker = ref(true);
   const hoveredReferenceMarker = ref(null);
@@ -49,6 +51,12 @@ export const useMarkerStore = defineStore("marker", () => {
 
   const filteredMarker = computed(() => {
     return marker.value.filter(
+      marker => marker.compAreaCoordsRel.x !== null && marker.compAreaCoordsRel.y !== null
+    );
+  });
+
+  const filteredReferenceMarker = computed(() => {
+    return marker.value.filter(
       marker => marker.videoCoordsRel.x !== null && marker.videoCoordsRel.y !== null
     );
   });
@@ -68,10 +76,12 @@ export const useMarkerStore = defineStore("marker", () => {
     if (!isAddingMarker.value) {
       isAddingMarker.value = true;
 
+      const customMarkerCount = marker.value.filter(m => m.name.startsWith("Custom-marker")).length;
       const newMarker = {
+        name: `Custom-marker-${customMarkerCount + 1}`,
         id: marker.value.length + 1,
         active: false,
-        compAreaCoordsRel: { x: null, y: null},
+        compAreaCoordsRel: { x: null, y: null, z: null },
         videoCoordsRel: { x: null, y: null, z: null }
       };
     
@@ -79,14 +89,18 @@ export const useMarkerStore = defineStore("marker", () => {
     }
   };
 
-  const setMarkerPosition = (clickX, clickY) => {
+  const setMarker = (event) => {
     if (isAddingMarker.value) {
       const lastMarker = marker.value[marker.value.length - 1];
       if (lastMarker) {
-        lastMarker.compAreaCoordsRel = { x: clickX, y: clickY };
+        lastMarker.compAreaCoordsRel = { 
+          x: (event.clientX - compAreaStore.compAreaSize.left) / compAreaStore.compAreaSize.width, 
+          y: (event.clientY - compAreaStore.compAreaSize.top) / compAreaStore.compAreaSize.height 
+        };
       }
+      
       isAddingMarker.value = false;
-    }
+    };
   };
 
   const deleteMarker = (id) => {
@@ -112,15 +126,16 @@ export const useMarkerStore = defineStore("marker", () => {
   return {
     marker,
     filteredMarker,
+    filteredReferenceMarker,
     toggleMarker,
     isAnyMarkerActive,
     isAddingMarker,
     addMarker,
-    setMarkerPosition,
+    setMarker,
     deleteMarker,
     setReferenceMarker,
     showReferenceMarker,
     viewReferenceMarker,
-    hoveredReferenceMarker
+    hoveredReferenceMarker,
   }
 });

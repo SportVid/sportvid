@@ -1,89 +1,66 @@
 <template>
-  <v-dialog v-model="dialog" max-width="90%" style="height: 85vh;">
+  <v-dialog v-model="dialog" max-width="90%" style="height: 85vh">
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-          {{ $t("modal.plugin.title") }}
+        {{ $t("modal.plugin.title") }}
 
-          <v-spacer></v-spacer>
+        <v-spacer />
 
-          <v-btn 
-            icon 
-            @click="dialog = false" 
-            variant="plain" 
-            color="grey"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-      
-      <v-card-text style="overflow: hidden;">
+        <v-btn icon @click="dialog = false" variant="plain" color="grey">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-toolbar>
+
+      <v-card-text style="overflow: hidden">
         <v-row>
           <v-col cols="3" class="ml-n3">
-            <v-text-field 
-              v-model="searchPlugin" 
-              label="Search Plugin" 
+            <v-text-field
+              v-model="searchPlugin"
+              label="Search Plugin"
               class="searchField"
               variant="solo-filled"
               hide-details
               clearable
               clear-icon="mdi-close-circle-outline"
-            ></v-text-field>
+            />
 
             <v-treeview
-              v-model="activeNode" 
+              v-model="activeNode"
               class="mt-2 pr-4 treeview"
               :items="pluginsSorted"
               :search="searchPlugin"
               item-value="id"
               item-title="name"
-              style="cursor: pointer; overflow-y: auto; height: 55vh;"
+              style="cursor: pointer; overflow-y: auto; height: 55vh"
             >
               <template v-slot:prepend="{ item }">
                 <v-icon v-if="!item.children || item.children.length === 0">
                   {{ item.icon }}
                 </v-icon>
-              </template> 
+              </template>
             </v-treeview>
           </v-col>
 
-          <v-divider vertical></v-divider>
+          <v-divider vertical />
 
           <v-col cols="9">
-            <div 
-              v-if="!selected" 
-              class="text-h4 text-grey font-weight-light" 
-              style="
-                display: flex; 
-                justify-content: center; 
-                align-items: center; 
-                height: 60vh;
-              "
+            <div
+              v-if="!selected"
+              class="text-h4 text-grey font-weight-light"
+              style="display: flex; justify-content: center; align-items: center; height: 60vh"
             >
               {{ $t("modal.plugin.search.select") }}
             </div>
-            <v-card 
-              v-else 
-              :key="selected.id" 
-              class="mx-auto" 
-              style="height: 60vh;"
-              flat
-            >
+
+            <v-card v-else :key="selected.id" class="mx-auto" style="height: 60vh" flat>
               <v-card-title class="mb-0">{{ selected.name }}</v-card-title>
 
-              <v-card-text 
-                style="flex-grow: 1; overflow-y: auto; max-height: 50vh;"
-              >
-                <div
-                  style="padding-bottom: 2em;" 
-                  v-html="selected.description"
-                ></div>
+              <v-card-text style="flex-grow: 1; overflow-y: auto; max-height: 50vh">
+                <div style="padding-bottom: 2em" v-html="selected.description" />
 
-                <Parameters 
-                  :parameters="selected.parameters" 
-                  :videoIds="videoIds"
-                ></Parameters>
+                <Parameters :parameters="selected.parameters" :videoIds="videoIds" />
 
-                <v-expansion-panels 
+                <v-expansion-panels
                   v-if="selected.optional_parameters && selected.optional_parameters.length > 0"
                 >
                   <v-expansion-panel>
@@ -92,10 +69,7 @@
                     </v-expansion-panel-header>
 
                     <v-expansion-panel-content>
-                      <Parameters 
-                        :parameters="selected.optional_parameters" 
-                        :videoIds="videoIds"
-                      ></Parameters>
+                      <Parameters :parameters="selected.optional_parameters" :videoIds="videoIds" />
                     </v-expansion-panel-content>
                   </v-expansion-panel>
                 </v-expansion-panels>
@@ -103,21 +77,19 @@
             </v-card>
 
             <v-row>
-              <v-spacer></v-spacer>
-              <v-btn 
+              <v-spacer />
+              <v-btn
                 v-if="selected"
-                @click="runPlugin(
-                  selected.plugin,
-                  selected.parameters,
-                  selected.optional_parameters
-                )"
+                @click="
+                  runPlugin(selected.plugin, selected.parameters, selected.optional_parameters)
+                "
               >
                 {{ $t("modal.plugin.run") }}
               </v-btn>
             </v-row>
           </v-col>
-        </v-row>        
-      </v-card-text>      
+        </v-row>
+      </v-card-text>
     </v-card>
   </v-dialog>
 </template>
@@ -135,7 +107,7 @@ export default {
       type: Boolean,
       default: false,
     },
-    videoIds: Array
+    videoIds: Array,
   },
   setup(props, { emit }) {
     const dialog = ref(props.modelValue);
@@ -304,7 +276,7 @@ export default {
                 hint: t("modal.plugin.face_clustering.clustering_method_hint"),
                 items: ["Agglomerative", "DBScan"],
                 name: "clustering_method",
-                value: "DBScan"
+                value: "DBScan",
               },
               {
                 field: "slider",
@@ -327,21 +299,15 @@ export default {
               {
                 field: "text_field",
                 name: "timeline",
-                value: t(
-                  "modal.plugin.face_identification.timeline_name"
-                ),
+                value: t("modal.plugin.face_identification.timeline_name"),
                 text: t("modal.plugin.timeline_name"),
               },
               {
                 field: "image_input",
                 file: null,
                 name: "query_images",
-                text: t(
-                  "modal.plugin.face_identification.query_images"
-                ),
-                hint: t(
-                  "modal.plugin.face_identification.query_images_hint"
-                ),
+                text: t("modal.plugin.face_identification.query_images"),
+                hint: t("modal.plugin.face_identification.query_images_hint"),
               },
             ],
             optional_parameters: [
@@ -493,9 +459,7 @@ export default {
             ],
           },
           {
-            name: t(
-              "modal.plugin.color_brightness_analysis.plugin_name"
-            ),
+            name: t("modal.plugin.color_brightness_analysis.plugin_name"),
             description: t("modal.plugin.color_brightness_analysis.plugin_description"),
             icon: "mdi-palette",
             plugin: "color_brightness_analysis",
@@ -504,9 +468,7 @@ export default {
               {
                 field: "text_field",
                 name: "timeline",
-                value: t(
-                  "modal.plugin.color_brightness_analysis.timeline_name"
-                ),
+                value: t("modal.plugin.color_brightness_analysis.timeline_name"),
                 text: t("modal.plugin.timeline_name"),
               },
             ],
@@ -524,7 +486,7 @@ export default {
                 field: "checkbox",
                 name: "normalize",
                 text: t("modal.plugin.normalize"),
-                value: true
+                value: true,
               },
             ],
           },
@@ -649,9 +611,7 @@ export default {
               {
                 field: "text_field",
                 name: "timeline",
-                value: t(
-                  "modal.plugin.places_classification.timeline_name"
-                ),
+                value: t("modal.plugin.places_classification.timeline_name"),
                 text: t("modal.plugin.timeline_name"),
               },
               {
@@ -688,13 +648,13 @@ export default {
                 text: t("modal.plugin.shot_timeline_name"),
                 hint: t("modal.plugin.shot_timeline_hint"),
               },
-  //                {
-  //                  field: "select_options",
-  //                  text: t("modal.plugin.place_clustering.encoder_name"),
-  //                  hint: t("modal.plugin.place_clustering.encoder_hint"),
-  //                  items: ["CLIP", "Places"],
-  //                  name: "encoder",
-  //                },
+              //                {
+              //                  field: "select_options",
+              //                  text: t("modal.plugin.place_clustering.encoder_name"),
+              //                  hint: t("modal.plugin.place_clustering.encoder_hint"),
+              //                  items: ["CLIP", "Places"],
+              //                  name: "encoder",
+              //                },
               {
                 field: "slider",
                 min: 0.05,
@@ -723,8 +683,8 @@ export default {
                 hint: t("modal.plugin.place_clustering.clustering_method_hint"),
                 items: ["Agglomerative", "DBScan"],
                 name: "clustering_method",
-                value: "DBScan"
-              }
+                value: "DBScan",
+              },
             ],
           },
           {
@@ -755,8 +715,7 @@ export default {
                 text: t("modal.plugin.blip.search_term"),
               },
             ],
-            optional_parameters: [
-            ],
+            optional_parameters: [],
           },
           {
             name: t("modal.plugin.ocr.plugin_name"),
@@ -862,9 +821,7 @@ export default {
             ],
           },
           {
-            name: t(
-              "modal.plugin.shot_type_classification.plugin_name"
-            ),
+            name: t("modal.plugin.shot_type_classification.plugin_name"),
             description: t("modal.plugin.shot_type_classification.plugin_description"),
             icon: "mdi-video-switch",
             plugin: "shot_type_classification",
@@ -873,9 +830,7 @@ export default {
               {
                 field: "text_field",
                 name: "timeline",
-                value: t(
-                  "modal.plugin.shot_type_classification.timeline_name"
-                ),
+                value: t("modal.plugin.shot_type_classification.timeline_name"),
                 text: t("modal.plugin.timeline_name"),
               },
               {
@@ -907,9 +862,7 @@ export default {
               {
                 field: "text_field",
                 name: "timeline",
-                value: t(
-                  "modal.plugin.shot_scalar_annotation.timeline_name"
-                ),
+                value: t("modal.plugin.shot_scalar_annotation.timeline_name"),
                 text: t("modal.plugin.timeline_name"),
               },
               {
@@ -975,7 +928,8 @@ export default {
               },
             ],
             optional_parameters: [],
-          }, {
+          },
+          {
             name: t("modal.plugin.invert.plugin_name"),
             description: t("modal.plugin.invert.plugin_description"),
             icon: "mdi-numeric-negative-1",
@@ -1032,26 +986,24 @@ export default {
       for (const video of props.videoIds) {
         const video_params = [];
         for (const param of parameters) {
-          if (param.name === 'shot_timeline_id' || param.name == 'scalar_timeline_id') {
+          if (param.name === "shot_timeline_id" || param.name == "scalar_timeline_id") {
             video_params.push({
               name: param.name,
-              value: param.value.timeline_ids[param.value.video_ids.indexOf(video)]
+              value: param.value.timeline_ids[param.value.video_ids.indexOf(video)],
             });
-          } else if (param.name === 'timeline_ids') {
+          } else if (param.name === "timeline_ids") {
             video_params.push({
               name: param.name,
-              value: param.value.map(t => t.timeline_ids[t.video_ids.indexOf(video)])
-            })
+              value: param.value.map((t) => t.timeline_ids[t.video_ids.indexOf(video)]),
+            });
           } else {
             video_params.push(param);
           }
         }
 
-        pluginRunStore
-          .submit({ plugin, parameters: video_params, videoId: video })
-          .then(() => {
-            dialog.value = false;
-          });
+        pluginRunStore.submit({ plugin, parameters: video_params, videoId: video }).then(() => {
+          dialog.value = false;
+        });
       }
     };
 
@@ -1077,9 +1029,9 @@ export default {
       activeNode,
       pluginsSorted,
       selected,
-      runPlugin
+      runPlugin,
     };
-  }
+  },
 };
 </script>
 

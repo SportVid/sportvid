@@ -4,7 +4,7 @@
       <template v-slot:activator="{ props }">
         <v-btn v-bind="props" @click="showModalShortcut = true">
           <v-icon color="primary">mdi-label-multiple-outline</v-icon>
-          Shortcuts
+          {{ $t("app_bar.shortcut_menu") }}
         </v-btn>
       </template>
     </v-menu>
@@ -14,28 +14,28 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed } from "vue";
 import ModalShortcut from "@/components/ModalShortcut.vue";
 import { useUserStore } from "@/stores/user";
 import { usePlayerStore } from "@/stores/player";
 
 export default {
   setup() {
-    const showModalShortcut = ref(false);  
-    const userStore = useUserStore();      
-    const playerStore = usePlayerStore();  
+    const showModalShortcut = ref(false);
+    const userStore = useUserStore();
+    const playerStore = usePlayerStore();
 
-    const videoId = computed(() => playerStore.videoId);  
-    const loggedIn = computed(() => userStore.loggedIn);  
+    const videoId = computed(() => playerStore.videoId);
+    const loggedIn = computed(() => userStore.loggedIn);
 
     return {
-      showModalShortcut, 
-      videoId,     
-      loggedIn, 
+      showModalShortcut,
+      videoId,
+      loggedIn,
     };
   },
   components: {
-    ModalShortcut, 
+    ModalShortcut,
   },
 };
 </script>

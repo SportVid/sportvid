@@ -1,23 +1,18 @@
 <template>
   <v-app id="tibava">
     <v-app-bar>
-      <img 
-        :title="appName" 
-        src="./assets/logo_tib_dshs.png" 
-        height="50" 
-        class="ml-4" 
-      />
-      <v-toolbar-title class="pr-12">SportVid</v-toolbar-title>
+      <img :title="appName" src="./assets/logo_tib_dshs.png" height="50" class="ml-4" />
+      <v-toolbar-title class="pr-12">{{ $t("app_bar.plattform_name") }}</v-toolbar-title>
 
-      <v-btn v-if="videoView" to="/">
+      <v-btn v-if="analysisView" to="/">
         <v-icon color="primary">mdi-movie</v-icon>
-        Videos
+        {{ $t("app_bar.video_view") }}
       </v-btn>
-      <PluginMenu v-if="videoView" />
-      <History v-if="videoView" />
-      <AnnotationMenu v-if="videoView" />
-      <VideoMenu v-if="videoView" />
-      <v-divider vertical inset class="mx-2"></v-divider>
+      <PluginMenu v-if="analysisView" />
+      <HistoryMenu v-if="analysisView" />
+      <ShortcutMenu v-if="analysisView" />
+      <ExportMenu v-if="analysisView" />
+      <v-divider vertical inset class="mx-2" />
       <UserMenu />
     </v-app-bar>
     <router-view />
@@ -32,21 +27,21 @@ import { useUserStore } from "@/stores/user";
 import { usePlayerStore } from "@/stores/player";
 import { useErrorStore } from "@/stores/error";
 
-import UserMenu from "@/components/UserMenu.vue";
-import VideoMenu from "@/components/VideoMenu.vue";
 import PluginMenu from "@/components/PluginMenu.vue";
-import AnnotationMenu from "@/components/AnnotationMenu.vue";
-import History from "./components/History.vue";
+import HistoryMenu from "./components/HistoryMenu.vue";
+import ShortcutMenu from "@/components/ShortcutMenu.vue";
+import ExportMenu from "@/components/ExportMenu.vue";
+import UserMenu from "@/components/UserMenu.vue";
 import ModalError from "./components/ModalError.vue";
 
 export default {
   components: {
-    UserMenu,
-    VideoMenu,
     PluginMenu,
-    AnnotationMenu,
-    History,
-    ModalError
+    HistoryMenu,
+    ShortcutMenu,
+    ExportMenu,
+    UserMenu,
+    ModalError,
   },
   setup() {
     const appName = process.env.VUE_APP_NAME;
@@ -58,18 +53,18 @@ export default {
     const errorStore = useErrorStore();
 
     const loggedIn = computed(() => userStore.loggedIn);
-    const videoView = computed(() => route.name === "VideoAnalysis");
+    const analysisView = computed(() => route.name === "AnalysisView");
 
     return {
       appName,
       loggedIn,
-      videoView,
+      analysisView,
       userStore,
       playerStore,
       errorStore,
     };
-  }
-}
+  },
+};
 </script>
 
 <style>

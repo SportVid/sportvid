@@ -3,46 +3,41 @@
     <template v-slot:activator="{ props }">
       <v-btn v-bind="props" variant="outlined" class="ml-n2">
         <v-icon class="mr-1">{{ "mdi-pencil" }}</v-icon>
-        {{ $t("modal.video.rename.link") }}
+        {{ $t("video_view.rename") }}
       </v-btn>
     </template>
 
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-          {{ $t("modal.video.rename.title") }}
+        {{ $t("modal.video.rename.title") }}
 
-          <v-spacer></v-spacer>
+        <v-spacer />
 
-          <v-btn 
-            icon 
-            @click="show = false"
-            variant="plain" 
-            color="grey"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-toolbar>
-      
+        <v-btn icon @click="show = false" variant="plain" color="grey">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-toolbar>
+
       <v-card-text class="pt-4 d-flex align-center">
-          <v-text-field
-            v-model="name"
-            :label="$t('modal.video.rename.name')"
-            prepend-icon="mdi-pencil"
-            variant="underlined"
-            class="mr-6"
-          ></v-text-field>
-          
-          <v-btn class="" @click="submit" :disabled="isSubmitting || !name">
-            {{ $t("modal.video.rename.update") }}
-          </v-btn>
+        <v-text-field
+          v-model="name"
+          :label="$t('modal.video.rename.name')"
+          prepend-icon="mdi-pencil"
+          variant="underlined"
+          class="mr-6"
+        />
+
+        <v-btn class="" @click="submit" :disabled="isSubmitting || !name">
+          {{ $t("modal.video.rename.update") }}
+        </v-btn>
       </v-card-text>
     </v-card>
   </v-dialog>
 </template>
 
 <script>
-import { ref, computed, watch } from 'vue';
-import { useVideoStore } from '@/stores/video';
+import { ref, computed, watch } from "vue";
+import { useVideoStore } from "@/stores/video";
 
 export default {
   props: {
@@ -60,7 +55,7 @@ export default {
     const name = computed({
       get() {
         const videoData = videoStore.get(props.video);
-        const name = videoData ? videoData.name : '';
+        const name = videoData ? videoData.name : "";
         return nameProxy.value === null ? name : nameProxy.value;
       },
       set(val) {
@@ -86,7 +81,7 @@ export default {
     watch(show, (value) => {
       if (value) {
         nameProxy.value = null;
-        emit('close');
+        emit("close");
       }
     });
 

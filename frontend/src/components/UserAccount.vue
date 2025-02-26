@@ -5,12 +5,10 @@
         :title="$t('user.logout.title')"
         class="mr-n3 mt-n5 mb-n5"
         @click="logout"
-        icon
+        icon="mdi-logout-variant"
         variant="text"
         color="grey"
-      >
-        <v-icon>mdi-logout-variant</v-icon>
-      </v-btn>
+      />
     </v-container>
 
     <v-list-item class="account justify-center pb-6 pl-6 pr-6 pt-0 mt-n2">
@@ -32,7 +30,7 @@
 </template>
 
 <script>
-import { computed } from 'vue';
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import { repPlace } from "../plugins/helpers";
@@ -55,7 +53,7 @@ export default {
     });
 
     const joined = computed(() => {
-      const text = "Joined {n_days} days ago"
+      const text = "Joined {n_days} days ago";
       return repPlace({ n_days: nDays.value }, text);
     });
 
@@ -64,7 +62,7 @@ export default {
     const logout = async () => {
       const loggedOut = await userStore.logout();
       if (loggedOut) {
-        router.push({ name: 'Home' });
+        router.push({ name: "Home" });
       }
     };
 

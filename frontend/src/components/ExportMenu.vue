@@ -4,7 +4,7 @@
       <template v-slot:activator="{ props }">
         <v-btn v-bind="props" @click="showModalExport = true">
           <v-icon color="primary">mdi-swap-vertical-bold</v-icon>
-          Export
+          {{ $t("app_bar.export_menu") }}
         </v-btn>
       </template>
     </v-menu>

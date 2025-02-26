@@ -1,16 +1,16 @@
 <template>
-  <v-card 
-    :class="['d-flex', 'flex-column', 'ma-6']" 
-    style="text-align: center;" 
-    flat 
-    color="transparent" 
+  <v-card
+    :class="['d-flex', 'flex-column', 'ma-6']"
+    style="text-align: center"
+    flat
+    color="transparent"
     width="210"
   >
     <v-dialog v-model="dialog" max-width="1000">
       <template v-slot:activator="{ props }">
         <v-btn :disabled="!canUpload" color="primary" v-bind="props">
           {{ $t("modal.video.upload.link") }}
-          <v-icon class="ms-2">{{ "mdi-plus-circle" }}</v-icon>
+          <v-icon class="ms-2">mdi-plus-circle</v-icon>
         </v-btn>
       </template>
 
@@ -18,14 +18,9 @@
         <v-toolbar color="primary" dark class="pl-4 pr-1 text-h6">
           {{ $t("modal.video.upload.title") }}
 
-          <v-spacer></v-spacer>
+          <v-spacer />
 
-          <v-btn 
-            icon 
-            @click="dialog = false" 
-            variant="plain" 
-            color="grey"
-          >
+          <v-btn icon @click="dialog = false" variant="plain" color="grey">
             <v-icon>mdi-close</v-icon>
           </v-btn>
         </v-toolbar>
@@ -33,15 +28,15 @@
         <v-card-text class="pt-4">
           <v-form>
             <v-text-field
-              v-model="video.title" 
+              v-model="video.title"
               :counter="120"
-              persistent-counter 
-              variant="underlined" 
+              persistent-counter
+              variant="underlined"
               :label="$t('modal.video.upload.name')"
               required
               clearable
               clear-icon="mdi-close-circle-outline"
-            ></v-text-field>
+            />
 
             <v-file-input
               v-model="video.file"
@@ -50,21 +45,21 @@
               filled
               prepend-icon="mdi-movie-filter"
               class="mt-2"
-            ></v-file-input>
+            />
 
             <v-progress-linear
               v-if="isUploading"
               v-model="uploadingProgress"
               class="mt-n4 ml-10 mb-4"
-              style="max-width: calc(100% - 40px);"
-            ></v-progress-linear>
+              style="max-width: calc(100% - 40px)"
+            />
 
             <v-checkbox
-              v-model="checkbox" 
-              label="Do you agree with the terms of services?" 
-              required 
-              class="mt-n2">
-            </v-checkbox>
+              v-model="checkbox"
+              label="Do you agree with the terms of services?"
+              required
+              class="mt-n2"
+            />
 
             <v-btn class="mr-4 mt-n4" :disabled="disabled" @click="uploadVideo">
               {{ $t("modal.video.upload.update") }}
@@ -74,15 +69,11 @@
       </v-card>
     </v-dialog>
     <span v-if="!canUpload" class="text-error">
-      You have uploaded the maximum amount of videos that you are allowed to. If
-      you require more, please contact abc@xyz.de.
+      You have uploaded the maximum amount of videos that you are allowed to. If you require more,
+      please contact abc@xyz.de.
     </span>
-    <span v-if="canUpload">
-      Videos uploaded: {{ numVideos }} out of {{ allowance }}
-    </span>
-    <span v-if="canUpload">
-      Max. file size: {{ maxSizeInWords }}
-    </span>
+    <span v-if="canUpload"> Videos uploaded: {{ numVideos }} out of {{ allowance }} </span>
+    <span v-if="canUpload"> Max. file size: {{ maxSizeInWords }} </span>
   </v-card>
 </template>
 
@@ -115,7 +106,9 @@ export default {
     const fileValid = ref(false);
 
     const canUpload = computed(() => userStore.allowance > videoStore.all.length);
-    const disabled = computed(() => !checkbox.value || !fileValid.value || uploadingProgress.value !== 0);
+    const disabled = computed(
+      () => !checkbox.value || !fileValid.value || uploadingProgress.value !== 0
+    );
     const isUploading = computed(() => videoUploadStore.isUploading);
     const uploadingProgress = computed(() => videoUploadStore.progress);
     const allowance = computed(() => userStore.allowance);

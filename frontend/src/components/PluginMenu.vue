@@ -4,12 +4,12 @@
       <template v-slot:activator="{ props }">
         <v-btn v-bind="props" @click="showModalPlugin = true">
           <v-icon color="primary">mdi-plus</v-icon>
-          Run Plugin
+          {{ $t("app_bar.plugin_menu") }}
         </v-btn>
       </template>
     </v-menu>
 
-    <ModalPlugin v-model="showModalPlugin" :videoIds="[videoId]"></ModalPlugin>
+    <ModalPlugin v-model="showModalPlugin" :videoIds="[videoId]" />
   </div>
 </template>
 
@@ -44,8 +44,8 @@ export default {
         .sort((a, b) => a.date - b.date);
     });
 
-    const numRunningPlugins = computed(() =>
-      pluginRuns.value.filter((e) => e.status !== "DONE" && e.status !== "ERROR").length
+    const numRunningPlugins = computed(
+      () => pluginRuns.value.filter((e) => e.status !== "DONE" && e.status !== "ERROR").length
     );
 
     const progressColor = (status) => {

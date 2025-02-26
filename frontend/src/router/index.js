@@ -1,17 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Home from '@/views/Home.vue';
-import VideoAnalysis from '@/views/Analysis.vue';
+import Home from '@/views/VideoView.vue';
+import VideoAnalysis from '@/views/AnalysisView.vue';
+import VideoView from '@/views/VideoView.vue';
+import AnalysisView from '@/views/AnalysisView.vue';
 
 const routes = [
     {
         path: '/',
-        name: 'Home',
-        component: Home
+        name: 'VideoView',
+        component: VideoView
     },
     {
         path: '/video-analysis/:id',
-        name: 'VideoAnalysis',
-        component: VideoAnalysis
+        name: 'AnalysisView',
+        component: AnalysisView
     }
   ];
 

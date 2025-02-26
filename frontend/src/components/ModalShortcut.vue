@@ -4,7 +4,7 @@
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("modal.shortcut.title") }}
 
-        <v-spacer></v-spacer>
+        <v-spacer />
 
         <v-btn 
           icon 
@@ -24,7 +24,7 @@
           variant="underlined"
           hide-details
           class="mt-n2 mb-4"
-        ></v-text-field>
+        />
 
         <v-data-table
           :headers="headers"

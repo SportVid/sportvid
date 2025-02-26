@@ -6,41 +6,41 @@
           <ModalVideoUpload />
         </v-col>
         <v-col cols="10" md="3" class="d-flex flex-column align-center">
-          <v-btn 
-            class="mt-6" 
-            :disabled="selectedVideosIds.length == 0" 
+          <v-btn
+            class="mt-6"
+            :disabled="selectedVideosIds.length == 0"
             @click="showModalPlugin = true"
           >
             <v-icon color="primary">mdi-plus</v-icon>
-            Run Batch Plugin
+            {{ $t("video_view.run_plugin") }}
           </v-btn>
           <ModalPlugin v-model="showModalPlugin" :videoIds="selectedVideosIds" />
         </v-col>
       </v-row>
 
       <v-container class="d-flex flex-wrap video-gallery align-content-center">
-        <v-card 
-          elevation="2" 
+        <v-card
+          elevation="2"
           width="420px"
           v-for="item in videos"
-          :loading="item.loading"  
+          :loading="item.loading"
           :key="item.id"
         >
           <v-card-title class="video-overview-title mt-2 mb-2">
             {{ item.name }}
           </v-card-title>
           <v-card-text>
-            <div>Video ID: {{ item.id }}</div>
-            <div>Length: {{ getDisplayTime(item.duration) }}</div>
-            <div>Uploaded: {{ item.date.slice(0, 10) }}</div>
-            <div>Timelines: {{ item.num_timelines }}</div>
+            <div>{{ $t("video_view.video_id") }} {{ item.id }}</div>
+            <div>{{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}</div>
+            <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
+            <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
 
             <v-card-actions class="actions mt-n4 mb-n4">
               <v-btn variant="outlined" class="ml-n2" @click="showVideo(item.id)">
                 <v-icon class="mr-1">
                   {{ "mdi-movie-search-outline" }}
                 </v-icon>
-                Analyse
+                {{ $t("video_view.analysis") }}
               </v-btn>
 
               <ModalVideoRename :video="item.id" />
@@ -49,13 +49,9 @@
                 <v-icon class="mr-1">
                   {{ "mdi-trash-can-outline" }}
                 </v-icon>
-                Delete
+                {{ $t("video_view.delete") }}
               </v-btn>
-              <v-checkbox
-                v-model="selectedVideos[item.id]"
-                color="primary"
-                class="pt-5 ml-n1"
-              ></v-checkbox>
+              <v-checkbox v-model="selectedVideos[item.id]" color="primary" class="pt-5 ml-n1" />
             </v-card-actions>
           </v-card-text>
           <v-progress-linear v-model="videosProgress[item.id]" />
@@ -74,7 +70,7 @@
             <p v-html="$t('welcome.text')" class="mb-4"></p>
             <h2 class="text-h5 mb-2">{{ $t("welcome.demo_title") }}</h2>
             <p>
-              <video id = "welcome-video" controls>
+              <video id="welcome-video" controls>
                 <source
                   src="https://tib.eu/cloud/s/sMmqWqWYict3Zpb/download/TIB-AV-A_Einfuehrung_2.mp4"
                   type="video/mp4"
@@ -82,9 +78,9 @@
               </video>
             </p>
             <h2 class="text-h5 mb-1 mt-4">{{ $t("welcome.login_title") }}</h2>
-            <p v-html="$t('welcome.login_text')"></p>
+            <p v-html="$t('welcome.login_text')" />
             <h2 class="text-h5 mb-1 mt-4">{{ $t("welcome.format_title") }}</h2>
-            <p v-html="$t('welcome.format_text')"></p>
+            <p v-html="$t('welcome.format_text')" />
           </v-card-text>
         </v-card>
       </v-col>
@@ -133,7 +129,8 @@ export default {
       videos.value.forEach((video) => {
         const runs = pluginRunStore.forVideo(video.id);
         progress[video.id] =
-          (runs.filter((r) => r.status !== "RUNNING" && r.status !== "QUEUED").length / runs.length) *
+          (runs.filter((r) => r.status !== "RUNNING" && r.status !== "QUEUED").length /
+            runs.length) *
           100;
       });
       return progress;
@@ -202,15 +199,15 @@ export default {
   text-overflow: ellipsis;
 }
 
-.video-gallery>* {
+.video-gallery > * {
   margin: 8px;
 }
 
-.video-gallery>* {
+.video-gallery > * {
   margin: 8px;
 }
 
-.actions>.v-btn:not(:first-child) {
+.actions > .v-btn:not(:first-child) {
   margin-left: 8px !important;
 }
 #welcome-video {
@@ -219,6 +216,6 @@ export default {
   display: block;
   border-style: outset;
   border-color: black;
-  max-width: 800px
+  max-width: 800px;
 }
 </style>

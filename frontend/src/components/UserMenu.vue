@@ -1,17 +1,11 @@
 <template>
   <div>
-    <v-menu location="bottom right"  offset-y>
+    <v-menu location="bottom right" offset-y>
       <template v-slot:activator="{ props }">
-        <v-btn
-          v-bind="props" 
-          class="pl-4 pr-4 mr-4" 
-          :title="$t('user.menu.title')"
-        >
-          <v-icon size="x-large" color="primary" class="mr-1">
-            mdi-account-circle
-          </v-icon>
+        <v-btn v-bind="props" class="pl-4 pr-4 mr-4">
+          <v-icon size="x-large" color="primary" class="mr-1">mdi-account-circle</v-icon>
           <span v-if="loggedIn" color="accent">{{ username }}</span>
-          <span v-else> Login </span>
+          <span v-else>{{ $t("app_bar.user_menu") }}</span>
         </v-btn>
       </template>
 
@@ -29,12 +23,11 @@
 
     <UserRegister v-model="showModalRegister" />
     <UserLogin v-model="showModalLogin" />
-    
   </div>
 </template>
 
 <script>
-import { ref, computed } from 'vue'; 
+import { ref, computed } from "vue";
 import { useUserStore } from "@/stores/user";
 import UserLogin from "@/components/UserLogin.vue";
 import UserRegister from "@/components/UserRegister.vue";
@@ -44,7 +37,7 @@ export default {
   components: {
     UserLogin,
     UserRegister,
-    UserAccount
+    UserAccount,
   },
   setup() {
     const showModalLogin = ref(false);
@@ -59,7 +52,7 @@ export default {
       showModalLogin,
       showModalRegister,
       username,
-      loggedIn
+      loggedIn,
     };
   },
 };

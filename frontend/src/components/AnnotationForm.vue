@@ -8,7 +8,7 @@
           :counter="120"
           label="Label"
           required
-        ></v-text-field>
+        />
 
         <v-btn class="mr-4" :disabled="disabled" @click="annotateSegment">
           Upload

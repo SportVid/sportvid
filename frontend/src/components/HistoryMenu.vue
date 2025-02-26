@@ -3,16 +3,11 @@
     <template v-slot:activator="{ props }">
       <v-btn v-bind="props">
         <v-icon color="primary">mdi-history</v-icon>
-        <v-badge 
-          v-if="numRunningPlugins > 0" 
-          color="accent" 
-          :content="numRunningPlugins"
-          floating
-        >
-          {{ $t("modal.history.title") }}
+        <v-badge v-if="numRunningPlugins > 0" color="accent" :content="numRunningPlugins" floating>
+          {{ $t("app_bar.history_menu") }}
         </v-badge>
         <span v-else>
-          {{ $t("modal.history.title") }}
+          {{ $t("app_bar.history_menu") }}
         </span>
       </v-btn>
     </template>
@@ -23,54 +18,40 @@
 
         <v-spacer></v-spacer>
 
-        <v-btn 
-          icon 
-          @click="menu = false" 
-          variant="plain" 
-          color="grey"
-        >
+        <v-btn icon @click="menu = false" variant="plain" color="grey">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
 
       <v-card-text class="mt-2">
-        <v-data-table 
-          :items-per-page="10" 
-          :headers="headers" 
-          :items="pluginRuns" 
-          item-key="id" 
+        <v-data-table
+          :items-per-page="10"
+          :headers="headers"
+          :items="pluginRuns"
+          item-key="id"
           class="elevation-1 mb-3"
         >
           <template v-slot:item.progress="{ index }">
-            <v-progress-linear 
-              v-model="progressComputed[index]" 
-              height="8"
-              color="primary"
-            />
+            <v-progress-linear v-model="progressComputed[index]" height="8" color="primary" />
           </template>
           <template v-slot:item.status="{ value }">
-            <v-chip 
-              :color="progressColor(value)"
-              variant="flat"
-            >
+            <v-chip :color="progressColor(value)" variant="flat">
               {{ value }}
             </v-chip>
           </template>
         </v-data-table>
       </v-card-text>
     </v-card>
-    
   </v-dialog>
 </template>
 
 <script>
-import { ref, computed, watchEffect } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { ref, computed, watchEffect } from "vue";
+import { useI18n } from "vue-i18n";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
-
 
 export default {
   components: {
@@ -83,10 +64,10 @@ export default {
     const { t } = useI18n();
 
     const headers = [
-      { title: 'Plugin Name', align: 'start', key: 'type' },
-      { title: 'Date', key: 'date' },
-      { title: 'Progress', key: 'progress' },
-      { title: 'Status', key: 'status' }
+      { title: "Plugin Name", align: "start", key: "type" },
+      { title: "Date", key: "date" },
+      { title: "Progress", key: "progress" },
+      { title: "Status", key: "status" },
     ];
 
     const progressColor = (status) => {
@@ -149,9 +130,12 @@ export default {
         .map((pluginRun, index) => ({
           id: index,
           type: pluginName(pluginRun.type),
-          date: pluginRun.date.replace("T", " ").replace("Z", "").substring(0, pluginRun.date.length - 5),
+          date: pluginRun.date
+            .replace("T", " ")
+            .replace("Z", "")
+            .substring(0, pluginRun.date.length - 5),
           progress: parseFloat(pluginRun.progress),
-          status: pluginRun.status
+          status: pluginRun.status,
         }));
     });
 
@@ -173,9 +157,9 @@ export default {
       indeterminate,
       pluginStatus,
       pluginName,
-      progressComputed
+      progressComputed,
     };
-  }
+  },
 };
 </script>
 

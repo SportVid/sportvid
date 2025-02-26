@@ -4,75 +4,57 @@
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("modal.export.title") }}
 
-        <v-spacer></v-spacer>
+        <v-spacer />
 
-        <v-btn 
-          icon 
-          @click="dialog = false" 
-          variant="plain" 
-          color="grey"
-        >
+        <v-btn icon @click="dialog = false" variant="plain" color="grey">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
 
-      <v-card-text style="overflow: hidden;">
+      <v-card-text style="overflow: hidden">
         <v-row>
           <v-col cols="3" class="ml-n3 mr-9">
-            <v-tabs 
-              direction="vertical" 
-              slider-color="primary"
-              v-model="tab"
-              class="mr-n9"
-            >
-              <v-tab 
-                v-for="exportFormat in exportFormatsSorted" 
+            <v-tabs direction="vertical" slider-color="primary" v-model="tab" class="mr-n9">
+              <v-tab
+                v-for="exportFormat in exportFormatsSorted"
                 :key="exportFormat.name"
                 :value="exportFormat.name"
               >
                 <v-icon>{{ exportFormat.icon }}</v-icon>
                 <span class="text-button ml-1">{{ exportFormat.name }}</span>
               </v-tab>
-            </v-tabs>  
+            </v-tabs>
           </v-col>
 
-          <v-divider vertical></v-divider>
+          <v-divider vertical />
 
-          <v-col style="width: 490px;">
-              <v-tabs-window v-model="tab">
-                <v-tabs-window-item 
-                  v-for="exportFormat in exportFormatsSorted" 
-                  :key="exportFormat.name"
-                  :value="exportFormat.name"
-                >
-                  <v-card style="height: 35vh;" flat>
-                    <v-card-title class="mb-0">{{ exportFormat.name }}</v-card-title>
-                    
-                    <v-card-text
-                      style="flex-grow: 1; overflow-y: auto;"
-                    >
-                      <Parameters 
-                        :videoIds="[videoId]" 
-                        :parameters="exportFormat.parameters"
-                        class="compact_parameters"
-                      />
-                    </v-card-text>
-                  </v-card>
-                  
-                  <v-row class="mt-n4 mb-1 mr-2">
-                    <v-spacer></v-spacer>
-                    <v-btn 
-                      @click="downloadExport(
-                        exportFormat.export, 
-                        exportFormat.parameters
-                      )"
-                      
-                    >
-                      {{ $t("modal.export.export") }}
-                    </v-btn>
-                  </v-row>
-                </v-tabs-window-item>
-              </v-tabs-window>
+          <v-col style="width: 490px">
+            <v-tabs-window v-model="tab">
+              <v-tabs-window-item
+                v-for="exportFormat in exportFormatsSorted"
+                :key="exportFormat.name"
+                :value="exportFormat.name"
+              >
+                <v-card style="height: 35vh" flat>
+                  <v-card-title class="mb-0">{{ exportFormat.name }}</v-card-title>
+
+                  <v-card-text style="flex-grow: 1; overflow-y: auto">
+                    <Parameters
+                      :videoIds="[videoId]"
+                      :parameters="exportFormat.parameters"
+                      class="compact_parameters"
+                    />
+                  </v-card-text>
+                </v-card>
+
+                <v-row class="mt-n4 mb-1 mr-2">
+                  <v-spacer />
+                  <v-btn @click="downloadExport(exportFormat.export, exportFormat.parameters)">
+                    {{ $t("modal.export.export") }}
+                  </v-btn>
+                </v-row>
+              </v-tabs-window-item>
+            </v-tabs-window>
           </v-col>
         </v-row>
       </v-card-text>
@@ -242,7 +224,7 @@ export default {
       exportFormatsSorted,
       videoId,
       downloadExport,
-      tab
+      tab,
     };
   },
   components: { Parameters },

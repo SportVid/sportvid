@@ -3,11 +3,7 @@
     <v-container fluid>
       <v-row class="ma-n2">
         <v-col cols="6">
-          <v-card 
-            class="d-flex flex-column flex-nowrap px-2" 
-            elevation="2" 
-            ref="videoCard"
-          >
+          <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" ref="videoCard">
             <v-row>
               <v-card-title class="mt-2">
                 {{ playerStore.videoName }}
@@ -24,39 +20,26 @@
 
         <v-col cols="6">
           <div v-if="isLoading" class="loading-container">
-            <div class="spinner"> 
-              <i class="mdi mdi-loading mdi-spin"></i>
+            <div class="spinner">
+              <i class="mdi mdi-loading mdi-spin" />
             </div>
             <div class="loading-text">Loading...</div>
           </div>
-          <v-card 
-            v-else 
-            class="d-flex flex-column flex-nowrap px-2" 
-            elevation="2"
-          >
+          <v-card v-else class="d-flex flex-column flex-nowrap px-2" elevation="2">
             <v-row class="sticky-tabs-bar" justify="center">
-              <v-tabs 
-                fixed-tabs 
-                slider-color="primary"
-                v-model="tab">
-                <v-tab
-                  v-for="analysisTab in analysisTabs"
-                  :key="analysisTab.id"
-                >
+              <v-tabs fixed-tabs slider-color="primary" v-model="tab">
+                <v-tab v-for="analysisTab in analysisTabs" :key="analysisTab.id">
                   <span>{{ analysisTab.name }}</span>
                 </v-tab>
               </v-tabs>
             </v-row>
-            
+
             <v-row class="flex-grow-1">
               <v-col>
                 <v-tabs-window v-model="tab">
-                  <v-tabs-window-item
-                    v-for="analysisTab in analysisTabs"
-                    :key="analysisTab.id"
-                  >
-                    <CompAreaVisualizer v-if="analysisTab.name === 'Position Data'" />
+                  <v-tabs-window-item v-for="analysisTab in analysisTabs" :key="analysisTab.id">
                     <AnnotationVisualizer v-if="analysisTab.name === 'Annotation'" />
+                    <PosDataVisualizer v-if="analysisTab.name === 'Position Data'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -85,7 +68,7 @@ import { useMarkerStore } from "@/stores/marker";
 // import * as Keyboard from "../plugins/keyboard";
 
 import VideoPlayer from "@/components/VideoPlayer.vue";
-import CompAreaVisualizer from "@/components/CompAreaVisualizer.vue";
+import PosDataVisualizer from "@/components/PosDataVisualizer.vue";
 import AnnotationVisualizer from "@/components/AnnotationVisualizer.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import Timeline from "@/components/Timeline.vue";
@@ -101,8 +84,8 @@ import AnnotationVisualizer from "@/components/AnnotationVisualizer.vue";
 export default {
   setup() {
     const analysisTabs = ref([
-      { id: "1", name: "Position Data" },
-      { id: "2", name: "Annotation" },
+      { id: "1", name: "Annotation" },
+      { id: "2", name: "Position Data" },
     ]);
 
     const route = useRoute();
@@ -215,10 +198,9 @@ export default {
     // });
 
     const onVideoResize = (size) => {
-      resultCardHeight.value =
-        resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
+      resultCardHeight.value = resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
 
-    videoStore.setVideoSize(size); 
+      videoStore.setVideoSize(size);
     };
 
     // const onAnnotateSegment = () => {
@@ -226,7 +208,6 @@ export default {
     //     annotationDialog.show = true;
     //   }
     // };
-
 
     // const fetchData = async ({ addResults = true }) => {
     //   await videoStore.fetch({
@@ -370,8 +351,7 @@ export default {
       () => isLoading,
       (value) => {
         if (!value) {
-          resultCardHeight.value =
-            resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
+          resultCardHeight.value = resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
         }
       }
     );
@@ -392,7 +372,7 @@ export default {
     //     isLoading.value = false;
     //     console.log(playerStore.videoUrl);
     //     console.error("Fehler im mounted Hook:", error);
-        
+
     //   }
     // });
 
@@ -400,7 +380,7 @@ export default {
       try {
         await fetchData({ addResults: true });
       } catch (error) {
-        console.error('Fehler beim Laden der Daten:', error);
+        console.error("Fehler beim Laden der Daten:", error);
       } finally {
         isLoading.value = false;
       }
@@ -412,18 +392,18 @@ export default {
           videoId: route.params.id,
           addResults,
         });
-        
+
         if (!data) {
-          throw new Error('Daten konnten nicht abgerufen werden.');
+          throw new Error("Daten konnten nicht abgerufen werden.");
         }
       } catch (error) {
-        console.error('Fehler beim Abrufen der Daten:', error);
+        console.error("Fehler beim Abrufen der Daten:", error);
       }
     };
 
     watch(tab, (newTab) => {
       const currentTab = analysisTabs.value[newTab]?.name;
-      
+
       if (currentTab === "Annotation") {
         markerStore.showReferenceMarker = true;
       } else {
@@ -463,12 +443,12 @@ export default {
       fetchData,
       // fetchPlugin,
       // onKeyDown,
-      analysisTabs
+      analysisTabs,
     };
   },
   components: {
     VideoPlayer,
-    CompAreaVisualizer,
+    PosDataVisualizer,
     AnnotationVisualizer,
     // TranscriptOverview,
     // Timeline,
@@ -480,14 +460,12 @@ export default {
     // VisualizationMenu,
     // PersonGraph,
     // ClusterTimelineItemOverview
-    
   },
 };
 </script>
 
-
 <style scoped>
-.logo>img {
+.logo > img {
   max-height: 56px;
 }
 
