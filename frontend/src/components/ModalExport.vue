@@ -35,7 +35,7 @@
                 :key="exportFormat.name"
                 :value="exportFormat.name"
               >
-                <v-card style="height: 35vh" flat>
+                <v-card style="height: 275px" flat>
                   <v-card-title class="mb-0">{{ exportFormat.name }}</v-card-title>
 
                   <v-card-text style="flex-grow: 1; overflow-y: auto">
@@ -47,7 +47,7 @@
                   </v-card-text>
                 </v-card>
 
-                <v-row class="mt-n4 mb-1 mr-2">
+                <v-row class="mt-n4 mb-1 mr-1">
                   <v-spacer />
                   <v-btn @click="downloadExport(exportFormat.export, exportFormat.parameters)">
                     {{ $t("modal.export.export") }}

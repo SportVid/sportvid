@@ -9,7 +9,7 @@ export const usePlayerStore = defineStore("player", () => {
   const targetTime = ref(0.0);
   const playing = ref(false);
   const ended = ref(false);
-  const isSynced = ref(false);
+  const isSynced = ref(true);
 
   const hiddenVolume = ref(1.0);
   const mute = ref(false);
@@ -151,6 +151,6 @@ export const usePlayerStore = defineStore("player", () => {
     setPlaying,
     togglePlaying,
     fetchVideo,
-    toggleSliderSync
+    toggleSliderSync,
   };
 });

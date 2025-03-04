@@ -1,20 +1,32 @@
 <template>
   <v-container class="d-flex flex-column">
-    <v-row ref="visualizerContainer" class="visualizer-container mt-n1">
-      <img class="visualizer-image" :src="currentSport.pitchImage" />
+    <v-row class="mx-2 mt-1">
+      <img
+        ref="compAreaElement"
+        class="visualizer-image"
+        :src="currentSport.pitchImage"
+        @load="updateCompAreaSize"
+      />
 
       <div
-        v-for="(position, index) in positions[sliderValue]"
+        v-for="(position, index) in markerStore.positions[sliderValue]"
         :key="index"
         class="data-point-position"
         :style="{
-          top: `${position.y}%`,
-          left: `${position.x}%`,
+          top:
+            (position.bbox_top + position.bbox_height) * compAreaStore.compAreaSize.height +
+            compAreaStore.compAreaSize.top +
+            'px',
+          left:
+            (position.bbox_left + position.bbox_width / 2) * compAreaStore.compAreaSize.width +
+            compAreaStore.compAreaSize.left +
+            'px',
+          backgroundColor: `${position.team}`,
         }"
       />
     </v-row>
 
-    <v-row class="video-control mt-6">
+    <v-row class="video-control mt-8 mx-1 mb-n1">
       <v-menu offset-y top>
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
@@ -30,7 +42,15 @@
         </v-list>
       </v-menu>
 
-      <v-btn @click="toggleSliderSync" size="small">
+      <v-btn
+        size="small"
+        @click="markerStore.viewBoundingBox"
+        :color="markerStore.showBoundingBox ? 'primary' : 'white'"
+      >
+        {{ $t("pos_data_vis.view_bounding_box") }}
+      </v-btn>
+
+      <v-btn @click="playerStore.toggleSliderSync" size="small">
         <v-icon v-if="playerStore.isSynced"> mdi-link-off</v-icon>
         <v-icon v-else> mdi-link</v-icon>
       </v-btn>
@@ -40,7 +60,7 @@
       </div>
     </v-row>
 
-    <v-row class="mt-4">
+    <v-row class="mx-0">
       <v-slider
         v-model="sliderValue"
         @update:model-value="updateFrame"
@@ -56,13 +76,17 @@
 </template>
 
 <script>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
+import { useCompAreaStore } from "@/stores/comp_area";
+import { useMarkerStore } from "@/stores/marker";
 import { getTimecode } from "@/plugins/time";
 
 export default {
   setup() {
     const playerStore = usePlayerStore();
+    const compAreaStore = useCompAreaStore();
+    const markerStore = useMarkerStore();
 
     const currentSport = ref({
       title: "Soccer",
@@ -78,21 +102,9 @@ export default {
       currentSport.value = sports[idx];
     };
 
-    const positions = ref(
-      Array.from({ length: 100 }, (_, frameIndex) =>
-        Array.from({ length: 3 }, (_, pointIndex) => ({
-          x: 20 + frameIndex * 0.5 + pointIndex * 2,
-          y: 20 + frameIndex * 0.5 + pointIndex * 2,
-        }))
-      )
-    );
-
     const currentFrame = ref(0);
     const updateFrame = (newIndex) => {
       currentFrame.value = newIndex;
-    };
-    const toggleSliderSync = () => {
-      playerStore.isSynced = !playerStore.isSynced;
     };
     const currentTime = computed(() => playerStore.currentTime);
 
@@ -108,42 +120,72 @@ export default {
       },
     });
 
+    const compAreaElement = ref(null);
+    const updateCompAreaSize = () => {
+      nextTick(() => {
+        if (compAreaElement.value) {
+          const rect = compAreaElement.value.getBoundingClientRect();
+          const size = {
+            width: rect.width,
+            height: rect.height,
+            top: rect.top,
+            left: rect.left,
+          };
+
+          compAreaStore.setCompAreaSize(size);
+        }
+      });
+    };
+
+    const handleResize = () => {
+      updateCompAreaSize();
+    };
+
+    onMounted(() => {
+      setTimeout(() => {
+        window.dispatchEvent(new Event("resize"));
+      }, 500);
+      updateCompAreaSize();
+      window.addEventListener("resize", handleResize);
+      window.addEventListener("scroll", handleResize);
+    });
+
+    onUnmounted(() => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleResize);
+    });
+
     return {
       playerStore,
+      compAreaStore,
+      markerStore,
       currentSport,
       sports,
       onSportChange,
-      positions,
       currentFrame,
       updateFrame,
-      toggleSliderSync,
       currentTime,
       sliderValue,
       getTimecode,
+      compAreaElement,
     };
   },
 };
 </script>
 
 <style>
-.visualizer-container {
-  height: 100%;
-  justify-content: center;
-}
-
 .visualizer-image {
   max-width: 100%;
   max-height: 100%;
 }
 
 .data-point-position {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background-color: red;
+  position: fixed;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  pointer-events: none;
+  z-index: 1000;
 }
 
 .video-control {
@@ -160,6 +202,6 @@ export default {
 }
 
 .sport-item:hover {
-  background-color: #f0f0f0; /* Markiere das Element bei Hover */
+  background-color: #f0f0f0;
 }
 </style>

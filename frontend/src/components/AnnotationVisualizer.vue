@@ -7,7 +7,7 @@
       @click="markerStore.setReferenceMarker"
     />
 
-    <v-row class="mx-2 mt-n1">
+    <v-row class="mx-2 mt-1">
       <div
         v-if="markerStore.isAddingMarker"
         ref="overlayMarker"
@@ -61,7 +61,7 @@
         @click="markerStore.deleteMarker(m.id)"
         :style="{
           top:
-            m.compAreaCoords8Rel.y * compAreaStore.compAreaSize.height +
+            m.compAreaCoordsRel.y * compAreaStore.compAreaSize.height +
             compAreaStore.compAreaSize.top +
             'px',
           left:
@@ -73,7 +73,7 @@
       />
     </v-row>
 
-    <v-row class="video-control mt-7 mx-1">
+    <v-row class="video-control mt-10 mx-1 mb-2">
       <v-menu offset-y top>
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
@@ -116,15 +116,15 @@
       </v-btn>
     </v-row>
 
-    <v-row>
+    <!-- <v-row>
       <v-list class="ma-2">
         <v-list-item v-for="m in filteredMarker" :key="m.id">
           <v-list-item-content>
             <v-list-item-title>
               {{ m.name }}:
-              <!-- <span v-if="m.videoCoordsRel.x !== null && m.videoCoordsRel.y !== null !== null">
+              <span v-if="m.videoCoordsRel.x !== null && m.videoCoordsRel.y !== null !== null">
                   (X: {{ m.videoCoordsRel.x }} px, Y: {{ m.videoCoordsRel.y }} px, Z: {{ m.videoCoordsRel.z }} px)
-                </span> -->
+                </span>
               <span
                 v-if="m.compAreaCoordsRel.x !== null && (m.compAreaCoordsRel.y !== null) !== null"
               >
@@ -136,7 +136,7 @@
           </v-list-item-content>
         </v-list-item>
       </v-list>
-    </v-row>
+    </v-row> -->
   </v-container>
 </template>
 
@@ -147,8 +147,7 @@ import { useCompAreaStore } from "@/stores/comp_area";
 import { useMarkerStore } from "@/stores/marker";
 
 export default {
-  emits: ["resize"],
-  setup(_, { emit }) {
+  setup() {
     const videoStore = useVideoStore();
     const compAreaStore = useCompAreaStore();
     const markerStore = useMarkerStore();
@@ -191,7 +190,6 @@ export default {
           };
 
           compAreaStore.setCompAreaSize(size);
-          emit("resize", size);
         }
       });
     };
@@ -223,6 +221,9 @@ export default {
     };
 
     onMounted(() => {
+      setTimeout(() => {
+        window.dispatchEvent(new Event("resize"));
+      }, 500);
       updateCompAreaSize();
       window.addEventListener("click", handleClickOverlayReferenceMarker);
       window.addEventListener("click", handleClickOverlayMarker);

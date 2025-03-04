@@ -454,5 +454,8 @@
     "view_ref_marker": "View Ref Marker",
     "add_marker": "Add Marker",
     "delete_marker": "Delete Marker"
+  },
+  "pos_data_vis": {
+    "view_bounding_box": "Bounding Box"
   }
 }

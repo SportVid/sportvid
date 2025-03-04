@@ -4,8 +4,8 @@
       <v-row class="ma-n2">
         <v-col cols="6">
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" ref="videoCard">
-            <v-row>
-              <v-card-title class="mt-2">
+            <v-row justify="center">
+              <v-card-title class="mt-5 mb-n1">
                 {{ playerStore.videoName }}
               </v-card-title>
             </v-row>
@@ -52,7 +52,7 @@
 </template>
 
 <script>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
@@ -408,6 +408,12 @@ export default {
         markerStore.showReferenceMarker = true;
       } else {
         markerStore.showReferenceMarker = false;
+      }
+
+      if (currentTab === "Position Data") {
+        markerStore.showBoundingBox = true;
+      } else {
+        markerStore.showBoundingBox = false;
       }
     });
 

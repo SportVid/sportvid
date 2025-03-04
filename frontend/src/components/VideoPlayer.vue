@@ -26,6 +26,20 @@
         @mouseleave="markerStore.hoveredReferenceMarker = null"
         class="reference-marker-position"
       />
+
+      <div
+        v-for="(position, index) in markerStore.positions[sliderValue]"
+        v-show="markerStore.showBoundingBox"
+        :key="index"
+        class="bounding-box-position"
+        :style="{
+          top: position.bbox_top * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
+          left: position.bbox_left * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
+          width: position.bbox_width * videoStore.videoSize.width + 'px',
+          height: position.bbox_height * videoStore.videoSize.height + 'px',
+          border: `2px solid ${position.team}`,
+        }"
+      />
     </v-row>
 
     <v-row class="video-control mt-6">
@@ -108,15 +122,15 @@
 
 <script>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, onBeforeUnmount } from "vue";
+import { useElementBounding } from "@vueuse/components";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useMarkerStore } from "@/stores/marker";
 import { getTimecode } from "@/plugins/time";
 
 export default {
-  props: ["showReferenceMarker"],
-  emits: ["loadedData", "canPlay", "resize"],
-  setup(props, { emit }) {
+  emits: ["loadedData", "canPlay"],
+  setup(_, { emit }) {
     const videoElement = ref(null);
     const videoContainer = ref(null);
 
@@ -226,8 +240,6 @@ export default {
       return (playerStore.currentTime / playerStore.videoDuration) * 100;
     });
 
-    const showReferenceMarker = props.showReferenceMarker;
-
     const updateVideoSize = () => {
       nextTick(() => {
         if (videoElement.value) {
@@ -240,7 +252,6 @@ export default {
           };
 
           videoStore.setVideoSize(size);
-          emit("resize", size);
         }
       });
     };
@@ -248,6 +259,20 @@ export default {
     const handleResize = () => {
       updateVideoSize();
     };
+
+    const currentFrame = ref(0);
+    const updateFrame = (newIndex) => {
+      currentFrame.value = newIndex;
+    };
+    const sliderValue = computed({
+      get: () => {
+        return Math.round(currentTime.value);
+      },
+      set: (value) => {
+        currentFrame.value = value;
+        updateFrame(value);
+      },
+    });
 
     onMounted(() => {
       updateVideoSize();
@@ -332,7 +357,8 @@ export default {
       updateVideoSize,
       markerStore,
       videoStore,
-      showReferenceMarker,
+      useElementBounding,
+      sliderValue,
     };
   },
 };
@@ -378,6 +404,11 @@ export default {
   background-color: red;
   border-radius: 50%;
   transform: translate(-50%, -50%);
+  z-index: 1000;
+}
+
+.bounding-box-position {
+  position: fixed;
   z-index: 1000;
 }
 </style>
