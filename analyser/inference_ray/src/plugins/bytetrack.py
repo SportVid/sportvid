@@ -4,7 +4,7 @@ from analyser.data import VideoData, BboxesData, BboxData
 from analyser.data import DataManager, Data
 from analyser.utils import VideoDecoder
 
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Tuple
 import argparse
 
 """ByteTrack model from https://github.com/ifzhang/ByteTrack
@@ -117,7 +117,7 @@ class ByteTrack(
         
         with inputs["video"] as input_data, data_manager.create_data(
             "BboxesData"
-        ) as output_data, data_manager.create_data("ImagesData") as output_img_data:
+        ) as output_data:
             with input_data.open_video() as f_video:
                 video_decoder = VideoDecoder(
                     f_video,
@@ -141,7 +141,7 @@ class ByteTrack(
                 model.eval()
                 predictor = Predictor(model, exp, None, self.device, fp16=args.fp16)
 
-                results = self.track(video_decoder, predictor, args)
+                results, img_info = self.track(video_decoder, predictor, args)
 
                 for i, frame_info in enumerate(results):
                     for id, score, box in zip(
@@ -150,11 +150,12 @@ class ByteTrack(
                         frame_info["track_boxes"],
                     ):
                         
+                        # normalize the box coordinates
                         bbox = BboxData(
-                            x=int(box[0]),
-                            y=int(box[1]),
-                            w=int(box[2]),
-                            h=int(box[3]),
+                            x=int(box[0]) / img_info["width"],
+                            y=int(box[1]) / img_info["height"],
+                            w=int(box[2]) / img_info["width"],
+                            h=int(box[3]) / img_info["height"],
                             image_id=frame_info["frame_id"],
                             ref_id=id,
                             det_score=score,
@@ -172,7 +173,7 @@ class ByteTrack(
         video_decoder: VideoDecoder,
         predictor: Predictor,
         args: argparse.Namespace,
-    ) -> List[Dict[str, Any]]:
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """Performs object tracking
 
         Result dictionary format for each frame:
@@ -189,7 +190,7 @@ class ByteTrack(
             args (argparse.Namespace): Parameters / arguments
 
         Returns:
-            tuple[list, list]: Results with dictionary per frame, Image with object frames
+            Tuple[List[Dict[str, Any]], Dict[str, Any]]: Results with dictionary per frame, image info
         """
         from yolox.tracker.byte_tracker import BYTETracker
 
@@ -226,5 +227,4 @@ class ByteTrack(
                     "track_boxes": online_tlwhs,
                 }
             )
-
-        return results
+        return results, img_info
