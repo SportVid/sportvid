@@ -9,7 +9,7 @@ from backend.models import (
 from backend.plugin_manager import PluginManager
 
 from ..utils.analyser_client import TaskAnalyserClient
-from analyser.data import Shot, DataManager
+from analyser.data import DataManager
 from backend.utils.parser import Parser
 from backend.utils.task import Task
 from django.db import transaction
@@ -62,8 +62,8 @@ class ByteTrack(Task):
                 "fps": parameters.get("fps"),
             },
             inputs={"video": video_id},
-            #outputs=["tracklets", "annotated_frames"],
-            downloads=["tracklets", "annotated_frames"],
+            outputs=["tracklets"],
+            downloads=["tracklets"],
         )
 
         if plugin_run is not None:
@@ -75,15 +75,12 @@ class ByteTrack(Task):
             return {}
 
         with transaction.atomic():
-            with bytetrack_result[1]["tracklets"] as tracklets, bytetrack_result[1]["annotated_frames"] as annotated_frames:
+            with bytetrack_result[1]["tracklets"] as tracklets:
 
-                print(f"{tracklets=}")
-                print(f"{annotated_frames=}")
-                #TODO build frontend representation
-
+                #TODO build frontend representation?
                 return {
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [],
                     #"timelines": {"tracklets": annotation_timeline_db.id.hex},
-                    "data": {"tracklets": bytetrack_result[1]["tracklets"].id, "annotated_frames": bytetrack_result[1]["annotated_frames"].id}
+                    "data": {"tracklets": bytetrack_result[1]["tracklets"].id}
                 }
