@@ -61,7 +61,7 @@
           </template>
         </v-data-table>
 
-        <v-row class="mt-6 justify-center">
+        <v-row class="mt-6 mb-n2 justify-center">
           <v-btn class="mt-n2" @click="submit" :disabled="isSubmitting">
             {{ $t("modal.shortcut.update") }}
           </v-btn>

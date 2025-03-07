@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" width="750px">
+  <v-dialog v-model="dialog" width="710px">
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("modal.export.title") }}
@@ -18,18 +18,19 @@
 
       <v-card-text style="overflow: hidden;">
         <v-row>
-          <v-col cols="4">
+          <v-col cols="3" class="ml-n3 mr-9">
             <v-tabs 
               direction="vertical" 
               slider-color="primary"
               v-model="tab"
+              class="mr-n9"
             >
               <v-tab 
                 v-for="exportFormat in exportFormatsSorted" 
                 :key="exportFormat.name"
-                :value="exportFormat.name" 
+                :value="exportFormat.name"
               >
-                <v-icon> {{ exportFormat.icon }} </v-icon>
+                <v-icon>{{ exportFormat.icon }}</v-icon>
                 <span class="text-button ml-1">{{ exportFormat.name }}</span>
               </v-tab>
             </v-tabs>  
@@ -37,14 +38,14 @@
 
           <v-divider vertical></v-divider>
 
-          <v-col cols="7">  
-            <v-card style="height: 35vh;  width: 470px;" flat>
+          <v-col style="width: 490px;">
               <v-tabs-window v-model="tab">
                 <v-tabs-window-item 
                   v-for="exportFormat in exportFormatsSorted" 
                   :key="exportFormat.name"
                   :value="exportFormat.name"
                 >
+                  <v-card style="height: 35vh;" flat>
                     <v-card-title class="mb-0">{{ exportFormat.name }}</v-card-title>
                     
                     <v-card-text
@@ -56,22 +57,22 @@
                         class="compact_parameters"
                       />
                     </v-card-text>
+                  </v-card>
+                  
+                  <v-row class="mt-n4 mb-1 mr-2">
+                    <v-spacer></v-spacer>
+                    <v-btn 
+                      @click="downloadExport(
+                        exportFormat.export, 
+                        exportFormat.parameters
+                      )"
+                      
+                    >
+                      {{ $t("modal.export.export") }}
+                    </v-btn>
+                  </v-row>
                 </v-tabs-window-item>
               </v-tabs-window>
-            </v-card>
-
-            <v-row>
-              <v-spacer></v-spacer>
-              <v-btn 
-                @click="downloadExport(
-                  exportFormat.export, 
-                  exportFormat.parameters
-                )"
-                class="mr-n12 mb-2"
-              >
-                {{ $t("modal.export.export") }}
-              </v-btn>
-            </v-row>
           </v-col>
         </v-row>
       </v-card-text>
@@ -198,16 +199,25 @@ export default {
     );
 
     const downloadExport = async (format, parameters) => {
+      // const processedParams = parameters.map((e) => {
+      //   if ("file" in e) {
+      //     return { name: e.name, file: e.file };
+      //   } else if (e.name === "shot_timeline_id") {
+      //     return { name: e.name, value: e.value.timeline_ids[0] };
+      //   } else {
+      //     return { name: e.name, value: e.value };
+      //   }
+      // });
       const processedParams = parameters.map((e) => {
         if ("file" in e) {
           return { name: e.name, file: e.file };
-        } else if (e.name === "shot_timeline_id") {
+        } else if (e.name === "shot_timeline_id" && e.value?.timeline_ids?.length) {
           return { name: e.name, value: e.value.timeline_ids[0] };
         } else {
-          return { name: e.name, value: e.value };
+          return { name: e.name, value: e.value ?? null };
         }
       });
-      await videoStore.export({ format, parameters: processedParams });
+      await videoStore.exportVideo({ format, parameters: processedParams });
       dialog.modelValue = false;
     };
 

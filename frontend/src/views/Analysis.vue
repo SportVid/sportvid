@@ -1,5 +1,5 @@
 <template>
-  <v-main class="main" tabindex="0" ref="main" @click="handleClickOutsideButton">
+  <v-main class="main" tabindex="0" ref="main">
     <v-container fluid>
       <v-row class="ma-n2">
         <v-col cols="6">
@@ -37,41 +37,41 @@
             elevation="2"
           >
             <v-row class="sticky-tabs-bar" justify="center">
-              <v-tabs align-tabs="center" v-model="tab">
-                <v-tab>Pitch</v-tab>
+              <v-tabs 
+                fixed-tabs 
+                slider-color="primary"
+                v-model="tab">
+                <v-tab
+                  v-for="analysisTab in analysisTabs"
+                  :key="analysisTab.name"
+                >
+                  <span>{{ analysisTab.name }}</span>
+                </v-tab>
               </v-tabs>
             </v-row>
             
             <v-row class="flex-grow-1">
               <v-col>
-                <VideoVisualizer />
-                <v-btn
-                  :color="isButtonActive ? 'red' : 'grey'"
-                  dark
-                  icon="mdi-circle-medium"
-                  variant="icon"
-                  @click="toggleButton"
-                  class="custom-button"
-                >
-                </v-btn>
+                <v-tabs-window v-model="tab">
+                  <v-tabs-window-item
+                    v-for="analysisTab in analysisTabs"
+                    :key="analysisTab.name"
+                  >
+                    <CompAreaVisualizer v-if="analysisTab.name === 'Position Data'"/>
+                    <AnnotationVisualizer v-if="analysisTab.name === 'Annotation'"/>
+                  </v-tabs-window-item>
+                </v-tabs-window>
               </v-col>
             </v-row>
           </v-card>
         </v-col>
-      </v-row>
-
-      <v-row> 
-        <v-spacer></v-spacer>
-        <div :disabled="isButtonActive" class="mr-16">
-          Mouse X: {{ mouseX }} px, Mouse Y: {{ mouseY }} px
-        </div>
       </v-row>
     </v-container>
   </v-main>
 </template>
 
 <script>
-import { ref, reactive, onMounted, watch } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
@@ -86,7 +86,8 @@ import { usePlayerStore } from "@/stores/player";
 // import * as Keyboard from "../plugins/keyboard";
 
 import VideoPlayer from "@/components/VideoPlayer.vue";
-import VideoVisualizer from "@/components/VideoVisualizer.vue";
+import CompAreaVisualizer from "@/components/CompAreaVisualizer.vue";
+import AnnotationVisualizer from "@/components/AnnotationVisualizer.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import Timeline from "@/components/Timeline.vue";
 // import TimeSelector from "@/components/TimeSelector.vue";
@@ -100,31 +101,10 @@ import VideoVisualizer from "@/components/VideoVisualizer.vue";
 
 export default {
   setup() {
-    const isButtonActive = ref(false); // Button aktiv/inaktiv
-    const mouseX = ref(null); // X-Koordinate der Maus
-    const mouseY = ref(null); // Y-Koordinate der Maus
-    const position = ref(null); // Speichert die Position des Klicks
-
-    // Toggle Button Aktivierung
-    const toggleButton = (event) => {
-      // Verhindern, dass der Button sofort nach Klick auf sich selbst deaktiviert wird
-      event.stopPropagation();
-      isButtonActive.value = !isButtonActive.value;
-    };
-
-    // Klick auf den Bildschirm (außerhalb des Buttons) - Position speichern
-    const handleClickOutsideButton = (event) => {
-      if (isButtonActive.value) {
-        // Speichern der Position
-        mouseX.value = event.clientX; // X-Position des Klicks
-        mouseY.value = event.clientY; // Y-Position des Klicks
-        position.value = { x: mouseX.value, y: mouseY.value }; // Speichern der Position
-
-        // Button wieder deaktivieren, nachdem die Position gespeichert wurde
-        isButtonActive.value = false;
-      }
-    };
-
+    const analysisTabs = ref([
+      { name: "Position Data" },
+      { name: "Annotation" },
+    ]);
 
     const route = useRoute();
 
@@ -471,17 +451,13 @@ export default {
       fetchData,
       // fetchPlugin,
       // onKeyDown,
-      isButtonActive,
-      toggleButton,
-      mouseX,
-      mouseY,
-      position,
-      handleClickOutsideButton,
+      analysisTabs
     };
   },
   components: {
     VideoPlayer,
-    VideoVisualizer,
+    CompAreaVisualizer,
+    AnnotationVisualizer,
     // TranscriptOverview,
     // Timeline,
     // TimeSelector,
@@ -539,12 +515,5 @@ export default {
 .loading-text {
   margin-top: 10px;
   font-size: 18px;
-}
-
-.custom-button {
-  position: absolute; /* Absolute Positionierung */
-  top: 36px; /* Abstand von oben */
-  right: -11px; /* Abstand von rechts */
-  z-index: 10;
 }
 </style>
