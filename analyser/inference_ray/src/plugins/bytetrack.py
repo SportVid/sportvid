@@ -1,20 +1,23 @@
 from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.data import VideoData, ImagesData, BboxesData, BboxData
+from analyser.data import VideoData, BboxesData, BboxData
 
-# from analyser.inference import InferenceServer
 from analyser.data import DataManager, Data
-
 from analyser.utils import VideoDecoder
 
-from typing import Callable, Dict
-import logging
+from typing import Any, Callable, Dict, List
 import argparse
+
+"""ByteTrack model from https://github.com/ifzhang/ByteTrack
+
+TODO: Replace with ONNX version from https://github.com/ifzhang/ByteTrack/tree/main/deploy/ONNXRuntime
+TODO: stream output_data to avoid memory issues in future plugins?
+
+"""
 
 default_config = {
     "data_dir": "/data/",
     "host": "localhost",
     "port": 6379,
-    # TODO currently needs to be downloaded and moved manually from https://drive.google.com/file/d/1P4mY0Yyd3PPTybgZkjMYhFri88nTmJX5/view?usp=sharing
     "model_file": "/models/bytetrack/bytetrack_x_mot17.pth.tar",
 }
 
@@ -40,7 +43,6 @@ requires = {
 
 provides = {
     "tracklets": BboxesData,
-    "annotated_frames": ImagesData,
 }
 
 
@@ -112,6 +114,7 @@ class ByteTrack(
         import torch
         from yolox.exp import get_exp
 
+        
         with inputs["video"] as input_data, data_manager.create_data(
             "BboxesData"
         ) as output_data, data_manager.create_data("ImagesData") as output_img_data:
@@ -138,7 +141,7 @@ class ByteTrack(
                 model.eval()
                 predictor = Predictor(model, exp, None, self.device, fp16=args.fp16)
 
-                results, annotated_frames = self.track(video_decoder, predictor, args)
+                results = self.track(video_decoder, predictor, args)
 
                 for i, frame_info in enumerate(results):
                     for id, score, box in zip(
@@ -158,14 +161,10 @@ class ByteTrack(
                             time=i / args.fps,
                         )
                         output_data.bboxes.append(bbox)
-                for frame in annotated_frames:
-                    output_img_data.save_image(frame)
                 self.update_callbacks(callbacks, progress=1.0)
 
-                #TODO maybe change annotated frames to video/ or remove it if not needed for memory efficiency
                 return {
                     "tracklets": output_data,
-                    "annotated_frames": output_img_data,
                 }
 
     def track(
@@ -173,7 +172,7 @@ class ByteTrack(
         video_decoder: VideoDecoder,
         predictor: Predictor,
         args: argparse.Namespace,
-    ) -> tuple[list, list]:
+    ) -> List[Dict[str, Any]]:
         """Performs object tracking
 
         Result dictionary format for each frame:
@@ -192,13 +191,11 @@ class ByteTrack(
         Returns:
             tuple[list, list]: Results with dictionary per frame, Image with object frames
         """
-        from yolox.utils.visualize import plot_tracking
         from yolox.tracker.byte_tracker import BYTETracker
 
         tracker = BYTETracker(args, frame_rate=args.fps)
 
         results = []
-        annotated_frames = []
         for frame_id, _frame in enumerate(video_decoder):
             outputs, img_info = predictor.inference(_frame["frame"])
 
@@ -221,13 +218,6 @@ class ByteTrack(
                         online_tlwhs.append(tlwh)
                         online_ids.append(tid)
                         online_scores.append(t.score.item())
-
-                online_img = plot_tracking(
-                    img_info["raw_img"], online_tlwhs, online_ids, frame_id=frame_id + 1
-                )
-            else:
-                online_img = img_info["raw_img"]
-
             results.append(
                 {
                     "frame_id": frame_id,
@@ -236,6 +226,5 @@ class ByteTrack(
                     "track_boxes": online_tlwhs,
                 }
             )
-            annotated_frames.append(online_img)
 
-        return results, annotated_frames
+        return results
