@@ -29,53 +29,39 @@
   </v-list>
 </template>
 
-<script>
+<script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import { repPlace } from "../plugins/helpers";
 import { useI18n } from "vue-i18n";
 
-export default {
-  setup() {
-    const { t } = useI18n();
-    const userStore = useUserStore();
-    const router = useRouter();
+const { t } = useI18n();
+const userStore = useUserStore();
+const router = useRouter();
 
-    const username = computed(() => userStore.username);
-    const email = computed(() => userStore.email);
-    const date = computed(() => userStore.date);
+const username = computed(() => userStore.username);
+const email = computed(() => userStore.email);
+const date = computed(() => userStore.date);
 
-    const nDays = computed(() => {
-      const dateObj = new Date(date.value);
-      const diffInMs = new Date() - dateObj;
-      return Math.round(diffInMs / (1000 * 60 * 60 * 24));
-    });
+const nDays = computed(() => {
+  const dateObj = new Date(date.value);
+  const diffInMs = new Date() - dateObj;
+  return Math.round(diffInMs / (1000 * 60 * 60 * 24));
+});
 
-    const joined = computed(() => {
-      const text = "Joined {n_days} days ago";
-      return repPlace({ n_days: nDays.value }, text);
-    });
+const joined = computed(() => {
+  const text = "Joined {n_days} days ago";
+  return repPlace({ n_days: nDays.value }, text);
+});
 
-    const initials = computed(() => username.value.slice(0, 2));
+const initials = computed(() => username.value.slice(0, 2));
 
-    const logout = async () => {
-      const loggedOut = await userStore.logout();
-      if (loggedOut) {
-        router.push({ name: "Home" });
-      }
-    };
-
-    return {
-      username,
-      email,
-      date,
-      nDays,
-      joined,
-      initials,
-      logout,
-    };
-  },
+const logout = async () => {
+  const loggedOut = await userStore.logout();
+  if (loggedOut) {
+    router.push({ name: "Home" });
+  }
 };
 </script>
 

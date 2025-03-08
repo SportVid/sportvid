@@ -88,7 +88,7 @@
   </v-main>
 </template>
 
-<script>
+<script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useVideoStore } from "@/stores/video";
@@ -100,94 +100,71 @@ import ModalVideoUpload from "@/components/ModalVideoUpload.vue";
 import ModalVideoRename from "@/components/ModalVideoRename.vue";
 import { getDisplayTime } from "@/plugins/time";
 
-export default {
-  components: {
-    ModalVideoUpload,
-    ModalVideoRename,
-    ModalPlugin,
-  },
-  setup() {
-    const router = useRouter();
-    const videoStore = useVideoStore();
-    const userStore = useUserStore();
-    const pluginRunStore = usePluginRunStore();
-    const timelineStore = useTimelineStore();
+const router = useRouter();
+const videoStore = useVideoStore();
+const userStore = useUserStore();
+const pluginRunStore = usePluginRunStore();
+const timelineStore = useTimelineStore();
 
-    const showModalPlugin = ref(false);
-    const selectedVideos = ref({});
-    const fetchPluginTimer = ref(null);
+const showModalPlugin = ref(false);
+const selectedVideos = ref({});
+const fetchPluginTimer = ref(null);
 
-    const videos = computed(() => videoStore.all);
-    const selectedVideosIds = computed(() =>
-      Object.entries(selectedVideos.value)
-        .filter(([, isSelected]) => isSelected)
-        .map(([id]) => id)
-    );
+const videos = computed(() => videoStore.all);
+const selectedVideosIds = computed(() =>
+  Object.entries(selectedVideos.value)
+    .filter(([, isSelected]) => isSelected)
+    .map(([id]) => id)
+);
 
-    const videosProgress = computed(() => {
-      const progress = {};
-      videos.value.forEach((video) => {
-        const runs = pluginRunStore.forVideo(video.id);
-        progress[video.id] =
-          (runs.filter((r) => r.status !== "RUNNING" && r.status !== "QUEUED").length /
-            runs.length) *
-          100;
-      });
-      return progress;
-    });
+const videosProgress = computed(() => {
+  const progress = {};
+  videos.value.forEach((video) => {
+    const runs = pluginRunStore.forVideo(video.id);
+    progress[video.id] =
+      (runs.filter((r) => r.status !== "RUNNING" && r.status !== "QUEUED").length / runs.length) *
+      100;
+  });
+  return progress;
+});
 
-    const fetchData = async (fetchTimelines = false) => {
-      await videoStore.fetchAll();
-      await pluginRunStore.fetchAll({ addResults: false });
-      if (fetchTimelines) {
-        await timelineStore.fetchAll({ addResultsType: true });
-      }
-    };
-
-    const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
-    const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
-
-    onMounted(() => {
-      fetchData();
-    });
-
-    watch(
-      () => userStore.loggedIn,
-      (newValue, oldValue) => {
-        if (!oldValue && newValue) {
-          fetchData();
-        }
-      }
-    );
-
-    watch(
-      () => pluginRunStore.pluginInProgress,
-      (newState) => {
-        if (newState) {
-          fetchPluginTimer.value = setInterval(() => {
-            fetchData();
-          }, 2000);
-        } else if (fetchPluginTimer.value) {
-          clearInterval(fetchPluginTimer.value);
-        }
-      },
-      { immediate: true }
-    );
-
-    return {
-      videos,
-      selectedVideos,
-      selectedVideosIds,
-      videosProgress,
-      showModalPlugin,
-      deleteVideo,
-      showVideo,
-      fetchData,
-      userStore,
-      getDisplayTime,
-    };
-  },
+const fetchData = async (fetchTimelines = false) => {
+  await videoStore.fetchAll();
+  await pluginRunStore.fetchAll({ addResults: false });
+  if (fetchTimelines) {
+    await timelineStore.fetchAll({ addResultsType: true });
+  }
 };
+
+const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
+const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
+
+onMounted(() => {
+  fetchData();
+});
+
+watch(
+  () => userStore.loggedIn,
+  (newValue, oldValue) => {
+    if (!oldValue && newValue) {
+      fetchData();
+    }
+  }
+);
+
+watch(
+  () => pluginRunStore.pluginInProgress,
+  (newState) => {
+    if (newState) {
+      fetchPluginTimer.value = setInterval(() => {
+        fetchData();
+      }, 2000);
+    } else if (fetchPluginTimer.value) {
+      clearInterval(fetchPluginTimer.value);
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style>

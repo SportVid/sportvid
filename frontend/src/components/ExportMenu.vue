@@ -13,32 +13,19 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, computed } from "vue";
 import { useUserStore } from "@/stores/user";
 import { usePlayerStore } from "@/stores/player";
 import ModalExport from "@/components/ModalExport.vue";
 
-export default {
-  components: {
-    ModalExport,
-  },
-  setup() {
-    const userStore = useUserStore();
-    const playerStore = usePlayerStore();
+const userStore = useUserStore();
+const playerStore = usePlayerStore();
 
-    const showModalExport = ref(false);
+const showModalExport = ref(false);
 
-    const videoId = computed(() => playerStore.videoId);
-    const loggedIn = computed(() => userStore.loggedIn);
-
-    return {
-      showModalExport,
-      videoId,
-      loggedIn,
-    };
-  },
-};
+const videoId = computed(() => playerStore.videoId);
+const loggedIn = computed(() => userStore.loggedIn);
 </script>
 
 <style>

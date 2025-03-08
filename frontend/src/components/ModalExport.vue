@@ -62,173 +62,163 @@
   </v-dialog>
 </template>
 
-<script>
+<script setup>
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import Parameters from "./Parameters.vue";
 
-export default {
-  props: {
-    modelValue: {
-      type: Boolean,
-      default: false,
-    },
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
+    default: false,
   },
-  setup(props, { emit }) {
-    const videoStore = useVideoStore();
-    const playerStore = usePlayerStore();
+});
 
-    const dialog = ref(props.modelValue);
-    const { t } = useI18n();
+const emit = defineEmits();
 
-    const tab = ref(null);
+const videoStore = useVideoStore();
+const playerStore = usePlayerStore();
 
-    const exportFormats = ref([
+const dialog = ref(props.modelValue);
+const { t } = useI18n();
+
+const tab = ref(null);
+
+const exportFormats = ref([
+  {
+    name: t("modal.export.merged_csv.export_name"),
+    icon: "mdi-file",
+    export: "merged_csv",
+    parameters: [
       {
-        name: t("modal.export.merged_csv.export_name"),
-        icon: "mdi-file",
-        export: "merged_csv",
-        parameters: [
-          {
-            field: "checkbox",
-            name: "merge_timeline",
-            value: true,
-            text: t("modal.export.merged_csv.timeline_merge"),
-          },
-          {
-            field: "checkbox",
-            name: "use_timestamps",
-            value: true,
-            text: t("modal.export.merged_csv.use_timestamps"),
-          },
-          {
-            field: "checkbox",
-            name: "use_seconds",
-            value: true,
-            text: t("modal.export.merged_csv.use_seconds"),
-          },
-          {
-            field: "checkbox",
-            name: "include_category",
-            value: true,
-            text: t("modal.export.merged_csv.include_category"),
-          },
-          {
-            field: "checkbox",
-            name: "split_places",
-            value: true,
-            text: t("modal.export.merged_csv.split_places"),
-          },
-        ],
+        field: "checkbox",
+        name: "merge_timeline",
+        value: true,
+        text: t("modal.export.merged_csv.timeline_merge"),
       },
       {
-        name: t("modal.export.individual_csv.export_name"),
-        icon: "mdi-file",
-        export: "individual_csv",
-        parameters: [
-          {
-            field: "checkbox",
-            name: "use_timestamps",
-            value: true,
-            text: t("modal.export.individual_csv.use_timestamps"),
-          },
-          {
-            field: "checkbox",
-            name: "use_seconds",
-            value: true,
-            text: t("modal.export.individual_csv.use_seconds"),
-          },
-          {
-            field: "checkbox",
-            name: "include_category",
-            value: true,
-            text: t("modal.export.individual_csv.include_category"),
-          },
-        ],
+        field: "checkbox",
+        name: "use_timestamps",
+        value: true,
+        text: t("modal.export.merged_csv.use_timestamps"),
       },
       {
-        name: t("modal.export.elan.export_name"),
-        icon: "mdi-file",
-        export: "elan",
-        parameters: [
-          {
-            field: "select_timeline",
-            name: "shot_timeline_id",
-            text: t("modal.plugin.shot_timeline_name"),
-            hint: t("modal.plugin.shot_timeline_hint"),
-          },
-          {
-            field: "buttongroup",
-            text: t("modal.plugin.aggregation.method"),
-            name: "aggregation",
-            value: 0,
-            buttons: [
-              t("modal.plugin.aggregation.max"),
-              t("modal.plugin.aggregation.min"),
-              t("modal.plugin.aggregation.mean"),
-            ],
-          },
-        ],
+        field: "checkbox",
+        name: "use_seconds",
+        value: true,
+        text: t("modal.export.merged_csv.use_seconds"),
       },
-    ]);
-
-    const videoId = computed(() => playerStore.videoId);
-
-    const exportFormatsSorted = computed(() =>
-      exportFormats.value.slice().sort((a, b) => a.name.localeCompare(b.name))
-    );
-
-    const downloadExport = async (format, parameters) => {
-      // const processedParams = parameters.map((e) => {
-      //   if ("file" in e) {
-      //     return { name: e.name, file: e.file };
-      //   } else if (e.name === "shot_timeline_id") {
-      //     return { name: e.name, value: e.value.timeline_ids[0] };
-      //   } else {
-      //     return { name: e.name, value: e.value };
-      //   }
-      // });
-      const processedParams = parameters.map((e) => {
-        if ("file" in e) {
-          return { name: e.name, file: e.file };
-        } else if (e.name === "shot_timeline_id" && e.value?.timeline_ids?.length) {
-          return { name: e.name, value: e.value.timeline_ids[0] };
-        } else {
-          return { name: e.name, value: e.value ?? null };
-        }
-      });
-      await videoStore.exportVideo({ format, parameters: processedParams });
-      dialog.modelValue = false;
-    };
-
-    watch(
-      () => dialog.value,
-      (value) => {
-        emit("update:modelValue", value);
-      }
-    );
-
-    watch(
-      () => props.modelValue,
-      (value) => {
-        if (value) {
-          dialog.value = true;
-        }
-      }
-    );
-
-    return {
-      dialog,
-      exportFormatsSorted,
-      videoId,
-      downloadExport,
-      tab,
-    };
+      {
+        field: "checkbox",
+        name: "include_category",
+        value: true,
+        text: t("modal.export.merged_csv.include_category"),
+      },
+      {
+        field: "checkbox",
+        name: "split_places",
+        value: true,
+        text: t("modal.export.merged_csv.split_places"),
+      },
+    ],
   },
-  components: { Parameters },
+  {
+    name: t("modal.export.individual_csv.export_name"),
+    icon: "mdi-file",
+    export: "individual_csv",
+    parameters: [
+      {
+        field: "checkbox",
+        name: "use_timestamps",
+        value: true,
+        text: t("modal.export.individual_csv.use_timestamps"),
+      },
+      {
+        field: "checkbox",
+        name: "use_seconds",
+        value: true,
+        text: t("modal.export.individual_csv.use_seconds"),
+      },
+      {
+        field: "checkbox",
+        name: "include_category",
+        value: true,
+        text: t("modal.export.individual_csv.include_category"),
+      },
+    ],
+  },
+  {
+    name: t("modal.export.elan.export_name"),
+    icon: "mdi-file",
+    export: "elan",
+    parameters: [
+      {
+        field: "select_timeline",
+        name: "shot_timeline_id",
+        text: t("modal.plugin.shot_timeline_name"),
+        hint: t("modal.plugin.shot_timeline_hint"),
+      },
+      {
+        field: "buttongroup",
+        text: t("modal.plugin.aggregation.method"),
+        name: "aggregation",
+        value: 0,
+        buttons: [
+          t("modal.plugin.aggregation.max"),
+          t("modal.plugin.aggregation.min"),
+          t("modal.plugin.aggregation.mean"),
+        ],
+      },
+    ],
+  },
+]);
+
+const videoId = computed(() => playerStore.videoId);
+
+const exportFormatsSorted = computed(() =>
+  exportFormats.value.slice().sort((a, b) => a.name.localeCompare(b.name))
+);
+
+const downloadExport = async (format, parameters) => {
+  // const processedParams = parameters.map((e) => {
+  //   if ("file" in e) {
+  //     return { name: e.name, file: e.file };
+  //   } else if (e.name === "shot_timeline_id") {
+  //     return { name: e.name, value: e.value.timeline_ids[0] };
+  //   } else {
+  //     return { name: e.name, value: e.value };
+  //   }
+  // });
+  const processedParams = parameters.map((e) => {
+    if ("file" in e) {
+      return { name: e.name, file: e.file };
+    } else if (e.name === "shot_timeline_id" && e.value?.timeline_ids?.length) {
+      return { name: e.name, value: e.value.timeline_ids[0] };
+    } else {
+      return { name: e.name, value: e.value ?? null };
+    }
+  });
+  await videoStore.exportVideo({ format, parameters: processedParams });
+  dialog.modelValue = false;
 };
+
+watch(
+  () => dialog.value,
+  (value) => {
+    emit("update:modelValue", value);
+  }
+);
+
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (value) {
+      dialog.value = true;
+    }
+  }
+);
 </script>
 
 <style>

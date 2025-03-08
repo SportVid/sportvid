@@ -20,13 +20,12 @@
   </v-app>
 </template>
 
-<script>
+<script setup>
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import { usePlayerStore } from "@/stores/player";
 import { useErrorStore } from "@/stores/error";
-
 import PluginMenu from "@/components/PluginMenu.vue";
 import HistoryMenu from "./components/HistoryMenu.vue";
 import ShortcutMenu from "@/components/ShortcutMenu.vue";
@@ -34,37 +33,16 @@ import ExportMenu from "@/components/ExportMenu.vue";
 import UserMenu from "@/components/UserMenu.vue";
 import ModalError from "./components/ModalError.vue";
 
-export default {
-  components: {
-    PluginMenu,
-    HistoryMenu,
-    ShortcutMenu,
-    ExportMenu,
-    UserMenu,
-    ModalError,
-  },
-  setup() {
-    const appName = process.env.VUE_APP_NAME;
+const appName = process.env.VUE_APP_NAME;
 
-    const route = useRoute();
+const route = useRoute();
 
-    const userStore = useUserStore();
-    const playerStore = usePlayerStore();
-    const errorStore = useErrorStore();
+const userStore = useUserStore();
+const playerStore = usePlayerStore();
+const errorStore = useErrorStore();
 
-    const loggedIn = computed(() => userStore.loggedIn);
-    const analysisView = computed(() => route.name === "AnalysisView");
-
-    return {
-      appName,
-      loggedIn,
-      analysisView,
-      userStore,
-      playerStore,
-      errorStore,
-    };
-  },
-};
+const loggedIn = computed(() => userStore.loggedIn);
+const analysisView = computed(() => route.name === "AnalysisView");
 </script>
 
 <style>

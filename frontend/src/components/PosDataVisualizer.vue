@@ -75,102 +75,83 @@
   </v-container>
 </template>
 
-<script>
+<script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { useMarkerStore } from "@/stores/marker";
 import { getTimecode } from "@/plugins/time";
 
-export default {
-  setup() {
-    const playerStore = usePlayerStore();
-    const compAreaStore = useCompAreaStore();
-    const markerStore = useMarkerStore();
+const playerStore = usePlayerStore();
+const compAreaStore = useCompAreaStore();
+const markerStore = useMarkerStore();
 
-    const currentSport = ref({
-      title: "Soccer",
-      pitchImage: require("../assets/pitch_soccer.png"),
-    });
-    const sports = [
-      { title: "Soccer", pitchImage: require("../assets/pitch_soccer.png") },
-      { title: "Handball", pitchImage: require("../assets/pitch_handball.png") },
-      { title: "Basketball", pitchImage: require("../assets/pitch_basketball.png") },
-      { title: "Climbing", pitchImage: require("../assets/pitch_climbing.png") },
-    ];
-    const onSportChange = (idx) => {
-      currentSport.value = sports[idx];
-    };
-
-    const currentFrame = ref(0);
-    const updateFrame = (newIndex) => {
-      currentFrame.value = newIndex;
-    };
-    const currentTime = computed(() => playerStore.currentTime);
-
-    const sliderValue = computed({
-      get: () => {
-        return playerStore.isSynced ? Math.round(currentTime.value) : currentFrame.value;
-      },
-      set: (value) => {
-        if (!playerStore.isSynced) {
-          currentFrame.value = value;
-          updateFrame(value);
-        }
-      },
-    });
-
-    const compAreaElement = ref(null);
-    const updateCompAreaSize = () => {
-      nextTick(() => {
-        if (compAreaElement.value) {
-          const rect = compAreaElement.value.getBoundingClientRect();
-          const size = {
-            width: rect.width,
-            height: rect.height,
-            top: rect.top,
-            left: rect.left,
-          };
-
-          compAreaStore.setCompAreaSize(size);
-        }
-      });
-    };
-
-    const handleResize = () => {
-      updateCompAreaSize();
-    };
-
-    onMounted(() => {
-      setTimeout(() => {
-        window.dispatchEvent(new Event("resize"));
-      }, 500);
-      updateCompAreaSize();
-      window.addEventListener("resize", handleResize);
-      window.addEventListener("scroll", handleResize);
-    });
-
-    onUnmounted(() => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleResize);
-    });
-
-    return {
-      playerStore,
-      compAreaStore,
-      markerStore,
-      currentSport,
-      sports,
-      onSportChange,
-      currentFrame,
-      updateFrame,
-      currentTime,
-      sliderValue,
-      getTimecode,
-      compAreaElement,
-    };
-  },
+const currentSport = ref({
+  title: "Soccer",
+  pitchImage: require("../assets/pitch_soccer.png"),
+});
+const sports = [
+  { title: "Soccer", pitchImage: require("../assets/pitch_soccer.png") },
+  { title: "Handball", pitchImage: require("../assets/pitch_handball.png") },
+  { title: "Basketball", pitchImage: require("../assets/pitch_basketball.png") },
+  { title: "Climbing", pitchImage: require("../assets/pitch_climbing.png") },
+];
+const onSportChange = (idx) => {
+  currentSport.value = sports[idx];
 };
+
+const currentFrame = ref(0);
+const updateFrame = (newIndex) => {
+  currentFrame.value = newIndex;
+};
+const currentTime = computed(() => playerStore.currentTime);
+
+const sliderValue = computed({
+  get: () => {
+    return playerStore.isSynced ? Math.round(currentTime.value) : currentFrame.value;
+  },
+  set: (value) => {
+    if (!playerStore.isSynced) {
+      currentFrame.value = value;
+      updateFrame(value);
+    }
+  },
+});
+
+const compAreaElement = ref(null);
+const updateCompAreaSize = () => {
+  nextTick(() => {
+    if (compAreaElement.value) {
+      const rect = compAreaElement.value.getBoundingClientRect();
+      const size = {
+        width: rect.width,
+        height: rect.height,
+        top: rect.top,
+        left: rect.left,
+      };
+
+      compAreaStore.setCompAreaSize(size);
+    }
+  });
+};
+
+const handleResize = () => {
+  updateCompAreaSize();
+};
+
+onMounted(() => {
+  setTimeout(() => {
+    window.dispatchEvent(new Event("resize"));
+  }, 500);
+  updateCompAreaSize();
+  window.addEventListener("resize", handleResize);
+  window.addEventListener("scroll", handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", handleResize);
+  window.removeEventListener("scroll", handleResize);
+});
 </script>
 
 <style>

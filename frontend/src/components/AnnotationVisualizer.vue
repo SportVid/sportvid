@@ -140,121 +140,101 @@
   </v-container>
 </template>
 
-<script>
+<script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { useVideoStore } from "@/stores/video";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { useMarkerStore } from "@/stores/marker";
 
-export default {
-  setup() {
-    const videoStore = useVideoStore();
-    const compAreaStore = useCompAreaStore();
-    const markerStore = useMarkerStore();
+const videoStore = useVideoStore();
+const compAreaStore = useCompAreaStore();
+const markerStore = useMarkerStore();
 
-    const compAreaElement = ref(null);
+const compAreaElement = ref(null);
 
-    const currentSport = ref({
-      title: "Soccer",
-      pitchImage: require("../assets/pitch_soccer.png"),
-    });
+const currentSport = ref({
+  title: "Soccer",
+  pitchImage: require("../assets/pitch_soccer.png"),
+});
 
-    const sports = [
-      { title: "Soccer", pitchImage: require("../assets/pitch_soccer.png") },
-      { title: "Handball", pitchImage: require("../assets/pitch_handball.png") },
-      { title: "Basketball", pitchImage: require("../assets/pitch_basketball.png") },
-      { title: "Climbing", pitchImage: require("../assets/pitch_climbing.png") },
-    ];
+const sports = [
+  { title: "Soccer", pitchImage: require("../assets/pitch_soccer.png") },
+  { title: "Handball", pitchImage: require("../assets/pitch_handball.png") },
+  { title: "Basketball", pitchImage: require("../assets/pitch_basketball.png") },
+  { title: "Climbing", pitchImage: require("../assets/pitch_climbing.png") },
+];
 
-    const onSportChange = (idx) => {
-      currentSport.value = sports[idx];
-    };
-
-    const marker = computed(() => markerStore.marker);
-    const filteredMarker = computed(() => markerStore.filteredMarker);
-
-    const showDeleteButton = ref(false);
-
-    const overlayMarker = ref(null);
-    const overlayReferenceMarker = ref(null);
-
-    const updateCompAreaSize = () => {
-      nextTick(() => {
-        if (compAreaElement.value) {
-          const rect = compAreaElement.value.getBoundingClientRect();
-          const size = {
-            width: rect.width,
-            height: rect.height,
-            top: rect.top,
-            left: rect.left,
-          };
-
-          compAreaStore.setCompAreaSize(size);
-        }
-      });
-    };
-
-    const handleResize = () => {
-      updateCompAreaSize();
-    };
-
-    const handleClickOverlayReferenceMarker = (event) => {
-      const activeMarker = marker.value.find((m) => m.active);
-      if (!activeMarker || !overlayReferenceMarker.value) return;
-      if (!overlayReferenceMarker.value.contains(event.target)) return;
-    };
-
-    const handleClickOverlayMarker = (event) => {
-      if (!markerStore.isAddingMarker || !overlayMarker.value) return;
-      if (!overlayMarker.value.contains(event.target)) return;
-    };
-
-    const handleAddMarker = () => {
-      if (showDeleteButton.value) {
-        showDeleteButton.value = false;
-        nextTick(() => {
-          markerStore.addMarker();
-        });
-      } else {
-        markerStore.addMarker();
-      }
-    };
-
-    onMounted(() => {
-      setTimeout(() => {
-        window.dispatchEvent(new Event("resize"));
-      }, 500);
-      updateCompAreaSize();
-      window.addEventListener("click", handleClickOverlayReferenceMarker);
-      window.addEventListener("click", handleClickOverlayMarker);
-      window.addEventListener("resize", handleResize);
-      window.addEventListener("scroll", handleResize);
-    });
-
-    onUnmounted(() => {
-      window.removeEventListener("click", handleClickOverlayReferenceMarker);
-      window.removeEventListener("click", handleClickOverlayMarker);
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleResize);
-    });
-
-    return {
-      videoStore,
-      compAreaStore,
-      markerStore,
-      currentSport,
-      sports,
-      onSportChange,
-      filteredMarker,
-      compAreaElement,
-      updateCompAreaSize,
-      handleAddMarker,
-      showDeleteButton,
-      overlayMarker,
-      overlayReferenceMarker,
-    };
-  },
+const onSportChange = (idx) => {
+  currentSport.value = sports[idx];
 };
+
+const marker = computed(() => markerStore.marker);
+const filteredMarker = computed(() => markerStore.filteredMarker);
+
+const showDeleteButton = ref(false);
+
+const overlayMarker = ref(null);
+const overlayReferenceMarker = ref(null);
+
+const updateCompAreaSize = () => {
+  nextTick(() => {
+    if (compAreaElement.value) {
+      const rect = compAreaElement.value.getBoundingClientRect();
+      const size = {
+        width: rect.width,
+        height: rect.height,
+        top: rect.top,
+        left: rect.left,
+      };
+
+      compAreaStore.setCompAreaSize(size);
+    }
+  });
+};
+
+const handleResize = () => {
+  updateCompAreaSize();
+};
+
+const handleClickOverlayReferenceMarker = (event) => {
+  const activeMarker = marker.value.find((m) => m.active);
+  if (!activeMarker || !overlayReferenceMarker.value) return;
+  if (!overlayReferenceMarker.value.contains(event.target)) return;
+};
+
+const handleClickOverlayMarker = (event) => {
+  if (!markerStore.isAddingMarker || !overlayMarker.value) return;
+  if (!overlayMarker.value.contains(event.target)) return;
+};
+
+const handleAddMarker = () => {
+  if (showDeleteButton.value) {
+    showDeleteButton.value = false;
+    nextTick(() => {
+      markerStore.addMarker();
+    });
+  } else {
+    markerStore.addMarker();
+  }
+};
+
+onMounted(() => {
+  setTimeout(() => {
+    window.dispatchEvent(new Event("resize"));
+  }, 500);
+  updateCompAreaSize();
+  window.addEventListener("click", handleClickOverlayReferenceMarker);
+  window.addEventListener("click", handleClickOverlayMarker);
+  window.addEventListener("resize", handleResize);
+  window.addEventListener("scroll", handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("click", handleClickOverlayReferenceMarker);
+  window.removeEventListener("click", handleClickOverlayMarker);
+  window.removeEventListener("resize", handleResize);
+  window.removeEventListener("scroll", handleResize);
+});
 </script>
 
 <style>

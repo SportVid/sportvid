@@ -154,62 +154,59 @@
   </div>
 </template>
 
-<script>
-import { mapStores } from "pinia";
+<script setup>
+import { computed } from "vue";
 import { useTimelineStore } from "../stores/timeline";
 import { usePluginRunResultStore } from "../stores/plugin_run_result";
 
-export default {
-  props: ["parameters", "videoIds"],
-  methods: {
-    groupTimelines(timelines) {
-      let timelinesGroups = {};
-      for (const timeline of timelines) {
-        if (!(timeline.name in timelinesGroups)) {
-          timelinesGroups[timeline.name] = {
-            name: timeline.name,
-            ids: {
-              timeline_ids: [],
-              video_ids: [],
-            },
-          };
-        } else if (timelinesGroups[timeline.name].ids.video_ids.indexOf(timeline.video_id) >= 0) {
-          continue;
-        }
-        timelinesGroups[timeline.name].ids.timeline_ids.push(timeline.id);
-        timelinesGroups[timeline.name].ids.video_ids.push(timeline.video_id);
-      }
-      return Object.values(timelinesGroups).filter(
-        (t) => t.ids.video_ids.length == this.videoIds.length
-      );
-    },
-  },
-  computed: {
-    shot_timelines() {
-      let timelines = this.timelineStore.all.filter(
-        (timeline) => timeline.type == "ANNOTATION" && this.videoIds.indexOf(timeline.video_id) >= 0
-      );
-      return this.groupTimelines(timelines);
-    },
-    scalar_timelines() {
-      // this.timelineStore.all.filter((t) => t.type === "PLUGIN_RESULT").forEach(element => {
-      //   console.log(element.name)
-      //   console.log(element.plugin)
-      // });
-      let timelines = this.timelineStore.all.filter(
-        (t) =>
-          t.type === "PLUGIN_RESULT" &&
-          t.plugin &&
-          t.plugin.type == "SCALAR" &&
-          this.videoIds.indexOf(t.video_id) >= 0
-      );
-      timelines = this.groupTimelines(timelines);
+const props = defineProps({
+  parameters: Array,
+  videoIds: Array,
+});
 
-      return timelines;
-    },
-    ...mapStores(useTimelineStore, usePluginRunResultStore),
-  },
+const timelineStore = useTimelineStore();
+const pluginRunResultStore = usePluginRunResultStore();
+
+const groupTimelines = (timelines) => {
+  let timelinesGroups = {};
+  for (const timeline of timelines) {
+    if (!(timeline.name in timelinesGroups)) {
+      timelinesGroups[timeline.name] = {
+        name: timeline.name,
+        ids: {
+          timeline_ids: [],
+          video_ids: [],
+        },
+      };
+    } else if (timelinesGroups[timeline.name].ids.video_ids.indexOf(timeline.video_id) >= 0) {
+      continue;
+    }
+    timelinesGroups[timeline.name].ids.timeline_ids.push(timeline.id);
+    timelinesGroups[timeline.name].ids.video_ids.push(timeline.video_id);
+  }
+  return Object.values(timelinesGroups).filter(
+    (t) => t.ids.video_ids.length == props.videoIds.length
+  );
 };
+
+const shot_timelines = computed(() => {
+  let timelines = timelineStore.all.filter(
+    (timeline) => timeline.type == "ANNOTATION" && props.videoIds.indexOf(timeline.video_id) >= 0
+  );
+  return groupTimelines(timelines);
+});
+
+const scalar_timelines = computed(() => {
+  let timelines = timelineStore.all.filter(
+    (t) =>
+      t.type === "PLUGIN_RESULT" &&
+      t.plugin &&
+      t.plugin.type == "SCALAR" &&
+      props.videoIds.indexOf(t.video_id) >= 0
+  );
+  timelines = groupTimelines(timelines);
+  return timelines;
+});
 </script>
 
 <style>

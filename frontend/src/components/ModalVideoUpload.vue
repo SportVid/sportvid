@@ -77,107 +77,84 @@
   </v-card>
 </template>
 
-<script>
+<script setup>
 import { ref, computed } from "vue";
 import { useVideoUploadStore } from "@/stores/video_upload";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
 
-export default {
-  setup() {
-    const videoUploadStore = useVideoUploadStore();
-    const userStore = useUserStore();
-    const videoStore = useVideoStore();
+const videoUploadStore = useVideoUploadStore();
+const userStore = useUserStore();
+const videoStore = useVideoStore();
 
-    const video = ref({
-      title: "",
-      file: null,
-    });
-    const analysers = ref([
-      {
-        label: "Shot Detection",
-        disabled: false,
-        model: "shotdetection",
-      },
-    ]);
-    const selectedAnalysers = ref(["shotdetection"]);
-    const checkbox = ref(false);
-    const dialog = ref(false);
-    const fileValid = ref(false);
-
-    const canUpload = computed(() => userStore.allowance > videoStore.all.length);
-    const disabled = computed(
-      () => !checkbox.value || !fileValid.value || uploadingProgress.value !== 0
-    );
-    const isUploading = computed(() => videoUploadStore.isUploading);
-    const uploadingProgress = computed(() => videoUploadStore.progress);
-    const allowance = computed(() => userStore.allowance);
-    const numVideos = computed(() => videoStore.all.length);
-
-    const maxSizeInWords = computed(() => {
-      let size = userStore.maxVideoSize;
-      let extensionId = 0;
-      const extensions = [" B", " kB", " MB", " GB"];
-      while (size > 1024) {
-        size = (size / 1024).toFixed(2);
-        extensionId++;
-      }
-      return size + extensions[extensionId];
-    });
-
-    const maxSize = computed(() => userStore.maxVideoSize);
-
-    const validateFile = (file) => {
-      if (Array.isArray(file)) {
-        file = file[0];
-      }
-
-      if (!file || !file.name) {
-        fileValid.value = false;
-        return "Please select a file.";
-      }
-      if (file.size > maxSize.value) {
-        fileValid.value = false;
-        return "File exceeds your maximum file size of " + maxSizeInWords.value;
-      }
-      if (!file.name.endsWith(".mp4")) {
-        fileValid.value = false;
-        return "File is not in the .mp4 format.";
-      }
-
-      fileValid.value = true;
-      return true;
-    };
-
-    const uploadVideo = async () => {
-      const params = {
-        video: video.value,
-        analyser: selectedAnalysers.value,
-      };
-
-      await videoUploadStore.upload(params);
-      dialog.value = false;
-      fileValid.value = false;
-    };
-
-    return {
-      video,
-      analysers,
-      selectedAnalysers,
-      checkbox,
-      dialog,
-      fileValid,
-      canUpload,
-      disabled,
-      isUploading,
-      uploadingProgress,
-      allowance,
-      numVideos,
-      maxSizeInWords,
-      maxSize,
-      validateFile,
-      uploadVideo,
-    };
+const video = ref({
+  title: "",
+  file: null,
+});
+const analysers = ref([
+  {
+    label: "Shot Detection",
+    disabled: false,
+    model: "shotdetection",
   },
+]);
+const selectedAnalysers = ref(["shotdetection"]);
+const checkbox = ref(false);
+const dialog = ref(false);
+const fileValid = ref(false);
+
+const canUpload = computed(() => userStore.allowance > videoStore.all.length);
+const disabled = computed(
+  () => !checkbox.value || !fileValid.value || uploadingProgress.value !== 0
+);
+const isUploading = computed(() => videoUploadStore.isUploading);
+const uploadingProgress = computed(() => videoUploadStore.progress);
+const allowance = computed(() => userStore.allowance);
+const numVideos = computed(() => videoStore.all.length);
+
+const maxSizeInWords = computed(() => {
+  let size = userStore.maxVideoSize;
+  let extensionId = 0;
+  const extensions = [" B", " kB", " MB", " GB"];
+  while (size > 1024) {
+    size = (size / 1024).toFixed(2);
+    extensionId++;
+  }
+  return size + extensions[extensionId];
+});
+
+const maxSize = computed(() => userStore.maxVideoSize);
+
+const validateFile = (file) => {
+  if (Array.isArray(file)) {
+    file = file[0];
+  }
+
+  if (!file || !file.name) {
+    fileValid.value = false;
+    return "Please select a file.";
+  }
+  if (file.size > maxSize.value) {
+    fileValid.value = false;
+    return "File exceeds your maximum file size of " + maxSizeInWords.value;
+  }
+  if (!file.name.endsWith(".mp4")) {
+    fileValid.value = false;
+    return "File is not in the .mp4 format.";
+  }
+
+  fileValid.value = true;
+  return true;
+};
+
+const uploadVideo = async () => {
+  const params = {
+    video: video.value,
+    analyser: selectedAnalysers.value,
+  };
+
+  await videoUploadStore.upload(params);
+  dialog.value = false;
+  fileValid.value = false;
 };
 </script>

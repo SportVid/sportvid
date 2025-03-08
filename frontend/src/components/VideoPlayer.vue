@@ -120,7 +120,7 @@
   </v-container>
 </template>
 
-<script>
+<script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, onBeforeUnmount } from "vue";
 import { useElementBounding } from "@vueuse/components";
 import { usePlayerStore } from "@/stores/player";
@@ -128,240 +128,203 @@ import { useVideoStore } from "@/stores/video";
 import { useMarkerStore } from "@/stores/marker";
 import { getTimecode } from "@/plugins/time";
 
-export default {
-  emits: ["loadedData", "canPlay"],
-  setup(_, { emit }) {
-    const videoElement = ref(null);
-    const videoContainer = ref(null);
+const emit = defineEmits();
 
-    const playerStore = usePlayerStore();
-    const videoStore = useVideoStore();
-    const markerStore = useMarkerStore();
+const videoElement = ref(null);
+const videoContainer = ref(null);
 
-    const volume = computed(() => playerStore.volume);
-    const ended = computed(() => playerStore.ended);
-    const currentTime = computed(() => playerStore.currentTime);
-    const duration = computed(() => playerStore.videoDuration);
-    const syncTime = computed(() => playerStore.syncTime);
-    const playing = computed(() => playerStore.playing);
-    const targetTime = computed(() => playerStore.targetTime);
+const playerStore = usePlayerStore();
+const videoStore = useVideoStore();
+const markerStore = useMarkerStore();
 
-    const currentSpeed = ref({ title: "1.00", value: 1.0 });
-    const speeds = [
-      { title: "0.25", value: 0.25 },
-      { title: "0.50", value: 0.5 },
-      { title: "0.75", value: 0.75 },
-      { title: "1.00", value: 1.0 },
-      { title: "1.25", value: 1.25 },
-      { title: "1.50", value: 1.5 },
-      { title: "1.75", value: 1.75 },
-      { title: "2.00", value: 2.0 },
-    ];
+const volume = computed(() => playerStore.volume);
+const ended = computed(() => playerStore.ended);
+const currentTime = computed(() => playerStore.currentTime);
+const duration = computed(() => playerStore.videoDuration);
+const syncTime = computed(() => playerStore.syncTime);
+const playing = computed(() => playerStore.playing);
+const targetTime = computed(() => playerStore.targetTime);
 
-    let observer = null;
-    const threshold = 0.1;
+const currentSpeed = ref({ title: "1.00", value: 1.0 });
+const speeds = [
+  { title: "0.25", value: 0.25 },
+  { title: "0.50", value: 0.5 },
+  { title: "0.75", value: 0.75 },
+  { title: "1.00", value: 1.0 },
+  { title: "1.25", value: 1.25 },
+  { title: "1.50", value: 1.5 },
+  { title: "1.75", value: 1.75 },
+  { title: "2.00", value: 2.0 },
+];
 
-    const toggleStickyVideo = ([entry]) => {
-      if (videoElement.value) {
-        videoElement.value.classList.toggle("sticky-video", entry.intersectionRatio < threshold);
-      }
-    };
+let observer = null;
+const threshold = 0.1;
 
-    onMounted(() => {
-      if (videoContainer.value.$el) {
-        observer = new IntersectionObserver(toggleStickyVideo, { threshold: [threshold] });
-        observer.observe(videoContainer.value.$el);
-      }
-    });
-
-    onBeforeUnmount(() => {
-      if (observer) {
-        observer.disconnect();
-      }
-    });
-
-    const toggle = () => playerStore.togglePlaying();
-    const toggleSyncTime = () => playerStore.toggleSyncTime();
-
-    const deltaSeek = (delta) => {
-      if (videoElement.value) {
-        const newTime = videoElement.value.currentTime + delta;
-        playerStore.setCurrentTime(newTime);
-        videoElement.value.currentTime = newTime;
-      }
-    };
-
-    const onEnded = () => {
-      playerStore.setEnded(true);
-      playerStore.setPlaying(false);
-    };
-
-    const onPause = () => {
-      playerStore.setPlaying(false);
-    };
-
-    const onPlay = () => {
-      playerStore.setEnded(false);
-      playerStore.setPlaying(true);
-    };
-
-    const onTimeUpdate = (event) => {
-      playerStore.setCurrentTime(event.target.currentTime);
-      playerStore.setEnded(event.target.ended);
-    };
-
-    const onSeek = (percentage) => {
-      if (videoElement.value) {
-        const targetTime = (duration.value * percentage) / 100;
-        videoElement.value.currentTime = targetTime;
-      }
-    };
-
-    const onSpeedChange = (idx) => {
-      currentSpeed.value = speeds[idx];
-      if (videoElement.value) {
-        videoElement.value.playbackRate = currentSpeed.value.value;
-      }
-    };
-
-    const onToggleVolume = () => playerStore.toggleMute();
-    const onVolumeChange = (newVolume) => playerStore.setVolume(newVolume);
-
-    const onLoadedData = () => {
-      emit("loadedData");
-    };
-
-    const onCanPlay = () => {
-      emit("canPlay");
-    };
-
-    const progress = computed(() => {
-      if (duration.value <= 0) return 0;
-      return (playerStore.currentTime / playerStore.videoDuration) * 100;
-    });
-
-    const updateVideoSize = () => {
-      nextTick(() => {
-        if (videoElement.value) {
-          const rect = videoElement.value.getBoundingClientRect();
-          const size = {
-            width: rect.width,
-            height: rect.height,
-            top: rect.top,
-            left: rect.left,
-          };
-
-          videoStore.setVideoSize(size);
-        }
-      });
-    };
-
-    const handleResize = () => {
-      updateVideoSize();
-    };
-
-    const currentFrame = ref(0);
-    const updateFrame = (newIndex) => {
-      currentFrame.value = newIndex;
-    };
-    const sliderValue = computed({
-      get: () => {
-        return Math.round(currentTime.value);
-      },
-      set: (value) => {
-        currentFrame.value = value;
-        updateFrame(value);
-      },
-    });
-
-    onMounted(() => {
-      updateVideoSize();
-      window.addEventListener("resize", handleResize);
-      window.addEventListener("scroll", handleResize);
-    });
-
-    onUnmounted(() => {
-      window.removeEventListener("resize", handleResize);
-      window.removeEventListener("scroll", handleResize);
-    });
-
-    // watch(progress, (newProgress) => {
-    //   progress.value = newProgress;
-    //   emit("update-slider", newProgress);
-    // });
-    // watch(progress, (newProgress) => {
-    //   if (playerStore.isSynced) {
-    //     const newTime = (playerStore.videoDuration * newProgress) / 100;
-    //     playerStore.setCurrentTime(newTime);
-    //   }
-    // });
-
-    // watch(() => playerStore.currentTime, (newTime) => {
-    //   if (!playerStore.isSynced) {
-    //     const newProgress = (newTime / playerStore.videoDuration) * 100;
-    //     progress.value = newProgress;
-    //   }
-    // });
-
-    watch(targetTime, (newTargetTime) => {
-      const delta = 1 / playerStore.videoFPS;
-      if (syncTime.value && videoElement.value) {
-        videoElement.value.currentTime = newTargetTime + delta;
-      }
-    });
-
-    watch(playing, (isPlaying) => {
-      if (videoElement.value) {
-        if (isPlaying) {
-          videoElement.value.volume = volume.value / 100;
-          videoElement.value.play();
-        } else {
-          videoElement.value.pause();
-        }
-      }
-    });
-
-    watch(volume, (newVolume) => {
-      if (videoElement.value) {
-        videoElement.value.volume = newVolume / 100;
-      }
-    });
-
-    return {
-      videoElement,
-      videoContainer,
-      currentSpeed,
-      speeds,
-      progress,
-      volume,
-      ended,
-      currentTime,
-      syncTime,
-      duration,
-      playing,
-      toggle,
-      toggleSyncTime,
-      deltaSeek,
-      onEnded,
-      onPause,
-      onPlay,
-      onTimeUpdate,
-      onSeek,
-      onSpeedChange,
-      onToggleVolume,
-      onVolumeChange,
-      onLoadedData,
-      onCanPlay,
-      getTimecode,
-      playerStore,
-      updateVideoSize,
-      markerStore,
-      videoStore,
-      useElementBounding,
-      sliderValue,
-    };
-  },
+const toggleStickyVideo = ([entry]) => {
+  if (videoElement.value) {
+    videoElement.value.classList.toggle("sticky-video", entry.intersectionRatio < threshold);
+  }
 };
+
+onMounted(() => {
+  if (videoContainer.value.$el) {
+    observer = new IntersectionObserver(toggleStickyVideo, { threshold: [threshold] });
+    observer.observe(videoContainer.value.$el);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (observer) {
+    observer.disconnect();
+  }
+});
+
+const toggle = () => playerStore.togglePlaying();
+const toggleSyncTime = () => playerStore.toggleSyncTime();
+
+const deltaSeek = (delta) => {
+  if (videoElement.value) {
+    const newTime = videoElement.value.currentTime + delta;
+    playerStore.setCurrentTime(newTime);
+    videoElement.value.currentTime = newTime;
+  }
+};
+
+const onEnded = () => {
+  playerStore.setEnded(true);
+  playerStore.setPlaying(false);
+};
+
+const onPause = () => {
+  playerStore.setPlaying(false);
+};
+
+const onPlay = () => {
+  playerStore.setEnded(false);
+  playerStore.setPlaying(true);
+};
+
+const onTimeUpdate = (event) => {
+  playerStore.setCurrentTime(event.target.currentTime);
+  playerStore.setEnded(event.target.ended);
+};
+
+const onSeek = (percentage) => {
+  if (videoElement.value) {
+    const targetTime = (duration.value * percentage) / 100;
+    videoElement.value.currentTime = targetTime;
+  }
+};
+
+const onSpeedChange = (idx) => {
+  currentSpeed.value = speeds[idx];
+  if (videoElement.value) {
+    videoElement.value.playbackRate = currentSpeed.value.value;
+  }
+};
+
+const onToggleVolume = () => playerStore.toggleMute();
+const onVolumeChange = (newVolume) => playerStore.setVolume(newVolume);
+
+const onLoadedData = () => {
+  emit("loadedData");
+};
+
+const onCanPlay = () => {
+  emit("canPlay");
+};
+
+const progress = computed(() => {
+  if (duration.value <= 0) return 0;
+  return (playerStore.currentTime / playerStore.videoDuration) * 100;
+});
+
+const updateVideoSize = () => {
+  nextTick(() => {
+    if (videoElement.value) {
+      const rect = videoElement.value.getBoundingClientRect();
+      const size = {
+        width: rect.width,
+        height: rect.height,
+        top: rect.top,
+        left: rect.left,
+      };
+
+      videoStore.setVideoSize(size);
+    }
+  });
+};
+
+const handleResize = () => {
+  updateVideoSize();
+};
+
+const currentFrame = ref(0);
+const updateFrame = (newIndex) => {
+  currentFrame.value = newIndex;
+};
+const sliderValue = computed({
+  get: () => {
+    return Math.round(currentTime.value);
+  },
+  set: (value) => {
+    currentFrame.value = value;
+    updateFrame(value);
+  },
+});
+
+onMounted(() => {
+  updateVideoSize();
+  window.addEventListener("resize", handleResize);
+  window.addEventListener("scroll", handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", handleResize);
+  window.removeEventListener("scroll", handleResize);
+});
+
+// watch(progress, (newProgress) => {
+//   progress.value = newProgress;
+//   emit("update-slider", newProgress);
+// });
+// watch(progress, (newProgress) => {
+//   if (playerStore.isSynced) {
+//     const newTime = (playerStore.videoDuration * newProgress) / 100;
+//     playerStore.setCurrentTime(newTime);
+//   }
+// });
+
+// watch(() => playerStore.currentTime, (newTime) => {
+//   if (!playerStore.isSynced) {
+//     const newProgress = (newTime / playerStore.videoDuration) * 100;
+//     progress.value = newProgress;
+//   }
+// });
+
+watch(targetTime, (newTargetTime) => {
+  const delta = 1 / playerStore.videoFPS;
+  if (syncTime.value && videoElement.value) {
+    videoElement.value.currentTime = newTargetTime + delta;
+  }
+});
+
+watch(playing, (isPlaying) => {
+  if (videoElement.value) {
+    if (isPlaying) {
+      videoElement.value.volume = volume.value / 100;
+      videoElement.value.play();
+    } else {
+      videoElement.value.pause();
+    }
+  }
+});
+
+watch(volume, (newVolume) => {
+  if (videoElement.value) {
+    videoElement.value.volume = newVolume / 100;
+  }
+});
 </script>
 
 <style>

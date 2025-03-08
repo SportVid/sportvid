@@ -72,84 +72,73 @@
   </v-dialog>
 </template>
 
-<script>
+<script setup>
 import { reactive, ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useUserStore } from "@/stores/user";
 
-export default {
-  props: {
-    modelValue: {
-      type: Boolean,
-      default: false,
-    },
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
+    default: false,
   },
-  setup(props, { emit }) {
-    const { t } = useI18n();
-    const userStore = useUserStore();
+});
 
-    const user = reactive({});
-    const dialog = ref(props.modelValue);
-    const showPassword = ref(false);
-    const errorMessage = ref("");
+const emit = defineEmits();
 
-    const register = async () => {
-      const status = await userStore.register(user);
-      if (status.status === "ok") {
-        dialog.value = false;
-        errorMessage.value = "";
-      } else {
-        errorMessage.value = status.message;
-      }
-    };
+const { t } = useI18n();
+const userStore = useUserStore();
 
-    const checkLength = (value) => {
-      if (value) {
-        if (value.length < 5) {
-          return t("user.register.rules.min");
-        }
-        if (value.length > 50) {
-          return t("user.register.rules.max");
-        }
-        return true;
-      }
-      return t("field.required");
-    };
+const user = reactive({});
+const dialog = ref(props.modelValue);
+const showPassword = ref(false);
+const errorMessage = ref("");
 
-    const disabled = computed(() => {
-      const total = Object.keys(user).length
-        ? Object.values(user).reduce((t, value) => t + (checkLength(value) === true), 0)
-        : 0;
-      return total !== 3;
-    });
-
-    watch(
-      () => dialog.value,
-      (newValue) => {
-        emit("update:modelValue", newValue);
-      }
-    );
-
-    watch(
-      () => props.modelValue,
-      (newValue) => {
-        if (newValue) {
-          dialog.value = true;
-        }
-      }
-    );
-
-    return {
-      user,
-      dialog,
-      showPassword,
-      errorMessage,
-      register,
-      checkLength,
-      disabled,
-    };
-  },
+const register = async () => {
+  const status = await userStore.register(user);
+  if (status.status === "ok") {
+    dialog.value = false;
+    errorMessage.value = "";
+  } else {
+    errorMessage.value = status.message;
+  }
 };
+
+const checkLength = (value) => {
+  if (value) {
+    if (value.length < 5) {
+      return t("user.register.rules.min");
+    }
+    if (value.length > 50) {
+      return t("user.register.rules.max");
+    }
+    return true;
+  }
+  return t("field.required");
+};
+
+const disabled = computed(() => {
+  const total = Object.keys(user).length
+    ? Object.values(user).reduce((t, value) => t + (checkLength(value) === true), 0)
+    : 0;
+  return total !== 3;
+});
+
+watch(
+  () => dialog.value,
+  (newValue) => {
+    emit("update:modelValue", newValue);
+  }
+);
+
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    if (newValue) {
+      dialog.value = true;
+    }
+  }
+);
 </script>
 
 <style>

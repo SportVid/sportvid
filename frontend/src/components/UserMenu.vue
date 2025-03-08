@@ -26,36 +26,20 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, computed } from "vue";
 import { useUserStore } from "@/stores/user";
 import UserLogin from "@/components/UserLogin.vue";
 import UserRegister from "@/components/UserRegister.vue";
 import UserAccount from "@/components/UserAccount.vue";
 
-export default {
-  components: {
-    UserLogin,
-    UserRegister,
-    UserAccount,
-  },
-  setup() {
-    const showModalLogin = ref(false);
-    const showModalRegister = ref(false);
+const showModalLogin = ref(false);
+const showModalRegister = ref(false);
 
-    const userStore = useUserStore();
+const userStore = useUserStore();
 
-    const username = computed(() => userStore.username);
-    const loggedIn = computed(() => userStore.loggedIn);
-
-    return {
-      showModalLogin,
-      showModalRegister,
-      username,
-      loggedIn,
-    };
-  },
-};
+const username = computed(() => userStore.username);
+const loggedIn = computed(() => userStore.loggedIn);
 </script>
 
 <style>

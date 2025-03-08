@@ -35,62 +35,54 @@
   </v-dialog>
 </template>
 
-<script>
-import { ref, computed, watch } from "vue";
+<script setup>
+import { ref, computed, watch, defineProps, defineEmits } from "vue";
 import { useVideoStore } from "@/stores/video";
 
-export default {
-  props: {
-    video: {
-      type: [String, Number],
-      required: true,
-    },
+const props = defineProps({
+  video: {
+    type: [String, Number],
+    required: true,
   },
-  setup(props, { emit }) {
-    const videoStore = useVideoStore();
-    const show = ref(false);
-    const isSubmitting = ref(false);
-    const nameProxy = ref(null);
+});
 
-    const name = computed({
-      get() {
-        const videoData = videoStore.get(props.video);
-        const name = videoData ? videoData.name : "";
-        return nameProxy.value === null ? name : nameProxy.value;
-      },
-      set(val) {
-        nameProxy.value = val;
-      },
-    });
+const emit = defineEmits();
 
-    const submit = async () => {
-      if (isSubmitting.value) {
-        return;
-      }
-      isSubmitting.value = true;
+const videoStore = useVideoStore();
+const show = ref(false);
+const isSubmitting = ref(false);
+const nameProxy = ref(null);
 
-      await videoStore.rename({
-        videoId: props.video,
-        name: name.value,
-      });
-
-      isSubmitting.value = false;
-      show.value = false;
-    };
-
-    watch(show, (value) => {
-      if (value) {
-        nameProxy.value = null;
-        emit("close");
-      }
-    });
-
-    return {
-      show,
-      isSubmitting,
-      name,
-      submit,
-    };
+const name = computed({
+  get() {
+    const videoData = videoStore.get(props.video);
+    const name = videoData ? videoData.name : "";
+    return nameProxy.value === null ? name : nameProxy.value;
   },
+  set(val) {
+    nameProxy.value = val;
+  },
+});
+
+const submit = async () => {
+  if (isSubmitting.value) {
+    return;
+  }
+  isSubmitting.value = true;
+
+  await videoStore.rename({
+    videoId: props.video,
+    name: name.value,
+  });
+
+  isSubmitting.value = false;
+  show.value = false;
 };
+
+watch(show, (value) => {
+  if (value) {
+    nameProxy.value = null;
+    emit("close");
+  }
+});
 </script>

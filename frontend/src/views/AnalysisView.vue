@@ -51,8 +51,8 @@
   </v-main>
 </template>
 
-<script>
-import { ref, onMounted, watch, nextTick } from "vue";
+<script setup>
+import { ref, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
@@ -81,393 +81,339 @@ import AnnotationVisualizer from "@/components/AnnotationVisualizer.vue";
 // import PersonGraph from "@/components/PersonGraph.vue";
 // import ClusterTimelineItemOverview from "@/components/ClusterTimelineItemOverview.vue";
 
-export default {
-  setup() {
-    const analysisTabs = ref([
-      { id: "1", name: "Annotation" },
-      { id: "2", name: "Position Data" },
-    ]);
+const analysisTabs = ref([
+  { id: "1", name: "Annotation" },
+  { id: "2", name: "Position Data" },
+]);
 
-    const route = useRoute();
+const route = useRoute();
 
-    const videoStore = useVideoStore();
-    // const pluginRunStore = usePluginRunStore();
-    const playerStore = usePlayerStore();
-    const markerStore = useMarkerStore();
-    // const timelineStore = useTimelineStore();
-    // const timelineSegmentStore = useTimelineSegmentStore();
-    // const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
-    // const shortcutStore = useShortcutStore();
-    // const annotationShortcutStore = useAnnotationShortcutStore();
-    // const clusterTimelineItemStore = useClusterTimelineItemStore();
-    // const shotStore = useShotStore();
+const videoStore = useVideoStore();
+// const pluginRunStore = usePluginRunStore();
+const playerStore = usePlayerStore();
+const markerStore = useMarkerStore();
+// const timelineStore = useTimelineStore();
+// const timelineSegmentStore = useTimelineSegmentStore();
+// const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
+// const shortcutStore = useShortcutStore();
+// const annotationShortcutStore = useAnnotationShortcutStore();
+// const clusterTimelineItemStore = useClusterTimelineItemStore();
+// const shotStore = useShotStore();
 
-    // const fetchPluginTimer = ref(null);
-    // const selectedShotsProxy = ref(null);
-    // const selectedFaceClusteringProxy = ref(null);
-    // const selectedPlaceClusteringProxy = ref(null);
-    // const selectedTimelineProxy = ref(null);
-    const tab = ref(0);
-    // const addedAnnotation = ref(null);
-    // const labels = ref([]);
-    // const selectedLabel = ref(null);
-    // const annotationsLUT = ref({});
-    // const annotationDialog = ref({ show: false });
-    const isLoading = ref(true);
-    const resultCardHeight = ref(0);
+// const fetchPluginTimer = ref(null);
+// const selectedShotsProxy = ref(null);
+// const selectedFaceClusteringProxy = ref(null);
+// const selectedPlaceClusteringProxy = ref(null);
+// const selectedTimelineProxy = ref(null);
+const tab = ref(0);
+// const addedAnnotation = ref(null);
+// const labels = ref([]);
+// const selectedLabel = ref(null);
+// const annotationsLUT = ref({});
+// const annotationDialog = ref({ show: false });
+const isLoading = ref(true);
+const resultCardHeight = ref(0);
 
-    // const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
-    // const timelines = computed(() => timelineStore.forVideo(route.params.id));
-    // const timelineNames = computed(() => timelines.value.map((e) => e.name));
-    // const faceClusters = computed(() =>
-    //   clusterTimelineItemStore.latestFaceClustering()
-    // );
-    // const placeClusters = computed(() =>
-    //   clusterTimelineItemStore.latestPlaceClustering()
-    // );
-    // const shotsList = computed(() =>
-    //   shotStore.shotsList.map((e) => ({ text: e.name, value: e.index }))
-    // );
+// const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
+// const timelines = computed(() => timelineStore.forVideo(route.params.id));
+// const timelineNames = computed(() => timelines.value.map((e) => e.name));
+// const faceClusters = computed(() =>
+//   clusterTimelineItemStore.latestFaceClustering()
+// );
+// const placeClusters = computed(() =>
+//   clusterTimelineItemStore.latestPlaceClustering()
+// );
+// const shotsList = computed(() =>
+//   shotStore.shotsList.map((e) => ({ text: e.name, value: e.index }))
+// );
 
-    // const selectedShots = computed({
-    //   get() {
-    //     const selectedShots = shotStore.selectedShots;
-    //     return selectedShotsProxy === null
-    //       ? selectedShots
-    //       : selectedShotsProxy;
-    //   },
-    //   set(val) {
-    //     selectedShotsProxy = val;
-    //     shotStore.setSelectedShots({ shotTimeline: val });
-    //   },
-    // });
+// const selectedShots = computed({
+//   get() {
+//     const selectedShots = shotStore.selectedShots;
+//     return selectedShotsProxy === null
+//       ? selectedShots
+//       : selectedShotsProxy;
+//   },
+//   set(val) {
+//     selectedShotsProxy = val;
+//     shotStore.setSelectedShots({ shotTimeline: val });
+//   },
+// });
 
-    // const selectedFaceClustering = computed({
-    //   get() {
-    //     const selectedFaceClustering =
-    //       clusterTimelineItemStore.selectedFaceClustering;
-    //     return selectedFaceClusteringProxy === null
-    //       ? selectedFaceClustering
-    //       : selectedFaceClusteringProxy;
-    //   },
-    //   set(val) {
-    //     selectedFaceClusteringProxy = val;
-    //     clusterTimelineItemStore.setSelectedFaceClustering({ pluginRunId: val });
-    //   },
-    // });
+// const selectedFaceClustering = computed({
+//   get() {
+//     const selectedFaceClustering =
+//       clusterTimelineItemStore.selectedFaceClustering;
+//     return selectedFaceClusteringProxy === null
+//       ? selectedFaceClustering
+//       : selectedFaceClusteringProxy;
+//   },
+//   set(val) {
+//     selectedFaceClusteringProxy = val;
+//     clusterTimelineItemStore.setSelectedFaceClustering({ pluginRunId: val });
+//   },
+// });
 
-    // const faceClusteringList = computed(() =>
-    //   clusterTimelineItemStore.faceClusteringList.map((e) => ({
-    //     text: e.name,
-    //     value: e.index,
-    //   }))
-    // );
+// const faceClusteringList = computed(() =>
+//   clusterTimelineItemStore.faceClusteringList.map((e) => ({
+//     text: e.name,
+//     value: e.index,
+//   }))
+// );
 
-    // const selectedPlaceClustering = computed({
-    //   get() {
-    //     const selectedPlaceClustering =
-    //       clusterTimelineItemStore.selectedPlaceClustering;
-    //     return selectedPlaceClusteringProxy === null
-    //       ? selectedPlaceClustering
-    //       : selectedPlaceClusteringProxy;
-    //   },
-    //   set(val) {
-    //     selectedPlaceClusteringProxy = val;
-    //     clusterTimelineItemStore.setSelectedPlaceClustering({
-    //       pluginRunId: val,
-    //     });
-    //   },
-    // });
+// const selectedPlaceClustering = computed({
+//   get() {
+//     const selectedPlaceClustering =
+//       clusterTimelineItemStore.selectedPlaceClustering;
+//     return selectedPlaceClusteringProxy === null
+//       ? selectedPlaceClustering
+//       : selectedPlaceClusteringProxy;
+//   },
+//   set(val) {
+//     selectedPlaceClusteringProxy = val;
+//     clusterTimelineItemStore.setSelectedPlaceClustering({
+//       pluginRunId: val,
+//     });
+//   },
+// });
 
-    // const placeClusteringList = computed(() =>
-    //   clusterTimelineItemStore.placeClusteringList.map((e) => ({
-    //     text: e.name,
-    //     value: e.index,
-    //   }))
-    // );
+// const placeClusteringList = computed(() =>
+//   clusterTimelineItemStore.placeClusteringList.map((e) => ({
+//     text: e.name,
+//     value: e.index,
+//   }))
+// );
 
-    // const selectedTimeline = computed({
-    //   get() {
-    //     return selectedTimelineProxy === null
-    //       ? timelines.value[0]
-    //       : selectedTimelineProxy;
-    //   },
-    //   set(val) {
-    //     selectedTimelineProxy = val;
-    //   },
-    // });
+// const selectedTimeline = computed({
+//   get() {
+//     return selectedTimelineProxy === null
+//       ? timelines.value[0]
+//       : selectedTimelineProxy;
+//   },
+//   set(val) {
+//     selectedTimelineProxy = val;
+//   },
+// });
 
-    const onVideoResize = (size) => {
-      resultCardHeight.value = resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
+const onVideoResize = (size) => {
+  resultCardHeight.value = resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
 
-      videoStore.setVideoSize(size);
-    };
-
-    // const onAnnotateSegment = () => {
-    //   if (timelineSegmentStore.lastSelected) {
-    //     annotationDialog.show = true;
-    //   }
-    // };
-
-    // const fetchData = async ({ addResults = true }) => {
-    //   await videoStore.fetch({
-    //     videoId: route.params.id,
-    //     addResults,
-    //   });
-    // };
-
-    // const fetchPlugin = async () => {
-    //   await pluginRunStore.fetchForVideo({
-    //     videoId: route.params.id,
-    //     fetchResults: true,
-    //   });
-    // };
-
-    // const onKeyDown = (event) => {
-    //   const lastSelectedTimeline = timelineStore.lastSelected;
-    //   const lastSelectedTimelineSegment = timelineSegmentStore.lastSelected;
-
-    //   if (!lastSelectedTimeline) {
-    //     if (
-    //       ["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"].includes(event.key)
-    //     ) {
-    //       const selectedTimeline = timelineStore.getNext(null);
-    //       if (selectedTimeline) {
-    //         timelineStore.addToSelection(selectedTimeline.id);
-    //         const timelineSegments = timelineSegmentStore.forTimeline(
-    //           selectedTimeline.id
-    //         );
-    //         if (timelineSegments.length > 0) {
-    //           const selectedTimelineSegment = timelineSegments[0];
-    //           timelineSegmentStore.addToSelection(selectedTimelineSegment.id);
-    //         }
-    //       }
-    //       return;
-    //     }
-    //   }
-
-    //   if (event.key === "ArrowDown") {
-    //     const nextTimeline = timelineStore.getNext(lastSelectedTimeline?.id);
-    //     if (nextTimeline) {
-    //       if (!event.ctrlKey) {
-    //         timelineStore.clearSelection();
-    //         timelineSegmentStore.clearSelection();
-    //       }
-    //       timelineStore.addToSelection(nextTimeline.id);
-    //       const timelineSegments = timelineSegmentStore.forTimeline(
-    //         nextTimeline.id
-    //       );
-    //       if (timelineSegments.length > 0) {
-    //         timelineSegmentStore.addToSelection(timelineSegments[0].id);
-    //       }
-    //       event.preventDefault();
-    //     }
-    //   } else if (event.key === "ArrowUp") {
-    //     const nextTimeline = timelineStore.getPrevious(lastSelectedTimeline?.id);
-    //     if (nextTimeline) {
-    //       if (!event.ctrlKey) {
-    //         timelineStore.clearSelection();
-    //         timelineSegmentStore.clearSelection();
-    //       }
-    //       timelineStore.addToSelection(nextTimeline.id);
-    //       const timelineSegments = timelineSegmentStore.forTimeline(
-    //         nextTimeline.id
-    //       );
-    //       if (timelineSegments.length > 0) {
-    //         timelineSegmentStore.addToSelection(timelineSegments[0].id);
-    //       }
-    //       event.preventDefault();
-    //     }
-    //   } else if (event.key === "ArrowLeft") {
-    //     if (lastSelectedTimelineSegment) {
-    //       const nextTimelineSegment =
-    //         timelineSegmentStore.getPreviousOnTimeline(
-    //           lastSelectedTimelineSegment.id
-    //         );
-    //       if (nextTimelineSegment) {
-    //         playerStore.setTargetTime(nextTimelineSegment.start);
-    //         if (!event.ctrlKey) {
-    //           timelineSegmentStore.clearSelection();
-    //         }
-    //         timelineSegmentStore.addToSelection(nextTimelineSegment.id);
-    //         event.preventDefault();
-    //       }
-    //     }
-    //   } else if (event.key === "ArrowRight") {
-    //     if (lastSelectedTimelineSegment) {
-    //       const nextTimelineSegment =
-    //         timelineSegmentStore.getNextOnTimeline(lastSelectedTimelineSegment.id);
-    //       if (nextTimelineSegment) {
-    //         playerStore.setTargetTime(nextTimelineSegment.start);
-    //         if (!event.ctrlKey) {
-    //           timelineSegmentStore.clearSelection();
-    //         }
-    //         timelineSegmentStore.addToSelection(nextTimelineSegment.id);
-    //         event.preventDefault();
-    //       }
-    //     }
-    //   } else if (event.key === "Enter") {
-    //     onAnnotateSegment();
-    //     event.preventDefault();
-    //   }
-
-    //   const keys = [];
-    //   if (event.ctrlKey) keys.push("ctrl");
-    //   if (event.shiftKey) keys.push("shift");
-    //   if (event.key.length === 1) keys.push(event.key.toLowerCase());
-
-    //   const keysString = Keyboard.generateKeysString(keys);
-    //   const shortcuts = shortcutStore.getByKeys(keysString);
-
-    //   if (shortcuts.length > 0) {
-    //     shortcuts.forEach((shortcut) => {
-    //       const annotationShortcut = annotationShortcutStore.forShortcut(
-    //         shortcut.id
-    //       );
-    //       if (annotationShortcut && lastSelectedTimelineSegment) {
-    //         timelineSegmentStore.toggle({
-    //           timelineSegmentId: lastSelectedTimelineSegment.id,
-    //           annotationId: annotationShortcut.annotation_id,
-    //         });
-    //       }
-    //     });
-    //   }
-    // };
-
-    // watch(
-    //   pluginInProgress,
-    //   (newState) => {
-    //     if (newState) {
-    //       fetchPluginTimer = setInterval(() => {
-    //         fetchPlugin({ addResults: false });
-    //       }, 1000);
-    //     } else {
-    //       clearInterval(fetchPluginTimer);
-    //     }
-    //   }
-    // );
-
-    watch(
-      () => isLoading,
-      (value) => {
-        if (!value) {
-          resultCardHeight.value = resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
-        }
-      }
-    );
-
-    // onMounted(async () => {
-    //   await fetchData({ addResults: true });
-    //   isLoading = false;
-
-    //   console.log(playerStore.videoUrl);
-    // });
-
-    // onMounted(async () => {
-    //   try {
-    //     await fetchData({ addResults: true });
-    //     isLoading.value = false;
-    //     console.log(playerStore.videoUrl);
-    //   } catch (error) {
-    //     isLoading.value = false;
-    //     console.log(playerStore.videoUrl);
-    //     console.error("Fehler im mounted Hook:", error);
-
-    //   }
-    // });
-
-    onMounted(async () => {
-      try {
-        await fetchData({ addResults: true });
-      } catch (error) {
-        console.error("Fehler beim Laden der Daten:", error);
-      } finally {
-        isLoading.value = false;
-      }
-    });
-
-    const fetchData = async ({ addResults = true }) => {
-      try {
-        const data = await videoStore.fetch({
-          videoId: route.params.id,
-          addResults,
-        });
-
-        if (!data) {
-          throw new Error("Daten konnten nicht abgerufen werden.");
-        }
-      } catch (error) {
-        console.error("Fehler beim Abrufen der Daten:", error);
-      }
-    };
-
-    watch(tab, (newTab) => {
-      const currentTab = analysisTabs.value[newTab]?.name;
-
-      if (currentTab === "Annotation") {
-        markerStore.showReferenceMarker = true;
-      } else {
-        markerStore.showReferenceMarker = false;
-      }
-
-      if (currentTab === "Position Data") {
-        markerStore.showBoundingBox = true;
-      } else {
-        markerStore.showBoundingBox = false;
-      }
-    });
-
-    return {
-      playerStore,
-      // fetchPluginTimer,
-      // selectedShotsProxy,
-      // selectedFaceClusteringProxy,
-      // selectedPlaceClusteringProxy,
-      // selectedTimelineProxy,
-      tab,
-      // addedAnnotation,
-      // labels,
-      // selectedLabel,
-      // annotationsLUT,
-      // annotationDialog,
-      isLoading,
-      resultCardHeight,
-      // pluginInProgress,
-      // timelines,
-      // timelineNames,
-      // faceClusters,
-      // placeClusters,
-      // selectedShots,
-      // selectedFaceClustering,
-      // faceClusteringList,
-      // selectedPlaceClustering,
-      // placeClusteringList,
-      // selectedTimeline,
-      // shotsList,
-      onVideoResize,
-      // onAnnotateSegment,
-      fetchData,
-      // fetchPlugin,
-      // onKeyDown,
-      analysisTabs,
-    };
-  },
-  components: {
-    VideoPlayer,
-    PosDataVisualizer,
-    AnnotationVisualizer,
-    // TranscriptOverview,
-    // Timeline,
-    // TimeSelector,
-    // CurrentEntitiesOverView,
-    // ModalTimelineSegmentAnnotate,
-    // ShotsOverview,
-    // WordcloudCard,
-    // VisualizationMenu,
-    // PersonGraph,
-    // ClusterTimelineItemOverview
-  },
+  videoStore.setVideoSize(size);
 };
+
+// const onAnnotateSegment = () => {
+//   if (timelineSegmentStore.lastSelected) {
+//     annotationDialog.show = true;
+//   }
+// };
+
+// const fetchData = async ({ addResults = true }) => {
+//   await videoStore.fetch({
+//     videoId: route.params.id,
+//     addResults,
+//   });
+// };
+
+// const fetchPlugin = async () => {
+//   await pluginRunStore.fetchForVideo({
+//     videoId: route.params.id,
+//     fetchResults: true,
+//   });
+// };
+
+// const onKeyDown = (event) => {
+//   const lastSelectedTimeline = timelineStore.lastSelected;
+//   const lastSelectedTimelineSegment = timelineSegmentStore.lastSelected;
+
+//   if (!lastSelectedTimeline) {
+//     if (
+//       ["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight"].includes(event.key)
+//     ) {
+//       const selectedTimeline = timelineStore.getNext(null);
+//       if (selectedTimeline) {
+//         timelineStore.addToSelection(selectedTimeline.id);
+//         const timelineSegments = timelineSegmentStore.forTimeline(
+//           selectedTimeline.id
+//         );
+//         if (timelineSegments.length > 0) {
+//           const selectedTimelineSegment = timelineSegments[0];
+//           timelineSegmentStore.addToSelection(selectedTimelineSegment.id);
+//         }
+//       }
+//       return;
+//     }
+//   }
+
+//   if (event.key === "ArrowDown") {
+//     const nextTimeline = timelineStore.getNext(lastSelectedTimeline?.id);
+//     if (nextTimeline) {
+//       if (!event.ctrlKey) {
+//         timelineStore.clearSelection();
+//         timelineSegmentStore.clearSelection();
+//       }
+//       timelineStore.addToSelection(nextTimeline.id);
+//       const timelineSegments = timelineSegmentStore.forTimeline(
+//         nextTimeline.id
+//       );
+//       if (timelineSegments.length > 0) {
+//         timelineSegmentStore.addToSelection(timelineSegments[0].id);
+//       }
+//       event.preventDefault();
+//     }
+//   } else if (event.key === "ArrowUp") {
+//     const nextTimeline = timelineStore.getPrevious(lastSelectedTimeline?.id);
+//     if (nextTimeline) {
+//       if (!event.ctrlKey) {
+//         timelineStore.clearSelection();
+//         timelineSegmentStore.clearSelection();
+//       }
+//       timelineStore.addToSelection(nextTimeline.id);
+//       const timelineSegments = timelineSegmentStore.forTimeline(
+//         nextTimeline.id
+//       );
+//       if (timelineSegments.length > 0) {
+//         timelineSegmentStore.addToSelection(timelineSegments[0].id);
+//       }
+//       event.preventDefault();
+//     }
+//   } else if (event.key === "ArrowLeft") {
+//     if (lastSelectedTimelineSegment) {
+//       const nextTimelineSegment =
+//         timelineSegmentStore.getPreviousOnTimeline(
+//           lastSelectedTimelineSegment.id
+//         );
+//       if (nextTimelineSegment) {
+//         playerStore.setTargetTime(nextTimelineSegment.start);
+//         if (!event.ctrlKey) {
+//           timelineSegmentStore.clearSelection();
+//         }
+//         timelineSegmentStore.addToSelection(nextTimelineSegment.id);
+//         event.preventDefault();
+//       }
+//     }
+//   } else if (event.key === "ArrowRight") {
+//     if (lastSelectedTimelineSegment) {
+//       const nextTimelineSegment =
+//         timelineSegmentStore.getNextOnTimeline(lastSelectedTimelineSegment.id);
+//       if (nextTimelineSegment) {
+//         playerStore.setTargetTime(nextTimelineSegment.start);
+//         if (!event.ctrlKey) {
+//           timelineSegmentStore.clearSelection();
+//         }
+//         timelineSegmentStore.addToSelection(nextTimelineSegment.id);
+//         event.preventDefault();
+//       }
+//     }
+//   } else if (event.key === "Enter") {
+//     onAnnotateSegment();
+//     event.preventDefault();
+//   }
+
+//   const keys = [];
+//   if (event.ctrlKey) keys.push("ctrl");
+//   if (event.shiftKey) keys.push("shift");
+//   if (event.key.length === 1) keys.push(event.key.toLowerCase());
+
+//   const keysString = Keyboard.generateKeysString(keys);
+//   const shortcuts = shortcutStore.getByKeys(keysString);
+
+//   if (shortcuts.length > 0) {
+//     shortcuts.forEach((shortcut) => {
+//       const annotationShortcut = annotationShortcutStore.forShortcut(
+//         shortcut.id
+//       );
+//       if (annotationShortcut && lastSelectedTimelineSegment) {
+//         timelineSegmentStore.toggle({
+//           timelineSegmentId: lastSelectedTimelineSegment.id,
+//           annotationId: annotationShortcut.annotation_id,
+//         });
+//       }
+//     });
+//   }
+// };
+
+// watch(
+//   pluginInProgress,
+//   (newState) => {
+//     if (newState) {
+//       fetchPluginTimer = setInterval(() => {
+//         fetchPlugin({ addResults: false });
+//       }, 1000);
+//     } else {
+//       clearInterval(fetchPluginTimer);
+//     }
+//   }
+// );
+
+watch(
+  () => isLoading,
+  (value) => {
+    if (!value) {
+      resultCardHeight.value = resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
+    }
+  }
+);
+
+// onMounted(async () => {
+//   await fetchData({ addResults: true });
+//   isLoading = false;
+
+//   console.log(playerStore.videoUrl);
+// });
+
+// onMounted(async () => {
+//   try {
+//     await fetchData({ addResults: true });
+//     isLoading.value = false;
+//     console.log(playerStore.videoUrl);
+//   } catch (error) {
+//     isLoading.value = false;
+//     console.log(playerStore.videoUrl);
+//     console.error("Fehler im mounted Hook:", error);
+
+//   }
+// });
+
+onMounted(async () => {
+  try {
+    await fetchData({ addResults: true });
+  } catch (error) {
+    console.error("Fehler beim Laden der Daten:", error);
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+const fetchData = async ({ addResults = true }) => {
+  try {
+    const data = await videoStore.fetch({
+      videoId: route.params.id,
+      addResults,
+    });
+
+    if (!data) {
+      throw new Error("Daten konnten nicht abgerufen werden.");
+    }
+  } catch (error) {
+    console.error("Fehler beim Abrufen der Daten:", error);
+  }
+};
+
+watch(tab, (newTab) => {
+  const currentTab = analysisTabs.value[newTab]?.name;
+
+  if (currentTab === "Annotation") {
+    markerStore.showReferenceMarker = true;
+  } else {
+    markerStore.showReferenceMarker = false;
+  }
+
+  if (currentTab === "Position Data") {
+    markerStore.showBoundingBox = true;
+  } else {
+    markerStore.showBoundingBox = false;
+  }
+});
 </script>
 
 <style scoped>
