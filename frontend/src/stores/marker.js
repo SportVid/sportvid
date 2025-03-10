@@ -131,16 +131,32 @@ export const useMarkerStore = defineStore("marker", () => {
   };
 
   const positions = ref(
-    Array.from({ length: 100 }, (_, frameIndex) =>
-      Array.from({ length: 3 }, (_, pointIndex) => ({
-        bbox_top: (frameIndex * 0.5 + pointIndex * 2) / (100 * 0.5 + 2),
-        bbox_left: (frameIndex * 0.5 + pointIndex * 2) / (100 * 0.5 + 2),
-        bbox_width: 0.05,
-        bbox_height: 0.1,
-        team: "blue",
-      }))
+    Array.from({ length: 100 }, () =>
+      Array.from({ length: 20 }, (_, playerIndex) => {
+        const isTeamA = playerIndex < 10;
+
+        return {
+          bbox_top: Math.random() * 0.8 + 0.1,
+          bbox_left: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3),
+          bbox_width: 0.05,
+          bbox_height: 0.1,
+          team: isTeamA ? "blue" : "red",
+        };
+      })
     )
   );
+
+  const showSpaceControl = ref(false);
+  const viewSpaceControl = () => {
+    showSpaceControl.value = !showSpaceControl.value;
+    showEffectivePlayingSpace.value = false;
+  };
+
+  const showEffectivePlayingSpace = ref(false);
+  const viewEffectivePlayingSpace = () => {
+    showEffectivePlayingSpace.value = !showEffectivePlayingSpace.value;
+    showSpaceControl.value = false;
+  };
 
   return {
     marker,
@@ -159,5 +175,9 @@ export const useMarkerStore = defineStore("marker", () => {
     showBoundingBox,
     viewBoundingBox,
     positions,
+    showSpaceControl,
+    viewSpaceControl,
+    showEffectivePlayingSpace,
+    viewEffectivePlayingSpace,
   };
 });

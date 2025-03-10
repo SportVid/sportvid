@@ -1,6 +1,21 @@
 <template>
   <v-main class="main" tabindex="0" ref="main">
     <v-container fluid>
+      <ModalMarkerOverlay v-if="markerStore.isAnyMarkerActive" />
+
+      <div
+        v-for="m in markerStore.filteredReferenceMarker"
+        v-show="markerStore.showReferenceMarker"
+        :key="m.id"
+        :style="{
+          top: m.videoCoordsRel.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
+          left: m.videoCoordsRel.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
+        }"
+        @mouseenter="markerStore.hoveredReferenceMarker = m.id"
+        @mouseleave="markerStore.hoveredReferenceMarker = null"
+        class="reference-marker-position"
+      />
+
       <v-row class="ma-n2">
         <v-col cols="6">
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" ref="videoCard">
@@ -57,6 +72,7 @@ import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import { useMarkerStore } from "@/stores/marker";
+import { useCompAreaStore } from "@/stores/comp_area";
 // import { usePluginRunStore } from "@/stores/plugin_run";
 // import { useTimelineStore } from "@/stores/timeline";
 // import { useTimelineSegmentStore } from "@/stores/timeline_segment";
@@ -70,6 +86,7 @@ import { useMarkerStore } from "@/stores/marker";
 import VideoPlayer from "@/components/VideoPlayer.vue";
 import PosDataVisualizer from "@/components/PosDataVisualizer.vue";
 import AnnotationVisualizer from "@/components/AnnotationVisualizer.vue";
+import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import Timeline from "@/components/Timeline.vue";
 // import TimeSelector from "@/components/TimeSelector.vue";
@@ -92,6 +109,7 @@ const videoStore = useVideoStore();
 // const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
 const markerStore = useMarkerStore();
+const compAreaStore = useCompAreaStore();
 // const timelineStore = useTimelineStore();
 // const timelineSegmentStore = useTimelineSegmentStore();
 // const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
@@ -457,5 +475,15 @@ watch(tab, (newTab) => {
 .loading-text {
   margin-top: 10px;
   font-size: 18px;
+}
+
+.reference-marker-position {
+  position: fixed;
+  width: 12px;
+  height: 12px;
+  background-color: red;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
 }
 </style>

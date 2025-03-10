@@ -1,12 +1,5 @@
 <template>
   <v-container class="d-flex flex-column">
-    <div
-      v-if="markerStore.isAnyMarkerActive"
-      ref="overlayReferenceMarker"
-      class="overlay-reference-marker"
-      @click="markerStore.setReferenceMarker"
-    />
-
     <v-row class="mx-2 mt-1">
       <div
         v-if="markerStore.isAddingMarker"
@@ -80,8 +73,8 @@
             {{ currentSport.title }}
           </v-btn>
         </template>
-        <v-list>
-          <v-list-item v-for="(item, index) in sports" :key="index" class="sport-item">
+        <v-list class="py-0" density="compact">
+          <v-list-item v-for="(item, index) in sports" :key="index" class="menu-item">
             <v-list-item-title v-on:click="onSportChange(index)">
               {{ item.title }}
             </v-list-item-title>
@@ -89,31 +82,42 @@
         </v-list>
       </v-menu>
 
-      <v-spacer />
+      <v-menu offset-y top>
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" size="small">
+            <v-icon>mdi-dots-horizontal</v-icon>
+          </v-btn>
+        </template>
+        <v-list class="py-0" density="compact">
+          <v-list-item class="menu-item">
+            <v-list-item-title @click="markerStore.viewReferenceMarker">
+              {{ $t("annotation_vis.view_ref_marker") }}
+              <v-icon
+                :class="{
+                  'text-disabled': !markerStore.showReferenceMarker,
+                  'text-red': markerStore.showReferenceMarker,
+                }"
+                class="ml-4 mb-1"
+                size="small"
+              >
+                mdi-check
+              </v-icon>
+            </v-list-item-title>
+          </v-list-item>
 
-      <v-btn
-        size="small"
-        @click="markerStore.viewReferenceMarker"
-        :color="markerStore.showReferenceMarker ? 'primary' : 'white'"
-      >
-        {{ $t("annotation_vis.view_ref_marker") }}
-      </v-btn>
+          <v-list-item class="menu-item">
+            <v-list-item-title @click="handleAddMarker">
+              {{ $t("annotation_vis.add_marker") }}
+            </v-list-item-title>
+          </v-list-item>
 
-      <v-btn
-        size="small"
-        @click="handleAddMarker"
-        :color="markerStore.isAddingMarker ? 'primary' : 'white'"
-      >
-        {{ $t("annotation_vis.add_marker") }}
-      </v-btn>
-
-      <v-btn
-        size="small"
-        @click="showDeleteButton = !showDeleteButton"
-        :color="showDeleteButton ? 'primary' : 'white'"
-      >
-        {{ $t("annotation_vis.delete_marker") }}
-      </v-btn>
+          <v-list-item class="menu-item">
+            <v-list-item-title @click="showDeleteButton = !showDeleteButton">
+              {{ $t("annotation_vis.delete_marker") }}
+            </v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
     </v-row>
 
     <!-- <v-row>
@@ -122,9 +126,10 @@
           <v-list-item-content>
             <v-list-item-title>
               {{ m.name }}:
-              <span v-if="m.videoCoordsRel.x !== null && m.videoCoordsRel.y !== null !== null">
-                  (X: {{ m.videoCoordsRel.x }} px, Y: {{ m.videoCoordsRel.y }} px, Z: {{ m.videoCoordsRel.z }} px)
-                </span>
+              <span v-if="m.videoCoordsRel.x !== null && (m.videoCoordsRel.y !== null) !== null">
+                (X: {{ m.videoCoordsRel.x }} px, Y: {{ m.videoCoordsRel.y }} px, Z:
+                {{ m.videoCoordsRel.z }} px)
+              </span>
               <span
                 v-if="m.compAreaCoordsRel.x !== null && (m.compAreaCoordsRel.y !== null) !== null"
               >
@@ -142,11 +147,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
-import { useVideoStore } from "@/stores/video";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { useMarkerStore } from "@/stores/marker";
 
-const videoStore = useVideoStore();
 const compAreaStore = useCompAreaStore();
 const markerStore = useMarkerStore();
 
@@ -168,13 +171,11 @@ const onSportChange = (idx) => {
   currentSport.value = sports[idx];
 };
 
-const marker = computed(() => markerStore.marker);
 const filteredMarker = computed(() => markerStore.filteredMarker);
 
 const showDeleteButton = ref(false);
 
 const overlayMarker = ref(null);
-const overlayReferenceMarker = ref(null);
 
 const updateCompAreaSize = () => {
   nextTick(() => {
@@ -194,12 +195,6 @@ const updateCompAreaSize = () => {
 
 const handleResize = () => {
   updateCompAreaSize();
-};
-
-const handleClickOverlayReferenceMarker = (event) => {
-  const activeMarker = marker.value.find((m) => m.active);
-  if (!activeMarker || !overlayReferenceMarker.value) return;
-  if (!overlayReferenceMarker.value.contains(event.target)) return;
 };
 
 const handleClickOverlayMarker = (event) => {
@@ -223,14 +218,12 @@ onMounted(() => {
     window.dispatchEvent(new Event("resize"));
   }, 500);
   updateCompAreaSize();
-  window.addEventListener("click", handleClickOverlayReferenceMarker);
   window.addEventListener("click", handleClickOverlayMarker);
   window.addEventListener("resize", handleResize);
   window.addEventListener("scroll", handleResize);
 });
 
 onUnmounted(() => {
-  window.removeEventListener("click", handleClickOverlayReferenceMarker);
   window.removeEventListener("click", handleClickOverlayMarker);
   window.removeEventListener("resize", handleResize);
   window.removeEventListener("scroll", handleResize);
@@ -267,24 +260,16 @@ onUnmounted(() => {
   gap: 5px;
 }
 
-.sport-item {
+.menu-item {
   cursor: pointer;
 }
 
-.sport-item:hover {
+.menu-item:hover {
   background-color: #f0f0f0;
 }
 
-.overlay-reference-marker {
-  position: fixed;
-  top: 64px;
-  left: 0;
-  width: 100%;
-  height: calc(100vh - 64px);
-  background: rgba(255, 255, 255, 0.5);
-  z-index: 5;
-  pointer-events: auto;
-  border: 4px solid red;
+.menu-item .v-list-item-title {
+  font-size: 12px;
 }
 
 .overlay-marker {
@@ -292,5 +277,6 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.5);
   z-index: 5;
   border: 4px solid red;
+  cursor: crosshair;
 }
 </style>

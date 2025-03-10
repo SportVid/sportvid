@@ -1,9 +1,12 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import { useMarkerStore } from "@/stores/marker";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 
 export const usePlayerStore = defineStore("player", () => {
+  const markerStore = useMarkerStore();
+
   const video = ref(null);
   const currentTime = ref(0.0);
   const targetTime = ref(0.0);

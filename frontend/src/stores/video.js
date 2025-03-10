@@ -1,8 +1,8 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
-import { Buffer } from 'buffer';
+import { Buffer } from "buffer";
 import { usePlayerStore } from "@/stores/player";
 import { useAnnotationStore } from "./annotation";
 import { useAnnotationCategoryStore } from "./annotation_category";
@@ -16,7 +16,7 @@ import { useAnnotationShortcutStore } from "./annotation_shortcut";
 import { useClusterTimelineItemStore } from "./cluster_timeline_item";
 import { useShotStore } from "./shot";
 
-export const useVideoStore = defineStore('video', () => {
+export const useVideoStore = defineStore("video", () => {
   const videos = ref({});
   const videoList = ref([]);
   const isLoading = ref(false);
@@ -91,7 +91,8 @@ export const useVideoStore = defineStore('video', () => {
 
     if (includeTimeline) {
       promises.push(
-        timelineStore.fetchForVideo({ videoId })
+        timelineStore
+          .fetchForVideo({ videoId })
           .then(() => timelineSegmentStore.fetchForVideo({ videoId }))
           .then(() => timelineSegmentAnnotationStore.fetchForVideo({ videoId }))
       );
@@ -100,12 +101,8 @@ export const useVideoStore = defineStore('video', () => {
     if (includeAnalyser) {
       pluginRunStore.clearStore();
       pluginRunResultStore.clearStore();
-      promises.push(
-        pluginRunStore.fetchForVideo({ videoId, addResults })
-      );
-      promises.push(
-        pluginRunResultStore.fetchForVideo({ videoId, addResults })
-      );
+      promises.push(pluginRunStore.fetchForVideo({ videoId, addResults }));
+      promises.push(pluginRunResultStore.fetchForVideo({ videoId, addResults }));
     }
 
     if (includeShortcut) {
@@ -128,7 +125,7 @@ export const useVideoStore = defineStore('video', () => {
   const fetchAll = async () => {
     if (isLoading.value) return;
 
-    const user = localStorage.getItem('user');
+    const user = localStorage.getItem("user");
     if (!user) {
       return;
     }
@@ -137,7 +134,7 @@ export const useVideoStore = defineStore('video', () => {
 
     try {
       const res = await axios.get(`${config.API_LOCATION}/video/list`);
-      if (res.data.status === 'ok') {
+      if (res.data.status === "ok") {
         replaceStore(res.data.entries);
       }
     } finally {
@@ -156,7 +153,7 @@ export const useVideoStore = defineStore('video', () => {
 
     try {
       const res = await axios.post(`${config.API_LOCATION}/video/rename`, params);
-      if (res.data.status === 'ok') {
+      if (res.data.status === "ok") {
         // Optionally commit to store
       }
     } finally {
@@ -172,7 +169,7 @@ export const useVideoStore = defineStore('video', () => {
 
     try {
       const res = await axios.post(`${config.API_LOCATION}/video/delete`, params);
-      if (res.data.status === 'ok') {
+      if (res.data.status === "ok") {
         deleteFromStore([videoId]);
       }
     } finally {
@@ -203,7 +200,7 @@ export const useVideoStore = defineStore('video', () => {
       const res = await axios.post(`${config.API_LOCATION}/video/export`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      if (res.data.status === 'ok') {
+      if (res.data.status === "ok") {
         handleExportFile(res.data, video_id);
       }
     } finally {
@@ -212,14 +209,14 @@ export const useVideoStore = defineStore('video', () => {
   };
 
   const handleExportFile = (data, videoId) => {
-    if (data.extension === 'zip') {
-      const filecontent = Buffer.from(data.file, 'base64');
-      let blob = new Blob([filecontent], { type: 'application/zip' });
+    if (data.extension === "zip") {
+      const filecontent = Buffer.from(data.file, "base64");
+      let blob = new Blob([filecontent], { type: "application/zip" });
       let link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);
       link.download = `timelines.${data.extension}`;
       link.click();
-    } else if (data.extension === 'csv' || data.extension === 'eaf') {
+    } else if (data.extension === "csv" || data.extension === "eaf") {
       let blob = new Blob([data.file], { type: `text/${data.extension}` });
       let link = document.createElement("a");
       link.href = window.URL.createObjectURL(blob);

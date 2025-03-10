@@ -24,6 +24,17 @@
           backgroundColor: `${position.team}`,
         }"
       />
+
+      <svg v-if="markerStore.showEffectivePlayingSpace" class="hull-overlay">
+        <polygon
+          v-for="(hull, team) in convexHullPlayer[sliderValue]"
+          :key="team"
+          :points="hull.map((p) => `${p.left},${p.top}`).join(' ')"
+          :stroke="team"
+          :fill="team"
+          fill-opacity="0.2"
+        />
+      </svg>
     </v-row>
 
     <v-row class="video-control mt-8 mx-1 mb-n1">
@@ -33,27 +44,98 @@
             {{ currentSport.title }}
           </v-btn>
         </template>
-        <v-list>
-          <v-list-item v-for="(item, index) in sports" :key="index" class="sport-item">
-            <v-list-item-title v-on:click="onSportChange(index)">
+        <v-list class="py-0" density="compact">
+          <v-list-item v-for="(item, index) in sports" :key="index" class="menu-item">
+            <v-list-item-title v-on:click="onSportChange(index)" class="my-0">
               {{ item.title }}
             </v-list-item-title>
           </v-list-item>
         </v-list>
       </v-menu>
 
-      <v-btn
-        size="small"
-        @click="markerStore.viewBoundingBox"
-        :color="markerStore.showBoundingBox ? 'primary' : 'white'"
-      >
-        {{ $t("pos_data_vis.view_bounding_box") }}
-      </v-btn>
+      <v-menu offset-y top>
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" size="small">
+            <v-icon>mdi-dots-horizontal</v-icon>
+          </v-btn>
+        </template>
+        <v-list class="py-0" density="compact">
+          <v-list-item class="menu-item">
+            <v-list-item-title @click="markerStore.viewBoundingBox">
+              {{ $t("pos_data_vis.view_bounding_box") }}
+              <v-icon
+                :class="{
+                  'text-disabled': !markerStore.showBoundingBox,
+                  'text-red': markerStore.showBoundingBox,
+                }"
+                class="ml-12 mb-1"
+                size="small"
+              >
+                mdi-check
+              </v-icon>
+            </v-list-item-title>
+          </v-list-item>
 
-      <v-btn @click="playerStore.toggleSliderSync" size="small">
-        <v-icon v-if="playerStore.isSynced"> mdi-link-off</v-icon>
-        <v-icon v-else> mdi-link</v-icon>
-      </v-btn>
+          <v-list-item class="menu-item">
+            <v-list-item-title @click="playerStore.toggleSliderSync">
+              {{ $t("pos_data_vis.video_sync") }}
+              <v-icon
+                :class="{
+                  'text-disabled': !playerStore.isSynced,
+                  'text-red': playerStore.isSynced,
+                }"
+                class="ml-12 mb-1"
+                size="small"
+              >
+                mdi-check
+              </v-icon>
+            </v-list-item-title>
+          </v-list-item>
+
+          <v-menu offset-x location="end" open-on-hover>
+            <template v-slot:activator="{ props }">
+              <v-list-item v-bind="props" class="menu-item">
+                <v-list-item-title>
+                  {{ $t("pos_data_vis.view_kpis.title") }}
+                  <v-icon class="ml-4 mb-1" size="small">mdi-chevron-right</v-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+            <v-list class="py-0" density="compact">
+              <v-list-item class="menu-item">
+                <v-list-item-title @click="markerStore.viewSpaceControl">
+                  {{ $t("pos_data_vis.view_kpis.space_control") }}
+                  <v-icon
+                    :class="{
+                      'text-disabled': !markerStore.showSpaceControl,
+                      'text-red': markerStore.showSpaceControl,
+                    }"
+                    class="ml-4 mb-1"
+                    size="small"
+                  >
+                    mdi-check
+                  </v-icon>
+                </v-list-item-title>
+              </v-list-item>
+              <v-list-item class="menu-item">
+                <v-list-item-title @click="markerStore.viewEffectivePlayingSpace">
+                  {{ $t("pos_data_vis.view_kpis.eps") }}
+                  <v-icon
+                    :class="{
+                      'text-disabled': !markerStore.showEffectivePlayingSpace,
+                      'text-red': markerStore.showEffectivePlayingSpace,
+                    }"
+                    class="ml-4 mb-1"
+                    size="small"
+                  >
+                    mdi-check
+                  </v-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+        </v-list>
+      </v-menu>
 
       <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
         {{ getTimecode(sliderValue) }}
@@ -76,7 +158,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { useMarkerStore } from "@/stores/marker";
@@ -139,6 +221,66 @@ const handleResize = () => {
   updateCompAreaSize();
 };
 
+const computeConvexHull = (points) => {
+  if (points.length < 3) return [];
+
+  points = [...points].sort((a, b) => a.left - b.left || a.top - b.top);
+
+  const cross = (o, a, b) =>
+    (a.left - o.left) * (b.top - o.top) - (a.top - o.top) * (b.left - o.left);
+
+  const lower = [];
+  for (const p of points) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+      lower.pop();
+    }
+    lower.push(p);
+  }
+
+  const upper = [];
+  for (let i = points.length - 1; i >= 0; i--) {
+    const p = points[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+      upper.pop();
+    }
+    upper.push(p);
+  }
+
+  upper.pop();
+  lower.pop();
+
+  return lower.concat(upper);
+};
+
+const convexHullPlayer = computed(() => {
+  if (!compAreaStore.compAreaSize || !markerStore.positions) {
+    return [];
+  }
+
+  return markerStore.positions.map((framePositions) => {
+    const teams = {};
+
+    framePositions.forEach((position) => {
+      if (!teams[position.team]) {
+        teams[position.team] = [];
+      }
+      teams[position.team].push({
+        top:
+          (position.bbox_top + position.bbox_height) * compAreaStore.compAreaSize.height +
+          compAreaStore.compAreaSize.top,
+        left:
+          (position.bbox_left + position.bbox_width / 2) * compAreaStore.compAreaSize.width +
+          compAreaStore.compAreaSize.left,
+      });
+    });
+
+    return Object.keys(teams).reduce((acc, team) => {
+      acc[team] = computeConvexHull(teams[team]);
+      return acc;
+    }, {});
+  });
+});
+
 onMounted(() => {
   setTimeout(() => {
     window.dispatchEvent(new Event("resize"));
@@ -178,11 +320,25 @@ onUnmounted(() => {
   margin-bottom: auto;
 }
 
-.sport-item {
+.menu-item {
   cursor: pointer;
 }
 
-.sport-item:hover {
+.menu-item:hover {
   background-color: #f0f0f0;
+}
+
+.menu-item .v-list-item-title {
+  font-size: 12px;
+}
+
+.hull-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
 }
 </style>

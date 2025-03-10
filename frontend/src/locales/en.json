@@ -459,11 +459,17 @@
     "timelines": "Timelines:"
   },
   "annotation_vis": {
-    "view_ref_marker": "View Ref Marker",
+    "view_ref_marker": "View Reference Marker",
     "add_marker": "Add Marker",
     "delete_marker": "Delete Marker"
   },
   "pos_data_vis": {
-    "view_bounding_box": "Bounding Box"
+    "view_bounding_box": "View bounding-boxes",
+    "video_sync": "Sychronise with video",
+    "view_kpis": {
+      "title": "View performance indicator",
+      "space_control": "Space control",
+      "eps": "Effective playing space"
+    }
   }
 }

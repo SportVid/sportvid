@@ -15,19 +15,6 @@
       />
 
       <div
-        v-for="m in markerStore.filteredReferenceMarker"
-        v-show="markerStore.showReferenceMarker"
-        :key="m.id"
-        :style="{
-          top: m.videoCoordsRel.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
-          left: m.videoCoordsRel.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
-        }"
-        @mouseenter="markerStore.hoveredReferenceMarker = m.id"
-        @mouseleave="markerStore.hoveredReferenceMarker = null"
-        class="reference-marker-position"
-      />
-
-      <div
         v-for="(position, index) in markerStore.positions[sliderValue]"
         v-show="markerStore.showBoundingBox"
         :key="index"
@@ -65,10 +52,10 @@
         <v-icon> mdi-skip-forward</v-icon>
       </v-btn>
 
-      <v-btn @click="toggleSyncTime()" size="small">
+      <!-- <v-btn @click="toggleSyncTime()" size="small">
         <v-icon v-if="syncTime"> mdi-link</v-icon>
         <v-icon v-else> mdi-link-off</v-icon>
-      </v-btn>
+      </v-btn> -->
 
       <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
         {{ getTimecode(currentTime) }}
@@ -96,15 +83,17 @@
         <v-icon v-else-if="volume == 0">mdi-volume-mute</v-icon>
       </v-btn>
 
-      <v-slider
-        v-model="volume"
-        @update:model-value="onVolumeChange"
-        max="100"
-        min="0"
-        hide-details
-        color="primary"
-        :thumb-size="15"
-      />
+      <div style="width: 13%; min-width: 80px">
+        <v-slider
+          v-model="volume"
+          @update:model-value="onVolumeChange"
+          max="100"
+          min="0"
+          hide-details
+          color="primary"
+          :thumb-size="15"
+        />
+      </div>
     </v-row>
 
     <v-row>
@@ -122,7 +111,6 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, onBeforeUnmount } from "vue";
-import { useElementBounding } from "@vueuse/components";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useMarkerStore } from "@/stores/marker";
@@ -156,28 +144,6 @@ const speeds = [
   { title: "1.75", value: 1.75 },
   { title: "2.00", value: 2.0 },
 ];
-
-let observer = null;
-const threshold = 0.1;
-
-const toggleStickyVideo = ([entry]) => {
-  if (videoElement.value) {
-    videoElement.value.classList.toggle("sticky-video", entry.intersectionRatio < threshold);
-  }
-};
-
-onMounted(() => {
-  if (videoContainer.value.$el) {
-    observer = new IntersectionObserver(toggleStickyVideo, { threshold: [threshold] });
-    observer.observe(videoContainer.value.$el);
-  }
-});
-
-onBeforeUnmount(() => {
-  if (observer) {
-    observer.disconnect();
-  }
-});
 
 const toggle = () => playerStore.togglePlaying();
 const toggleSyncTime = () => playerStore.toggleSyncTime();
@@ -249,7 +215,6 @@ const updateVideoSize = () => {
         top: rect.top,
         left: rect.left,
       };
-
       videoStore.setVideoSize(size);
     }
   });
@@ -325,22 +290,22 @@ watch(volume, (newVolume) => {
     videoElement.value.volume = newVolume / 100;
   }
 });
+
+watch(
+  () => markerStore.isAnyMarkerActive,
+  async (newVal) => {
+    if (!newVal) {
+      await nextTick();
+      updateVideoSize();
+    }
+  }
+);
 </script>
 
 <style>
-.sticky-video {
-  position: fixed;
-  height: auto !important;
-  width: 15vw !important;
-  z-index: 3;
-  min-height: unset !important;
-  top: 80px;
-  right: 15px;
-}
-
 .video-video {
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  object-fit: cover;
 }
 
 .video-control {
@@ -358,16 +323,6 @@ watch(volume, (newVolume) => {
 
 .speed-item:hover {
   background-color: #f0f0f0;
-}
-
-.reference-marker-position {
-  position: fixed;
-  width: 12px;
-  height: 12px;
-  background-color: red;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
 }
 
 .bounding-box-position {
