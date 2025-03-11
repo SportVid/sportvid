@@ -7,7 +7,7 @@ export const useMarkerStore = defineStore("marker", () => {
   const videoStore = useVideoStore();
   const compAreaStore = useCompAreaStore();
 
-  const showReferenceMarker = ref(true);
+  const showReferenceMarker = ref(false);
   const hoveredReferenceMarker = ref(null);
   const isAddingMarker = ref(false);
   const showBoundingBox = ref(false);

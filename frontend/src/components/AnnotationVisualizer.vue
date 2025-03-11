@@ -74,8 +74,13 @@
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
-          <v-list-item v-for="(item, index) in sports" :key="index" class="menu-item">
-            <v-list-item-title v-on:click="onSportChange(index)">
+          <v-list-item
+            v-for="(item, index) in sports"
+            :key="index"
+            class="menu-item"
+            v-on:click="onSportChange(index)"
+          >
+            <v-list-item-title>
               {{ item.title }}
             </v-list-item-title>
           </v-list-item>
@@ -89,8 +94,8 @@
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
-          <v-list-item class="menu-item">
-            <v-list-item-title @click="markerStore.viewReferenceMarker">
+          <v-list-item class="menu-item" @click="markerStore.viewReferenceMarker">
+            <v-list-item-title>
               {{ $t("annotation_vis.view_ref_marker") }}
               <v-icon
                 :class="{
@@ -105,14 +110,14 @@
             </v-list-item-title>
           </v-list-item>
 
-          <v-list-item class="menu-item">
-            <v-list-item-title @click="handleAddMarker">
+          <v-list-item class="menu-item" @click="handleAddMarker">
+            <v-list-item-title>
               {{ $t("annotation_vis.add_marker") }}
             </v-list-item-title>
           </v-list-item>
 
-          <v-list-item class="menu-item">
-            <v-list-item-title @click="showDeleteButton = !showDeleteButton">
+          <v-list-item class="menu-item" @click="showDeleteButton = !showDeleteButton">
+            <v-list-item-title>
               {{ $t("annotation_vis.delete_marker") }}
             </v-list-item-title>
           </v-list-item>

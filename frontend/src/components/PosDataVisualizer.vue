@@ -35,6 +35,17 @@
           fill-opacity="0.2"
         />
       </svg>
+
+      <svg v-if="markerStore.showSpaceControl" class="voronoi-overlay">
+        <polygon
+          v-for="(cell, index) in voronoiCells[sliderValue]"
+          :key="index"
+          :points="cell.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')"
+          stroke="gray"
+          :fill="cell.team"
+          fill-opacity="0.2"
+        />
+      </svg>
     </v-row>
 
     <v-row class="video-control mt-8 mx-1 mb-n1">
@@ -45,8 +56,13 @@
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
-          <v-list-item v-for="(item, index) in sports" :key="index" class="menu-item">
-            <v-list-item-title v-on:click="onSportChange(index)" class="my-0">
+          <v-list-item
+            v-for="(item, index) in sports"
+            :key="index"
+            class="menu-item"
+            v-on:click="onSportChange(index)"
+          >
+            <v-list-item-title class="my-0">
               {{ item.title }}
             </v-list-item-title>
           </v-list-item>
@@ -60,8 +76,8 @@
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
-          <v-list-item class="menu-item">
-            <v-list-item-title @click="markerStore.viewBoundingBox">
+          <v-list-item class="menu-item" @click="markerStore.viewBoundingBox">
+            <v-list-item-title>
               {{ $t("pos_data_vis.view_bounding_box") }}
               <v-icon
                 :class="{
@@ -76,8 +92,8 @@
             </v-list-item-title>
           </v-list-item>
 
-          <v-list-item class="menu-item">
-            <v-list-item-title @click="playerStore.toggleSliderSync">
+          <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
+            <v-list-item-title>
               {{ $t("pos_data_vis.video_sync") }}
               <v-icon
                 :class="{
@@ -102,8 +118,8 @@
               </v-list-item>
             </template>
             <v-list class="py-0" density="compact">
-              <v-list-item class="menu-item">
-                <v-list-item-title @click="markerStore.viewSpaceControl">
+              <v-list-item class="menu-item" @click="markerStore.viewSpaceControl">
+                <v-list-item-title>
                   {{ $t("pos_data_vis.view_kpis.space_control") }}
                   <v-icon
                     :class="{
@@ -117,8 +133,8 @@
                   </v-icon>
                 </v-list-item-title>
               </v-list-item>
-              <v-list-item class="menu-item">
-                <v-list-item-title @click="markerStore.viewEffectivePlayingSpace">
+              <v-list-item class="menu-item" @click="markerStore.viewEffectivePlayingSpace">
+                <v-list-item-title>
                   {{ $t("pos_data_vis.view_kpis.eps") }}
                   <v-icon
                     :class="{
@@ -163,6 +179,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { useMarkerStore } from "@/stores/marker";
 import { getTimecode } from "@/plugins/time";
+import { Delaunay } from "d3-delaunay";
 
 const playerStore = usePlayerStore();
 const compAreaStore = useCompAreaStore();
@@ -281,6 +298,44 @@ const convexHullPlayer = computed(() => {
   });
 });
 
+const computeVoronoi = (players, width, height) => {
+  if (!players.length) return [];
+
+  const delaunay = Delaunay.from(players.map((p) => [p.left, p.top]));
+  const voronoi = delaunay.voronoi([
+    compAreaStore.compAreaSize.left,
+    compAreaStore.compAreaSize.top,
+    compAreaStore.compAreaSize.left + width,
+    compAreaStore.compAreaSize.top + height,
+  ]);
+
+  return players
+    .map((player, i) => {
+      const polygon = voronoi.cellPolygon(i);
+      return polygon ? { team: player.team, polygon } : null;
+    })
+    .filter((cell) => cell !== null);
+};
+
+const voronoiCells = computed(() => {
+  if (!compAreaStore.compAreaSize || !markerStore.positions) {
+    return [];
+  }
+
+  return markerStore.positions.map((framePositions) => {
+    const width = compAreaStore.compAreaSize.width;
+    const height = compAreaStore.compAreaSize.height;
+
+    const allPlayers = framePositions.map((player) => ({
+      top: (player.bbox_top + player.bbox_height) * height + compAreaStore.compAreaSize.top,
+      left: (player.bbox_left + player.bbox_width / 2) * width + compAreaStore.compAreaSize.left,
+      team: player.team,
+    }));
+
+    return computeVoronoi(allPlayers, width, height);
+  });
+});
+
 onMounted(() => {
   setTimeout(() => {
     window.dispatchEvent(new Event("resize"));
@@ -333,6 +388,16 @@ onUnmounted(() => {
 }
 
 .hull-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.voronoi-overlay {
   position: fixed;
   top: 0;
   left: 0;

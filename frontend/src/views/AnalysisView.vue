@@ -432,6 +432,19 @@ watch(tab, (newTab) => {
     markerStore.showBoundingBox = false;
   }
 });
+
+const previousShowReferenceMarker = ref(false);
+watch(
+  () => markerStore.isAnyMarkerActive,
+  (newValue) => {
+    if (newValue) {
+      previousShowReferenceMarker.value = markerStore.showReferenceMarker;
+      markerStore.showReferenceMarker = true;
+    } else {
+      markerStore.showReferenceMarker = previousShowReferenceMarker.value;
+    }
+  }
+);
 </script>
 
 <style scoped>
