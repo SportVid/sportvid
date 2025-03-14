@@ -2,6 +2,9 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useVideoStore } from "./video";
 import { useCompAreaStore } from "./comp_area";
+import { usePlayerStore } from "@/stores/player";
+import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 
 export const useMarkerStore = defineStore("marker", () => {
   const videoStore = useVideoStore();
@@ -97,8 +100,16 @@ export const useMarkerStore = defineStore("marker", () => {
       const lastMarker = marker.value[marker.value.length - 1];
       if (lastMarker) {
         lastMarker.compAreaCoordsRel = {
-          x: (event.clientX - compAreaStore.compAreaSize.left) / compAreaStore.compAreaSize.width,
-          y: (event.clientY - compAreaStore.compAreaSize.top) / compAreaStore.compAreaSize.height,
+          x:
+            (event.clientX -
+              (compAreaStore.compAreaSize.left +
+                ((1 - 2698 / 2910) / 2) * compAreaStore.compAreaSize.width)) /
+            (compAreaStore.compAreaSize.width * (2698 / 2910)),
+          y:
+            (event.clientY -
+              (compAreaStore.compAreaSize.top +
+                ((1 - 1794 / 2010) / 2) * compAreaStore.compAreaSize.height)) /
+            (compAreaStore.compAreaSize.height * (1794 / 2010)),
         };
       }
 
@@ -141,6 +152,8 @@ export const useMarkerStore = defineStore("marker", () => {
           bbox_width: 0.05,
           bbox_height: 0.1,
           team: isTeamA ? "blue" : "red",
+          time: 0,
+          tracking_id: 1,
         };
       })
     )
@@ -157,6 +170,20 @@ export const useMarkerStore = defineStore("marker", () => {
     showEffectivePlayingSpace.value = !showEffectivePlayingSpace.value;
     showSpaceControl.value = false;
   };
+
+  const pluginRunStore = usePluginRunStore();
+  const pluginRunResultStore = usePluginRunResultStore();
+  const playerStore = usePlayerStore();
+
+  const bboxData = computed(() => {
+    return pluginRunStore
+      .forVideo(playerStore.videoId)
+      .filter((e) => e.type == "bytetrack" && e.status == "DONE")
+      .map((e) => {
+        e.results = pluginRunResultStore.forPluginRun(e.id);
+        return e;
+      });
+  });
 
   return {
     marker,
@@ -179,5 +206,6 @@ export const useMarkerStore = defineStore("marker", () => {
     viewSpaceControl,
     showEffectivePlayingSpace,
     viewEffectivePlayingSpace,
+    bboxData,
   };
 });
