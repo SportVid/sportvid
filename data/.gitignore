@@ -1,3 +1,4 @@
 *
 !db/
 !.gitignore
+models/bytetrack/bytetrack_x_mot17.pth.tar
