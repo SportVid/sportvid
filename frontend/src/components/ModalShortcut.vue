@@ -78,6 +78,7 @@ const props = defineProps({
     default: false,
   },
 });
+const emit = defineEmits({});
 
 const dialog = ref(props.modelValue);
 const isSubmitting = ref(false);

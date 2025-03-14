@@ -1,10 +1,10 @@
 <template>
   <v-container class="d-flex flex-column">
-    <v-row class="mx-2 mt-1">
+    <v-row class="mt-1">
       <img
         ref="compAreaElement"
         class="visualizer-image"
-        :src="currentSport.pitchImage"
+        :src="compAreaStore.currentSport.pitchImage"
         @load="updateCompAreaSize"
       />
 
@@ -14,12 +14,17 @@
         class="data-point-position"
         :style="{
           top:
-            (position.bbox_top + position.bbox_height) * compAreaStore.compAreaSize.height +
-            compAreaStore.compAreaSize.top +
+            (position.bbox_top + position.bbox_height) *
+              (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
+            (compAreaStore.compAreaSize.top +
+              ((1 - compAreaStore.currentSport.heightRel) / 2) *
+                compAreaStore.compAreaSize.height) +
             'px',
           left:
-            (position.bbox_left + position.bbox_width / 2) * compAreaStore.compAreaSize.width +
-            compAreaStore.compAreaSize.left +
+            (position.bbox_left + position.bbox_width / 2) *
+              (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
+            (compAreaStore.compAreaSize.left +
+              ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
             'px',
           backgroundColor: `${position.team}`,
         }"
@@ -32,7 +37,7 @@
           :points="hull.map((p) => `${p.left},${p.top}`).join(' ')"
           :stroke="team"
           :fill="team"
-          fill-opacity="0.2"
+          fill-opacity="0.4"
         />
       </svg>
 
@@ -43,24 +48,24 @@
           :points="cell.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')"
           stroke="gray"
           :fill="cell.team"
-          fill-opacity="0.2"
+          fill-opacity="0.4"
         />
       </svg>
     </v-row>
 
-    <v-row class="video-control mt-8 mx-1 mb-n1">
+    <v-row class="video-control mt-6 mb-n1">
       <v-menu offset-y top>
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
-            {{ currentSport.title }}
+            {{ compAreaStore.currentSport.title }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
           <v-list-item
-            v-for="(item, index) in sports"
+            v-for="(item, index) in compAreaStore.sports"
             :key="index"
             class="menu-item"
-            v-on:click="onSportChange(index)"
+            v-on:click="compAreaStore.onSportChange(index)"
           >
             <v-list-item-title class="my-0">
               {{ item.title }}
@@ -158,7 +163,7 @@
       </div>
     </v-row>
 
-    <v-row class="mx-0">
+    <v-row>
       <v-slider
         v-model="sliderValue"
         @update:model-value="updateFrame"
@@ -184,20 +189,6 @@ import { Delaunay } from "d3-delaunay";
 const playerStore = usePlayerStore();
 const compAreaStore = useCompAreaStore();
 const markerStore = useMarkerStore();
-
-const currentSport = ref({
-  title: "Soccer",
-  pitchImage: require("../assets/pitch_soccer.png"),
-});
-const sports = [
-  { title: "Soccer", pitchImage: require("../assets/pitch_soccer.png") },
-  { title: "Handball", pitchImage: require("../assets/pitch_handball.png") },
-  { title: "Basketball", pitchImage: require("../assets/pitch_basketball.png") },
-  { title: "Climbing", pitchImage: require("../assets/pitch_climbing.png") },
-];
-const onSportChange = (idx) => {
-  currentSport.value = sports[idx];
-};
 
 const currentFrame = ref(0);
 const updateFrame = (newIndex) => {
@@ -283,11 +274,15 @@ const convexHullPlayer = computed(() => {
       }
       teams[position.team].push({
         top:
-          (position.bbox_top + position.bbox_height) * compAreaStore.compAreaSize.height +
-          compAreaStore.compAreaSize.top,
+          (position.bbox_top + position.bbox_height) *
+            (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
+          (compAreaStore.compAreaSize.top +
+            ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height),
         left:
-          (position.bbox_left + position.bbox_width / 2) * compAreaStore.compAreaSize.width +
-          compAreaStore.compAreaSize.left,
+          (position.bbox_left + position.bbox_width / 2) *
+            (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
+          (compAreaStore.compAreaSize.left +
+            ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width),
       });
     });
 
@@ -298,15 +293,21 @@ const convexHullPlayer = computed(() => {
   });
 });
 
-const computeVoronoi = (players, width, height) => {
+const computeVoronoi = (players) => {
   if (!players.length) return [];
 
   const delaunay = Delaunay.from(players.map((p) => [p.left, p.top]));
   const voronoi = delaunay.voronoi([
-    compAreaStore.compAreaSize.left,
-    compAreaStore.compAreaSize.top,
-    compAreaStore.compAreaSize.left + width,
-    compAreaStore.compAreaSize.top + height,
+    compAreaStore.compAreaSize.left +
+      ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width,
+    compAreaStore.compAreaSize.top +
+      ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height,
+    compAreaStore.compAreaSize.left +
+      ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width +
+      compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel,
+    compAreaStore.compAreaSize.top +
+      ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height +
+      compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel,
   ]);
 
   return players
@@ -323,16 +324,23 @@ const voronoiCells = computed(() => {
   }
 
   return markerStore.positions.map((framePositions) => {
-    const width = compAreaStore.compAreaSize.width;
-    const height = compAreaStore.compAreaSize.height;
-
     const allPlayers = framePositions.map((player) => ({
-      top: (player.bbox_top + player.bbox_height) * height + compAreaStore.compAreaSize.top,
-      left: (player.bbox_left + player.bbox_width / 2) * width + compAreaStore.compAreaSize.left,
+      top:
+        (player.bbox_top + player.bbox_height) *
+          compAreaStore.compAreaSize.height *
+          compAreaStore.currentSport.heightRel +
+        (compAreaStore.compAreaSize.top +
+          ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height),
+      left:
+        (player.bbox_left + player.bbox_width / 2) *
+          compAreaStore.compAreaSize.width *
+          compAreaStore.currentSport.widthRel +
+        (compAreaStore.compAreaSize.left +
+          ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width),
       team: player.team,
     }));
 
-    return computeVoronoi(allPlayers, width, height);
+    return computeVoronoi(allPlayers);
   });
 });
 

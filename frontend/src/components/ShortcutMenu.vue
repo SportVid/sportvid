@@ -13,31 +13,18 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, computed } from "vue";
 import ModalShortcut from "@/components/ModalShortcut.vue";
 import { useUserStore } from "@/stores/user";
 import { usePlayerStore } from "@/stores/player";
 
-export default {
-  setup() {
-    const showModalShortcut = ref(false);
-    const userStore = useUserStore();
-    const playerStore = usePlayerStore();
+const showModalShortcut = ref(false);
+const userStore = useUserStore();
+const playerStore = usePlayerStore();
 
-    const videoId = computed(() => playerStore.videoId);
-    const loggedIn = computed(() => userStore.loggedIn);
-
-    return {
-      showModalShortcut,
-      videoId,
-      loggedIn,
-    };
-  },
-  components: {
-    ModalShortcut,
-  },
-};
+const videoId = computed(() => playerStore.videoId);
+const loggedIn = computed(() => userStore.loggedIn);
 </script>
 
 <style scoped>

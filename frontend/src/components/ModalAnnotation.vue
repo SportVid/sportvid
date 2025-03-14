@@ -1,24 +1,12 @@
 <template>
-  <v-dialog v-model="menu" width="700px">
-    <template v-slot:activator="{ props }">
-      <v-btn v-bind="props">
-        <v-icon color="primary">mdi-history</v-icon>
-        <v-badge v-if="numRunningPlugins > 0" color="accent" :content="numRunningPlugins" floating>
-          {{ $t("app_bar.history_menu") }}
-        </v-badge>
-        <span v-else>
-          {{ $t("app_bar.history_menu") }}
-        </span>
-      </v-btn>
-    </template>
-
+  <v-dialog v-model="dialog" width="700px">
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.history.title") }}
+        {{ $t("modal.annotation.title") }}
 
         <v-spacer></v-spacer>
 
-        <v-btn icon @click="menu = false" variant="plain" color="grey">
+        <v-btn icon @click="dialog = false" variant="plain" color="grey">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
@@ -29,63 +17,45 @@
           :headers="headers"
           :items="pluginRuns"
           item-key="id"
+          @click:row="(_, item) => selectAnnotation(item)"
           class="elevation-1 mb-3"
         >
-          <template v-slot:item.progress="{ index }">
-            <v-progress-linear v-model="progressComputed[index]" height="8" color="primary" />
-          </template>
-          <template v-slot:item.status="{ value }">
-            <v-chip :color="progressColor(value)" variant="flat">
-              {{ value }}
-            </v-chip>
-          </template>
         </v-data-table>
+
+        <v-row class="mt-6 mb-n2 justify-center">
+          <v-btn class="mt-n2" @click="confirmSelection" :disabled="selectedAnnotation === null">
+            {{ $t("modal.annotation.select") }}
+          </v-btn>
+        </v-row>
       </v-card-text>
     </v-card>
   </v-dialog>
 </template>
 
 <script setup>
-import { ref, computed, watchEffect } from "vue";
+import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
-import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 
-const menu = ref(false);
+const { t } = useI18n();
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
-const { t } = useI18n();
+
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
+    default: false,
+  },
+});
+const emit = defineEmits();
+
+const dialog = ref(props.modelValue);
 
 const headers = [
-  { title: "Plugin Name", align: "start", key: "type" },
+  { title: "Annotation", align: "start", key: "type" },
   { title: "Date", key: "date" },
-  { title: "Progress", key: "progress" },
-  { title: "Status", key: "status" },
 ];
-
-const progressColor = (status) => {
-  if (status === "ERROR") return "red";
-  if (status === "RUNNING") return "blue";
-  if (status === "DONE") return "green";
-  return "yellow";
-};
-
-const indeterminate = (status) => {
-  return status === "QUEUED" || status === "WAITING";
-};
-
-const pluginStatus = (status) => {
-  const statusMap = {
-    UNKNOWN: "modal.plugin.status.unknown",
-    ERROR: "modal.plugin.status.error",
-    DONE: "modal.plugin.status.done",
-    RUNNING: "modal.plugin.status.running",
-    QUEUED: "modal.plugin.status.queued",
-    WAITING: "modal.plugin.status.waiting",
-  };
-  return statusMap[status] ? t(statusMap[status]) : status;
-};
 
 const pluginName = (type) => {
   const typeMap = {
@@ -134,55 +104,38 @@ const pluginRuns = computed(() => {
     }));
 });
 
-const numRunningPlugins = computed(() => {
-  return pluginRuns.value.filter((e) => e.status !== "DONE" && e.status !== "ERROR").length;
-});
+const selectedAnnotation = ref(null);
 
-const progressComputed = ref([]);
-watchEffect(() => {
-  progressComputed.value = pluginRuns.value.map((run) => run.progress * 100);
-});
+function selectAnnotation(item) {
+  if (selectedAnnotation.value?.index === item.index) {
+    selectedAnnotation.value = null;
+  } else {
+    selectedAnnotation.value = item;
+  }
+}
+
+function confirmSelection() {
+  if (selectedAnnotation.value) {
+    console.log("Ausgewähltes Template:", selectedAnnotation.value);
+  }
+  dialog.value = false;
+}
+
+watch(
+  () => dialog.value,
+  (value) => {
+    emit("update:modelValue", value);
+  }
+);
+
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (value) {
+      dialog.value = true;
+    }
+  }
+);
 </script>
 
-<style scoped>
-.v-menu__content .v-btn:not(.accent) {
-  text-transform: capitalize;
-  justify-content: left;
-}
-
-.v-btn:not(.v-btn--round).v-size--large {
-  height: 48px;
-}
-
-.plugin-overview {
-  background-color: rgb(255, 255, 255) !important;
-  max-height: 500px;
-  padding: 0;
-  margin: 0;
-}
-
-.v-list-item__content.plugin-overview {
-  min-width: 350px;
-  max-width: 500px;
-  letter-spacing: 0.0892857143em;
-  overflow: auto;
-}
-
-.text-overflow {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.plugin-name {
-  font-weight: bold;
-}
-
-.v-menu__content .plugin-overview .v-btn:not(.accent) {
-  justify-content: center;
-}
-
-.v-data-table .v-data-table-header tr th {
-  font-size: 20px !important;
-}
-</style>
+<style></style>
