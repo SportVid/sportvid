@@ -3,8 +3,9 @@ FROM python:3.10
 
 WORKDIR /app/analyser/inference/
 
-COPY ./requirements.txt /app/analyser/inference/
+COPY ./requirements.cuda.txt /app/analyser/inference/
 RUN pip install -r requirements.txt
+RUN pip install onnxruntime-gpu==1.21.0
 
 COPY ./src/ /app/analyser/inference/
 COPY ./deploy.cuda.yml /app/analyser/deploy.yml
