@@ -27,7 +27,7 @@
           class="mr-6"
         />
 
-        <v-btn class="" @click="submit" :disabled="isSubmitting || !name">
+        <v-btn @click="submit" :disabled="isSubmitting || !name">
           {{ $t("modal.video.rename.update") }}
         </v-btn>
       </v-card-text>

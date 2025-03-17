@@ -2,19 +2,19 @@
   <div>
     <v-menu min-width="175">
       <template v-slot:activator="{ props }">
-        <v-btn size="small" v-bind="props" @click="showModalAnnotation = true">
+        <v-btn size="small" v-bind="props" @click="showModalAnnotationSelect = true">
           {{ $t("annotation_vis.select_annotation") }}
         </v-btn>
       </template>
     </v-menu>
 
-    <ModalAnnotation v-model="showModalAnnotation" />
+    <ModalAnnotationSelect v-model="showModalAnnotationSelect" />
   </div>
 </template>
 
 <script setup>
 import { ref } from "vue";
-import ModalAnnotation from "@/components/ModalAnnotation.vue";
+import ModalAnnotationSelect from "@/components/ModalAnnotationSelect.vue";
 
-const showModalAnnotation = ref(false);
+const showModalAnnotationSelect = ref(false);
 </script>
