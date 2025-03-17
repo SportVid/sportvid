@@ -185,6 +185,31 @@ export const useMarkerStore = defineStore("marker", () => {
       });
   });
 
+  const annotations = ref({});
+
+  const saveAnnotation = (name) => {
+    if (!name) return;
+    annotations.value[name] = [...marker.value];
+    localStorage.setItem("annotations", JSON.stringify(annotations.value));
+  };
+
+  const loadAnnotation = (name) => {
+    if (annotations.value[name]) {
+      marker.value = [...annotations.value[name]];
+    }
+  };
+
+  const loadFromLocalStorage = () => {
+    const storedAnnotations = JSON.parse(localStorage.getItem("annotations"));
+    if (storedAnnotations) annotations.value = storedAnnotations;
+  };
+
+  const deleteAnnotation = (name) => {
+    if (!annotations.value[name]) return;
+    delete annotations.value[name];
+    localStorage.setItem("annotations", JSON.stringify(annotations.value));
+  };
+
   return {
     marker,
     filteredMarker,
@@ -207,5 +232,10 @@ export const useMarkerStore = defineStore("marker", () => {
     showEffectivePlayingSpace,
     viewEffectivePlayingSpace,
     bboxData,
+    annotations,
+    saveAnnotation,
+    loadAnnotation,
+    loadFromLocalStorage,
+    deleteAnnotation,
   };
 });

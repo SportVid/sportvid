@@ -97,11 +97,9 @@
         </v-list>
       </v-menu>
 
-      <v-btn size="small">
-        {{ $t("annotation_vis.save_annotation") }}
-      </v-btn>
+      <AnnotationSaveMenu />
 
-      <AnnotationMenu />
+      <AnnotationSelectMenu />
 
       <v-menu offset-y top>
         <template v-slot:activator="{ props }">
@@ -170,7 +168,8 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { useMarkerStore } from "@/stores/marker";
-import AnnotationMenu from "@/components/AnnotationMenu.vue";
+import AnnotationSelectMenu from "@/components/AnnotationSelectMenu.vue";
+import AnnotationSaveMenu from "@/components/AnnotationSaveMenu.vue";
 
 const compAreaStore = useCompAreaStore();
 const markerStore = useMarkerStore();

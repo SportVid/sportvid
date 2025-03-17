@@ -408,8 +408,10 @@
       "title": "History"
     },
     "annotation": {
-      "title": "Annotations",
-      "select": "Select Annotation"
+      "select_annotation": "Select Annotation",
+      "save_annotation": "Save annotation",
+      "save": "Save",
+      "name": "Annotation Name"
     }
   },
   "user": {
