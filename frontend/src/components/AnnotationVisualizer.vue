@@ -1,6 +1,6 @@
 <template>
   <v-container class="d-flex flex-column">
-    <v-row class="mx-2 mt-1">
+    <v-row class="mt-1">
       <div
         v-if="markerStore.isAddingMarker"
         ref="overlayMarker"
@@ -17,7 +17,7 @@
       <img
         ref="compAreaElement"
         class="visualizer-image"
-        :src="currentSport.pitchImage"
+        :src="compAreaStore.currentSport.pitchImage"
         @load="updateCompAreaSize"
       />
 
@@ -32,12 +32,17 @@
         @click="(event) => markerStore.toggleMarker(event, m.id)"
         :style="{
           top:
-            m.compAreaCoordsRel.y * compAreaStore.compAreaSize.height +
-            compAreaStore.compAreaSize.top +
+            m.compAreaCoordsRel.y *
+              (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
+            (compAreaStore.compAreaSize.top +
+              ((1 - compAreaStore.currentSport.heightRel) / 2) *
+                compAreaStore.compAreaSize.height) +
             'px',
           left:
-            m.compAreaCoordsRel.x * compAreaStore.compAreaSize.width +
-            compAreaStore.compAreaSize.left +
+            m.compAreaCoordsRel.x *
+              (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
+            (compAreaStore.compAreaSize.left +
+              ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
             'px',
         }"
         class="marker-position"
@@ -54,31 +59,36 @@
         @click="markerStore.deleteMarker(m.id)"
         :style="{
           top:
-            m.compAreaCoordsRel.y * compAreaStore.compAreaSize.height +
-            compAreaStore.compAreaSize.top +
+            m.compAreaCoordsRel.y *
+              (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
+            (compAreaStore.compAreaSize.top +
+              ((1 - compAreaStore.currentSport.heightRel) / 2) *
+                compAreaStore.compAreaSize.height) +
             'px',
           left:
-            m.compAreaCoordsRel.x * compAreaStore.compAreaSize.width +
-            compAreaStore.compAreaSize.left +
+            m.compAreaCoordsRel.x *
+              (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
+            (compAreaStore.compAreaSize.left +
+              ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
             'px',
         }"
         class="delete-marker-position"
       />
     </v-row>
 
-    <v-row class="video-control mt-10 mx-1 mb-2">
+    <v-row class="video-control mt-6 mb-0">
       <v-menu offset-y top>
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
-            {{ currentSport.title }}
+            {{ compAreaStore.currentSport.title }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
           <v-list-item
-            v-for="(item, index) in sports"
+            v-for="(item, index) in compAreaStore.sports"
             :key="index"
             class="menu-item"
-            v-on:click="onSportChange(index)"
+            v-on:click="compAreaStore.onSportChange(index)"
           >
             <v-list-item-title>
               {{ item.title }}
@@ -86,6 +96,10 @@
           </v-list-item>
         </v-list>
       </v-menu>
+
+      <AnnotationSaveMenu />
+
+      <AnnotationSelectMenu />
 
       <v-menu offset-y top>
         <template v-slot:activator="{ props }">
@@ -154,27 +168,13 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { useMarkerStore } from "@/stores/marker";
+import AnnotationSelectMenu from "@/components/AnnotationSelectMenu.vue";
+import AnnotationSaveMenu from "@/components/AnnotationSaveMenu.vue";
 
 const compAreaStore = useCompAreaStore();
 const markerStore = useMarkerStore();
 
 const compAreaElement = ref(null);
-
-const currentSport = ref({
-  title: "Soccer",
-  pitchImage: require("../assets/pitch_soccer.png"),
-});
-
-const sports = [
-  { title: "Soccer", pitchImage: require("../assets/pitch_soccer.png") },
-  { title: "Handball", pitchImage: require("../assets/pitch_handball.png") },
-  { title: "Basketball", pitchImage: require("../assets/pitch_basketball.png") },
-  { title: "Climbing", pitchImage: require("../assets/pitch_climbing.png") },
-];
-
-const onSportChange = (idx) => {
-  currentSport.value = sports[idx];
-};
 
 const filteredMarker = computed(() => markerStore.filteredMarker);
 
@@ -233,6 +233,9 @@ onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   window.removeEventListener("scroll", handleResize);
 });
+
+const bboxData = computed(() => markerStore.bboxData);
+console.log(bboxData.value);
 </script>
 
 <style>

@@ -98,7 +98,6 @@
 
     <v-row>
       <v-slider
-        class="progress-bar"
         v-model="progress"
         @update:model-value="onSeek"
         hide-details

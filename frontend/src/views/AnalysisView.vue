@@ -73,7 +73,7 @@ import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import { useMarkerStore } from "@/stores/marker";
 import { useCompAreaStore } from "@/stores/comp_area";
-// import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunStore } from "@/stores/plugin_run";
 // import { useTimelineStore } from "@/stores/timeline";
 // import { useTimelineSegmentStore } from "@/stores/timeline_segment";
 // import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
@@ -106,7 +106,7 @@ const analysisTabs = ref([
 const route = useRoute();
 
 const videoStore = useVideoStore();
-// const pluginRunStore = usePluginRunStore();
+const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
 const markerStore = useMarkerStore();
 const compAreaStore = useCompAreaStore();
@@ -225,19 +225,19 @@ const onVideoResize = (size) => {
 //   }
 // };
 
-// const fetchData = async ({ addResults = true }) => {
-//   await videoStore.fetch({
-//     videoId: route.params.id,
-//     addResults,
-//   });
-// };
+//const fetchData = async ({ addResults = true }) => {
+// await videoStore.fetch({
+//  videoId: route.params.id,
+// addResults,
+// });
+//};
 
-// const fetchPlugin = async () => {
-//   await pluginRunStore.fetchForVideo({
-//     videoId: route.params.id,
-//     fetchResults: true,
-//   });
-// };
+//const fetchPlugin = async () => {
+// await pluginRunStore.fetchForVideo({
+// videoId: route.params.id,
+// fetchResults: true,
+// });
+//};
 
 // const onKeyDown = (event) => {
 //   const lastSelectedTimeline = timelineStore.lastSelected;

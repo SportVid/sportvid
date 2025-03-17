@@ -406,6 +406,12 @@
     "history": {
       "close": "Close",
       "title": "History"
+    },
+    "annotation": {
+      "select_annotation": "Select Annotation",
+      "save_annotation": "Save annotation",
+      "save": "Save",
+      "name": "Annotation Name"
     }
   },
   "user": {
@@ -461,7 +467,9 @@
   "annotation_vis": {
     "view_ref_marker": "View Reference Marker",
     "add_marker": "Add Marker",
-    "delete_marker": "Delete Marker"
+    "delete_marker": "Delete Marker",
+    "save_annotation": "Save annotation",
+    "select_annotation": "Select Annotation"
   },
   "pos_data_vis": {
     "view_bounding_box": "View bounding-boxes",

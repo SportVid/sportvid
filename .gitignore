@@ -1,5 +1,6 @@
 *Zone.Identifier
 *.tar.gz
+*.tar
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

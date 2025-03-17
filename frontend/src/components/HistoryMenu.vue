@@ -48,7 +48,6 @@
 <script setup>
 import { ref, computed, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
-import ModalPlugin from "@/components/ModalPlugin.vue";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
@@ -114,6 +113,7 @@ const pluginName = (type) => {
     shot_scalar_annotation: "modal.plugin.shot_scalar_annotation.plugin_name",
     shot_type_classification: "modal.plugin.shot_type_classification.plugin_name",
     thumbnail: "modal.plugin.thumbnail.plugin_name",
+    bytetrack: "modal.plugin.bytetrack.plugin_name",
   };
   return t(typeMap[type] || type);
 };
