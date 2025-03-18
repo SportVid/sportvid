@@ -18,8 +18,8 @@ requests==2.25.1
 django-cors-headers==3.7.0
 librosa==0.10.1
 imageio[pyav,ffmpeg]==2.33.1
-grpcio==1.60.0
-grpcio-tools==1.60.0
+grpcio==1.71.0
+grpcio-tools==1.71.0
 pympi-ling==1.70.2
 pandas==2.2.2
 ffmpeg-python
