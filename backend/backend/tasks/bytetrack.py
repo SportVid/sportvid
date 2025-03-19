@@ -3,6 +3,7 @@ import logging
 
 from backend.models import (
     PluginRun,
+    PluginRunResult,
     Video,
     TibavaUser,
 )
@@ -77,10 +78,15 @@ class ByteTrack(Task):
         with transaction.atomic():
             with bytetrack_result[1]["tracklets"] as tracklets:
 
-                #TODO build frontend representation?
+                plugin_run_result_db = PluginRunResult.objects.create(
+                    plugin_run=plugin_run,
+                    data_id=tracklets.id,
+                    name="bboxes",
+                    type=PluginRunResult.TYPE_SCALAR, # TODO: need new type for list of bboxes?
+                )
+
                 return {
                     "plugin_run": plugin_run.id.hex,
-                    "plugin_run_results": [],
-                    #"timelines": {"tracklets": annotation_timeline_db.id.hex},
+                    "plugin_run_results": [plugin_run_result_db.id.hex],
                     "data": {"tracklets": bytetrack_result[1]["tracklets"].id}
                 }
