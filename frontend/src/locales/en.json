@@ -105,6 +105,9 @@
         "use_seconds": "Use seconds",
         "include_category": "Include category"
       },
+      "position_data": {
+        "export_name": "Position Data"
+      },
       "json": {
         "export_name": "JSON"
       },
@@ -145,6 +148,8 @@
       "shot_timeline_hint": "Annotations are created based on shot boundaries of the selected timeline.",
       "scalar_timeline_name": "Select Timeline",
       "scalar_timeline_hint": "*The scalar values of the selected timelines will be aggregated.",
+      "position_data_name": "Select Team",
+      "position_data_hint": "Exporting the data for one of the teams or for both.",
       "fps": "Frames per Second (FPS)",
       "normalize": "Normalize Results?",
       "aggregation": {

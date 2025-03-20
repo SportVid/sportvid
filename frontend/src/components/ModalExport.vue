@@ -173,6 +173,20 @@ const exportFormats = ref([
       },
     ],
   },
+  {
+    name: t("modal.export.position_data.export_name"),
+    icon: "mdi-file",
+    export: "positions_csv",
+    parameters: [
+      {
+        field: "select_pos_data_team",
+        name: "position_data_team",
+        value: null,
+        text: t("modal.plugin.position_data_name"),
+        hint: t("modal.plugin.position_data_hint"),
+      },
+    ],
+  },
 ]);
 
 const videoId = computed(() => playerStore.videoId);
@@ -196,12 +210,50 @@ const downloadExport = async (format, parameters) => {
       return { name: e.name, file: e.file };
     } else if (e.name === "shot_timeline_id" && e.value?.timeline_ids?.length) {
       return { name: e.name, value: e.value.timeline_ids[0] };
+    } else if (e.name === "position_data_team") {
+      return { name: e.name, value: e.value };
     } else {
       return { name: e.name, value: e.value ?? null };
     }
   });
-  await videoStore.exportVideo({ format, parameters: processedParams });
-  dialog.modelValue = false;
+  if (format === "positions_csv") {
+    await exportPositionsLocal({ parameters: processedParams });
+  } else {
+    await videoStore.exportVideo({ format, parameters: processedParams });
+  }
+  dialog.value = false;
+};
+
+import { useMarkerStore } from "@/stores/marker";
+const markerStore = useMarkerStore();
+
+const exportPositionsLocal = async ({ parameters = [] }) => {
+  const selectedTeam = parameters.find((p) => p.name === "position_data_team")?.value;
+
+  const filteredPositions = markerStore.positions.map((frame) =>
+    frame.filter((player) => selectedTeam === "both" || player.team === selectedTeam)
+  );
+  const csvHeader =
+    "frame,player,time,team,tracking_id,bbox_top,bbox_left,bbox_width,bbox_height\n";
+  const csvRows = filteredPositions
+    .map((frame, frameIndex) =>
+      frame
+        .map((player, playerIndex) => {
+          return `${frameIndex + 1},${playerIndex + 1},${player.time},${player.team},${
+            player.tracking_id
+          },${player.bbox_top},${player.bbox_left},${player.bbox_width},${player.bbox_height}`;
+        })
+        .join("\n")
+    )
+    .join("\n");
+
+  const videoId = usePlayerStore().videoId;
+  const csvContent = csvHeader + csvRows;
+  const blob = new Blob([csvContent], { type: "text/csv" });
+  const link = document.createElement("a");
+  link.href = window.URL.createObjectURL(blob);
+  link.download = `${videoId}_positions_${selectedTeam}.csv`;
+  link.click();
 };
 
 watch(
