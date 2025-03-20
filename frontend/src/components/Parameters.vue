@@ -21,9 +21,22 @@
         :items="shot_timelines"
         :label="parameter.text"
         :hint="parameter.hint"
-        item-text="name"
+        item-title="name"
         item-value="ids"
         v-if="parameter.field == 'select_timeline'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+      />
+
+      <v-select
+        v-model="parameter.value"
+        :items="position_data_teams"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_pos_data_team'"
         :key="parameter.name"
         persistent-hint
         variant="underlined"
@@ -34,7 +47,7 @@
         :items="scalar_timelines"
         :label="parameter.text"
         :hint="parameter.hint"
-        item-text="name"
+        item-title="name"
         item-value="ids"
         v-if="parameter.field == 'select_scalar_timelines' && scalar_timelines.length > 0"
         :key="parameter.name"
@@ -47,7 +60,7 @@
         :items="scalar_timelines"
         :label="parameter.text"
         :hint="parameter.hint"
-        item-text="name"
+        item-title="name"
         item-value="ids"
         v-if="parameter.field == 'select_scalar_timeline' && scalar_timelines.length > 0"
         :key="parameter.name"
@@ -158,6 +171,7 @@
 import { computed } from "vue";
 import { useTimelineStore } from "../stores/timeline";
 import { usePluginRunResultStore } from "../stores/plugin_run_result";
+import { useMarkerStore } from "../stores/marker";
 
 const props = defineProps({
   parameters: Array,
@@ -166,6 +180,7 @@ const props = defineProps({
 
 const timelineStore = useTimelineStore();
 const pluginRunResultStore = usePluginRunResultStore();
+const markerStore = useMarkerStore();
 
 const groupTimelines = (timelines) => {
   let timelinesGroups = {};
@@ -193,6 +208,7 @@ const shot_timelines = computed(() => {
   let timelines = timelineStore.all.filter(
     (timeline) => timeline.type == "ANNOTATION" && props.videoIds.indexOf(timeline.video_id) >= 0
   );
+
   return groupTimelines(timelines);
 });
 
@@ -206,6 +222,17 @@ const scalar_timelines = computed(() => {
   );
   timelines = groupTimelines(timelines);
   return timelines;
+});
+
+const position_data_teams = computed(() => {
+  const teams = new Set(markerStore.positions.flat().map((player) => player.team));
+  return [
+    { name: "Both Teams", id: "both" },
+    ...[...teams].map((team) => ({
+      name: `Team ${team.charAt(0).toUpperCase() + team.slice(1)}`,
+      id: team,
+    })),
+  ];
 });
 </script>
 
