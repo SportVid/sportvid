@@ -14,8 +14,8 @@
         :src="playerStore.videoUrl"
       />
 
-      <div
-        v-for="(position, index) in markerStore.positions[sliderValue]"
+      <!-- <div
+        v-for="(position, index) in markerStore.positionsNested[sliderValue]"
         v-show="markerStore.showBoundingBox"
         :key="index"
         class="bounding-box-position"
@@ -26,7 +26,35 @@
           height: position.bbox_height * videoStore.videoSize.height + 'px',
           border: `2px solid ${position.team}`,
         }"
-      />
+      /> -->
+      <!-- <div
+        v-for="(position, index) in markerStore.positionsFlat.filter(
+          (p) => p.image_id === sliderValue
+        )"
+        v-show="markerStore.showBoundingBox"
+        :key="index"
+        class="bounding-box-position"
+        :style="{
+          top: position.bbox_top * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
+          left: position.bbox_left * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
+          width: position.bbox_width * videoStore.videoSize.width + 'px',
+          height: position.bbox_height * videoStore.videoSize.height + 'px',
+          border: `2px solid ${position.team}`,
+        }"
+      /> -->
+      <!-- <div
+        v-for="(position, index) in bboxes.value.filter((p) => p.image_id === sliderValue)"
+        v-show="markerStore.showBoundingBox"
+        :key="index"
+        class="bounding-box-position"
+        :style="{
+          top: position.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
+          left: position.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
+          width: position.w * videoStore.videoSize.width + 'px',
+          height: position.h * videoStore.videoSize.height + 'px',
+          border: `2px solid ${position.team}`,
+        }"
+      /> -->
     </v-row>
 
     <v-row class="video-control mt-6">
@@ -124,7 +152,7 @@ const videoContainer = ref(null);
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 const markerStore = useMarkerStore();
-const bboxesStore = useBBoxesStore()
+const bboxesStore = useBBoxesStore();
 
 const volume = computed(() => playerStore.volume);
 const ended = computed(() => playerStore.ended);
@@ -251,9 +279,24 @@ onUnmounted(() => {
 });
 
 // in bboxes store get bboxData element
-watch(() => bboxesStore.bboxData, async (hasNewBboxData) => {
-  if (hasNewBboxData) {
-    console.log("New bbox data fetched", hasNewBboxData);
+// watch(
+//   () => bboxesStore.bboxData,
+//   async (hasNewBboxData) => {
+//     if (hasNewBboxData) {
+//       const allBboxes = bboxesStore.bboxData?.[0]?.results?.[0]?.data?.bboxes;
+//       console.log("New bbox data", allBboxes);
+//     }
+//   }
+// );
+const bboxes = computed(() => {
+  return bboxesStore.bboxData?.[0]?.results?.[0]?.data?.bboxes;
+});
+
+onMounted(() => {
+  if (bboxes.value) {
+    console.log("test_value", bboxes.value);
+  } else {
+    console.log("Bboxes are not available yet.");
   }
 });
 

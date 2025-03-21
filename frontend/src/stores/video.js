@@ -125,11 +125,6 @@ export const useVideoStore = defineStore("video", () => {
   const fetchAll = async () => {
     if (isLoading.value) return;
 
-    const user = localStorage.getItem("user");
-    if (!user) {
-      return;
-    }
-
     isLoading.value = true;
 
     try {

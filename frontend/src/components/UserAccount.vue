@@ -60,7 +60,7 @@ const initials = computed(() => username.value.slice(0, 2));
 const logout = async () => {
   const loggedOut = await userStore.logout();
   if (loggedOut) {
-    router.push({ name: "Home" });
+    router.push({ name: "VideoView" });
   }
 };
 </script>

@@ -233,9 +233,6 @@ onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   window.removeEventListener("scroll", handleResize);
 });
-
-const bboxData = computed(() => markerStore.bboxData);
-console.log(bboxData.value);
 </script>
 
 <style>

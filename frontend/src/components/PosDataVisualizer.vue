@@ -8,8 +8,8 @@
         @load="updateCompAreaSize"
       />
 
-      <div
-        v-for="(position, index) in markerStore.positions[sliderValue]"
+      <!-- <div
+        v-for="(position, index) in markerStore.positionsNested[sliderValue]"
         :key="index"
         class="data-point-position"
         :style="{
@@ -27,6 +27,29 @@
               ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
             'px',
           backgroundColor: `${position.team}`,
+        }"
+      /> -->
+      <div
+        v-for="(position, index) in markerStore.positionsFlat.filter(
+          (p) => p.image_id === sliderValue
+        )"
+        :key="index"
+        class="data-point-position"
+        :style="{
+          top:
+            (position.bbox_top + position.bbox_height) *
+              (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
+            (compAreaStore.compAreaSize.top +
+              ((1 - compAreaStore.currentSport.heightRel) / 2) *
+                compAreaStore.compAreaSize.height) +
+            'px',
+          left:
+            (position.bbox_left + position.bbox_width / 2) *
+              (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
+            (compAreaStore.compAreaSize.left +
+              ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
+            'px',
+          backgroundColor: position.team,
         }"
       />
 
@@ -261,11 +284,11 @@ const computeConvexHull = (points) => {
 };
 
 const convexHullPlayer = computed(() => {
-  if (!compAreaStore.compAreaSize || !markerStore.positions) {
+  if (!compAreaStore.compAreaSize || !markerStore.positionsNested) {
     return [];
   }
 
-  return markerStore.positions.map((framePositions) => {
+  return markerStore.positionsNested.map((framePositions) => {
     const teams = {};
 
     framePositions.forEach((position) => {
@@ -319,11 +342,11 @@ const computeVoronoi = (players) => {
 };
 
 const voronoiCells = computed(() => {
-  if (!compAreaStore.compAreaSize || !markerStore.positions) {
+  if (!compAreaStore.compAreaSize || !markerStore.positionsNested) {
     return [];
   }
 
-  return markerStore.positions.map((framePositions) => {
+  return markerStore.positionsNested.map((framePositions) => {
     const allPlayers = framePositions.map((player) => ({
       top:
         (player.bbox_top + player.bbox_height) *

@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed} from "vue";
+import { ref, computed } from "vue";
 import { useVideoStore } from "./video";
 import { useCompAreaStore } from "./comp_area";
 import { usePlayerStore } from "@/stores/player";
@@ -151,24 +151,44 @@ export const useMarkerStore = defineStore("marker", () => {
     showBoundingBox.value = !showBoundingBox.value;
   };
 
-  const positions = ref(
+  const positionsNested = ref(
     Array.from({ length: 100 }, () =>
       Array.from({ length: 20 }, (_, playerIndex) => {
         const isTeamA = playerIndex < 10;
 
         return {
-          bbox_top: Math.random() * 0.8 + 0.1,
-          bbox_left: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3),
-          bbox_width: 0.05,
-          bbox_height: 0.1,
-          team: isTeamA ? "blue" : "red",
-          time: 0,
-          tracking_id: 1,
-          time: 0,
-          tracking_id: 1,
+          bbox_top: Math.random() * 0.8 + 0.1, // x
+          bbox_left: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3), // y
+          bbox_width: 0.05, // w
+          bbox_height: 0.1, // h
+          team: isTeamA ? "blue" : "red", // will be in class BboxDataTeam
+          image_id: 0, // image_id (= frame)
+          time: 0, // image_id / fps
+          ref_id: 1,
+          det_score: 1.0,
         };
       })
     )
+  );
+
+  const positionsFlat = ref(
+    Array.from({ length: 100 * 20 }, (_, index) => {
+      const image_id = Math.floor(index / 20); // Frame (0-99)
+      const ref_id = (index % 20) + 1; // Spieler-ID (1-20)
+      const isTeamA = ref_id <= 10; // Team-Zuordnung
+
+      return {
+        bbox_top: Math.random() * 0.8 + 0.1, // y
+        bbox_left: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3), // x
+        bbox_width: 0.05, // w
+        bbox_height: 0.1, // h
+        team: isTeamA ? "blue" : "red", // Team-Zuordnung
+        image_id: image_id, // Frame-Nummer
+        time: image_id / 1, // Angenommene FPS von 30
+        ref_id: ref_id, // Spieler-Referenz-ID (1-20)
+        det_score: 1.0, // Score-Wert
+      };
+    })
   );
 
   const showSpaceControl = ref(false);
@@ -188,17 +208,17 @@ export const useMarkerStore = defineStore("marker", () => {
   const saveAnnotation = (name) => {
     if (!name) return;
     annotations.value[name] = [...marker.value];
-    console.log(annotations.value)
+    console.log(annotations.value);
     localStorage.setItem("annotations", JSON.stringify(annotations.value));
   };
 
   //TODO: store annotations in db
-  // requires video_id, dict/list source / tgt point 
+  // requires video_id, dict/list source / tgt point
   // const create = async ({ name, color, categoryId, videoId = null }) => {
   //   if (isLoading.value) return;
   //   isLoading.value = true;
 
-  //   const params = { # TODO definitions of params, 
+  //   const params = { # TODO definitions of params,
   // TODO create CalibrationAssets class backend/backend/models.py and link in backend/backend/urls.py
   // TODO: create new view for CalibrationAssets DB I/O in backend/backend/views/?.py (c.f.annotation.py)
   //     name,
@@ -252,7 +272,6 @@ export const useMarkerStore = defineStore("marker", () => {
     hoveredReferenceMarker,
     showBoundingBox,
     viewBoundingBox,
-    positions,
     showSpaceControl,
     viewSpaceControl,
     showEffectivePlayingSpace,
@@ -262,5 +281,7 @@ export const useMarkerStore = defineStore("marker", () => {
     loadAnnotation,
     loadFromLocalStorage,
     deleteAnnotation,
+    positionsNested,
+    positionsFlat,
   };
 });
