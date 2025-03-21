@@ -1,10 +1,7 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed} from "vue";
 import { useVideoStore } from "./video";
 import { useCompAreaStore } from "./comp_area";
-import { usePlayerStore } from "@/stores/player";
-import { usePluginRunStore } from "@/stores/plugin_run";
-import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 
 export const useMarkerStore = defineStore("marker", () => {
   const videoStore = useVideoStore();
@@ -171,27 +168,41 @@ export const useMarkerStore = defineStore("marker", () => {
     showSpaceControl.value = false;
   };
 
-  const pluginRunStore = usePluginRunStore();
-  const pluginRunResultStore = usePluginRunResultStore();
-  const playerStore = usePlayerStore();
-
-  const bboxData = computed(() => {
-    return pluginRunStore
-      .forVideo(playerStore.videoId)
-      .filter((e) => e.type == "bytetrack" && e.status == "DONE")
-      .map((e) => {
-        e.results = pluginRunResultStore.forPluginRun(e.id);
-        return e;
-      });
-  });
-
   const annotations = ref({});
 
   const saveAnnotation = (name) => {
     if (!name) return;
     annotations.value[name] = [...marker.value];
+    console.log(annotations.value)
     localStorage.setItem("annotations", JSON.stringify(annotations.value));
   };
+
+  //TODO: store annotations in db
+  // requires video_id, dict/list source / tgt point 
+  // const create = async ({ name, color, categoryId, videoId = null }) => {
+  //   if (isLoading.value) return;
+  //   isLoading.value = true;
+
+  //   const params = { # TODO definitions of params, 
+  // TODO create CalibrationAssets class backend/backend/models.py and link in backend/backend/urls.py
+  // TODO: create new view for CalibrationAssets DB I/O in backend/backend/views/?.py (c.f.annotation.py)
+  //     name,
+  //     color,
+  //     category_id: categoryId || undefined,
+  //     video_id: videoId || usePlayerStore().videoId,
+  //   };
+
+  // TODO: implement point_correspeondences/<create,get> etc.
+  //   try {
+  //     const res = await axios.post(`${config.API_LOCATION}/point_correspondences/create`, params);
+  //     if (res.data.status === "ok") {
+  //       addToStore([res.data.entry]);
+  //       return res.data.entry.id;
+  //     }
+  //   } finally {
+  //     isLoading.value = false;
+  //   }
+  // };
 
   const loadAnnotation = (name) => {
     if (annotations.value[name]) {
@@ -231,7 +242,6 @@ export const useMarkerStore = defineStore("marker", () => {
     viewSpaceControl,
     showEffectivePlayingSpace,
     viewEffectivePlayingSpace,
-    bboxData,
     annotations,
     saveAnnotation,
     loadAnnotation,
