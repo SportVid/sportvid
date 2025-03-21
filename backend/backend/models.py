@@ -14,6 +14,15 @@ from analyser.data import DataManager
 from backend.utils import media_path_to_video
 from .managers import TibavaUserManager
 
+"""
+After adding a new model or changing an existing model, run the following commands:
+
+`sudo docker-compose exec backend python3 manage.py makemigrations`
+and 
+`sudo docker-compose exec backend python3 manage.py migrate`
+to integrate changes into the database.
+
+"""
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +171,7 @@ class PluginRunResult(models.Model):
     TYPE_CLUSTER = "CL"
     TYPE_FACE = "FA"
     TYPE_IMAGE_EMBEDDINGS = "E"
+    TYPE_BBOXES = "B"
     TYPE = {
         TYPE_VIDEO: "VIDEO",
         TYPE_IMAGES: "IMAGES",
@@ -172,6 +182,7 @@ class PluginRunResult(models.Model):
         TYPE_CLUSTER: "CLUSTER",
         TYPE_FACE: "FACE",
         TYPE_IMAGE_EMBEDDINGS: "IMAGE_EMBEDDINGS",
+        TYPE_BBOXES: "BBOXES",
     }
 
     type = models.CharField(

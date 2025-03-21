@@ -78,13 +78,14 @@ class ByteTrack(Task):
         with transaction.atomic():
             with bytetrack_result[1]["tracklets"] as tracklets:
 
+                # relevant db entry for frontend
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
                     data_id=tracklets.id,
                     name="bboxes",
-                    type=PluginRunResult.TYPE_SCALAR, # TODO: need new type for list of bboxes?
+                    type=PluginRunResult.TYPE_BBOXES,
                 )
-
+                # only elevant for script-based calls
                 return {
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [plugin_run_result_db.id.hex],
