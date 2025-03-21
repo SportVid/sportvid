@@ -23,7 +23,7 @@ default_config = {
 
 # args from tools/demo_track.py
 default_parameters = {
-    "fps": 30,
+    "fps": 2,
     "track_thresh": 0.5,  # tracking confidence threshold
     "track_buffer": 30,  # the frames for keep lost tracks
     "match_thresh": 0.8,  # matching threshold for tracking
