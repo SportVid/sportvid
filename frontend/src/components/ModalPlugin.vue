@@ -966,10 +966,10 @@ const plugins = ref([
         parameters: [
           {
             field: "slider",
-            min: 5,
-            max: 60,
-            value: 25,
-            step: 5,
+            min: 1,
+            max: 30,
+            value: 2,
+            step: 1,
             name: "fps",
             text: t("modal.plugin.fps"),
           },

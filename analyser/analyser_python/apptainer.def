@@ -13,8 +13,8 @@ From: pytorch/pytorch:2.2.0-cuda12.1-cudnn8-runtime
     python3 -m pip install "msgpack==1.0.7"
     python3 -m pip install PyYAML
     python3 -m pip install "redis==5.0.1" 
-    python3 -m pip install "grpcio==1.47.0"
-    python3 -m pip install "grpcio-tools==1.47.0"
+    python3 -m pip install "grpcio==1.71.0"
+    python3 -m pip install "grpcio-tools==1.71.0"
     python3 -m pip install "msgpack-numpy==0.4.8"
     python3 -m pip install "librosa==0.10.1" 
 

@@ -27,10 +27,9 @@ DEBUG = True
 # FORCE_SCRIPT_NAME = "/"
 FORCE_SCRIPT_NAME = "/"
 
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-]
+
+ALLOWED_HOSTS = ["localhost"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost", "https://localhost"]
 
 
 CORS_ORIGIN_ALLOW_ALL = True
@@ -62,6 +61,8 @@ LOGGING = {
 }
 
 INSTALLED_APPS = [
+    "rest_framework",
+    "rest_framework.authtoken",
     "corsheaders",
     "backend",
     "django.contrib.admin",
@@ -81,6 +82,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     # "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # "mozilla_django_oidc.middleware.SessionRefresh",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

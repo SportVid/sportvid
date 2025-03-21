@@ -8,6 +8,7 @@ RUN apt update --fix-missing -y && apt install python3-pip npm git libsndfile1-d
 
 COPY ./requirements.txt /app/analyser/inference/
 RUN pip install -r requirements.txt
+RUN pip install onnxruntime==1.20.1
 
 COPY ./src/ /app/analyser/inference/
 COPY ./deploy.yml /app/analyser/deploy.yml

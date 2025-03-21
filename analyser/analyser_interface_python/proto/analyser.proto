@@ -1,8 +1,12 @@
 syntax = "proto3";
 option java_multiple_files = true;
 
-// python -m grpc_tools.protoc -I=proto --python_out=. --grpc_python_out=.
-// proto/analyser.proto
+// /!\ generate analyser_pb2_grpc.py and analyser_pb2.py with the correct grpc-tools version
+// python -m grpc_tools.protoc -I=proto --python_out=. --grpc_python_out=. proto/analyser.proto
+
+// TODO: autogenerate code on docker-compose build
+// /!\ line 5 in `*_grpc.py` needs to be replaced by `from analyser.proto import analyser_pb2 as analyser__pb2`
+
 
 package tibava.analyser;
 

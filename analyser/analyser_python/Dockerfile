@@ -22,8 +22,8 @@ RUN python3 -m pip install numpy
 RUN python3 -m pip install PyYAML
 RUN python3 -m pip install "redis==5.0.1" 
 RUN python3 -m pip install requests 
-RUN python3 -m pip install "grpcio==1.47.0"
-RUN python3 -m pip install "grpcio-tools==1.47.0"
+RUN python3 -m pip install "grpcio==1.71.0"
+RUN python3 -m pip install "grpcio-tools==1.71.0"
 
 RUN python3 -m pip install "msgpack-numpy==0.4.8"
 

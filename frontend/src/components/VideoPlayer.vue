@@ -113,6 +113,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick, onBeforeUnmount
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useMarkerStore } from "@/stores/marker";
+import { useBBoxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
 
 const emit = defineEmits();
@@ -123,6 +124,7 @@ const videoContainer = ref(null);
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 const markerStore = useMarkerStore();
+const bboxesStore = useBBoxesStore()
 
 const volume = computed(() => playerStore.volume);
 const ended = computed(() => playerStore.ended);
@@ -246,6 +248,13 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   window.removeEventListener("scroll", handleResize);
+});
+
+// in bboxes store get bboxData element
+watch(() => bboxesStore.bboxData, async (hasNewBboxData) => {
+  if (hasNewBboxData) {
+    console.log("New bbox data fetched", hasNewBboxData);
+  }
 });
 
 // watch(progress, (newProgress) => {
