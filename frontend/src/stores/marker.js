@@ -178,15 +178,15 @@ export const useMarkerStore = defineStore("marker", () => {
       const isTeamA = ref_id <= 10; // Team-Zuordnung
 
       return {
-        bbox_top: Math.random() * 0.8 + 0.1, // y
-        bbox_left: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3), // x
-        bbox_width: 0.05, // w
-        bbox_height: 0.1, // h
-        team: isTeamA ? "blue" : "red", // Team-Zuordnung
-        image_id: image_id, // Frame-Nummer
-        time: image_id / 1, // Angenommene FPS von 30
-        ref_id: ref_id, // Spieler-Referenz-ID (1-20)
-        det_score: 1.0, // Score-Wert
+        y: Math.random() * 0.8 + 0.1,
+        x: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3),
+        w: 0.05,
+        h: 0.1,
+        team: isTeamA ? "blue" : "red",
+        image_id: image_id,
+        time: image_id / 1, // Angenommene FPS von 1
+        ref_id: ref_id,
+        det_score: 1.0, // Bbox-Wahrscheinlichkeit
       };
     })
   );
@@ -208,7 +208,6 @@ export const useMarkerStore = defineStore("marker", () => {
   const saveAnnotation = (name) => {
     if (!name) return;
     annotations.value[name] = [...marker.value];
-    console.log(annotations.value);
     localStorage.setItem("annotations", JSON.stringify(annotations.value));
   };
 

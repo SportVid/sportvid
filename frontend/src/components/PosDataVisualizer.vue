@@ -37,14 +37,14 @@
         class="data-point-position"
         :style="{
           top:
-            (position.bbox_top + position.bbox_height) *
+            (position.y + position.h) *
               (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
             (compAreaStore.compAreaSize.top +
               ((1 - compAreaStore.currentSport.heightRel) / 2) *
                 compAreaStore.compAreaSize.height) +
             'px',
           left:
-            (position.bbox_left + position.bbox_width / 2) *
+            (position.x + position.w / 2) *
               (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
             (compAreaStore.compAreaSize.left +
               ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +

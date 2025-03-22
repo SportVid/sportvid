@@ -470,10 +470,12 @@
     "timelines": "Timelines:"
   },
   "annotation_vis": {
+    "marker_menu": "Marker",
     "view_ref_marker": "View Reference Marker",
     "add_marker": "Add Marker",
     "delete_marker": "Delete Marker",
-    "save_annotation": "Save annotation",
+    "annotation_menu": "Annotation",
+    "save_annotation": "Save Annotation",
     "select_annotation": "Select Annotation"
   },
   "pos_data_vis": {

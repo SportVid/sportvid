@@ -27,23 +27,10 @@
           border: `2px solid ${position.team}`,
         }"
       /> -->
-      <!-- <div
-        v-for="(position, index) in markerStore.positionsFlat.filter(
-          (p) => p.image_id === sliderValue
+      <div
+        v-for="(position, index) in bboxData.filter(
+          (p) => p.image_id / 2 === Math.round(playerStore.currentTime) // * 2 = selected fps
         )"
-        v-show="markerStore.showBoundingBox"
-        :key="index"
-        class="bounding-box-position"
-        :style="{
-          top: position.bbox_top * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
-          left: position.bbox_left * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
-          width: position.bbox_width * videoStore.videoSize.width + 'px',
-          height: position.bbox_height * videoStore.videoSize.height + 'px',
-          border: `2px solid ${position.team}`,
-        }"
-      /> -->
-      <!-- <div
-        v-for="(position, index) in bboxes.value.filter((p) => p.image_id === sliderValue)"
         v-show="markerStore.showBoundingBox"
         :key="index"
         class="bounding-box-position"
@@ -52,9 +39,9 @@
           left: position.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
           width: position.w * videoStore.videoSize.width + 'px',
           height: position.h * videoStore.videoSize.height + 'px',
-          border: `2px solid ${position.team}`,
+          border: `2px solid red`,
         }"
-      /> -->
+      />
     </v-row>
 
     <v-row class="video-control mt-6">
@@ -137,12 +124,19 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, onBeforeUnmount } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useMarkerStore } from "@/stores/marker";
 import { useBBoxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
+
+const props = defineProps({
+  bboxData: {
+    type: Array,
+    default: () => [],
+  },
+});
 
 const emit = defineEmits();
 
@@ -276,28 +270,6 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   window.removeEventListener("scroll", handleResize);
-});
-
-// in bboxes store get bboxData element
-// watch(
-//   () => bboxesStore.bboxData,
-//   async (hasNewBboxData) => {
-//     if (hasNewBboxData) {
-//       const allBboxes = bboxesStore.bboxData?.[0]?.results?.[0]?.data?.bboxes;
-//       console.log("New bbox data", allBboxes);
-//     }
-//   }
-// );
-const bboxes = computed(() => {
-  return bboxesStore.bboxData?.[0]?.results?.[0]?.data?.bboxes;
-});
-
-onMounted(() => {
-  if (bboxes.value) {
-    console.log("test_value", bboxes.value);
-  } else {
-    console.log("Bboxes are not available yet.");
-  }
 });
 
 // watch(progress, (newProgress) => {

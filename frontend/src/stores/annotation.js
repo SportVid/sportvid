@@ -1,4 +1,4 @@
-import { ref, reactive, computed } from "vue";
+import { ref, computed } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { defineStore } from "pinia";
@@ -6,7 +6,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useAnnotationCategoryStore } from "@/stores/annotation_category";
 
 export const useAnnotationStore = defineStore("annotation", () => {
-  const annotations = reactive({});
+  const annotations = ref({});
   const isLoading = ref(false);
 
   const nonTranscripts = computed(() => {

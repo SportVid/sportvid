@@ -1,5 +1,5 @@
-import { computed } from 'vue';
-import { defineStore } from 'pinia';
+import { computed } from "vue";
+import { defineStore } from "pinia";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
@@ -18,8 +18,8 @@ export const useBBoxesStore = defineStore("bboxes", () => {
         e.results = pluginRunResultStore.forPluginRun(e.id);
         return e;
       });
-      console.debug("bboxData: ", JSON.stringify(_bboxData));
-      return _bboxData;
+    console.debug("bboxData: ", JSON.stringify(_bboxData));
+    return _bboxData?.[0]?.results?.[0]?.data?.bboxes;
   });
 
   return {

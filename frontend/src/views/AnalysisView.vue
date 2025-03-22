@@ -27,7 +27,7 @@
 
             <v-row class="flex-grow-1">
               <v-col>
-                <VideoPlayer @resize="onVideoResize" />
+                <VideoPlayer :bboxData="bboxData" @resize="onVideoResize" />
               </v-col>
             </v-row>
           </v-card>
@@ -74,6 +74,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useMarkerStore } from "@/stores/marker";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { usePluginRunStore } from "@/stores/plugin_run";
+import { useBBoxesStore } from "@/stores/bboxes";
 // import { useTimelineStore } from "@/stores/timeline";
 // import { useTimelineSegmentStore } from "@/stores/timeline_segment";
 // import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
@@ -110,6 +111,7 @@ const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
 const markerStore = useMarkerStore();
 const compAreaStore = useCompAreaStore();
+const bboxesStore = useBBoxesStore();
 // const timelineStore = useTimelineStore();
 // const timelineSegmentStore = useTimelineSegmentStore();
 // const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
@@ -442,6 +444,16 @@ watch(
       markerStore.showReferenceMarker = true;
     } else {
       markerStore.showReferenceMarker = previousShowReferenceMarker.value;
+    }
+  }
+);
+
+const bboxData = ref([]);
+watch(
+  () => bboxesStore.bboxData,
+  (newBboxes) => {
+    if (newBboxes) {
+      bboxData.value = newBboxes;
     }
   }
 );
