@@ -2,16 +2,22 @@
   <div v-if="!bboxesStore.bboxDataLoaded" style="height: 60vh">
     <v-col>
       <v-row
-        class="text-h6 text-grey font-weight-light mx-8"
-        style="align-items: center; text-align: center; line-height: 1.5; height: 20vh"
-      >
-        {{ $t("pos_data_vis.no_bbox_data") }}
-      </v-row>
+        class="text-h6 text-grey font-weight-light mx-16 px-10 mt-8"
+        style="
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          line-height: 1.5;
+          height: 30vh;
+        "
+        v-html="$t('pos_data_vis.no_bbox_data')"
+      />
       <v-row style="justify-content: center">
         <v-btn>Upload position data</v-btn>
       </v-row>
     </v-col>
   </div>
+
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1">
       <img
@@ -90,7 +96,7 @@
     </v-row>
 
     <v-row class="video-control mt-6 mb-n1">
-      <v-menu offset-y top>
+      <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{ compAreaStore.currentSport.title }}
@@ -110,16 +116,16 @@
         </v-list>
       </v-menu>
 
-      <v-menu offset-y top>
+      <v-menu location="top">
         <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" size="small" :disabled="!bboxesStore.bboxDataLoaded">
-            {{ $t("pos_data_vis.display_settings") }}
+          <v-btn v-bind="props" size="small">
+            {{ $t("pos_data_vis.display_settings.title") }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
           <v-list-item class="menu-item" @click="bboxesStore.viewBoundingBox">
             <v-list-item-title>
-              {{ $t("pos_data_vis.view_bounding_box") }}
+              {{ $t("pos_data_vis.display_settings.view_bounding_box") }}
               <v-icon
                 :class="{
                   'text-disabled': !bboxesStore.showBoundingBox,
@@ -135,7 +141,7 @@
 
           <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
             <v-list-item-title>
-              {{ $t("pos_data_vis.video_sync") }}
+              {{ $t("pos_data_vis.display_settings.video_sync") }}
               <v-icon
                 :class="{
                   'text-disabled': !playerStore.isSynced,
@@ -149,11 +155,11 @@
             </v-list-item-title>
           </v-list-item>
 
-          <v-menu offset-x location="end" open-on-hover>
+          <v-menu location="end" open-on-hover>
             <template v-slot:activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
                 <v-list-item-title>
-                  {{ $t("pos_data_vis.view_kpis.title") }}
+                  {{ $t("pos_data_vis.display_settings.view_kpis.title") }}
                   <v-icon class="ml-4 mb-1" size="small">mdi-chevron-right</v-icon>
                 </v-list-item-title>
               </v-list-item>
@@ -161,7 +167,7 @@
             <v-list class="py-0" density="compact">
               <v-list-item class="menu-item" @click="bboxesStore.viewSpaceControl">
                 <v-list-item-title>
-                  {{ $t("pos_data_vis.view_kpis.space_control") }}
+                  {{ $t("pos_data_vis.display_settings.view_kpis.space_control") }}
                   <v-icon
                     :class="{
                       'text-disabled': !bboxesStore.showSpaceControl,
@@ -176,7 +182,7 @@
               </v-list-item>
               <v-list-item class="menu-item" @click="bboxesStore.viewEffectivePlayingSpace">
                 <v-list-item-title>
-                  {{ $t("pos_data_vis.view_kpis.eps") }}
+                  {{ $t("pos_data_vis.display_settings.view_kpis.eps") }}
                   <v-icon
                     :class="{
                       'text-disabled': !bboxesStore.showEffectivePlayingSpace,
@@ -191,6 +197,19 @@
               </v-list-item>
             </v-list>
           </v-menu>
+        </v-list>
+      </v-menu>
+
+      <v-menu location="top">
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" size="small">
+            <v-icon>mdi-dots-horizontal</v-icon>
+          </v-btn>
+        </template>
+        <v-list class="py-0" density="compact">
+          <v-list-item class="menu-item">
+            <v-list-item-title> Upload position data </v-list-item-title>
+          </v-list-item>
         </v-list>
       </v-menu>
 
@@ -218,14 +237,12 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useCompAreaStore } from "@/stores/comp_area";
-import { useMarkerStore } from "@/stores/marker";
 import { useBBoxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
 import { Delaunay } from "d3-delaunay";
 
 const playerStore = usePlayerStore();
 const compAreaStore = useCompAreaStore();
-const markerStore = useMarkerStore();
 const bboxesStore = useBBoxesStore();
 
 const currentFrame = ref(0);

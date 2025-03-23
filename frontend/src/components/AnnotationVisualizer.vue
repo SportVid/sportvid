@@ -77,7 +77,7 @@
     </v-row>
 
     <v-row class="video-control mt-6 mb-0">
-      <v-menu offset-y top>
+      <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{ compAreaStore.currentSport.title }}
@@ -97,7 +97,7 @@
         </v-list>
       </v-menu>
 
-      <v-menu offset-y top>
+      <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small"> {{ $t("annotation_vis.annotation_menu") }} </v-btn>
         </template>
@@ -119,7 +119,7 @@
       <ModalAnnotationSave v-model="showModalAnnotationSave" />
       <ModalAnnotationSelect v-model="showModalAnnotationSelect" />
 
-      <v-menu offset-y top>
+      <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small"> {{ $t("annotation_vis.marker_menu") }} </v-btn>
         </template>

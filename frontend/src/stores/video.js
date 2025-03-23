@@ -4,6 +4,7 @@ import axios from "../plugins/axios";
 import config from "../../app.config";
 import { Buffer } from "buffer";
 import { usePlayerStore } from "@/stores/player";
+import { useUserStore } from "@/stores/user";
 import { useAnnotationStore } from "./annotation";
 import { useAnnotationCategoryStore } from "./annotation_category";
 import { useTimelineStore } from "./timeline";
@@ -17,6 +18,8 @@ import { useClusterTimelineItemStore } from "./cluster_timeline_item";
 import { useShotStore } from "./shot";
 
 export const useVideoStore = defineStore("video", () => {
+  const userStore = useUserStore();
+
   const videos = ref({});
   const videoList = ref([]);
   const isLoading = ref(false);
@@ -124,6 +127,7 @@ export const useVideoStore = defineStore("video", () => {
 
   const fetchAll = async () => {
     if (isLoading.value) return;
+    if (userStore.loggedIn === false) return;
 
     isLoading.value = true;
 

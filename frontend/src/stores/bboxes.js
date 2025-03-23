@@ -37,7 +37,6 @@ export const useBBoxesStore = defineStore("bboxes", () => {
         });
 
       if (!_bboxData.length || !_bboxData[0]?.results?.length) {
-        console.error("Bytetrack: Not run or not finished yet");
         return [];
       }
 
