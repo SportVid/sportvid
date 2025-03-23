@@ -479,6 +479,8 @@
     "select_annotation": "Select Annotation"
   },
   "pos_data_vis": {
+    "no_bbox_data": "No position data has been calculated yet. Please run the Bytetrack plugin first or upload the position data manually.",
+    "display_settings": "Display Settings",
     "view_bounding_box": "View bounding-boxes",
     "video_sync": "Sychronise with video",
     "view_kpis": {
