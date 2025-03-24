@@ -27,7 +27,7 @@
 
             <v-row class="flex-grow-1">
               <v-col>
-                <VideoPlayer :bboxData="bboxData" @resize="onVideoResize" />
+                <VideoPlayer @resize="onVideoResize" />
               </v-col>
             </v-row>
           </v-card>
@@ -74,7 +74,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useMarkerStore } from "@/stores/marker";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { usePluginRunStore } from "@/stores/plugin_run";
-import { useBBoxesStore } from "@/stores/bboxes";
+import { useBboxesStore } from "@/stores/bboxes";
 // import { useTimelineStore } from "@/stores/timeline";
 // import { useTimelineSegmentStore } from "@/stores/timeline_segment";
 // import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
@@ -111,7 +111,7 @@ const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
 const markerStore = useMarkerStore();
 const compAreaStore = useCompAreaStore();
-const bboxesStore = useBBoxesStore();
+const bboxesStore = useBboxesStore();
 // const timelineStore = useTimelineStore();
 // const timelineSegmentStore = useTimelineSegmentStore();
 // const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
@@ -448,13 +448,27 @@ watch(
   }
 );
 
-const bboxData = ref([]);
 watch(
-  () => bboxesStore.bboxData,
+  () => bboxesStore.setBboxData(bboxesStore.bboxPluginRun),
   (newBboxes) => {
     if (newBboxes) {
-      bboxData.value = newBboxes;
+      bboxesStore.bboxData = newBboxes;
+      console.log(bboxesStore.bboxPluginRun);
+      console.log("bboxData", bboxesStore.bboxData);
     }
+    bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBoundingBoxes(
+      bboxesStore.bboxData,
+      playerStore.videoFPS,
+      1
+    );
+    console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
+  }
+);
+
+watch(
+  () => playerStore.videoFPS,
+  (newFPS) => {
+    console.log("FPS", newFPS);
   }
 );
 </script>

@@ -5,7 +5,7 @@ import config from "../../app.config";
 
 export const usePlayerStore = defineStore("player", () => {
   const video = ref(null);
-  const currentTime = ref(0.0);
+  const currentTime = ref(0);
   const targetTime = ref(0.0);
   const playing = ref(false);
   const ended = ref(false);
@@ -84,7 +84,7 @@ export const usePlayerStore = defineStore("player", () => {
   };
 
   const setCurrentTime = (time) => {
-    currentTime.value = time;
+    currentTime.value = Math.round(time);
   };
 
   const setEnded = (endedValue) => {

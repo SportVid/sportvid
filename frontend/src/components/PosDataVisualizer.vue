@@ -160,7 +160,7 @@
               <v-list-item v-bind="props" class="menu-item">
                 <v-list-item-title>
                   {{ $t("pos_data_vis.display_settings.view_kpis.title") }}
-                  <v-icon class="ml-4 mb-1" size="small">mdi-chevron-right</v-icon>
+                  <v-icon class="ml-5 mb-1" size="small">mdi-chevron-right</v-icon>
                 </v-list-item-title>
               </v-list-item>
             </template>
@@ -197,21 +197,32 @@
               </v-list-item>
             </v-list>
           </v-menu>
-        </v-list>
-      </v-menu>
 
-      <v-menu location="top">
-        <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" size="small">
-            <v-icon>mdi-dots-horizontal</v-icon>
-          </v-btn>
-        </template>
-        <v-list class="py-0" density="compact">
-          <v-list-item class="menu-item">
-            <v-list-item-title> Upload position data </v-list-item-title>
-          </v-list-item>
+          <v-menu location="end" open-on-hover>
+            <template v-slot:activator="{ props }">
+              <v-list-item v-bind="props" class="menu-item">
+                <v-list-item-title>
+                  {{ $t("pos_data_vis.display_settings.pos_data.title") }}
+                  <v-icon class="ml-16 pl-10 mb-1" size="small">mdi-chevron-right</v-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+            <v-list class="py-0" density="compact">
+              <v-list-item class="menu-item">
+                <v-list-item-title>
+                  {{ $t("pos_data_vis.display_settings.pos_data.upload") }}
+                </v-list-item-title>
+              </v-list-item>
+              <v-list-item class="menu-item" @click="showModalBboxDataSelect = true">
+                <v-list-item-title>
+                  {{ $t("pos_data_vis.display_settings.pos_data.select") }}
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </v-list>
       </v-menu>
+      <ModalBboxDataSelect v-model="showModalBboxDataSelect" />
 
       <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
         {{ getTimecode(sliderValue) }}
@@ -237,13 +248,16 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useCompAreaStore } from "@/stores/comp_area";
-import { useBBoxesStore } from "@/stores/bboxes";
+import { useBboxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
 import { Delaunay } from "d3-delaunay";
+import ModalBboxDataSelect from "@/components/ModalBboxDataSelect.vue";
 
 const playerStore = usePlayerStore();
 const compAreaStore = useCompAreaStore();
-const bboxesStore = useBBoxesStore();
+const bboxesStore = useBboxesStore();
+
+const showModalBboxDataSelect = ref(false);
 
 const currentFrame = ref(0);
 const updateFrame = (newIndex) => {

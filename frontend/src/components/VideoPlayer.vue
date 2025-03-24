@@ -28,8 +28,8 @@
         }"
       /> -->
       <div
-        v-for="(position, index) in bboxData.filter(
-          (p) => p.image_id / 2 === Math.round(playerStore.currentTime) // * 2 = selected fps
+        v-for="(position, index) in bboxesStore.bboxDataInterpolated.filter(
+          (p) => p.time === Math.round(playerStore.currentTime * 100) / 100
         )"
         v-show="markerStore.showBoundingBox"
         :key="index"
@@ -128,15 +128,8 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useMarkerStore } from "@/stores/marker";
-import { useBBoxesStore } from "@/stores/bboxes";
+import { useBboxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
-
-const props = defineProps({
-  bboxData: {
-    type: Array,
-    default: () => [],
-  },
-});
 
 const emit = defineEmits();
 
@@ -146,9 +139,9 @@ const videoContainer = ref(null);
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 const markerStore = useMarkerStore();
-const bboxesStore = useBBoxesStore();
+const bboxesStore = useBboxesStore();
 
-const volume = computed(() => playerStore.volume);
+const volume = ref(playerStore.volume);
 const ended = computed(() => playerStore.ended);
 const currentTime = computed(() => playerStore.currentTime);
 const duration = computed(() => playerStore.videoDuration);
@@ -223,10 +216,7 @@ const onCanPlay = () => {
   emit("canPlay");
 };
 
-const progress = computed(() => {
-  if (duration.value <= 0) return 0;
-  return (playerStore.currentTime / playerStore.videoDuration) * 100;
-});
+const progress = ref(0);
 
 const updateVideoSize = () => {
   nextTick(() => {
@@ -321,6 +311,14 @@ watch(
       await nextTick();
       updateVideoSize();
     }
+  }
+);
+
+watch(
+  () => playerStore.currentTime,
+  (newTime) => {
+    if (!playerStore.playing) return; // Kein Update wenn pausiert
+    progress.value = (newTime / playerStore.videoDuration) * 100;
   }
 );
 </script>
