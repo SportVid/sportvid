@@ -5,7 +5,7 @@ import config from "../../app.config";
 
 export const usePlayerStore = defineStore("player", () => {
   const video = ref(null);
-  const currentTime = ref(0);
+  const currentTime = ref(0.0);
   const targetTime = ref(0.0);
   const playing = ref(false);
   const ended = ref(false);
@@ -81,10 +81,12 @@ export const usePlayerStore = defineStore("player", () => {
 
   const setTargetTime = (time) => {
     targetTime.value = time;
+    // targetTime.value = Math.round(time * 100) / 100;
   };
 
   const setCurrentTime = (time) => {
-    currentTime.value = Math.round(time);
+    currentTime.value = time;
+    // currentTime.value = Math.round(time * 100) / 100;
   };
 
   const setEnded = (endedValue) => {
@@ -121,6 +123,11 @@ export const usePlayerStore = defineStore("player", () => {
     }
   };
 
+  const roundTimeToFPS = (time, fps) => {
+    const frameDuration = 1 / fps;
+    return Math.round(time / frameDuration) * frameDuration;
+  };
+
   return {
     video,
     currentTime,
@@ -152,5 +159,6 @@ export const usePlayerStore = defineStore("player", () => {
     togglePlaying,
     fetchVideo,
     toggleSliderSync,
+    roundTimeToFPS,
   };
 });

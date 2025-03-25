@@ -429,9 +429,9 @@ watch(tab, (newTab) => {
   }
 
   if (currentTab === "Position Data") {
-    markerStore.showBoundingBox = true;
+    bboxesStore.showBoundingBox = true;
   } else {
-    markerStore.showBoundingBox = false;
+    bboxesStore.showBoundingBox = false;
   }
 });
 

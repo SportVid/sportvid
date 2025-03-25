@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="show" max-width="800">
     <template v-slot:activator="{ props }">
-      <v-btn v-bind="props" variant="outlined" class="ml-n2">
+      <v-btn size="small" v-bind="props" variant="outlined">
         <v-icon class="mr-1">{{ "mdi-pencil" }}</v-icon>
         {{ $t("video_view.rename") }}
       </v-btn>
@@ -36,7 +36,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, defineProps, defineEmits } from "vue";
+import { ref, computed, watch } from "vue";
 import { useVideoStore } from "@/stores/video";
 
 const props = defineProps({

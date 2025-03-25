@@ -4,19 +4,17 @@
       <video
         class="video-video"
         ref="videoElement"
-        v-on:play="onPlay"
-        v-on:pause="onPause"
-        v-on:ended="onEnded"
-        v-on:canplay="onCanPlay"
-        v-on:loadeddata="onLoadedData"
-        v-on:timeupdate="onTimeUpdate"
+        @play="onPlay"
+        @pause="onPause"
+        @ended="onEnded"
+        @timeupdate="onTimeUpdate"
         @loadedmetadata="updateVideoSize"
         :src="playerStore.videoUrl"
       />
 
       <!-- <div
         v-for="(position, index) in markerStore.positionsNested[sliderValue]"
-        v-show="markerStore.showBoundingBox"
+        v-show="bboxesStore.showBoundingBox"
         :key="index"
         class="bounding-box-position"
         :style="{
@@ -28,10 +26,8 @@
         }"
       /> -->
       <div
-        v-for="(position, index) in bboxesStore.bboxDataInterpolated.filter(
-          (p) => p.time === Math.round(playerStore.currentTime * 100) / 100
-        )"
-        v-show="markerStore.showBoundingBox"
+        v-for="(position, index) in bboxData.filter((p) => p.time === playerStore.currentTime)"
+        v-show="bboxesStore.showBoundingBox"
         :key="index"
         class="bounding-box-position"
         :style="{
@@ -49,7 +45,7 @@
         <v-icon>mdi-skip-backward</v-icon>
       </v-btn>
 
-      <v-btn @click="deltaSeek(-0.01)" size="small">
+      <v-btn @click="deltaSeek(-(1 / playerStore.videoFPS))" size="small">
         <v-icon>mdi-skip-previous</v-icon>
       </v-btn>
 
@@ -59,7 +55,7 @@
         <v-icon v-else> mdi-play</v-icon>
       </v-btn>
 
-      <v-btn @click="deltaSeek(0.01)" size="small">
+      <v-btn @click="deltaSeek(1 / playerStore.videoFPS)" size="small">
         <v-icon> mdi-skip-next</v-icon>
       </v-btn>
 
@@ -114,10 +110,11 @@
     <v-row>
       <v-slider
         v-model="progress"
-        @update:model-value="onSeek"
+        @update:model-value="onProgressChange"
         hide-details
         color="primary"
         :thumb-size="15"
+        :step="100 / (playerStore.videoFPS * playerStore.videoDuration)"
       />
     </v-row>
   </v-container>
@@ -130,8 +127,6 @@ import { useVideoStore } from "@/stores/video";
 import { useMarkerStore } from "@/stores/marker";
 import { useBboxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
-
-const emit = defineEmits();
 
 const videoElement = ref(null);
 const videoContainer = ref(null);
@@ -149,6 +144,10 @@ const syncTime = computed(() => playerStore.syncTime);
 const playing = computed(() => playerStore.playing);
 const targetTime = computed(() => playerStore.targetTime);
 
+const progress = ref(0);
+const bboxData = ref([]);
+let updateTimer = null;
+
 const currentSpeed = ref({ title: "1.00", value: 1.0 });
 const speeds = [
   { title: "0.25", value: 0.25 },
@@ -161,9 +160,6 @@ const speeds = [
   { title: "2.00", value: 2.0 },
 ];
 
-const toggle = () => playerStore.togglePlaying();
-const toggleSyncTime = () => playerStore.toggleSyncTime();
-
 const deltaSeek = (delta) => {
   if (videoElement.value) {
     const newTime = videoElement.value.currentTime + delta;
@@ -172,28 +168,37 @@ const deltaSeek = (delta) => {
   }
 };
 
-const onEnded = () => {
-  playerStore.setEnded(true);
-  playerStore.setPlaying(false);
-};
-
-const onPause = () => {
-  playerStore.setPlaying(false);
-};
-
 const onPlay = () => {
+  startUpdatingTime();
   playerStore.setEnded(false);
   playerStore.setPlaying(true);
 };
 
+const onPause = () => {
+  stopUpdatingTime();
+  playerStore.setPlaying(false);
+};
+
+const onEnded = () => {
+  stopUpdatingTime();
+  playerStore.setPlaying(false);
+};
+
 const onTimeUpdate = (event) => {
-  playerStore.setCurrentTime(event.target.currentTime);
+  playerStore.setCurrentTime(
+    playerStore.roundTimeToFPS(event.target.currentTime, playerStore.videoFPS)
+  );
+
   playerStore.setEnded(event.target.ended);
 };
 
-const onSeek = (percentage) => {
+const onProgressChange = (percentage) => {
   if (videoElement.value) {
-    const targetTime = (duration.value * percentage) / 100;
+    const targetTime = playerStore.roundTimeToFPS(
+      (playerStore.videoDuration * percentage) / 100,
+      playerStore.videoFPS
+    );
+    playerStore.currentTime = targetTime;
     videoElement.value.currentTime = targetTime;
   }
 };
@@ -205,18 +210,32 @@ const onSpeedChange = (idx) => {
   }
 };
 
-const onToggleVolume = () => playerStore.toggleMute();
 const onVolumeChange = (newVolume) => playerStore.setVolume(newVolume);
 
-const onLoadedData = () => {
-  emit("loadedData");
+const toggle = () => playerStore.togglePlaying();
+const toggleSyncTime = () => playerStore.toggleSyncTime();
+const onToggleVolume = () => playerStore.toggleMute();
+
+const startUpdatingTime = () => {
+  if (updateTimer) clearInterval(updateTimer);
+
+  const interval = (1 / playerStore.videoFPS) * 1000;
+
+  updateTimer = setInterval(() => {
+    if (videoElement.value) {
+      playerStore.setCurrentTime(
+        playerStore.roundTimeToFPS(videoElement.value.currentTime, playerStore.videoFPS)
+      );
+    }
+  }, interval);
 };
 
-const onCanPlay = () => {
-  emit("canPlay");
+const stopUpdatingTime = () => {
+  if (updateTimer) {
+    clearInterval(updateTimer);
+    updateTimer = null;
+  }
 };
-
-const progress = ref(0);
 
 const updateVideoSize = () => {
   nextTick(() => {
@@ -237,54 +256,22 @@ const handleResize = () => {
   updateVideoSize();
 };
 
-const currentFrame = ref(0);
-const updateFrame = (newIndex) => {
-  currentFrame.value = newIndex;
-};
-const sliderValue = computed({
-  get: () => {
-    return Math.round(currentTime.value);
-  },
-  set: (value) => {
-    currentFrame.value = value;
-    updateFrame(value);
-  },
-});
-
 onMounted(() => {
   updateVideoSize();
+  startUpdatingTime();
+  nextTick(() => {
+    bboxData.value = bboxesStore.bboxData.filter(
+      (position) => position.time === playerStore.currentTime
+    );
+  });
   window.addEventListener("resize", handleResize);
   window.addEventListener("scroll", handleResize);
 });
 
 onUnmounted(() => {
+  stopUpdatingTime();
   window.removeEventListener("resize", handleResize);
   window.removeEventListener("scroll", handleResize);
-});
-
-// watch(progress, (newProgress) => {
-//   progress.value = newProgress;
-//   emit("update-slider", newProgress);
-// });
-// watch(progress, (newProgress) => {
-//   if (playerStore.isSynced) {
-//     const newTime = (playerStore.videoDuration * newProgress) / 100;
-//     playerStore.setCurrentTime(newTime);
-//   }
-// });
-
-// watch(() => playerStore.currentTime, (newTime) => {
-//   if (!playerStore.isSynced) {
-//     const newProgress = (newTime / playerStore.videoDuration) * 100;
-//     progress.value = newProgress;
-//   }
-// });
-
-watch(targetTime, (newTargetTime) => {
-  const delta = 1 / playerStore.videoFPS;
-  if (syncTime.value && videoElement.value) {
-    videoElement.value.currentTime = newTargetTime + delta;
-  }
 });
 
 watch(playing, (isPlaying) => {
@@ -314,13 +301,40 @@ watch(
   }
 );
 
+watch(targetTime, (newTargetTime) => {
+  if (videoElement.value) {
+    const roundedTargetTime = playerStore.roundTimeToFPS(newTargetTime, playerStore.videoFPS);
+    playerStore.currentTime = roundedTargetTime;
+  }
+});
+
 watch(
   () => playerStore.currentTime,
   (newTime) => {
-    if (!playerStore.playing) return; // Kein Update wenn pausiert
     progress.value = (newTime / playerStore.videoDuration) * 100;
+    nextTick(() => {
+      bboxData.value = bboxesStore.bboxData.filter((position) => position.time === newTime);
+    });
   }
 );
+
+watch(
+  () => playerStore.playing,
+  (isPlaying) => {
+    if (isPlaying) {
+      startUpdatingTime();
+    } else {
+      stopUpdatingTime();
+    }
+  }
+);
+
+watch(progress, (newProgress) => {
+  if (videoElement.value) {
+    const newTime = (playerStore.videoDuration * newProgress) / 100;
+    playerStore.setCurrentTime(newTime);
+  }
+});
 </script>
 
 <style>

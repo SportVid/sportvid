@@ -69,6 +69,9 @@ import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import Parameters from "./Parameters.vue";
 
+import { useBboxesStore } from "@/stores/bboxes";
+const bboxesStore = useBboxesStore();
+
 const props = defineProps({
   modelValue: {
     type: Boolean,
@@ -195,6 +198,41 @@ const exportFormatsSorted = computed(() =>
   exportFormats.value.slice().sort((a, b) => a.name.localeCompare(b.name))
 );
 
+const exportPositionsLocal = async ({ parameters = [] }) => {
+  const selectedTeam = parameters.find((p) => p.name === "position_data_team")?.value;
+
+  // const filteredPositions = bboxesStore.positionsNested.map((frame) =>
+  //   frame.filter((player) => selectedTeam === "both" || player.team === selectedTeam)
+  // );
+  // const csvHeader = "frame,player,time,team,bbox_top,bbox_left,bbox_width,bbox_height,det_score\n";
+  // const csvRows = filteredPositions
+  //   .map((frame, frameIndex) =>
+  //     frame
+  //       .map((player, playerIndex) => {
+  //         return `${frameIndex + 1},${playerIndex + 1},${player.time},${player.team},${player.bbox_top},${player.bbox_left},${player.bbox_width},${player.bbox_height},${player.det_score}`;
+  //       })
+  //       .join("\n")
+  //   )
+  //   .join("\n");
+  const filteredPositions = bboxesStore.positionsFlat.filter(
+    (player) => selectedTeam === "both" || player.team === selectedTeam
+  );
+  const csvHeader = "frame,player,time,team,y,x,w,h,det_score\n";
+  const csvRows = filteredPositions
+    .map((player) => {
+      return `${player.image_id},${player.ref_id},${player.time},${player.team},${player.y},${player.x},${player.w},${player.h},${player.det_score}`;
+    })
+    .join("\n");
+
+  const videoId = usePlayerStore().videoId;
+  const csvContent = csvHeader + csvRows;
+  const blob = new Blob([csvContent], { type: "text/csv" });
+  const link = document.createElement("a");
+  link.href = window.URL.createObjectURL(blob);
+  link.download = `${videoId}_positions_${selectedTeam}.csv`;
+  link.click();
+};
+
 const downloadExport = async (format, parameters) => {
   // const processedParams = parameters.map((e) => {
   //   if ("file" in e) {
@@ -222,38 +260,6 @@ const downloadExport = async (format, parameters) => {
     await videoStore.exportVideo({ format, parameters: processedParams });
   }
   dialog.value = false;
-};
-
-import { useMarkerStore } from "@/stores/marker";
-const markerStore = useMarkerStore();
-
-const exportPositionsLocal = async ({ parameters = [] }) => {
-  const selectedTeam = parameters.find((p) => p.name === "position_data_team")?.value;
-
-  const filteredPositions = markerStore.positions.map((frame) =>
-    frame.filter((player) => selectedTeam === "both" || player.team === selectedTeam)
-  );
-  const csvHeader =
-    "frame,player,time,team,tracking_id,bbox_top,bbox_left,bbox_width,bbox_height\n";
-  const csvRows = filteredPositions
-    .map((frame, frameIndex) =>
-      frame
-        .map((player, playerIndex) => {
-          return `${frameIndex + 1},${playerIndex + 1},${player.time},${player.team},${
-            player.tracking_id
-          },${player.bbox_top},${player.bbox_left},${player.bbox_width},${player.bbox_height}`;
-        })
-        .join("\n")
-    )
-    .join("\n");
-
-  const videoId = usePlayerStore().videoId;
-  const csvContent = csvHeader + csvRows;
-  const blob = new Blob([csvContent], { type: "text/csv" });
-  const link = document.createElement("a");
-  link.href = window.URL.createObjectURL(blob);
-  link.download = `${videoId}_positions_${selectedTeam}.csv`;
-  link.click();
 };
 
 watch(

@@ -47,6 +47,7 @@ const dialog = ref(props.modelValue);
 const name = ref(null);
 
 const saveAnnotation = (name) => {
+  markerStore.saveAnno(name);
   markerStore.saveAnnotation(name);
   dialog.value = false;
 };
