@@ -50,7 +50,6 @@ import { ref, computed, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
-import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 
 const menu = ref(false);
 const pluginRunStore = usePluginRunStore();
@@ -69,22 +68,6 @@ const progressColor = (status) => {
   if (status === "RUNNING") return "blue";
   if (status === "DONE") return "green";
   return "yellow";
-};
-
-const indeterminate = (status) => {
-  return status === "QUEUED" || status === "WAITING";
-};
-
-const pluginStatus = (status) => {
-  const statusMap = {
-    UNKNOWN: "modal.plugin.status.unknown",
-    ERROR: "modal.plugin.status.error",
-    DONE: "modal.plugin.status.done",
-    RUNNING: "modal.plugin.status.running",
-    QUEUED: "modal.plugin.status.queued",
-    WAITING: "modal.plugin.status.waiting",
-  };
-  return statusMap[status] ? t(statusMap[status]) : status;
 };
 
 const pluginName = (type) => {
@@ -128,7 +111,7 @@ const pluginRuns = computed(() => {
       date: pluginRun.date
         .replace("T", " ")
         .replace("Z", "")
-        .substring(0, pluginRun.date.length - 5),
+        .substring(0, pluginRun.date.length - 8),
       progress: parseFloat(pluginRun.progress),
       status: pluginRun.status,
     }));

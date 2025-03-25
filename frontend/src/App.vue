@@ -38,10 +38,7 @@ const appName = process.env.VUE_APP_NAME;
 const route = useRoute();
 
 const userStore = useUserStore();
-const playerStore = usePlayerStore();
-const errorStore = useErrorStore();
 
-const loggedIn = computed(() => userStore.loggedIn);
 const analysisView = computed(() => route.name === "AnalysisView");
 </script>
 

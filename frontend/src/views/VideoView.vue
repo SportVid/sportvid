@@ -11,17 +11,17 @@
             :disabled="selectedVideosIds.length == 0"
             @click="showModalPlugin = true"
           >
-            <v-icon color="primary">mdi-plus</v-icon>
+            <v-icon color="primary" :disabled="selectedVideosIds.length == 0">mdi-plus</v-icon>
             {{ $t("video_view.run_plugin") }}
           </v-btn>
           <ModalPlugin v-model="showModalPlugin" :videoIds="selectedVideosIds" />
         </v-col>
       </v-row>
 
-      <v-container class="d-flex flex-wrap video-gallery align-content-center">
+      <v-container class="d-flex flex-wrap justify-center video-gallery">
         <v-card
           elevation="2"
-          width="420px"
+          width="370px"
           v-for="item in videos"
           :loading="item.loading"
           :key="item.id"
@@ -35,8 +35,8 @@
             <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
             <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
 
-            <v-card-actions class="actions mt-n4 mb-n4">
-              <v-btn variant="outlined" class="ml-n2" @click="showVideo(item.id)">
+            <v-card-actions class="actions mt-n6 mb-n8">
+              <v-btn size="small" variant="outlined" class="ml-n2" @click="showVideo(item.id)">
                 <v-icon class="mr-1">
                   {{ "mdi-movie-search-outline" }}
                 </v-icon>
@@ -45,7 +45,7 @@
 
               <ModalVideoRename :video="item.id" />
 
-              <v-btn color="red" variant="outlined" @click="deleteVideo(item.id)">
+              <v-btn size="small" color="red" variant="outlined" @click="deleteVideo(item.id)">
                 <v-icon class="mr-1">
                   {{ "mdi-trash-can-outline" }}
                 </v-icon>
@@ -180,12 +180,8 @@ watch(
   margin: 8px;
 }
 
-.video-gallery > * {
-  margin: 8px;
-}
-
 .actions > .v-btn:not(:first-child) {
-  margin-left: 8px !important;
+  margin-left: 1px !important;
 }
 #welcome-video {
   margin-left: auto;

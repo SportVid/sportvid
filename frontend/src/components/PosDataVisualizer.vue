@@ -1,5 +1,24 @@
 <template>
-  <v-container class="d-flex flex-column">
+  <div v-if="!bboxesStore.bboxDataLoaded" style="height: 60vh">
+    <v-col>
+      <v-row
+        class="text-h6 text-grey font-weight-light mx-16 px-10 mt-8"
+        style="
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          line-height: 1.5;
+          height: 30vh;
+        "
+        v-html="$t('pos_data_vis.no_bbox_data')"
+      />
+      <v-row style="justify-content: center">
+        <v-btn>Upload position data</v-btn>
+      </v-row>
+    </v-col>
+  </div>
+
+  <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1">
       <img
         ref="compAreaElement"
@@ -8,8 +27,8 @@
         @load="updateCompAreaSize"
       />
 
-      <div
-        v-for="(position, index) in markerStore.positions[sliderValue]"
+      <!-- <div
+        v-for="(position, index) in bboxesStore.positionsNested[sliderValue]"
         :key="index"
         class="data-point-position"
         :style="{
@@ -28,9 +47,32 @@
             'px',
           backgroundColor: `${position.team}`,
         }"
+      /> -->
+      <div
+        v-for="(position, index) in bboxesStore.positionsFlat.filter(
+          (p) => p.image_id === sliderValue
+        )"
+        :key="index"
+        class="data-point-position"
+        :style="{
+          top:
+            (position.y + position.h) *
+              (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
+            (compAreaStore.compAreaSize.top +
+              ((1 - compAreaStore.currentSport.heightRel) / 2) *
+                compAreaStore.compAreaSize.height) +
+            'px',
+          left:
+            (position.x + position.w / 2) *
+              (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
+            (compAreaStore.compAreaSize.left +
+              ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
+            'px',
+          backgroundColor: position.team,
+        }"
       />
 
-      <svg v-if="markerStore.showEffectivePlayingSpace" class="hull-overlay">
+      <svg v-if="bboxesStore.showEffectivePlayingSpace" class="hull-overlay">
         <polygon
           v-for="(hull, team) in convexHullPlayer[sliderValue]"
           :key="team"
@@ -41,7 +83,7 @@
         />
       </svg>
 
-      <svg v-if="markerStore.showSpaceControl" class="voronoi-overlay">
+      <svg v-if="bboxesStore.showSpaceControl" class="voronoi-overlay">
         <polygon
           v-for="(cell, index) in voronoiCells[sliderValue]"
           :key="index"
@@ -54,7 +96,7 @@
     </v-row>
 
     <v-row class="video-control mt-6 mb-n1">
-      <v-menu offset-y top>
+      <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{ compAreaStore.currentSport.title }}
@@ -74,20 +116,20 @@
         </v-list>
       </v-menu>
 
-      <v-menu offset-y top>
+      <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
-            <v-icon>mdi-dots-horizontal</v-icon>
+            {{ $t("pos_data_vis.display_settings.title") }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
-          <v-list-item class="menu-item" @click="markerStore.viewBoundingBox">
+          <v-list-item class="menu-item" @click="bboxesStore.viewBoundingBox">
             <v-list-item-title>
-              {{ $t("pos_data_vis.view_bounding_box") }}
+              {{ $t("pos_data_vis.display_settings.view_bounding_box") }}
               <v-icon
                 :class="{
-                  'text-disabled': !markerStore.showBoundingBox,
-                  'text-red': markerStore.showBoundingBox,
+                  'text-disabled': !bboxesStore.showBoundingBox,
+                  'text-red': bboxesStore.showBoundingBox,
                 }"
                 class="ml-12 mb-1"
                 size="small"
@@ -99,7 +141,7 @@
 
           <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
             <v-list-item-title>
-              {{ $t("pos_data_vis.video_sync") }}
+              {{ $t("pos_data_vis.display_settings.video_sync") }}
               <v-icon
                 :class="{
                   'text-disabled': !playerStore.isSynced,
@@ -113,23 +155,23 @@
             </v-list-item-title>
           </v-list-item>
 
-          <v-menu offset-x location="end" open-on-hover>
+          <v-menu location="end" open-on-hover>
             <template v-slot:activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
                 <v-list-item-title>
-                  {{ $t("pos_data_vis.view_kpis.title") }}
-                  <v-icon class="ml-4 mb-1" size="small">mdi-chevron-right</v-icon>
+                  {{ $t("pos_data_vis.display_settings.view_kpis.title") }}
+                  <v-icon class="ml-5 mb-1" size="small">mdi-chevron-right</v-icon>
                 </v-list-item-title>
               </v-list-item>
             </template>
             <v-list class="py-0" density="compact">
-              <v-list-item class="menu-item" @click="markerStore.viewSpaceControl">
+              <v-list-item class="menu-item" @click="bboxesStore.viewSpaceControl">
                 <v-list-item-title>
-                  {{ $t("pos_data_vis.view_kpis.space_control") }}
+                  {{ $t("pos_data_vis.display_settings.view_kpis.space_control") }}
                   <v-icon
                     :class="{
-                      'text-disabled': !markerStore.showSpaceControl,
-                      'text-red': markerStore.showSpaceControl,
+                      'text-disabled': !bboxesStore.showSpaceControl,
+                      'text-red': bboxesStore.showSpaceControl,
                     }"
                     class="ml-4 mb-1"
                     size="small"
@@ -138,13 +180,13 @@
                   </v-icon>
                 </v-list-item-title>
               </v-list-item>
-              <v-list-item class="menu-item" @click="markerStore.viewEffectivePlayingSpace">
+              <v-list-item class="menu-item" @click="bboxesStore.viewEffectivePlayingSpace">
                 <v-list-item-title>
-                  {{ $t("pos_data_vis.view_kpis.eps") }}
+                  {{ $t("pos_data_vis.display_settings.view_kpis.eps") }}
                   <v-icon
                     :class="{
-                      'text-disabled': !markerStore.showEffectivePlayingSpace,
-                      'text-red': markerStore.showEffectivePlayingSpace,
+                      'text-disabled': !bboxesStore.showEffectivePlayingSpace,
+                      'text-red': bboxesStore.showEffectivePlayingSpace,
                     }"
                     class="ml-4 mb-1"
                     size="small"
@@ -155,8 +197,32 @@
               </v-list-item>
             </v-list>
           </v-menu>
+
+          <v-menu location="end" open-on-hover>
+            <template v-slot:activator="{ props }">
+              <v-list-item v-bind="props" class="menu-item">
+                <v-list-item-title>
+                  {{ $t("pos_data_vis.display_settings.pos_data.title") }}
+                  <v-icon class="ml-16 pl-10 mb-1" size="small">mdi-chevron-right</v-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+            <v-list class="py-0" density="compact">
+              <v-list-item class="menu-item">
+                <v-list-item-title>
+                  {{ $t("pos_data_vis.display_settings.pos_data.upload") }}
+                </v-list-item-title>
+              </v-list-item>
+              <v-list-item class="menu-item" @click="showModalBboxDataSelect = true">
+                <v-list-item-title>
+                  {{ $t("pos_data_vis.display_settings.pos_data.select") }}
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </v-list>
       </v-menu>
+      <ModalBboxDataSelect v-model="showModalBboxDataSelect" />
 
       <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
         {{ getTimecode(sliderValue) }}
@@ -179,16 +245,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useCompAreaStore } from "@/stores/comp_area";
-import { useMarkerStore } from "@/stores/marker";
+import { useBboxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
 import { Delaunay } from "d3-delaunay";
+import ModalBboxDataSelect from "@/components/ModalBboxDataSelect.vue";
 
 const playerStore = usePlayerStore();
 const compAreaStore = useCompAreaStore();
-const markerStore = useMarkerStore();
+const bboxesStore = useBboxesStore();
+
+const showModalBboxDataSelect = ref(false);
 
 const currentFrame = ref(0);
 const updateFrame = (newIndex) => {
@@ -261,11 +330,11 @@ const computeConvexHull = (points) => {
 };
 
 const convexHullPlayer = computed(() => {
-  if (!compAreaStore.compAreaSize || !markerStore.positions) {
+  if (!compAreaStore.compAreaSize || !bboxesStore.positionsNested) {
     return [];
   }
 
-  return markerStore.positions.map((framePositions) => {
+  return bboxesStore.positionsNested.map((framePositions) => {
     const teams = {};
 
     framePositions.forEach((position) => {
@@ -319,11 +388,11 @@ const computeVoronoi = (players) => {
 };
 
 const voronoiCells = computed(() => {
-  if (!compAreaStore.compAreaSize || !markerStore.positions) {
+  if (!compAreaStore.compAreaSize || !bboxesStore.positionsNested) {
     return [];
   }
 
-  return markerStore.positions.map((framePositions) => {
+  return bboxesStore.positionsNested.map((framePositions) => {
     const allPlayers = framePositions.map((player) => ({
       top:
         (player.bbox_top + player.bbox_height) *

@@ -1,5 +1,7 @@
 import { defineStore } from "pinia";
-import { ref, computed} from "vue";
+import { ref, computed } from "vue";
+import axios from "../plugins/axios";
+import config from "../../app.config";
 import { useVideoStore } from "./video";
 import { useCompAreaStore } from "./comp_area";
 import { usePlayerStore } from "@/stores/player";
@@ -9,11 +11,11 @@ import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 export const useMarkerStore = defineStore("marker", () => {
   const videoStore = useVideoStore();
   const compAreaStore = useCompAreaStore();
+  const playerStore = usePlayerStore();
 
   const showReferenceMarker = ref(false);
   const hoveredReferenceMarker = ref(null);
   const isAddingMarker = ref(false);
-  const showBoundingBox = ref(false);
 
   const marker = ref([
     {
@@ -147,77 +149,13 @@ export const useMarkerStore = defineStore("marker", () => {
     showReferenceMarker.value = !showReferenceMarker.value;
   };
 
-  const viewBoundingBox = () => {
-    showBoundingBox.value = !showBoundingBox.value;
-  };
-
-  const positions = ref(
-    Array.from({ length: 100 }, () =>
-      Array.from({ length: 20 }, (_, playerIndex) => {
-        const isTeamA = playerIndex < 10;
-
-        return {
-          bbox_top: Math.random() * 0.8 + 0.1,
-          bbox_left: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3),
-          bbox_width: 0.05,
-          bbox_height: 0.1,
-          team: isTeamA ? "blue" : "red",
-          time: 0,
-          tracking_id: 1,
-          time: 0,
-          tracking_id: 1,
-        };
-      })
-    )
-  );
-
-  const showSpaceControl = ref(false);
-  const viewSpaceControl = () => {
-    showSpaceControl.value = !showSpaceControl.value;
-    showEffectivePlayingSpace.value = false;
-  };
-
-  const showEffectivePlayingSpace = ref(false);
-  const viewEffectivePlayingSpace = () => {
-    showEffectivePlayingSpace.value = !showEffectivePlayingSpace.value;
-    showSpaceControl.value = false;
-  };
-
   const annotations = ref({});
 
   const saveAnnotation = (name) => {
     if (!name) return;
     annotations.value[name] = [...marker.value];
-    console.log(annotations.value)
     localStorage.setItem("annotations", JSON.stringify(annotations.value));
   };
-
-  //TODO: store annotations in db
-  // requires video_id, dict/list source / tgt point 
-  // const create = async ({ name, color, categoryId, videoId = null }) => {
-  //   if (isLoading.value) return;
-  //   isLoading.value = true;
-
-  //   const params = { # TODO definitions of params, 
-  // TODO create CalibrationAssets class backend/backend/models.py and link in backend/backend/urls.py
-  // TODO: create new view for CalibrationAssets DB I/O in backend/backend/views/?.py (c.f.annotation.py)
-  //     name,
-  //     color,
-  //     category_id: categoryId || undefined,
-  //     video_id: videoId || usePlayerStore().videoId,
-  //   };
-
-  // TODO: implement point_correspeondences/<create,get> etc.
-  //   try {
-  //     const res = await axios.post(`${config.API_LOCATION}/point_correspondences/create`, params);
-  //     if (res.data.status === "ok") {
-  //       addToStore([res.data.entry]);
-  //       return res.data.entry.id;
-  //     }
-  //   } finally {
-  //     isLoading.value = false;
-  //   }
-  // };
 
   const loadAnnotation = (name) => {
     if (annotations.value[name]) {
@@ -236,6 +174,66 @@ export const useMarkerStore = defineStore("marker", () => {
     localStorage.setItem("annotations", JSON.stringify(annotations.value));
   };
 
+  const isLoading = ref(false);
+  //TODO: store annotations in db
+  // requires video_id, dict/list source / tgt point
+  const create = async ({ name }) => {
+    if (isLoading.value || !name) return;
+    isLoading.value = true;
+    const params = {
+      // # TODO definitions of params,
+      // TODO create CalibrationAssets class backend/backend/models.py and link in backend/backend/urls.py
+      // TODO: create new view for CalibrationAssets DB I/O in backend/backend/views/?.py (c.f.annotation.py)
+      name,
+      marker_data: [...marker.value],
+      video_id: playerStore.videoId,
+    };
+    // TODO: implement point_correspondences/<create,get> etc.
+    try {
+      console.log(params);
+      // const res = await axios.post(`${config.API_LOCATION}/point_correspondences/create`, params);
+      // if (res.data.status === "ok") {
+      //   addToStore([res.data.entry]);
+      //   return res.data.entry.id;
+      // }
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const saveAnno = async (name) => {
+    const id = await create({ name });
+    if (id) {
+      console.log(`Annotation mit ID ${id} gespeichert`);
+    }
+  };
+
+  const clearStore = () => {
+    Object.keys(annotations).forEach((key) => {
+      delete annotations[key];
+    });
+  };
+
+  const updateInStore = (newAnnotations) => {
+    newAnnotations.forEach((e) => {
+      annotations[e.id] = e;
+    });
+  };
+
+  const addToStore = (newAnnotations) => {
+    newAnnotations.forEach((e) => {
+      annotations[e.id] = e;
+    });
+  };
+
+  const updateStore = (newAnnotations) => {
+    newAnnotations.forEach((e) => {
+      if (!(e.id in annotations)) {
+        annotations[e.id] = e;
+      }
+    });
+  };
+
   return {
     marker,
     filteredMarker,
@@ -250,17 +248,17 @@ export const useMarkerStore = defineStore("marker", () => {
     showReferenceMarker,
     viewReferenceMarker,
     hoveredReferenceMarker,
-    showBoundingBox,
-    viewBoundingBox,
-    positions,
-    showSpaceControl,
-    viewSpaceControl,
-    showEffectivePlayingSpace,
-    viewEffectivePlayingSpace,
     annotations,
     saveAnnotation,
     loadAnnotation,
     loadFromLocalStorage,
     deleteAnnotation,
+    create,
+    isLoading,
+    clearStore,
+    updateInStore,
+    addToStore,
+    updateStore,
+    saveAnno,
   };
 });

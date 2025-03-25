@@ -77,7 +77,7 @@
     </v-row>
 
     <v-row class="video-control mt-6 mb-0">
-      <v-menu offset-y top>
+      <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{ compAreaStore.currentSport.title }}
@@ -97,15 +97,31 @@
         </v-list>
       </v-menu>
 
-      <AnnotationSaveMenu />
-
-      <AnnotationSelectMenu />
-
-      <v-menu offset-y top>
+      <v-menu location="top">
         <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" size="small">
-            <v-icon>mdi-dots-horizontal</v-icon>
-          </v-btn>
+          <v-btn v-bind="props" size="small"> {{ $t("annotation_vis.annotation_menu") }} </v-btn>
+        </template>
+
+        <v-list class="py-0" density="compact">
+          <v-list-item class="menu-item" @click="showModalAnnotationSave = true">
+            <v-list-item-title>
+              {{ $t("annotation_vis.save_annotation") }}
+            </v-list-item-title>
+          </v-list-item>
+
+          <v-list-item class="menu-item" @click="showModalAnnotationSelect = true">
+            <v-list-item-title>
+              {{ $t("annotation_vis.select_annotation") }}
+            </v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+      <ModalAnnotationSave v-model="showModalAnnotationSave" />
+      <ModalAnnotationSelect v-model="showModalAnnotationSelect" />
+
+      <v-menu location="top">
+        <template v-slot:activator="{ props }">
+          <v-btn v-bind="props" size="small"> {{ $t("annotation_vis.marker_menu") }} </v-btn>
         </template>
         <v-list class="py-0" density="compact">
           <v-list-item class="menu-item" @click="markerStore.viewReferenceMarker">
@@ -168,11 +184,14 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { useMarkerStore } from "@/stores/marker";
-import AnnotationSelectMenu from "@/components/AnnotationSelectMenu.vue";
-import AnnotationSaveMenu from "@/components/AnnotationSaveMenu.vue";
+import ModalAnnotationSave from "@/components/ModalAnnotationSave.vue";
+import ModalAnnotationSelect from "@/components/ModalAnnotationSelect.vue";
 
 const compAreaStore = useCompAreaStore();
 const markerStore = useMarkerStore();
+
+const showModalAnnotationSave = ref(false);
+const showModalAnnotationSelect = ref(false);
 
 const compAreaElement = ref(null);
 
@@ -233,9 +252,6 @@ onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   window.removeEventListener("scroll", handleResize);
 });
-
-const bboxData = computed(() => markerStore.bboxData);
-console.log(bboxData.value);
 </script>
 
 <style>

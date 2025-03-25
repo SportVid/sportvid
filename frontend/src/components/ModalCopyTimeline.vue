@@ -42,7 +42,7 @@
 import { ref, computed, watch } from "vue";
 import { useTimelineStore } from "@/stores/timeline";
 
-defineProps({
+const props = defineProps({
   timeline: {
     type: String,
     required: true,
@@ -58,7 +58,7 @@ const includeannotations = ref(true);
 
 const name = computed({
   get() {
-    const timelineName = timelineStore.get(timeline).name + " (1)";
+    const timelineName = timelineStore.get(props.timeline).name + " (1)";
     return nameProxy.value === null ? timelineName : nameProxy.value;
   },
   set(val) {
@@ -72,7 +72,7 @@ const submit = async () => {
   isSubmitting.value = true;
 
   await timelineStore.duplicate({
-    id: timeline,
+    id: props.timeline,
     name: name.value,
     includeannotations: includeannotations.value,
   });

@@ -74,6 +74,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useMarkerStore } from "@/stores/marker";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { usePluginRunStore } from "@/stores/plugin_run";
+import { useBboxesStore } from "@/stores/bboxes";
 // import { useTimelineStore } from "@/stores/timeline";
 // import { useTimelineSegmentStore } from "@/stores/timeline_segment";
 // import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
@@ -110,6 +111,7 @@ const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
 const markerStore = useMarkerStore();
 const compAreaStore = useCompAreaStore();
+const bboxesStore = useBboxesStore();
 // const timelineStore = useTimelineStore();
 // const timelineSegmentStore = useTimelineSegmentStore();
 // const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
@@ -427,9 +429,9 @@ watch(tab, (newTab) => {
   }
 
   if (currentTab === "Position Data") {
-    markerStore.showBoundingBox = true;
+    bboxesStore.showBoundingBox = true;
   } else {
-    markerStore.showBoundingBox = false;
+    bboxesStore.showBoundingBox = false;
   }
 });
 
@@ -443,6 +445,30 @@ watch(
     } else {
       markerStore.showReferenceMarker = previousShowReferenceMarker.value;
     }
+  }
+);
+
+watch(
+  () => bboxesStore.setBboxData(bboxesStore.bboxPluginRun),
+  (newBboxes) => {
+    if (newBboxes) {
+      bboxesStore.bboxData = newBboxes;
+      console.log(bboxesStore.bboxPluginRun);
+      console.log("bboxData", bboxesStore.bboxData);
+    }
+    bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBoundingBoxes(
+      bboxesStore.bboxData,
+      playerStore.videoFPS,
+      1
+    );
+    console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
+  }
+);
+
+watch(
+  () => playerStore.videoFPS,
+  (newFPS) => {
+    console.log("FPS", newFPS);
   }
 );
 </script>

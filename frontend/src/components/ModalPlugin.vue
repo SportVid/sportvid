@@ -64,13 +64,13 @@
                   v-if="selected.optional_parameters && selected.optional_parameters.length > 0"
                 >
                   <v-expansion-panel>
-                    <v-expansion-panel-header expand-icon="mdi-menu-down">
+                    <v-expansion-panel-title expand-icon="mdi-menu-down">
                       Advanced Options
-                    </v-expansion-panel-header>
+                    </v-expansion-panel-title>
 
-                    <v-expansion-panel-content>
+                    <v-expansion-panel-text>
                       <Parameters :parameters="selected.optional_parameters" :videoIds="videoIds" />
-                    </v-expansion-panel-content>
+                    </v-expansion-panel-text>
                   </v-expansion-panel>
                 </v-expansion-panels>
               </v-card-text>
@@ -273,7 +273,6 @@ const plugins = ref([
           {
             field: "select_options",
             text: t("modal.plugin.face_clustering.clustering_method_name"),
-            hint: t("modal.plugin.face_clustering.clustering_method_hint"),
             items: ["Agglomerative", "DBScan"],
             name: "clustering_method",
             value: "DBScan",
@@ -680,7 +679,6 @@ const plugins = ref([
           {
             field: "select_options",
             text: t("modal.plugin.place_clustering.clustering_method_name"),
-            hint: t("modal.plugin.place_clustering.clustering_method_hint"),
             items: ["Agglomerative", "DBScan"],
             name: "clustering_method",
             value: "DBScan",

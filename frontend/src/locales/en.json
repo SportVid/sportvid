@@ -414,9 +414,13 @@
     },
     "annotation": {
       "select_annotation": "Select Annotation",
-      "save_annotation": "Save annotation",
+      "save_annotation": "Save Annotation",
       "save": "Save",
       "name": "Annotation Name"
+    },
+    "position_data": {
+      "upload": "Upload Position Data",
+      "select": "Select Position Data"
     }
   },
   "user": {
@@ -470,19 +474,30 @@
     "timelines": "Timelines:"
   },
   "annotation_vis": {
+    "marker_menu": "Marker",
     "view_ref_marker": "View Reference Marker",
     "add_marker": "Add Marker",
     "delete_marker": "Delete Marker",
-    "save_annotation": "Save annotation",
+    "annotation_menu": "Annotation",
+    "save_annotation": "Save Annotation",
     "select_annotation": "Select Annotation"
   },
   "pos_data_vis": {
-    "view_bounding_box": "View bounding-boxes",
-    "video_sync": "Sychronise with video",
-    "view_kpis": {
-      "title": "View performance indicator",
-      "space_control": "Space control",
-      "eps": "Effective playing space"
+    "no_bbox_data": "No position data has been calculated yet.<br> Please run the Bytetrack plugin or upload the position data manually.",
+    "display_settings": {
+      "title": "Display Settings",
+      "view_bounding_box": "View bounding-boxes",
+      "video_sync": "Sychronise with video",
+      "view_kpis": {
+        "title": "View performance indicator",
+        "space_control": "Space control",
+        "eps": "Effective playing space"
+      },
+      "pos_data": {
+        "title": "Position data",
+        "upload": "Upload position data",
+        "select": "Select position data"
+      }
     }
   }
 }

@@ -14,18 +14,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
-import { useUserStore } from "@/stores/user";
-import { usePlayerStore } from "@/stores/player";
+import { ref } from "vue";
 import ModalExport from "@/components/ModalExport.vue";
 
-const userStore = useUserStore();
-const playerStore = usePlayerStore();
-
 const showModalExport = ref(false);
-
-const videoId = computed(() => playerStore.videoId);
-const loggedIn = computed(() => userStore.loggedIn);
 </script>
 
 <style>

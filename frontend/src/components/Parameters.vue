@@ -171,7 +171,7 @@
 import { computed } from "vue";
 import { useTimelineStore } from "../stores/timeline";
 import { usePluginRunResultStore } from "../stores/plugin_run_result";
-import { useMarkerStore } from "../stores/marker";
+import { useBboxesStore } from "../stores/bboxes";
 
 const props = defineProps({
   parameters: Array,
@@ -180,7 +180,7 @@ const props = defineProps({
 
 const timelineStore = useTimelineStore();
 const pluginRunResultStore = usePluginRunResultStore();
-const markerStore = useMarkerStore();
+const bboxesStore = useBboxesStore();
 
 const groupTimelines = (timelines) => {
   let timelinesGroups = {};
@@ -225,7 +225,8 @@ const scalar_timelines = computed(() => {
 });
 
 const position_data_teams = computed(() => {
-  const teams = new Set(markerStore.positions.flat().map((player) => player.team));
+  // const teams = new Set(bboxesStore.positionsNested.flat().map((player) => player.team));
+  const teams = new Set(bboxesStore.positionsFlat.map((player) => player.team));
   return [
     { name: "Both Teams", id: "both" },
     ...[...teams].map((team) => ({

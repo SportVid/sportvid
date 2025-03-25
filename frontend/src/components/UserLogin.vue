@@ -96,7 +96,6 @@ const errorMessage = ref("");
 
 const login = async () => {
   const status = await userStore.login(user);
-  console.log(status);
   if (status.status === "ok") {
     dialog.value = false;
     errorMessage.value = "";

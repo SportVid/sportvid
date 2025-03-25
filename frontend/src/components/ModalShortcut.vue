@@ -78,7 +78,7 @@ const props = defineProps({
     default: false,
   },
 });
-const emit = defineEmits({});
+const emit = defineEmits(["update:modelValue"]);
 
 const dialog = ref(props.modelValue);
 const isSubmitting = ref(false);
@@ -143,18 +143,18 @@ watch(
 );
 
 watch(
+  () => dialog.value,
+  (value) => {
+    emit("update:modelValue", value);
+  }
+);
+
+watch(
   () => props.modelValue,
   (value) => {
     if (value) {
       dialog.value = true;
     }
-  }
-);
-
-watch(
-  () => dialog.value,
-  (value) => {
-    emit("update:modelValue", value);
   }
 );
 </script>
