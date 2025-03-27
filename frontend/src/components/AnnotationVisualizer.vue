@@ -1,6 +1,6 @@
 <template>
   <v-container class="d-flex flex-column">
-    <v-row class="mt-1">
+    <v-row class="mt-1" justify="center">
       <div
         v-if="markerStore.isAddingMarker"
         ref="overlayMarker"
@@ -19,6 +19,10 @@
         class="visualizer-image"
         :src="compAreaStore.currentSport.pitchImage"
         @load="updateCompAreaSize"
+        :style="{
+          maxHeight: maxVideoHeight * 100 + 'vh',
+          height: videoStore.videoSize.height + 'px',
+        }"
       />
 
       <v-btn
@@ -76,7 +80,7 @@
       />
     </v-row>
 
-    <v-row class="video-control mt-6 mb-0">
+    <v-row ref="videoControl" class="video-control mt-6 mb-0">
       <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
@@ -181,14 +185,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { useMarkerStore } from "@/stores/marker";
+import { useVideoStore } from "@/stores/video";
 import ModalAnnotationSave from "@/components/ModalAnnotationSave.vue";
 import ModalAnnotationSelect from "@/components/ModalAnnotationSelect.vue";
 
 const compAreaStore = useCompAreaStore();
 const markerStore = useMarkerStore();
+const videoStore = useVideoStore();
 
 const showModalAnnotationSave = ref(false);
 const showModalAnnotationSelect = ref(false);
@@ -252,12 +258,28 @@ onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   window.removeEventListener("scroll", handleResize);
 });
+
+const maxVideoHeight = ref(0);
+const videoControl = ref(null);
+
+const updateMaxHeight = () => {
+  if (!videoControl.value) return;
+  maxVideoHeight.value =
+    (window.innerHeight - 104 - 32 - videoControl.value.$el.offsetHeight - 60) / window.innerHeight;
+};
+
+onMounted(() => {
+  nextTick(() => updateMaxHeight());
+  window.addEventListener("resize", updateMaxHeight);
+});
+
+watch(() => window.innerHeight, updateMaxHeight);
 </script>
 
 <style>
-.visualizer-image {
+.image {
   max-width: 100%;
-  max-height: 100%;
+  object-fit: cover;
 }
 
 .marker-position {

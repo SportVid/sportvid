@@ -19,12 +19,16 @@
   </div>
 
   <v-container v-else class="d-flex flex-column">
-    <v-row class="mt-1">
+    <v-row class="mt-1" justify="center">
       <img
         ref="compAreaElement"
         class="visualizer-image"
         :src="compAreaStore.currentSport.pitchImage"
         @load="updateCompAreaSize"
+        :style="{
+          maxHeight: maxVideoHeight * 100 + 'vh',
+          height: videoStore.videoSize.height + 'px',
+        }"
       />
 
       <!-- <div
@@ -95,7 +99,7 @@
       </svg>
     </v-row>
 
-    <v-row class="video-control mt-6 mb-n1">
+    <v-row ref="videoControl" class="video-control mt-6 mb-n1">
       <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
@@ -229,7 +233,7 @@
       </div>
     </v-row>
 
-    <v-row>
+    <v-row ref="videoSlider">
       <v-slider
         v-model="sliderValue"
         @update:model-value="updateFrame"
@@ -245,10 +249,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useCompAreaStore } from "@/stores/comp_area";
 import { useBboxesStore } from "@/stores/bboxes";
+import { useVideoStore } from "@/stores/video";
 import { getTimecode } from "@/plugins/time";
 import { Delaunay } from "d3-delaunay";
 import ModalBboxDataSelect from "@/components/ModalBboxDataSelect.vue";
@@ -256,6 +261,7 @@ import ModalBboxDataSelect from "@/components/ModalBboxDataSelect.vue";
 const playerStore = usePlayerStore();
 const compAreaStore = useCompAreaStore();
 const bboxesStore = useBboxesStore();
+const videoStore = useVideoStore();
 
 const showModalBboxDataSelect = ref(false);
 
@@ -426,6 +432,29 @@ onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
   window.removeEventListener("scroll", handleResize);
 });
+
+const maxVideoHeight = ref(0);
+const videoSlider = ref(null);
+const videoControl = ref(null);
+
+const updateMaxHeight = () => {
+  if (!videoSlider.value || !videoControl.value) return;
+  maxVideoHeight.value =
+    (window.innerHeight -
+      104 -
+      32 -
+      videoSlider.value.$el.offsetHeight -
+      videoControl.value.$el.offsetHeight -
+      60) /
+    window.innerHeight;
+};
+
+onMounted(() => {
+  nextTick(() => updateMaxHeight());
+  window.addEventListener("resize", updateMaxHeight);
+});
+
+watch(() => window.innerHeight, updateMaxHeight);
 </script>
 
 <style>
