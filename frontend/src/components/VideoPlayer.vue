@@ -1,8 +1,8 @@
 <template>
-  <v-container class="d-flex flex-column">
-    <v-row ref="videoContainer">
+  <v-container ref="videoContainer" class="d-flex flex-column">
+    <v-row justify="center">
       <video
-        class="video-video"
+        class="video"
         ref="videoElement"
         @play="onPlay"
         @pause="onPause"
@@ -10,6 +10,9 @@
         @timeupdate="onTimeUpdate"
         @loadedmetadata="updateVideoSize"
         :src="playerStore.videoUrl"
+        :style="{
+          maxHeight: maxVideoHeight * 100 + 'vh',
+        }"
       />
 
       <!-- <div
@@ -40,7 +43,7 @@
       />
     </v-row>
 
-    <v-row class="video-control mt-6">
+    <v-row ref="videoControl" class="video-control mt-6">
       <v-btn @click="deltaSeek(-1)" size="small">
         <v-icon>mdi-skip-backward</v-icon>
       </v-btn>
@@ -107,7 +110,7 @@
       </div>
     </v-row>
 
-    <v-row>
+    <v-row ref="videoSlider">
       <v-slider
         v-model="progress"
         @update:model-value="onProgressChange"
@@ -335,14 +338,36 @@ watch(progress, (newProgress) => {
     playerStore.setCurrentTime(newTime);
   }
 });
+
+const maxVideoHeight = ref(0);
+const videoSlider = ref(null);
+const videoControl = ref(null);
+
+const updateMaxHeight = () => {
+  if (!videoSlider.value || !videoControl.value) return;
+  maxVideoHeight.value =
+    (window.innerHeight -
+      104 -
+      32 -
+      videoSlider.value.$el.offsetHeight -
+      videoControl.value.$el.offsetHeight -
+      60) /
+    window.innerHeight;
+};
+
+onMounted(() => {
+  nextTick(() => updateMaxHeight());
+  window.addEventListener("resize", updateMaxHeight);
+});
+
+watch(() => window.innerHeight, updateMaxHeight);
 </script>
 
 <style>
-.video-video {
-  width: 100%;
+.video {
   object-fit: cover;
+  max-width: 100%;
 }
-
 .video-control {
   gap: 5px;
 }

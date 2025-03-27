@@ -18,7 +18,12 @@
 
       <v-row class="ma-n2">
         <v-col cols="6">
-          <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" ref="videoCard">
+          <v-card
+            class="d-flex flex-column flex-nowrap px-2"
+            elevation="2"
+            ref="videoCard"
+            :style="{ maxHeight: analysisViewHeight + 'px' }"
+          >
             <v-row justify="center">
               <v-card-title class="mt-5 mb-n1">
                 {{ playerStore.videoName }}
@@ -27,7 +32,7 @@
 
             <v-row class="flex-grow-1">
               <v-col>
-                <VideoPlayer @resize="onVideoResize" />
+                <VideoPlayer />
               </v-col>
             </v-row>
           </v-card>
@@ -40,7 +45,13 @@
             </div>
             <div class="loading-text">Loading...</div>
           </div>
-          <v-card v-else class="d-flex flex-column flex-nowrap px-2" elevation="2">
+          <v-card
+            v-else
+            class="d-flex flex-column flex-nowrap px-2"
+            elevation="2"
+            ref="compAreaCard"
+            :style="{ maxHeight: analysisViewHeight + 'px' }"
+          >
             <v-row class="sticky-tabs-bar" justify="center">
               <v-tabs fixed-tabs slider-color="primary" v-model="tab">
                 <v-tab v-for="analysisTab in analysisTabs" :key="analysisTab.id">
@@ -67,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
@@ -133,6 +144,23 @@ const tab = ref(0);
 // const annotationDialog = ref({ show: false });
 const isLoading = ref(true);
 const resultCardHeight = ref(0);
+
+const videoCard = ref(null);
+const compAreaCard = ref(null);
+const analysisViewHeight = ref(null);
+
+const setMaxCardHeight = () => {
+  nextTick(() => {
+    analysisViewHeight.value = window.innerHeight - 64 - 40;
+  });
+};
+
+watch([videoCard, compAreaCard], setMaxCardHeight, { flush: "post" });
+
+onMounted(() => {
+  window.addEventListener("resize", setMaxCardHeight);
+  setMaxCardHeight();
+});
 
 // const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
 // const timelines = computed(() => timelineStore.forVideo(route.params.id));
