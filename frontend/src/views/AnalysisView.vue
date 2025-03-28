@@ -1,18 +1,18 @@
 <template>
   <v-main class="main" tabindex="0" ref="main">
     <v-container fluid>
-      <ModalMarkerOverlay v-if="markerStore.isAnyMarkerActive" />
+      <ModalMarkerOverlay v-if="calibrationAssetStore.isAnyReferenceMarkerActive" />
 
       <div
-        v-for="m in markerStore.filteredReferenceMarker"
-        v-show="markerStore.showReferenceMarker"
+        v-for="m in calibrationAssetStore.filteredVideoMarker"
+        v-show="calibrationAssetStore.showVideoMarker"
         :key="m.id"
         :style="{
           top: m.videoCoordsRel.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
           left: m.videoCoordsRel.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
         }"
-        @mouseenter="markerStore.hoveredReferenceMarker = m.id"
-        @mouseleave="markerStore.hoveredReferenceMarker = null"
+        @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
+        @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
         class="reference-marker-position"
       />
 
@@ -49,7 +49,7 @@
             v-else
             class="d-flex flex-column flex-nowrap px-2"
             elevation="2"
-            ref="compAreaCard"
+            ref="topViewCard"
             :style="{ maxHeight: analysisViewHeight + 'px' }"
           >
             <v-row class="sticky-tabs-bar" justify="center">
@@ -64,7 +64,7 @@
               <v-col>
                 <v-tabs-window v-model="tab">
                   <v-tabs-window-item v-for="analysisTab in analysisTabs" :key="analysisTab.id">
-                    <AnnotationVisualizer v-if="analysisTab.name === 'Annotation'" />
+                    <CalibrationVisualizer v-if="analysisTab.name === 'Calibration'" />
                     <PosDataVisualizer v-if="analysisTab.name === 'Position Data'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
@@ -82,8 +82,7 @@ import { ref, onMounted, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
-import { useMarkerStore } from "@/stores/marker";
-import { useCompAreaStore } from "@/stores/comp_area";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useBboxesStore } from "@/stores/bboxes";
 // import { useTimelineStore } from "@/stores/timeline";
@@ -97,7 +96,7 @@ import { useBboxesStore } from "@/stores/bboxes";
 
 import VideoPlayer from "@/components/VideoPlayer.vue";
 import PosDataVisualizer from "@/components/PosDataVisualizer.vue";
-import AnnotationVisualizer from "@/components/AnnotationVisualizer.vue";
+import CalibrationVisualizer from "@/components/CalibrationVisualizer.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import Timeline from "@/components/Timeline.vue";
@@ -111,7 +110,7 @@ import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import ClusterTimelineItemOverview from "@/components/ClusterTimelineItemOverview.vue";
 
 const analysisTabs = ref([
-  { id: "1", name: "Annotation" },
+  { id: "1", name: "Calibration" },
   { id: "2", name: "Position Data" },
 ]);
 
@@ -120,8 +119,7 @@ const route = useRoute();
 const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
-const markerStore = useMarkerStore();
-const compAreaStore = useCompAreaStore();
+const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
 // const timelineStore = useTimelineStore();
 // const timelineSegmentStore = useTimelineSegmentStore();
@@ -146,7 +144,7 @@ const isLoading = ref(true);
 const resultCardHeight = ref(0);
 
 const videoCard = ref(null);
-const compAreaCard = ref(null);
+const topViewCard = ref(null);
 const analysisViewHeight = ref(null);
 
 const setMaxCardHeight = () => {
@@ -155,7 +153,7 @@ const setMaxCardHeight = () => {
   });
 };
 
-watch([videoCard, compAreaCard], setMaxCardHeight, { flush: "post" });
+watch([videoCard, topViewCard], setMaxCardHeight, { flush: "post" });
 
 onMounted(() => {
   window.addEventListener("resize", setMaxCardHeight);
@@ -451,9 +449,9 @@ watch(tab, (newTab) => {
   const currentTab = analysisTabs.value[newTab]?.name;
 
   if (currentTab === "Annotation") {
-    markerStore.showReferenceMarker = true;
+    calibrationAssetStore.showVideoMarker = true;
   } else {
-    markerStore.showReferenceMarker = false;
+    calibrationAssetStore.showVideoMarker = false;
   }
 
   if (currentTab === "Position Data") {
@@ -463,15 +461,15 @@ watch(tab, (newTab) => {
   }
 });
 
-const previousShowReferenceMarker = ref(false);
+const previousShowVideoMarker = ref(false);
 watch(
-  () => markerStore.isAnyMarkerActive,
+  () => calibrationAssetStore.isAnyReferenceMarkerActive,
   (newValue) => {
     if (newValue) {
-      previousShowReferenceMarker.value = markerStore.showReferenceMarker;
-      markerStore.showReferenceMarker = true;
+      previousShowVideoMarker.value = calibrationAssetStore.showVideoMarker;
+      calibrationAssetStore.showVideoMarker = true;
     } else {
-      markerStore.showReferenceMarker = previousShowReferenceMarker.value;
+      calibrationAssetStore.showVideoMarker = previousShowVideoMarker.value;
     }
   }
 );
@@ -490,13 +488,6 @@ watch(
       1
     );
     console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
-  }
-);
-
-watch(
-  () => playerStore.videoFPS,
-  (newFPS) => {
-    console.log("FPS", newFPS);
   }
 );
 </script>

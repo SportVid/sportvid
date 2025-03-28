@@ -16,7 +16,7 @@
       />
 
       <!-- <div
-        v-for="(position, index) in markerStore.positionsNested[sliderValue]"
+        v-for="(position, index) in calibrationAssetStore.positionsNested[sliderValue]"
         v-show="bboxesStore.showBoundingBox"
         :key="index"
         class="bounding-box-position"
@@ -127,7 +127,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
-import { useMarkerStore } from "@/stores/marker";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
 
@@ -136,7 +136,7 @@ const videoContainer = ref(null);
 
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
-const markerStore = useMarkerStore();
+const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
 
 const volume = ref(playerStore.volume);
@@ -295,7 +295,7 @@ watch(volume, (newVolume) => {
 });
 
 watch(
-  () => markerStore.isAnyMarkerActive,
+  () => calibrationAssetStore.isAnyReferenceMarkerActive,
   async (newVal) => {
     if (!newVal) {
       await nextTick();

@@ -412,11 +412,14 @@
       "close": "Close",
       "title": "History"
     },
-    "annotation": {
-      "select_annotation": "Select Annotation",
-      "save_annotation": "Save Annotation",
-      "save": "Save",
-      "name": "Annotation Name"
+    "calibration_asset": {
+      "select": { "title": "Select Annotation" },
+      "save": {
+        "title": "Save Annotation",
+        "save": "Save",
+        "name": "Annotation Name",
+        "template": "Select Sport"
+      }
     },
     "position_data": {
       "upload": "Upload Position Data",
@@ -473,14 +476,20 @@
     "uploaded": "Uploaded:",
     "timelines": "Timelines:"
   },
-  "annotation_vis": {
-    "marker_menu": "Marker",
-    "view_ref_marker": "View Reference Marker",
-    "add_marker": "Add Marker",
-    "delete_marker": "Delete Marker",
-    "annotation_menu": "Annotation",
-    "save_annotation": "Save Annotation",
-    "select_annotation": "Select Annotation"
+  "calibration_asset_vis": {
+    "marker": {
+      "title": "Marker",
+      "view_vid_marker": "View Video Marker",
+      "add_ref_marker": "Add Reference Marker",
+      "delete_ref_marker": "Delete Reference Marker"
+    },
+    "calibration_asset": {
+      "title": "Calibration Asset",
+      "save": "Save Calibration Asset",
+      "select": "Select Calibration Asset",
+      "new": "New Calibration Asset",
+      "update": "Update Calibration Asset"
+    }
   },
   "pos_data_vis": {
     "no_bbox_data": "No position data has been calculated yet.<br> Please run the Bytetrack plugin or upload the position data manually.",

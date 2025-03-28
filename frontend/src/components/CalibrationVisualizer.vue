@@ -2,22 +2,22 @@
   <v-container class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
       <div
-        v-if="markerStore.isAddingMarker"
+        v-if="calibrationAssetStore.isAddingReferenceMarker"
         ref="overlayMarker"
         class="overlay-marker"
-        @click="markerStore.setMarker"
+        @click="calibrationAssetStore.setReferenceMarker"
         :style="{
-          top: compAreaStore.compAreaSize.top + 'px',
-          left: compAreaStore.compAreaSize.left + 'px',
-          width: compAreaStore.compAreaSize.width + 'px',
-          height: compAreaStore.compAreaSize.height + 'px',
+          top: topViewStore.topViewSize.top + 'px',
+          left: topViewStore.topViewSize.left + 'px',
+          width: topViewStore.topViewSize.width + 'px',
+          height: topViewStore.topViewSize.height + 'px',
         }"
       />
 
       <img
         ref="compAreaElement"
         class="visualizer-image"
-        :src="compAreaStore.currentSport.pitchImage"
+        :src="topViewStore.currentSport.pitchImage"
         @load="updateCompAreaSize"
         :style="{
           maxHeight: maxVideoHeight * 100 + 'vh',
@@ -26,54 +26,52 @@
       />
 
       <v-btn
-        v-for="m in filteredMarker"
+        v-for="m in filteredReferenceMarker"
         :key="m.id"
-        :disabled="markerStore.isAddingMarker"
-        :color="m.active || markerStore.hoveredReferenceMarker === m.id ? 'red' : 'grey'"
+        :disabled="calibrationAssetStore.isAddingReferenceMarker"
+        :color="m.active || calibrationAssetStore.hoveredVideoMarker === m.id ? 'red' : 'grey'"
         icon="mdi-circle"
         variant="plain"
         density="compact"
-        @click="(event) => markerStore.toggleMarker(event, m.id)"
+        @click="(event) => calibrationAssetStore.toggleReferenceMarker(event, m.id)"
         :style="{
           top:
             m.compAreaCoordsRel.y *
-              (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
-            (compAreaStore.compAreaSize.top +
-              ((1 - compAreaStore.currentSport.heightRel) / 2) *
-                compAreaStore.compAreaSize.height) +
+              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+            (topViewStore.topViewSize.top +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
             'px',
           left:
             m.compAreaCoordsRel.x *
-              (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
-            (compAreaStore.compAreaSize.left +
-              ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
+              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+            (topViewStore.topViewSize.left +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
             'px',
         }"
         class="marker-position"
       />
 
       <v-btn
-        v-for="m in filteredMarker"
+        v-for="m in filteredReferenceMarker"
         v-show="showDeleteButton"
         :key="'delete-' + m.id"
         color="red"
         icon="mdi-close"
         variant="plain"
         density="compact"
-        @click="markerStore.deleteMarker(m.id)"
+        @click="calibrationAssetStore.deleteReferenceMarker(m.id)"
         :style="{
           top:
             m.compAreaCoordsRel.y *
-              (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
-            (compAreaStore.compAreaSize.top +
-              ((1 - compAreaStore.currentSport.heightRel) / 2) *
-                compAreaStore.compAreaSize.height) +
+              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+            (topViewStore.topViewSize.top +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
             'px',
           left:
             m.compAreaCoordsRel.x *
-              (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
-            (compAreaStore.compAreaSize.left +
-              ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
+              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+            (topViewStore.topViewSize.left +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
             'px',
         }"
         class="delete-marker-position"
@@ -84,15 +82,15 @@
       <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
-            {{ compAreaStore.currentSport.title }}
+            {{ topViewStore.currentSport.title }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
           <v-list-item
-            v-for="(item, index) in compAreaStore.sports"
+            v-for="(item, index) in topViewStore.sports"
             :key="index"
             class="menu-item"
-            v-on:click="compAreaStore.onSportChange(index)"
+            v-on:click="topViewStore.onSportChange(index)"
           >
             <v-list-item-title>
               {{ item.title }}
@@ -103,40 +101,50 @@
 
       <v-menu location="top">
         <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" size="small"> {{ $t("annotation_vis.annotation_menu") }} </v-btn>
+          <v-btn v-bind="props" size="small">
+            {{ $t("calibration_asset_vis.calibration_asset.title") }}
+          </v-btn>
         </template>
 
         <v-list class="py-0" density="compact">
-          <v-list-item class="menu-item" @click="showModalAnnotationSave = true">
+          <v-list-item class="menu-item">
             <v-list-item-title>
-              {{ $t("annotation_vis.save_annotation") }}
+              {{ $t("calibration_asset_vis.calibration_asset.new") }}
             </v-list-item-title>
           </v-list-item>
 
-          <v-list-item class="menu-item" @click="showModalAnnotationSelect = true">
+          <v-list-item class="menu-item" @click="showModalCalibrationAssetSave = true">
             <v-list-item-title>
-              {{ $t("annotation_vis.select_annotation") }}
+              {{ $t("calibration_asset_vis.calibration_asset.save") }}
+            </v-list-item-title>
+          </v-list-item>
+
+          <v-list-item class="menu-item" @click="showModalCalibrationAssetSelect = true">
+            <v-list-item-title>
+              {{ $t("calibration_asset_vis.calibration_asset.select") }}
             </v-list-item-title>
           </v-list-item>
         </v-list>
       </v-menu>
-      <ModalAnnotationSave v-model="showModalAnnotationSave" />
-      <ModalAnnotationSelect v-model="showModalAnnotationSelect" />
+      <ModalCalibrationAssetSave v-model="showModalCalibrationAssetSave" />
+      <ModalCalibrationAssetSelect v-model="showModalCalibrationAssetSelect" />
 
       <v-menu location="top">
         <template v-slot:activator="{ props }">
-          <v-btn v-bind="props" size="small"> {{ $t("annotation_vis.marker_menu") }} </v-btn>
+          <v-btn v-bind="props" size="small">
+            {{ $t("calibration_asset_vis.marker.title") }}
+          </v-btn>
         </template>
         <v-list class="py-0" density="compact">
-          <v-list-item class="menu-item" @click="markerStore.viewReferenceMarker">
+          <v-list-item class="menu-item" @click="calibrationAssetStore.toggleVideoMarker">
             <v-list-item-title>
-              {{ $t("annotation_vis.view_ref_marker") }}
+              {{ $t("calibration_asset_vis.marker.view_vid_marker") }}
               <v-icon
                 :class="{
-                  'text-disabled': !markerStore.showReferenceMarker,
-                  'text-red': markerStore.showReferenceMarker,
+                  'text-disabled': !calibrationAssetStore.showVideoMarker,
+                  'text-red': calibrationAssetStore.showVideoMarker,
                 }"
-                class="ml-4 mb-1"
+                class="ml-12 mb-1"
                 size="small"
               >
                 mdi-check
@@ -144,15 +152,15 @@
             </v-list-item-title>
           </v-list-item>
 
-          <v-list-item class="menu-item" @click="handleAddMarker">
+          <v-list-item class="menu-item" @click="addReferenceMarker">
             <v-list-item-title>
-              {{ $t("annotation_vis.add_marker") }}
+              {{ $t("calibration_asset_vis.marker.add_ref_marker") }}
             </v-list-item-title>
           </v-list-item>
 
           <v-list-item class="menu-item" @click="showDeleteButton = !showDeleteButton">
             <v-list-item-title>
-              {{ $t("annotation_vis.delete_marker") }}
+              {{ $t("calibration_asset_vis.marker.delete_ref_marker") }}
             </v-list-item-title>
           </v-list-item>
         </v-list>
@@ -161,7 +169,7 @@
 
     <!-- <v-row>
       <v-list class="ma-2">
-        <v-list-item v-for="m in filteredMarker" :key="m.id">
+        <v-list-item v-for="m in filteredReferenceMarker" :key="m.id">
           <v-list-item-content>
             <v-list-item-title>
               {{ m.name }}:
@@ -186,22 +194,22 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
-import { useCompAreaStore } from "@/stores/comp_area";
-import { useMarkerStore } from "@/stores/marker";
+import { useTopViewStore } from "@/stores/top_view";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
-import ModalAnnotationSave from "@/components/ModalAnnotationSave.vue";
-import ModalAnnotationSelect from "@/components/ModalAnnotationSelect.vue";
+import ModalCalibrationAssetSave from "@/components/ModalCalibrationAssetSave.vue";
+import ModalCalibrationAssetSelect from "@/components/ModalCalibrationAssetSelect.vue";
 
-const compAreaStore = useCompAreaStore();
-const markerStore = useMarkerStore();
+const topViewStore = useTopViewStore();
+const calibrationAssetStore = useCalibrationAssetStore();
 const videoStore = useVideoStore();
 
-const showModalAnnotationSave = ref(false);
-const showModalAnnotationSelect = ref(false);
+const showModalCalibrationAssetSave = ref(false);
+const showModalCalibrationAssetSelect = ref(false);
 
 const compAreaElement = ref(null);
 
-const filteredMarker = computed(() => markerStore.filteredMarker);
+const filteredReferenceMarker = computed(() => calibrationAssetStore.filteredReferenceMarker);
 
 const showDeleteButton = ref(false);
 
@@ -218,7 +226,7 @@ const updateCompAreaSize = () => {
         left: rect.left,
       };
 
-      compAreaStore.setCompAreaSize(size);
+      topViewStore.setTopViewSize(size);
     }
   });
 };
@@ -228,18 +236,18 @@ const handleResize = () => {
 };
 
 const handleClickOverlayMarker = (event) => {
-  if (!markerStore.isAddingMarker || !overlayMarker.value) return;
+  if (!calibrationAssetStore.isAddingReferenceMarker || !overlayMarker.value) return;
   if (!overlayMarker.value.contains(event.target)) return;
 };
 
-const handleAddMarker = () => {
+const addReferenceMarker = () => {
   if (showDeleteButton.value) {
     showDeleteButton.value = false;
     nextTick(() => {
-      markerStore.addMarker();
+      calibrationAssetStore.addReferenceMarker();
     });
   } else {
-    markerStore.addMarker();
+    calibrationAssetStore.addReferenceMarker();
   }
 };
 
