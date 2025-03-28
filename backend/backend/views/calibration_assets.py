@@ -58,12 +58,12 @@ class CalibrationAssetsCreate(View):
                     data_db.marker_data.create(
                         name=marker.get("name"),
                         active=marker.get("active"),
-                        compAreaCoord_x=marker["compAreaCoordsRel"][0],
-                        compAreaCoord_y=marker["compAreaCoordsRel"][1],
-                        compAreaCoord_z=marker["compAreaCoordsRel"][2],
-                        videoCoord_x=marker["videoCoordsRel"][0],
-                        videoCoord_y=marker["videoCoordsRel"][1],
-                        videoCoord_z=marker["videoCoordsRel"][2]
+                        compAreaCoord_x=marker["compAreaCoordsRel"]["x"],
+                        compAreaCoord_y=marker["compAreaCoordsRel"]["y"],
+                        compAreaCoord_z=marker["compAreaCoordsRel"]["z"] if "z" in marker["compAreaCoordsRel"] else 0.0,
+                        videoCoord_x=marker["videoCoordsRel"]["x"],
+                        videoCoord_y=marker["videoCoordsRel"]["y"],
+                        videoCoord_z=marker["videoCoordsRel"]["z"] if "z" in marker["videoCoordsRel"] else 0.0,
                     )
                 
         except CalibrationAssets.DoesNotExist:
@@ -83,12 +83,12 @@ class CalibrationAssetsCreate(View):
                     data_db.marker_data.create(
                         name=marker.get("name"),
                         active=marker.get("active"),
-                        compAreaCoord_x=marker["compAreaCoordsRel"][0],
-                        compAreaCoord_y=marker["compAreaCoordsRel"][1],
-                        compAreaCoord_z=marker["compAreaCoordsRel"][2],
-                        videoCoord_x=marker["videoCoordsRel"][0],
-                        videoCoord_y=marker["videoCoordsRel"][1],
-                        videoCoord_z=marker["videoCoordsRel"][2]
+                        compAreaCoord_x=marker["compAreaCoordsRel"]["x"],
+                        compAreaCoord_y=marker["compAreaCoordsRel"]["y"],
+                        compAreaCoord_z=marker["compAreaCoordsRel"]["z"] if "z" in marker["compAreaCoordsRel"] else 0.0,
+                        videoCoord_x=marker["videoCoordsRel"]["x"],
+                        videoCoord_y=marker["videoCoordsRel"]["y"],
+                        videoCoord_z=marker["videoCoordsRel"]["z"] if "z" in marker["videoCoordsRel"] else 0.0,
                     )
 
         return JsonResponse({"status": "ok", "entry": data_db.to_dict()})
@@ -111,12 +111,12 @@ class CalibrationAssetsChange(View):
                     calibration_assets.marker_data.create(
                         name=marker.get("name"),
                         active=marker.get("active"),
-                        compAreaCoord_x=marker["compAreaCoordsRel"][0],
-                        compAreaCoord_y=marker["compAreaCoordsRel"][1],
-                        compAreaCoord_z=marker["compAreaCoordsRel"][2],
-                        videoCoord_x=marker["videoCoordsRel"][0],
-                        videoCoord_y=marker["videoCoordsRel"][1],
-                        videoCoord_z=marker["videoCoordsRel"][2]
+                        compAreaCoord_x=marker["compAreaCoordsRel"]["x"],
+                        compAreaCoord_y=marker["compAreaCoordsRel"]["y"],
+                        compAreaCoord_z=marker["compAreaCoordsRel"]["z"] if "z" in marker["compAreaCoordsRel"] else 0.0,
+                        videoCoord_x=marker["videoCoordsRel"]["x"],
+                        videoCoord_y=marker["videoCoordsRel"]["y"],
+                        videoCoord_z=marker["videoCoordsRel"]["z"] if "z" in marker["videoCoordsRel"] else 0.0,
                     )
 
             return JsonResponse({"status": "ok", "entry": calibration_assets.to_dict()})
