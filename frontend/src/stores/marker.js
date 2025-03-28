@@ -181,21 +181,17 @@ export const useMarkerStore = defineStore("marker", () => {
     if (isLoading.value || !name) return;
     isLoading.value = true;
     const params = {
-      // # TODO definitions of params,
-      // TODO create CalibrationAssets class backend/backend/models.py and link in backend/backend/urls.py
-      // TODO: create new view for CalibrationAssets DB I/O in backend/backend/views/?.py (c.f.annotation.py)
       name,
       marker_data: [...marker.value],
       video_id: playerStore.videoId,
     };
-    // TODO: implement point_correspondences/<create,get> etc.
     try {
       console.log(params);
-      // const res = await axios.post(`${config.API_LOCATION}/point_correspondences/create`, params);
-      // if (res.data.status === "ok") {
-      //   addToStore([res.data.entry]);
-      //   return res.data.entry.id;
-      // }
+      const res = await axios.post(`${config.API_LOCATION}/calibration_assets/create`, params);
+      if (res.data.status === "ok") {
+        addToStore([res.data.entry]);
+        return res.data.entry.id;
+      }
     } finally {
       isLoading.value = false;
     }
