@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { useVideoStore } from "./video";
@@ -163,6 +163,23 @@ export const useMarkerStore = defineStore("marker", () => {
     }
   };
 
+  const load_calibration_assets_list = async () => {
+    try {
+      const params = {};
+      if (playerStore.videoId) {
+        params.video_id = playerStore.videoId;
+      }
+      const res = await axios.get(`${config.API_LOCATION}/calibration_assets/list`, { params });
+      if (res.data.status === "ok") {
+        console.log("Available calibration assets:", res.data.entries);
+        updateStore(res.data.entries);
+        return res.data.entries;
+      }
+    } catch (error) {
+      console.error("Failed to list calibration assets:", error);
+    }
+  };
+
   const loadFromLocalStorage = () => {
     const storedAnnotations = JSON.parse(localStorage.getItem("annotations"));
     if (storedAnnotations) annotations.value = storedAnnotations;
@@ -175,8 +192,7 @@ export const useMarkerStore = defineStore("marker", () => {
   };
 
   const isLoading = ref(false);
-  //TODO: store annotations in db
-  // requires video_id, dict/list source / tgt point
+
   const create = async ({ name }) => {
     if (isLoading.value || !name) return;
     isLoading.value = true;
@@ -200,7 +216,7 @@ export const useMarkerStore = defineStore("marker", () => {
   const saveAnno = async (name) => {
     const id = await create({ name });
     if (id) {
-      console.log(`Annotation mit ID ${id} gespeichert`);
+      console.log(`Successfully saved calibration assets: ${id}`);
     }
   };
 
@@ -230,6 +246,12 @@ export const useMarkerStore = defineStore("marker", () => {
     });
   };
 
+  watch(() => playerStore.videoId, async (newId) => {
+    if (newId) {
+      await load_calibration_assets_list();
+    }
+  });
+
   return {
     marker,
     filteredMarker,
@@ -256,5 +278,6 @@ export const useMarkerStore = defineStore("marker", () => {
     addToStore,
     updateStore,
     saveAnno,
+    load_calibration_assets_list,
   };
 });
