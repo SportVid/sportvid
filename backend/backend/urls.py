@@ -229,6 +229,6 @@ urlpatterns = [
         "calibration_assets/update", views.CalibrationAssetsChange.as_view(), name="calibration_assets_change"
     ),
     path(
-        "calibration_assets/delete", views.CalibrationAssetsChange.as_view(), name="calibration_assets_change"
+        "calibration_assets/delete", views.CalibrationAssetsDelete.as_view(), name="calibration_assets_delete"
     ),
 ]

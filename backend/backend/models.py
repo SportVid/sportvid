@@ -694,10 +694,18 @@ class PointCorrespondence(models.Model):
 
     def to_dict(self):
         return {
-            "id": self.id.hex, # not required?
+            "id": self.id.hex,
             "name": self.name,
             "active": self.active,
-            "compAreaCoordsRel": [self.compAreaCoord_x, self.compAreaCoord_y, self.compAreaCoord_z],
-            "videoCoordsRel": [self.videoCoord_x, self.videoCoord_y, self.videoCoord_z]
+            "compAreaCoordsRel": {
+                "x": self.compAreaCoord_x,
+                "y": self.compAreaCoord_y,
+                "z": self.compAreaCoord_z
+            },
+            "videoCoordsRel": {
+                "x": self.videoCoord_x,
+                "y": self.videoCoord_y,
+                "z": self.videoCoord_z
+            }
         }
 

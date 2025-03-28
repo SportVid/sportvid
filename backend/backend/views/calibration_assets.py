@@ -49,22 +49,6 @@ class CalibrationAssetsCreate(View):
                 query_args["video__id"] = data.get("video_id")
 
             data_db = CalibrationAssets.objects.get(**query_args)
-
-            # update marker data if provided
-            if "marker_data" in data:
-                data_db.marker_data.all().delete()
-                # create new marker data points
-                for marker in data.get("marker_data"):
-                    data_db.marker_data.create(
-                        name=marker.get("name"),
-                        active=marker.get("active"),
-                        compAreaCoord_x=marker["compAreaCoordsRel"]["x"],
-                        compAreaCoord_y=marker["compAreaCoordsRel"]["y"],
-                        compAreaCoord_z=marker["compAreaCoordsRel"]["z"] if "z" in marker["compAreaCoordsRel"] else 0.0,
-                        videoCoord_x=marker["videoCoordsRel"]["x"],
-                        videoCoord_y=marker["videoCoordsRel"]["y"],
-                        videoCoord_z=marker["videoCoordsRel"]["z"] if "z" in marker["videoCoordsRel"] else 0.0,
-                    )
                 
         except CalibrationAssets.DoesNotExist:
             create_args = {"name": data.get("name"), "owner": request.user}
@@ -101,7 +85,10 @@ class CalibrationAssetsChange(View):
             
             if "name" in data:
                 calibration_assets.name = data.get("name")
-                calibration_assets.save()
+            if "template" in data:
+                calibration_assets.template = data.get("template")
+            
+            calibration_assets.save()
 
             if "marker_data" in data:
                 # Clear existing marker data
@@ -123,6 +110,22 @@ class CalibrationAssetsChange(View):
 
         except CalibrationAssets.DoesNotExist:
             return JsonResponse({"status": "error", "type": "not_exist"})
+        except Exception:
+            logger.exception(f'Failed to {__class__.__name__}')
+            return JsonResponse({"status": "error"})
+
+class CalibrationAssetsDelete(View):
+    @decode_and_authenticate(require_name=False)
+    def post(self, request, data):
+        try:
+            calibration_assets = CalibrationAssets.objects.get(id=data.get("id"))
+            calibration_assets.delete()
+            if "marker_data" in data:
+                for marker in data.get("marker_data"):
+                    marker.delete()
+            return JsonResponse({"status": "ok"})
+        except CalibrationAssets.DoesNotExist:
+            return JsonResponse({"status": "error", "type": "not_exist"})   
         except Exception:
             logger.exception(f'Failed to {__class__.__name__}')
             return JsonResponse({"status": "error"})
