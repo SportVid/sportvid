@@ -2,7 +2,7 @@
   <v-dialog v-model="dialog" width="600px">
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.annotation.save_annotation") }}
+        {{ $t("modal.calibration_asset.save.title") }}
 
         <v-spacer></v-spacer>
 
@@ -14,14 +14,21 @@
       <v-card-text class="d-flex align-center">
         <v-text-field
           v-model="name"
-          :label="$t('modal.annotation.name')"
+          :label="$t('modal.calibration_asset.save.name')"
           prepend-icon="mdi-pencil"
           variant="underlined"
           class="mr-6"
         />
 
-        <v-btn @click="saveAnnotation(name)" :disabled="!name" size="small">
-          {{ $t("modal.annotation.save") }}
+        <v-select
+          v-model="template"
+          :items="topViewStore.sports.map((sport) => sport.title)"
+          :label="$t('modal.calibration_asset.save.template')"
+          variant="underlined"
+        />
+
+        <v-btn @click="saveAnnotation(name, template)" :disabled="!name || !template" size="small">
+          {{ $t("modal.calibration_asset.save.save") }}
         </v-btn>
       </v-card-text>
     </v-card>
@@ -30,9 +37,11 @@
 
 <script setup>
 import { ref, watch } from "vue";
-import { useMarkerStore } from "@/stores/marker";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import { useTopViewStore } from "@/stores/top_view";
 
-const markerStore = useMarkerStore();
+const calibrationAssetStore = useCalibrationAssetStore();
+const topViewStore = useTopViewStore();
 
 const props = defineProps({
   modelValue: {
@@ -45,10 +54,10 @@ const emit = defineEmits();
 const dialog = ref(props.modelValue);
 
 const name = ref(null);
+const template = ref(null);
 
-const saveAnnotation = (name) => {
-  markerStore.saveAnno(name);
-  markerStore.saveAnnotation(name);
+const saveAnnotation = (name, template) => {
+  calibrationAssetStore.createCalibrationAsset(name, template);
   dialog.value = false;
 };
 

@@ -23,7 +23,7 @@
       <img
         ref="compAreaElement"
         class="visualizer-image"
-        :src="compAreaStore.currentSport.pitchImage"
+        :src="topViewStore.currentSport.pitchImage"
         @load="updateCompAreaSize"
         :style="{
           maxHeight: maxVideoHeight * 100 + 'vh',
@@ -38,16 +38,16 @@
         :style="{
           top:
             (position.bbox_top + position.bbox_height) *
-              (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
-            (compAreaStore.compAreaSize.top +
-              ((1 - compAreaStore.currentSport.heightRel) / 2) *
-                compAreaStore.compAreaSize.height) +
+              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+            (topViewStore.topViewSize.top +
+              ((1 - topViewStore.currentSport.heightRel) / 2) *
+                topViewStore.topViewSize.height) +
             'px',
           left:
             (position.bbox_left + position.bbox_width / 2) *
-              (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
-            (compAreaStore.compAreaSize.left +
-              ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
+              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+            (topViewStore.topViewSize.left +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
             'px',
           backgroundColor: `${position.team}`,
         }"
@@ -61,16 +61,15 @@
         :style="{
           top:
             (position.y + position.h) *
-              (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
-            (compAreaStore.compAreaSize.top +
-              ((1 - compAreaStore.currentSport.heightRel) / 2) *
-                compAreaStore.compAreaSize.height) +
+              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+            (topViewStore.topViewSize.top +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
             'px',
           left:
             (position.x + position.w / 2) *
-              (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
-            (compAreaStore.compAreaSize.left +
-              ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
+              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+            (topViewStore.topViewSize.left +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
             'px',
           backgroundColor: position.team,
         }"
@@ -103,15 +102,15 @@
       <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
-            {{ compAreaStore.currentSport.title }}
+            {{ topViewStore.currentSport.title }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
           <v-list-item
-            v-for="(item, index) in compAreaStore.sports"
+            v-for="(item, index) in topViewStore.sports"
             :key="index"
             class="menu-item"
-            v-on:click="compAreaStore.onSportChange(index)"
+            v-on:click="topViewStore.onSportChange(index)"
           >
             <v-list-item-title class="my-0">
               {{ item.title }}
@@ -251,7 +250,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
-import { useCompAreaStore } from "@/stores/comp_area";
+import { useTopViewStore } from "@/stores/top_view";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useVideoStore } from "@/stores/video";
 import { getTimecode } from "@/plugins/time";
@@ -259,7 +258,7 @@ import { Delaunay } from "d3-delaunay";
 import ModalBboxDataSelect from "@/components/ModalBboxDataSelect.vue";
 
 const playerStore = usePlayerStore();
-const compAreaStore = useCompAreaStore();
+const topViewStore = useTopViewStore();
 const bboxesStore = useBboxesStore();
 const videoStore = useVideoStore();
 
@@ -295,7 +294,7 @@ const updateCompAreaSize = () => {
         left: rect.left,
       };
 
-      compAreaStore.setCompAreaSize(size);
+      topViewStore.setTopViewSize(size);
     }
   });
 };
@@ -336,7 +335,7 @@ const computeConvexHull = (points) => {
 };
 
 const convexHullPlayer = computed(() => {
-  if (!compAreaStore.compAreaSize || !bboxesStore.positionsNested) {
+  if (!topViewStore.topViewSize || !bboxesStore.positionsNested) {
     return [];
   }
 
@@ -350,14 +349,14 @@ const convexHullPlayer = computed(() => {
       teams[position.team].push({
         top:
           (position.bbox_top + position.bbox_height) *
-            (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
-          (compAreaStore.compAreaSize.top +
-            ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height),
+            (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+          (topViewStore.topViewSize.top +
+            ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height),
         left:
           (position.bbox_left + position.bbox_width / 2) *
-            (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
-          (compAreaStore.compAreaSize.left +
-            ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width),
+            (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+          (topViewStore.topViewSize.left +
+            ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width),
       });
     });
 
@@ -373,16 +372,16 @@ const computeVoronoi = (players) => {
 
   const delaunay = Delaunay.from(players.map((p) => [p.left, p.top]));
   const voronoi = delaunay.voronoi([
-    compAreaStore.compAreaSize.left +
-      ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width,
-    compAreaStore.compAreaSize.top +
-      ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height,
-    compAreaStore.compAreaSize.left +
-      ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width +
-      compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel,
-    compAreaStore.compAreaSize.top +
-      ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height +
-      compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel,
+    topViewStore.topViewSize.left +
+      ((1 - topViewStore.currentSport.widthRel) / 2) * compAreatopViewStoreStore.topViewSize.width,
+    topViewStore.topViewSize.top +
+      ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height,
+    topViewStore.topViewSize.left +
+      ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+      topViewStore.topViewSize.width * topViewStore.currentSport.widthRel,
+    topViewStore.topViewSize.top +
+      ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+      topViewStore.topViewSize.height * topViewStore.currentSport.heightRel,
   ]);
 
   return players
@@ -394,7 +393,7 @@ const computeVoronoi = (players) => {
 };
 
 const voronoiCells = computed(() => {
-  if (!compAreaStore.compAreaSize || !bboxesStore.positionsNested) {
+  if (!topViewStore.topViewSize || !bboxesStore.positionsNested) {
     return [];
   }
 
@@ -402,16 +401,16 @@ const voronoiCells = computed(() => {
     const allPlayers = framePositions.map((player) => ({
       top:
         (player.bbox_top + player.bbox_height) *
-          compAreaStore.compAreaSize.height *
-          compAreaStore.currentSport.heightRel +
-        (compAreaStore.compAreaSize.top +
-          ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height),
+          topViewStore.topViewSize.height *
+          topViewStore.currentSport.heightRel +
+        (topViewStore.topViewSize.top +
+          ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height),
       left:
         (player.bbox_left + player.bbox_width / 2) *
-          compAreaStore.compAreaSize.width *
-          compAreaStore.currentSport.widthRel +
-        (compAreaStore.compAreaSize.left +
-          ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width),
+          topViewStore.topViewSize.width *
+          topViewStore.currentSport.widthRel +
+        (topViewStore.topViewSize.left +
+          ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width),
       team: player.team,
     }));
 

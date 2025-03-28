@@ -2,7 +2,7 @@
   <v-dialog v-model="dialog" width="600px">
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.annotation.select_annotation") }}
+        {{ $t("modal.calibration_asset.select.title") }}
 
         <v-spacer></v-spacer>
 
@@ -14,9 +14,9 @@
       <v-card-text>
         <v-list density="compact" style="height: 210px; overflow-y: auto">
           <v-list-item
-            v-for="(_, key) in markerStore.annotations"
+            v-for="(asset, key) in calibrationAssetStore.calibrationAssetsList"
             :key="key"
-            @click="loadAnnotation(key)"
+            @click="loadCalibrationAsset(asset.id)"
             class="mr-4"
           >
             <template v-slot:prepend>
@@ -25,12 +25,12 @@
                 color="red"
                 variant="plain"
                 class="mr-2"
-                @click="markerStore.deleteAnnotation(key)"
+                @click.stop="calibrationAssetStore.deleteCalibrationAsset(asset.id)"
               >
                 <v-icon>mdi-delete</v-icon>
               </v-btn>
             </template>
-            {{ key }}
+            {{ asset.name }}
           </v-list-item>
         </v-list>
       </v-card-text>
@@ -40,9 +40,9 @@
 
 <script setup>
 import { ref, onMounted, watch } from "vue";
-import { useMarkerStore } from "@/stores/marker";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 
-const markerStore = useMarkerStore();
+const calibrationAssetStore = useCalibrationAssetStore();
 
 const props = defineProps({
   modelValue: {
@@ -54,13 +54,13 @@ const emit = defineEmits();
 
 const dialog = ref(props.modelValue);
 
-const loadAnnotation = (name) => {
-  markerStore.loadAnnotation(name);
+const loadCalibrationAsset = (id) => {
+  calibrationAssetStore.loadCalibrationAsset(id);
   dialog.value = false;
 };
 
 onMounted(() => {
-  markerStore.loadFromLocalStorage();
+  calibrationAssetStore.loadCalibrationAssetsList();
 });
 
 watch(

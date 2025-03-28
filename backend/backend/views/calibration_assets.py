@@ -51,7 +51,7 @@ class CalibrationAssetsCreate(View):
             data_db = CalibrationAssets.objects.get(**query_args)
                 
         except CalibrationAssets.DoesNotExist:
-            create_args = {"name": data.get("name"), "owner": request.user}
+            create_args = {"name": data.get("name"), "template": data.get("template"), "owner": request.user}
             if "video_id" in data:
                 try:
                     video_db = Video.objects.get(id=data.get("video_id"))
