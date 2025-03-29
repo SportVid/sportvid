@@ -9,7 +9,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
   const pluginRunStore = usePluginRunStore();
   const pluginRunResultStore = usePluginRunResultStore();
 
-  const bboxData = ref([]);
+  const bboxData = ref({});
   const bboxDataInterpolated = ref([]);
   const bboxDataLoaded = ref(false);
 

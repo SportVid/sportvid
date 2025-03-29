@@ -1,6 +1,6 @@
 <template>
   <v-card
-    :class="['d-flex', 'flex-column', 'ma-6']"
+    :class="['d-flex', 'flex-column']"
     style="text-align: center"
     flat
     color="transparent"

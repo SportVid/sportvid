@@ -477,17 +477,32 @@ watch(
 watch(
   () => bboxesStore.setBboxData(bboxesStore.bboxPluginRun),
   (newBboxes) => {
-    if (newBboxes) {
-      bboxesStore.bboxData = newBboxes;
-      console.log(bboxesStore.bboxPluginRun);
-      console.log("bboxData", bboxesStore.bboxData);
+    if (newBboxes && newBboxes.length > 0) {
+      const groupedData = {};
+
+      newBboxes.forEach((position) => {
+        const { time } = position;
+
+        if (!groupedData[time]) {
+          groupedData[time] = [];
+        }
+
+        groupedData[time].push(position);
+      });
+
+      bboxesStore.bboxData = groupedData;
+      console.log("datss:", bboxesStore.bboxData);
+      // bboxesStore.bboxData = newBboxes;
+      // console.log(bboxesStore.bboxPluginRun);
+      // console.log("bboxData", bboxesStore.bboxData);
+
+      // bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBoundingBoxes(
+      //   bboxesStore.bboxData,
+      //   playerStore.videoFPS,
+      //   1
+      // );
+      // console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
     }
-    bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBoundingBoxes(
-      bboxesStore.bboxData,
-      playerStore.videoFPS,
-      1
-    );
-    console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
   }
 );
 </script>
