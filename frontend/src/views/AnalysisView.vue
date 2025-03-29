@@ -53,7 +53,7 @@
             :style="{ maxHeight: analysisViewHeight + 'px' }"
           >
             <v-row class="sticky-tabs-bar" justify="center">
-              <v-tabs fixed-tabs slider-color="primary" v-model="tab">
+              <v-tabs fixed-tabs slider-color="primary" v-model="analysisTab">
                 <v-tab v-for="analysisTab in analysisTabs" :key="analysisTab.id">
                   <span>{{ analysisTab.name }}</span>
                 </v-tab>
@@ -62,7 +62,7 @@
 
             <v-row class="flex-grow-1">
               <v-col>
-                <v-tabs-window v-model="tab">
+                <v-tabs-window v-model="analysisTab">
                   <v-tabs-window-item v-for="analysisTab in analysisTabs" :key="analysisTab.id">
                     <CalibrationVisualizer v-if="analysisTab.name === 'Calibration'" />
                     <PosDataVisualizer v-if="analysisTab.name === 'Position Data'" />
@@ -78,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
@@ -93,7 +93,6 @@ import { useBboxesStore } from "@/stores/bboxes";
 // import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 // import { useShotStore } from "@/stores/shot";
 // import * as Keyboard from "../plugins/keyboard";
-
 import VideoPlayer from "@/components/VideoPlayer.vue";
 import PosDataVisualizer from "@/components/PosDataVisualizer.vue";
 import CalibrationVisualizer from "@/components/CalibrationVisualizer.vue";
@@ -109,13 +108,7 @@ import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import PersonGraph from "@/components/PersonGraph.vue";
 // import ClusterTimelineItemOverview from "@/components/ClusterTimelineItemOverview.vue";
 
-const analysisTabs = ref([
-  { id: "1", name: "Calibration" },
-  { id: "2", name: "Position Data" },
-]);
-
 const route = useRoute();
-
 const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
@@ -129,50 +122,116 @@ const bboxesStore = useBboxesStore();
 // const clusterTimelineItemStore = useClusterTimelineItemStore();
 // const shotStore = useShotStore();
 
-// const fetchPluginTimer = ref(null);
-// const selectedShotsProxy = ref(null);
-// const selectedFaceClusteringProxy = ref(null);
-// const selectedPlaceClusteringProxy = ref(null);
-// const selectedTimelineProxy = ref(null);
-const tab = ref(0);
-// const addedAnnotation = ref(null);
-// const labels = ref([]);
-// const selectedLabel = ref(null);
-// const annotationsLUT = ref({});
-// const annotationDialog = ref({ show: false });
+const analysisTab = ref(0);
+const analysisTabs = ref([
+  { id: "1", name: "Calibration" },
+  { id: "2", name: "Position Data" },
+]);
+watch(analysisTab, (newTab) => {
+  const currentTab = analysisTabs.value[newTab]?.name;
+
+  if (currentTab === "Annotation") {
+    calibrationAssetStore.showVideoMarker = true;
+  } else {
+    calibrationAssetStore.showVideoMarker = false;
+  }
+
+  if (currentTab === "Position Data") {
+    bboxesStore.showBoundingBox = true;
+  } else {
+    bboxesStore.showBoundingBox = false;
+  }
+});
+
 const isLoading = ref(true);
-const resultCardHeight = ref(0);
+const fetchData = async ({ addResults = true }) => {
+  try {
+    await videoStore.fetch({
+      videoId: route.params.id,
+      addResults,
+    });
+  } catch (error) {
+    console.error("Fehler beim Abrufen der Daten:", error);
+  }
+};
+onMounted(async () => {
+  try {
+    await fetchData({ addResults: true });
+  } catch (error) {
+    console.error("Fehler beim Laden der Daten:", error);
+  } finally {
+    isLoading.value = false;
+  }
+});
 
 const videoCard = ref(null);
 const topViewCard = ref(null);
 const analysisViewHeight = ref(null);
-
 const setMaxCardHeight = () => {
   nextTick(() => {
     analysisViewHeight.value = window.innerHeight - 64 - 40;
   });
 };
-
+onMounted(() => {
+  setMaxCardHeight();
+  window.addEventListener("resize", setMaxCardHeight);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", setMaxCardHeight);
+});
 watch([videoCard, topViewCard], setMaxCardHeight, { flush: "post" });
 
-onMounted(() => {
-  window.addEventListener("resize", setMaxCardHeight);
-  setMaxCardHeight();
-});
+const previousShowVideoMarker = ref(false);
+watch(
+  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  (newValue) => {
+    if (newValue) {
+      previousShowVideoMarker.value = calibrationAssetStore.showVideoMarker;
+      calibrationAssetStore.showVideoMarker = true;
+    } else {
+      calibrationAssetStore.showVideoMarker = previousShowVideoMarker.value;
+    }
+  }
+);
 
-// const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
+watch(
+  () => bboxesStore.setBboxData(bboxesStore.bboxPluginRun),
+  (newBboxes) => {
+    if (newBboxes && newBboxes.length > 0) {
+      const groupedData = {};
+
+      newBboxes.forEach((position) => {
+        const { time } = position;
+
+        if (!groupedData[time]) {
+          groupedData[time] = [];
+        }
+
+        groupedData[time].push(position);
+      });
+
+      bboxesStore.bboxData = groupedData;
+
+      // console.log(bboxesStore.bboxPluginRun);
+      // console.log("bboxData", bboxesStore.bboxData);
+
+      // bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBoundingBoxes(
+      //   bboxesStore.bboxData,
+      //   playerStore.videoFPS,
+      //   1
+      // );
+      // console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
+    }
+  }
+);
+
 // const timelines = computed(() => timelineStore.forVideo(route.params.id));
 // const timelineNames = computed(() => timelines.value.map((e) => e.name));
-// const faceClusters = computed(() =>
-//   clusterTimelineItemStore.latestFaceClustering()
-// );
-// const placeClusters = computed(() =>
-//   clusterTimelineItemStore.latestPlaceClustering()
-// );
+
 // const shotsList = computed(() =>
 //   shotStore.shotsList.map((e) => ({ text: e.name, value: e.index }))
 // );
-
+// const selectedShotsProxy = ref(null);
 // const selectedShots = computed({
 //   get() {
 //     const selectedShots = shotStore.selectedShots;
@@ -186,6 +245,16 @@ onMounted(() => {
 //   },
 // });
 
+// const faceClusteringList = computed(() =>
+//   clusterTimelineItemStore.faceClusteringList.map((e) => ({
+//     text: e.name,
+//     value: e.index,
+//   }))
+// );
+// const faceClusters = computed(() =>
+//   clusterTimelineItemStore.latestFaceClustering()
+// );
+// const selectedFaceClusteringProxy = ref(null);
 // const selectedFaceClustering = computed({
 //   get() {
 //     const selectedFaceClustering =
@@ -200,13 +269,16 @@ onMounted(() => {
 //   },
 // });
 
-// const faceClusteringList = computed(() =>
-//   clusterTimelineItemStore.faceClusteringList.map((e) => ({
+// const placeClusteringList = computed(() =>
+//   clusterTimelineItemStore.placeClusteringList.map((e) => ({
 //     text: e.name,
 //     value: e.index,
 //   }))
 // );
-
+// const placeClusters = computed(() =>
+//   clusterTimelineItemStore.latestPlaceClustering()
+// );
+// const selectedPlaceClusteringProxy = ref(null);
 // const selectedPlaceClustering = computed({
 //   get() {
 //     const selectedPlaceClustering =
@@ -223,13 +295,7 @@ onMounted(() => {
 //   },
 // });
 
-// const placeClusteringList = computed(() =>
-//   clusterTimelineItemStore.placeClusteringList.map((e) => ({
-//     text: e.name,
-//     value: e.index,
-//   }))
-// );
-
+// const selectedTimelineProxy = ref(null);
 // const selectedTimeline = computed({
 //   get() {
 //     return selectedTimelineProxy === null
@@ -241,31 +307,33 @@ onMounted(() => {
 //   },
 // });
 
-const onVideoResize = (size) => {
-  resultCardHeight.value = resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
+// const fetchPluginTimer = ref(null);
+// const fetchPlugin = async () => {
+//   await pluginRunStore.fetchForVideo({
+//   videoId: route.params.id,
+//   fetchResults: true,
+//   });
+// };
+// const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
+// watch(
+//   pluginInProgress,
+//   (newState) => {
+//     if (newState) {
+//       fetchPluginTimer = setInterval(() => {
+//         fetchPlugin({ addResults: false });
+//       }, 1000);
+//     } else {
+//       clearInterval(fetchPluginTimer);
+//     }
+//   }
+// );
 
-  videoStore.setVideoSize(size);
-};
-
+// const annotationDialog = ref({ show: false });
 // const onAnnotateSegment = () => {
 //   if (timelineSegmentStore.lastSelected) {
 //     annotationDialog.show = true;
 //   }
 // };
-
-//const fetchData = async ({ addResults = true }) => {
-// await videoStore.fetch({
-//  videoId: route.params.id,
-// addResults,
-// });
-//};
-
-//const fetchPlugin = async () => {
-// await pluginRunStore.fetchForVideo({
-// videoId: route.params.id,
-// fetchResults: true,
-// });
-//};
 
 // const onKeyDown = (event) => {
 //   const lastSelectedTimeline = timelineStore.lastSelected;
@@ -377,134 +445,6 @@ const onVideoResize = (size) => {
 //     });
 //   }
 // };
-
-// watch(
-//   pluginInProgress,
-//   (newState) => {
-//     if (newState) {
-//       fetchPluginTimer = setInterval(() => {
-//         fetchPlugin({ addResults: false });
-//       }, 1000);
-//     } else {
-//       clearInterval(fetchPluginTimer);
-//     }
-//   }
-// );
-
-watch(
-  () => isLoading,
-  (value) => {
-    if (!value) {
-      resultCardHeight.value = resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
-    }
-  }
-);
-
-// onMounted(async () => {
-//   await fetchData({ addResults: true });
-//   isLoading = false;
-
-//   console.log(playerStore.videoUrl);
-// });
-
-// onMounted(async () => {
-//   try {
-//     await fetchData({ addResults: true });
-//     isLoading.value = false;
-//     console.log(playerStore.videoUrl);
-//   } catch (error) {
-//     isLoading.value = false;
-//     console.log(playerStore.videoUrl);
-//     console.error("Fehler im mounted Hook:", error);
-
-//   }
-// });
-
-onMounted(async () => {
-  try {
-    await fetchData({ addResults: true });
-  } catch (error) {
-    console.error("Fehler beim Laden der Daten:", error);
-  } finally {
-    isLoading.value = false;
-  }
-});
-
-const fetchData = async ({ addResults = true }) => {
-  try {
-    const data = await videoStore.fetch({
-      videoId: route.params.id,
-      addResults,
-    });
-
-    if (!data) {
-      throw new Error("Daten konnten nicht abgerufen werden.");
-    }
-  } catch (error) {
-    console.error("Fehler beim Abrufen der Daten:", error);
-  }
-};
-
-watch(tab, (newTab) => {
-  const currentTab = analysisTabs.value[newTab]?.name;
-
-  if (currentTab === "Annotation") {
-    calibrationAssetStore.showVideoMarker = true;
-  } else {
-    calibrationAssetStore.showVideoMarker = false;
-  }
-
-  if (currentTab === "Position Data") {
-    bboxesStore.showBoundingBox = true;
-  } else {
-    bboxesStore.showBoundingBox = false;
-  }
-});
-
-const previousShowVideoMarker = ref(false);
-watch(
-  () => calibrationAssetStore.isAnyReferenceMarkerActive,
-  (newValue) => {
-    if (newValue) {
-      previousShowVideoMarker.value = calibrationAssetStore.showVideoMarker;
-      calibrationAssetStore.showVideoMarker = true;
-    } else {
-      calibrationAssetStore.showVideoMarker = previousShowVideoMarker.value;
-    }
-  }
-);
-
-watch(
-  () => bboxesStore.setBboxData(bboxesStore.bboxPluginRun),
-  (newBboxes) => {
-    if (newBboxes && newBboxes.length > 0) {
-      const groupedData = {};
-
-      newBboxes.forEach((position) => {
-        const { time } = position;
-
-        if (!groupedData[time]) {
-          groupedData[time] = [];
-        }
-
-        groupedData[time].push(position);
-      });
-
-      bboxesStore.bboxData = groupedData;
-      console.log("datss:", bboxesStore.bboxData);
-      // bboxesStore.bboxData = newBboxes;
-      // console.log(bboxesStore.bboxPluginRun);
-      // console.log("bboxData", bboxesStore.bboxData);
-
-      // bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBoundingBoxes(
-      //   bboxesStore.bboxData,
-      //   playerStore.videoFPS,
-      //   1
-      // );
-      // console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
-    }
-  }
-);
 </script>
 
 <style scoped>
