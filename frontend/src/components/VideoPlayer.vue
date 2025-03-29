@@ -28,8 +28,21 @@
           border: `2px solid ${position.team}`,
         }"
       /> -->
-      <div
+      <!-- <div
         v-for="(position, index) in bboxData.filter((p) => p.time === playerStore.currentTime)"
+        v-show="bboxesStore.showBoundingBox"
+        :key="index"
+        class="bounding-box-position"
+        :style="{
+          top: position.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
+          left: position.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
+          width: position.w * videoStore.videoSize.width + 'px',
+          height: position.h * videoStore.videoSize.height + 'px',
+          border: `2px solid red`,
+        }"
+      /> -->
+      <div
+        v-for="(position, index) in bboxesStore.bboxData[playerStore.currentTime]"
         v-show="bboxesStore.showBoundingBox"
         :key="index"
         class="bounding-box-position"
@@ -148,7 +161,7 @@ const playing = computed(() => playerStore.playing);
 const targetTime = computed(() => playerStore.targetTime);
 
 const progress = ref(0);
-const bboxData = ref([]);
+const bboxData = ref({});
 let updateTimer = null;
 
 const currentSpeed = ref({ title: "1.00", value: 1.0 });
@@ -262,11 +275,6 @@ const handleResize = () => {
 onMounted(() => {
   updateVideoSize();
   startUpdatingTime();
-  nextTick(() => {
-    bboxData.value = bboxesStore.bboxData.filter(
-      (position) => position.time === playerStore.currentTime
-    );
-  });
   window.addEventListener("resize", handleResize);
   window.addEventListener("scroll", handleResize);
 });
@@ -315,9 +323,6 @@ watch(
   () => playerStore.currentTime,
   (newTime) => {
     progress.value = (newTime / playerStore.videoDuration) * 100;
-    nextTick(() => {
-      bboxData.value = bboxesStore.bboxData.filter((position) => position.time === newTime);
-    });
   }
 );
 

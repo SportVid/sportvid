@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" width="600px">
+  <v-dialog v-model="dialog" width="800px">
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("modal.calibration_asset.save.title") }}
@@ -25,6 +25,7 @@
           :items="topViewStore.sports.map((sport) => sport.title)"
           :label="$t('modal.calibration_asset.save.template')"
           variant="underlined"
+          class="mr-6"
         />
 
         <v-btn @click="saveAnnotation(name, template)" :disabled="!name || !template" size="small">
