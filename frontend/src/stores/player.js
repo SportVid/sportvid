@@ -11,7 +11,7 @@ export const usePlayerStore = defineStore("player", () => {
   const ended = ref(false);
   const isSynced = ref(true);
 
-  const hiddenVolume = ref(1.0);
+  const hiddenVolume = ref(100);
   const mute = ref(false);
 
   const syncTime = ref(true);
@@ -42,9 +42,7 @@ export const usePlayerStore = defineStore("player", () => {
     return video.value && "url" in video.value ? video.value.url : null;
   });
 
-  const volume = computed(() => {
-    return mute.value ? 0 : Math.round(hiddenVolume.value * 100);
-  });
+  const volume = computed(() => (mute.value ? 0 : hiddenVolume.value));
 
   const clearStore = () => {
     video.value = null;
@@ -64,8 +62,8 @@ export const usePlayerStore = defineStore("player", () => {
     selectedTimeRange.value.end = time;
   };
 
-  const setVolume = (volume) => {
-    hiddenVolume.value = volume / 100;
+  const setVolume = (newVolume) => {
+    hiddenVolume.value = Math.round(newVolume);
     if (hiddenVolume.value > 0) {
       mute.value = false;
     }

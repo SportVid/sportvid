@@ -13,9 +13,13 @@
             color="transparent"
             width="210"
           >
-            <v-btn :disabled="selectedVideosIds.length == 0" @click="showModalPlugin = true">
-              <v-icon color="primary" :disabled="selectedVideosIds.length == 0">mdi-plus</v-icon>
-              {{ $t("video_view.run_plugin") }}
+            <v-btn
+              :disabled="selectedVideosIds.length == 0"
+              :color="selectedVideosIds.length === 0 ? 'light-grey' : 'primary'"
+              @click="showModalPlugin = true"
+            >
+              <v-icon>mdi-plus-circle</v-icon>
+              <p class="ms-2">{{ $t("video_view.run_plugin") }}</p>
             </v-btn>
             <ModalPlugin v-model="showModalPlugin" :videoIds="selectedVideosIds" />
           </v-card>
@@ -101,10 +105,10 @@ import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTimelineStore } from "@/stores/timeline";
+import { getDisplayTime } from "@/plugins/time";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalVideoUpload from "@/components/ModalVideoUpload.vue";
 import ModalVideoRename from "@/components/ModalVideoRename.vue";
-import { getDisplayTime } from "@/plugins/time";
 
 const router = useRouter();
 const videoStore = useVideoStore();
@@ -113,10 +117,9 @@ const pluginRunStore = usePluginRunStore();
 const timelineStore = useTimelineStore();
 
 const showModalPlugin = ref(false);
-const selectedVideos = ref({});
-const fetchPluginTimer = ref(null);
 
 const videos = computed(() => videoStore.all);
+const selectedVideos = ref({});
 const selectedVideosIds = computed(() =>
   Object.entries(selectedVideos.value)
     .filter(([, isSelected]) => isSelected)
@@ -133,7 +136,18 @@ const videosProgress = computed(() => {
   });
   return progress;
 });
+watch(
+  videosProgress,
+  (newState, oldState) => {
+    if (!oldState) return;
+    if (Object.keys(newState).some((k) => oldState[k] !== newState[k])) {
+      fetchData(true);
+    }
+  },
+  { deep: true }
+);
 
+const fetchPluginTimer = ref(null);
 const fetchData = async (fetchTimelines = false) => {
   await videoStore.fetchAll();
   await pluginRunStore.fetchAll({ addResults: false });
@@ -141,14 +155,9 @@ const fetchData = async (fetchTimelines = false) => {
     await timelineStore.fetchAll({ addResultsType: true });
   }
 };
-
-const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
-const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
-
 onMounted(() => {
   fetchData();
 });
-
 watch(
   () => userStore.loggedIn,
   (newValue, oldValue) => {
@@ -157,7 +166,6 @@ watch(
     }
   }
 );
-
 watch(
   () => pluginRunStore.pluginInProgress,
   (newState) => {
@@ -171,6 +179,9 @@ watch(
   },
   { immediate: true }
 );
+
+const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
+const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
 </script>
 
 <style>

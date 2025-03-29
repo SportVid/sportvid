@@ -8,7 +8,7 @@
   >
     <v-dialog v-model="dialog" max-width="1000">
       <template v-slot:activator="{ props }">
-        <v-btn :disabled="!canUpload" color="primary" v-bind="props">
+        <v-btn :disabled="!canUpload" :color="!canUpload ? 'light-grey' : 'primary'" v-bind="props">
           {{ $t("modal.video.upload.link") }}
           <v-icon class="ms-2">mdi-plus-circle</v-icon>
         </v-btn>
