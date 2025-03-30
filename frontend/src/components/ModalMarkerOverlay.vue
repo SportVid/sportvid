@@ -18,7 +18,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
@@ -65,7 +65,7 @@ onMounted(() => {
   window.addEventListener("resize", updateVideoSize);
 });
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   window.removeEventListener("click", handleClickOverlayReferenceMarker);
   window.removeEventListener("resize", updateVideoSize);
 });

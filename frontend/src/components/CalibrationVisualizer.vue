@@ -15,10 +15,10 @@
       />
 
       <img
-        ref="compAreaElement"
+        ref="topViewElement"
         class="visualizer-image"
         :src="topViewStore.currentSport.pitchImage"
-        @load="updateCompAreaSize"
+        @load="updateTopViewSize"
         :style="{
           maxHeight: maxVideoHeight * 100 + 'vh',
           height: videoStore.videoSize.height + 'px',
@@ -193,7 +193,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
@@ -204,42 +204,14 @@ const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const videoStore = useVideoStore();
 
+const topViewElement = ref(null);
+
 const showModalCalibrationAssetSave = ref(false);
 const showModalCalibrationAssetSelect = ref(false);
-
-const compAreaElement = ref(null);
 
 const filteredReferenceMarker = computed(() => calibrationAssetStore.filteredReferenceMarker);
 
 const showDeleteButton = ref(false);
-
-const overlayMarker = ref(null);
-
-const updateCompAreaSize = () => {
-  nextTick(() => {
-    if (compAreaElement.value) {
-      const rect = compAreaElement.value.getBoundingClientRect();
-      const size = {
-        width: rect.width,
-        height: rect.height,
-        top: rect.top,
-        left: rect.left,
-      };
-
-      topViewStore.setTopViewSize(size);
-    }
-  });
-};
-
-const handleResize = () => {
-  updateCompAreaSize();
-};
-
-const handleClickOverlayMarker = (event) => {
-  if (!calibrationAssetStore.isAddingReferenceMarker || !overlayMarker.value) return;
-  if (!overlayMarker.value.contains(event.target)) return;
-};
-
 const addReferenceMarker = () => {
   if (showDeleteButton.value) {
     showDeleteButton.value = false;
@@ -251,36 +223,55 @@ const addReferenceMarker = () => {
   }
 };
 
+const overlayMarker = ref(null);
+const handleClickOverlayMarker = (event) => {
+  if (!calibrationAssetStore.isAddingReferenceMarker || !overlayMarker.value) return;
+  if (!overlayMarker.value.contains(event.target)) return;
+};
+onMounted(() => {
+  window.addEventListener("click", handleClickOverlayMarker);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("click", handleClickOverlayMarker);
+});
+
+const updateTopViewSize = () => {
+  nextTick(() => {
+    if (topViewElement.value) {
+      const rect = topViewElement.value.getBoundingClientRect();
+      topViewStore.setTopViewSize({
+        width: rect.width,
+        height: rect.height,
+        top: rect.top,
+        left: rect.left,
+      });
+    }
+  });
+};
 onMounted(() => {
   setTimeout(() => {
     window.dispatchEvent(new Event("resize"));
   }, 500);
-  updateCompAreaSize();
-  window.addEventListener("click", handleClickOverlayMarker);
-  window.addEventListener("resize", handleResize);
-  window.addEventListener("scroll", handleResize);
+  updateTopViewSize();
+  window.addEventListener("resize", updateTopViewSize);
+  window.addEventListener("scroll", updateTopViewSize);
 });
-
-onUnmounted(() => {
-  window.removeEventListener("click", handleClickOverlayMarker);
-  window.removeEventListener("resize", handleResize);
-  window.removeEventListener("scroll", handleResize);
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateTopViewSize);
+  window.removeEventListener("scroll", updateTopViewSize);
 });
 
 const maxVideoHeight = ref(0);
 const videoControl = ref(null);
-
 const updateMaxHeight = () => {
   if (!videoControl.value) return;
   maxVideoHeight.value =
     (window.innerHeight - 104 - 32 - videoControl.value.$el.offsetHeight - 60) / window.innerHeight;
 };
-
 onMounted(() => {
   nextTick(() => updateMaxHeight());
   window.addEventListener("resize", updateMaxHeight);
 });
-
 watch(() => window.innerHeight, updateMaxHeight);
 </script>
 
