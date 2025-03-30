@@ -90,13 +90,13 @@
       </v-menu>
 
       <v-btn @click="playerStore.toggleMute" size="small">
-        <v-icon>{{ volumeIcon }}</v-icon>
+        <v-icon>{{ playerStore.isMuted ? "mdi-volume-mute" : playerStore.volumeIcon }}</v-icon>
       </v-btn>
 
       <div style="width: 13%; min-width: 80px">
         <v-slider
-          v-model="volume"
-          @update:model-value="onVolumeChange"
+          v-model="playerStore.volume"
+          @update:model-value="playerStore.changeVolume"
           max="100"
           min="0"
           hide-details
@@ -109,7 +109,7 @@
     <v-row ref="videoSlider">
       <v-slider
         v-model="progress"
-        @update:model-value="playerStore.setVolume"
+        @update:model-value="onProgressChange"
         hide-details
         color="primary"
         :thumb-size="15"
@@ -135,6 +135,9 @@ const bboxesStore = useBboxesStore();
 
 const videoContainer = ref(null);
 const videoElement = ref(null);
+onMounted(() => {
+  if (videoElement.value) playerStore.videoElement = videoElement.value;
+});
 
 const currentTime = computed(() => playerStore.currentTime);
 const onTimeUpdate = (event) => {
@@ -234,31 +237,14 @@ watch(progress, (newProgress) => {
   }
 });
 
-const { mute } = storeToRefs(playerStore);
-const volume = ref(playerStore.volume);
-const volumeIcon = computed(() => {
-  if (mute) {
-    return "mdi-volume-mute";
-  } else {
-    return "mdi-volume-high";
+watch(
+  () => playerStore.volume,
+  () => {
+    if (playerStore.videoElement) {
+      playerStore.videoElement.volume = playerStore.volume / 100;
+    }
   }
-  // if (volume.value > 66) return "mdi-volume-high";
-  // if (volume.value > 33) return "mdi-volume-medium";
-  // if (volume.value > 0) return "mdi-volume-low";
-  // if (volume.value == 0) return "mdi-volume-mute";
-});
-const onVolumeChange = (newVolume) => playerStore.setVolume(newVolume);
-watch(volume, (newVolume) => {
-  if (videoElement.value) {
-    console.log(newVolume);
-    videoElement.value.volume = newVolume / 100;
-  }
-});
-watch(mute, (newVolume) => {
-  if (videoElement.value) {
-    console.log(newVolume);
-  }
-});
+);
 
 const ended = computed(() => playerStore.ended);
 const playing = computed(() => playerStore.playing);

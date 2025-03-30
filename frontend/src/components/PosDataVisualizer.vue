@@ -21,10 +21,10 @@
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
       <img
-        ref="compAreaElement"
+        ref="topViewElement"
         class="visualizer-image"
         :src="topViewStore.currentSport.pitchImage"
-        @load="updateCompAreaSize"
+        @load="updateTopViewSize"
         :style="{
           maxHeight: maxVideoHeight * 100 + 'vh',
           height: videoStore.videoSize.height + 'px',
@@ -248,7 +248,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "@/stores/top_view";
 import { useBboxesStore } from "@/stores/bboxes";
@@ -263,6 +263,8 @@ const bboxesStore = useBboxesStore();
 const videoStore = useVideoStore();
 
 const showModalBboxDataSelect = ref(false);
+
+const topViewElement = ref(null);
 
 const currentFrame = ref(0);
 const updateFrame = (newIndex) => {
@@ -282,26 +284,31 @@ const sliderValue = computed({
   },
 });
 
-const compAreaElement = ref(null);
-const updateCompAreaSize = () => {
+const updateTopViewSize = () => {
   nextTick(() => {
-    if (compAreaElement.value) {
-      const rect = compAreaElement.value.getBoundingClientRect();
-      const size = {
+    if (topViewElement.value) {
+      const rect = topViewElement.value.getBoundingClientRect();
+      topViewStore.setTopViewSize({
         width: rect.width,
         height: rect.height,
         top: rect.top,
         left: rect.left,
-      };
-
-      topViewStore.setTopViewSize(size);
+      });
     }
   });
 };
-
-const handleResize = () => {
-  updateCompAreaSize();
-};
+onMounted(() => {
+  setTimeout(() => {
+    window.dispatchEvent(new Event("resize"));
+  }, 500);
+  updateTopViewSize();
+  window.addEventListener("resize", updateTopViewSize);
+  window.addEventListener("scroll", updateTopViewSize);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateTopViewSize);
+  window.removeEventListener("scroll", updateTopViewSize);
+});
 
 const computeConvexHull = (points) => {
   if (points.length < 3) return [];
@@ -333,7 +340,6 @@ const computeConvexHull = (points) => {
 
   return lower.concat(upper);
 };
-
 const convexHullPlayer = computed(() => {
   if (!topViewStore.topViewSize || !bboxesStore.positionsNested) {
     return [];
@@ -391,7 +397,6 @@ const computeVoronoi = (players) => {
     })
     .filter((cell) => cell !== null);
 };
-
 const voronoiCells = computed(() => {
   if (!topViewStore.topViewSize || !bboxesStore.positionsNested) {
     return [];
@@ -418,24 +423,9 @@ const voronoiCells = computed(() => {
   });
 });
 
-onMounted(() => {
-  setTimeout(() => {
-    window.dispatchEvent(new Event("resize"));
-  }, 500);
-  updateCompAreaSize();
-  window.addEventListener("resize", handleResize);
-  window.addEventListener("scroll", handleResize);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("resize", handleResize);
-  window.removeEventListener("scroll", handleResize);
-});
-
 const maxVideoHeight = ref(0);
 const videoSlider = ref(null);
 const videoControl = ref(null);
-
 const updateMaxHeight = () => {
   if (!videoSlider.value || !videoControl.value) return;
   maxVideoHeight.value =
@@ -447,12 +437,10 @@ const updateMaxHeight = () => {
       60) /
     window.innerHeight;
 };
-
 onMounted(() => {
   nextTick(() => updateMaxHeight());
   window.addEventListener("resize", updateMaxHeight);
 });
-
 watch(() => window.innerHeight, updateMaxHeight);
 </script>
 
