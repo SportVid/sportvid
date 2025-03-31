@@ -42,8 +42,12 @@ export const useTopViewStore = defineStore("top_view", () => {
     },
   ];
 
-  const onSportChange = (idx) => {
-    currentSport.value = sports[idx];
+  const onSportChange = (title) => {
+    const sport = sports.find((sport) => sport.title === title);
+    currentSport.value.title = sport.title;
+    currentSport.value.pitchImage = sport.pitchImage;
+    currentSport.value.widthRel = sport.widthRel;
+    currentSport.value.heightRel = sport.heightRel;
   };
 
   return {

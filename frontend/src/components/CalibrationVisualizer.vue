@@ -1,5 +1,7 @@
 <template>
-  <v-container class="d-flex flex-column">
+  <CalibrationAssetMenu v-if="calibrationAssetStore.marker.length === 0" />
+
+  <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
       <div
         v-if="calibrationAssetStore.isAddingReferenceMarker"
@@ -90,7 +92,7 @@
             v-for="(item, index) in topViewStore.sports"
             :key="index"
             class="menu-item"
-            v-on:click="topViewStore.onSportChange(index)"
+            v-on:click="topViewStore.onSportChange(item.title)"
           >
             <v-list-item-title>
               {{ item.title }}
@@ -108,16 +110,27 @@
 
         <v-list class="py-0" density="compact">
           <v-list-item class="menu-item">
-            <v-list-item-title>
-              {{ $t("calibration_asset_vis.calibration_asset.new") }}
+            <v-list-item-title @click="showModalCalibrationAssetCreate = true">
+              {{ $t("calibration_asset_vis.calibration_asset.create") }}
             </v-list-item-title>
           </v-list-item>
 
-          <v-list-item class="menu-item" @click="showModalCalibrationAssetSave = true">
-            <v-list-item-title>
+          <v-list-item class="menu-item" v-if="!calibrationAssetStore.calibrationAssetId">
+            <v-list-item-title @click="showModalCalibrationAssetSave = true">
               {{ $t("calibration_asset_vis.calibration_asset.save") }}
             </v-list-item-title>
           </v-list-item>
+
+          <v-list-item class="menu-item" v-if="calibrationAssetStore.calibrationAssetId">
+            <v-list-item-title @click="showModalCalibrationAssetUpdate = true">
+              {{ $t("calibration_asset_vis.calibration_asset.update") }}
+            </v-list-item-title>
+          </v-list-item>
+          <!-- <v-list-item class="menu-item" @click="handleModalCalibrationAssetStorage">
+            <v-list-item-title>
+              {{ CalibrationAssetStorageTitle }}
+            </v-list-item-title>
+          </v-list-item> -->
 
           <v-list-item class="menu-item" @click="showModalCalibrationAssetSelect = true">
             <v-list-item-title>
@@ -126,8 +139,10 @@
           </v-list-item>
         </v-list>
       </v-menu>
+      <ModalCalibrationAssetCreate v-model="showModalCalibrationAssetCreate" />
       <ModalCalibrationAssetSave v-model="showModalCalibrationAssetSave" />
       <ModalCalibrationAssetSelect v-model="showModalCalibrationAssetSelect" />
+      <ModalCalibrationAssetUpdate v-model="showModalCalibrationAssetUpdate" />
 
       <v-menu location="top">
         <template v-slot:activator="{ props }">
@@ -197,8 +212,11 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue"
 import { useTopViewStore } from "@/stores/top_view";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
+import CalibrationAssetMenu from "@/components/CalibrationAssetMenu.vue";
+import ModalCalibrationAssetCreate from "@/components/ModalCalibrationAssetCreate.vue";
 import ModalCalibrationAssetSave from "@/components/ModalCalibrationAssetSave.vue";
 import ModalCalibrationAssetSelect from "@/components/ModalCalibrationAssetSelect.vue";
+import ModalCalibrationAssetUpdate from "@/components/ModalCalibrationAssetUpdate.vue";
 
 const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();
@@ -206,8 +224,10 @@ const videoStore = useVideoStore();
 
 const topViewElement = ref(null);
 
+const showModalCalibrationAssetCreate = ref(false);
 const showModalCalibrationAssetSave = ref(false);
 const showModalCalibrationAssetSelect = ref(false);
+const showModalCalibrationAssetUpdate = ref(false);
 
 const filteredReferenceMarker = computed(() => calibrationAssetStore.filteredReferenceMarker);
 
@@ -273,6 +293,36 @@ onMounted(() => {
   window.addEventListener("resize", updateMaxHeight);
 });
 watch(() => window.innerHeight, updateMaxHeight);
+watch(videoControl, (newVal) => {
+  if (newVal) {
+    nextTick(() => updateMaxHeight());
+  }
+});
+
+watch(
+  () => calibrationAssetStore.calibrationAssetId,
+  (newId) => {
+    if (newId) {
+      console.log("Id", newId);
+    }
+  }
+);
+onMounted(() => {
+  console.log("Id", calibrationAssetStore.calibrationAssetId);
+});
+
+watch(
+  () => calibrationAssetStore.marker,
+  (newId) => {
+    if (newId) {
+      console.log("listm", newId);
+    }
+  },
+  { deep: true }
+);
+onMounted(() => {
+  console.log("markerM", calibrationAssetStore.marker);
+});
 </script>
 
 <style>

@@ -1,8 +1,8 @@
 <template>
-  <v-dialog v-model="dialog" width="800px">
+  <v-dialog v-model="dialog" width="450px">
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.calibration_asset.save.title") }}
+        {{ $t("modal.calibration_asset.create.title") }}
 
         <v-spacer></v-spacer>
 
@@ -12,28 +12,16 @@
       </v-toolbar>
 
       <v-card-text class="d-flex align-center">
-        <v-text-field
-          v-model="name"
-          :label="$t('modal.calibration_asset.save.name')"
-          prepend-icon="mdi-pencil"
-          variant="underlined"
-          class="mr-6"
-        />
-
         <v-select
           v-model="template"
           :items="topViewStore.sports.map((sport) => sport.title)"
-          :label="$t('modal.calibration_asset.save.template')"
+          :label="$t('modal.calibration_asset.create.template')"
           variant="underlined"
           class="mr-6"
         />
 
-        <v-btn
-          @click="saveCalibrationAsset(name, template)"
-          :disabled="!name || !template || !calibrationAssetStore.allMarkerValid"
-          size="small"
-        >
-          {{ $t("modal.calibration_asset.save.save") }}
+        <v-btn @click="createCalibrationAsset(template)" :disabled="!template" size="small">
+          {{ $t("modal.calibration_asset.create.create") }}
         </v-btn>
       </v-card-text>
     </v-card>
@@ -58,11 +46,10 @@ const emit = defineEmits();
 
 const dialog = ref(props.modelValue);
 
-const name = ref(null);
-const template = ref(topViewStore.currentSport.title);
+const template = ref(null);
 
-const saveCalibrationAsset = (name, template) => {
-  calibrationAssetStore.saveCalibrationAsset(name, template);
+const createCalibrationAsset = (template) => {
+  calibrationAssetStore.createCalibrationAsset(template);
   dialog.value = false;
 };
 
@@ -82,5 +69,3 @@ watch(
   }
 );
 </script>
-
-<style></style>
