@@ -2,7 +2,7 @@
   <v-dialog v-model="dialog" width="800px">
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.calibration_asset.save.title") }}
+        {{ $t("modal.calibration_asset.update.title") }}
 
         <v-spacer></v-spacer>
 
@@ -29,11 +29,11 @@
         />
 
         <v-btn
-          @click="saveCalibrationAsset(name, template)"
+          @click="updateCalibrationAsset(name, template)"
           :disabled="!name || !template || !calibrationAssetStore.allMarkerValid"
           size="small"
         >
-          {{ $t("modal.calibration_asset.save.save") }}
+          {{ $t("modal.calibration_asset.update.update") }}
         </v-btn>
       </v-card-text>
     </v-card>
@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
 
@@ -58,11 +58,22 @@ const emit = defineEmits();
 
 const dialog = ref(props.modelValue);
 
-const name = ref(null);
+const nameProxy = ref(null);
+const name = computed({
+  get() {
+    const name = calibrationAssetStore.calibrationAssetsList.find(
+      (asset) => asset.id === calibrationAssetStore.calibrationAssetId
+    )?.name;
+    return nameProxy.value === null ? name : nameProxy.value;
+  },
+  set(val) {
+    nameProxy.value = val;
+  },
+});
 const template = ref(topViewStore.currentSport.title);
 
-const saveCalibrationAsset = (name, template) => {
-  calibrationAssetStore.saveCalibrationAsset(name, template);
+const updateCalibrationAsset = (name, template) => {
+  calibrationAssetStore.updateCalibrationAsset(name, template);
   dialog.value = false;
 };
 

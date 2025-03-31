@@ -10,10 +10,10 @@
           line-height: 1.5;
           height: 30vh;
         "
-        v-html="$t('pos_data_vis.no_bbox_data')"
+        v-html="$t('pos_data_vis.no_bbox_data.text')"
       />
       <v-row style="justify-content: center">
-        <v-btn>Upload position data</v-btn>
+        <v-btn>{{ $t("pos_data_vis.no_bbox_data.upload") }}</v-btn>
       </v-row>
     </v-col>
   </div>

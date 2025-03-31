@@ -13,7 +13,8 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
 
   const isLoading = ref(false);
 
-  const marker = ref([
+  const marker = ref([]);
+  const markerTemplate = ref([
     {
       name: "Top-left",
       id: "1",
@@ -50,6 +51,10 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
       videoCoordsRel: { x: null, y: null, z: null },
     },
   ]);
+
+  const allMarkerValid = computed(() =>
+    marker.value.every((m) => m.videoCoordsRel.x !== null && m.videoCoordsRel.y !== null)
+  );
 
   const isAddingReferenceMarker = ref(false);
 
@@ -142,6 +147,13 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
   };
 
   const calibrationAssetsList = ref({});
+  const calibrationAssetId = ref(null);
+
+  const createCalibrationAsset = (template) => {
+    marker.value = JSON.parse(JSON.stringify(markerTemplate.value));
+    topViewStore.onSportChange(template);
+    calibrationAssetId.value = null;
+  };
 
   const loadCalibrationAssetsList = async () => {
     try {
@@ -151,7 +163,6 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
       }
       const res = await axios.get(`${config.API_LOCATION}/calibration_assets/list`, { params });
       if (res.data.status === "ok") {
-        updateStore(res.data.entries);
         calibrationAssetsList.value = res.data.entries;
         return res.data.entries;
       }
@@ -164,14 +175,13 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     const calibrationAsset = calibrationAssetsList.value.find((asset) => asset.id === id);
     if (calibrationAsset) {
       marker.value = calibrationAsset.marker_data;
-      topViewStore.currentSport = topViewStore.sports.find(
-        (sport) => sport.title === calibrationAsset.template
-      );
+      topViewStore.onSportChange(calibrationAsset.template);
+      calibrationAssetId.value = id;
     }
   };
 
-  const createCalibrationAsset = async (name, template) => {
-    if (isLoading.value || !name) return;
+  const saveCalibrationAsset = async (name, template) => {
+    if (isLoading.value || !name || !template) return;
     isLoading.value = true;
     const params = {
       name,
@@ -182,7 +192,6 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     try {
       const res = await axios.post(`${config.API_LOCATION}/calibration_assets/create`, params);
       if (res.data.status === "ok") {
-        addToStore([res.data.entry]);
         loadCalibrationAssetsList();
         return res.data.entry.id;
       }
@@ -191,10 +200,11 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     }
   };
 
-  const updateCalibrationAsset = async ({ name, template }) => {
+  const updateCalibrationAsset = async (name, template) => {
     if (isLoading.value || !name || !template) return;
     isLoading.value = true;
     const params = {
+      id: calibrationAssetId,
       name,
       template,
       marker_data: [...marker.value],
@@ -202,7 +212,6 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     try {
       const res = await axios.post(`${config.API_LOCATION}/calibration_assets/update`, params);
       if (res.data.status === "ok") {
-        updateInStore([res.data.entry]);
         loadCalibrationAssetsList();
         return res.data.entry;
       }
@@ -218,7 +227,6 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     try {
       const res = await axios.post(`${config.API_LOCATION}/calibration_assets/delete`, params);
       if (res.data.status === "ok") {
-        delete calibrationAssetsList.value[id];
         loadCalibrationAssetsList();
       }
     } finally {
@@ -226,29 +234,10 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     }
   };
 
-  const updateStore = (newCalibrationAsset) => {
-    newCalibrationAsset.forEach((e) => {
-      if (!(e.id in calibrationAssetsList)) {
-        calibrationAssetsList[e.id] = e;
-      }
-    });
-  };
-
-  const addToStore = (newCalibrationAsset) => {
-    newCalibrationAsset.forEach((e) => {
-      calibrationAssetsList[e.id] = e;
-    });
-  };
-
-  const updateInStore = (newCalibrationAsset) => {
-    newCalibrationAsset.forEach((e) => {
-      calibrationAssetsList[e.id] = e;
-    });
-  };
-
   return {
     marker,
-    marker,
+    markerTemplate,
+    allMarkerValid,
     filteredReferenceMarker,
     filteredVideoMarker,
     toggleReferenceMarker,
@@ -262,9 +251,11 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     toggleVideoMarker,
     hoveredVideoMarker,
     calibrationAssetsList,
+    calibrationAssetId,
+    createCalibrationAsset,
     loadCalibrationAsset,
     loadCalibrationAssetsList,
-    createCalibrationAsset,
+    saveCalibrationAsset,
     updateCalibrationAsset,
     deleteCalibrationAsset,
   };

@@ -82,12 +82,10 @@ class CalibrationAssetsChange(View):
     def post(self, request, data):
         try:
             calibration_assets = CalibrationAssets.objects.get(id=data.get("id"))
-            
             if "name" in data:
                 calibration_assets.name = data.get("name")
             if "template" in data:
                 calibration_assets.template = data.get("template")
-            
             calibration_assets.save()
 
             if "marker_data" in data:
