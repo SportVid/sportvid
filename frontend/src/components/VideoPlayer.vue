@@ -28,7 +28,7 @@
         }"
       /> -->
       <div
-        v-for="(position, index) in bboxesStore.bboxData[playerStore.currentTime]"
+        v-for="(position, index) in bboxesStore.bboxDataInterpolated[playerStore.currentTime]"
         v-show="bboxesStore.showBoundingBox"
         :key="index"
         class="bounding-box-position"
@@ -71,7 +71,7 @@
       </v-btn> -->
 
       <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
-        {{ getTimecode(currentTime) }}
+        {{ getTimecode(playerStore.currentTime) }}
       </div>
 
       <v-menu offset-y top>
@@ -121,7 +121,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
-import { storeToRefs } from "pinia";
+import { throttle } from "lodash";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
@@ -139,13 +139,28 @@ onMounted(() => {
   if (videoElement.value) playerStore.videoElement = videoElement.value;
 });
 
-const currentTime = computed(() => playerStore.currentTime);
+// const throttledUpdateTime = throttle((currentTime) => {
+//   playerStore.setCurrentTime(playerStore.roundTimeToFPS(currentTime, playerStore.videoFPS));
+// }, 40);
+let animationFrameId = null;
+const throttledUpdateTime = throttle((currentTime) => {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+  }
+  animationFrameId = requestAnimationFrame(() => {
+    playerStore.setCurrentTime(playerStore.roundTimeToFPS(currentTime, playerStore.videoFPS));
+  });
+}, (1 / playerStore.videoFPS) * 1000);
 const onTimeUpdate = (event) => {
-  playerStore.setCurrentTime(
-    playerStore.roundTimeToFPS(event.target.currentTime, playerStore.videoFPS)
-  );
+  throttledUpdateTime(event.target.currentTime);
   playerStore.setEnded(event.target.ended);
 };
+// const onTimeUpdate = (event) => {
+//   playerStore.setCurrentTime(
+//     playerStore.roundTimeToFPS(event.target.currentTime, playerStore.videoFPS)
+//   );
+//   playerStore.setEnded(event.target.ended);
+// };
 const deltaSeek = (delta) => {
   if (videoElement.value) {
     const newTime = videoElement.value.currentTime + delta;

@@ -22,6 +22,7 @@
     "d3-interpolate": "^3.0.1",
     "file-uri-to-path": "^2.0.0",
     "google-palette": "^1.1.1",
+    "lodash": "^4.17.21",
     "nan": "^2.22.0",
     "paper": "^0.12.18",
     "pinia": "^2.3.0",

@@ -44,11 +44,12 @@ export const useBboxesStore = defineStore("bboxes", () => {
     }
   };
 
-  function interpolateBoundingBoxes(bboxData, VideoFPS, bboxDataFPS) {
+  function interpolateBboxData(bboxData, VideoFPS, bboxDataFPS) {
     const factor = VideoFPS / bboxDataFPS;
-    const interpolatedData = [];
+    if (factor == 1) return bboxData;
+    const bboxDatainterpolated = [];
 
-    // Group bboxes by `image_id`
+    // Group bboxes by image_id
     const bboxMap = new Map();
     bboxData.forEach((bbox) => {
       if (!bboxMap.has(bbox.image_id)) {
@@ -71,11 +72,11 @@ export const useBboxesStore = defineStore("bboxes", () => {
         const nextBboxes = bboxMap.get(nextFrame);
 
         prevBboxes.forEach((prev, index) => {
-          const next = nextBboxes.find((b) => b.ref_id === prev.ref_id); // Find same ID
+          const next = nextBboxes.find((b) => b.ref_id === prev.ref_id);
 
           if (next) {
-            const alpha = srcFrame - prevFrame; // Interpolation factor between 0 and 1
-            interpolatedData.push({
+            const alpha = srcFrame - prevFrame;
+            bboxDatainterpolated.push({
               x: prev.x + (next.x - prev.x) * alpha,
               y: prev.y + (next.y - prev.y) * alpha,
               w: prev.w + (next.w - prev.w) * alpha,
@@ -89,14 +90,13 @@ export const useBboxesStore = defineStore("bboxes", () => {
           }
         });
       } else if (bboxMap.has(prevFrame)) {
-        // If there is no next frame, use the previous value
         bboxMap.get(prevFrame).forEach((bbox) => {
-          interpolatedData.push({ ...bbox, image_id: frame, time: frame / VideoFPS });
+          bboxDatainterpolated.push({ ...bbox, image_id: frame, time: frame / VideoFPS });
         });
       }
     }
 
-    return interpolatedData;
+    return bboxDatainterpolated;
   }
 
   const positionsNested = ref(
@@ -168,7 +168,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
     viewEffectivePlayingSpace,
     positionsNested,
     positionsFlat,
-    interpolateBoundingBoxes,
+    interpolateBboxData,
     bboxDataInterpolated,
     bboxPluginRun,
   };

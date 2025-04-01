@@ -298,31 +298,6 @@ watch(videoControl, (newVal) => {
     nextTick(() => updateMaxHeight());
   }
 });
-
-watch(
-  () => calibrationAssetStore.calibrationAssetId,
-  (newId) => {
-    if (newId) {
-      console.log("Id", newId);
-    }
-  }
-);
-onMounted(() => {
-  console.log("Id", calibrationAssetStore.calibrationAssetId);
-});
-
-watch(
-  () => calibrationAssetStore.marker,
-  (newId) => {
-    if (newId) {
-      console.log("listm", newId);
-    }
-  },
-  { deep: true }
-);
-onMounted(() => {
-  console.log("markerM", calibrationAssetStore.marker);
-});
 </script>
 
 <style>
