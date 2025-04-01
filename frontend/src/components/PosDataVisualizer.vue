@@ -31,8 +31,8 @@
         }"
       />
 
-      <!-- <div
-        v-for="(position, index) in bboxesStore.positionsNested[sliderValue]"
+      <div
+        v-for="(position, index) in bboxesStore.positionsNested[currentTime * playerStore.videoFPS]"
         :key="index"
         class="data-point-position"
         :style="{
@@ -40,8 +40,7 @@
             (position.bbox_top + position.bbox_height) *
               (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
             (topViewStore.topViewSize.top +
-              ((1 - topViewStore.currentSport.heightRel) / 2) *
-                topViewStore.topViewSize.height) +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
             'px',
           left:
             (position.bbox_left + position.bbox_width / 2) *
@@ -51,11 +50,9 @@
             'px',
           backgroundColor: `${position.team}`,
         }"
-      /> -->
-      <div
-        v-for="(position, index) in bboxesStore.positionsFlat.filter(
-          (p) => p.image_id === sliderValue
-        )"
+      />
+      <!-- <div
+        v-for="(position, index) in bboxesStore.positionsFlat.filter((p) => p.time === currentTime)"
         :key="index"
         class="data-point-position"
         :style="{
@@ -73,7 +70,7 @@
             'px',
           backgroundColor: position.team,
         }"
-      />
+      /> -->
 
       <svg v-if="bboxesStore.showEffectivePlayingSpace" class="hull-overlay">
         <polygon
@@ -98,7 +95,7 @@
       </svg>
     </v-row>
 
-    <v-row ref="videoControl" class="video-control mt-6 mb-n1">
+    <v-row ref="videoControl" class="video-control mt-6 mb-n2 justify-center">
       <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
@@ -227,21 +224,20 @@
       </v-menu>
       <ModalBboxDataSelect v-model="showModalBboxDataSelect" />
 
-      <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
-        {{ getTimecode(sliderValue) }}
+      <div class="time-code ml-2">
+        {{ getTimecode(currentTime) }}
       </div>
     </v-row>
 
     <v-row ref="videoSlider">
       <v-slider
-        v-model="sliderValue"
-        @update:model-value="updateFrame"
+        v-model="progress"
+        @update:model-value="onProgressChange"
         hide-details
         color="primary"
-        :thumb-size="15"
-        :max="99"
-        :step="1"
         :disabled="playerStore.isSynced"
+        :thumb-size="15"
+        :step="100 / (playerStore.videoFPS * playerStore.videoDuration)"
       />
     </v-row>
   </v-container>
@@ -266,23 +262,23 @@ const showModalBboxDataSelect = ref(false);
 
 const topViewElement = ref(null);
 
-const currentFrame = ref(0);
-const updateFrame = (newIndex) => {
-  currentFrame.value = newIndex;
-};
-const currentTime = computed(() => playerStore.currentTime);
-
-const sliderValue = computed({
-  get: () => {
-    return playerStore.isSynced ? Math.round(currentTime.value) : currentFrame.value;
-  },
-  set: (value) => {
-    if (!playerStore.isSynced) {
-      currentFrame.value = value;
-      updateFrame(value);
-    }
-  },
+const progress = ref(0);
+const currentTime = computed(() => {
+  return playerStore.isSynced
+    ? playerStore.currentTime
+    : (progress.value / 100) * playerStore.videoDuration;
 });
+const onProgressChange = (newIndex) => {
+  if (!playerStore.isSynced) {
+    progress.value = newIndex;
+  }
+};
+watch(
+  () => playerStore.currentTime,
+  (newTime) => {
+    progress.value = (newTime / playerStore.videoDuration) * 100;
+  }
+);
 
 const updateTopViewSize = () => {
   nextTick(() => {
@@ -379,7 +375,7 @@ const computeVoronoi = (players) => {
   const delaunay = Delaunay.from(players.map((p) => [p.left, p.top]));
   const voronoi = delaunay.voronoi([
     topViewStore.topViewSize.left +
-      ((1 - topViewStore.currentSport.widthRel) / 2) * compAreatopViewStoreStore.topViewSize.width,
+      ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width,
     topViewStore.topViewSize.top +
       ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height,
     topViewStore.topViewSize.left +
@@ -442,6 +438,11 @@ onMounted(() => {
   window.addEventListener("resize", updateMaxHeight);
 });
 watch(() => window.innerHeight, updateMaxHeight);
+watch(videoControl || videoSlider, (newVal) => {
+  if (newVal) {
+    nextTick(() => updateMaxHeight());
+  }
+});
 </script>
 
 <style>

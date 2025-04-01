@@ -80,7 +80,11 @@
       />
     </v-row>
 
-    <v-row ref="videoControl" class="video-control mt-6 mb-0">
+    <v-row
+      ref="videoControl"
+      class="video-control mt-6 mb-0 justify-center align-center"
+      style="height: 60px"
+    >
       <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
