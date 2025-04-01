@@ -1,5 +1,5 @@
 <template>
-  <v-app id="tibava">
+  <v-app id="sportVid">
     <v-app-bar>
       <img :title="appName" src="./assets/logo_tib_dshs.png" height="50" class="ml-4" />
       <v-toolbar-title class="pr-12">{{ $t("app_bar.plattform_name") }}</v-toolbar-title>
@@ -38,7 +38,7 @@ const analysisView = computed(() => route.name === "AnalysisView");
 </script>
 
 <style>
-#tibava {
+#sportVid {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

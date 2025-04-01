@@ -1,4 +1,4 @@
-import { ref, computed } from "vue";
+import { ref, watch } from "vue";
 import { defineStore } from "pinia";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
@@ -99,44 +99,53 @@ export const useBboxesStore = defineStore("bboxes", () => {
     return bboxDatainterpolated;
   }
 
-  const positionsNested = ref(
-    Array.from({ length: 100 }, () =>
-      Array.from({ length: 20 }, (_, playerIndex) => {
-        const isTeamA = playerIndex < 10;
+  const positionsFlat = ref([]);
+  const positionsNested = ref([]);
+  watch(
+    () => playerStore.videoDuration,
+    (newDuration) => {
+      if (newDuration > 0) {
+        positionsFlat.value = Array.from(
+          { length: newDuration * playerStore.videoFPS * 20 },
+          (_, index) => {
+            const image_id = Math.floor(index / 20);
+            const ref_id = (index % 20) + 1;
+            const isTeamA = ref_id <= 10;
 
-        return {
-          bbox_top: Math.random() * 0.8 + 0.1, // x
-          bbox_left: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3), // y
-          bbox_width: 0.05, // w
-          bbox_height: 0.1, // h
-          team: isTeamA ? "blue" : "red", // will be in class BboxDataTeam
-          image_id: 0, // image_id (= frame)
-          time: 0, // image_id / fps
-          ref_id: 1,
-          det_score: 1.0,
-        };
-      })
-    )
-  );
+            return {
+              y: Math.random() * 0.8 + 0.1,
+              x: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3),
+              w: 0.05,
+              h: 0.1,
+              team: isTeamA ? "blue" : "red",
+              image_id: image_id,
+              time: image_id / playerStore.videoFPS,
+              ref_id: ref_id,
+              det_score: 1.0,
+            };
+          }
+        );
+        positionsNested.value = Array.from(
+          { length: newDuration * playerStore.videoFPS * 20 },
+          (_, frameIndex) =>
+            Array.from({ length: 20 }, (_, playerIndex) => {
+              const isTeamA = playerIndex < 10;
 
-  const positionsFlat = ref(
-    Array.from({ length: 100 * 20 }, (_, index) => {
-      const image_id = Math.floor(index / 20); // Frame (0-99)
-      const ref_id = (index % 20) + 1; // Spieler-ID (1-20)
-      const isTeamA = ref_id <= 10; // Team-Zuordnung
-
-      return {
-        y: Math.random() * 0.8 + 0.1,
-        x: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3),
-        w: 0.05,
-        h: 0.1,
-        team: isTeamA ? "blue" : "red",
-        image_id: image_id,
-        time: image_id / 1, // Angenommene FPS von 1
-        ref_id: ref_id,
-        det_score: 1.0, // Bbox-Wahrscheinlichkeit
-      };
-    })
+              return {
+                bbox_top: Math.random() * 0.8 + 0.1, // x
+                bbox_left: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3), // y
+                bbox_width: 0.05, // w
+                bbox_height: 0.1, // h
+                team: isTeamA ? "blue" : "red",
+                image_id: frameIndex,
+                time: frameIndex / playerStore.videoFPS,
+                ref_id: playerIndex,
+                det_score: 1.0,
+              };
+            })
+        );
+      }
+    }
   );
 
   const showSpaceControl = ref(false);

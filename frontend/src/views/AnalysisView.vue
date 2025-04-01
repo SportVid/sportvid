@@ -50,7 +50,7 @@
             class="d-flex flex-column flex-nowrap px-2"
             elevation="2"
             ref="topViewCard"
-            :style="{ maxHeight: analysisViewHeight + 'px' }"
+            :style="{ maxHeight: analysisViewHeight + 'px', height: cardHeight + 'px' }"
           >
             <v-row class="sticky-tabs-bar" justify="center">
               <v-tabs fixed-tabs slider-color="primary" v-model="analysisTab">
@@ -166,20 +166,24 @@ onMounted(async () => {
 
 const videoCard = ref(null);
 const topViewCard = ref(null);
+const windowHeight = ref(window.innerHeight);
 const analysisViewHeight = ref(null);
-const setMaxCardHeight = () => {
+const cardHeight = ref(null);
+const setCardHeight = () => {
+  windowHeight.value = window.innerHeight;
   nextTick(() => {
     analysisViewHeight.value = window.innerHeight - 64 - 40;
+    cardHeight.value = videoCard.value.$el.offsetHeight;
   });
 };
 onMounted(() => {
-  setMaxCardHeight();
-  window.addEventListener("resize", setMaxCardHeight);
+  setCardHeight();
+  window.addEventListener("resize", setCardHeight);
 });
 onBeforeUnmount(() => {
-  window.removeEventListener("resize", setMaxCardHeight);
+  window.removeEventListener("resize", setCardHeight);
 });
-watch([videoCard, topViewCard], setMaxCardHeight, { flush: "post" });
+watch([videoCard, topViewCard, windowHeight], setCardHeight, { flush: "post" });
 
 const previousShowVideoMarker = ref(false);
 watch(
@@ -208,8 +212,8 @@ watch(
       // });
       // bboxesStore.bboxData = groupedData;
       bboxesStore.bboxData = newBboxes;
-      console.log(bboxesStore.bboxPluginRun);
-      console.log("bboxData", bboxesStore.bboxData);
+      // console.log(bboxesStore.bboxPluginRun);
+      // console.log("bboxData", bboxesStore.bboxData);
 
       bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBboxData(
         newBboxes,
@@ -225,7 +229,7 @@ watch(
         groupedDataInterpolated[time].push(position);
       });
       bboxesStore.bboxDataInterpolated = groupedDataInterpolated;
-      console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
+      // console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
     }
   }
 );
