@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
+import { inv } from "mathjs";
 import { useVideoStore } from "./video";
 import { useTopViewStore } from "./top_view";
 import { usePlayerStore } from "@/stores/player";
@@ -74,7 +75,6 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
       active: marker.id === id ? !marker.active : false,
     }));
   };
-
   const addReferenceMarker = () => {
     if (!isAddingReferenceMarker.value) {
       isAddingReferenceMarker.value = true;
@@ -93,7 +93,6 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
       marker.value.push(newMarker);
     }
   };
-
   const setReferenceMarker = (event) => {
     if (isAddingReferenceMarker.value) {
       const lastMarker = marker.value[marker.value.length - 1];
@@ -116,20 +115,17 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
       isAddingReferenceMarker.value = false;
     }
   };
-
   const deleteReferenceMarker = (id) => {
     marker.value = marker.value.filter((m) => m.id !== id);
   };
 
   const showVideoMarker = ref(false);
   const hoveredVideoMarker = ref(null);
-
   const filteredVideoMarker = computed(() => {
     return marker.value.filter(
       (marker) => marker.videoCoordsRel.x !== null && marker.videoCoordsRel.y !== null
     );
   });
-
   const setVideoMarker = (event) => {
     const activeMarker = marker.value.find((marker) => marker.active);
     if (!activeMarker) return;
@@ -141,20 +137,16 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
 
     activeMarker.active = false;
   };
-
   const toggleVideoMarker = () => {
     showVideoMarker.value = !showVideoMarker.value;
   };
-
   const calibrationAssetsList = ref({});
   const calibrationAssetId = ref(null);
-
   const createCalibrationAsset = (template) => {
     marker.value = JSON.parse(JSON.stringify(markerTemplate.value));
     topViewStore.onSportChange(template);
     calibrationAssetId.value = null;
   };
-
   const loadCalibrationAssetsList = async () => {
     try {
       const params = {};
@@ -164,22 +156,22 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
       const res = await axios.get(`${config.API_LOCATION}/calibration_assets/list`, { params });
       if (res.data.status === "ok") {
         calibrationAssetsList.value = res.data.entries;
-        return res.data.entries;
+        // return res.data.entries;
       }
     } catch (error) {
       console.error("Failed to list calibration assets:", error);
     }
   };
-
   const loadCalibrationAsset = (id) => {
     const calibrationAsset = calibrationAssetsList.value.find((asset) => asset.id === id);
     if (calibrationAsset) {
       marker.value = calibrationAsset.marker_data;
+      videoMarker.value = marker.value.map((m) => m.videoCoordsRel);
       topViewStore.onSportChange(calibrationAsset.template);
       calibrationAssetId.value = id;
+      console.log(calibrationAsset);
     }
   };
-
   const saveCalibrationAsset = async (name, template) => {
     if (isLoading.value || !name || !template) return;
     isLoading.value = true;
@@ -193,13 +185,11 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
       const res = await axios.post(`${config.API_LOCATION}/calibration_assets/create`, params);
       if (res.data.status === "ok") {
         loadCalibrationAssetsList();
-        return res.data.entry.id;
       }
     } finally {
       isLoading.value = false;
     }
   };
-
   const updateCalibrationAsset = async (name, template) => {
     if (isLoading.value || !name || !template) return;
     isLoading.value = true;
@@ -213,13 +203,11 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
       const res = await axios.post(`${config.API_LOCATION}/calibration_assets/update`, params);
       if (res.data.status === "ok") {
         loadCalibrationAssetsList();
-        return res.data.entry;
       }
     } finally {
       isLoading.value = false;
     }
   };
-
   const deleteCalibrationAsset = async (id) => {
     if (isLoading.value || !id) return;
     isLoading.value = true;
@@ -233,6 +221,29 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
       isLoading.value = false;
     }
   };
+
+  const hMatrix = [
+    [1, 0, 0],
+    [0, 1, 0],
+    [0, 0, 1],
+  ];
+  const hMatrixInv = inv(hMatrix);
+  function applyHomography(matrix, point) {
+    const [x, y, w] = [
+      matrix[0][0] * point.x + matrix[0][1] * point.y + matrix[0][2] * 1,
+      matrix[1][0] * point.x + matrix[1][1] * point.y + matrix[1][2] * 1,
+      matrix[2][0] * point.x + matrix[2][1] * point.y + matrix[2][2] * 1,
+    ];
+    return { x: x / w, y: y / w };
+  }
+  const videoMarker = ref([]);
+  const fieldPoints = computed(() => {
+    return videoMarker.value.map((marker) => applyHomography(hMatrix, marker));
+  });
+
+  const reprojectionPoints = computed(() => {
+    return fieldPoints.value.map((fieldPoint) => applyHomography(hMatrixInv, fieldPoint));
+  });
 
   return {
     marker,
@@ -258,5 +269,8 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     saveCalibrationAsset,
     updateCalibrationAsset,
     deleteCalibrationAsset,
+    videoMarker,
+    fieldPoints,
+    reprojectionPoints,
   };
 });
