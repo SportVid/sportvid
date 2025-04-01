@@ -302,6 +302,20 @@ watch(videoControl, (newVal) => {
     nextTick(() => updateMaxHeight());
   }
 });
+
+watch(
+  () => [
+    calibrationAssetStore.videoMarker,
+    calibrationAssetStore.fieldPoints,
+    calibrationAssetStore.reprojectionPoints,
+  ],
+  ([newVideoMarker, newFieldPoint, newReprojectionPoint]) => {
+    console.log("Video Marker:", newVideoMarker);
+    console.log("Field Point:", newFieldPoint);
+    console.log("Reprojection:", newReprojectionPoint);
+  },
+  { deep: true }
+);
 </script>
 
 <style>

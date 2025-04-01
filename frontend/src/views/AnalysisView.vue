@@ -15,6 +15,18 @@
         @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
         class="reference-marker-position"
       />
+      <div>
+        <div
+          v-for="(point, index) in calibrationAssetStore.reprojectionPoints"
+          v-show="calibrationAssetStore.showVideoMarker"
+          :key="index"
+          :style="{
+            top: point.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
+            left: point.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
+          }"
+          class="reprojection-marker-position"
+        />
+      </div>
 
       <v-row class="ma-n2">
         <v-col cols="6">
@@ -507,5 +519,14 @@ watch(
   border-radius: 50%;
   transform: translate(-50%, -50%);
   z-index: 1000;
+}
+.reprojection-marker-position {
+  position: fixed;
+  width: 5px;
+  height: 5px;
+  background-color: blue;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
 }
 </style>
