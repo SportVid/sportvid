@@ -47,6 +47,9 @@
                 <VideoPlayer />
               </v-col>
             </v-row>
+            <!-- <v-row class="mb-2 px-4">
+              <TimeSelector width="100%" />
+            </v-row> -->
           </v-card>
         </v-col>
 
@@ -85,6 +88,30 @@
           </v-card>
         </v-col>
       </v-row>
+
+      <!-- <v-row class="ma-2">
+        <v-col>
+          <VisualizationMenu></VisualizationMenu>
+        </v-col>
+      </v-row> -->
+
+      <!-- <v-row class="ma-n2">
+        <v-col>
+          <v-card>test </v-card>
+        </v-col>
+      </v-row> -->
+
+      <v-row class="ma-n2">
+        <v-col>
+          <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" scrollable="False">
+            <v-card-title class="pl-2"> Timelines </v-card-title>
+            <v-sheet class="px-4">
+              <Timeline ref="timeline" :style="{ width: '100%' }" />
+            </v-sheet>
+          </v-card>
+        </v-col>
+      </v-row>
+      <!-- <ModalTimelineSegmentAnnotate :show.sync="annotationDialog.show" /> -->
     </v-container>
   </v-main>
 </template>
@@ -110,7 +137,7 @@ import PosDataVisualizer from "@/components/PosDataVisualizer.vue";
 import CalibrationVisualizer from "@/components/CalibrationVisualizer.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
-// import Timeline from "@/components/Timeline.vue";
+import Timeline from "@/components/Timeline.vue";
 // import TimeSelector from "@/components/TimeSelector.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
