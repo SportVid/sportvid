@@ -86,8 +86,6 @@ class CalibrationAssetsChange(View):
                 calibration_assets.name = data.get("name")
             if "template" in data:
                 calibration_assets.template = data.get("template")
-            calibration_assets.save()
-
             if "marker_data" in data:
                 # Clear existing marker data
                 calibration_assets.marker_data.all().delete()
@@ -103,6 +101,7 @@ class CalibrationAssetsChange(View):
                         videoCoord_y=marker["videoCoordsRel"]["y"],
                         videoCoord_z=marker["videoCoordsRel"]["z"] if "z" in marker["videoCoordsRel"] else 0.0,
                     )
+            calibration_assets.save()
 
             return JsonResponse({"status": "ok", "entry": calibration_assets.to_dict()})
 

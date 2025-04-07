@@ -176,8 +176,8 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     if (isLoading.value || !name || !template) return;
     isLoading.value = true;
     const params = {
-      name,
-      template,
+      name: name,
+      template: template,
       marker_data: [...marker.value],
       video_id: playerStore.videoId,
     };
@@ -194,10 +194,11 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     if (isLoading.value || !name || !template) return;
     isLoading.value = true;
     const params = {
-      id: calibrationAssetId,
-      name,
-      template,
+      id: calibrationAssetId.value,
+      name: name,
+      template: template,
       marker_data: [...marker.value],
+      video_id: playerStore.videoId,
     };
     try {
       const res = await axios.post(`${config.API_LOCATION}/calibration_assets/update`, params);
