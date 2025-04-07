@@ -47,9 +47,6 @@
                 <VideoPlayer />
               </v-col>
             </v-row>
-            <!-- <v-row class="mb-2 px-4">
-              <TimeSelector width="100%" />
-            </v-row> -->
           </v-card>
         </v-col>
 
@@ -95,17 +92,17 @@
         </v-col>
       </v-row> -->
 
-      <!-- <v-row class="ma-n2">
-        <v-col>
-          <v-card>test </v-card>
-        </v-col>
-      </v-row> -->
-
       <v-row class="ma-n2">
         <v-col>
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" scrollable="False">
             <v-card-title class="pl-2"> Timelines </v-card-title>
-            <v-sheet class="px-4">
+            <v-row>
+              <v-col cols="3" />
+              <v-col cols="9">
+                <TimeSelector />
+              </v-col>
+            </v-row>
+            <v-sheet class="px-4 mb-6">
               <Timeline ref="timeline" :style="{ width: '100%' }" />
             </v-sheet>
           </v-card>
@@ -138,7 +135,7 @@ import CalibrationVisualizer from "@/components/CalibrationVisualizer.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 import Timeline from "@/components/Timeline.vue";
-// import TimeSelector from "@/components/TimeSelector.vue";
+import TimeSelector from "@/components/TimeSelector.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
 // import ShotsOverview from "@/components/ShotsOverview.vue";
@@ -493,15 +490,6 @@ watch(
 //     });
 //   }
 // };
-
-watch(
-  () => calibrationAssetStore.calibrationAssetId,
-  (newValue) => {
-    if (newValue) {
-      console.log("calibrationAssetId", newValue);
-    }
-  }
-);
 </script>
 
 <style scoped>

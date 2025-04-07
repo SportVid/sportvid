@@ -1,57 +1,40 @@
 <template>
-  <v-dialog v-model="dialog" max-width="1000">
-    <template v-slot:activator="{ props }">
-      <v-btn v-bind="props" text block large>
-        <v-icon left>mdi-swap-vertical</v-icon>
-        {{ $t("modal.timeline.export_result.link") }}
-      </v-btn>
-    </template>
+  <v-dialog v-model="dialog" width="800">
     <v-card>
-      <v-card-title class="mb-2">
+      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("modal.timeline.export_result.title") }}
 
-        <v-btn icon @click="dialog = false" absolute top right>
+        <v-spacer></v-spacer>
+
+        <v-btn icon @click="dialog = false" variant="plain" color="grey">
           <v-icon>mdi-close</v-icon>
         </v-btn>
-      </v-card-title>
+      </v-toolbar>
+
       <v-card-text>
         <v-tabs vertical class="tabs-left">
-          <v-tab
-            v-for="export_format in export_formats_sorted"
-            :key="export_format.name"
-          >
-            <v-icon left> {{ export_format.icon }} </v-icon>
-            <span class="text-button">{{ export_format.name }}</span>
+          <v-tab v-for="exportFormat in exportFormatsSorted" :key="exportFormat.name">
+            <v-icon left> {{ exportFormat.icon }} </v-icon>
+            <span class="text-button">{{ exportFormat.name }}</span>
           </v-tab>
-          <v-tab-item
-            v-for="export_format in export_formats_sorted"
-            :key="export_format.name"
-          >
+          <v-tab-item v-for="exportFormat in exportFormatsSorted" :key="exportFormat.name">
             <v-card flat height="100%">
-              <v-card-title>{{ export_format.name }} </v-card-title>
+              <v-card-title>{{ exportFormat.name }} </v-card-title>
               <v-card-text>
-                <Parameters :parameters="export_format.parameters" />
+                <Parameters :parameters="exportFormat.parameters" />
               </v-card-text>
 
               <v-card-actions class="pt-0">
-                <v-btn
-                  @click="
-                    downloadExport(
-                      export_format.export,
-                      export_format.parameters
-                    )
-                  "
-                  >{{ $t("modal.timeline.export_result.export") }}</v-btn
-                >
+                <v-btn @click="downloadExport(exportFormat.export, exportFormat.parameters)">{{
+                  $t("modal.timeline.export_result.export")
+                }}</v-btn>
               </v-card-actions>
             </v-card>
           </v-tab-item>
         </v-tabs>
       </v-card-text>
       <v-card-actions class="pt-0">
-        <v-btn @click="dialog = false">{{
-          $t("modal.timeline.export_result.close")
-        }}</v-btn>
+        <v-btn @click="dialog = false">{{ $t("modal.timeline.export_result.close") }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

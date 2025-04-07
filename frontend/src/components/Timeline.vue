@@ -21,11 +21,16 @@
               </v-list-item>
             </v-list>
           </v-menu>
-          <ModalCreateTimeline v-model="showModalCreateTimeline" />
-          <ModalImportTimeline v-model="showModalImportTimeline" />
+          <ModalTimelineCreate v-model="showModalTimelineCreate" />
+          <ModalTimelineImport v-model="showModalTimelineImport" />
         </div>
 
-        <Draggable v-model="timelineHierarchy" :defaultOpen="false" :indent="25">
+        <Draggable
+          v-model="timelineHierarchy"
+          :defaultOpen="false"
+          :indent="25"
+          :keepPlaceholder="true"
+        >
           <template v-slot:default="{ node, stat }">
             <v-card style="height: 60px" class="my-1">
               <v-row class="mt-4 ml-3 mr-2">
@@ -48,40 +53,47 @@
                     </v-btn>
                   </template>
                   <v-list class="py-0" density="compact">
-                    <v-list-item class="menu-item" @click="showModalCopyTimeline = true">
+                    <v-list-item class="menu-item" @click="showModalTimelineCopy = true">
                       <v-icon left>{{ "mdi-content-copy" }}</v-icon>
                       {{ $t("modal.timeline.duplicate.link") }}
                     </v-list-item>
-                    <v-list-item class="menu-item" @click="showModalRenameTimeline = true">
+                    <v-list-item class="menu-item" @click="showModalTimelineRename = true">
                       <v-icon left>{{ "mdi-pencil" }}</v-icon>
                       {{ $t("modal.timeline.rename.link") }}
                     </v-list-item>
-                    <!-- <v-list-item class="menu-item" v-if="node.type == 'PLUGIN_RESULT'" @click="showModalVisualizationTimeline = true">
+                    <!-- <v-list-item class="menu-item" v-if="node.type == 'PLUGIN_RESULT'" @click="showModalTimelineVisualization = true">
                     </v-list-item> -->
                     <v-list-item
                       class="menu-item"
                       v-if="node.type == 'PLUGIN_RESULT'"
-                      @click="showModalExportTimeline = true"
+                      @click="showModalTimelineExport = true"
                     >
                     </v-list-item>
-                    <v-list-item class="menu-item" @click="showModalDeleteTimeline = true">
+                    <v-list-item class="menu-item" @click="showModalTimelineDelete = true">
                       <v-icon left>{{ "mdi-trash-can-outline" }}</v-icon>
                       {{ $t("modal.timeline.delete.link") }}
                     </v-list-item>
                   </v-list>
                 </v-menu>
-                <ModalCopyTimeline v-model="showModalCopyTimeline" />
-                <ModalRenameTimeline v-model="showModalRenameTimeline" />
-                <!-- <ModalVisualizationTimeline
+                <ModalTimelineCopy v-model="showModalTimelineCopy" />
+                <ModalTimelineRename v-model="showModalTimelineRename" />
+                <!-- <ModalTimelineVisualization
                   :timeline="node.id"
-                  v-model="showModalVisualizationTimeline"
+                  v-model="showModalTimelineVisualization"
                 /> -->
-                <ModalExportResult v-model="showModalExportTimeline" />
-                <ModalDeleteTimeline v-model="showModalDeleteTimeline" />
+                <ModalExportResult v-model="showModalExportResult" />
+                <ModalTimelineDelete v-model="showModalTimelineDelete" />
               </v-row>
             </v-card>
           </template>
+          <template v-slot:placeholder="{}">
+            <div class="draggable-placeholder-inner"></div>
+          </template>
         </Draggable>
+      </v-col>
+
+      <v-col ref="container" cols="9" style="margin: 0; padding: 0; border: 2px solid red">
+        <canvas style="width: 100%; border: 2px solid blue" ref="canvas" resize> </canvas>
       </v-col>
     </v-row>
 
@@ -189,13 +201,13 @@ import { useAnnotationCategoryStore } from "@/stores/annotation_category";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
-import ModalRenameTimeline from "@/components/ModalRenameTimeline.vue";
-import ModalCopyTimeline from "@/components/ModalCopyTimeline.vue";
-import ModalDeleteTimeline from "@/components/ModalDeleteTimeline.vue";
+import ModalTimelineRename from "@/components/ModalTimelineRename.vue";
+import ModalTimelineCopy from "@/components/ModalTimelineCopy.vue";
+import ModalTimelineDelete from "@/components/ModalTimelineDelete.vue";
 import ModalExportResult from "@/components/ModalExportResult.vue";
-import ModalCreateTimeline from "@/components/ModalCreateTimeline.vue";
-// import ModalVisualizationTimeline from "@/components/ModalVisualizationTimeline.vue";
-import ModalImportTimeline from "@/components/ModalImportTimeline.vue";
+import ModalCreateTimModalTimelineCreateeline from "@/components/ModalTimelineCreate.vue";
+// import ModalTimelineVisualization from "@/components/ModalTimelineVisualization.vue";
+import ModalTimelineImport from "@/components/ModalTimelineImport.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
 import {
   AnnotationTimeline,
@@ -310,13 +322,13 @@ const menu = ref({
   selected: null,
 });
 
-const showModalCreateTimeline = ref(null);
-const showModalImportTimeline = ref(null);
-const showModalCopyTimeline = ref(null);
-const showModalRenameTimeline = ref(null);
-const showModalVisualizationTimeline = ref(null);
-const showModalExportTimeline = ref(null);
-const showModalDeleteTimeline = ref(null);
+const showModalTimelineCreate = ref(false);
+const showModalTimelineImport = ref(false);
+const showModalTimelineCopy = ref(false);
+const showModalTimelineRename = ref(false);
+const showModalTimelineVisualization = ref(false);
+const showModalExportResult = ref(false);
+const showModalTimelineDelete = ref(false);
 
 const toggleOpen = (node) => {
   node.open = !node.open;
@@ -730,17 +742,17 @@ const change = async (node) => {
 //   return x / timeScale.value + startTime.value;
 // };
 
-// const canvas = ref(null);
+const canvas = ref(null);
 
-// const mapToGlobal = (point) => {
-//   const screenRect = app.screen;
-//   const canvasRect = canvas.value.getBoundingClientRect();
+const mapToGlobal = (point) => {
+  const screenRect = app.screen;
+  const canvasRect = canvas.value.getBoundingClientRect();
 
-//   const windowsX = (point.x / screenRect.width) * canvasRect.width + canvasRect.x;
-//   const windowsY = (point.y / screenRect.height) * canvasRect.height + canvasRect.y;
+  const windowsX = (point.x / screenRect.width) * canvasRect.width + canvasRect.x;
+  const windowsY = (point.y / screenRect.height) * canvasRect.height + canvasRect.y;
 
-//   return { x: windowsX, y: windowsY };
-// };
+  return { x: windowsX, y: windowsY };
+};
 
 // const onAnnotateSelection = () => {
 //   annotationDialog.value.show = true;
@@ -858,41 +870,44 @@ const change = async (node) => {
 //   addSegmentSelection(newSelection);
 // });
 
-// const container = ref(null);
-// onMounted(() => {
-//   containerWidth.value = container.value.clientWidth;
-//   app.value = new PIXI.Application();
-//   app.value.init({
-//     width: containerWidth.value,
-//     height: containerHeight.value,
-//     backgroundAlpha: 0.0,
-//     canvas: canvas.value,
-//     resizeTo: canvas.value,
-//   });
-//   console.log("app_post", app.value);
+const container = ref(null);
+onMounted(() => {
+  containerWidth.value = container.value.clientWidth;
+  app.value = new PIXI.Application();
+  app.value.init({
+    width: containerWidth.value,
+    height: containerHeight.value,
+    backgroundAlpha: 0.0,
+    canvas: canvas.value,
+    resizeTo: canvas.value,
+  });
+  console.log("app_post", app.value);
 
-//   canvas.value.addEventListener("contextmenu", (e) => {
-//     e.preventDefault();
-//   });
+  canvas.value.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+  });
 
-//   // generate bitmapfont
-//   // generateFont();
-//   nextTick(() => {
-//     if (app.value) {
-//       app.value.ticker.add(() => {
-//         // Deine Logik hier
-//       });
-//     } else {
-//       console.error("Ticker is not available yet");
-//     }
-//   });
-// });
+  // generate bitmapfont
+  // generateFont();
+  // nextTick(() => {
+  //   if (app.value) {
+  //     app.value.ticker.add(() => {
+  //       // Deine Logik hier
+  //     });
+  //   } else {
+  //     console.error("Ticker is not available yet");
+  //   }
+  // });
+});
 </script>
 
 <style>
 .draggable-placeholder-inner {
-  border: 1px solid #ae1313;
+  border: 2px solid #ae1313;
   background: #ae131377;
+  border-radius: 6px;
+  height: 60px;
+  margin: 4px 0;
 }
 
 .menu-item {
