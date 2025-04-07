@@ -493,6 +493,15 @@ watch(
 //     });
 //   }
 // };
+
+watch(
+  () => calibrationAssetStore.calibrationAssetId,
+  (newValue) => {
+    if (newValue) {
+      console.log("calibrationAssetId", newValue);
+    }
+  }
+);
 </script>
 
 <style scoped>
