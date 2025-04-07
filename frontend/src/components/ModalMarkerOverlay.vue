@@ -2,7 +2,7 @@
   <div
     ref="overlayReferenceMarker"
     class="overlay-reference-marker"
-    @click="markerStore.setReferenceMarker"
+    @click="calibrationAssetStore.setVideoMarker"
   >
     <video
       class="video-overlay"
@@ -18,16 +18,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from "vue";
-import { useMarkerStore } from "@/stores/marker";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 
-const markerStore = useMarkerStore();
+const calibrationAssetStore = useCalibrationAssetStore();
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 
-const marker = computed(() => markerStore.marker);
+const marker = computed(() => calibrationAssetStore.marker);
 const overlayReferenceMarker = ref(null);
 
 const videoOverlayElement = ref(null);
@@ -65,7 +65,7 @@ onMounted(() => {
   window.addEventListener("resize", updateVideoSize);
 });
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   window.removeEventListener("click", handleClickOverlayReferenceMarker);
   window.removeEventListener("resize", updateVideoSize);
 });

@@ -14,22 +14,21 @@
           maxHeight: maxVideoHeight * 100 + 'vh',
         }"
       />
-
       <!-- <div
-        v-for="(position, index) in markerStore.positionsNested[sliderValue]"
+        v-for="(position, index) in bboxesStore.bboxData.filter((p) => p.time === playerStore.currentTime)"
         v-show="bboxesStore.showBoundingBox"
         :key="index"
         class="bounding-box-position"
         :style="{
-          top: position.bbox_top * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
-          left: position.bbox_left * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
-          width: position.bbox_width * videoStore.videoSize.width + 'px',
-          height: position.bbox_height * videoStore.videoSize.height + 'px',
-          border: `2px solid ${position.team}`,
+          top: position.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
+          left: position.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
+          width: position.w * videoStore.videoSize.width + 'px',
+          height: position.h * videoStore.videoSize.height + 'px',
+          border: `2px solid red`,
         }"
       /> -->
       <div
-        v-for="(position, index) in bboxData.filter((p) => p.time === playerStore.currentTime)"
+        v-for="(position, index) in bboxesStore.bboxDataInterpolated[playerStore.currentTime]"
         v-show="bboxesStore.showBoundingBox"
         :key="index"
         class="bounding-box-position"
@@ -53,9 +52,9 @@
       </v-btn>
 
       <v-btn @click="toggle" size="small">
-        <v-icon v-if="ended"> mdi-restart</v-icon>
-        <v-icon v-else-if="playing"> mdi-pause</v-icon>
-        <v-icon v-else> mdi-play</v-icon>
+        <v-icon v-if="ended">mdi-restart</v-icon>
+        <v-icon v-else-if="playing">mdi-pause</v-icon>
+        <v-icon v-else>mdi-play</v-icon>
       </v-btn>
 
       <v-btn @click="deltaSeek(1 / playerStore.videoFPS)" size="small">
@@ -72,7 +71,7 @@
       </v-btn> -->
 
       <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
-        {{ getTimecode(currentTime) }}
+        {{ getTimecode(playerStore.currentTime) }}
       </div>
 
       <v-menu offset-y top>
@@ -90,17 +89,14 @@
         </v-list>
       </v-menu>
 
-      <v-btn @click="onToggleVolume" size="small">
-        <v-icon v-if="volume > 66">mdi-volume-high</v-icon>
-        <v-icon v-else-if="volume > 33">mdi-volume-medium</v-icon>
-        <v-icon v-else-if="volume > 0">mdi-volume-low</v-icon>
-        <v-icon v-else-if="volume == 0">mdi-volume-mute</v-icon>
+      <v-btn @click="playerStore.toggleMute" size="small">
+        <v-icon>{{ playerStore.isMuted ? "mdi-volume-mute" : playerStore.volumeIcon }}</v-icon>
       </v-btn>
 
       <div style="width: 13%; min-width: 80px">
         <v-slider
-          v-model="volume"
-          @update:model-value="onVolumeChange"
+          v-model="playerStore.volume"
+          @update:model-value="playerStore.changeVolume"
           max="100"
           min="0"
           hide-details
@@ -124,45 +120,47 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { throttle } from "lodash";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
-import { useMarkerStore } from "@/stores/marker";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
 
-const videoElement = ref(null);
-const videoContainer = ref(null);
-
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
-const markerStore = useMarkerStore();
+const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
 
-const volume = ref(playerStore.volume);
-const ended = computed(() => playerStore.ended);
-const currentTime = computed(() => playerStore.currentTime);
-const duration = computed(() => playerStore.videoDuration);
-const syncTime = computed(() => playerStore.syncTime);
-const playing = computed(() => playerStore.playing);
-const targetTime = computed(() => playerStore.targetTime);
+const videoContainer = ref(null);
+const videoElement = ref(null);
+onMounted(() => {
+  if (videoElement.value) playerStore.videoElement = videoElement.value;
+});
 
-const progress = ref(0);
-const bboxData = ref([]);
-let updateTimer = null;
-
-const currentSpeed = ref({ title: "1.00", value: 1.0 });
-const speeds = [
-  { title: "0.25", value: 0.25 },
-  { title: "0.50", value: 0.5 },
-  { title: "0.75", value: 0.75 },
-  { title: "1.00", value: 1.0 },
-  { title: "1.25", value: 1.25 },
-  { title: "1.50", value: 1.5 },
-  { title: "1.75", value: 1.75 },
-  { title: "2.00", value: 2.0 },
-];
-
+// const throttledUpdateTime = throttle((currentTime) => {
+//   playerStore.setCurrentTime(playerStore.roundTimeToFPS(currentTime, playerStore.videoFPS));
+// }, 40);
+let animationFrameId = null;
+const throttledUpdateTime = throttle((currentTime) => {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+  }
+  animationFrameId = requestAnimationFrame(() => {
+    playerStore.setCurrentTime(playerStore.roundTimeToFPS(currentTime, playerStore.videoFPS));
+  });
+}, (1 / playerStore.videoFPS) * 1000);
+const onTimeUpdate = (event) => {
+  throttledUpdateTime(event.target.currentTime);
+  playerStore.setEnded(event.target.ended);
+};
+// const onTimeUpdate = (event) => {
+//   playerStore.setCurrentTime(
+//     playerStore.roundTimeToFPS(event.target.currentTime, playerStore.videoFPS)
+//   );
+//   playerStore.setEnded(event.target.ended);
+// };
 const deltaSeek = (delta) => {
   if (videoElement.value) {
     const newTime = videoElement.value.currentTime + delta;
@@ -171,54 +169,25 @@ const deltaSeek = (delta) => {
   }
 };
 
-const onPlay = () => {
-  startUpdatingTime();
-  playerStore.setEnded(false);
-  playerStore.setPlaying(true);
-};
-
-const onPause = () => {
-  stopUpdatingTime();
-  playerStore.setPlaying(false);
-};
-
-const onEnded = () => {
-  stopUpdatingTime();
-  playerStore.setPlaying(false);
-};
-
-const onTimeUpdate = (event) => {
-  playerStore.setCurrentTime(
-    playerStore.roundTimeToFPS(event.target.currentTime, playerStore.videoFPS)
-  );
-
-  playerStore.setEnded(event.target.ended);
-};
-
+const targetTime = computed(() => playerStore.targetTime);
 const onProgressChange = (percentage) => {
   if (videoElement.value) {
     const targetTime = playerStore.roundTimeToFPS(
       (playerStore.videoDuration * percentage) / 100,
       playerStore.videoFPS
     );
-    playerStore.currentTime = targetTime;
+    playerStore.setCurrentTime(targetTime);
     videoElement.value.currentTime = targetTime;
   }
 };
-
-const onSpeedChange = (idx) => {
-  currentSpeed.value = speeds[idx];
+watch(targetTime, (newTargetTime) => {
   if (videoElement.value) {
-    videoElement.value.playbackRate = currentSpeed.value.value;
+    const roundedTargetTime = playerStore.roundTimeToFPS(newTargetTime, playerStore.videoFPS);
+    playerStore.currentTime = roundedTargetTime;
   }
-};
+});
 
-const onVolumeChange = (newVolume) => playerStore.setVolume(newVolume);
-
-const toggle = () => playerStore.togglePlaying();
-const toggleSyncTime = () => playerStore.toggleSyncTime();
-const onToggleVolume = () => playerStore.toggleMute();
-
+let updateTimer = null;
 const startUpdatingTime = () => {
   if (updateTimer) clearInterval(updateTimer);
 
@@ -232,95 +201,18 @@ const startUpdatingTime = () => {
     }
   }, interval);
 };
-
 const stopUpdatingTime = () => {
   if (updateTimer) {
     clearInterval(updateTimer);
     updateTimer = null;
   }
 };
-
-const updateVideoSize = () => {
-  nextTick(() => {
-    if (videoElement.value) {
-      const rect = videoElement.value.getBoundingClientRect();
-      const size = {
-        width: rect.width,
-        height: rect.height,
-        top: rect.top,
-        left: rect.left,
-      };
-      videoStore.setVideoSize(size);
-    }
-  });
-};
-
-const handleResize = () => {
-  updateVideoSize();
-};
-
 onMounted(() => {
-  updateVideoSize();
   startUpdatingTime();
-  nextTick(() => {
-    bboxData.value = bboxesStore.bboxData.filter(
-      (position) => position.time === playerStore.currentTime
-    );
-  });
-  window.addEventListener("resize", handleResize);
-  window.addEventListener("scroll", handleResize);
 });
-
-onUnmounted(() => {
+onBeforeUnmount(() => {
   stopUpdatingTime();
-  window.removeEventListener("resize", handleResize);
-  window.removeEventListener("scroll", handleResize);
 });
-
-watch(playing, (isPlaying) => {
-  if (videoElement.value) {
-    if (isPlaying) {
-      videoElement.value.volume = volume.value / 100;
-      videoElement.value.play();
-    } else {
-      videoElement.value.pause();
-    }
-  }
-});
-
-watch(volume, (newVolume) => {
-  if (videoElement.value) {
-    videoElement.value.volume = newVolume / 100;
-  }
-});
-
-watch(
-  () => markerStore.isAnyMarkerActive,
-  async (newVal) => {
-    if (!newVal) {
-      await nextTick();
-      updateVideoSize();
-    }
-  }
-);
-
-watch(targetTime, (newTargetTime) => {
-  if (videoElement.value) {
-    const roundedTargetTime = playerStore.roundTimeToFPS(newTargetTime, playerStore.videoFPS);
-    playerStore.currentTime = roundedTargetTime;
-  }
-});
-
-watch(
-  () => playerStore.currentTime,
-  (newTime) => {
-    progress.value = (newTime / playerStore.videoDuration) * 100;
-    nextTick(() => {
-      bboxData.value = bboxesStore.bboxData.filter((position) => position.time === newTime);
-    });
-  }
-);
-
 watch(
   () => playerStore.playing,
   (isPlaying) => {
@@ -332,6 +224,27 @@ watch(
   }
 );
 
+const onPlay = () => {
+  startUpdatingTime();
+  playerStore.setEnded(false);
+  playerStore.setPlaying(true);
+};
+const onPause = () => {
+  stopUpdatingTime();
+  playerStore.setPlaying(false);
+};
+const onEnded = () => {
+  stopUpdatingTime();
+  playerStore.setPlaying(false);
+};
+
+const progress = ref(0);
+watch(
+  () => playerStore.currentTime,
+  (newTime) => {
+    progress.value = (newTime / playerStore.videoDuration) * 100;
+  }
+);
 watch(progress, (newProgress) => {
   if (videoElement.value) {
     const newTime = (playerStore.videoDuration * newProgress) / 100;
@@ -339,10 +252,80 @@ watch(progress, (newProgress) => {
   }
 });
 
-const maxVideoHeight = ref(0);
+watch(
+  () => playerStore.volume,
+  () => {
+    if (playerStore.videoElement) {
+      playerStore.videoElement.volume = playerStore.volume / 100;
+    }
+  }
+);
+
+const ended = computed(() => playerStore.ended);
+const playing = computed(() => playerStore.playing);
+const toggle = () => playerStore.togglePlaying();
+watch(playing, (isPlaying) => {
+  if (videoElement.value) {
+    isPlaying ? videoElement.value.play() : videoElement.value.pause();
+  }
+});
+
+// const syncTime = computed(() => playerStore.syncTime);
+// const toggleSyncTime = () => playerStore.toggleSyncTime();
+
+const currentSpeed = ref({ title: "1.00", value: 1.0 });
+const speeds = [
+  { title: "0.25", value: 0.25 },
+  { title: "0.50", value: 0.5 },
+  { title: "0.75", value: 0.75 },
+  { title: "1.00", value: 1.0 },
+  { title: "1.25", value: 1.25 },
+  { title: "1.50", value: 1.5 },
+  { title: "1.75", value: 1.75 },
+  { title: "2.00", value: 2.0 },
+];
+const onSpeedChange = (idx) => {
+  currentSpeed.value = speeds[idx];
+  if (videoElement.value) {
+    videoElement.value.playbackRate = currentSpeed.value.value;
+  }
+};
+
+const updateVideoSize = () => {
+  nextTick(() => {
+    if (videoElement.value) {
+      const rect = videoElement.value.getBoundingClientRect();
+      videoStore.setVideoSize({
+        width: rect.width,
+        height: rect.height,
+        top: rect.top,
+        left: rect.left,
+      });
+    }
+  });
+};
+onMounted(() => {
+  updateVideoSize();
+  window.addEventListener("resize", updateVideoSize);
+  window.addEventListener("scroll", updateVideoSize);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateVideoSize);
+  window.removeEventListener("scroll", updateVideoSize);
+});
+watch(
+  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  async (newVal) => {
+    if (!newVal) {
+      await nextTick();
+      updateVideoSize();
+    }
+  }
+);
+
 const videoSlider = ref(null);
 const videoControl = ref(null);
-
+const maxVideoHeight = ref(0);
 const updateMaxHeight = () => {
   if (!videoSlider.value || !videoControl.value) return;
   maxVideoHeight.value =
@@ -354,12 +337,13 @@ const updateMaxHeight = () => {
       60) /
     window.innerHeight;
 };
-
 onMounted(() => {
   nextTick(() => updateMaxHeight());
   window.addEventListener("resize", updateMaxHeight);
 });
-
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateMaxHeight);
+});
 watch(() => window.innerHeight, updateMaxHeight);
 </script>
 

@@ -366,8 +366,9 @@
       },
       "import": {
         "title": "Import Timeline",
+        "input": "Select an ELAN file to import [eaf]",
         "eaf": "Import from ELAN .eaf file",
-        "update": "Import",
+        "import": "Import",
         "close": "Close"
       },
       "duplicate": {
@@ -412,11 +413,20 @@
       "close": "Close",
       "title": "History"
     },
-    "annotation": {
-      "select_annotation": "Select Annotation",
-      "save_annotation": "Save Annotation",
-      "save": "Save",
-      "name": "Annotation Name"
+    "calibration_asset": {
+      "create": {
+        "title": "Create Calibration Asset",
+        "template": "Select Sport",
+        "create": "Create"
+      },
+      "select": { "title": "Select Calibration Asset" },
+      "save": {
+        "title": "Save Calibration Asset",
+        "save": "Save",
+        "name": "Calibration Asset Name",
+        "template": "Select Sport"
+      },
+      "update": { "title": "Update Calibration Asset", "update": "Update" }
     },
     "position_data": {
       "upload": "Upload Position Data",
@@ -473,17 +483,31 @@
     "uploaded": "Uploaded:",
     "timelines": "Timelines:"
   },
-  "annotation_vis": {
-    "marker_menu": "Marker",
-    "view_ref_marker": "View Reference Marker",
-    "add_marker": "Add Marker",
-    "delete_marker": "Delete Marker",
-    "annotation_menu": "Annotation",
-    "save_annotation": "Save Annotation",
-    "select_annotation": "Select Annotation"
+  "calibration_asset_vis": {
+    "no_calibration_asset": {
+      "text": "No calibration asset selected.<br>Please create a new calibration asset or choose an existing one.",
+      "create": "Create new calibration asset",
+      "select": "Select calibration asset"
+    },
+    "marker": {
+      "title": "Marker",
+      "view_vid_marker": "View Video Marker",
+      "add_ref_marker": "Add Reference Marker",
+      "delete_ref_marker": "Delete Reference Marker"
+    },
+    "calibration_asset": {
+      "title": "Calibration Asset",
+      "save": "Save Calibration Asset",
+      "select": "Select Calibration Asset",
+      "create": "Create Calibration Asset",
+      "update": "Update Calibration Asset"
+    }
   },
   "pos_data_vis": {
-    "no_bbox_data": "No position data has been calculated yet.<br> Please run the Bytetrack plugin or upload the position data manually.",
+    "no_bbox_data": {
+      "text": "No position data has been calculated yet.<br>Please run the Bytetrack plugin or upload the position data manually.",
+      "upload": "Upload position data"
+    },
     "display_settings": {
       "title": "Display Settings",
       "view_bounding_box": "View bounding-boxes",

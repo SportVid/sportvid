@@ -1,62 +1,72 @@
 <template>
   <v-main>
-    <v-container v-if="userStore.loggedIn" class="py-8 px-6" fluid>
-      <v-row justify="center">
-        <v-col cols="10" md="3" class="d-flex flex-column align-center">
+    <v-container v-if="userStore.loggedIn" fluid>
+      <v-row justify="center" class="mt-2">
+        <v-col xs="6" sm="5" md="3" xl="2" class="d-flex flex-column align-center">
           <ModalVideoUpload />
         </v-col>
-        <v-col cols="10" md="3" class="d-flex flex-column align-center">
-          <v-btn
-            class="mt-6"
-            :disabled="selectedVideosIds.length == 0"
-            @click="showModalPlugin = true"
+        <v-col xs="6" sm="5" md="3" xl="2" class="d-flex flex-column align-center">
+          <v-card
+            :class="['d-flex', 'flex-column']"
+            style="text-align: center"
+            flat
+            color="transparent"
+            width="210"
           >
-            <v-icon color="primary" :disabled="selectedVideosIds.length == 0">mdi-plus</v-icon>
-            {{ $t("video_view.run_plugin") }}
-          </v-btn>
-          <ModalPlugin v-model="showModalPlugin" :videoIds="selectedVideosIds" />
+            <v-btn
+              :disabled="selectedVideosIds.length == 0"
+              :color="selectedVideosIds.length === 0 ? 'light-grey' : 'primary'"
+              @click="showModalPlugin = true"
+            >
+              <v-icon>mdi-plus-circle</v-icon>
+              <p class="ms-2">{{ $t("video_view.run_plugin") }}</p>
+            </v-btn>
+            <ModalPlugin v-model="showModalPlugin" :videoIds="selectedVideosIds" />
+          </v-card>
         </v-col>
       </v-row>
 
-      <v-container class="d-flex flex-wrap justify-center video-gallery">
-        <v-card
-          elevation="2"
-          width="370px"
-          v-for="item in videos"
-          :loading="item.loading"
-          :key="item.id"
-        >
-          <v-card-title class="video-overview-title mt-2 mb-2">
-            {{ item.name }}
-          </v-card-title>
-          <v-card-text>
-            <div>{{ $t("video_view.video_id") }} {{ item.id }}</div>
-            <div>{{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}</div>
-            <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
-            <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
+      <v-row>
+        <v-col>
+          <v-container class="d-flex flex-wrap justify-center video-gallery pa-0" fluid>
+            <v-card elevation="2" v-for="item in videos" :loading="item.loading" :key="item.id">
+              <v-card-title class="video-overview-title mt-2 mb-2">
+                {{ item.name }}
+              </v-card-title>
+              <v-card-text>
+                <div>{{ $t("video_view.video_id") }} {{ item.id }}</div>
+                <div>{{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}</div>
+                <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
+                <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
 
-            <v-card-actions class="actions mt-n6 mb-n8">
-              <v-btn size="small" variant="outlined" class="ml-n2" @click="showVideo(item.id)">
-                <v-icon class="mr-1">
-                  {{ "mdi-movie-search-outline" }}
-                </v-icon>
-                {{ $t("video_view.analysis") }}
-              </v-btn>
+                <v-card-actions class="actions mt-n6 mb-n8">
+                  <v-btn size="small" variant="outlined" class="ml-n2" @click="showVideo(item.id)">
+                    <v-icon class="mr-1">
+                      {{ "mdi-movie-search-outline" }}
+                    </v-icon>
+                    {{ $t("video_view.analysis") }}
+                  </v-btn>
 
-              <ModalVideoRename :video="item.id" />
+                  <ModalVideoRename :video="item.id" />
 
-              <v-btn size="small" color="red" variant="outlined" @click="deleteVideo(item.id)">
-                <v-icon class="mr-1">
-                  {{ "mdi-trash-can-outline" }}
-                </v-icon>
-                {{ $t("video_view.delete") }}
-              </v-btn>
-              <v-checkbox v-model="selectedVideos[item.id]" color="primary" class="pt-5 ml-n1" />
-            </v-card-actions>
-          </v-card-text>
-          <v-progress-linear v-model="videosProgress[item.id]" />
-        </v-card>
-      </v-container>
+                  <v-btn size="small" color="red" variant="outlined" @click="deleteVideo(item.id)">
+                    <v-icon class="mr-1">
+                      {{ "mdi-trash-can-outline" }}
+                    </v-icon>
+                    {{ $t("video_view.delete") }}
+                  </v-btn>
+                  <v-checkbox
+                    v-model="selectedVideos[item.id]"
+                    color="primary"
+                    class="pt-5 ml-n1"
+                  />
+                </v-card-actions>
+              </v-card-text>
+              <v-progress-linear v-model="videosProgress[item.id]" />
+            </v-card>
+          </v-container>
+        </v-col>
+      </v-row>
     </v-container>
 
     <v-container v-else>
@@ -95,10 +105,10 @@ import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTimelineStore } from "@/stores/timeline";
+import { getDisplayTime } from "@/plugins/time";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalVideoUpload from "@/components/ModalVideoUpload.vue";
 import ModalVideoRename from "@/components/ModalVideoRename.vue";
-import { getDisplayTime } from "@/plugins/time";
 
 const router = useRouter();
 const videoStore = useVideoStore();
@@ -107,10 +117,9 @@ const pluginRunStore = usePluginRunStore();
 const timelineStore = useTimelineStore();
 
 const showModalPlugin = ref(false);
-const selectedVideos = ref({});
-const fetchPluginTimer = ref(null);
 
 const videos = computed(() => videoStore.all);
+const selectedVideos = ref({});
 const selectedVideosIds = computed(() =>
   Object.entries(selectedVideos.value)
     .filter(([, isSelected]) => isSelected)
@@ -127,7 +136,18 @@ const videosProgress = computed(() => {
   });
   return progress;
 });
+watch(
+  videosProgress,
+  (newState, oldState) => {
+    if (!oldState) return;
+    if (Object.keys(newState).some((k) => oldState[k] !== newState[k])) {
+      fetchData(true);
+    }
+  },
+  { deep: true }
+);
 
+const fetchPluginTimer = ref(null);
 const fetchData = async (fetchTimelines = false) => {
   await videoStore.fetchAll();
   await pluginRunStore.fetchAll({ addResults: false });
@@ -135,14 +155,9 @@ const fetchData = async (fetchTimelines = false) => {
     await timelineStore.fetchAll({ addResultsType: true });
   }
 };
-
-const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
-const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
-
 onMounted(() => {
   fetchData();
 });
-
 watch(
   () => userStore.loggedIn,
   (newValue, oldValue) => {
@@ -151,7 +166,6 @@ watch(
     }
   }
 );
-
 watch(
   () => pluginRunStore.pluginInProgress,
   (newState) => {
@@ -165,6 +179,9 @@ watch(
   },
   { immediate: true }
 );
+
+const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
+const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
 </script>
 
 <style>

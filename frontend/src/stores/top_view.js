@@ -1,11 +1,11 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
-export const useCompAreaStore = defineStore("comp_area", () => {
-  const compAreaSize = ref({ width: 0, height: 0, top: 0, left: 0 });
+export const useTopViewStore = defineStore("top_view", () => {
+  const topViewSize = ref({ width: 0, height: 0, top: 0, left: 0 });
 
-  const setCompAreaSize = (size) => {
-    compAreaSize.value = size;
+  const setTopViewSize = (size) => {
+    topViewSize.value = size;
   };
 
   const currentSport = ref({
@@ -42,13 +42,17 @@ export const useCompAreaStore = defineStore("comp_area", () => {
     },
   ];
 
-  const onSportChange = (idx) => {
-    currentSport.value = sports[idx];
+  const onSportChange = (title) => {
+    const sport = sports.find((sport) => sport.title === title);
+    currentSport.value.title = sport.title;
+    currentSport.value.pitchImage = sport.pitchImage;
+    currentSport.value.widthRel = sport.widthRel;
+    currentSport.value.heightRel = sport.heightRel;
   };
 
   return {
-    compAreaSize,
-    setCompAreaSize,
+    topViewSize,
+    setTopViewSize,
     currentSport,
     sports,
     onSportChange,

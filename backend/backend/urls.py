@@ -220,4 +220,15 @@ urlpatterns = [
         views.VideoAnalysisStateSetSelectedFaceClustering.as_view(),
         name="video_analysis_set_selected_face_clustering",
     ),
+    # 
+    path("calibration_assets/list", views.CalibrationAssetsList.as_view(), name="calibration_assets_list"),
+    path(
+        "calibration_assets/create", views.CalibrationAssetsCreate.as_view(), name="calibration_assets_create"
+    ),
+    path(
+        "calibration_assets/update", views.CalibrationAssetsChange.as_view(), name="calibration_assets_change"
+    ),
+    path(
+        "calibration_assets/delete", views.CalibrationAssetsDelete.as_view(), name="calibration_assets_delete"
+    ),
 ]

@@ -1,6 +1,6 @@
 <template>
   <v-card
-    :class="['d-flex', 'flex-column', 'ma-6']"
+    :class="['d-flex', 'flex-column']"
     style="text-align: center"
     flat
     color="transparent"
@@ -8,7 +8,7 @@
   >
     <v-dialog v-model="dialog" max-width="1000">
       <template v-slot:activator="{ props }">
-        <v-btn :disabled="!canUpload" color="primary" v-bind="props">
+        <v-btn :disabled="!canUpload" :color="!canUpload ? 'light-grey' : 'primary'" v-bind="props">
           {{ $t("modal.video.upload.link") }}
           <v-icon class="ms-2">mdi-plus-circle</v-icon>
         </v-btn>
@@ -36,6 +36,7 @@
               required
               clearable
               clear-icon="mdi-close-circle-outline"
+              prepend-icon="mdi-pencil"
             />
 
             <v-file-input
@@ -45,21 +46,23 @@
               filled
               prepend-icon="mdi-movie-filter"
               class="mt-2"
+              show-size
+              :hint="`Maximum file size: ${maxSizeInWords}`"
+              persistent-hint
             />
 
             <v-progress-linear
               v-if="isUploading"
               v-model="uploadingProgress"
-              class="mt-n4 ml-10 mb-4"
+              class="mt-n2 ml-10 mb-4"
               style="max-width: calc(100% - 40px)"
             />
 
-            <v-checkbox
-              v-model="checkbox"
-              label="Do you agree with the terms of services?"
-              required
-              class="mt-n2"
-            />
+            <v-checkbox v-model="checkbox" required class="ml-n2">
+              <template v-slot:label>
+                <span class="ml-2">Do you agree with the terms of services?</span>
+              </template>
+            </v-checkbox>
 
             <v-btn class="mr-4 mt-n4" :disabled="disabled" @click="uploadVideo">
               {{ $t("modal.video.upload.update") }}
@@ -73,7 +76,6 @@
       please contact abc@xyz.de.
     </span>
     <span v-if="canUpload"> Videos uploaded: {{ numVideos }} out of {{ allowance }} </span>
-    <span v-if="canUpload"> Max. file size: {{ maxSizeInWords }} </span>
   </v-card>
 </template>
 
@@ -132,7 +134,7 @@ const validateFile = (file) => {
 
   if (!file || !file.name) {
     fileValid.value = false;
-    return "Please select a file.";
+    return "Please select a file with a maximum file size of " + maxSizeInWords.value;
   }
   if (file.size > maxSize.value) {
     fileValid.value = false;

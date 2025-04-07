@@ -4,6 +4,8 @@ import axios from "../plugins/axios";
 import config from "../../app.config";
 
 export const usePlayerStore = defineStore("player", () => {
+  const videoElement = ref(null);
+
   const video = ref(null);
   const currentTime = ref(0.0);
   const targetTime = ref(0.0);
@@ -11,8 +13,30 @@ export const usePlayerStore = defineStore("player", () => {
   const ended = ref(false);
   const isSynced = ref(true);
 
-  const hiddenVolume = ref(1.0);
-  const mute = ref(false);
+  const isMuted = ref(false);
+  const volume = ref(100);
+  const previousVolume = ref(100);
+  const changeVolume = () => {
+    if (videoElement.value) {
+      videoElement.value.volume = volume.value / 100;
+    }
+  };
+  const toggleMute = () => {
+    if (isMuted.value) {
+      volume.value = previousVolume.value;
+    } else {
+      previousVolume.value = volume.value;
+      volume.value = 0;
+    }
+    isMuted.value = !isMuted.value;
+    changeVolume();
+  };
+  const volumeIcon = computed(() => {
+    if (volume.value > 66) return "mdi-volume-high";
+    if (volume.value > 33) return "mdi-volume-medium";
+    if (volume.value > 0) return "mdi-volume-low";
+    return "mdi-volume-mute";
+  });
 
   const syncTime = ref(true);
 
@@ -42,10 +66,6 @@ export const usePlayerStore = defineStore("player", () => {
     return video.value && "url" in video.value ? video.value.url : null;
   });
 
-  const volume = computed(() => {
-    return mute.value ? 0 : Math.round(hiddenVolume.value * 100);
-  });
-
   const clearStore = () => {
     video.value = null;
     currentTime.value = 0.0;
@@ -62,17 +82,6 @@ export const usePlayerStore = defineStore("player", () => {
 
   const setSelectedTimeRangeEnd = (time) => {
     selectedTimeRange.value.end = time;
-  };
-
-  const setVolume = (volume) => {
-    hiddenVolume.value = volume / 100;
-    if (hiddenVolume.value > 0) {
-      mute.value = false;
-    }
-  };
-
-  const toggleMute = () => {
-    mute.value = !mute.value;
   };
 
   const toggleSliderSync = () => {
@@ -129,13 +138,12 @@ export const usePlayerStore = defineStore("player", () => {
   };
 
   return {
+    videoElement,
     video,
     currentTime,
     targetTime,
     playing,
     ended,
-    hiddenVolume,
-    mute,
     syncTime,
     selectedTimeRange,
     isLoading,
@@ -144,13 +152,10 @@ export const usePlayerStore = defineStore("player", () => {
     videoName,
     videoId,
     videoUrl,
-    volume,
     isSynced,
     clearStore,
     setSelectedTimeRangeStart,
     setSelectedTimeRangeEnd,
-    setVolume,
-    toggleMute,
     setTargetTime,
     setCurrentTime,
     setEnded,
@@ -160,5 +165,11 @@ export const usePlayerStore = defineStore("player", () => {
     fetchVideo,
     toggleSliderSync,
     roundTimeToFPS,
+    isMuted,
+    volume,
+    previousVolume,
+    volumeIcon,
+    changeVolume,
+    toggleMute,
   };
 });

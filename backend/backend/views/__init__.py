@@ -11,6 +11,7 @@ from .annotation_category import *
 from .annotation import *
 from .shortcut import *
 from .annotation_shortcut import *
+from .calibration_assets import *
 
 from .analyser_api import *
 

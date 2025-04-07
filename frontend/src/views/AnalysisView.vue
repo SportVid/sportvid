@@ -1,20 +1,32 @@
 <template>
   <v-main class="main" tabindex="0" ref="main">
     <v-container fluid>
-      <ModalMarkerOverlay v-if="markerStore.isAnyMarkerActive" />
+      <ModalMarkerOverlay v-if="calibrationAssetStore.isAnyReferenceMarkerActive" />
 
       <div
-        v-for="m in markerStore.filteredReferenceMarker"
-        v-show="markerStore.showReferenceMarker"
+        v-for="m in calibrationAssetStore.filteredVideoMarker"
+        v-show="calibrationAssetStore.showVideoMarker"
         :key="m.id"
         :style="{
           top: m.videoCoordsRel.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
           left: m.videoCoordsRel.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
         }"
-        @mouseenter="markerStore.hoveredReferenceMarker = m.id"
-        @mouseleave="markerStore.hoveredReferenceMarker = null"
+        @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
+        @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
         class="reference-marker-position"
       />
+      <div>
+        <div
+          v-for="(point, index) in calibrationAssetStore.reprojectionPoints"
+          v-show="calibrationAssetStore.showVideoMarker"
+          :key="index"
+          :style="{
+            top: point.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
+            left: point.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
+          }"
+          class="reprojection-marker-position"
+        />
+      </div>
 
       <v-row class="ma-n2">
         <v-col cols="6">
@@ -35,6 +47,9 @@
                 <VideoPlayer />
               </v-col>
             </v-row>
+            <!-- <v-row class="mb-2 px-4">
+              <TimeSelector width="100%" />
+            </v-row> -->
           </v-card>
         </v-col>
 
@@ -49,11 +64,11 @@
             v-else
             class="d-flex flex-column flex-nowrap px-2"
             elevation="2"
-            ref="compAreaCard"
-            :style="{ maxHeight: analysisViewHeight + 'px' }"
+            ref="topViewCard"
+            :style="{ maxHeight: analysisViewHeight + 'px', height: cardHeight + 'px' }"
           >
             <v-row class="sticky-tabs-bar" justify="center">
-              <v-tabs fixed-tabs slider-color="primary" v-model="tab">
+              <v-tabs fixed-tabs slider-color="primary" v-model="analysisTab">
                 <v-tab v-for="analysisTab in analysisTabs" :key="analysisTab.id">
                   <span>{{ analysisTab.name }}</span>
                 </v-tab>
@@ -62,9 +77,9 @@
 
             <v-row class="flex-grow-1">
               <v-col>
-                <v-tabs-window v-model="tab">
+                <v-tabs-window v-model="analysisTab">
                   <v-tabs-window-item v-for="analysisTab in analysisTabs" :key="analysisTab.id">
-                    <AnnotationVisualizer v-if="analysisTab.name === 'Annotation'" />
+                    <CalibrationVisualizer v-if="analysisTab.name === 'Calibration'" />
                     <PosDataVisualizer v-if="analysisTab.name === 'Position Data'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
@@ -73,17 +88,40 @@
           </v-card>
         </v-col>
       </v-row>
+
+      <!-- <v-row class="ma-2">
+        <v-col>
+          <VisualizationMenu></VisualizationMenu>
+        </v-col>
+      </v-row> -->
+
+      <!-- <v-row class="ma-n2">
+        <v-col>
+          <v-card>test </v-card>
+        </v-col>
+      </v-row> -->
+
+      <v-row class="ma-n2">
+        <v-col>
+          <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" scrollable="False">
+            <v-card-title class="pl-2"> Timelines </v-card-title>
+            <v-sheet class="px-4">
+              <Timeline ref="timeline" :style="{ width: '100%' }" />
+            </v-sheet>
+          </v-card>
+        </v-col>
+      </v-row>
+      <!-- <ModalTimelineSegmentAnnotate :show.sync="annotationDialog.show" /> -->
     </v-container>
   </v-main>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
-import { useMarkerStore } from "@/stores/marker";
-import { useCompAreaStore } from "@/stores/comp_area";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useBboxesStore } from "@/stores/bboxes";
 // import { useTimelineStore } from "@/stores/timeline";
@@ -94,13 +132,12 @@ import { useBboxesStore } from "@/stores/bboxes";
 // import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 // import { useShotStore } from "@/stores/shot";
 // import * as Keyboard from "../plugins/keyboard";
-
 import VideoPlayer from "@/components/VideoPlayer.vue";
 import PosDataVisualizer from "@/components/PosDataVisualizer.vue";
-import AnnotationVisualizer from "@/components/AnnotationVisualizer.vue";
+import CalibrationVisualizer from "@/components/CalibrationVisualizer.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
-// import Timeline from "@/components/Timeline.vue";
+import Timeline from "@/components/Timeline.vue";
 // import TimeSelector from "@/components/TimeSelector.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
@@ -110,18 +147,11 @@ import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import PersonGraph from "@/components/PersonGraph.vue";
 // import ClusterTimelineItemOverview from "@/components/ClusterTimelineItemOverview.vue";
 
-const analysisTabs = ref([
-  { id: "1", name: "Annotation" },
-  { id: "2", name: "Position Data" },
-]);
-
 const route = useRoute();
-
 const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
-const markerStore = useMarkerStore();
-const compAreaStore = useCompAreaStore();
+const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
 // const timelineStore = useTimelineStore();
 // const timelineSegmentStore = useTimelineSegmentStore();
@@ -131,50 +161,125 @@ const bboxesStore = useBboxesStore();
 // const clusterTimelineItemStore = useClusterTimelineItemStore();
 // const shotStore = useShotStore();
 
-// const fetchPluginTimer = ref(null);
-// const selectedShotsProxy = ref(null);
-// const selectedFaceClusteringProxy = ref(null);
-// const selectedPlaceClusteringProxy = ref(null);
-// const selectedTimelineProxy = ref(null);
-const tab = ref(0);
-// const addedAnnotation = ref(null);
-// const labels = ref([]);
-// const selectedLabel = ref(null);
-// const annotationsLUT = ref({});
-// const annotationDialog = ref({ show: false });
-const isLoading = ref(true);
-const resultCardHeight = ref(0);
+const analysisTab = ref(0);
+const analysisTabs = ref([
+  { id: "1", name: "Calibration" },
+  { id: "2", name: "Position Data" },
+]);
+watch(analysisTab, (newTab) => {
+  const currentTab = analysisTabs.value[newTab]?.name;
 
-const videoCard = ref(null);
-const compAreaCard = ref(null);
-const analysisViewHeight = ref(null);
+  if (currentTab === "Annotation") {
+    calibrationAssetStore.showVideoMarker = true;
+  } else {
+    calibrationAssetStore.showVideoMarker = false;
+  }
 
-const setMaxCardHeight = () => {
-  nextTick(() => {
-    analysisViewHeight.value = window.innerHeight - 64 - 40;
-  });
-};
-
-watch([videoCard, compAreaCard], setMaxCardHeight, { flush: "post" });
-
-onMounted(() => {
-  window.addEventListener("resize", setMaxCardHeight);
-  setMaxCardHeight();
+  if (currentTab === "Position Data") {
+    bboxesStore.showBoundingBox = true;
+  } else {
+    bboxesStore.showBoundingBox = false;
+  }
 });
 
-// const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
+const isLoading = ref(true);
+const fetchData = async ({ addResults = true }) => {
+  try {
+    await videoStore.fetch({
+      videoId: route.params.id,
+      addResults,
+    });
+  } catch (error) {
+    console.error("Fehler beim Abrufen der Daten:", error);
+  }
+};
+onMounted(async () => {
+  try {
+    await fetchData({ addResults: true });
+  } catch (error) {
+    console.error("Fehler beim Laden der Daten:", error);
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+const videoCard = ref(null);
+const topViewCard = ref(null);
+const windowHeight = ref(window.innerHeight);
+const analysisViewHeight = ref(null);
+const cardHeight = ref(null);
+const setCardHeight = () => {
+  windowHeight.value = window.innerHeight;
+  nextTick(() => {
+    analysisViewHeight.value = window.innerHeight - 64 - 40;
+    cardHeight.value = videoCard.value.$el.offsetHeight;
+  });
+};
+onMounted(() => {
+  setCardHeight();
+  window.addEventListener("resize", setCardHeight);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", setCardHeight);
+});
+watch([videoCard, topViewCard, windowHeight], setCardHeight, { flush: "post" });
+
+const previousShowVideoMarker = ref(false);
+watch(
+  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  (newValue) => {
+    if (newValue) {
+      previousShowVideoMarker.value = calibrationAssetStore.showVideoMarker;
+      calibrationAssetStore.showVideoMarker = true;
+    } else {
+      calibrationAssetStore.showVideoMarker = previousShowVideoMarker.value;
+    }
+  }
+);
+
+watch(
+  () => bboxesStore.setBboxData(bboxesStore.bboxPluginRun),
+  (newBboxes) => {
+    if (newBboxes && newBboxes.length > 0) {
+      // const groupedData = {};
+      // newBboxes.forEach((position) => {
+      //   const { time } = position;
+      //   if (!groupedData[time]) {
+      //     groupedData[time] = [];
+      //   }
+      //   groupedData[time].push(position);
+      // });
+      // bboxesStore.bboxData = groupedData;
+      bboxesStore.bboxData = newBboxes;
+      // console.log(bboxesStore.bboxPluginRun);
+      // console.log("bboxData", bboxesStore.bboxData);
+
+      bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBboxData(
+        newBboxes,
+        playerStore.videoFPS,
+        25
+      );
+      const groupedDataInterpolated = {};
+      bboxesStore.bboxDataInterpolated.forEach((position) => {
+        const { time } = position;
+        if (!groupedDataInterpolated[time]) {
+          groupedDataInterpolated[time] = [];
+        }
+        groupedDataInterpolated[time].push(position);
+      });
+      bboxesStore.bboxDataInterpolated = groupedDataInterpolated;
+      // console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
+    }
+  }
+);
+
 // const timelines = computed(() => timelineStore.forVideo(route.params.id));
 // const timelineNames = computed(() => timelines.value.map((e) => e.name));
-// const faceClusters = computed(() =>
-//   clusterTimelineItemStore.latestFaceClustering()
-// );
-// const placeClusters = computed(() =>
-//   clusterTimelineItemStore.latestPlaceClustering()
-// );
+
 // const shotsList = computed(() =>
 //   shotStore.shotsList.map((e) => ({ text: e.name, value: e.index }))
 // );
-
+// const selectedShotsProxy = ref(null);
 // const selectedShots = computed({
 //   get() {
 //     const selectedShots = shotStore.selectedShots;
@@ -188,6 +293,16 @@ onMounted(() => {
 //   },
 // });
 
+// const faceClusteringList = computed(() =>
+//   clusterTimelineItemStore.faceClusteringList.map((e) => ({
+//     text: e.name,
+//     value: e.index,
+//   }))
+// );
+// const faceClusters = computed(() =>
+//   clusterTimelineItemStore.latestFaceClustering()
+// );
+// const selectedFaceClusteringProxy = ref(null);
 // const selectedFaceClustering = computed({
 //   get() {
 //     const selectedFaceClustering =
@@ -202,13 +317,16 @@ onMounted(() => {
 //   },
 // });
 
-// const faceClusteringList = computed(() =>
-//   clusterTimelineItemStore.faceClusteringList.map((e) => ({
+// const placeClusteringList = computed(() =>
+//   clusterTimelineItemStore.placeClusteringList.map((e) => ({
 //     text: e.name,
 //     value: e.index,
 //   }))
 // );
-
+// const placeClusters = computed(() =>
+//   clusterTimelineItemStore.latestPlaceClustering()
+// );
+// const selectedPlaceClusteringProxy = ref(null);
 // const selectedPlaceClustering = computed({
 //   get() {
 //     const selectedPlaceClustering =
@@ -225,13 +343,7 @@ onMounted(() => {
 //   },
 // });
 
-// const placeClusteringList = computed(() =>
-//   clusterTimelineItemStore.placeClusteringList.map((e) => ({
-//     text: e.name,
-//     value: e.index,
-//   }))
-// );
-
+// const selectedTimelineProxy = ref(null);
 // const selectedTimeline = computed({
 //   get() {
 //     return selectedTimelineProxy === null
@@ -243,31 +355,33 @@ onMounted(() => {
 //   },
 // });
 
-const onVideoResize = (size) => {
-  resultCardHeight.value = resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
+// const fetchPluginTimer = ref(null);
+// const fetchPlugin = async () => {
+//   await pluginRunStore.fetchForVideo({
+//   videoId: route.params.id,
+//   fetchResults: true,
+//   });
+// };
+// const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
+// watch(
+//   pluginInProgress,
+//   (newState) => {
+//     if (newState) {
+//       fetchPluginTimer = setInterval(() => {
+//         fetchPlugin({ addResults: false });
+//       }, 1000);
+//     } else {
+//       clearInterval(fetchPluginTimer);
+//     }
+//   }
+// );
 
-  videoStore.setVideoSize(size);
-};
-
+// const annotationDialog = ref({ show: false });
 // const onAnnotateSegment = () => {
 //   if (timelineSegmentStore.lastSelected) {
 //     annotationDialog.show = true;
 //   }
 // };
-
-//const fetchData = async ({ addResults = true }) => {
-// await videoStore.fetch({
-//  videoId: route.params.id,
-// addResults,
-// });
-//};
-
-//const fetchPlugin = async () => {
-// await pluginRunStore.fetchForVideo({
-// videoId: route.params.id,
-// fetchResults: true,
-// });
-//};
 
 // const onKeyDown = (event) => {
 //   const lastSelectedTimeline = timelineStore.lastSelected;
@@ -380,123 +494,12 @@ const onVideoResize = (size) => {
 //   }
 // };
 
-// watch(
-//   pluginInProgress,
-//   (newState) => {
-//     if (newState) {
-//       fetchPluginTimer = setInterval(() => {
-//         fetchPlugin({ addResults: false });
-//       }, 1000);
-//     } else {
-//       clearInterval(fetchPluginTimer);
-//     }
-//   }
-// );
-
 watch(
-  () => isLoading,
-  (value) => {
-    if (!value) {
-      resultCardHeight.value = resultCardHeight.$refs?.videoCard?.$el?.clientHeight || 0;
-    }
-  }
-);
-
-// onMounted(async () => {
-//   await fetchData({ addResults: true });
-//   isLoading = false;
-
-//   console.log(playerStore.videoUrl);
-// });
-
-// onMounted(async () => {
-//   try {
-//     await fetchData({ addResults: true });
-//     isLoading.value = false;
-//     console.log(playerStore.videoUrl);
-//   } catch (error) {
-//     isLoading.value = false;
-//     console.log(playerStore.videoUrl);
-//     console.error("Fehler im mounted Hook:", error);
-
-//   }
-// });
-
-onMounted(async () => {
-  try {
-    await fetchData({ addResults: true });
-  } catch (error) {
-    console.error("Fehler beim Laden der Daten:", error);
-  } finally {
-    isLoading.value = false;
-  }
-});
-
-const fetchData = async ({ addResults = true }) => {
-  try {
-    const data = await videoStore.fetch({
-      videoId: route.params.id,
-      addResults,
-    });
-
-    if (!data) {
-      throw new Error("Daten konnten nicht abgerufen werden.");
-    }
-  } catch (error) {
-    console.error("Fehler beim Abrufen der Daten:", error);
-  }
-};
-
-watch(tab, (newTab) => {
-  const currentTab = analysisTabs.value[newTab]?.name;
-
-  if (currentTab === "Annotation") {
-    markerStore.showReferenceMarker = true;
-  } else {
-    markerStore.showReferenceMarker = false;
-  }
-
-  if (currentTab === "Position Data") {
-    bboxesStore.showBoundingBox = true;
-  } else {
-    bboxesStore.showBoundingBox = false;
-  }
-});
-
-const previousShowReferenceMarker = ref(false);
-watch(
-  () => markerStore.isAnyMarkerActive,
+  () => calibrationAssetStore.calibrationAssetId,
   (newValue) => {
     if (newValue) {
-      previousShowReferenceMarker.value = markerStore.showReferenceMarker;
-      markerStore.showReferenceMarker = true;
-    } else {
-      markerStore.showReferenceMarker = previousShowReferenceMarker.value;
+      console.log("calibrationAssetId", newValue);
     }
-  }
-);
-
-watch(
-  () => bboxesStore.setBboxData(bboxesStore.bboxPluginRun),
-  (newBboxes) => {
-    if (newBboxes) {
-      bboxesStore.bboxData = newBboxes;
-      console.log(bboxesStore.bboxPluginRun);
-      console.log("bboxData", bboxesStore.bboxData);
-    }
-    bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBoundingBoxes(
-      bboxesStore.bboxData,
-      playerStore.videoFPS,
-      1
-    );
-    console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
-  }
-);
-
-watch(
-  () => playerStore.videoFPS,
-  (newFPS) => {
-    console.log("FPS", newFPS);
   }
 );
 </script>
@@ -552,5 +555,14 @@ watch(
   border-radius: 50%;
   transform: translate(-50%, -50%);
   z-index: 1000;
+}
+.reprojection-marker-position {
+  position: fixed;
+  width: 5px;
+  height: 5px;
+  background-color: blue;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
 }
 </style>

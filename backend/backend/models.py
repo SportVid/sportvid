@@ -14,21 +14,16 @@ from analyser.data import DataManager
 from backend.utils import media_path_to_video
 from .managers import TibavaUserManager
 
-"""
-After adding a new model or changing an existing model, run the following commands:
-
-`sudo docker-compose exec backend python3 manage.py makemigrations`
-and 
-`sudo docker-compose exec backend python3 manage.py migrate`
-to integrate changes into the database.
-
-"""
 
 logger = logging.getLogger(__name__)
 
 
 def random_color_string():
     return rgb_to_hex(random_rgb())
+
+
+def default_homography_matrix():
+    return [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
 
 
 class TibavaUser(AbstractUser):
@@ -652,3 +647,65 @@ class VideoAnalysisState(models.Model):
         }
 
         return result
+
+
+class CalibrationAssets(models.Model):
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    video = models.ForeignKey(Video, blank=True, null=True, on_delete=models.CASCADE)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.CASCADE
+    )
+    name = models.CharField(max_length=1024)
+    # store 3x3 matrix as JSON array of arrays, default to identity matrix
+    homography_matrix = models.JSONField(default=default_homography_matrix)
+    template = models.CharField(max_length=1024, null=True) # TODO: enum
+
+    def to_dict(self, include_refs_hashes=True, include_refs=True, **kwargs):
+        result = {
+            "id": self.id.hex,
+            "name": self.name,
+            "homography_matrix": self.homography_matrix,
+            "template": self.template,
+        }
+        if include_refs:
+            result["marker_data"] = [
+                x.to_dict() for x in self.marker_data.all()
+            ]
+        return result
+
+
+class PointCorrespondence(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False) # set editable to True?
+    
+    calibration_asset = models.ForeignKey(
+        CalibrationAssets, 
+        on_delete=models.CASCADE,
+        related_name='marker_data'
+    )
+    name = models.CharField(max_length=1024)
+    active = models.BooleanField(default=False)
+    compAreaCoord_x = models.FloatField()
+    compAreaCoord_y = models.FloatField()
+    compAreaCoord_z = models.FloatField(default=0.0)
+    videoCoord_x = models.FloatField()
+    videoCoord_y = models.FloatField()
+    videoCoord_z = models.FloatField(default=0.0)
+
+    def to_dict(self):
+        return {
+            "id": self.id.hex,
+            "name": self.name,
+            "active": self.active,
+            "compAreaCoordsRel": {
+                "x": self.compAreaCoord_x,
+                "y": self.compAreaCoord_y,
+                "z": self.compAreaCoord_z
+            },
+            "videoCoordsRel": {
+                "x": self.videoCoord_x,
+                "y": self.videoCoord_y,
+                "z": self.videoCoord_z
+            }
+        }
+

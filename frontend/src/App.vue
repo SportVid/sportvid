@@ -1,5 +1,5 @@
 <template>
-  <v-app id="tibava">
+  <v-app id="sportVid">
     <v-app-bar>
       <img :title="appName" src="./assets/logo_tib_dshs.png" height="50" class="ml-4" />
       <v-toolbar-title class="pr-12">{{ $t("app_bar.plattform_name") }}</v-toolbar-title>
@@ -23,9 +23,6 @@
 <script setup>
 import { computed } from "vue";
 import { useRoute } from "vue-router";
-import { useUserStore } from "@/stores/user";
-import { usePlayerStore } from "@/stores/player";
-import { useErrorStore } from "@/stores/error";
 import PluginMenu from "@/components/PluginMenu.vue";
 import HistoryMenu from "./components/HistoryMenu.vue";
 import ShortcutMenu from "@/components/ShortcutMenu.vue";
@@ -33,17 +30,15 @@ import ExportMenu from "@/components/ExportMenu.vue";
 import UserMenu from "@/components/UserMenu.vue";
 import ModalError from "./components/ModalError.vue";
 
-const appName = process.env.VUE_APP_NAME;
-
 const route = useRoute();
 
-const userStore = useUserStore();
+const appName = process.env.VUE_APP_NAME;
 
 const analysisView = computed(() => route.name === "AnalysisView");
 </script>
 
 <style>
-#tibava {
+#sportVid {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

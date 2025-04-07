@@ -10,10 +10,10 @@
           line-height: 1.5;
           height: 30vh;
         "
-        v-html="$t('pos_data_vis.no_bbox_data')"
+        v-html="$t('pos_data_vis.no_bbox_data.text')"
       />
       <v-row style="justify-content: center">
-        <v-btn>Upload position data</v-btn>
+        <v-btn>{{ $t("pos_data_vis.no_bbox_data.upload") }}</v-btn>
       </v-row>
     </v-col>
   </div>
@@ -21,60 +21,56 @@
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
       <img
-        ref="compAreaElement"
+        ref="topViewElement"
         class="visualizer-image"
-        :src="compAreaStore.currentSport.pitchImage"
-        @load="updateCompAreaSize"
+        :src="topViewStore.currentSport.pitchImage"
+        @load="updateTopViewSize"
         :style="{
           maxHeight: maxVideoHeight * 100 + 'vh',
           height: videoStore.videoSize.height + 'px',
         }"
       />
 
-      <!-- <div
-        v-for="(position, index) in bboxesStore.positionsNested[sliderValue]"
+      <div
+        v-for="(position, index) in bboxesStore.positionsNested[currentTime * playerStore.videoFPS]"
         :key="index"
         class="data-point-position"
         :style="{
           top:
             (position.bbox_top + position.bbox_height) *
-              (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
-            (compAreaStore.compAreaSize.top +
-              ((1 - compAreaStore.currentSport.heightRel) / 2) *
-                compAreaStore.compAreaSize.height) +
+              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+            (topViewStore.topViewSize.top +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
             'px',
           left:
             (position.bbox_left + position.bbox_width / 2) *
-              (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
-            (compAreaStore.compAreaSize.left +
-              ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
+              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+            (topViewStore.topViewSize.left +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
             'px',
           backgroundColor: `${position.team}`,
         }"
-      /> -->
-      <div
-        v-for="(position, index) in bboxesStore.positionsFlat.filter(
-          (p) => p.image_id === sliderValue
-        )"
+      />
+      <!-- <div
+        v-for="(position, index) in bboxesStore.positionsFlat.filter((p) => p.time === currentTime)"
         :key="index"
         class="data-point-position"
         :style="{
           top:
             (position.y + position.h) *
-              (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
-            (compAreaStore.compAreaSize.top +
-              ((1 - compAreaStore.currentSport.heightRel) / 2) *
-                compAreaStore.compAreaSize.height) +
+              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+            (topViewStore.topViewSize.top +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
             'px',
           left:
             (position.x + position.w / 2) *
-              (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
-            (compAreaStore.compAreaSize.left +
-              ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width) +
+              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+            (topViewStore.topViewSize.left +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
             'px',
           backgroundColor: position.team,
         }"
-      />
+      /> -->
 
       <svg v-if="bboxesStore.showEffectivePlayingSpace" class="hull-overlay">
         <polygon
@@ -99,19 +95,19 @@
       </svg>
     </v-row>
 
-    <v-row ref="videoControl" class="video-control mt-6 mb-n1">
+    <v-row ref="videoControl" class="video-control mt-6 mb-n2 justify-center">
       <v-menu location="top">
         <template v-slot:activator="{ props }">
           <v-btn v-bind="props" size="small">
-            {{ compAreaStore.currentSport.title }}
+            {{ topViewStore.currentSport.title }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
           <v-list-item
-            v-for="(item, index) in compAreaStore.sports"
+            v-for="(item, index) in topViewStore.sports"
             :key="index"
             class="menu-item"
-            v-on:click="compAreaStore.onSportChange(index)"
+            v-on:click="topViewStore.onSportChange(index)"
           >
             <v-list-item-title class="my-0">
               {{ item.title }}
@@ -228,30 +224,29 @@
       </v-menu>
       <ModalBboxDataSelect v-model="showModalBboxDataSelect" />
 
-      <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
-        {{ getTimecode(sliderValue) }}
+      <div class="time-code ml-2">
+        {{ getTimecode(currentTime) }}
       </div>
     </v-row>
 
     <v-row ref="videoSlider">
       <v-slider
-        v-model="sliderValue"
-        @update:model-value="updateFrame"
+        v-model="progress"
+        @update:model-value="onProgressChange"
         hide-details
         color="primary"
-        :thumb-size="15"
-        :max="99"
-        :step="1"
         :disabled="playerStore.isSynced"
+        :thumb-size="15"
+        :step="100 / (playerStore.videoFPS * playerStore.videoDuration)"
       />
     </v-row>
   </v-container>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
-import { useCompAreaStore } from "@/stores/comp_area";
+import { useTopViewStore } from "@/stores/top_view";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useVideoStore } from "@/stores/video";
 import { getTimecode } from "@/plugins/time";
@@ -259,50 +254,57 @@ import { Delaunay } from "d3-delaunay";
 import ModalBboxDataSelect from "@/components/ModalBboxDataSelect.vue";
 
 const playerStore = usePlayerStore();
-const compAreaStore = useCompAreaStore();
+const topViewStore = useTopViewStore();
 const bboxesStore = useBboxesStore();
 const videoStore = useVideoStore();
 
 const showModalBboxDataSelect = ref(false);
 
-const currentFrame = ref(0);
-const updateFrame = (newIndex) => {
-  currentFrame.value = newIndex;
-};
-const currentTime = computed(() => playerStore.currentTime);
+const topViewElement = ref(null);
 
-const sliderValue = computed({
-  get: () => {
-    return playerStore.isSynced ? Math.round(currentTime.value) : currentFrame.value;
-  },
-  set: (value) => {
-    if (!playerStore.isSynced) {
-      currentFrame.value = value;
-      updateFrame(value);
-    }
-  },
+const progress = ref(0);
+const currentTime = computed(() => {
+  return playerStore.isSynced
+    ? playerStore.currentTime
+    : (progress.value / 100) * playerStore.videoDuration;
 });
+const onProgressChange = (newIndex) => {
+  if (!playerStore.isSynced) {
+    progress.value = newIndex;
+  }
+};
+watch(
+  () => playerStore.currentTime,
+  (newTime) => {
+    progress.value = (newTime / playerStore.videoDuration) * 100;
+  }
+);
 
-const compAreaElement = ref(null);
-const updateCompAreaSize = () => {
+const updateTopViewSize = () => {
   nextTick(() => {
-    if (compAreaElement.value) {
-      const rect = compAreaElement.value.getBoundingClientRect();
-      const size = {
+    if (topViewElement.value) {
+      const rect = topViewElement.value.getBoundingClientRect();
+      topViewStore.setTopViewSize({
         width: rect.width,
         height: rect.height,
         top: rect.top,
         left: rect.left,
-      };
-
-      compAreaStore.setCompAreaSize(size);
+      });
     }
   });
 };
-
-const handleResize = () => {
-  updateCompAreaSize();
-};
+onMounted(() => {
+  setTimeout(() => {
+    window.dispatchEvent(new Event("resize"));
+  }, 500);
+  updateTopViewSize();
+  window.addEventListener("resize", updateTopViewSize);
+  window.addEventListener("scroll", updateTopViewSize);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateTopViewSize);
+  window.removeEventListener("scroll", updateTopViewSize);
+});
 
 const computeConvexHull = (points) => {
   if (points.length < 3) return [];
@@ -334,9 +336,8 @@ const computeConvexHull = (points) => {
 
   return lower.concat(upper);
 };
-
 const convexHullPlayer = computed(() => {
-  if (!compAreaStore.compAreaSize || !bboxesStore.positionsNested) {
+  if (!topViewStore.topViewSize || !bboxesStore.positionsNested) {
     return [];
   }
 
@@ -350,14 +351,14 @@ const convexHullPlayer = computed(() => {
       teams[position.team].push({
         top:
           (position.bbox_top + position.bbox_height) *
-            (compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel) +
-          (compAreaStore.compAreaSize.top +
-            ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height),
+            (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+          (topViewStore.topViewSize.top +
+            ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height),
         left:
           (position.bbox_left + position.bbox_width / 2) *
-            (compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel) +
-          (compAreaStore.compAreaSize.left +
-            ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width),
+            (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+          (topViewStore.topViewSize.left +
+            ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width),
       });
     });
 
@@ -373,16 +374,16 @@ const computeVoronoi = (players) => {
 
   const delaunay = Delaunay.from(players.map((p) => [p.left, p.top]));
   const voronoi = delaunay.voronoi([
-    compAreaStore.compAreaSize.left +
-      ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width,
-    compAreaStore.compAreaSize.top +
-      ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height,
-    compAreaStore.compAreaSize.left +
-      ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width +
-      compAreaStore.compAreaSize.width * compAreaStore.currentSport.widthRel,
-    compAreaStore.compAreaSize.top +
-      ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height +
-      compAreaStore.compAreaSize.height * compAreaStore.currentSport.heightRel,
+    topViewStore.topViewSize.left +
+      ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width,
+    topViewStore.topViewSize.top +
+      ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height,
+    topViewStore.topViewSize.left +
+      ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+      topViewStore.topViewSize.width * topViewStore.currentSport.widthRel,
+    topViewStore.topViewSize.top +
+      ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+      topViewStore.topViewSize.height * topViewStore.currentSport.heightRel,
   ]);
 
   return players
@@ -392,9 +393,8 @@ const computeVoronoi = (players) => {
     })
     .filter((cell) => cell !== null);
 };
-
 const voronoiCells = computed(() => {
-  if (!compAreaStore.compAreaSize || !bboxesStore.positionsNested) {
+  if (!topViewStore.topViewSize || !bboxesStore.positionsNested) {
     return [];
   }
 
@@ -402,16 +402,16 @@ const voronoiCells = computed(() => {
     const allPlayers = framePositions.map((player) => ({
       top:
         (player.bbox_top + player.bbox_height) *
-          compAreaStore.compAreaSize.height *
-          compAreaStore.currentSport.heightRel +
-        (compAreaStore.compAreaSize.top +
-          ((1 - compAreaStore.currentSport.heightRel) / 2) * compAreaStore.compAreaSize.height),
+          topViewStore.topViewSize.height *
+          topViewStore.currentSport.heightRel +
+        (topViewStore.topViewSize.top +
+          ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height),
       left:
         (player.bbox_left + player.bbox_width / 2) *
-          compAreaStore.compAreaSize.width *
-          compAreaStore.currentSport.widthRel +
-        (compAreaStore.compAreaSize.left +
-          ((1 - compAreaStore.currentSport.widthRel) / 2) * compAreaStore.compAreaSize.width),
+          topViewStore.topViewSize.width *
+          topViewStore.currentSport.widthRel +
+        (topViewStore.topViewSize.left +
+          ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width),
       team: player.team,
     }));
 
@@ -419,24 +419,9 @@ const voronoiCells = computed(() => {
   });
 });
 
-onMounted(() => {
-  setTimeout(() => {
-    window.dispatchEvent(new Event("resize"));
-  }, 500);
-  updateCompAreaSize();
-  window.addEventListener("resize", handleResize);
-  window.addEventListener("scroll", handleResize);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("resize", handleResize);
-  window.removeEventListener("scroll", handleResize);
-});
-
 const maxVideoHeight = ref(0);
 const videoSlider = ref(null);
 const videoControl = ref(null);
-
 const updateMaxHeight = () => {
   if (!videoSlider.value || !videoControl.value) return;
   maxVideoHeight.value =
@@ -448,13 +433,16 @@ const updateMaxHeight = () => {
       60) /
     window.innerHeight;
 };
-
 onMounted(() => {
   nextTick(() => updateMaxHeight());
   window.addEventListener("resize", updateMaxHeight);
 });
-
 watch(() => window.innerHeight, updateMaxHeight);
+watch(videoControl || videoSlider, (newVal) => {
+  if (newVal) {
+    nextTick(() => updateMaxHeight());
+  }
+});
 </script>
 
 <style>
