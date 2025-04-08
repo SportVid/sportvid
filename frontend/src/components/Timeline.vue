@@ -53,23 +53,36 @@
                     </v-btn>
                   </template>
                   <v-list class="py-0" density="compact">
-                    <v-list-item class="menu-item" @click="showModalTimelineCopy = true">
+                    <v-list-item
+                      class="menu-item"
+                      @click="showModalTimelineCopy = true"
+                      :timeline="node.id"
+                    >
                       <v-icon left>{{ "mdi-content-copy" }}</v-icon>
                       {{ $t("modal.timeline.duplicate.link") }}
                     </v-list-item>
-                    <v-list-item class="menu-item" @click="showModalTimelineRename = true">
+                    <v-list-item
+                      class="menu-item"
+                      @click="showModalTimelineRename = true"
+                      :timeline="node.id"
+                    >
                       <v-icon left>{{ "mdi-pencil" }}</v-icon>
                       {{ $t("modal.timeline.rename.link") }}
                     </v-list-item>
-                    <!-- <v-list-item class="menu-item" v-if="node.type == 'PLUGIN_RESULT'" @click="showModalTimelineVisualization = true">
+                    <!-- <v-list-item class="menu-item" v-if="node.type == 'PLUGIN_RESULT'" @click="showModalTimelineVisualization = true" :timeline="node.id">
                     </v-list-item> -->
                     <v-list-item
                       class="menu-item"
                       v-if="node.type == 'PLUGIN_RESULT'"
-                      @click="showModalTimelineExport = true"
+                      @click="showModalExportResult = true"
+                      :timeline="node.id"
                     >
                     </v-list-item>
-                    <v-list-item class="menu-item" @click="showModalTimelineDelete = true">
+                    <v-list-item
+                      class="menu-item"
+                      @click="showModalTimelineDelete = true"
+                      :timeline="node.id"
+                    >
                       <v-icon left>{{ "mdi-trash-can-outline" }}</v-icon>
                       {{ $t("modal.timeline.delete.link") }}
                     </v-list-item>

@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" width="800">
+  <v-dialog v-model="dialog" width="710px">
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("modal.timeline.export_result.title") }}
@@ -11,31 +11,53 @@
         </v-btn>
       </v-toolbar>
 
-      <v-card-text>
-        <v-tabs vertical class="tabs-left">
-          <v-tab v-for="exportFormat in exportFormatsSorted" :key="exportFormat.name">
-            <v-icon left> {{ exportFormat.icon }} </v-icon>
-            <span class="text-button">{{ exportFormat.name }}</span>
-          </v-tab>
-          <v-tab-item v-for="exportFormat in exportFormatsSorted" :key="exportFormat.name">
-            <v-card flat height="100%">
-              <v-card-title>{{ exportFormat.name }} </v-card-title>
-              <v-card-text>
-                <Parameters :parameters="exportFormat.parameters" />
-              </v-card-text>
+      <v-card-text style="overflow: hidden">
+        <v-row>
+          <v-col cols="3" class="ml-n3 mr-9">
+            <v-tabs direction="vertical" slider-color="primary" v-model="tab" class="mr-n9">
+              <v-tab
+                v-for="exportFormat in exportFormatsSorted"
+                :key="exportFormat.name"
+                :value="exportFormat.name"
+              >
+                <v-icon>{{ exportFormat.icon }}</v-icon>
+                <span class="text-button ml-1">{{ exportFormat.name }}</span>
+              </v-tab>
+            </v-tabs>
+          </v-col>
 
-              <v-card-actions class="pt-0">
-                <v-btn @click="downloadExport(exportFormat.export, exportFormat.parameters)">{{
-                  $t("modal.timeline.export_result.export")
-                }}</v-btn>
-              </v-card-actions>
-            </v-card>
-          </v-tab-item>
-        </v-tabs>
+          <v-divider vertical />
+
+          <v-col style="width: 490px">
+            <v-tabs-window v-model="tab">
+              <v-tabs-window-item
+                v-for="exportFormat in exportFormatsSorted"
+                :key="exportFormat.name"
+                :value="exportFormat.name"
+              >
+                <v-card style="height: 275px" flat>
+                  <v-card-title class="mb-0">{{ exportFormat.name }}</v-card-title>
+
+                  <v-card-text style="flex-grow: 1; overflow-y: auto">
+                    <Parameters
+                      :videoIds="[videoId]"
+                      :parameters="exportFormat.parameters"
+                      class="compact_parameters"
+                    />
+                  </v-card-text>
+                </v-card>
+
+                <v-row class="mt-n4 mb-1 mr-1">
+                  <v-spacer />
+                  <v-btn @click="downloadExport(exportFormat.export, exportFormat.parameters)">
+                    {{ $t("modal.timeline.export_result.export") }}
+                  </v-btn>
+                </v-row>
+              </v-tabs-window-item>
+            </v-tabs-window>
+          </v-col>
+        </v-row>
       </v-card-text>
-      <v-card-actions class="pt-0">
-        <v-btn @click="dialog = false">{{ $t("modal.timeline.export_result.close") }}</v-btn>
-      </v-card-actions>
     </v-card>
   </v-dialog>
 </template>

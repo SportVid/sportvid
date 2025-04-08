@@ -10,10 +10,8 @@ import paper from "paper";
 import { getTimecode } from "@/plugins/time";
 import { usePlayerStore } from "@/stores/player";
 
-// Store
 const playerStore = usePlayerStore();
 
-// Props
 const props = defineProps({
   width: {
     type: String,
@@ -29,7 +27,8 @@ const props = defineProps({
   },
 });
 
-// Refs
+const emit = defineEmits(["update:startTime", "update:endTime"]);
+
 const container = ref(null);
 const canvas = ref(null);
 const canvasStyle = ref({ width: props.width, height: props.height });
@@ -60,7 +59,6 @@ watch(
   (val) => {
     hiddenStartTime.value = val;
     draw();
-    console.log("startTime", val);
   }
 );
 
@@ -69,7 +67,6 @@ watch(
   (val) => {
     hiddenEndTime.value = val;
     draw();
-    console.log("endTime", val);
   }
 );
 
@@ -93,13 +90,10 @@ watch(hiddenEndTime, () => {
   });
 });
 
-// Emit
-const emit = defineEmits(["update:startTime", "update:endTime"]);
-
 // Util Functions
-function linspace(startValue, stopValue, step) {
+function linspace(startValue, numSteps, step) {
   const arr = [];
-  for (let i = 0; i <= stopValue; i++) {
+  for (let i = 0; i <= numSteps; i++) {
     arr.push(startValue + step * i);
   }
   return arr;
@@ -186,15 +180,14 @@ function drawScale() {
   scope.activate();
   scaleLayer = new paper.Layer();
 
-  const timeline_options = [10, 15, 30, 60, 90, 150, 300, 600];
-  let interval = duration.value / 10;
-  let best_option = timeline_options.reduce((prev, curr) =>
-    Math.abs(curr - interval) < Math.abs(prev - interval) ? curr : prev
-  );
-  interval = best_option;
+  // const timeline_options = [1, 2, 5, 10, 15, 20, 30, 60, 90, 150, 300, 600];
+  const interval = duration.value / 5;
+  // let best_option = timeline_options.reduce((prev, curr) =>
+  //   Math.abs(curr - interval) < Math.abs(prev - interval) ? curr : prev
+  // );
+  // interval = best_option;
 
-  // 👇 Jetzt inkl. 0.0 bis duration
-  const times = linspace(0, duration.value, interval);
+  const times = linspace(0, 5, interval);
   const mainStrokes = times.map((time) => {
     const x = timeToX(time);
     return new paper.Path(new paper.Point(x, 10), new paper.Point(x, 35));
@@ -205,12 +198,12 @@ function drawScale() {
     const text = new paper.PointText(new paper.Point(x, 50));
     if (index === 0) {
       text.justification = "left";
-    } else if (index === 1) {
+    } else if (index === times.length - 1) {
       text.justification = "right";
     } else {
       text.justification = "center";
     }
-    text.content = getTimecode(time, 0);
+    text.content = getTimecode(time, 2);
     return text;
   });
 
@@ -221,9 +214,8 @@ function drawScale() {
     fillColor: "black",
   };
 
-  // 👇 Zwischenstriche
   const minorInterval = interval / 4;
-  const minorTimes = linspace(0, duration.value, minorInterval);
+  const minorTimes = linspace(0, 20, minorInterval);
   const minorStrokes = minorTimes.map((time) => {
     const x = timeToX(time);
     return new paper.Path(new paper.Point(x, 25), new paper.Point(x, 30));
@@ -247,7 +239,6 @@ function drawSelection() {
   path.fillColor = "#ae131377";
   handleBar = path;
 
-  // handles
   const createHandle = (time) => {
     const x = timeToX(time);
     const handleRect = new paper.Rectangle(

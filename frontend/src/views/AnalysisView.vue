@@ -114,20 +114,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useBboxesStore } from "@/stores/bboxes";
-// import { useTimelineStore } from "@/stores/timeline";
-// import { useTimelineSegmentStore } from "@/stores/timeline_segment";
-// import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
-// import { useShortcutStore } from "@/stores/shortcut";
-// import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
-// import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
-// import { useShotStore } from "@/stores/shot";
+import { useTimelineStore } from "@/stores/timeline";
+import { useTimelineSegmentStore } from "@/stores/timeline_segment";
+import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
+import { useShortcutStore } from "@/stores/shortcut";
+import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
+import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
+import { useShotStore } from "@/stores/shot";
 // import * as Keyboard from "../plugins/keyboard";
 import VideoPlayer from "@/components/VideoPlayer.vue";
 import PosDataVisualizer from "@/components/PosDataVisualizer.vue";
@@ -150,13 +150,13 @@ const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
-// const timelineStore = useTimelineStore();
-// const timelineSegmentStore = useTimelineSegmentStore();
-// const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
-// const shortcutStore = useShortcutStore();
-// const annotationShortcutStore = useAnnotationShortcutStore();
-// const clusterTimelineItemStore = useClusterTimelineItemStore();
-// const shotStore = useShotStore();
+const timelineStore = useTimelineStore();
+const timelineSegmentStore = useTimelineSegmentStore();
+const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
+const shortcutStore = useShortcutStore();
+const annotationShortcutStore = useAnnotationShortcutStore();
+const clusterTimelineItemStore = useClusterTimelineItemStore();
+const shotStore = useShotStore();
 
 const analysisTab = ref(0);
 const analysisTabs = ref([
@@ -270,115 +270,111 @@ watch(
   }
 );
 
-// const timelines = computed(() => timelineStore.forVideo(route.params.id));
-// const timelineNames = computed(() => timelines.value.map((e) => e.name));
+const timelines = computed(() => timelineStore.forVideo(route.params.id));
+const timelineNames = computed(() => timelines.value.map((e) => e.name));
+onMounted(() => {
+  console.log("x", timelines);
+  console.log("plugins", pluginRunStore.forVideo(playerStore.videoId));
+});
+watch(playerStore.videoId, (newState) => {
+  if (newState) {
+    console.log("plugins", pluginRunStore.forVideo(newState));
+  }
+});
 
-// const shotsList = computed(() =>
-//   shotStore.shotsList.map((e) => ({ text: e.name, value: e.index }))
-// );
-// const selectedShotsProxy = ref(null);
-// const selectedShots = computed({
-//   get() {
-//     const selectedShots = shotStore.selectedShots;
-//     return selectedShotsProxy === null
-//       ? selectedShots
-//       : selectedShotsProxy;
-//   },
-//   set(val) {
-//     selectedShotsProxy = val;
-//     shotStore.setSelectedShots({ shotTimeline: val });
-//   },
-// });
+const shotsList = computed(() =>
+  shotStore.shotsList.map((e) => ({ text: e.name, value: e.index }))
+);
+const selectedShotsProxy = ref(null);
+const selectedShots = computed({
+  get() {
+    const selectedShots = shotStore.selectedShots;
+    return selectedShotsProxy === null ? selectedShots : selectedShotsProxy;
+  },
+  set(val) {
+    selectedShotsProxy = val;
+    shotStore.setSelectedShots({ shotTimeline: val });
+  },
+});
 
-// const faceClusteringList = computed(() =>
-//   clusterTimelineItemStore.faceClusteringList.map((e) => ({
-//     text: e.name,
-//     value: e.index,
-//   }))
-// );
-// const faceClusters = computed(() =>
-//   clusterTimelineItemStore.latestFaceClustering()
-// );
-// const selectedFaceClusteringProxy = ref(null);
-// const selectedFaceClustering = computed({
-//   get() {
-//     const selectedFaceClustering =
-//       clusterTimelineItemStore.selectedFaceClustering;
-//     return selectedFaceClusteringProxy === null
-//       ? selectedFaceClustering
-//       : selectedFaceClusteringProxy;
-//   },
-//   set(val) {
-//     selectedFaceClusteringProxy = val;
-//     clusterTimelineItemStore.setSelectedFaceClustering({ pluginRunId: val });
-//   },
-// });
+const faceClusteringList = computed(() =>
+  clusterTimelineItemStore.faceClusteringList.map((e) => ({
+    text: e.name,
+    value: e.index,
+  }))
+);
+const faceClusters = computed(() => clusterTimelineItemStore.latestFaceClustering());
+const selectedFaceClusteringProxy = ref(null);
+const selectedFaceClustering = computed({
+  get() {
+    const selectedFaceClustering = clusterTimelineItemStore.selectedFaceClustering;
+    return selectedFaceClusteringProxy === null
+      ? selectedFaceClustering
+      : selectedFaceClusteringProxy;
+  },
+  set(val) {
+    selectedFaceClusteringProxy = val;
+    clusterTimelineItemStore.setSelectedFaceClustering({ pluginRunId: val });
+  },
+});
 
-// const placeClusteringList = computed(() =>
-//   clusterTimelineItemStore.placeClusteringList.map((e) => ({
-//     text: e.name,
-//     value: e.index,
-//   }))
-// );
-// const placeClusters = computed(() =>
-//   clusterTimelineItemStore.latestPlaceClustering()
-// );
-// const selectedPlaceClusteringProxy = ref(null);
-// const selectedPlaceClustering = computed({
-//   get() {
-//     const selectedPlaceClustering =
-//       clusterTimelineItemStore.selectedPlaceClustering;
-//     return selectedPlaceClusteringProxy === null
-//       ? selectedPlaceClustering
-//       : selectedPlaceClusteringProxy;
-//   },
-//   set(val) {
-//     selectedPlaceClusteringProxy = val;
-//     clusterTimelineItemStore.setSelectedPlaceClustering({
-//       pluginRunId: val,
-//     });
-//   },
-// });
+const placeClusteringList = computed(() =>
+  clusterTimelineItemStore.placeClusteringList.map((e) => ({
+    text: e.name,
+    value: e.index,
+  }))
+);
+const placeClusters = computed(() => clusterTimelineItemStore.latestPlaceClustering());
+const selectedPlaceClusteringProxy = ref(null);
+const selectedPlaceClustering = computed({
+  get() {
+    const selectedPlaceClustering = clusterTimelineItemStore.selectedPlaceClustering;
+    return selectedPlaceClusteringProxy === null
+      ? selectedPlaceClustering
+      : selectedPlaceClusteringProxy;
+  },
+  set(val) {
+    selectedPlaceClusteringProxy = val;
+    clusterTimelineItemStore.setSelectedPlaceClustering({
+      pluginRunId: val,
+    });
+  },
+});
 
-// const selectedTimelineProxy = ref(null);
-// const selectedTimeline = computed({
-//   get() {
-//     return selectedTimelineProxy === null
-//       ? timelines.value[0]
-//       : selectedTimelineProxy;
-//   },
-//   set(val) {
-//     selectedTimelineProxy = val;
-//   },
-// });
+const selectedTimelineProxy = ref(null);
+const selectedTimeline = computed({
+  get() {
+    return selectedTimelineProxy === null ? timelines.value[0] : selectedTimelineProxy;
+  },
+  set(val) {
+    selectedTimelineProxy = val;
+  },
+});
 
-// const fetchPluginTimer = ref(null);
-// const fetchPlugin = async () => {
-//   await pluginRunStore.fetchForVideo({
-//   videoId: route.params.id,
-//   fetchResults: true,
-//   });
-// };
-// const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
-// watch(
-//   pluginInProgress,
-//   (newState) => {
-//     if (newState) {
-//       fetchPluginTimer = setInterval(() => {
-//         fetchPlugin({ addResults: false });
-//       }, 1000);
-//     } else {
-//       clearInterval(fetchPluginTimer);
-//     }
-//   }
-// );
+const fetchPluginTimer = ref(null);
+const fetchPlugin = async () => {
+  await pluginRunStore.fetchForVideo({
+    videoId: route.params.id,
+    fetchResults: true,
+  });
+};
+const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
+watch(pluginInProgress, (newState) => {
+  if (newState) {
+    fetchPluginTimer = setInterval(() => {
+      fetchPlugin({ addResults: false });
+    }, 1000);
+  } else {
+    clearInterval(fetchPluginTimer);
+  }
+});
 
-// const annotationDialog = ref({ show: false });
-// const onAnnotateSegment = () => {
-//   if (timelineSegmentStore.lastSelected) {
-//     annotationDialog.show = true;
-//   }
-// };
+const annotationDialog = ref({ show: false });
+const onAnnotateSegment = () => {
+  if (timelineSegmentStore.lastSelected) {
+    annotationDialog.show = true;
+  }
+};
 
 // const onKeyDown = (event) => {
 //   const lastSelectedTimeline = timelineStore.lastSelected;
