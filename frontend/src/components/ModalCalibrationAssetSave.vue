@@ -82,5 +82,3 @@ watch(
   }
 );
 </script>
-
-<style></style>

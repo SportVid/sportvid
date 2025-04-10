@@ -1,9 +1,10 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 
 export const useTopViewStore = defineStore("top_view", () => {
-  const topViewSize = ref({ width: 0, height: 0, top: 0, left: 0 });
+  const showItems = ref(false);
 
+  const topViewSize = ref({ width: 0, height: 0, top: 0, left: 0 });
   const setTopViewSize = (size) => {
     topViewSize.value = size;
   };
@@ -14,7 +15,6 @@ export const useTopViewStore = defineStore("top_view", () => {
     widthRel: 2698 / 2910,
     heightRel: 1794 / 2010,
   });
-
   const sports = [
     {
       title: "Soccer",
@@ -41,13 +41,16 @@ export const useTopViewStore = defineStore("top_view", () => {
       heightRel: 1866 / 1984,
     },
   ];
-
   const onSportChange = (title) => {
+    showItems.value = false;
     const sport = sports.find((sport) => sport.title === title);
     currentSport.value.title = sport.title;
     currentSport.value.pitchImage = sport.pitchImage;
     currentSport.value.widthRel = sport.widthRel;
     currentSport.value.heightRel = sport.heightRel;
+    nextTick(() => {
+      showItems.value = true;
+    });
   };
 
   return {
@@ -56,5 +59,6 @@ export const useTopViewStore = defineStore("top_view", () => {
     currentSport,
     sports,
     onSportChange,
+    showItems,
   };
 });

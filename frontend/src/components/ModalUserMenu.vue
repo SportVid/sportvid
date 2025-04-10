@@ -9,7 +9,7 @@
         </v-btn>
       </template>
 
-      <UserAccount v-if="loggedIn" />
+      <ModalUserAccount v-if="loggedIn" />
 
       <v-list v-else min-width="175" class="pa-0">
         <v-list-item @click="showModalLogin = true">
@@ -21,17 +21,17 @@
       </v-list>
     </v-menu>
 
-    <UserRegister v-model="showModalRegister" />
-    <UserLogin v-model="showModalLogin" />
+    <ModalUserRegister v-model="showModalRegister" />
+    <ModalUserLogin v-model="showModalLogin" />
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from "vue";
 import { useUserStore } from "@/stores/user";
-import UserLogin from "@/components/UserLogin.vue";
-import UserRegister from "@/components/UserRegister.vue";
-import UserAccount from "@/components/UserAccount.vue";
+import ModalUserLogin from "@/components/ModalUserLogin.vue";
+import ModalUserRegister from "@/components/ModalUserRegister.vue";
+import ModalUserAccount from "@/components/ModalUserAccount.vue";
 
 const showModalLogin = ref(false);
 const showModalRegister = ref(false);
@@ -42,7 +42,7 @@ const username = computed(() => userStore.username);
 const loggedIn = computed(() => userStore.loggedIn);
 </script>
 
-<style>
+<style scoped>
 .v-list-item__content.account {
   min-width: 250px;
   letter-spacing: 0.0892857143em;

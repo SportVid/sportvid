@@ -8,12 +8,12 @@
         <v-icon color="primary">mdi-movie</v-icon>
         {{ $t("app_bar.video_view") }}
       </v-btn>
-      <PluginMenu v-if="analysisView" />
-      <HistoryMenu v-if="analysisView" />
-      <ShortcutMenu v-if="analysisView" />
-      <ExportMenu v-if="analysisView" />
+      <ModalPluginButton v-if="analysisView" />
+      <ModalHistoryButton v-if="analysisView" />
+      <ModalShortcutButton v-if="analysisView" />
+      <ModalExportButton v-if="analysisView" />
       <v-divider vertical inset class="mx-2" />
-      <UserMenu />
+      <ModalUserMenu />
     </v-app-bar>
     <router-view />
     <ModalError />
@@ -23,11 +23,11 @@
 <script setup>
 import { computed } from "vue";
 import { useRoute } from "vue-router";
-import PluginMenu from "@/components/PluginMenu.vue";
-import HistoryMenu from "./components/HistoryMenu.vue";
-import ShortcutMenu from "@/components/ShortcutMenu.vue";
-import ExportMenu from "@/components/ExportMenu.vue";
-import UserMenu from "@/components/UserMenu.vue";
+import ModalPluginButton from "@/components/ModalPluginButton.vue";
+import ModalHistoryButton from "./components/ModalHistoryButton.vue";
+import ModalShortcutButton from "@/components/ModalShortcutButton.vue";
+import ModalExportButton from "@/components/ModalExportButton.vue";
+import ModalUserMenu from "@/components/ModalUserMenu.vue";
 import ModalError from "./components/ModalError.vue";
 
 const route = useRoute();
@@ -36,13 +36,3 @@ const appName = process.env.VUE_APP_NAME;
 
 const analysisView = computed(() => route.name === "AnalysisView");
 </script>
-
-<style>
-#sportVid {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: left;
-  color: #2c3e50;
-}
-</style>

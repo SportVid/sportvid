@@ -80,7 +80,7 @@
             <p v-html="$t('welcome.text')" class="mb-4"></p>
             <h2 class="text-h5 mb-2">{{ $t("welcome.demo_title") }}</h2>
             <p>
-              <video id="welcome-video" controls>
+              <video class="welcome-video" controls>
                 <source
                   src="https://tib.eu/cloud/s/sMmqWqWYict3Zpb/download/TIB-AV-A_Einfuehrung_2.mp4"
                   type="video/mp4"
@@ -184,7 +184,7 @@ const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
 const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
 </script>
 
-<style>
+<style scoped>
 .video-overview-title {
   display: block !important;
   white-space: nowrap;
@@ -200,7 +200,7 @@ const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` 
 .actions > .v-btn:not(:first-child) {
   margin-left: 1px !important;
 }
-#welcome-video {
+.welcome-video {
   margin-left: auto;
   margin-right: auto;
   display: block;

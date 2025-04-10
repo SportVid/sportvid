@@ -65,7 +65,7 @@
           {{ $t("user.register.title") }}
         </a>
       </div>
-      <UserRegister v-model="showModalRegister" />
+      <ModalUserRegister v-model="showModalRegister" />
     </v-card>
   </v-dialog>
 </template>
@@ -73,7 +73,7 @@
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import UserRegister from "@/components/UserRegister.vue";
+import ModalUserRegister from "@/components/ModalUserRegister.vue";
 import { useUserStore } from "@/stores/user";
 
 const props = defineProps({
@@ -142,7 +142,7 @@ watch(
 );
 </script>
 
-<style>
+<style scoped>
 .v-card.login .v-btn.register {
   min-width: auto !important;
   text-transform: capitalize;

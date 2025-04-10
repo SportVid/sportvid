@@ -237,7 +237,7 @@ const position_data_teams = computed(() => {
 });
 </script>
 
-<style>
+<style scoped>
 .checkbox-label-spacing .v-label {
   margin-left: 6px;
 }
