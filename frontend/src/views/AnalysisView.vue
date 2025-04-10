@@ -310,15 +310,12 @@ watchEffect(() => {
   }
 });
 
-const timelines = computed(() => timelineStore.forVideo(route.params.id));
-const timelineNames = computed(() => timelines.value.map((e) => e.name));
 onMounted(() => {
-  console.log("x", timelines);
-  console.log("plugins", pluginRunStore.forVideo(playerStore.videoId));
+  console.log("TimelinesListMounted", timelineStore.timelineList);
 });
-watch(playerStore.videoId, (newState) => {
+watch(timelineStore.timelineList, (newState) => {
   if (newState) {
-    console.log("plugins", pluginRunStore.forVideo(newState));
+    console.log("TimelinesListWatch", newState);
   }
 });
 
@@ -381,15 +378,15 @@ const selectedPlaceClustering = computed({
   },
 });
 
-const selectedTimelineProxy = ref(null);
-const selectedTimeline = computed({
-  get() {
-    return selectedTimelineProxy === null ? timelines.value[0] : selectedTimelineProxy;
-  },
-  set(val) {
-    selectedTimelineProxy = val;
-  },
-});
+// const selectedTimelineProxy = ref(null);
+// const selectedTimeline = computed({
+//   get() {
+//     return selectedTimelineProxy === null ? timelines.value[0] : selectedTimelineProxy;
+//   },
+//   set(val) {
+//     selectedTimelineProxy = val;
+//   },
+// });
 
 const fetchPluginTimer = ref(null);
 const fetchPlugin = async () => {
