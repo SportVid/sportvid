@@ -76,8 +76,8 @@
               <v-col>
                 <v-tabs-window v-model="analysisTab">
                   <v-tabs-window-item v-for="analysisTab in analysisTabs" :key="analysisTab.id">
-                    <CalibrationVisualizer v-if="analysisTab.name === 'Calibration'" />
-                    <PosDataVisualizer v-if="analysisTab.name === 'Position Data'" />
+                    <TabWindowCalibration v-if="analysisTab.name === 'Calibration'" />
+                    <TabWindowPosData v-if="analysisTab.name === 'Position Data'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -130,12 +130,12 @@ import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 import { useShotStore } from "@/stores/shot";
 // import * as Keyboard from "../plugins/keyboard";
 import VideoPlayer from "@/components/VideoPlayer.vue";
-import PosDataVisualizer from "@/components/PosDataVisualizer.vue";
-import CalibrationVisualizer from "@/components/CalibrationVisualizer.vue";
+import TabWindowPosData from "@/components/TabWindowPosData.vue";
+import TabWindowCalibration from "@/components/TabWindowCalibration.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 import Timeline from "@/components/Timeline.vue";
-import TimeSelector from "@/components/TimeSelector.vue";
+import TimeSelector from "@/components/TimelineTimeSelector.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
 // import ShotsOverview from "@/components/ShotsOverview.vue";
