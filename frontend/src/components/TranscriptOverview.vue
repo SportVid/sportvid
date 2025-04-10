@@ -1,8 +1,11 @@
 <template>
   <v-card v-if="noTranscripts" elevation="0" :class="['d-flex', 'flex-column', 'pa-2', 'ma-4']">
-    <span>There is no transcript. Create it with the <em>Speech Recognition (whisper)</em> pipeline.</span>
+    <span
+      >There is no transcript. Create it with the
+      <em>Speech Recognition (whisper)</em> pipeline.</span
+    >
   </v-card>
-  <div v-else style="height: 100%;">
+  <div v-else style="height: 100%">
     <v-text-field
       v-model="search"
       append-icon="mdi-magnify"
@@ -58,12 +61,10 @@ export default {
     },
     noTranscripts() {
       return this.timelineSegmentAnnotationStore.transcriptSegments.length === 0;
-    }, 
+    },
     transcripts() {
       return this.timelineSegmentAnnotationStore.transcriptSegments.filter(
-        (t) =>
-          this.search == "" ||
-          t.name.toLowerCase().includes(this.search.toLowerCase())
+        (t) => this.search == "" || t.name.toLowerCase().includes(this.search.toLowerCase())
       );
     },
     ...mapStores(useTimelineSegmentAnnotationStore),
@@ -73,7 +74,8 @@ export default {
   },
 };
 </script>
-<style>
+
+<style scoped>
 .transcript-search {
   max-width: 450px;
 }

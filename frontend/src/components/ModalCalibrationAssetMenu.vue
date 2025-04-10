@@ -36,5 +36,3 @@ import ModalCalibrationAssetSelect from "@/components/ModalCalibrationAssetSelec
 const showModalCalibrationAssetCreate = ref(false);
 const showModalCalibrationAssetSelect = ref(false);
 </script>
-
-<style></style>

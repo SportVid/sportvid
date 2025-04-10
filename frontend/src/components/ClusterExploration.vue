@@ -9,29 +9,31 @@
       </template>
       <v-card v-show="show" class="canvasContainer" ref="canvasContainer">
         <v-card-title>Cluster {{ cluster.name }} </v-card-title>
-        <v-card-subtitle>Click on images to mark them for deletion. There are {{ cluster.items.length }} images in total.</v-card-subtitle>
-        <v-virtual-scroll
-          :items="items"
-          height="600px"
-          item-height="170px"
+        <v-card-subtitle
+          >Click on images to mark them for deletion. There are {{ cluster.items.length }} images in
+          total.</v-card-subtitle
         >
+        <v-virtual-scroll :items="items" height="600px" item-height="170px">
           <template v-slot:default="{ item }">
             <v-list-item :key="item.name">
               <v-list-item-content>
                 <v-list-item-title>
                   {{ item.name }}
                 </v-list-item-title>
-                <div style="display: flex; overflow-y: auto; padding: 5px 0;">
-                  <img class="clusterImg" v-for="imageUrl in item.visibleImages" :key="imageUrl" :src="imageUrl"
-                    :style="borderStyle(imageUrl)" @click="mark(imageUrl)" loading="lazy"/>
+                <div style="display: flex; overflow-y: auto; padding: 5px 0">
+                  <img
+                    class="clusterImg"
+                    v-for="imageUrl in item.visibleImages"
+                    :key="imageUrl"
+                    :src="imageUrl"
+                    :style="borderStyle(imageUrl)"
+                    @click="mark(imageUrl)"
+                    loading="lazy"
+                  />
                 </div>
               </v-list-item-content>
               <v-list-item-action>
-                <v-btn
-                  v-if="!item.show"
-                  icon
-                  @click="showItems(item)"
-                >
+                <v-btn v-if="!item.show" icon @click="showItems(item)">
                   <v-icon x-large>mdi-chevron-right</v-icon>
                 </v-btn>
               </v-list-item-action>
@@ -46,23 +48,22 @@
             {{ $t("button.delete") }}
           </v-btn>
           <v-btn :disabled="!imagesSelectedForDeletion" @click="showNewCluster = true">
-            {{ $t('modal.cluster_edit.new_cluster') }}
+            {{ $t("modal.cluster_edit.new_cluster") }}
           </v-btn>
           <v-btn :disabled="!imagesSelectedForDeletion" @click="showMove = true">
-            {{ $t('modal.cluster_edit.move') }}
+            {{ $t("modal.cluster_edit.move") }}
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
     <v-dialog v-model="showConfirmation" width="auto">
       <v-card>
-        <v-card-title>
-          Confirm
-        </v-card-title>
+        <v-card-title> Confirm </v-card-title>
         <v-card-text>
           Delete {{ markedForDeletion.length }} images from Cluster "{{ cluster.name }}"?
-          <v-card-text style="color: red" v-if="allImagesMarked"> <b>You selected all images. This removes the
-              cluster.</b></v-card-text>
+          <v-card-text style="color: red" v-if="allImagesMarked">
+            <b>You selected all images. This removes the cluster.</b></v-card-text
+          >
         </v-card-text>
         <v-card-actions>
           <v-btn @click="showConfirmation = false"> Back </v-btn>
@@ -74,7 +75,7 @@
     <v-dialog v-model="showMove" width="300px">
       <v-card>
         <v-card-title>
-          {{ $t('modal.cluster_edit.move_existing') }}
+          {{ $t("modal.cluster_edit.move_existing") }}
         </v-card-title>
         <v-card-text>
           <v-list dense>
@@ -82,12 +83,9 @@
             <v-list-item-group
               v-model="toMoveCluster"
               color="primary"
-              style="max-height: 500px; overflow-x: auto;"
+              style="max-height: 500px; overflow-x: auto"
             >
-              <v-list-item
-                v-for="cluster in allClustersButSelf"
-                :key="cluster.id"
-              >
+              <v-list-item v-for="cluster in allClustersButSelf" :key="cluster.id">
                 <v-list-item-content>
                   <v-list-item-title>{{ cluster.name }}</v-list-item-title>
                 </v-list-item-content>
@@ -96,27 +94,28 @@
           </v-list>
         </v-card-text>
         <v-card-actions>
-          <v-btn @click="showMove = false">{{  $t('button.cancel') }}</v-btn>
+          <v-btn @click="showMove = false">{{ $t("button.cancel") }}</v-btn>
           <v-spacer></v-spacer>
-          <v-btn :disabled="toMoveCluster === undefined" @click="applyMove">{{ $t('modal.cluster_edit.move') }}</v-btn>
+          <v-btn :disabled="toMoveCluster === undefined" @click="applyMove">{{
+            $t("modal.cluster_edit.move")
+          }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
     <v-dialog v-model="showNewCluster" width="300px">
       <v-card>
         <v-card-title>
-          {{ $t('modal.cluster_edit.move_new') }}
+          {{ $t("modal.cluster_edit.move_new") }}
         </v-card-title>
         <v-card-text>
-          <v-text-field
-            label="Cluster Name"
-            v-model="newClusterName"
-          ></v-text-field>
+          <v-text-field label="Cluster Name" v-model="newClusterName"></v-text-field>
         </v-card-text>
         <v-card-actions>
-          <v-btn @click="showNewCluster = false">{{ $t('button.cancel') }}</v-btn>
+          <v-btn @click="showNewCluster = false">{{ $t("button.cancel") }}</v-btn>
           <v-spacer></v-spacer>
-          <v-btn :disabled="newClusterName.length == 0" @click="applyNewCluster">{{ $t('button.create') }}</v-btn>
+          <v-btn :disabled="newClusterName.length == 0" @click="applyNewCluster">{{
+            $t("button.create")
+          }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -125,8 +124,8 @@
 
 <script>
 import { ref, computed, watch, onMounted } from "vue";
-import { useClusterTimelineItemStore } from '../stores/cluster_timeline_item';
-import { useShotStore } from '../stores/shot';
+import { useClusterTimelineItemStore } from "../stores/cluster_timeline_item";
+import { useShotStore } from "../stores/shot";
 
 export default {
   props: ["cluster", "allClusters"],
@@ -134,7 +133,7 @@ export default {
     const show = ref(false);
     const showConfirmation = ref(false);
     const showNewCluster = ref(false);
-    const newClusterName = ref('');
+    const newClusterName = ref("");
     const showMove = ref(false);
     const toMoveCluster = ref(undefined);
     const markedForDeletion = ref([]);
@@ -145,20 +144,30 @@ export default {
 
     const allImagesMarked = computed(() => markedForDeletion.value.length === items.value.length);
     const imagesSelectedForDeletion = computed(() => markedForDeletion.value.length > 0);
-    const allClustersButSelf = computed(() => props.allClusters.filter(c => c.id !== props.cluster.id));
+    const allClustersButSelf = computed(() =>
+      props.allClusters.filter((c) => c.id !== props.cluster.id)
+    );
 
     const generateItems = () => {
-      items.value = shotStore.shots.map((shot, i) => {
-        const images = props.cluster.items.filter((i) => Math.round(shot.start) <= Math.round(i.time) && Math.round(i.time) < Math.round(shot.end)).map((i) => i.image_path);
-        return {
-          name: "Shot " + i,
-          images: images,
-          start: shot.start,
-          end: shot.end,
-          visibleImages: images.slice(0, 5),
-          show: images.length <= 5
-        };
-      }).filter((s) => s.images.length > 0);
+      items.value = shotStore.shots
+        .map((shot, i) => {
+          const images = props.cluster.items
+            .filter(
+              (i) =>
+                Math.round(shot.start) <= Math.round(i.time) &&
+                Math.round(i.time) < Math.round(shot.end)
+            )
+            .map((i) => i.image_path);
+          return {
+            name: "Shot " + i,
+            images: images,
+            start: shot.start,
+            end: shot.end,
+            visibleImages: images.slice(0, 5),
+            show: images.length <= 5,
+          };
+        })
+        .filter((s) => s.images.length > 0);
     };
 
     const showItems = (item) => {
@@ -180,14 +189,15 @@ export default {
 
     const borderStyle = (imageUrl) => {
       if (marked(imageUrl)) {
-        return 'border: 5px solid red';
+        return "border: 5px solid red";
       }
-      return '';
+      return "";
     };
 
     const applyMove = async () => {
-      const marked_items = props.cluster.items.filter((i) => markedForDeletion.value.includes(i.image_path))
-                                               .map((i) => i.id);
+      const marked_items = props.cluster.items
+        .filter((i) => markedForDeletion.value.includes(i.image_path))
+        .map((i) => i.id);
       await clusterTimelineItemStore.moveItemsToCluster(
         props.cluster.cluster_id,
         marked_items,
@@ -202,14 +212,15 @@ export default {
     };
 
     const applyNewCluster = async () => {
-      const marked_items = props.cluster.items.filter((i) => markedForDeletion.value.includes(i.image_path))
-                                               .map((i) => i.id);
+      const marked_items = props.cluster.items
+        .filter((i) => markedForDeletion.value.includes(i.image_path))
+        .map((i) => i.id);
       const newCluster = await clusterTimelineItemStore.create(
         newClusterName.value,
         props.cluster.video,
         props.cluster.plugin_run,
         props.cluster.type
-      )
+      );
       if (newCluster) {
         await clusterTimelineItemStore.moveItemsToCluster(
           props.cluster.cluster_id,
@@ -219,7 +230,7 @@ export default {
       }
       show.value = false;
       markedForDeletion.value = [];
-      newClusterName.value = '';
+      newClusterName.value = "";
       showNewCluster.value = false;
       if (allImagesMarked.value) {
         this.$emit("deleteCluster");
@@ -227,8 +238,9 @@ export default {
     };
 
     const applyDeletion = async () => {
-      const item_ids_to_delete = props.cluster.items.filter((i) => markedForDeletion.value.includes(i.image_path))
-                                                   .map((i) => i.id);
+      const item_ids_to_delete = props.cluster.items
+        .filter((i) => markedForDeletion.value.includes(i.image_path))
+        .map((i) => i.id);
       await clusterTimelineItemStore.deleteItems(props.cluster.cluster_id, item_ids_to_delete);
 
       markedForDeletion.value = [];
@@ -248,13 +260,19 @@ export default {
       generateItems();
     });
 
-    watch(() => shotStore.shots, () => {
-      generateItems();
-    });
+    watch(
+      () => shotStore.shots,
+      () => {
+        generateItems();
+      }
+    );
 
-    watch(() => props.cluster.items, () => {
-      generateItems();
-    });
+    watch(
+      () => props.cluster.items,
+      () => {
+        generateItems();
+      }
+    );
 
     return {
       show,
@@ -275,13 +293,13 @@ export default {
       applyMove,
       applyNewCluster,
       applyDeletion,
-      abort
+      abort,
     };
-  }
+  },
 };
 </script>
 
-<style>
+<style scoped>
 .scrollable-content {
   max-height: 70vh;
   margin-bottom: 5px;

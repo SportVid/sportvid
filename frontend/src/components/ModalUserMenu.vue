@@ -42,7 +42,7 @@ const username = computed(() => userStore.username);
 const loggedIn = computed(() => userStore.loggedIn);
 </script>
 
-<style>
+<style scoped>
 .v-list-item__content.account {
   min-width: 250px;
   letter-spacing: 0.0892857143em;

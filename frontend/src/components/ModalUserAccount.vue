@@ -65,7 +65,7 @@ const logout = async () => {
 };
 </script>
 
-<style>
+<style scoped>
 .v-list-item__content.account {
   min-width: 250px;
   letter-spacing: 0.0892857143em;

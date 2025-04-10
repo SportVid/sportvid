@@ -1,27 +1,20 @@
 <template>
   <v-card
-  :class="['d-flex', 'flex-column', 'pa-2', 'ma-4', { highlighted: isHighlighted }]"
-  elevation="4"
-  height="120"
-  v-on:click="setVideoPlayerTime(transcript.start)"
+    :class="['d-flex', 'flex-column', 'pa-2', 'ma-4', { highlighted: isHighlighted }]"
+    elevation="4"
+    height="120"
+    v-on:click="setVideoPlayerTime(transcript.start)"
   >
-    <span style="margin-bottom:0.2cm">{{ get_timecode(transcript.start, 0) }}</span>
+    <span style="margin-bottom: 0.2cm">{{ get_timecode(transcript.start, 0) }}</span>
     <v-tooltip top open-delay="200">
-    <template v-slot:activator="{ on, attrs }">
-      <span
-        v-bind="attrs"
-        v-on="on"
-        class="mx-0"
-        style="overflow: hidden; color:rgb(0, 0, 0);"
-        >
-        {{ transcript.name }}
-        </span
-      ></template
-    >
-    <span>{{transcript.name}}</span>
-  </v-tooltip>
+      <template v-slot:activator="{ on, attrs }">
+        <span v-bind="attrs" v-on="on" class="mx-0" style="overflow: hidden; color: rgb(0, 0, 0)">
+          {{ transcript.name }}
+        </span></template
+      >
+      <span>{{ transcript.name }}</span>
+    </v-tooltip>
   </v-card>
-
 </template>
 
 <script>
@@ -33,11 +26,11 @@ import { usePlayerStore } from "@/stores/player";
 export default {
   mixins: [TimeMixin],
   props: ["transcript"],
-  data () {
+  data() {
     return {
-      // this variable ensures that the signal to scroll is only emitted once 
-      emitted: false
-    }
+      // this variable ensures that the signal to scroll is only emitted once
+      emitted: false,
+    };
   },
   methods: {
     setVideoPlayerTime(time) {
@@ -49,7 +42,7 @@ export default {
       const cur_time = this.playerStore.currentTime;
       return this.transcript.start <= cur_time && this.transcript.end > cur_time;
     },
-    time(){
+    time() {
       return this.playerStore.currentTime;
     },
     syncTime() {
@@ -59,20 +52,20 @@ export default {
   },
   watch: {
     isHighlighted(newVal) {
-        if (newVal && !this.emitted && this.syncTime){
-          this.$emit('childHighlighted', this.transcript.id);
-        }
-        this.emitted = newVal;
+      if (newVal && !this.emitted && this.syncTime) {
+        this.$emit("childHighlighted", this.transcript.id);
       }
-    }
+      this.emitted = newVal;
+    },
+  },
 };
 </script>
 
-<style>
+<style scoped>
 .highlighted {
-  background-color: rgba(43, 24, 27, 0.287) !important
+  background-color: rgba(43, 24, 27, 0.287) !important;
 }
 .v-tooltip__content {
-max-width: 400px; /* Set your desired maximum width */
+  max-width: 400px; /* Set your desired maximum width */
 }
-</style> 
+</style>

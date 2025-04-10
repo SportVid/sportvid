@@ -142,7 +142,7 @@ watch(
 );
 </script>
 
-<style>
+<style scoped>
 .v-card.login .v-btn.register {
   min-width: auto !important;
   text-transform: capitalize;

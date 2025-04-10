@@ -29,6 +29,7 @@
 
       <v-btn
         v-for="m in filteredReferenceMarker"
+        v-show="topViewStore.showItems"
         :key="m.id"
         :disabled="calibrationAssetStore.isAddingReferenceMarker"
         :color="m.active || calibrationAssetStore.hoveredVideoMarker === m.id ? 'red' : 'grey'"
@@ -228,6 +229,13 @@ const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const videoStore = useVideoStore();
 
+const props = defineProps({
+  showItems: {
+    type: Boolean,
+    default: false,
+  },
+});
+
 const topViewElement = ref(null);
 
 const showModalCalibrationAssetCreate = ref(false);
@@ -274,6 +282,7 @@ const updateTopViewSize = () => {
     }
   });
 };
+
 onMounted(() => {
   setTimeout(() => {
     window.dispatchEvent(new Event("resize"));
@@ -320,7 +329,7 @@ watch(
 );
 </script>
 
-<style>
+<style scoped>
 .image {
   max-width: 100%;
   object-fit: cover;

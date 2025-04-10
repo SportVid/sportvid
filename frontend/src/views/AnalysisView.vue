@@ -31,7 +31,7 @@
       <v-row class="ma-n2">
         <v-col cols="6">
           <v-card
-            class="d-flex flex-column flex-nowrap px-2"
+            class="loading-container"
             elevation="2"
             ref="videoCard"
             :style="{ maxHeight: analysisViewHeight + 'px' }"
@@ -51,12 +51,19 @@
         </v-col>
 
         <v-col cols="6">
-          <div v-if="isLoading" class="loading-container">
+          <v-card
+            v-if="isLoading"
+            class="loading-card"
+            elevation="2"
+            ref="topViewCard"
+            :style="{ maxHeight: analysisViewHeight + 'px', height: cardHeight + 'px' }"
+          >
             <div class="spinner">
               <i class="mdi mdi-loading mdi-spin" />
             </div>
             <div class="loading-text">Loading...</div>
-          </div>
+          </v-card>
+
           <v-card
             v-else
             class="d-flex flex-column flex-nowrap px-2"
@@ -114,13 +121,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, watchEffect, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useBboxesStore } from "@/stores/bboxes";
+import { useTopViewStore } from "@/stores/top_view";
 import { useTimelineStore } from "@/stores/timeline";
 import { useTimelineSegmentStore } from "@/stores/timeline_segment";
 import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
@@ -150,6 +158,7 @@ const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
+const topViewStore = useTopViewStore();
 const timelineStore = useTimelineStore();
 const timelineSegmentStore = useTimelineSegmentStore();
 const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
@@ -158,13 +167,17 @@ const annotationShortcutStore = useAnnotationShortcutStore();
 const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
 
-const analysisTab = ref(0);
+const analysisTab = ref(1);
 const analysisTabs = ref([
   { id: "1", name: "Calibration" },
   { id: "2", name: "Position Data" },
 ]);
-watch(analysisTab, (newTab) => {
-  const currentTab = analysisTabs.value[newTab]?.name;
+onMounted(() => {
+  analysisTab.value = analysisTabs.value.find((tab) => tab.name === "Annotation")?.id;
+});
+watch(analysisTab, (newTabId) => {
+  topViewStore.showItems = false;
+  const currentTab = analysisTabs.value.find((tab) => tab.id === newTabId)?.name;
 
   if (currentTab === "Annotation") {
     calibrationAssetStore.showVideoMarker = true;
@@ -177,6 +190,10 @@ watch(analysisTab, (newTab) => {
   } else {
     bboxesStore.showBoundingBox = false;
   }
+
+  nextTick(() => {
+    topViewStore.showItems = true;
+  });
 });
 
 const isLoading = ref(true);
@@ -234,41 +251,64 @@ watch(
   }
 );
 
-watch(
-  () => bboxesStore.setBboxData(bboxesStore.bboxPluginRun),
-  (newBboxes) => {
-    if (newBboxes && newBboxes.length > 0) {
-      // const groupedData = {};
-      // newBboxes.forEach((position) => {
-      //   const { time } = position;
-      //   if (!groupedData[time]) {
-      //     groupedData[time] = [];
-      //   }
-      //   groupedData[time].push(position);
-      // });
-      // bboxesStore.bboxData = groupedData;
-      bboxesStore.bboxData = newBboxes;
-      // console.log(bboxesStore.bboxPluginRun);
-      // console.log("bboxData", bboxesStore.bboxData);
+// watch(
+//   () => bboxesStore.setBboxData(bboxesStore.bboxPluginRun),
+//   (newBboxes) => {
+//     if (newBboxes && newBboxes.length > 0) {
+//       // const groupedData = {};
+//       // newBboxes.forEach((position) => {
+//       //   const { time } = position;
+//       //   if (!groupedData[time]) {
+//       //     groupedData[time] = [];
+//       //   }
+//       //   groupedData[time].push(position);
+//       // });
+//       // bboxesStore.bboxData = groupedData;
+//       bboxesStore.bboxData = newBboxes;
+//       // console.log(bboxesStore.bboxPluginRun);
+//       // console.log("bboxData", bboxesStore.bboxData);
 
-      bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBboxData(
-        newBboxes,
-        playerStore.videoFPS,
-        25
-      );
-      const groupedDataInterpolated = {};
-      bboxesStore.bboxDataInterpolated.forEach((position) => {
-        const { time } = position;
-        if (!groupedDataInterpolated[time]) {
-          groupedDataInterpolated[time] = [];
-        }
-        groupedDataInterpolated[time].push(position);
-      });
-      bboxesStore.bboxDataInterpolated = groupedDataInterpolated;
-      // console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
-    }
+//       bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBboxData(
+//         newBboxes,
+//         playerStore.videoFPS,
+//         25
+//       );
+//       const groupedDataInterpolated = {};
+//       bboxesStore.bboxDataInterpolated.forEach((position) => {
+//         const { time } = position;
+//         if (!groupedDataInterpolated[time]) {
+//           groupedDataInterpolated[time] = [];
+//         }
+//         groupedDataInterpolated[time].push(position);
+//       });
+//       bboxesStore.bboxDataInterpolated = groupedDataInterpolated;
+//       // console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
+//     }
+//   }
+// );
+watchEffect(() => {
+  const newBboxes = bboxesStore.setBboxData(bboxesStore.bboxPluginRun);
+
+  if (newBboxes && newBboxes.length > 0) {
+    bboxesStore.bboxData = newBboxes;
+
+    bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBboxData(
+      newBboxes,
+      playerStore.videoFPS,
+      25
+    );
+
+    const groupedDataInterpolated = {};
+    bboxesStore.bboxDataInterpolated.forEach((position) => {
+      const { time } = position;
+      if (!groupedDataInterpolated[time]) {
+        groupedDataInterpolated[time] = [];
+      }
+      groupedDataInterpolated[time].push(position);
+    });
+    bboxesStore.bboxDataInterpolated = groupedDataInterpolated;
   }
-);
+});
 
 const timelines = computed(() => timelineStore.forVideo(route.params.id));
 const timelineNames = computed(() => timelines.value.map((e) => e.name));
@@ -513,12 +553,11 @@ const onAnnotateSegment = () => {
   outline: none;
 }
 
-.loading-container {
+.loading-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 50vh;
 }
 
 .spinner {

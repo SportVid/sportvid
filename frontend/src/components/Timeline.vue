@@ -914,7 +914,7 @@ onMounted(() => {
 });
 </script>
 
-<style>
+<style scoped>
 .draggable-placeholder-inner {
   border: 2px solid #ae1313;
   background: #ae131377;

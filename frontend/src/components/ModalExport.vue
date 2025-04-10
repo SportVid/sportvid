@@ -279,10 +279,10 @@ watch(
 );
 </script>
 
-<style>
+<style scoped>
 .compact-parameters {
   display: flex;
   flex-direction: column;
-  gap: 4px; /* Abstand zwischen den Checkboxen */
+  gap: 4px;
 }
 </style>
