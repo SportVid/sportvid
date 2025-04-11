@@ -6,4 +6,6 @@ export { ColorTimeline } from "./draw/color_timeline.js";
 export { ScalarLineTimeline } from "./draw/scalar_line_timeline.js";
 export { ScalarColorTimeline } from "./draw/scalar_color_timeline.js";
 export { HistTimeline } from "./draw/hist_timeline.js";
-// export { generateFont } from "./draw/utils.js"
+export { generateFont } from "./draw/utils.js"
+
+

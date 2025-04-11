@@ -26,7 +26,7 @@
 
             <v-treeview
               v-model="activeNode"
-              class="mt-2 pr-4"
+              class="mt-2 pr-4 treeview"
               :items="pluginsSorted"
               :search="searchPlugin"
               item-value="id"

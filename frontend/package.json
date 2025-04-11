@@ -7,7 +7,6 @@
     "build": "vue-cli-service build"
   },
   "dependencies": {
-    "@he-tree/vue": "^2.9.4",
     "@mdi/font": "^7.4.47",
     "@vue/cli-plugin-babel": "^5.0.8",
     "@vue/compiler-sfc": "^3.5.13",

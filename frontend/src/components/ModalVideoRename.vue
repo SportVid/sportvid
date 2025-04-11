@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" max-width="800">
+  <v-dialog v-model="show" max-width="800">
     <template v-slot:activator="{ props }">
       <v-btn size="small" v-bind="props" variant="outlined">
         <v-icon class="mr-1">{{ "mdi-pencil" }}</v-icon>
@@ -13,7 +13,7 @@
 
         <v-spacer />
 
-        <v-btn icon @click="dialog = false" variant="plain" color="grey">
+        <v-btn icon @click="show = false" variant="plain" color="grey">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </v-toolbar>
@@ -49,8 +49,7 @@ const props = defineProps({
 const emit = defineEmits();
 
 const videoStore = useVideoStore();
-
-const dialog = ref(false);
+const show = ref(false);
 const isSubmitting = ref(false);
 const nameProxy = ref(null);
 
@@ -66,7 +65,9 @@ const name = computed({
 });
 
 const submit = async () => {
-  if (isSubmitting.value) return;
+  if (isSubmitting.value) {
+    return;
+  }
   isSubmitting.value = true;
 
   await videoStore.rename({
@@ -75,10 +76,10 @@ const submit = async () => {
   });
 
   isSubmitting.value = false;
-  dialog.value = false;
+  show.value = false;
 };
 
-watch(dialog, (value) => {
+watch(show, (value) => {
   if (value) {
     nameProxy.value = null;
     emit("close");
