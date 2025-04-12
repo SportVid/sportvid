@@ -1,14 +1,14 @@
-import { ref, reactive, computed } from 'vue';
-import axios from '../plugins/axios';
-import config from '../../app.config';
-import { defineStore } from 'pinia';
-import { useTimelineSegmentStore } from '@/stores/timeline_segment';
-import { useAnnotationCategoryStore } from '@/stores/annotation_category';
-import { useAnnotationStore } from '@/stores/annotation';
-import { usePlayerStore } from '@/stores/player';
+import { ref, computed } from "vue";
+import axios from "../plugins/axios";
+import config from "../../app.config";
+import { defineStore } from "pinia";
+import { useTimelineSegmentStore } from "@/stores/timeline_segment";
+import { useAnnotationCategoryStore } from "@/stores/annotation_category";
+import { useAnnotationStore } from "@/stores/annotation";
+import { usePlayerStore } from "@/stores/player";
 
-export const useTimelineSegmentAnnotationStore = defineStore('timelineSegmentAnnotation', () => {
-  const timelineSegmentAnnotations = reactive({});
+export const useTimelineSegmentAnnotationStore = defineStore("timelineSegmentAnnotation", () => {
+  const timelineSegmentAnnotations = ref({});
   const isLoading = ref(false);
 
   const all = computed(() => Object.values(timelineSegmentAnnotations));
@@ -41,11 +41,11 @@ export const useTimelineSegmentAnnotationStore = defineStore('timelineSegmentAnn
           cat = annotationCategoryStore.get(annotation.category_id);
         }
 
-        let name = annotation ? annotation.name : '';
+        let name = annotation ? annotation.name : "";
 
         return { id: i + 1, category: cat, name, start, end };
       })
-      .filter((segment) => segment.category && segment.category.name === 'Transcript')
+      .filter((segment) => segment.category && segment.category.name === "Transcript")
       .sort((a, b) => a.start - b.start)
       .map((segment, i) => {
         segment.id = i + 1;
@@ -76,11 +76,9 @@ export const useTimelineSegmentAnnotationStore = defineStore('timelineSegmentAnn
         params
       );
 
-      if (res.data.status === 'ok') {
+      if (res.data.status === "ok") {
         addToStore([res.data.entry]);
-        timelineSegmentStore.addAnnotation([
-          { timelineSegmentId, entry: res.data.entry },
-        ]);
+        timelineSegmentStore.addAnnotation([{ timelineSegmentId, entry: res.data.entry }]);
         return res.data.entry.id;
       }
     } finally {
@@ -102,7 +100,7 @@ export const useTimelineSegmentAnnotationStore = defineStore('timelineSegmentAnn
         params
       );
 
-      if (res.data.status === 'ok') {
+      if (res.data.status === "ok") {
         deleteFromStore([id]);
         timelineSegmentStore.deleteAnnotation([id]);
       }
@@ -132,12 +130,11 @@ export const useTimelineSegmentAnnotationStore = defineStore('timelineSegmentAnn
     }
 
     try {
-      const res = await axios.get(
-        `${config.API_LOCATION}/timeline/segment/annotation/list`,
-        { params }
-      );
+      const res = await axios.get(`${config.API_LOCATION}/timeline/segment/annotation/list`, {
+        params,
+      });
 
-      if (res.data.status === 'ok') {
+      if (res.data.status === "ok") {
         updateStore(res.data.entries);
       }
     } finally {

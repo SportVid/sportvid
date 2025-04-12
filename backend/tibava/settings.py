@@ -32,7 +32,10 @@ ALLOWED_HOSTS = ["localhost"]
 CSRF_TRUSTED_ORIGINS = ["http://localhost", "https://localhost"]
 
 
-CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+]
 CORS_ALLOW_CREDENTIALS = True
 
 LOGGING = {

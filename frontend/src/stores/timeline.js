@@ -200,13 +200,11 @@ export const useTimelineStore = defineStore("timeline", () => {
     if (clear) {
       clearStore();
     }
-
     try {
       const res = await axios.get(`${config.API_LOCATION}/timeline/list`, { params });
       if (res.data.status === "ok") {
-        updateStore(res.data.entries);
-        // Load plugin run results
         const pluginRunResultStore = usePluginRunResultStore();
+
         res.data.entries.forEach((timeline) => {
           if (
             !("plugin" in timeline) &&
@@ -219,6 +217,7 @@ export const useTimelineStore = defineStore("timeline", () => {
             }
           }
         });
+        updateStore(res.data.entries);
       }
     } finally {
       isLoading.value = false;
@@ -488,8 +487,8 @@ export const useTimelineStore = defineStore("timeline", () => {
     });
   };
 
-  const addToStore = (timelines) => {
-    timelines.forEach((e) => {
+  const addToStore = (addedTimelines) => {
+    addedTimelines.forEach((e) => {
       timelineListAdded.value.push([Date.now(), e.id]);
       timelines.value[e.id] = e;
       timelineList.value.push(e.id);
@@ -497,8 +496,8 @@ export const useTimelineStore = defineStore("timeline", () => {
     updateVisibleStore();
   };
 
-  const updateStore = (timelines) => {
-    timelines.forEach((e) => {
+  const updateStore = (addedTimelines) => {
+    addedTimelines.forEach((e) => {
       if (!(e.id in timelines.value)) {
         timelineListAdded.value.push([Date.now(), e.id]);
         timelines.value[e.id] = e;

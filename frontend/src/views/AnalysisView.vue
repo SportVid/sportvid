@@ -72,7 +72,7 @@
             :style="{ maxHeight: analysisViewHeight + 'px', height: cardHeight + 'px' }"
           >
             <v-row class="sticky-tabs-bar" justify="center">
-              <v-tabs fixed-tabs slider-color="primary" v-model="analysisTab">
+              <v-tabs fixed-tabs slider-color="primary" v-model="analysisTabId">
                 <v-tab v-for="analysisTab in analysisTabs" :key="analysisTab.id">
                   <span>{{ analysisTab.name }}</span>
                 </v-tab>
@@ -81,7 +81,7 @@
 
             <v-row class="flex-grow-1">
               <v-col>
-                <v-tabs-window v-model="analysisTab">
+                <v-tabs-window v-model="analysisTabId">
                   <v-tabs-window-item v-for="analysisTab in analysisTabs" :key="analysisTab.id">
                     <TabWindowCalibration v-if="analysisTab.name === 'Calibration'" />
                     <TabWindowPosData v-if="analysisTab.name === 'Position Data'" />
@@ -167,19 +167,20 @@ const annotationShortcutStore = useAnnotationShortcutStore();
 const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
 
-const analysisTab = ref(1);
+const analysisTabId = ref(0);
 const analysisTabs = ref([
-  { id: "1", name: "Calibration" },
-  { id: "2", name: "Position Data" },
+  { id: 0, name: "Calibration" },
+  { id: 1, name: "Position Data" },
 ]);
 onMounted(() => {
-  analysisTab.value = analysisTabs.value.find((tab) => tab.name === "Annotation")?.id;
+  analysisTabId.value = analysisTabs.value.find((tab) => tab.name === "Calibration")?.id;
 });
-watch(analysisTab, (newTabId) => {
+watch(analysisTabId, (newTabId) => {
   topViewStore.showItems = false;
+
   const currentTab = analysisTabs.value.find((tab) => tab.id === newTabId)?.name;
 
-  if (currentTab === "Annotation") {
+  if (currentTab === "Calibration") {
     calibrationAssetStore.showVideoMarker = true;
   } else {
     calibrationAssetStore.showVideoMarker = false;
@@ -307,15 +308,6 @@ watchEffect(() => {
       groupedDataInterpolated[time].push(position);
     });
     bboxesStore.bboxDataInterpolated = groupedDataInterpolated;
-  }
-});
-
-onMounted(() => {
-  console.log("TimelinesListMounted", timelineStore.timelineList);
-});
-watch(timelineStore.timelineList, (newState) => {
-  if (newState) {
-    console.log("TimelinesListWatch", newState);
   }
 });
 

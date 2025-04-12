@@ -73,7 +73,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useUserStore } from "@/stores/user";
 
@@ -89,13 +89,17 @@ const emit = defineEmits();
 const { t } = useI18n();
 const userStore = useUserStore();
 
-const user = reactive({});
+const user = ref({
+  name: "",
+  password: "",
+  email: "",
+});
 const dialog = ref(props.modelValue);
 const showPassword = ref(false);
 const errorMessage = ref("");
 
 const register = async () => {
-  const status = await userStore.register(user);
+  const status = await userStore.register(user.value);
   if (status.status === "ok") {
     dialog.value = false;
     errorMessage.value = "";
@@ -118,8 +122,8 @@ const checkLength = (value) => {
 };
 
 const disabled = computed(() => {
-  const total = Object.keys(user).length
-    ? Object.values(user).reduce((t, value) => t + (checkLength(value) === true), 0)
+  const total = Object.keys(user.value).length
+    ? Object.values(user.value).reduce((t, value) => t + (checkLength(value) === true), 0)
     : 0;
   return total !== 3;
 });

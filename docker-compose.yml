@@ -65,7 +65,7 @@ services:
         target: /cache/
 
   postgres:
-    image: postgres:13.2
+    image: postgres:14
     volumes:
       - ./data/db/:/var/lib/postgresql/data
     environment:
@@ -164,7 +164,6 @@ services:
       - type: bind
         source: ./data/tmp
         target: /tmp
-        
 
     working_dir: /app/backend/
     environment:
