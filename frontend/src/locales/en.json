@@ -366,8 +366,9 @@
       },
       "import": {
         "title": "Import Timeline",
+        "input": "Select an ELAN file to import [eaf]",
         "eaf": "Import from ELAN .eaf file",
-        "update": "Import",
+        "import": "Import",
         "close": "Close"
       },
       "duplicate": {

@@ -113,29 +113,31 @@
         </template>
 
         <v-list class="py-0" density="compact">
-          <v-list-item class="menu-item">
-            <v-list-item-title @click="showModalCalibrationAssetCreate = true">
+          <v-list-item class="menu-item" @click="showModalCalibrationAssetCreate = true">
+            <v-list-item-title>
               {{ $t("calibration_asset_vis.calibration_asset.create") }}
             </v-list-item-title>
           </v-list-item>
 
-          <v-list-item class="menu-item" v-if="!calibrationAssetStore.calibrationAssetId">
-            <v-list-item-title @click="showModalCalibrationAssetSave = true">
+          <v-list-item
+            class="menu-item"
+            v-if="!calibrationAssetStore.calibrationAssetId"
+            @click="showModalCalibrationAssetSave = true"
+          >
+            <v-list-item-title>
               {{ $t("calibration_asset_vis.calibration_asset.save") }}
             </v-list-item-title>
           </v-list-item>
 
-          <v-list-item class="menu-item" v-if="calibrationAssetStore.calibrationAssetId">
-            <v-list-item-title @click="showModalCalibrationAssetUpdate = true">
+          <v-list-item
+            class="menu-item"
+            v-if="calibrationAssetStore.calibrationAssetId"
+            @click="showModalCalibrationAssetUpdate = true"
+          >
+            <v-list-item-title>
               {{ $t("calibration_asset_vis.calibration_asset.update") }}
             </v-list-item-title>
           </v-list-item>
-          <!-- <v-list-item class="menu-item" @click="handleModalCalibrationAssetStorage">
-            <v-list-item-title>
-              {{ CalibrationAssetStorageTitle }}
-            </v-list-item-title>
-          </v-list-item> -->
-
           <v-list-item class="menu-item" @click="showModalCalibrationAssetSelect = true">
             <v-list-item-title>
               {{ $t("calibration_asset_vis.calibration_asset.select") }}

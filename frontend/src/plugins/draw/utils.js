@@ -12,7 +12,7 @@ var colormaps = new Map([
   ["YlGnBu", d3.interpolateYlGnBu],
   ["YlOrRd", d3.interpolateYlOrRd],
   ["Viridis", d3.interpolateViridis],
-  ["Plasma", d3.interpolatePlasma]
+  ["Plasma", d3.interpolatePlasma],
 ]);
 
 export function getMax(arr) {
@@ -24,6 +24,7 @@ export function getMax(arr) {
   }
   return max;
 }
+
 export function getMin(arr) {
   let len = arr.length;
   let min = Infinity;
@@ -34,13 +35,10 @@ export function getMin(arr) {
   return min;
 }
 
-
 export function hex2luminance(string) {
   const rgb = PIXI.utils.hex2rgb(string);
   return Math.sqrt(
-    0.299 * Math.pow(rgb[0], 2) +
-    0.587 * Math.pow(rgb[1], 2) +
-    0.114 * Math.pow(rgb[2], 2)
+    0.299 * Math.pow(rgb[0], 2) + 0.587 * Math.pow(rgb[1], 2) + 0.114 * Math.pow(rgb[2], 2)
   );
 }
 
@@ -72,7 +70,7 @@ export function scalarToRGB(s, invert = false, colorPalette = "TIBReds") {
 
   const cm = colormaps.get(colorPalette);
   var color = cm(s);
-  color = d3.color(color).clamp()
+  color = d3.color(color).clamp();
   return [color.r, color.g, color.b, color.opacity * 255];
 }
 
@@ -88,55 +86,50 @@ export function scalarToString(s, invert = false, colorPalette = "TIBReds") {
 }
 
 export function resampleApprox({ data, targetSize = 1024 }) {
-  const stepsize =
-    2 ** Math.max(Math.ceil(Math.log2(data.length) - Math.log2(targetSize)), 0);
+  const stepsize = 2 ** Math.max(Math.ceil(Math.log2(data.length) - Math.log2(targetSize)), 0);
   const filteredData = data.filter((e, i) => i % stepsize == 0);
   return filteredData;
 }
 
-export function generateFont() {
-  PIXI.BitmapFont.from(
-    "default_font",
-    {
-      fill: "#333333",
-      fontSize: 10,
-    },
-    {
-      chars: [["a", "z"], ["0", "9"], ["A", "Z"], " \\|/:.-^%$&*()!?"],
-      // fontWeight: 'bold',
-    }
-  );
-  PIXI.BitmapFont.from(
-    "default_white_font",
-    {
-      fill: "#FFFFFF",
-      fontSize: 10,
-    },
-    {
-      chars: [["a", "z"], ["0", "9"], ["A", "Z"], " \\|/:.-^%$&*()!?"],
-      // fontWeight: 'bold',
-    }
-  );
-  PIXI.BitmapFont.from(
-    "large_font",
-    {
-      fill: "#333333",
-      fontSize: 20,
-    },
-    {
-      chars: [["a", "z"], ["0", "9"], ["A", "Z"], " \\|/:.-^%$&*()!?"],
-      // fontWeight: 'bold',
-    }
-  );
-  PIXI.BitmapFont.from(
-    "large_white_font",
-    {
-      fill: "#FFFFFF",
-      fontSize: 20,
-    },
-    {
-      chars: [["a", "z"], ["0", "9"], ["A", "Z"], " \\|/:.-^%$&*()!?"],
-      // fontWeight: 'bold',
-    }
-  );
-}
+// export function generateFont() {
+//   PIXI.BitmapFont.from(
+//     "default_font",
+//     {
+//       fill: "#333333",
+//       fontSize: 10,
+//     },
+//     {
+//       chars: [["a", "z"], ["0", "9"], ["A", "Z"], " \\|/:.-^%$&*()!?"],
+//     }
+//   );
+//   PIXI.BitmapFont.from(
+//     "default_white_font",
+//     {
+//       fill: "#FFFFFF",
+//       fontSize: 10,
+//     },
+//     {
+//       chars: [["a", "z"], ["0", "9"], ["A", "Z"], " \\|/:.-^%$&*()!?"],
+//     }
+//   );
+//   PIXI.BitmapFont.from(
+//     "large_font",
+//     {
+//       fill: "#333333",
+//       fontSize: 20,
+//     },
+//     {
+//       chars: [["a", "z"], ["0", "9"], ["A", "Z"], " \\|/:.-^%$&*()!?"],
+//     }
+//   );
+//   PIXI.BitmapFont.from(
+//     "large_white_font",
+//     {
+//       fill: "#FFFFFF",
+//       fontSize: 20,
+//     },
+//     {
+//       chars: [["a", "z"], ["0", "9"], ["A", "Z"], " \\|/:.-^%$&*()!?"],
+//     }
+//   );
+// }
