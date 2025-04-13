@@ -170,7 +170,13 @@
         "plugin_description": "This plugin performs multi-object tracking (MOT). It uses the 'bytetrack_x_mot17' model from https://github.com/ifzhang/ByteTrack.",
         "timeline_name": "ByteTrack"
       },
-
+      "calibration_static_dlt": {
+        "plugin_name": "DLT+RANSAC from annotated landmarks",
+        "plugin_description": "This plugin performs a static calibration of the video using the Direct Linear Transformation (DLT) + RANSAC method. It uses the annotated marker correspondences from a calibration asset to estimate the homography matrix.",
+        "timeline_name": "Calibration Static DLT",
+        "calibration_id": "Select Calibration Asset",
+        "calibration_id_hint": "Select a calibration asset to use for the calibration."
+      },
       "audio_waveform": {
         "plugin_name": "Audio Waveform",
         "plugin_description": "This plugin computes the waveform of the audio signal for basic sound analysis.",

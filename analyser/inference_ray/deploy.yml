@@ -39,8 +39,23 @@ applications:
               - h5py
               - cython-bbox
               - pycocotools
-
-
+  - name: calibration_static_dlt
+    route_prefix: /calibration_static_dlt
+    import_path: main:app_builder
+    args:
+      model: calibration_static_dlt
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        autoscaling_config:
+          min_replicas: 0
+        ray_actor_options:
+          num_cpus: 2
+          runtime_env:
+            pip:
+              - numpy==2.2.4
+              - opencv-python-headless==4.11.0.86
   - name: video_to_audio
     route_prefix: /video_to_audio
     import_path: main:app_builder

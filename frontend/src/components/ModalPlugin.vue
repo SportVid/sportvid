@@ -974,8 +974,26 @@ const plugins = ref([
         ],
         optional_parameters: [],
       },
+      {
+        name: t("modal.plugin.calibration_static_dlt.plugin_name"),
+        description: t("modal.plugin.calibration_static_dlt.plugin_description"),
+        icon: "mdi-camera-enhance",
+        plugin: "calibration_static_dlt",
+        id: 702,
+        parameters: [
+          { // TODO needs to be replaced by a dropdown list of CalibrationAssets
+            field: "text_field",
+            name: "calibration_id",
+            value: "",
+            text: t("modal.plugin.calibration_id"),
+            hint: t("modal.plugin.calibration_id_hint"),
+          },
+        ],
+        optional_parameters: [],
+      },
     ],
   },
+  // TODO: add extra view for all calibration plugins
 ]);
 
 const pluginsSorted = computed(() => {

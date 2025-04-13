@@ -26,3 +26,4 @@ from .invert_scalar import *
 from .ocr import *
 
 from .bytetrack import *
+from .calibration_static_dlt import *
