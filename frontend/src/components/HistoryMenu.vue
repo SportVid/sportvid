@@ -97,6 +97,7 @@ const pluginName = (type) => {
     shot_type_classification: "modal.plugin.shot_type_classification.plugin_name",
     thumbnail: "modal.plugin.thumbnail.plugin_name",
     bytetrack: "modal.plugin.bytetrack.plugin_name",
+    calibration_static_dlt: "modal.plugin.calibration_static_dlt.plugin_name",
   };
   return t(typeMap[type] || type);
 };
