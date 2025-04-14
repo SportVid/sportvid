@@ -516,7 +516,7 @@ export const useTimelineStore = defineStore("timeline", () => {
       let parent_id = e.parent_id;
 
       while (parent_id != null) {
-        let parent = get(parent_id);
+        let parent = timelines.value[parent_id];
         parent_id = parent.parent_id;
         if (parent.collapse) {
           return true;

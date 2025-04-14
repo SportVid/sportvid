@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" max-width="800">
+  <v-dialog v-model="dialog" width="800px">
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("modal.timeline.create.title") }}
@@ -54,7 +54,7 @@ const submit = async () => {
   if (isSubmitting.value) return;
   isSubmitting.value = true;
 
-  // await timelineStore.create({ name: name.value });
+  await timelineStore.create({ name: name.value });
 
   isSubmitting.value = false;
   dialog.value = false;

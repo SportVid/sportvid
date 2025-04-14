@@ -5,7 +5,7 @@
       {{ $t("app_bar.plugin_menu") }}
     </v-btn>
 
-    <ModalPlugin v-model="showModalPlugin" :videoIds="[videoId]" />
+    <ModalPlugin v-if="showModalPlugin" v-model="showModalPlugin" :videoIds="[videoId]" />
   </div>
 </template>
 

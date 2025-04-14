@@ -21,8 +21,8 @@
       </v-list>
     </v-menu>
 
-    <ModalUserRegister v-model="showModalRegister" />
-    <ModalUserLogin v-model="showModalLogin" />
+    <ModalUserRegister v-if="showModalRegister" v-model="showModalRegister" />
+    <ModalUserLogin v-if="showModalLogin" v-model="showModalLogin" />
   </div>
 </template>
 

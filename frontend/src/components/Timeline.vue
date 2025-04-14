@@ -11,36 +11,36 @@
               </v-btn>
             </template>
             <v-list class="py-0" density="compact" width="200">
-              <v-list-item class="menu-item" @click="showModalCreateTimeline = true">
+              <v-list-item class="menu-item" @click="showModalTimelineCreate = true">
                 <v-icon size="small" class="mt-n1">mdi-plus</v-icon>
                 {{ $t("modal.timeline.create.title") }}
               </v-list-item>
-              <v-list-item class="menu-item" @click="showModalImportTimeline = true">
+              <v-list-item class="menu-item" @click="showModalTimelineImport = true">
                 <v-icon size="small" class="mt-n1">mdi-import</v-icon>
                 {{ $t("modal.timeline.import.title") }}
               </v-list-item>
             </v-list>
           </v-menu>
-          <ModalTimelineCreate v-model="showModalTimelineCreate" />
-          <ModalTimelineImport v-model="showModalTimelineImport" />
+          <ModalTimelineCreate v-if="showModalTimelineCreate" v-model="showModalTimelineCreate" />
+          <ModalTimelineImport v-if="showModalTimelineImport" v-model="showModalTimelineImport" />
         </div>
 
         <Draggable
           v-model="timelineHierarchy"
-          :defaultOpen="false"
           :indent="25"
           :keepPlaceholder="true"
+          @change="onChange"
         >
           <template v-slot:default="{ node, stat }">
             <v-card style="height: 60px" class="my-1">
               <v-row class="mt-4 ml-3 mr-2">
                 <v-icon
-                  v-if="stat.children && stat.children.length"
-                  @click="toggleOpen(stat)"
+                  v-if="stat.children.length"
+                  @click="toggleOpen(node, stat)"
                   class="ml-n1 mr-1"
                   color="grey darken-1"
                 >
-                  {{ stat.open ? "mdi-minus" : "mdi-plus" }}
+                  {{ stat.open ? "mdi-chevron-down" : "mdi-chevron-right" }}
                 </v-icon>
                 <span class="text-h6 mt-n1">{{ node.text }}</span>
 
@@ -53,56 +53,72 @@
                     </v-btn>
                   </template>
                   <v-list class="py-0" density="compact">
-                    <v-list-item
-                      class="menu-item"
-                      @click="showModalTimelineCopy = true"
-                      :timeline="node.id"
-                    >
-                      <v-icon left>{{ "mdi-content-copy" }}</v-icon>
-                      {{ $t("modal.timeline.duplicate.link") }}
+                    <v-list-item class="menu-item" @click="openCopyModal(node.id)">
+                      <v-icon>{{ "mdi-content-copy" }}</v-icon>
+                      {{ $t("modal.timeline.duplicate.button") }}
                     </v-list-item>
-                    <v-list-item
-                      class="menu-item"
-                      @click="showModalTimelineRename = true"
-                      :timeline="node.id"
-                    >
-                      <v-icon left>{{ "mdi-pencil" }}</v-icon>
-                      {{ $t("modal.timeline.rename.link") }}
+
+                    <v-list-item class="menu-item" @click="openRenameModal(node.id)">
+                      <v-icon>{{ "mdi-pencil" }}</v-icon>
+                      {{ $t("modal.timeline.rename.button") }}
                     </v-list-item>
-                    <!-- <v-list-item class="menu-item" v-if="node.type == 'PLUGIN_RESULT'" @click="showModalTimelineVisualization = true" :timeline="node.id">
-                    </v-list-item> -->
+
                     <v-list-item
                       class="menu-item"
                       v-if="node.type == 'PLUGIN_RESULT'"
-                      @click="showModalExportResult = true"
-                      :timeline="node.id"
+                      @click="openVisualizationModal(node.id)"
                     >
+                      <v-icon>{{ "mdi-chart-line-variant" }}</v-icon>
+                      {{ $t("modal.timeline.visualization.button") }}
                     </v-list-item>
+
                     <v-list-item
                       class="menu-item"
-                      @click="showModalTimelineDelete = true"
-                      :timeline="node.id"
+                      v-if="node.type == 'PLUGIN_RESULT'"
+                      @click="openExportResultModal(node.id)"
                     >
-                      <v-icon left>{{ "mdi-trash-can-outline" }}</v-icon>
-                      {{ $t("modal.timeline.delete.link") }}
+                      <v-icon>{{ "mdi-swap-vertical" }}</v-icon>
+                      {{ $t("modal.timeline.export_result.button") }}
+                    </v-list-item>
+
+                    <v-list-item class="menu-item" @click="openDeleteModal(node.id)">
+                      <v-icon>{{ "mdi-trash-can-outline" }}</v-icon>
+                      {{ $t("modal.timeline.delete.button") }}
                     </v-list-item>
                   </v-list>
                 </v-menu>
-                <ModalTimelineCopy v-model="showModalTimelineCopy" />
-                <ModalTimelineRename v-model="showModalTimelineRename" />
-                <!-- <ModalTimelineVisualization
-                  :timeline="node.id"
-                  v-model="showModalTimelineVisualization"
-                /> -->
-                <ModalExportResult v-model="showModalExportResult" />
-                <ModalTimelineDelete v-model="showModalTimelineDelete" />
               </v-row>
             </v-card>
           </template>
-          <template v-slot:placeholder="{}">
+          <template v-slot:placeholder>
             <div class="draggable-placeholder-inner"></div>
           </template>
         </Draggable>
+        <ModalTimelineCopy
+          v-if="showModalTimelineCopy"
+          v-model="showModalTimelineCopy"
+          :timeline="selectedTimelineId"
+        />
+        <ModalTimelineRename
+          v-if="showModalTimelineRename"
+          v-model="showModalTimelineRename"
+          :timeline="selectedTimelineId"
+        />
+        <!-- <ModalTimelineVisualization
+          v-if="showModalTimelineVisualization"
+          v-model="showModalTimelineVisualization"
+          :timeline="selectedTimelineId"
+        /> -->
+        <ModalTimelineExport
+          v-if="showModalExportResult"
+          v-model="showModalExportResult"
+          :timeline="selectedTimelineId"
+        />
+        <ModalTimelineDelete
+          v-if="showModalTimelineDelete"
+          v-model="showModalTimelineDelete"
+          :timeline="selectedTimelineId"
+        />
       </v-col>
 
       <v-col ref="container" cols="9" style="margin: 0; padding: 0; border: 2px solid red">
@@ -204,8 +220,7 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from "vue";
 import * as PIXI from "pixi.js";
-import { BaseTree, Draggable } from "@he-tree/vue";
-import { mapStores } from "pinia";
+import { Draggable } from "@he-tree/vue";
 import { useTimelineStore } from "@/stores/timeline";
 import { useTimelineSegmentStore } from "@/stores/timeline_segment";
 import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
@@ -217,8 +232,8 @@ import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import ModalTimelineRename from "@/components/ModalTimelineRename.vue";
 import ModalTimelineCopy from "@/components/ModalTimelineCopy.vue";
 import ModalTimelineDelete from "@/components/ModalTimelineDelete.vue";
-import ModalExportResult from "@/components/ModalExportResult.vue";
-import ModalCreateTimModalTimelineCreateeline from "@/components/ModalTimelineCreate.vue";
+import ModalTimelineExport from "@/components/ModalTimelineExport.vue";
+import ModalTimelineCreate from "@/components/ModalTimelineCreate.vue";
 // import ModalTimelineVisualization from "@/components/ModalTimelineVisualization.vue";
 import ModalTimelineImport from "@/components/ModalTimelineImport.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
@@ -283,16 +298,12 @@ const props = defineProps({
   width: Number,
 });
 
-const enabled = ref(false);
+const enabled = ref(true);
 const app = ref(null);
 const timelineObjects = ref([]);
 const timeScaleObjects = ref([]);
 const timeBarsObjects = ref([]);
-const timelineHierarchy = ref([
-  { text: "Projects", open: false, children: [{ text: "P1" }, { text: "P2" }, { text: "P3" }] },
-  { text: "Photos", open: false },
-  { text: "Videos", open: false },
-]);
+
 const containerWidth = ref(100);
 const containerHeight = ref(100);
 const lastTimestamp = ref(0);
@@ -335,103 +346,178 @@ const menu = ref({
   selected: null,
 });
 
-const showModalTimelineCreate = ref(false);
-const showModalTimelineImport = ref(false);
-const showModalTimelineCopy = ref(false);
-const showModalTimelineRename = ref(false);
-const showModalTimelineVisualization = ref(false);
-const showModalExportResult = ref(false);
-const showModalTimelineDelete = ref(false);
-
-const toggleOpen = (node) => {
-  node.open = !node.open;
+const timelineHierarchy = ref([]);
+const timelines = computed(() => timelineStore.all);
+const toggleOpen = async (node, stat) => {
+  stat.open = !stat.open;
+  console.log("stat", stat);
+  console.log("node", node);
+  await timelineStore.setCollapse({ timelineId: node.id, collapse: node.open });
 };
-
-// const startDragging = (event, x, time) => {
-//   dragSelection.x = x;
-//   dragSelection.start = time;
-//   dragSelection.dragging = true;
-//   timelineStore.setSelectedTimeRangeStart(time);
-//   timelineStore.setSelectedTimeRangeEnd(null);
-//   event.stopPropagation();
-// };
-
-// const moveDragging = (event, x, time) => {
-//   if (!dragSelection.dragging || Math.abs(x - dragSelection.x) < 2) return;
-//   dragSelection.end = time;
-//   timelineStore.setSelectedTimeRangeEnd(time);
-//   event.stopPropagation();
-// };
-
-// const endDragging = (event, x, time) => {
-//   dragSelection.dragging = false;
-//   if (Math.abs(x - dragSelection.x) < 2) {
-//     timelineStore.setSelectedTimeRangeEnd(null);
-//     return;
-//   }
-//   dragSelection.end = time;
-//   timelineStore.setSelectedTimeRangeEnd(time);
-//   event.stopPropagation();
-// };
-
-// const getTimeline = (timelineId) => {
-//   return timelineObjects.value.find((obj) => obj.timelineId === timelineId) || null;
-// };
-
-// const computeTimelineX = () => {
-//   return timeToX(startTime);
-// };
-
-// const computeTimelineY = (index) => {
-//   return (gap + timelineHeight) * index + scaleHeight + 2 * gap;
-// };
-
-const nodeOpenChanged = async (node) => {
-  await timelineStore.setCollapse({ timelineId: node.id, collapse: !node.open });
-};
-
-const change = async (node) => {
+const onChange = async (node) => {
   function timelineOrder(elem) {
     return elem.reduce((hierarchy, e) => hierarchy.concat(e.id, timelineOrder(e.children)), []);
   }
 
-  let order = timelineOrder(timelineHierarchy);
+  let order = timelineOrder(timelineHierarchy.value);
   await timelineStore.setOrder({ order });
   await timelineStore.setParent({ timelineId: node.id, parentId: node.parent.id });
 };
+function findChildren(elem, parent) {
+  let hierarchy = [];
+  elem
+    .sort((a, b) => a.order > b.order)
+    .forEach((e) => {
+      if (e.parent_id == parent) {
+        let children = findChildren(elem, e.id);
+        hierarchy.push({
+          id: e.id,
+          text: e.name,
+          children: children,
+          type: e.type,
+          open: e.collapse ?? false,
+        });
+      }
+    });
+  return hierarchy;
+}
 
-// const draw = () => {
-//   drawTimelines();
-//   drawScale();
-//   drawTimeBar();
-// };
+onMounted(() => {
+  timelineHierarchy.value = findChildren(timelines.value, null);
+});
+watch(timelines, (values) => {
+  timelineHierarchy.value = findChildren(values, null);
+});
 
-// const drawTimeBar = () => {
-//   if (timeBarsContainer.value) app.value.stage.removeChild(timeBarsContainer.value);
-//   timeBarsContainer.value = new PIXI.Container();
-//   const x = timeToX(startTime);
-//   const width = timeToX(endTime) - x;
-//   let timeline = new TimeBar(x, gap, width, window.innerHeight, time, startTime, endTime);
-//   timeBarsContainer.value.addChild(timeline);
-//   app.value.stage.addChild(timeBarsContainer.value);
-// };
+const selectedTimelineId = ref(null);
+const showModalTimelineCopy = ref(false);
+const openCopyModal = (id) => {
+  selectedTimelineId.value = id;
+  showModalTimelineCopy.value = true;
+};
+const showModalTimelineCreate = ref(false);
+const showModalTimelineImport = ref(false);
+const showModalTimelineRename = ref(false);
+const openRenameModal = (id) => {
+  selectedTimelineId.value = id;
+  showModalTimelineRename.value = true;
+};
+const showModalTimelineVisualization = ref(false);
+const openVisualizationModal = (id) => {
+  selectedTimelineId.value = id;
+  showModalTimelineVisualization.value = true;
+};
+const showModalExportResult = ref(false);
+const openExportResultModal = (id) => {
+  selectedTimelineId.value = id;
+  showModalExportResult.value = true;
+};
+const showModalTimelineDelete = ref(false);
+const openDeleteModal = (id) => {
+  selectedTimelineId.value = id;
+  showModalTimelineDelete.value = true;
+};
 
-// const drawScale = () => {
-//   if (timeScalesContainer.value) app.value.stage.removeChild(timeScalesContainer.value);
-//   timeScalesContainer.value = new PIXI.Container();
-//   const x = timeToX(startTime);
-//   const width = timeToX(endTime) - x;
-//   let timeline = new TimeScale(x, gap, width, scaleHeight, startTime, endTime);
-//   timeScalesContainer.value.addChild(timeline);
-//   app.value.stage.addChild(timeScalesContainer.value);
-// };
+const timelinesContainer = ref(null);
+const timeBarsContainer = ref(null);
+const timeScalesContainer = ref(null);
+
+const duration = computed(() => playerStore.videoDuration);
+
+const isLoading = computed(() => videoStore.isLoading);
+
+const startTime = computed(() => playerStore.selectedTimeRange.start);
+
+const endTime = computed(() => playerStore.selectedTimeRange.end);
+
+const timelinesAdded = computed(() => timelineStore.added);
+
+const timelinesChanged = computed(() => timelineStore.changed);
+
+const timelinesDeleted = computed(() => timelineStore.deleted);
+
+const selectedTimelineSegments = computed(() => timelineSegmentStore.selected);
+
+const timeScale = computed(() => containerWidth / (endTime.value - startTime.value));
+
+const computedHeight = computed(
+  () =>
+    timelines.value.length * (props.timelineHeight + props.gap) + props.scaleHeight + 3 * props.gap
+);
+
+const time = computed(() => playerStore.currentTime);
+
+const startDragging = (event, x, time) => {
+  dragSelection.x = x;
+  dragSelection.start = time;
+  dragSelection.dragging = true;
+  timelineStore.setSelectedTimeRangeStart(time);
+  timelineStore.setSelectedTimeRangeEnd(null);
+  event.stopPropagation();
+};
+
+const moveDragging = (event, x, time) => {
+  if (!dragSelection.dragging || Math.abs(x - dragSelection.x) < 2) return;
+  dragSelection.end = time;
+  timelineStore.setSelectedTimeRangeEnd(time);
+  event.stopPropagation();
+};
+
+const endDragging = (event, x, time) => {
+  dragSelection.dragging = false;
+  if (Math.abs(x - dragSelection.x) < 2) {
+    timelineStore.setSelectedTimeRangeEnd(null);
+    return;
+  }
+  dragSelection.end = time;
+  timelineStore.setSelectedTimeRangeEnd(time);
+  event.stopPropagation();
+};
+
+const getTimeline = (timelineId) => {
+  return timelineObjects.value.find((obj) => obj.timelineId === timelineId) || null;
+};
+
+const computeTimelineX = () => {
+  return timeToX(startTime);
+};
+
+const computeTimelineY = (index) => {
+  return (props.gap + props.timelineHeight) * index + props.scaleHeight + 2 * props.gap;
+};
+
+const draw = () => {
+  // drawTimelines();
+  // drawScale();
+  drawTimeBar();
+};
+
+const drawTimeBar = () => {
+  if (timeBarsContainer.value) app.value.stage.removeChild(timeBarsContainer.value);
+  timeBarsContainer.value = new PIXI.Container();
+  const x = timeToX(startTime);
+  const width = timeToX(endTime) - x;
+  let timeline = new TimeBar(x, props.gap, width, window.innerHeight, time, startTime, endTime);
+  timeBarsContainer.value.addChild(timeline);
+  app.value.stage.addChild(timeBarsContainer.value);
+};
+
+const drawScale = () => {
+  if (timeScalesContainer.value) app.value.stage.removeChild(timeScalesContainer.value);
+  timeScalesContainer.value = new PIXI.Container();
+  const x = timeToX(startTime);
+  const width = timeToX(endTime) - x;
+  let timeline = new TimeScale(x, props.gap, width, props.scaleHeight, startTime, endTime);
+  timeScalesContainer.value.addChild(timeline);
+  app.value.stage.addChild(timeScalesContainer.value);
+};
 
 // const drawTimelines = () => {
 //   if (timelinesContainer.value) app.value.stage.removeChild(timelinesContainer.value);
 //   timelinesContainer.value = new PIXI.Container();
 //   timelineObjects.value = [];
 
-//   timelines.forEach((e, i) => {
+//   timelines.value.forEach((e, i) => {
 //     const x = timeToX(startTime);
 //     const y = computeTimelineY(i);
 //     const timeline = drawTimeline(e);
@@ -447,7 +533,7 @@ const change = async (node) => {
 
 // const drawTimeline = (timeline) => {
 //   const width = timeToX(endTime) - timeToX(startTime);
-//   const height = timelineHeight;
+//   const height = props.timelineHeight;
 
 //   if (timeline.type === "ANNOTATION" || timeline.type === "TRANSCRIPT") {
 //     return drawAnnotationTimeline(timeline, width, height);
@@ -747,13 +833,13 @@ const change = async (node) => {
 //   }
 // };
 
-// const timeToX = (time) => {
-//   return timeScale.value * (time - startTime.value);
-// };
+const timeToX = (time) => {
+  return timeScale.value * (time - startTime.value);
+};
 
-// const xToTime = (x) => {
-//   return x / timeScale.value + startTime.value;
-// };
+const xToTime = (x) => {
+  return x / timeScale.value + startTime.value;
+};
 
 const canvas = ref(null);
 
@@ -767,116 +853,67 @@ const mapToGlobal = (point) => {
   return { x: windowsX, y: windowsY };
 };
 
-// const onAnnotateSelection = () => {
-//   annotationDialog.value.show = true;
-//   annotationDialog.value.annotateRange = false;
-// };
+const onAnnotateSelection = () => {
+  annotationDialog.value.show = true;
+  annotationDialog.value.annotateRange = false;
+};
 
-// const onAnnotateSelectionRange = () => {
-//   annotationDialog.value.show = true;
-//   annotationDialog.value.annotateRange = true;
-// };
+const onAnnotateSelectionRange = () => {
+  annotationDialog.value.show = true;
+  annotationDialog.value.annotateRange = true;
+};
 
-// const onMergeSelection = () => {};
+const onMergeSelection = () => {};
 
-// const onMergeSelectionRange = () => {};
+const onMergeSelectionRange = () => {};
 
-// const onSplitSegment = () => {
-//   timelineSegmentStore.split({
-//     timelineSegmentId: segmentMenu.selected,
-//     time: playerStore.targetTime,
-//   });
-// };
+const onSplitSegment = () => {
+  timelineSegmentStore.split({
+    timelineSegmentId: segmentMenu.selected,
+    time: playerStore.targetTime,
+  });
+};
 
-// const onMergeSegments = () => {
-//   const timelineSegmentIds = timelineSegmentStore.selected.map((e) => e.id);
-//   timelineSegmentStore.merge({
-//     timelineSegmentIds: timelineSegmentIds,
-//   });
-// };
+const onMergeSegments = () => {
+  const timelineSegmentIds = timelineSegmentStore.selected.map((e) => e.id);
+  timelineSegmentStore.merge({
+    timelineSegmentIds: timelineSegmentIds,
+  });
+};
 
-// const onMergeSegmentsLeft = () => {
-//   if (timelineSegmentStore.selected.length <= 0) {
-//     return;
-//   }
-//   const timelineSegmentId =
-//     timelineSegmentStore.selected[timelineSegmentStore.selected.length - 1].id;
-//   const previousTimelineSegment = timelineSegmentStore.getPreviousOnTimeline(timelineSegmentId);
-//   if (previousTimelineSegment) {
-//     timelineSegmentStore.merge({
-//       timelineSegmentIds: [timelineSegmentId, previousTimelineSegment.id],
-//     });
-//   }
-// };
+const onMergeSegmentsLeft = () => {
+  if (timelineSegmentStore.selected.length <= 0) {
+    return;
+  }
+  const timelineSegmentId =
+    timelineSegmentStore.selected[timelineSegmentStore.selected.length - 1].id;
+  const previousTimelineSegment = timelineSegmentStore.getPreviousOnTimeline(timelineSegmentId);
+  if (previousTimelineSegment) {
+    timelineSegmentStore.merge({
+      timelineSegmentIds: [timelineSegmentId, previousTimelineSegment.id],
+    });
+  }
+};
 
-// const onMergeSegmentsRight = () => {
-//   if (timelineSegmentStore.selected.length <= 0) {
-//     return;
-//   }
-//   const timelineSegmentId =
-//     timelineSegmentStore.selected[timelineSegmentStore.selected.length - 1].id;
-//   const nextTimelineSegment = timelineSegmentStore.getNextOnTimeline(timelineSegmentId);
-//   if (nextTimelineSegment) {
-//     timelineSegmentStore.merge({
-//       timelineSegmentIds: [timelineSegmentId, nextTimelineSegment.id],
-//     });
-//   }
-// };
+const onMergeSegmentsRight = () => {
+  if (timelineSegmentStore.selected.length <= 0) {
+    return;
+  }
+  const timelineSegmentId =
+    timelineSegmentStore.selected[timelineSegmentStore.selected.length - 1].id;
+  const nextTimelineSegment = timelineSegmentStore.getNextOnTimeline(timelineSegmentId);
+  if (nextTimelineSegment) {
+    timelineSegmentStore.merge({
+      timelineSegmentIds: [timelineSegmentId, nextTimelineSegment.id],
+    });
+  }
+};
 
-// const duration = computed(() => playerStore.videoDuration);
-
-// const isLoading = computed(() => videoStore.isLoading);
-
-// const startTime = computed(() => playerStore.selectedTimeRange.start);
-
-// const endTime = computed(() => playerStore.selectedTimeRange.end);
-
-// const timelines = computed(() => timelineStore.all);
-
-// const timelinesAdded = computed(() => timelineStore.added);
-
-// const timelinesChanged = computed(() => timelineStore.changed);
-
-// const timelinesDeleted = computed(() => timelineStore.deleted);
-
-// const selectedTimelineSegments = computed(() => timelineSegmentStore.selected);
-
-// const timeScale = computed(() => containerWidth / (endTime.value - startTime.value));
-
-// const computedHeight = computed(
-//   () => timelines.value.length * (timelineHeight + gap) + scaleHeight + 3 * gap
-// );
-
-// const time = computed(() => playerStore.currentTime);
-
-// // Watchers
-// watch(isLoading, (newValue) => {
-//   if (newValue === false) {
-//     enabled.value = true;
-//   }
-// });
-
-// watch(timelines, (values) => {
-//   function findChildren(elem, parent) {
-//     let hierarchy = [];
-//     elem
-//       .sort((a, b) => a.order > b.order)
-//       .forEach((e) => {
-//         if (e.parent_id == parent) {
-//           let children = findChildren(elem, e.id);
-//           hierarchy.push({
-//             id: e.id,
-//             text: e.name,
-//             children: children,
-//             type: e.type,
-//             open: !e.collapse,
-//           });
-//         }
-//       });
-//     return hierarchy;
-//   }
-//   timelineHierarchy.value = findChildren(values, null);
-// });
+watch(isLoading, (newValue) => {
+  if (newValue === true) {
+    enabled.value = false;
+  }
+});
 
 // watch(selectedTimelineSegments, (newSelection, oldSelection) => {
 //   removeSegmentSelection(oldSelection);
@@ -884,17 +921,17 @@ const mapToGlobal = (point) => {
 // });
 
 const container = ref(null);
-onMounted(() => {
+onMounted(async () => {
   containerWidth.value = container.value.clientWidth;
   app.value = new PIXI.Application();
-  app.value.init({
+  await app.value.init({
     width: containerWidth.value,
     height: containerHeight.value,
     backgroundAlpha: 0.0,
     canvas: canvas.value,
     resizeTo: canvas.value,
   });
-  console.log("app_post", app.value);
+  console.log("app_post", app.value.canvas);
 
   canvas.value.addEventListener("contextmenu", (e) => {
     e.preventDefault();
@@ -902,15 +939,135 @@ onMounted(() => {
 
   // generate bitmapfont
   // generateFont();
-  // nextTick(() => {
-  //   if (app.value) {
-  //     app.value.ticker.add(() => {
-  //       // Deine Logik hier
-  //     });
-  //   } else {
-  //     console.error("Ticker is not available yet");
-  //   }
-  // });
+  nextTick(() => {
+    if (app.value) {
+      app.value.ticker.add(() => {
+        if (!enabled.value) return;
+
+        if (container.value) {
+          if (container.value.clientWidth !== containerWidth.value) {
+            containerWidth.value = container.value.clientWidth;
+            console.log("Drawing1 timelines...");
+            draw();
+          }
+
+          if (computedHeight.value !== containerHeight.value) {
+            containerHeight.value = computedHeight.value;
+            container.value.style.height = `${computedHeight.value}px`;
+            if (canvas.value) canvas.value.height = computedHeight.value;
+            app.value.resize();
+            console.log("Drawing2 timelines...");
+            console.log(selectedTimelineSegments.value);
+            draw();
+          }
+        }
+
+        let latestTimestamp = -1;
+
+        // Deleted
+        // timelinesDeleted.value.forEach(([date, id]) => {
+        //   if (date <= lastTimestamp.value) return;
+        //   if (date > latestTimestamp) latestTimestamp = date;
+
+        //   const obj = getTimeline(id);
+        //   if (obj) {
+        //     timelinesContainer.value?.removeChild(obj);
+        //     const index = timelineObjects.value.indexOf(obj);
+        //     if (index > -1) timelineObjects.value.splice(index, 1);
+        //   }
+        // });
+
+        // Added
+        // timelinesAdded.value.forEach(([date, timeline]) => {
+        //   if (date <= lastTimestamp.value) return;
+
+        //   const obj = getTimeline(timeline.id);
+        //   if (!obj) {
+        //     const newObj = drawTimeline(timeline);
+        //     if (!newObj) return;
+        //     timelinesContainer.value?.addChild(newObj);
+        //     timelineObjects.value.push(newObj);
+        //   }
+
+        //   if (date > latestTimestamp) latestTimestamp = date;
+        // });
+
+        // Changed
+        // timelinesChanged.value.forEach(([date, timeline]) => {
+        //   if (date <= lastTimestamp.value) return;
+
+        //   const oldObj = getTimeline(timeline.id);
+        //   if (oldObj) {
+        //     timelinesContainer.value?.removeChild(oldObj);
+        //     const index = timelineObjects.value.indexOf(oldObj);
+        //     if (index > -1) timelineObjects.value.splice(index, 1);
+        //   }
+
+        //   const newObj = drawTimeline(timeline);
+        //   if (!newObj) return;
+        //   timelinesContainer.value?.addChild(newObj);
+        //   timelineObjects.value.push(newObj);
+
+        //   if (date > latestTimestamp) latestTimestamp = date;
+        // });
+
+        // if (latestTimestamp > 0) {
+        //   lastTimestamp.value = latestTimestamp;
+        // }
+
+        // Position + Sichtbarkeit
+        // let skipped = 0;
+        // timelines.value
+        //   .sort((a, b) => a.order - b.order)
+        //   .forEach((timeline, i) => {
+        //     const obj = getTimeline(timeline.id);
+        //     if (obj) {
+        //       obj.y = computeTimelineY(i - skipped);
+        //       if (!timeline.visible) skipped += 1;
+        //       obj.visible = timeline.visible;
+        //     }
+        //   });
+
+        // const rescale = false;
+
+        // Zeitupdates
+        // const updateTime = (arr, key, value) => {
+        //   arr.forEach((e) => {
+        //     if (e[key] !== value || rescale) {
+        //       e[key] = value;
+        //     }
+        //   });
+        // };
+
+        // updateTime(timelineObjects.value, "startTime", startTime.value);
+        // updateTime(timeScaleObjects.value, "startTime", startTime.value);
+        // updateTime(timeBarsObjects.value, "startTime", startTime.value);
+        // updateTime(timelineObjects.value, "endTime", endTime.value);
+        // updateTime(timeScaleObjects.value, "endTime", endTime.value);
+        // updateTime(timeBarsObjects.value, "endTime", endTime.value);
+        // updateTime(timeBarsObjects.value, "time", time.value);
+
+        // Höhe
+        // timeBarsObjects.value.forEach((e) => {
+        //   if (e.height !== computedHeight.value || rescale) {
+        //     e.height = computedHeight.value;
+        //   }
+        // });
+
+        // Auswahl
+        // timeBarsObjects.value.forEach((e) => {
+        //   const start = timelineStore.timelineSelectedTimeRange.start;
+        //   const end = timelineStore.timelineSelectedTimeRange.end;
+        //   if (e.selectedRangeStart !== start || e.selectedRangeEnd !== end) {
+        //     e.selectedRangeStart = start;
+        //     e.selectedRangeEnd = end;
+        //   }
+        // });
+      });
+    } else {
+      console.warn("app is not ready");
+    }
+  });
 });
 </script>
 
@@ -935,46 +1092,3 @@ onMounted(() => {
   font-size: 12px;
 }
 </style>
-
-<!-- app.value.ticker.add(() => { if (!enabled.value) { return; } if (container.value) { if
-(container.value.clientWidth != containerWidth.value) { containerWidth.value =
-container.value.clientWidth; draw(); } if (computedHeight.value != containerHeight.value) {
-containerHeight.value = computedHeight.value; container.value.style.height = computedHeight.value;
-canvas.value.height = computedHeight.value; app.value.resize(); draw(); } } let latestTimestamp =
--1; // handle timeline deletion timelinesDeleted.value.forEach((data) => { const [date, id] = data;
-if (date <= lastTimestamp.value) { return; } if (date > latestTimestamp) { latestTimestamp = date; }
-const timelineObject = getTimeline(id); if (timelineObject) {
-timelinesContainer.removeChild(timelineObject); const index =
-timelineObjects.value.indexOf(timelineObject); if (index > -1) { timelineObjects.value.splice(index,
-1); } } }); // handle timeline added timelinesAdded.value.forEach((data) => { const [date, timeline]
-= data; if (date <= lastTimestamp.value) { return; } const timelineObject =
-getTimeline(timeline.id); if (!timelineObject) { const newTimelineObject = drawTimeline(timeline);
-if (!newTimelineObject) { return; } timelinesContainer.addChild(newTimelineObject);
-timelineObjects.value.push(newTimelineObject); } if (date > latestTimestamp) { latestTimestamp =
-date; } }); // handle timeline change timelinesChanged.value.forEach((data) => { const [date,
-timeline] = data; if (date <= lastTimestamp.value) { return; } const timelineObject =
-getTimeline(timeline.id); if (timelineObject) { timelinesContainer.removeChild(timelineObject);
-const index = timelineObjects.value.indexOf(timelineObject); if (index > -1) {
-timelineObjects.value.splice(index, 1); } } const newTimelineObject = drawTimeline(timeline); if
-(!newTimelineObject) { return; } timelinesContainer.addChild(newTimelineObject);
-timelineObjects.value.push(newTimelineObject); if (date > latestTimestamp) { latestTimestamp = date;
-} }); // update lastTimestamp if (latestTimestamp > 0) { lastTimestamp.value = latestTimestamp; } //
-update order and visibility of all objects let skipped = 0; timelines.value .sort((a, b) => a.order
-- b.order) .forEach((timeline, i) => { const timelineObject = getTimeline(timeline.id); if
-(timelineObject) { timelineObject.y = computeTimelineY(i - skipped); if (!timeline.visible) {
-skipped += 1; } timelineObject.visible = timeline.visible; } }); const rescale = false; // update
-all time position if there is something to update timelineObjects.value.forEach((e) => { if
-(e.startTime !== startTime.value || rescale) { e.startTime = startTime.value; } });
-timeScaleObjects.value.forEach((e) => { if (e.startTime !== startTime.value || rescale) {
-e.startTime = startTime.value; } }); timeBarsObjects.value.forEach((e) => { if (e.startTime !==
-startTime.value || rescale) { e.startTime = startTime.value; } }); timelineObjects.value.forEach((e)
-=> { if (e.endTime !== endTime.value || rescale) { e.endTime = endTime.value; } });
-timeScaleObjects.value.forEach((e) => { if (e.endTime !== endTime.value || rescale) { e.endTime =
-endTime.value; } }); timeBarsObjects.value.forEach((e) => { if (e.endTime !== endTime.value ||
-rescale) { e.endTime = endTime.value; } }); timeBarsObjects.value.forEach((e) => { if (e.time !==
-time.value || rescale) { e.time = time.value; } }); // update height
-timeBarsObjects.value.forEach((e) => { if (e.height !== computedHeight.value || rescale) { e.height
-= computedHeight.value; } }); // update selection timeBarsObjects.value.forEach((e) => { const start
-= timelineStore.timelineSelectedTimeRange.start; const end =
-timelineStore.timelineSelectedTimeRange.end; if (e.selectedRangeStart !== start ||
-e.selectedRangeEnd !== end) { e.selectedRangeStart = start; e.selectedRangeEnd = end; } }); }); -->

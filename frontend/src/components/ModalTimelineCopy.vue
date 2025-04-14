@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useTimelineStore } from "@/stores/timeline";
 
 const props = defineProps({
@@ -66,16 +66,15 @@ const isSubmitting = ref(false);
 const nameProxy = ref(null);
 const includeannotations = ref(true);
 
-// const name = computed({
-//   get() {
-//     const timelineName = timelineStore.get(props.timeline).name + " (1)";
-//     return nameProxy.value === null ? timelineName : nameProxy.value;
-//   },
-//   set(val) {
-//     nameProxy.value = val;
-//   },
-// });
-const name = ref("Test");
+const name = computed({
+  get() {
+    const timelineName = timelineStore.timelines[props.timeline].name + " (1)";
+    return nameProxy.value === null ? timelineName : nameProxy.value;
+  },
+  set(val) {
+    nameProxy.value = val;
+  },
+});
 
 const submit = async () => {
   if (isSubmitting.value) return;

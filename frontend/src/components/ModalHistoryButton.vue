@@ -10,7 +10,7 @@
       </span>
     </v-btn>
 
-    <ModalHistory v-model="showModalHistory" :pluginRuns="pluginRuns" />
+    <ModalHistory v-if="showModalHistory" v-model="showModalHistory" :pluginRuns="pluginRuns" />
   </div>
 </template>
 

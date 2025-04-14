@@ -5,7 +5,7 @@
       {{ $t("app_bar.export_menu") }}
     </v-btn>
 
-    <ModalExport v-model="showModalExport" />
+    <ModalExport v-if="showModalExport" v-model="showModalExport" />
   </div>
 </template>
 

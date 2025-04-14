@@ -51,16 +51,15 @@ const nameProxy = ref(null);
 
 const timelineStore = useTimelineStore();
 
-// const name = computed({
-//   get() {
-//     const name = timelineStore.get(props.timeline).name;
-//     return nameProxy.value === null ? name : nameProxy.value;
-//   },
-//   set(value) {
-//     nameProxy.value = value;
-//   },
-// });
-const name = ref("Text");
+const name = computed({
+  get() {
+    const name = timelineStore.get(props.timeline).name;
+    return nameProxy.value === null ? name : nameProxy.value;
+  },
+  set(value) {
+    nameProxy.value = value;
+  },
+});
 
 const submit = async () => {
   if (isSubmitting.value) return;

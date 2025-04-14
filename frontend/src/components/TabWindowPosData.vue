@@ -223,7 +223,7 @@
           </v-menu>
         </v-list>
       </v-menu>
-      <ModalBboxDataSelect v-model="showModalBboxDataSelect" />
+      <ModalBboxDataSelect v-if="showModalBboxDataSelect" v-model="showModalBboxDataSelect" />
 
       <div class="time-code ml-2">
         {{ getTimecode(currentTime) }}

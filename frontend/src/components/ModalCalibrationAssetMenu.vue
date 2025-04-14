@@ -21,8 +21,14 @@
         <v-btn @click="showModalCalibrationAssetSelect = true">{{
           $t("calibration_asset_vis.no_calibration_asset.select")
         }}</v-btn>
-        <ModalCalibrationAssetCreate v-model="showModalCalibrationAssetCreate" />
-        <ModalCalibrationAssetSelect v-model="showModalCalibrationAssetSelect" />
+        <ModalCalibrationAssetCreate
+          v-if="showModalCalibrationAssetCreate"
+          v-model="showModalCalibrationAssetCreate"
+        />
+        <ModalCalibrationAssetSelect
+          v-if="showModalCalibrationAssetSelect"
+          v-model="showModalCalibrationAssetSelect"
+        />
       </v-row>
     </v-col>
   </div>

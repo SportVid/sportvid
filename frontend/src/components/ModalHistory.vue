@@ -34,10 +34,7 @@
 </template>
 
 <script setup>
-import { ref, watch, watchEffect } from "vue";
-
-import { usePlayerStore } from "@/stores/player";
-import { usePluginRunStore } from "@/stores/plugin_run";
+import { ref, watch, onMounted, watchEffect } from "vue";
 
 const props = defineProps({
   modelValue: {
@@ -53,8 +50,6 @@ const props = defineProps({
 const emit = defineEmits();
 
 const dialog = ref(props.modelValue);
-const pluginRunStore = usePluginRunStore();
-const playerStore = usePlayerStore();
 
 const headers = [
   { title: "Plugin Name", align: "start", key: "type" },

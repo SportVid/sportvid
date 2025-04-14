@@ -65,7 +65,7 @@
           {{ $t("user.register.title") }}
         </a>
       </div>
-      <ModalUserRegister v-model="showModalRegister" />
+      <ModalUserRegister v-if="showModalRegister" v-model="showModalRegister" />
     </v-card>
   </v-dialog>
 </template>

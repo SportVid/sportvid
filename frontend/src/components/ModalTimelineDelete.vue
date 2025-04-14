@@ -49,7 +49,7 @@ const submit = async () => {
   }
   isSubmitting.value = true;
 
-  // await timelineStore.delete(props.timeline);
+  await timelineStore.deleteTimeline(props.timeline);
 
   isSubmitting.value = false;
   dialog.value = false;

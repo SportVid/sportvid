@@ -21,7 +21,11 @@
               <v-icon>mdi-plus-circle</v-icon>
               <p class="ms-2">{{ $t("video_view.run_plugin") }}</p>
             </v-btn>
-            <ModalPlugin v-model="showModalPlugin" :videoIds="selectedVideosIds" />
+            <ModalPlugin
+              v-if="showModalPlugin"
+              v-model="showModalPlugin"
+              :videoIds="selectedVideosIds"
+            />
           </v-card>
         </v-col>
       </v-row>

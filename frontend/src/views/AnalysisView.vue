@@ -99,7 +99,7 @@
         </v-col>
       </v-row> -->
 
-      <v-row class="ma-n2">
+      <v-row v-if="analysisTabId !== 0" class="ma-n2">
         <v-col>
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" scrollable="False">
             <v-card-title class="pl-2"> Timelines </v-card-title>
