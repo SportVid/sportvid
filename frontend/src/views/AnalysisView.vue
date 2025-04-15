@@ -102,14 +102,16 @@
       <v-row v-if="analysisTabId !== 0" class="ma-n2">
         <v-col>
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" scrollable="False">
-            <v-card-title class="pl-2"> Timelines </v-card-title>
             <v-row>
-              <v-col cols="3" />
-              <v-col cols="9">
-                <TimeSelector />
+              <v-col cols="3">
+                <v-card-title class="pl-2 mb-n2"> Timelines </v-card-title>
+              </v-col>
+              <v-col cols="9" class="mt-2">
+                <TimelineTimeSelector class="ml-n1" />
               </v-col>
             </v-row>
-            <v-sheet class="px-4 mb-6">
+
+            <v-sheet class="px-4 mb-6 mt-2">
               <Timeline ref="timeline" :style="{ width: '100%' }" />
             </v-sheet>
           </v-card>
@@ -143,7 +145,7 @@ import TabWindowCalibration from "@/components/TabWindowCalibration.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 import Timeline from "@/components/Timeline.vue";
-import TimeSelector from "@/components/TimelineTimeSelector.vue";
+import TimelineTimeSelector from "@/components/TimelineTimeSelector.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
 // import ShotsOverview from "@/components/ShotsOverview.vue";

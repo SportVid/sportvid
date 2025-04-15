@@ -19,25 +19,20 @@ export const useTimelineSegmentStore = () => {
   const timelineSegmentListDeleted = ref([]);
   const isLoading = ref(false);
 
-  const all = computed(() =>
-    timelineSegmentList.value.map((id) => timelineSegments.value[id])
-  );
+  const all = computed(() => timelineSegmentList.value.map((id) => timelineSegments.value[id]));
 
   const forTimeline = (timeline_id) => {
-    return all.value
-      .filter((e) => e.timeline_id === timeline_id)
-      .sort((a, b) => a.start - b.start);
+    return all.value.filter((e) => e.timeline_id === timeline_id).sort((a, b) => a.start - b.start);
   };
 
   const forTimelineTimeRange = (timeline_id, start, end) => {
-    return forTimeline(timeline_id)
-      .filter((e) => Math.min(e.end, end) - Math.max(e.start, start) > 0);
+    return forTimeline(timeline_id).filter(
+      (e) => Math.min(e.end, end) - Math.max(e.start, start) > 0
+    );
   };
 
   const forTime = (current_time) => {
-    return all.value.filter(
-      (e) => e.start <= current_time && e.end >= current_time
-    );
+    return all.value.filter((e) => e.start <= current_time && e.end >= current_time);
   };
 
   const get = (id) => timelineSegments.value[id];
@@ -47,17 +42,13 @@ export const useTimelineSegmentStore = () => {
   );
 
   const lastSelected = computed(() =>
-    selected.value.length > 0
-      ? selected.value[selected.value.length - 1]
-      : null
+    selected.value.length > 0 ? selected.value[selected.value.length - 1] : null
   );
 
   const forTimeLUT = (time) => {
     const timeSecond = Math.round(time);
     if (timelineSegmentByTime.value[timeSecond]) {
-      return timelineSegmentByTime.value[timeSecond].map(
-        (id) => timelineSegments.value[id]
-      );
+      return timelineSegmentByTime.value[timeSecond].map((id) => timelineSegments.value[id]);
     }
     return [];
   };
@@ -87,9 +78,7 @@ export const useTimelineSegmentStore = () => {
   };
 
   const removeFromSelection = (timelineSegmentId) => {
-    const index = timelineSegmentListSelected.value.findIndex(
-      (f) => f === timelineSegmentId
-    );
+    const index = timelineSegmentListSelected.value.findIndex((f) => f === timelineSegmentId);
     if (index >= 0) {
       timelineSegmentListSelected.value.splice(index, 1);
     }
@@ -113,7 +102,9 @@ export const useTimelineSegmentStore = () => {
         const annotationCategoryStore = useAnnotationCategoryStore();
         const annotationStore = useAnnotationStore();
 
-        timelineSegmentAnnotationStore.deleteFromStore(res.data.timeline_segment_annotation_deleted);
+        timelineSegmentAnnotationStore.deleteFromStore(
+          res.data.timeline_segment_annotation_deleted
+        );
         timelineSegmentAnnotationStore.addToStore(res.data.timeline_segment_annotation_added);
 
         annotationCategoryStore.addToStore(res.data.annotation_category_added);
@@ -153,7 +144,10 @@ export const useTimelineSegmentStore = () => {
     };
 
     try {
-      const res = await axios.post(`${config.API_LOCATION}/timeline/segment/annotate/range`, params);
+      const res = await axios.post(
+        `${config.API_LOCATION}/timeline/segment/annotate/range`,
+        params
+      );
       if (res.data.status === "ok") {
         const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
         const annotationCategoryStore = useAnnotationCategoryStore();
@@ -165,7 +159,9 @@ export const useTimelineSegmentStore = () => {
         annotationCategoryStore.addToStore(res.data.annotation_category_added);
         annotationStore.addToStore(res.data.annotation_added);
 
-        timelineSegmentAnnotationStore.deleteFromStore(res.data.timeline_segment_annotation_deleted);
+        timelineSegmentAnnotationStore.deleteFromStore(
+          res.data.timeline_segment_annotation_deleted
+        );
         timelineSegmentAnnotationStore.addToStore(res.data.timeline_segment_annotation_added);
 
         const timelineStore = useTimelineStore();
@@ -192,7 +188,10 @@ export const useTimelineSegmentStore = () => {
     const annotationStore = useAnnotationStore();
 
     try {
-      const res = await axios.post(`${config.API_LOCATION}/timeline/segment/annotation/toggle`, params);
+      const res = await axios.post(
+        `${config.API_LOCATION}/timeline/segment/annotation/toggle`,
+        params
+      );
       if (res.data.status === "ok") {
         if ("annotation_added" in res.data) {
           annotationStore.addToStore(res.data.annotation_added);
@@ -201,7 +200,9 @@ export const useTimelineSegmentStore = () => {
           annotationCategoryStore.addToStore(res.data.annotation_category_added);
         }
         if ("timeline_segment_annotation_deleted" in res.data) {
-          timelineSegmentAnnotationStore.deleteFromStore(res.data.timeline_segment_annotation_deleted);
+          timelineSegmentAnnotationStore.deleteFromStore(
+            res.data.timeline_segment_annotation_deleted
+          );
         }
         if ("timeline_segment_annotation_added" in res.data) {
           timelineSegmentAnnotationStore.addToStore(res.data.timeline_segment_annotation_added);
@@ -234,7 +235,9 @@ export const useTimelineSegmentStore = () => {
         const timelineId = get(timelineSegmentId).timeline_id;
         const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
 
-        timelineSegmentAnnotationStore.deleteFromStore(res.data.timeline_segment_annotation_deleted);
+        timelineSegmentAnnotationStore.deleteFromStore(
+          res.data.timeline_segment_annotation_deleted
+        );
         timelineSegmentAnnotationStore.addToStore(res.data.timeline_segment_annotation_added);
         deleteFromStore(res.data.timeline_segment_deleted);
         addToStore(res.data.timeline_segment_added);
@@ -262,15 +265,13 @@ export const useTimelineSegmentStore = () => {
       if (res.data.status === "ok") {
         const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
 
-        timelineSegmentAnnotationStore.deleteFromStore(res.data.timeline_segment_annotation_deleted);
+        timelineSegmentAnnotationStore.deleteFromStore(
+          res.data.timeline_segment_annotation_deleted
+        );
         timelineSegmentAnnotationStore.addToStore(res.data.timeline_segment_annotation_added);
 
         const timelineStore = useTimelineStore();
-        const timelineIds = [
-          ...new Set(
-            timelineSegmentIds.map((id) => get(id).timeline_id)
-          ),
-        ];
+        const timelineIds = [...new Set(timelineSegmentIds.map((id) => get(id).timeline_id))];
         timelineStore.notifyChanges({ timelineIds: timelineIds });
 
         deleteFromStore(res.data.timeline_segment_deleted);
@@ -322,7 +323,6 @@ export const useTimelineSegmentStore = () => {
     timelineSegments.value = {};
     timelineSegmentList.value = [];
   };
-
 
   const addAnnotation = (annotations) => {
     annotations.forEach((e) => {
@@ -432,6 +432,6 @@ export const useTimelineSegmentStore = () => {
     deleteTimeline,
     updateStore,
     deleteFromStore,
-    updateTimeStore
+    updateTimeStore,
   };
 };

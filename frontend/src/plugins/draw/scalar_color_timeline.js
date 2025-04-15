@@ -24,9 +24,8 @@ export class ScalarColorTimeline extends Timeline {
 
     this.pData = data;
     if (!colormap) {
-      this.pColormap = "TIBReds"
-    }
-    else {
+      this.pColormap = "TIBReds";
+    } else {
       this.pColormap = colormap;
     }
 
@@ -34,7 +33,6 @@ export class ScalarColorTimeline extends Timeline {
 
     this.pDataMinTime = getMin(data.time);
     this.pDataMaxTime = getMax(data.time);
-
 
     this.pResolution = resolution;
     this.pOversampling = oversampling;
@@ -51,23 +49,22 @@ export class ScalarColorTimeline extends Timeline {
     const renderWidth = this.pResolution;
     const r = renderWidth / this.pDuration;
 
-    const brt = new PIXI.BaseRenderTexture({
+    const rt = new PIXI.RenderTexture({
       width: renderWidth,
       height: this.pHeight,
       // PIXI.SCALE_MODES.NEAREST,
-      scaleMode: PIXI.SCALE_MODES.LINEAR,
+      scaleMode: PIXI.linear,
 
       resolution: 1,
     });
-    const rt = new PIXI.RenderTexture(brt);
 
     const sprite = new PIXI.Sprite(rt);
 
     let colorRects = new PIXI.Graphics();
     // fill with nothing
     let color = scalarToHex(0);
-    colorRects.beginFill(color);
-    colorRects.drawRect(0, 0, renderWidth, this.pHeight);
+    colorRects.rect(0, 0, renderWidth, this.pHeight);
+    colorRects.fill(color);
 
     const targetSize = this.pOversampling * this.pResolution;
     const y = resampleApprox({ data: this.pData.y, targetSize: targetSize });
@@ -76,8 +73,7 @@ export class ScalarColorTimeline extends Timeline {
       targetSize: targetSize,
     });
 
-    const deltaTime =
-      (this.pData.delta_time * this.pData.time.length) / times.length;
+    const deltaTime = (this.pData.delta_time * this.pData.time.length) / times.length;
     // console.log(deltaTime)
     // console.log(this.pData.delta_time)
     times.forEach((t, i) => {
@@ -91,25 +87,21 @@ export class ScalarColorTimeline extends Timeline {
       // console.log(deltaTime)
 
       let color = scalarToHex(y[i], this.pColormapInverse, this.pColormap);
-      colorRects.beginFill(color);
-      // colorRects.drawRect(r * t, 0, r * deltaTime, this.pHeight);
-      colorRects.drawRect(
-        Math.max(0, r * (t - deltaTime / 2)),
-        0,
-        r * deltaTime,
-        this.pHeight
-      );
-
+      // colorRects.rect(r * t, 0, r * deltaTime, this.pHeight);
+      colorRects.rect(Math.max(0, r * (t - deltaTime / 2)), 0, r * deltaTime, this.pHeight);
+      colorRects.fill(color);
     });
 
-    this.pRenderer.render(colorRects, rt);
+    this.pRenderer.render({
+      container: colorRects,
+      target: rt,
+    });
     return sprite;
   }
 
   scaleContainer() {
     if (this.cRects) {
-      const width =
-        this.timeToX(this.pDuration) - this.timeToX(0);
+      const width = this.timeToX(this.pDuration) - this.timeToX(0);
       const x = this.timeToX(0);
       this.cRects.x = x;
       this.cRects.width = width;

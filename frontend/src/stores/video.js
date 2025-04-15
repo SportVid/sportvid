@@ -83,7 +83,6 @@ export const useVideoStore = defineStore("video", () => {
 
     playerStore.clearStore();
     promises.push(playerStore.fetchVideo({ videoId }));
-    promises.push(shotStore.fetchForVideo({ videoId }));
 
     if (includeAnnotation) {
       annotationCategoryStore.clearStore();
@@ -117,6 +116,8 @@ export const useVideoStore = defineStore("video", () => {
 
       promises.push(...timelinePromises);
     }
+
+    promises.push(shotStore.fetchForVideo({ videoId }));
 
     if (includeShortcut) {
       shortcutStore.clearStore();

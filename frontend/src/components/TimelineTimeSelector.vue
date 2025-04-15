@@ -1,6 +1,10 @@
 <template>
   <div ref="container" style="width: 100%">
-    <canvas :style="canvasStyle" ref="canvas"></canvas>
+    <canvas
+      :style="canvasStyle"
+      style="background-color: #bbbbbb; border-radius: 5px"
+      ref="canvas"
+    ></canvas>
   </div>
 </template>
 
@@ -19,7 +23,7 @@ const props = defineProps({
   },
   height: {
     type: String,
-    default: "60",
+    default: "50",
   },
   radius: {
     type: Number,
@@ -190,12 +194,12 @@ function drawScale() {
   const times = linspace(0, 5, interval);
   const mainStrokes = times.map((time) => {
     const x = timeToX(time);
-    return new paper.Path(new paper.Point(x, 10), new paper.Point(x, 35));
+    return new paper.Path(new paper.Point(x, 10), new paper.Point(x, 25));
   });
 
   const textList = times.map((time, index) => {
     const x = timeToX(time);
-    const text = new paper.PointText(new paper.Point(x, 50));
+    const text = new paper.PointText(new paper.Point(x, 40));
     if (index === 0) {
       text.justification = "left";
     } else if (index === times.length - 1) {

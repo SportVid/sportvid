@@ -59,7 +59,8 @@ export function scalarToHex(s, invert = false, colorPalette = "TIBReds") {
 
   const cm = colormaps.get(colorPalette);
   var color = cm(s);
-  return PIXI.utils.string2hex(d3.color(color).formatHex());
+  const hexColor = d3.color(color).formatHex();
+  return parseInt(hexColor.replace("#", "0x"));
 }
 
 export function scalarToRGB(s, invert = false, colorPalette = "TIBReds") {

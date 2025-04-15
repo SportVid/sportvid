@@ -39,15 +39,14 @@ export class ColorTimeline extends Timeline {
     const renderWidth = this.pResolution;
     const r = renderWidth / this.pDuration;
 
-    const brt = new PIXI.BaseRenderTexture({
+    const rt = new PIXI.RenderTexture({
       width: renderWidth,
       height: this.pHeight,
       // PIXI.SCALE_MODES.NEAREST,
-      scaleMode: PIXI.SCALE_MODES.LINEAR,
+      scaleMode: PIXI.linear,
 
       resolution: 1,
     });
-    const rt = new PIXI.RenderTexture(brt);
 
     const sprite = new PIXI.Sprite(rt);
 
@@ -62,21 +61,19 @@ export class ColorTimeline extends Timeline {
       data: this.pData.time,
       targetSize: targetSize,
     });
-    const deltaTime =
-      (this.pData.delta_time * this.pData.time.length) / times.length;
+    const deltaTime = (this.pData.delta_time * this.pData.time.length) / times.length;
     times.forEach((t, i) => {
-      let color = PIXI.utils.rgb2hex(colors[i]);
-      colorRects.beginFill(color);
-      // colorRects.drawRect(r * t, 0, r * (t + deltaTime), this.pHeight);
-      colorRects.drawRect(
-        Math.max(0, r * (t - deltaTime / 2)),
-        0,
-        r * deltaTime,
-        this.pHeight
-      );
+      const rgb = colors[i];
+      const color = (rgb[0] << 16) + (rgb[1] << 8) + rgb[2];
+
+      colorRects.rect(Math.max(0, r * (t - deltaTime / 2)), 0, r * deltaTime, this.pHeight);
+      colorRects.fill(color);
     });
 
-    this.pRenderer.render(colorRects, rt);
+    this.pRenderer.render({
+      container: colorRects,
+      target: rt,
+    });
     return sprite;
   }
 
@@ -88,14 +85,12 @@ export class ColorTimeline extends Timeline {
       targetSize: targetSize,
     });
 
-    const deltaTime =
-      (this.pData.delta_time * this.pData.time.length) / times.length;
+    const deltaTime = (this.pData.delta_time * this.pData.time.length) / times.length;
 
     if (this.cRects) {
       const width =
-        this.timeToX(
-          this.pData.time[this.pData.time.length - 1] + deltaTime / 2
-        ) - this.timeToX(this.pData.time[0]);
+        this.timeToX(this.pData.time[this.pData.time.length - 1] + deltaTime / 2) -
+        this.timeToX(this.pData.time[0]);
       const x = this.timeToX(this.pData.time[0]);
       this.cRects.x = x;
       this.cRects.width = width;
