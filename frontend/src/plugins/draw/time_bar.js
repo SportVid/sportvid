@@ -31,7 +31,7 @@ export class TimeBar extends PIXI.Container {
     const bar = new PIXI.Graphics();
 
     bar.moveTo(0, 0);
-    bar.lineTo(0, this.pHeight - 25);
+    bar.lineTo(0, this.pHeight + 25);
     bar.stroke({ color: 0xae1313, pixelLine: true });
 
     bar.fill(0xae1313);

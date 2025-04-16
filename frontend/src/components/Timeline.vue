@@ -32,8 +32,8 @@
           @change="onChange"
         >
           <template v-slot:default="{ node, stat }">
-            <v-card style="height: 60px" class="my-1">
-              <v-row class="mt-4 ml-3 mr-2">
+            <v-card style="height: 50px" class="my-1">
+              <v-row class="mt-3 ml-3 mr-2">
                 <v-icon
                   v-if="stat.children.length"
                   @click="toggleOpen(node, stat)"
@@ -261,7 +261,7 @@ const props = defineProps({
   headerWidth: { type: Number, default: 0 },
   scaleHeight: { type: Number, default: 40 },
   timelineHeight: { type: Number, default: 50 },
-  gap: { type: Number, default: 4 },
+  gap: { type: Number, default: 8 },
   headerStyle: {
     type: Object,
     default: () => ({
@@ -439,10 +439,7 @@ const selectedTimelineSegments = computed(() => timelineSegmentStore.selected);
 const timeScale = computed(() => containerWidth.value / (endTime.value - startTime.value));
 
 const computedHeight = computed(
-  () =>
-    (timelines.value.length + 1) * (props.timelineHeight + props.gap) +
-    props.scaleHeight +
-    3 * props.gap
+  () => timelines.value.length * (props.timelineHeight + props.gap) + props.scaleHeight + 12
 );
 
 const currentTime = computed(() => playerStore.currentTime);
@@ -483,7 +480,7 @@ const computeTimelineX = () => {
 };
 
 const computeTimelineY = (index) => {
-  return (props.gap + props.timelineHeight) * index + props.scaleHeight + 2 * props.gap;
+  return (props.gap + props.timelineHeight) * index + props.scaleHeight + 12;
 };
 
 const draw = () => {
@@ -496,10 +493,11 @@ const drawTimeBar = () => {
   if (timeBarsContainer.value) app.value.stage.removeChild(timeBarsContainer.value);
   timeBarsContainer.value = new PIXI.Container();
   const x = timeToX(startTime.value);
+  const y = props.gap / 2;
   const width = timeToX(endTime.value) - x;
   let timeline = new TimeBar(
     x,
-    props.gap,
+    y,
     width,
     window.innerHeight,
     currentTime.value,
@@ -514,15 +512,9 @@ const drawScale = () => {
   if (timeScalesContainer.value) app.value.stage.removeChild(timeScalesContainer.value);
   timeScalesContainer.value = new PIXI.Container();
   const x = timeToX(startTime.value);
+  const y = props.gap / 2;
   const width = timeToX(endTime.value) - x;
-  let timeline = new TimeScale(
-    x,
-    props.gap,
-    width,
-    props.scaleHeight,
-    startTime.value,
-    endTime.value
-  );
+  let timeline = new TimeScale(x, y, width, props.scaleHeight, startTime.value, endTime.value);
   timeScalesContainer.value.addChild(timeline);
   app.value.stage.addChild(timeScalesContainer.value);
 };
@@ -738,7 +730,7 @@ const drawGraphicTimeline = (timeline, width, height) => {
     }
 
     if (timeline.visualization == "COLOR") {
-      console.log("color", timeline);
+      console.log("timeline", timeline);
       drawnTimeline = new ColorTimeline({
         timelineId: timeline.id,
         width: width,
@@ -950,7 +942,7 @@ onMounted(async () => {
   await app.value.init({
     width: containerWidth.value,
     height: containerHeight.value,
-    backgroundAlpha: 0.5,
+    backgroundAlpha: 0.0,
     canvas: canvas.value,
     resizeTo: canvas.value,
     resolution: window.devicePixelRatio,
@@ -976,9 +968,15 @@ onMounted(async () => {
 
           if (computedHeight.value !== containerHeight.value) {
             containerHeight.value = computedHeight.value;
-            container.value.style.height = `${computedHeight.value}px`;
-            if (canvas.value) canvas.value.height = computedHeight.value;
-            app.value.resize();
+            if (canvas.value) {
+              canvas.value.style.height = `${computedHeight.value}px`;
+              canvas.value.height = computedHeight.value;
+            }
+
+            // 3. Update PIXI renderer size
+            if (app.value?.renderer) {
+              app.value.renderer.resize(containerWidth.value, computedHeight.value);
+            }
             draw();
           }
         }

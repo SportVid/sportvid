@@ -291,6 +291,7 @@ export class TimeScale extends PIXI.Container {
 
     const width = this.timeToX(end) - this.timeToX(start);
     const height = this.pHeight;
+    console.log("pheight-sclae selectreange", this.pHeight);
 
     selectionRect.roundRect(0, 0, width, height, 1);
     selectionRect.setStrokeStyle(2, this.pRangeSelectedColor, 1);

@@ -212,15 +212,14 @@ export class AnnotationTimeline extends Timeline {
     const colorOdd = 0xeeeeee;
     const colorEven = 0xdddddd;
 
-    const brt = new PIXI.RenderTexture({
+    const rt = new PIXI.RenderTexture({
       width: renderWidth,
       height: this.pHeight,
       // PIXI.SCALE_MODES.NEAREST,
-      scaleMode: PIXI.linear,
+      scaleMode: "linear",
 
       resolution: 1,
     });
-    const rt = new PIXI.RenderTexture(brt);
 
     const sprite = new PIXI.Sprite(rt);
 

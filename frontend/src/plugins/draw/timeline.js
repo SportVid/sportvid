@@ -58,7 +58,7 @@ export class Timeline extends PIXI.Container {
     const width = this.timeToX(end) - this.timeToX(start);
     const height = this.pHeight;
 
-    selectionRect.roundRect(0, 0, width, height, 1);
+    selectionRect.roundRect(0, 0, width, height, 5);
     selectionRect.x = x;
     selectionRect.fill(this.pRangeSelectedColor, 0.2);
     selectionRect.stroke({ color: this.pRangeSelectedColor, pixelLine: true });
