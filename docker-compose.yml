@@ -65,7 +65,7 @@ services:
         target: /cache/
 
   postgres:
-    image: postgres:14
+    image: postgres:14.17
     volumes:
       - ./data/db/:/var/lib/postgresql/data
     environment:
