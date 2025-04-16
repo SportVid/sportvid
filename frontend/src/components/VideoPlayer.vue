@@ -347,7 +347,7 @@ onBeforeUnmount(() => {
 watch(() => window.innerHeight, updateMaxHeight);
 </script>
 
-<style>
+<style scoped>
 .video {
   object-fit: cover;
   max-width: 100%;

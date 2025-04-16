@@ -33,6 +33,7 @@
 
       <div
         v-for="(position, index) in bboxesStore.positionsNested[currentTime * playerStore.videoFPS]"
+        v-show="topViewStore.showItems"
         :key="index"
         class="data-point-position"
         :style="{
@@ -107,7 +108,7 @@
             v-for="(item, index) in topViewStore.sports"
             :key="index"
             class="menu-item"
-            v-on:click="topViewStore.onSportChange(index)"
+            v-on:click="topViewStore.onSportChange(item.title)"
           >
             <v-list-item-title class="my-0">
               {{ item.title }}
@@ -222,7 +223,7 @@
           </v-menu>
         </v-list>
       </v-menu>
-      <ModalBboxDataSelect v-model="showModalBboxDataSelect" />
+      <ModalBboxDataSelect v-if="showModalBboxDataSelect" v-model="showModalBboxDataSelect" />
 
       <div class="time-code ml-2">
         {{ getTimecode(currentTime) }}
@@ -445,7 +446,7 @@ watch(videoControl || videoSlider, (newVal) => {
 });
 </script>
 
-<style>
+<style scoped>
 .visualizer-image {
   max-width: 100%;
   max-height: 100%;

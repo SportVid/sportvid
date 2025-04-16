@@ -1064,9 +1064,3 @@ watch(
   }
 );
 </script>
-
-<style>
-div.tabs-left [role="tab"] {
-  justify-content: flex-start;
-}
-</style>

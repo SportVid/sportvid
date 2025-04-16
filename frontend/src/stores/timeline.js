@@ -29,10 +29,7 @@ export const useTimelineStore = defineStore("timeline", () => {
     ) {
       return null;
     }
-    return Math.min(
-      timelineSelectedTimeRange.value.start,
-      timelineSelectedTimeRange.value.end
-    );
+    return Math.min(timelineSelectedTimeRange.value.start, timelineSelectedTimeRange.value.end);
   });
   const selectedTimeRangeEnd = computed(() => {
     if (
@@ -41,10 +38,7 @@ export const useTimelineStore = defineStore("timeline", () => {
     ) {
       return null;
     }
-    return Math.max(
-      timelineSelectedTimeRange.value.start,
-      timelineSelectedTimeRange.value.end
-    );
+    return Math.max(timelineSelectedTimeRange.value.start, timelineSelectedTimeRange.value.end);
   });
   const forVideo = computed(() => {
     return (videoId) => {
@@ -54,15 +48,13 @@ export const useTimelineStore = defineStore("timeline", () => {
     };
   });
   const all = computed(() => Object.values(timelines.value));
-  const added = computed(() => timelineListAdded.value.map((data) => [
-    data[0],
-    timelines.value[data[1]],
-  ]));
+  const added = computed(() =>
+    timelineListAdded.value.map((data) => [data[0], timelines.value[data[1]]])
+  );
   const deleted = computed(() => timelineListDeleted.value);
-  const changed = computed(() => timelineListChanged.value.map((data) => [
-    data[0],
-    timelines.value[data[1]],
-  ]));
+  const changed = computed(() =>
+    timelineListChanged.value.map((data) => [data[0], timelines.value[data[1]]])
+  );
   const get = computed(() => {
     return (id) => {
       return timelines.value[id];
@@ -168,9 +160,7 @@ export const useTimelineStore = defineStore("timeline", () => {
   };
 
   const removeFromSelection = (timelineId) => {
-    let segment_index = timelineListSelected.value.findIndex(
-      (f) => f === timelineId
-    );
+    let segment_index = timelineListSelected.value.findIndex((f) => f === timelineId);
     timelineListSelected.value.splice(segment_index, 1);
   };
 
@@ -210,21 +200,24 @@ export const useTimelineStore = defineStore("timeline", () => {
     if (clear) {
       clearStore();
     }
-
     try {
       const res = await axios.get(`${config.API_LOCATION}/timeline/list`, { params });
       if (res.data.status === "ok") {
-        updateStore(res.data.entries);
-        // Load plugin run results
         const pluginRunResultStore = usePluginRunResultStore();
+
         res.data.entries.forEach((timeline) => {
-          if (!('plugin' in timeline) && timeline.type == "PLUGIN_RESULT" && "plugin_run_result_id" in timeline) {
+          if (
+            !("plugin" in timeline) &&
+            timeline.type == "PLUGIN_RESULT" &&
+            "plugin_run_result_id" in timeline
+          ) {
             const result = pluginRunResultStore.get(timeline.plugin_run_result_id);
             if (result) {
               timeline.plugin = { data: result.data, type: result.type };
             }
           }
         });
+        updateStore(res.data.entries);
       }
     } finally {
       isLoading.value = false;
@@ -371,7 +364,12 @@ export const useTimelineStore = defineStore("timeline", () => {
     }
   };
 
-  const changeVisualization = async ({ timelineId, visualization, colormap = null, colormap_inverse = false }) => {
+  const changeVisualization = async ({
+    timelineId,
+    visualization,
+    colormap = null,
+    colormap_inverse = false,
+  }) => {
     if (isLoading.value) {
       return;
     }
@@ -489,8 +487,8 @@ export const useTimelineStore = defineStore("timeline", () => {
     });
   };
 
-  const addToStore = (timelines) => {
-    timelines.forEach((e) => {
+  const addToStore = (addedTimelines) => {
+    addedTimelines.forEach((e) => {
       timelineListAdded.value.push([Date.now(), e.id]);
       timelines.value[e.id] = e;
       timelineList.value.push(e.id);
@@ -498,8 +496,8 @@ export const useTimelineStore = defineStore("timeline", () => {
     updateVisibleStore();
   };
 
-  const updateStore = (timelines) => {
-    timelines.forEach((e) => {
+  const updateStore = (addedTimelines) => {
+    addedTimelines.forEach((e) => {
       if (!(e.id in timelines.value)) {
         timelineListAdded.value.push([Date.now(), e.id]);
         timelines.value[e.id] = e;
@@ -518,7 +516,7 @@ export const useTimelineStore = defineStore("timeline", () => {
       let parent_id = e.parent_id;
 
       while (parent_id != null) {
-        let parent = get(parent_id);
+        let parent = timelines.value[parent_id];
         parent_id = parent.parent_id;
         if (parent.collapse) {
           return true;

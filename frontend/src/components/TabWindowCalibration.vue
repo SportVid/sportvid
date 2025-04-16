@@ -1,5 +1,5 @@
 <template>
-  <CalibrationAssetMenu v-if="calibrationAssetStore.marker.length === 0" />
+  <ModalCalibrationAssetMenu v-if="calibrationAssetStore.marker.length === 0" />
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
@@ -29,6 +29,7 @@
 
       <v-btn
         v-for="m in filteredReferenceMarker"
+        v-show="topViewStore.showItems"
         :key="m.id"
         :disabled="calibrationAssetStore.isAddingReferenceMarker"
         :color="m.active || calibrationAssetStore.hoveredVideoMarker === m.id ? 'red' : 'grey'"
@@ -145,10 +146,22 @@
           </v-list-item>
         </v-list>
       </v-menu>
-      <ModalCalibrationAssetCreate v-model="showModalCalibrationAssetCreate" />
-      <ModalCalibrationAssetSave v-model="showModalCalibrationAssetSave" />
-      <ModalCalibrationAssetSelect v-model="showModalCalibrationAssetSelect" />
-      <ModalCalibrationAssetUpdate v-model="showModalCalibrationAssetUpdate" />
+      <ModalCalibrationAssetCreate
+        v-if="showModalCalibrationAssetCreate"
+        v-model="showModalCalibrationAssetCreate"
+      />
+      <ModalCalibrationAssetSave
+        v-if="showModalCalibrationAssetSave"
+        v-model="showModalCalibrationAssetSave"
+      />
+      <ModalCalibrationAssetSelect
+        v-if="showModalCalibrationAssetSelect"
+        v-model="showModalCalibrationAssetSelect"
+      />
+      <ModalCalibrationAssetUpdate
+        v-if="showModalCalibrationAssetUpdate"
+        v-model="showModalCalibrationAssetUpdate"
+      />
 
       <v-menu location="top">
         <template v-slot:activator="{ props }">
@@ -218,7 +231,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue"
 import { useTopViewStore } from "@/stores/top_view";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
-import CalibrationAssetMenu from "@/components/CalibrationAssetMenu.vue";
+import ModalCalibrationAssetMenu from "@/components/ModalCalibrationAssetMenu.vue";
 import ModalCalibrationAssetCreate from "@/components/ModalCalibrationAssetCreate.vue";
 import ModalCalibrationAssetSave from "@/components/ModalCalibrationAssetSave.vue";
 import ModalCalibrationAssetSelect from "@/components/ModalCalibrationAssetSelect.vue";
@@ -227,6 +240,13 @@ import ModalCalibrationAssetUpdate from "@/components/ModalCalibrationAssetUpdat
 const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const videoStore = useVideoStore();
+
+const props = defineProps({
+  showItems: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 const topViewElement = ref(null);
 
@@ -274,6 +294,7 @@ const updateTopViewSize = () => {
     }
   });
 };
+
 onMounted(() => {
   setTimeout(() => {
     window.dispatchEvent(new Event("resize"));
@@ -320,7 +341,7 @@ watch(
 );
 </script>
 
-<style>
+<style scoped>
 .image {
   max-width: 100%;
   object-fit: cover;

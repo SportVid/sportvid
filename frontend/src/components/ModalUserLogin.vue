@@ -65,15 +65,15 @@
           {{ $t("user.register.title") }}
         </a>
       </div>
-      <UserRegister v-model="showModalRegister" />
+      <ModalUserRegister v-if="showModalRegister" v-model="showModalRegister" />
     </v-card>
   </v-dialog>
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import UserRegister from "@/components/UserRegister.vue";
+import ModalUserRegister from "@/components/ModalUserRegister.vue";
 import { useUserStore } from "@/stores/user";
 
 const props = defineProps({
@@ -88,14 +88,17 @@ const emit = defineEmits();
 const { t } = useI18n();
 const userStore = useUserStore();
 
-const user = reactive({});
+const user = ref({
+  name: "",
+  password: "",
+});
 const dialog = ref(props.modelValue);
 const showPassword = ref(false);
 const showModalRegister = ref(false);
 const errorMessage = ref("");
 
 const login = async () => {
-  const status = await userStore.login(user);
+  const status = await userStore.login(user.value);
   if (status.status === "ok") {
     dialog.value = false;
     errorMessage.value = "";
@@ -118,8 +121,11 @@ const checkLength = (value) => {
 };
 
 const disabled = computed(() => {
-  if (Object.keys(user).length) {
-    const total = Object.values(user).reduce((t, value) => t + (checkLength(value) === true), 0);
+  if (Object.keys(user.value).length) {
+    const total = Object.values(user.value).reduce(
+      (t, value) => t + (checkLength(value) === true),
+      0
+    );
     return total !== 2;
   }
   return true;
@@ -142,7 +148,7 @@ watch(
 );
 </script>
 
-<style>
+<style scoped>
 .v-card.login .v-btn.register {
   min-width: auto !important;
   text-transform: capitalize;

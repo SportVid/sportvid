@@ -1,11 +1,11 @@
-import { defineStore } from 'pinia';
-import { ref, reactive, computed } from 'vue';
-import axios from '../plugins/axios';
-import config from '../../app.config';
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import axios from "../plugins/axios";
+import config from "../../app.config";
 import { usePlayerStore } from "@/stores/player";
 
-export const usePluginRunResultStore = defineStore('pluginRunResult', () => {
-  const pluginRunResults = reactive({});
+export const usePluginRunResultStore = defineStore("pluginRunResult", () => {
+  const pluginRunResults = ref({});
   const pluginRunResultList = ref([]);
   const isLoading = ref(false);
 
@@ -40,10 +40,9 @@ export const usePluginRunResultStore = defineStore('pluginRunResult', () => {
     if (pluginRunId) {
       params.plugin_run_id = pluginRunId;
     }
-
     try {
       const res = await axios.get(`${config.API_LOCATION}/plugin/run/result/list`, { params });
-      if (res.data.status === 'ok') {
+      if (res.data.status === "ok") {
         updateAll(res.data.entries);
       }
     } finally {

@@ -83,7 +83,6 @@ export const useVideoStore = defineStore("video", () => {
 
     playerStore.clearStore();
     promises.push(playerStore.fetchVideo({ videoId }));
-    promises.push(shotStore.fetchForVideo({ videoId }));
 
     if (includeAnnotation) {
       annotationCategoryStore.clearStore();
@@ -92,21 +91,33 @@ export const useVideoStore = defineStore("video", () => {
       promises.push(annotationStore.fetchForVideo({ videoId }));
     }
 
-    if (includeTimeline) {
-      promises.push(
-        timelineStore
-          .fetchForVideo({ videoId })
-          .then(() => timelineSegmentStore.fetchForVideo({ videoId }))
-          .then(() => timelineSegmentAnnotationStore.fetchForVideo({ videoId }))
-      );
-    }
-
-    if (includeAnalyser) {
+    if (includeAnalyser && !includeTimeline) {
       pluginRunStore.clearStore();
       pluginRunResultStore.clearStore();
       promises.push(pluginRunStore.fetchForVideo({ videoId, addResults }));
       promises.push(pluginRunResultStore.fetchForVideo({ videoId, addResults }));
     }
+
+    if (includeAnalyser && includeTimeline) {
+      pluginRunStore.clearStore();
+      pluginRunResultStore.clearStore();
+      const pluginRunPromises = [
+        pluginRunResultStore.fetchForVideo({ videoId, addResults }),
+        pluginRunStore.fetchForVideo({ videoId, addResults }),
+      ];
+      promises.push(...pluginRunPromises);
+      await Promise.all(pluginRunPromises);
+
+      const timelinePromises = [
+        timelineStore.fetchForVideo({ videoId }),
+        timelineSegmentStore.fetchForVideo({ videoId }),
+        timelineSegmentAnnotationStore.fetchForVideo({ videoId }),
+      ];
+
+      promises.push(...timelinePromises);
+    }
+
+    promises.push(shotStore.fetchForVideo({ videoId }));
 
     if (includeShortcut) {
       shortcutStore.clearStore();

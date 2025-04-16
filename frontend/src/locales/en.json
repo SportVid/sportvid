@@ -353,12 +353,13 @@
     },
     "timeline": {
       "export_result": {
-        "link": "Export Data",
+        "button": "Export Data",
         "close": "Close",
         "title": "Export Timeline Data",
         "export": "Export",
         "csv": {
-          "export_name": "CSV"
+          "export_name": "CSV",
+          "export_text": "Export Timeline as CSV."
         }
       },
       "menu": {
@@ -379,7 +380,7 @@
       },
       "duplicate": {
         "title": "Duplicate Timeline",
-        "link": "Duplicate",
+        "button": "Duplicate",
         "name": "Timeline Name",
         "includeannotations": "Duplicate with annotations?",
         "update": "Duplicate",
@@ -387,14 +388,14 @@
       },
       "rename": {
         "title": "Rename Timeline",
-        "link": "Rename",
+        "button": "Rename",
         "name": "Timeline Name",
         "update": "Rename",
         "close": "Close"
       },
       "visualization": {
         "title": "Change Visualization",
-        "link": "Visualization",
+        "button": "Visualization",
         "name": "Timeline Name",
         "update": "OK",
         "close": "Close",
@@ -403,7 +404,7 @@
       },
       "delete": {
         "title": "Delete Timeline",
-        "link": "Delete",
+        "button": "Delete",
         "question": "Are you sure that you want to delete this timeline?",
         "yes": "Yes",
         "no": "No"

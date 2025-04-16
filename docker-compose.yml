@@ -164,7 +164,6 @@ services:
       - type: bind
         source: ./data/tmp
         target: /tmp
-        
 
     working_dir: /app/backend/
     environment:

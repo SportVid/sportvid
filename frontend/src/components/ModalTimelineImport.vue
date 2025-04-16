@@ -41,7 +41,7 @@ const props = defineProps({
 
 const emit = defineEmits();
 
-const dialog = ref(false);
+const dialog = ref(props.modelValue);
 const isSubmitting = ref(false);
 const importfile = ref(null);
 const name = ref(null);
@@ -52,9 +52,9 @@ const submit = async () => {
   if (isSubmitting.value) return;
   isSubmitting.value = true;
 
-  // await timelineStore.importEAF({
-  //   importfile: importfile.value,
-  // });
+  await timelineStore.importEAF({
+    importfile: importfile.value,
+  });
 
   isSubmitting.value = false;
   dialog.value = false;

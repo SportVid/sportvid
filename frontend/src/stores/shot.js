@@ -77,16 +77,11 @@ export const useShotStore = defineStore("shot", () => {
 
     let thumbnailList = [];
     let deltaTime = 0.2;
-    if (
-      "results" in thumbnail &&
-      thumbnail.results.length > 0 &&
-      "data" in thumbnail.results[0]
-    ) {
+    if ("results" in thumbnail && thumbnail.results.length > 0 && "data" in thumbnail.results[0]) {
       deltaTime = thumbnail.results[0].data.images[0].delta_time;
       thumbnailList = thumbnail.results[0].data.images.map((e) => {
         return (
-          config.THUMBNAIL_LOCATION +
-          `/${e.id.substr(0, 2)}/${e.id.substr(2, 2)}/${e.id}.${e.ext}`
+          config.THUMBNAIL_LOCATION + `/${e.id.substr(0, 2)}/${e.id.substr(2, 2)}/${e.id}.${e.ext}`
         );
       });
     }
@@ -96,12 +91,8 @@ export const useShotStore = defineStore("shot", () => {
       start: e.start,
       end: e.end,
       thumbnails: [
-        thumbnailList[
-          Math.min(Math.ceil(e.start / deltaTime), thumbnailList.length - 1)
-        ],
-        thumbnailList[
-          Math.round((e.start + (e.end - e.start) / 2) / deltaTime)
-        ],
+        thumbnailList[Math.min(Math.ceil(e.start / deltaTime), thumbnailList.length - 1)],
+        thumbnailList[Math.round((e.start + (e.end - e.start) / 2) / deltaTime)],
         thumbnailList[Math.floor(e.end / deltaTime)],
       ],
     }));

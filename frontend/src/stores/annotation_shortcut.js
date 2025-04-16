@@ -1,20 +1,18 @@
-import axios from '../plugins/axios';
-import config from '../../app.config';
-import { defineStore } from 'pinia';
-import { usePlayerStore } from '@/stores/player';
-import { useShortcutStore } from '@/stores/shortcut';
-import { ref, reactive, computed } from 'vue';
+import axios from "../plugins/axios";
+import config from "../../app.config";
+import { defineStore } from "pinia";
+import { usePlayerStore } from "@/stores/player";
+import { useShortcutStore } from "@/stores/shortcut";
+import { ref, computed } from "vue";
 
-export const useAnnotationShortcutStore = defineStore('annotationShortcut', () => {
-  const annotationShortcuts = reactive({});
+export const useAnnotationShortcutStore = defineStore("annotationShortcut", () => {
+  const annotationShortcuts = ref({});
   const annotationShortcutList = ref([]);
-  const annotationShortcutByKeys = reactive({});
+  const annotationShortcutByKeys = ref({});
   const isLoading = ref(false);
 
   const all = computed(() => {
-    return annotationShortcutList.value.map(
-      (id) => annotationShortcuts[id]
-    );
+    return annotationShortcutList.value.map((id) => annotationShortcuts[id]);
   });
 
   const get = computed(() => (id) => annotationShortcuts[id]);
@@ -52,14 +50,14 @@ export const useAnnotationShortcutStore = defineStore('annotationShortcut', () =
 
     try {
       const res = await axios.post(`${config.API_LOCATION}/annotation/shortcut/update`, params);
-      if (res.data.status === 'ok') {
+      if (res.data.status === "ok") {
         replaceAll(res.data.annotation_shortcuts);
 
         const shortcutStore = useShortcutStore();
         shortcutStore.replaceAll(res.data.shortcuts);
       }
     } catch (error) {
-      console.error('Error updating annotation shortcuts:', error);
+      console.error("Error updating annotation shortcuts:", error);
     } finally {
       isLoading.value = false;
     }
@@ -87,11 +85,11 @@ export const useAnnotationShortcutStore = defineStore('annotationShortcut', () =
       const res = await axios.get(`${config.API_LOCATION}/annotation/shortcut/list`, {
         params,
       });
-      if (res.data.status === 'ok') {
+      if (res.data.status === "ok") {
         replaceAll(res.data.entries);
       }
     } catch (error) {
-      console.error('Error fetching annotation shortcuts:', error);
+      console.error("Error fetching annotation shortcuts:", error);
     } finally {
       isLoading.value = false;
     }

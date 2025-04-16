@@ -1,8 +1,8 @@
 <template>
-  <v-dialog v-model="dialog" max-width="800">
+  <v-dialog v-model="dialog" width="600">
     <v-card>
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.timeline.create.title") }}
+        {{ $t("modal.timeline.rename.title") }}
 
         <v-spacer></v-spacer>
 
@@ -11,17 +11,16 @@
         </v-btn>
       </v-toolbar>
 
-      <v-card-text class="d-flex align-center">
+      <v-card-text class="pt-4 d-flex align-center">
         <v-text-field
-          v-model="name"
-          :label="$t('modal.timeline.create.name')"
+          :label="$t('modal.timeline.rename.name')"
           prepend-icon="mdi-pencil"
+          v-model="name"
           variant="underlined"
           class="mr-6"
         />
-
         <v-btn @click="submit" :disabled="isSubmitting || !name">
-          {{ $t("modal.timeline.create.submit") }}
+          {{ $t("modal.timeline.rename.update") }}
         </v-btn>
       </v-card-text>
     </v-card>
@@ -29,14 +28,15 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { useTimelineStore } from "@/stores/timeline";
 
 const props = defineProps({
   timeline: {
-    type: Object,
-    required: false,
+    type: String,
+    required: true,
   },
+
   modelValue: {
     type: Boolean,
     default: false,
@@ -47,14 +47,28 @@ const emit = defineEmits();
 
 const dialog = ref(props.modelValue);
 const isSubmitting = ref(false);
-const name = ref(null);
+const nameProxy = ref(null);
+
 const timelineStore = useTimelineStore();
+
+const name = computed({
+  get() {
+    const name = timelineStore.get(props.timeline).name;
+    return nameProxy.value === null ? name : nameProxy.value;
+  },
+  set(value) {
+    nameProxy.value = value;
+  },
+});
 
 const submit = async () => {
   if (isSubmitting.value) return;
   isSubmitting.value = true;
 
-  // await timelineStore.create({ name: name.value });
+  await timelineStore.rename({
+    timelineId: props.timeline,
+    name: name.value,
+  });
 
   isSubmitting.value = false;
   dialog.value = false;
@@ -62,8 +76,7 @@ const submit = async () => {
 
 watch(dialog, (value) => {
   if (value) {
-    name.value = null;
-    emit("close");
+    nameProxy.value = null;
   }
 });
 

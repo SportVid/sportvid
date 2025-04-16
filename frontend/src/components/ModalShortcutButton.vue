@@ -9,7 +9,7 @@
       </template>
     </v-menu>
 
-    <ModalShortcut v-model="showModalShortcut" />
+    <ModalShortcut v-if="showModalShortcut" v-model="showModalShortcut" />
   </div>
 </template>
 

@@ -1,8 +1,8 @@
 <template>
-  <v-card 
-  :class="['d-flex', 'flex-column', 'pa-2', 'ma-4', { highlighted: isHighlighted }]"
-  elevation="4"
-  v-on:click="setVideoPlayerTime(shot.start)"
+  <v-card
+    :class="['d-flex', 'flex-column', 'pa-2', 'ma-4', { highlighted: isHighlighted }]"
+    elevation="4"
+    v-on:click="setVideoPlayerTime(shot.start)"
   >
     <v-row align="center" justify="center" class="px-2 py-0">
       <v-col class="shotcard-left">
@@ -11,7 +11,9 @@
             <div style="font-size: 16px; margin-bottom: 0.2cm">Shot {{ shot.id }}</div>
             <v-list-item-subtitle>Begin: {{ get_timecode(shot.start) }}</v-list-item-subtitle>
             <v-list-item-subtitle>End: {{ get_timecode(shot.end) }}</v-list-item-subtitle>
-            <v-list-item-subtitle>Duration: {{ get_timecode(shot.end - shot.start) }}</v-list-item-subtitle>
+            <v-list-item-subtitle
+              >Duration: {{ get_timecode(shot.end - shot.start) }}</v-list-item-subtitle
+            >
           </v-list-item-content>
         </v-list-item>
       </v-col>
@@ -38,11 +40,11 @@ import { usePlayerStore } from "@/stores/player";
 export default {
   mixins: [TimeMixin],
   props: ["shot"],
-  data () {
+  data() {
     return {
-      // this variable ensures that the signal to scroll is only emitted once 
-      emitted: false
-    }
+      // this variable ensures that the signal to scroll is only emitted once
+      emitted: false,
+    };
   },
   methods: {
     setVideoPlayerTime(time) {
@@ -61,15 +63,16 @@ export default {
   },
   watch: {
     isHighlighted(newVal) {
-      if (newVal && !this.emitted && this.syncTime){
-        this.$emit('childHighlighted', this.shot.id);
+      if (newVal && !this.emitted && this.syncTime) {
+        this.$emit("childHighlighted", this.shot.id);
       }
       this.emitted = newVal;
-    }
-  }
+    },
+  },
 };
 </script>
-<style>
+
+<style scoped>
 .shotcard-left {
   max-width: 250px;
   min-width: 150px;

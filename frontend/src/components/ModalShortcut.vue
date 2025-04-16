@@ -159,7 +159,7 @@ watch(
 );
 </script>
 
-<style>
+<style scoped>
 .annotation-chip {
   height: auto !important;
 }
