@@ -228,7 +228,19 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     [0, 1, 0],
     [0, 0, 1],
   ];
-  const hMatrixInv = inv(hMatrix);
+
+  const calibrationMatrix = computed(() => {
+    const asset = Object.values(calibrationAssetsList.value).find(
+      (item) => item.id === calibrationAssetId.value
+    );
+    return asset ? asset.homography_matrix : null;
+  });
+
+  const calibrationMatrixInv = computed(() => {
+    if (!calibrationMatrix.value) return null;
+    return inv(calibrationMatrix.value);
+  });
+
   function applyHomography(matrix, point) {
     const [x, y, w] = [
       matrix[0][0] * point.x + matrix[0][1] * point.y + matrix[0][2] * 1,
@@ -239,11 +251,13 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
   }
   const videoMarker = ref([]);
   const fieldPoints = computed(() => {
-    return videoMarker.value.map((marker) => applyHomography(hMatrix, marker));
+    if (!calibrationMatrix.value) return [];
+    return videoMarker.value.map((marker) => applyHomography(calibrationMatrix.value, marker));
   });
 
   const reprojectionPoints = computed(() => {
-    return fieldPoints.value.map((fieldPoint) => applyHomography(hMatrixInv, fieldPoint));
+    if (!calibrationMatrixInv.value) return [];
+    return fieldPoints.value.map((point) => applyHomography(calibrationMatrixInv.value, point));
   });
 
   return {
@@ -270,6 +284,9 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     saveCalibrationAsset,
     updateCalibrationAsset,
     deleteCalibrationAsset,
+    hMatrix,
+    calibrationMatrix,
+    calibrationMatrixInv,
     videoMarker,
     fieldPoints,
     reprojectionPoints,

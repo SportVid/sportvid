@@ -98,7 +98,11 @@
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePlayerStore } from "@/stores/player";
 import Parameters from "./Parameters.vue";
+
+const pluginRunStore = usePluginRunStore();
+const playerStore = usePlayerStore();
 
 const props = defineProps({
   modelValue: {
@@ -966,7 +970,7 @@ const plugins = ref([
             field: "slider",
             min: 1,
             max: 30,
-            value: 2,
+            value: playerStore.videoFPS,
             step: 1,
             name: "fps",
             text: t("modal.plugin.fps"),
@@ -981,12 +985,14 @@ const plugins = ref([
         plugin: "calibration_static_dlt",
         id: 702,
         parameters: [
-          { // TODO needs to be replaced by a dropdown list of CalibrationAssets
-            field: "text_field",
+          {
+            // TODO needs to be replaced by a dropdown list of CalibrationAssets
+            field: "select_calibration",
+            // field: "text_field",
             name: "calibration_id",
             value: "",
-            text: t("modal.plugin.calibration_id"),
-            hint: t("modal.plugin.calibration_id_hint"),
+            text: t("modal.plugin.calibration_static_dlt.calibration_id"),
+            hint: t("modal.plugin.calibration_static_dlt.calibration_id_hint"),
           },
         ],
         optional_parameters: [],
@@ -1011,8 +1017,6 @@ const selected = computed(() => {
 
   return plugin;
 });
-
-const pluginRunStore = usePluginRunStore();
 
 const runPlugin = async (plugin, parameters, optional_parameters) => {
   parameters = [...parameters, ...optional_parameters];

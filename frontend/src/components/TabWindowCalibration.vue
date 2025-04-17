@@ -79,6 +79,19 @@
         }"
         class="delete-marker-position"
       />
+
+      <div>
+        <div
+          v-for="(point, index) in calibrationAssetStore.fieldPoints"
+          v-show="calibrationAssetStore.showVideoMarker"
+          :key="index"
+          :style="{
+            top: point.y * topViewStore.topViewSize.height + topViewStore.topViewSize.top + 'px',
+            left: point.x * topViewStore.topViewSize.width + topViewStore.topViewSize.left + 'px',
+          }"
+          class="field-marker-position"
+        />
+      </div>
     </v-row>
 
     <v-row
@@ -389,5 +402,15 @@ watch(
   z-index: 5;
   border: 4px solid red;
   cursor: crosshair;
+}
+
+.field-marker-position {
+  position: fixed;
+  width: 5px;
+  height: 5px;
+  background-color: blue;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
 }
 </style>

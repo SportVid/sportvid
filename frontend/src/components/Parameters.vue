@@ -31,6 +31,19 @@
 
       <v-select
         v-model="parameter.value"
+        :items="calibration_assets"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_calibration'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+      />
+
+      <v-select
+        v-model="parameter.value"
         :items="position_data_teams"
         :label="parameter.text"
         :hint="parameter.hint"
@@ -168,10 +181,11 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useTimelineStore } from "../stores/timeline";
 import { usePluginRunResultStore } from "../stores/plugin_run_result";
 import { useBboxesStore } from "../stores/bboxes";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset"; // Import hinzufügen
 
 const props = defineProps({
   parameters: Array,
@@ -181,6 +195,7 @@ const props = defineProps({
 const timelineStore = useTimelineStore();
 const pluginRunResultStore = usePluginRunResultStore();
 const bboxesStore = useBboxesStore();
+const calibrationAssetStore = useCalibrationAssetStore();
 
 const groupTimelines = (timelines) => {
   let timelinesGroups = {};
@@ -234,6 +249,14 @@ const position_data_teams = computed(() => {
       id: team,
     })),
   ];
+});
+
+const calibration_assets = computed(() => {
+  return Object.values(calibrationAssetStore.calibrationAssetsList);
+});
+
+onMounted(() => {
+  calibrationAssetStore.loadCalibrationAssetsList();
 });
 </script>
 

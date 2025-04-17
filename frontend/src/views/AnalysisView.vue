@@ -517,6 +517,32 @@ const onAnnotateSegment = () => {
 //     });
 //   }
 // };
+
+onMounted(async () => {
+  await calibrationAssetStore.loadCalibrationAssetsList();
+  console.log("assets", calibrationAssetStore.calibrationAssetsList);
+});
+
+onMounted(() => {
+  console.log(
+    "Matrix",
+    calibrationAssetStore.calibrationAssetId,
+    calibrationAssetStore.hMatrix,
+    calibrationAssetStore.calibrationMatrix
+  );
+});
+
+watch(
+  [
+    () => calibrationAssetStore.calibrationAssetId,
+    () => calibrationAssetStore.hMatrix,
+    () => calibrationAssetStore.calibrationMatrix,
+  ],
+  ([newAssetId, newHMatrix, newCalMatrix]) => {
+    console.log("MatrixWatch", newAssetId, newHMatrix, newCalMatrix);
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>

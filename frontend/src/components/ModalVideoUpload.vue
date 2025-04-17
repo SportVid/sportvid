@@ -54,7 +54,7 @@
             <v-progress-linear
               v-if="isUploading"
               v-model="uploadingProgress"
-              class="mt-n2 ml-10 mb-4"
+              class="mt-1 ml-10 mb-n2"
               style="max-width: calc(100% - 40px)"
             />
 
