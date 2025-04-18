@@ -17,7 +17,7 @@
       />
       <div>
         <div
-          v-for="(point, index) in calibrationAssetStore.reprojectionPoints"
+          v-for="(point, index) in calibrationAssetStore.videoMarkerReprojection"
           v-show="calibrationAssetStore.showVideoMarker"
           :key="index"
           :style="{
@@ -254,62 +254,34 @@ watch(
   }
 );
 
-// watch(
-//   () => bboxesStore.setBboxData(bboxesStore.bboxPluginRun),
-//   (newBboxes) => {
-//     if (newBboxes && newBboxes.length > 0) {
-//       // const groupedData = {};
-//       // newBboxes.forEach((position) => {
-//       //   const { time } = position;
-//       //   if (!groupedData[time]) {
-//       //     groupedData[time] = [];
-//       //   }
-//       //   groupedData[time].push(position);
-//       // });
-//       // bboxesStore.bboxData = groupedData;
-//       bboxesStore.bboxData = newBboxes;
-//       // console.log(bboxesStore.bboxPluginRun);
-//       // console.log("bboxData", bboxesStore.bboxData);
-
-//       bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBboxData(
-//         newBboxes,
-//         playerStore.videoFPS,
-//         25
-//       );
-//       const groupedDataInterpolated = {};
-//       bboxesStore.bboxDataInterpolated.forEach((position) => {
-//         const { time } = position;
-//         if (!groupedDataInterpolated[time]) {
-//           groupedDataInterpolated[time] = [];
-//         }
-//         groupedDataInterpolated[time].push(position);
-//       });
-//       bboxesStore.bboxDataInterpolated = groupedDataInterpolated;
-//       // console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
-//     }
-//   }
-// );
+const groupDataByTime = (data) => {
+  const grouped = {};
+  data.forEach((position) => {
+    const { time } = position;
+    if (!grouped[time]) {
+      grouped[time] = [];
+    }
+    grouped[time].push(position);
+  });
+  return grouped;
+};
 watchEffect(() => {
   const newBboxes = bboxesStore.setBboxData(bboxesStore.bboxPluginRun);
 
   if (newBboxes && newBboxes.length > 0) {
     bboxesStore.bboxData = newBboxes;
 
-    bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBboxData(
+    const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
       newBboxes,
       playerStore.videoFPS,
-      25
+      30
     );
+    bboxesStore.bboxDataInterpolated = groupDataByTime(_bboxDataInterpolated);
 
-    const groupedDataInterpolated = {};
-    bboxesStore.bboxDataInterpolated.forEach((position) => {
-      const { time } = position;
-      if (!groupedDataInterpolated[time]) {
-        groupedDataInterpolated[time] = [];
-      }
-      groupedDataInterpolated[time].push(position);
-    });
-    bboxesStore.bboxDataInterpolated = groupedDataInterpolated;
+    if (calibrationAssetStore.calibrationMatrix) {
+      const _bboxDataTopView = bboxesStore.setbboxDataTopView(_bboxDataInterpolated);
+      bboxesStore.bboxDataTopView = groupDataByTime(_bboxDataTopView);
+    }
   }
 });
 
@@ -518,30 +490,13 @@ const onAnnotateSegment = () => {
 //   }
 // };
 
-onMounted(async () => {
-  await calibrationAssetStore.loadCalibrationAssetsList();
-  console.log("assets", calibrationAssetStore.calibrationAssetsList);
-});
-
-onMounted(() => {
-  console.log(
-    "Matrix",
-    calibrationAssetStore.calibrationAssetId,
-    calibrationAssetStore.hMatrix,
-    calibrationAssetStore.calibrationMatrix
-  );
-});
-
 watch(
-  [
-    () => calibrationAssetStore.calibrationAssetId,
-    () => calibrationAssetStore.hMatrix,
-    () => calibrationAssetStore.calibrationMatrix,
-  ],
-  ([newAssetId, newHMatrix, newCalMatrix]) => {
-    console.log("MatrixWatch", newAssetId, newHMatrix, newCalMatrix);
+  [calibrationAssetStore.marker, bboxesStore.bboxPluginRun],
+  ([newmarker, newBytetrack]) => {
+    console.log("Selected Calibration Asset:", newmarker);
+    console.log("Selected Bytetrack Plugin:", newBytetrack);
   },
-  { immediate: true }
+  { deep: true }
 );
 </script>
 

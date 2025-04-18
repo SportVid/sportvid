@@ -32,44 +32,43 @@
       />
 
       <div
+        v-for="(position, index) in bboxesStore.bboxDataTopView[currentTime]"
+        v-show="topViewStore.showItems"
+        :key="index"
+        class="data-point-position"
+        :style="{
+          top:
+            position.new_y *
+              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+            (topViewStore.topViewSize.top +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
+            'px',
+          left:
+            position.new_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+            (topViewStore.topViewSize.left +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
+            'px',
+          backgroundColor: 'red',
+        }"
+      />
+      <!-- <div
         v-for="(position, index) in bboxesStore.positionsNested[currentTime * playerStore.videoFPS]"
         v-show="topViewStore.showItems"
         :key="index"
         class="data-point-position"
         :style="{
           top:
-            (position.bbox_top + position.bbox_height) *
+            position.new_y *
               (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
             (topViewStore.topViewSize.top +
               ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
             'px',
           left:
-            (position.bbox_left + position.bbox_width / 2) *
-              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+            position.new_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
             (topViewStore.topViewSize.left +
               ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
             'px',
           backgroundColor: `${position.team}`,
-        }"
-      />
-      <!-- <div
-        v-for="(position, index) in bboxesStore.positionsFlat.filter((p) => p.time === currentTime)"
-        :key="index"
-        class="data-point-position"
-        :style="{
-          top:
-            (position.y + position.h) *
-              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-            (topViewStore.topViewSize.top +
-              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
-            'px',
-          left:
-            (position.x + position.w / 2) *
-              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-            (topViewStore.topViewSize.left +
-              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
-            'px',
-          backgroundColor: position.team,
         }"
       /> -->
 
@@ -214,7 +213,7 @@
                   {{ $t("pos_data_vis.display_settings.pos_data.upload") }}
                 </v-list-item-title>
               </v-list-item>
-              <v-list-item class="menu-item" @click="showModalBboxDataSelect = true">
+              <v-list-item class="menu-item" @click="showModalPosDataSelect = true">
                 <v-list-item-title>
                   {{ $t("pos_data_vis.display_settings.pos_data.select") }}
                 </v-list-item-title>
@@ -223,7 +222,7 @@
           </v-menu>
         </v-list>
       </v-menu>
-      <ModalBboxDataSelect v-if="showModalBboxDataSelect" v-model="showModalBboxDataSelect" />
+      <ModalPosDataSelect v-if="showModalPosDataSelect" v-model="showModalPosDataSelect" />
 
       <div class="time-code ml-2">
         {{ getTimecode(currentTime) }}
@@ -252,14 +251,14 @@ import { useBboxesStore } from "@/stores/bboxes";
 import { useVideoStore } from "@/stores/video";
 import { getTimecode } from "@/plugins/time";
 import { Delaunay } from "d3-delaunay";
-import ModalBboxDataSelect from "@/components/ModalBboxDataSelect.vue";
+import ModalPosDataSelect from "@/components/ModalPosDataSelect.vue";
 
 const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();
 const bboxesStore = useBboxesStore();
 const videoStore = useVideoStore();
 
-const showModalBboxDataSelect = ref(false);
+const showModalPosDataSelect = ref(false);
 
 const topViewElement = ref(null);
 

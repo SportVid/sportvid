@@ -1,16 +1,19 @@
-import { ref, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { defineStore } from "pinia";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
+import { useCalibrationAssetStore } from "./calibration_asset";
 
 export const useBboxesStore = defineStore("bboxes", () => {
   const playerStore = usePlayerStore();
   const pluginRunStore = usePluginRunStore();
   const pluginRunResultStore = usePluginRunResultStore();
+  const calibrationAssetStore = useCalibrationAssetStore();
 
   const bboxData = ref({});
   const bboxDataInterpolated = ref([]);
+  const bboxDataTopView = ref([]);
   const bboxDataLoaded = ref(false);
 
   const bboxPluginRun = ref(0);
@@ -99,6 +102,36 @@ export const useBboxesStore = defineStore("bboxes", () => {
     return bboxDatainterpolated;
   }
 
+  const setbboxDataTopView = (bboxData) => {
+    // return bboxData.map((bbox) => ({
+    //   ...bbox,
+    //   new_x: bbox.x + bbox.w / 2,
+    //   new_y: bbox.y + bbox.h,
+    // }));
+    return bboxData.map((bbox) => {
+      const point = {
+        x: bbox.x + bbox.w / 2,
+        y: bbox.y + bbox.h,
+      };
+      if (calibrationAssetStore.calibrationMatrix) {
+        const transformed = calibrationAssetStore.applyHomography(
+          calibrationAssetStore.calibrationMatrix,
+          point
+        );
+        return {
+          ...bbox,
+          new_x: transformed.x,
+          new_y: transformed.y,
+        };
+      }
+      return {
+        ...bbox,
+        new_x: point.x,
+        new_y: point.y,
+      };
+    });
+  };
+
   const positionsFlat = ref([]);
   const positionsNested = ref([]);
   watch(
@@ -112,11 +145,18 @@ export const useBboxesStore = defineStore("bboxes", () => {
             const ref_id = (index % 20) + 1;
             const isTeamA = ref_id <= 10;
 
+            const x = Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3);
+            const y = Math.random() * 0.8 + 0.1;
+            const w = 0.05;
+            const h = 0.1;
+
             return {
-              y: Math.random() * 0.8 + 0.1,
-              x: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3),
-              w: 0.05,
-              h: 0.1,
+              x: x,
+              y: y,
+              w: w,
+              h: h,
+              new_x: x + w / 2,
+              new_y: y + h,
               team: isTeamA ? "blue" : "red",
               image_id: image_id,
               time: image_id / playerStore.videoFPS,
@@ -130,12 +170,17 @@ export const useBboxesStore = defineStore("bboxes", () => {
           (_, frameIndex) =>
             Array.from({ length: 20 }, (_, playerIndex) => {
               const isTeamA = playerIndex < 10;
-
+              const x = Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3);
+              const y = Math.random() * 0.8 + 0.1;
+              const w = 0.05;
+              const h = 0.1;
               return {
-                bbox_top: Math.random() * 0.8 + 0.1, // x
-                bbox_left: Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3), // y
-                bbox_width: 0.05, // w
-                bbox_height: 0.1, // h
+                bbox_top: y,
+                bbox_left: x,
+                bbox_width: w,
+                bbox_height: h,
+                new_x: x + w / 2,
+                new_y: y + h,
                 team: isTeamA ? "blue" : "red",
                 image_id: frameIndex,
                 time: frameIndex / playerStore.videoFPS,
@@ -180,5 +225,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
     interpolateBboxData,
     bboxDataInterpolated,
     bboxPluginRun,
+    bboxDataTopView,
+    setbboxDataTopView,
   };
 });

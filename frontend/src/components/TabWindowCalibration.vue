@@ -82,7 +82,7 @@
 
       <div>
         <div
-          v-for="(point, index) in calibrationAssetStore.fieldPoints"
+          v-for="(point, index) in calibrationAssetStore.topViewMarkerProjection"
           v-show="calibrationAssetStore.showVideoMarker"
           :key="index"
           :style="{
@@ -338,20 +338,6 @@ watch(videoControl, (newVal) => {
     nextTick(() => updateMaxHeight());
   }
 });
-
-watch(
-  () => [
-    calibrationAssetStore.videoMarker,
-    calibrationAssetStore.fieldPoints,
-    calibrationAssetStore.reprojectionPoints,
-  ],
-  ([newVideoMarker, newFieldPoint, newReprojectionPoint]) => {
-    console.log("Video Marker:", newVideoMarker);
-    console.log("Field Point:", newFieldPoint);
-    console.log("Reprojection:", newReprojectionPoint);
-  },
-  { deep: true }
-);
 </script>
 
 <style scoped>

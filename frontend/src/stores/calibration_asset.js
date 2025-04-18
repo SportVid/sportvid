@@ -169,7 +169,6 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
       videoMarker.value = marker.value.map((m) => m.videoCoordsRel);
       topViewStore.onSportChange(calibrationAsset.template);
       calibrationAssetId.value = id;
-      console.log(calibrationAsset);
     }
   };
   const saveCalibrationAsset = async (name, template) => {
@@ -223,12 +222,6 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     }
   };
 
-  const hMatrix = [
-    [1, 0, 0],
-    [0, 1, 0],
-    [0, 0, 1],
-  ];
-
   const calibrationMatrix = computed(() => {
     const asset = Object.values(calibrationAssetsList.value).find(
       (item) => item.id === calibrationAssetId.value
@@ -250,14 +243,16 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     return { x: x / w, y: y / w };
   }
   const videoMarker = ref([]);
-  const fieldPoints = computed(() => {
+  const topViewMarkerProjection = computed(() => {
     if (!calibrationMatrix.value) return [];
     return videoMarker.value.map((marker) => applyHomography(calibrationMatrix.value, marker));
   });
 
-  const reprojectionPoints = computed(() => {
+  const videoMarkerReprojection = computed(() => {
     if (!calibrationMatrixInv.value) return [];
-    return fieldPoints.value.map((point) => applyHomography(calibrationMatrixInv.value, point));
+    return topViewMarkerProjection.value.map((point) =>
+      applyHomography(calibrationMatrixInv.value, point)
+    );
   });
 
   return {
@@ -284,11 +279,11 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     saveCalibrationAsset,
     updateCalibrationAsset,
     deleteCalibrationAsset,
-    hMatrix,
     calibrationMatrix,
     calibrationMatrixInv,
     videoMarker,
-    fieldPoints,
-    reprojectionPoints,
+    topViewMarkerProjection,
+    videoMarkerReprojection,
+    applyHomography,
   };
 });

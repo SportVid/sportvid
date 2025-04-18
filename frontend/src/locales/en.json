@@ -436,8 +436,8 @@
       "update": { "title": "Update Calibration Asset", "update": "Update" }
     },
     "position_data": {
-      "upload": "Upload Position Data",
-      "select": "Select Position Data"
+      "upload": { "title": "Upload Position Data", "upload": "Upload" },
+      "select": { "title": "Select Position Data", "select": "Select" }
     }
   },
   "user": {
