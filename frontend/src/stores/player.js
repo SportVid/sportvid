@@ -136,7 +136,8 @@ export const usePlayerStore = defineStore(
 
     const roundTimeToFPS = (time, fps) => {
       const frameDuration = 1 / fps;
-      return Math.round(time / frameDuration) * frameDuration;
+      const frame = Math.round(time / frameDuration) * frameDuration;
+      return parseFloat(frame.toFixed(3));
     };
 
     return {

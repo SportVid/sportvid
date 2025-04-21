@@ -6,7 +6,7 @@
     color="transparent"
     width="210"
   >
-    <v-dialog v-model="dialog" max-width="1000">
+    <v-dialog v-model="dialog" width="700">
       <template v-slot:activator="{ props }">
         <v-btn :disabled="!canUpload" :color="!canUpload ? 'light-grey' : 'primary'" v-bind="props">
           {{ $t("modal.video.upload.link") }}
@@ -43,7 +43,6 @@
               v-model="video.file"
               :rules="[validateFile]"
               :label="$t('modal.video.upload.input')"
-              filled
               prepend-icon="mdi-movie-filter"
               class="mt-2"
               show-size

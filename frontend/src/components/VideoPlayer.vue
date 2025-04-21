@@ -248,7 +248,7 @@ watch(
 watch(progress, (newProgress) => {
   if (videoElement.value) {
     const newTime = (playerStore.videoDuration * newProgress) / 100;
-    playerStore.setCurrentTime(newTime);
+    playerStore.setCurrentTime(playerStore.roundTimeToFPS(newTime, playerStore.videoFPS));
   }
 });
 

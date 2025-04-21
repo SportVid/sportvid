@@ -18,7 +18,7 @@
 
       <img
         ref="topViewElement"
-        class="visualizer-image"
+        class="image"
         :src="topViewStore.currentSport.pitchImage"
         @load="updateTopViewSize"
         :style="{
@@ -244,6 +244,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue"
 import { useTopViewStore } from "@/stores/top_view";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
+import { usePlayerStore } from "@/stores/player";
 import ModalCalibrationAssetMenu from "@/components/ModalCalibrationAssetMenu.vue";
 import ModalCalibrationAssetCreate from "@/components/ModalCalibrationAssetCreate.vue";
 import ModalCalibrationAssetSave from "@/components/ModalCalibrationAssetSave.vue";
@@ -253,6 +254,7 @@ import ModalCalibrationAssetUpdate from "@/components/ModalCalibrationAssetUpdat
 const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const videoStore = useVideoStore();
+const playerStore = usePlayerStore();
 
 const props = defineProps({
   showItems: {

@@ -12,8 +12,8 @@ export const useBboxesStore = defineStore("bboxes", () => {
   const calibrationAssetStore = useCalibrationAssetStore();
 
   const bboxData = ref({});
-  const bboxDataInterpolated = ref([]);
-  const bboxDataTopView = ref([]);
+  const bboxDataInterpolated = ref({});
+  const bboxDataTopView = ref({});
   const bboxDataLoaded = ref(false);
 
   const bboxPluginRun = ref(0);
@@ -103,11 +103,6 @@ export const useBboxesStore = defineStore("bboxes", () => {
   }
 
   const setbboxDataTopView = (bboxData) => {
-    // return bboxData.map((bbox) => ({
-    //   ...bbox,
-    //   new_x: bbox.x + bbox.w / 2,
-    //   new_y: bbox.y + bbox.h,
-    // }));
     return bboxData.map((bbox) => {
       const point = {
         x: bbox.x + bbox.w / 2,
