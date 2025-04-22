@@ -436,8 +436,13 @@
       "update": { "title": "Update Calibration Asset", "update": "Update" }
     },
     "position_data": {
-      "upload": "Upload Position Data",
-      "select": "Select Position Data"
+      "upload": {
+        "title": "Upload Position Data",
+        "file_name": "File Title",
+        "file_input": "Select a file",
+        "upload": "Upload"
+      },
+      "select": { "title": "Select Position Data", "select": "Select" }
     }
   },
   "user": {
@@ -512,8 +517,9 @@
   },
   "pos_data_vis": {
     "no_bbox_data": {
-      "text": "No position data has been calculated yet.<br>Please run the Bytetrack plugin or upload the position data manually.",
-      "upload": "Upload position data"
+      "text": "No position data selected.<br>Please run the Bytetrack plugin or upload the position data manually.",
+      "upload": "Upload position data",
+      "select": "Select position data"
     },
     "display_settings": {
       "title": "Display Settings",

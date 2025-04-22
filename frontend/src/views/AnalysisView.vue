@@ -17,7 +17,7 @@
       />
       <div>
         <div
-          v-for="(point, index) in calibrationAssetStore.reprojectionPoints"
+          v-for="(point, index) in calibrationAssetStore.videoMarkerReprojection"
           v-show="calibrationAssetStore.showVideoMarker"
           :key="index"
           :style="{
@@ -74,7 +74,7 @@
             <v-row class="sticky-tabs-bar" justify="center">
               <v-tabs fixed-tabs slider-color="primary" v-model="analysisTabId">
                 <v-tab v-for="analysisTab in analysisTabs" :key="analysisTab.id">
-                  <span>{{ analysisTab.name }}</span>
+                  {{ analysisTab.name }}
                 </v-tab>
               </v-tabs>
             </v-row>
@@ -177,27 +177,29 @@ const analysisTabs = ref([
 onMounted(() => {
   analysisTabId.value = analysisTabs.value.find((tab) => tab.name === "Calibration")?.id;
 });
-watch(analysisTabId, (newTabId) => {
-  topViewStore.showItems = false;
+watch(
+  () => analysisTabId,
+  (newTabId) => {
+    topViewStore.showItems = false;
 
-  const currentTab = analysisTabs.value.find((tab) => tab.id === newTabId)?.name;
+    const currentTab = analysisTabs.value.find((tab) => tab.id === newTabId)?.name;
 
-  if (currentTab === "Calibration") {
-    calibrationAssetStore.showVideoMarker = true;
-  } else {
-    calibrationAssetStore.showVideoMarker = false;
+    nextTick(() => {
+      if (currentTab === "Calibration") {
+        calibrationAssetStore.showVideoMarker = true;
+      } else {
+        calibrationAssetStore.showVideoMarker = false;
+      }
+
+      if (currentTab === "Position Data") {
+        bboxesStore.showBoundingBox = true;
+      } else {
+        bboxesStore.showBoundingBox = false;
+      }
+      topViewStore.showItems = true;
+    });
   }
-
-  if (currentTab === "Position Data") {
-    bboxesStore.showBoundingBox = true;
-  } else {
-    bboxesStore.showBoundingBox = false;
-  }
-
-  nextTick(() => {
-    topViewStore.showItems = true;
-  });
-});
+);
 
 const isLoading = ref(true);
 const fetchData = async ({ addResults = true }) => {
@@ -239,7 +241,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener("resize", setCardHeight);
 });
-watch([videoCard, topViewCard, windowHeight], setCardHeight, { flush: "post" });
+watch(() => [videoCard, topViewCard, windowHeight], setCardHeight, { flush: "post" });
 
 const previousShowVideoMarker = ref(false);
 watch(
@@ -254,62 +256,35 @@ watch(
   }
 );
 
-// watch(
-//   () => bboxesStore.setBboxData(bboxesStore.bboxPluginRun),
-//   (newBboxes) => {
-//     if (newBboxes && newBboxes.length > 0) {
-//       // const groupedData = {};
-//       // newBboxes.forEach((position) => {
-//       //   const { time } = position;
-//       //   if (!groupedData[time]) {
-//       //     groupedData[time] = [];
-//       //   }
-//       //   groupedData[time].push(position);
-//       // });
-//       // bboxesStore.bboxData = groupedData;
-//       bboxesStore.bboxData = newBboxes;
-//       // console.log(bboxesStore.bboxPluginRun);
-//       // console.log("bboxData", bboxesStore.bboxData);
-
-//       bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBboxData(
-//         newBboxes,
-//         playerStore.videoFPS,
-//         25
-//       );
-//       const groupedDataInterpolated = {};
-//       bboxesStore.bboxDataInterpolated.forEach((position) => {
-//         const { time } = position;
-//         if (!groupedDataInterpolated[time]) {
-//           groupedDataInterpolated[time] = [];
-//         }
-//         groupedDataInterpolated[time].push(position);
-//       });
-//       bboxesStore.bboxDataInterpolated = groupedDataInterpolated;
-//       // console.log("bboxDataInterpolated", bboxesStore.bboxDataInterpolated);
-//     }
-//   }
-// );
+const groupDataByTime = (data) => {
+  const grouped = {};
+  data.forEach((position) => {
+    const time = playerStore.roundTimeToFPS(position.time, playerStore.videoFPS);
+    if (!grouped[time]) {
+      grouped[time] = [];
+    }
+    grouped[time].push(position);
+  });
+  return grouped;
+};
 watchEffect(() => {
   const newBboxes = bboxesStore.setBboxData(bboxesStore.bboxPluginRun);
 
   if (newBboxes && newBboxes.length > 0) {
     bboxesStore.bboxData = newBboxes;
 
-    bboxesStore.bboxDataInterpolated = bboxesStore.interpolateBboxData(
+    const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
       newBboxes,
       playerStore.videoFPS,
-      25
+      30
     );
+    bboxesStore.bboxDataInterpolated = groupDataByTime(_bboxDataInterpolated);
 
-    const groupedDataInterpolated = {};
-    bboxesStore.bboxDataInterpolated.forEach((position) => {
-      const { time } = position;
-      if (!groupedDataInterpolated[time]) {
-        groupedDataInterpolated[time] = [];
-      }
-      groupedDataInterpolated[time].push(position);
-    });
-    bboxesStore.bboxDataInterpolated = groupedDataInterpolated;
+    if (calibrationAssetStore.calibrationMatrix) {
+      const _bboxDataTopView = bboxesStore.setbboxDataTopView(_bboxDataInterpolated);
+      bboxesStore.bboxDataTopView = groupDataByTime(_bboxDataTopView);
+      console.log("bboxDataTopView", bboxesStore.bboxDataTopView);
+    }
   }
 });
 
@@ -390,15 +365,18 @@ const fetchPlugin = async () => {
   });
 };
 const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
-watch(pluginInProgress, (newState) => {
-  if (newState) {
-    fetchPluginTimer = setInterval(() => {
-      fetchPlugin({ addResults: false });
-    }, 1000);
-  } else {
-    clearInterval(fetchPluginTimer);
+watch(
+  () => pluginInProgress,
+  (newState) => {
+    if (newState) {
+      fetchPluginTimer = setInterval(() => {
+        fetchPlugin({ addResults: false });
+      }, 1000);
+    } else {
+      clearInterval(fetchPluginTimer);
+    }
   }
-});
+);
 
 const annotationDialog = ref({ show: false });
 const onAnnotateSegment = () => {
@@ -517,6 +495,29 @@ const onAnnotateSegment = () => {
 //     });
 //   }
 // };
+
+watch(
+  () => [calibrationAssetStore.marker, bboxesStore.bboxPluginRun],
+  ([newmarker, newBytetrack]) => {
+    console.log("Selected Calibration Asset:", newmarker);
+    console.log("Selected Bytetrack Plugin:", newBytetrack);
+  },
+  { deep: true }
+);
+
+watch(
+  () => bboxesStore.bboxDataTopView,
+  (newBboxDataTopView) => {
+    console.log("Selected Bbox Data Top View:", newBboxDataTopView);
+  }
+);
+
+watch(
+  () => calibrationAssetStore.calibrationMatrix,
+  (newMatrix) => {
+    console.log("Selected Calibration Matrix:", newMatrix);
+  }
+);
 </script>
 
 <style scoped>
@@ -528,8 +529,6 @@ const onAnnotateSegment = () => {
   position: sticky;
   top: 0;
   z-index: 1;
-  background-color: white;
-  /* Adjust the background color if needed */
 }
 
 .card-title {
