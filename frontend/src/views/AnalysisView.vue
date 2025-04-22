@@ -513,9 +513,9 @@ watch(
 );
 
 watch(
-  () => playerStore.currentTime,
-  (newTime) => {
-    console.log("Time", newTime);
+  () => calibrationAssetStore.calibrationMatrix,
+  (newMatrix) => {
+    console.log("Selected Calibration Matrix:", newMatrix);
   }
 );
 </script>
