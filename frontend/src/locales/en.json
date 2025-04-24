@@ -78,7 +78,8 @@
         "link": "Rename",
         "name": "Video Title",
         "update": "Rename",
-        "close": "Close"
+        "close": "Close",
+        "success": "Video successfully renamed"
       },
       "upload": {
         "title": "Upload new Video",
@@ -86,7 +87,11 @@
         "input": "Select a video file [mp4]",
         "name": "Video Title",
         "update": "Upload",
-        "close": "Close"
+        "close": "Close",
+        "success": "Video successfully uploaded"
+      },
+      "delete": {
+        "success": "Video successfully deleted"
       }
     },
     "export": {
@@ -431,16 +436,25 @@
         "title": "Save Calibration Asset",
         "save": "Save",
         "name": "Calibration Asset Name",
-        "template": "Select Sport"
+        "template": "Select Sport",
+        "success": "Calibration Asset successfully saved"
       },
-      "update": { "title": "Update Calibration Asset", "update": "Update" }
+      "update": {
+        "title": "Update Calibration Asset",
+        "update": "Update",
+        "success": "Calibration Asset successfully updated"
+      },
+      "delete": {
+        "success": "Calibration Asset successfully deleted"
+      }
     },
     "position_data": {
       "upload": {
         "title": "Upload Position Data",
         "file_name": "File Title",
         "file_input": "Select a file",
-        "upload": "Upload"
+        "upload": "Upload",
+        "success": "Position data successfully uploaded"
       },
       "select": { "title": "Select Position Data", "select": "Select" }
     }
@@ -462,7 +476,8 @@
       }
     },
     "logout": {
-      "title": "Logout"
+      "title": "Logout",
+      "success": "Successfully logged out"
     },
     "register": {
       "title": "Register",

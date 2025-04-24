@@ -82,9 +82,9 @@
         />
 
         <div
-          v-for="(point, index) in calibrationAssetStore.topViewMarkerProjection"
+          v-for="point in calibrationAssetStore.topViewMarkerProjection"
           v-show="calibrationAssetStore.showVideoMarker"
-          :key="index"
+          :key="point"
           :style="{
             top: point.y * topViewStore.topViewSize.height + topViewStore.topViewSize.top + 'px',
             left: point.x * topViewStore.topViewSize.width + topViewStore.topViewSize.left + 'px',
@@ -100,15 +100,15 @@
       style="height: 60px"
     >
       <v-menu location="top">
-        <template v-slot:activator="{ props }">
+        <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{ topViewStore.currentSport.title }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
           <v-list-item
-            v-for="(item, index) in topViewStore.sports"
-            :key="index"
+            v-for="item in topViewStore.sports"
+            :key="item"
             class="menu-item"
             v-on:click="topViewStore.onSportChange(item.title)"
           >
@@ -120,7 +120,7 @@
       </v-menu>
 
       <v-menu location="top">
-        <template v-slot:activator="{ props }">
+        <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{ $t("calibration_asset_vis.calibration_asset.title") }}
           </v-btn>
@@ -177,21 +177,21 @@
       />
 
       <v-menu location="top">
-        <template v-slot:activator="{ props }">
+        <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{ $t("calibration_asset_vis.marker.title") }}
           </v-btn>
         </template>
-        <v-list class="py-0" density="compact">
+        <v-list class="py-0" density="compact" width="200px">
           <v-list-item class="menu-item" @click="calibrationAssetStore.toggleVideoMarker">
-            <v-list-item-title>
+            <v-list-item-title class="d-flex justify-space-between">
               {{ $t("calibration_asset_vis.marker.view_vid_marker") }}
               <v-icon
                 :class="{
                   'text-disabled': !calibrationAssetStore.showVideoMarker,
                   'text-red': calibrationAssetStore.showVideoMarker,
                 }"
-                class="ml-12 mb-1"
+                class="mb-1"
                 size="small"
               >
                 mdi-check

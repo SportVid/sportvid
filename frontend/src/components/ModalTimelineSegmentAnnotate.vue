@@ -1,9 +1,7 @@
 <template>
   <v-dialog persistent v-model="show" max-width="1000" @keydown.esc="close">
     <v-card>
-      <v-toolbar color="primary" dark>{{
-        $t("timelineSegment.title")
-      }}</v-toolbar>
+      <v-toolbar color="primary" dark>{{ $t("timelineSegment.title") }}</v-toolbar>
       <v-card-text>
         <v-form @submit="submit">
           <v-combobox
@@ -19,7 +17,7 @@
             item-text="name"
             class="mb-9"
           >
-            <template v-slot:no-data>
+            <template #no-data>
               <v-list-item>
                 <v-list-item-content>
                   <v-list-item-title>
@@ -30,24 +28,19 @@
               </v-list-item>
             </template>
 
-            <template v-slot:item="{ item }">
+            <template #item="{ item }">
               <v-chip>
                 <v-btn disable icon x-small :color="item.color" class="mr-1">
                   <v-icon>{{ "mdi-palette" }}</v-icon>
                 </v-btn>
-                <v-btn
-                  v-if="item.category"
-                  disable
-                  x-small
-                  :color="item.color"
-                  class="mr-1"
+                <v-btn v-if="item.category" disable x-small :color="item.color" class="mr-1"
                   >{{ item.category.name }}
                 </v-btn>
                 <span>{{ item.name }}</span>
               </v-chip>
             </template>
 
-            <template v-slot:selection="{ item, index }">
+            <template #selection="{ item, index }">
               <v-chip>
                 <v-menu
                   v-model="item.colorMenu"
@@ -56,15 +49,8 @@
                   nudge-left="16"
                   :close-on-content-click="false"
                 >
-                  <template v-slot:activator="{ on }">
-                    <v-btn
-                      disable
-                      icon
-                      x-small
-                      :color="item.color"
-                      class="mr-1"
-                      v-on="on"
-                    >
+                  <template #activator="{ on }">
+                    <v-btn disable icon x-small :color="item.color" class="mr-1" v-on="on">
                       <v-icon>{{ "mdi-palette" }}</v-icon>
                     </v-btn>
                   </template>
@@ -75,12 +61,8 @@
                   </v-card>
                 </v-menu>
 
-                <v-menu
-                  v-model="item.categoryMenu"
-                  top
-                  :close-on-content-click="false"
-                >
-                  <template v-slot:activator="{ on }">
+                <v-menu v-model="item.categoryMenu" top :close-on-content-click="false">
+                  <template #activator="{ on }">
                     <v-btn
                       v-if="!item.category"
                       disable
@@ -93,14 +75,7 @@
                       <v-icon>{{ "mdi-menu" }}</v-icon>
                     </v-btn>
 
-                    <v-btn
-                      v-else
-                      disable
-                      x-small
-                      :color="item.color"
-                      class="mr-2"
-                      v-on="on"
-                    >
+                    <v-btn v-else disable x-small :color="item.color" class="mr-2" v-on="on">
                       {{ item.category.name }}
                     </v-btn>
                   </template>
@@ -113,10 +88,10 @@
                         flat
                         @change="onAnnotationCategoryChange(item)"
                       >
-                        <template v-slot:item="{ item }">
+                        <template #item="{ item }">
                           {{ item.name }}
                         </template>
-                        <template v-slot:selection="{ item }">
+                        <template #selection="{ item }">
                           {{ item.name }}
                         </template>
                       </v-combobox>
@@ -196,9 +171,7 @@ export default {
     allExistingAnnotationCategories() {
       let annotationCategories = this.annotationCategoryStore.all;
 
-      console.log(
-        `annotationCategories ${JSON.stringify(annotationCategories)}`
-      );
+      console.log(`annotationCategories ${JSON.stringify(annotationCategories)}`);
       return annotationCategories;
     },
     annotationCategories: {
@@ -234,45 +207,37 @@ export default {
         console.log(timelineSegments);
         annotations = timelineSegments
           .map((s) => {
-            return this.timelineSegmentAnnotationStore
-              .forTimelineSegment(s.id)
-              .map((a) => {
-                const annotation = this.annotationStore.get(a.annotation_id);
-                let category = null;
-                if ("category_id" in annotation) {
-                  category = this.annotationCategoryStore.get(
-                    annotation.category_id
-                  );
-                }
-                return {
-                  name: annotation.name,
-                  color: annotation.color,
-                  id: annotation.id,
-                  category: category,
-                };
-              });
+            return this.timelineSegmentAnnotationStore.forTimelineSegment(s.id).map((a) => {
+              const annotation = this.annotationStore.get(a.annotation_id);
+              let category = null;
+              if ("category_id" in annotation) {
+                category = this.annotationCategoryStore.get(annotation.category_id);
+              }
+              return {
+                name: annotation.name,
+                color: annotation.color,
+                id: annotation.id,
+                category: category,
+              };
+            });
           })
           .flat();
       } else {
         annotations = this.timelineSegments
           .map((s) => {
-            return this.timelineSegmentAnnotationStore
-              .forTimelineSegment(s.id)
-              .map((a) => {
-                const annotation = this.annotationStore.get(a.annotation_id);
-                let category = null;
-                if ("category_id" in annotation) {
-                  category = this.annotationCategoryStore.get(
-                    annotation.category_id
-                  );
-                }
-                return {
-                  name: annotation.name,
-                  color: annotation.color,
-                  id: annotation.id,
-                  category: category,
-                };
-              });
+            return this.timelineSegmentAnnotationStore.forTimelineSegment(s.id).map((a) => {
+              const annotation = this.annotationStore.get(a.annotation_id);
+              let category = null;
+              if ("category_id" in annotation) {
+                category = this.annotationCategoryStore.get(annotation.category_id);
+              }
+              return {
+                name: annotation.name,
+                color: annotation.color,
+                id: annotation.id,
+                category: category,
+              };
+            });
           })
           .flat();
       }
@@ -284,9 +249,7 @@ export default {
     },
     annotations: {
       get() {
-        return this.annotationsProxy === null
-          ? this.currentAnnotations
-          : this.annotationsProxy;
+        return this.annotationsProxy === null ? this.currentAnnotations : this.annotationsProxy;
       },
       set(val) {
         console.log(`Set value ${JSON.stringify(val)}`);
@@ -345,9 +308,7 @@ export default {
             }
             let color = getRandomColor();
             // Filter existing categories and use the color of the category
-            let existingCategory = self.categories.filter(
-              (e) => e.name === category
-            );
+            let existingCategory = self.categories.filter((e) => e.name === category);
             if (existingCategory.length > 0) {
               inputs.push({
                 name: name,

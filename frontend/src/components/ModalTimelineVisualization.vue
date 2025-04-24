@@ -1,6 +1,6 @@
 <template>
   <v-dialog v-model="show" max-width="1000">
-    <template v-slot:activator="{ on }">
+    <template #activator="{ on }">
       <v-btn v-on="on" text block large>
         <v-icon left>{{ "mdi-chart-line-variant" }}</v-icon>
         {{ $t("modal.timeline.visualization.link") }}
@@ -42,16 +42,16 @@
                       }"
                     ></div>
                   </v-list-item>
-                  <v-divider
-                    :key="i"
-                    v-if="i < colormap_options.length - 1"
-                  ></v-divider>
+                  <v-divider :key="i" v-if="i < colormap_options.length - 1"></v-divider>
                 </template>
               </v-list-item-group>
             </v-list>
           </v-row>
           <v-row>
-            <v-checkbox v-model="colormap_inverse" :label="$t('modal.timeline.visualization.colormap_inverse')"></v-checkbox>
+            <v-checkbox
+              v-model="colormap_inverse"
+              :label="$t('modal.timeline.visualization.colormap_inverse')"
+            ></v-checkbox>
           </v-row>
         </v-col>
       </v-card-text>
@@ -59,9 +59,7 @@
         <v-btn class="mr-4" @click="submit" :disabled="isSubmitting">
           {{ $t("modal.timeline.visualization.update") }}
         </v-btn>
-        <v-btn @click="show = false">{{
-          $t("modal.timeline.visualization.close")
-        }}</v-btn>
+        <v-btn @click="show = false">{{ $t("modal.timeline.visualization.close") }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -94,13 +92,8 @@ export default {
     timeline_type() {
       const timeline = this.timelineStore.get(this.timeline);
 
-      if (
-        timeline.type == "PLUGIN_RESULT" &&
-        "plugin_run_result_id" in timeline
-      ) {
-        const result = this.pluginRunResultStore.get(
-          timeline.plugin_run_result_id
-        );
+      if (timeline.type == "PLUGIN_RESULT" && "plugin_run_result_id" in timeline) {
+        const result = this.pluginRunResultStore.get(timeline.plugin_run_result_id);
         if (result) {
           timeline.plugin = { data: result.data, type: result.type };
         }
@@ -132,9 +125,7 @@ export default {
     colormap: {
       get() {
         const timeline = this.timelineStore.get(this.timeline);
-        return this.colormap_proxy === null
-          ? timeline.colormap
-          : this.colormap_proxy;
+        return this.colormap_proxy === null ? timeline.colormap : this.colormap_proxy;
       },
       set(val) {
         this.colormap_proxy = val;
@@ -151,8 +142,7 @@ export default {
 
       let visualization = this.visualization;
       if (this.visualization_idx !== null) {
-        visualization =
-          this.visualization_options[this.visualization_idx].value;
+        visualization = this.visualization_options[this.visualization_idx].value;
       }
       let colormap = null;
       if (this.colormap_idx === null) {
@@ -165,7 +155,7 @@ export default {
         timelineId: this.timeline,
         visualization: visualization,
         colormap: colormap,
-        colormap_inverse: this.colormap_inverse
+        colormap_inverse: this.colormap_inverse,
       });
 
       this.isSubmitting = false;
@@ -261,6 +251,3 @@ export default {
   width: 100%;
 }
 </style>
-
-
-

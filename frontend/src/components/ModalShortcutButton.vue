@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-menu min-width="175" offset-y bottom left>
-      <template v-slot:activator="{ props }">
+      <template #activator="{ props }">
         <v-btn v-bind="props" @click="showModalShortcut = true">
           <v-icon color="primary">mdi-label-multiple-outline</v-icon>
           {{ $t("app_bar.shortcut_menu") }}

@@ -22,7 +22,7 @@
       :bench="transcriptLength"
       height="100%"
     >
-      <template v-slot:default="{ item }">
+      <template #default="{ item }">
         <TranscriptCard
           :transcript="item"
           :ref="`childContainer-${item.id}`"

@@ -1,14 +1,14 @@
 <template>
   <v-dialog v-model="dialog" max-width="1000">
     <v-card>
-      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.shortcut.title") }}
+      <v-toolbar color="primary">
+        <v-toolbar-title class="text-h6">
+          {{ $t("modal.shortcut.title") }}
+        </v-toolbar-title>
 
-        <v-spacer />
-
-        <v-btn icon @click="dialog = false" variant="plain" color="grey">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        <template #append>
+          <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
+        </template>
       </v-toolbar>
 
       <v-card-text>
@@ -28,7 +28,7 @@
           class="elevation-1"
           :search="search"
         >
-          <template v-slot:item.name="{ value }">
+          <template #item.name="{ value }">
             <v-chip class="annotation-chip">
               <v-btn disable icon x-small :color="value.color" class="mr-1">
                 <v-icon>mdi-palette</v-icon>
@@ -37,7 +37,7 @@
             </v-chip>
           </template>
 
-          <template v-slot:item.actions="{ value }">
+          <template #item.actions="{ value }">
             <v-text-field
               solo
               flat
@@ -47,7 +47,7 @@
               @click:append-outer="clear(value)"
               append-outer-icon="mdi-close"
             >
-              <template v-slot:prepend-inner>
+              <template #prepend-inner>
                 <v-chip v-for="key in value.keys" :key="key">
                   <span>{{ key }}</span>
                 </v-chip>

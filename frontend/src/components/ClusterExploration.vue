@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-dialog v-model="show" width="90%" persistent>
-      <template v-slot:activator="{ props }">
+      <template #activator="{ props }">
         <v-btn v-bind="props" text block large>
           <v-icon left>{{ "mdi-eye-outline" }}</v-icon>
           {{ $t("button.edit") }}
@@ -14,7 +14,7 @@
           total.</v-card-subtitle
         >
         <v-virtual-scroll :items="items" height="600px" item-height="170px">
-          <template v-slot:default="{ item }">
+          <template #default="{ item }">
             <v-list-item :key="item.name">
               <v-list-item-content>
                 <v-list-item-title>

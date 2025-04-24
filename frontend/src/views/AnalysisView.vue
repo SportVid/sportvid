@@ -17,9 +17,9 @@
       />
       <div>
         <div
-          v-for="(point, index) in calibrationAssetStore.videoMarkerReprojection"
+          v-for="point in calibrationAssetStore.videoMarkerReprojection"
           v-show="calibrationAssetStore.showVideoMarker"
-          :key="index"
+          :key="point"
           :style="{
             top: point.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
             left: point.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
@@ -119,12 +119,39 @@
       </v-row>
       <!-- <ModalTimelineSegmentAnnotate :show.sync="annotationDialog.show" /> -->
     </v-container>
+
+    <v-snackbar
+      v-model="showCalibrationAssetActionSnackbar"
+      location="top"
+      timeout="2000"
+      color="primary"
+      multi-line
+    >
+      <div class="d-flex justify-center">
+        <v-icon size="large" class="mt-1 mr-2">mdi-check-circle</v-icon>
+        <span class="text-h6">{{ calibrationAssetActionMessage }}</span>
+      </div>
+    </v-snackbar>
+
+    <v-snackbar
+      v-model="showPosDataUploadSnackbar"
+      location="top"
+      timeout="2000"
+      color="primary"
+      multi-line
+    >
+      <div class="d-flex justify-center">
+        <v-icon size="large" class="mt-1 mr-2">mdi-check-circle</v-icon>
+        <span class="text-h6">{{ $t("modal.position_data.upload.success") }}</span>
+      </div>
+    </v-snackbar>
   </v-main>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, watchEffect, nextTick } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
@@ -155,6 +182,7 @@ import TimelineTimeSelector from "@/components/TimelineTimeSelector.vue";
 // import ClusterTimelineItemOverview from "@/components/ClusterTimelineItemOverview.vue";
 
 const route = useRoute();
+const { t } = useI18n();
 const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
@@ -495,6 +523,52 @@ const onAnnotateSegment = () => {
 //     });
 //   }
 // };
+
+const showCalibrationAssetActionSnackbar = ref(false);
+const calibrationAssetActionMessage = ref("");
+const resetcalibrationAssetActionSnackbar = async () => {
+  showCalibrationAssetActionSnackbar.value = false;
+  await nextTick();
+  showCalibrationAssetActionSnackbar.value = true;
+};
+watch(
+  [
+    () => calibrationAssetStore.calibrationAssetSaveSuccess,
+    () => calibrationAssetStore.calibrationAssetUpdateSuccess,
+    () => calibrationAssetStore.calibrationAssetDeleteSuccess,
+  ],
+  ([save, update, del]) => {
+    if (save === true) {
+      calibrationAssetActionMessage.value = t("modal.calibration_asset.save.success");
+      resetcalibrationAssetActionSnackbar();
+      calibrationAssetStore.calibrationAssetSaveSuccess = false;
+    } else if (update === true) {
+      calibrationAssetActionMessage.value = t("modal.calibration_asset.update.success");
+      resetcalibrationAssetActionSnackbar();
+      calibrationAssetStore.calibrationAssetUpdateSuccess = false;
+    } else if (del === true) {
+      calibrationAssetActionMessage.value = t("modal.calibration_asset.delete.success");
+      resetcalibrationAssetActionSnackbar();
+      calibrationAssetStore.calibrationAssetDeleteSuccess = false;
+    }
+  }
+);
+
+const showPosDataUploadSnackbar = ref(false);
+const resetPosDataUploadSnackbar = async () => {
+  showPosDataUploadSnackbar.value = false;
+  await nextTick();
+  showPosDataUploadSnackbar.value = true;
+  bboxesStore.posDataUploadSuccess = false;
+};
+watch(
+  () => bboxesStore.posDataUploadSuccess,
+  (newValue) => {
+    if (newValue === true) {
+      resetPosDataUploadSnackbar();
+    }
+  }
+);
 
 watch(
   () => [calibrationAssetStore.marker, bboxesStore.bboxPluginRun],

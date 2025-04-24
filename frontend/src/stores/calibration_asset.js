@@ -140,8 +140,12 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
   const toggleVideoMarker = () => {
     showVideoMarker.value = !showVideoMarker.value;
   };
+
   const calibrationAssetsList = ref({});
   const calibrationAssetId = ref(null);
+  const calibrationAssetSaveSuccess = ref(false);
+  const calibrationAssetUpdateSuccess = ref(false);
+  const calibrationAssetDeleteSuccess = ref(false);
   const createCalibrationAsset = (template) => {
     marker.value = JSON.parse(JSON.stringify(markerTemplate.value));
     topViewStore.onSportChange(template);
@@ -183,6 +187,7 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     try {
       const res = await axios.post(`${config.API_LOCATION}/calibration_assets/create`, params);
       if (res.data.status === "ok") {
+        calibrationAssetSaveSuccess.value = true;
         loadCalibrationAssetsList();
       }
     } finally {
@@ -202,6 +207,7 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     try {
       const res = await axios.post(`${config.API_LOCATION}/calibration_assets/update`, params);
       if (res.data.status === "ok") {
+        calibrationAssetUpdateSuccess.value = true;
         loadCalibrationAssetsList();
       }
     } finally {
@@ -215,6 +221,7 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     try {
       const res = await axios.post(`${config.API_LOCATION}/calibration_assets/delete`, params);
       if (res.data.status === "ok") {
+        calibrationAssetDeleteSuccess.value = true;
         loadCalibrationAssetsList();
       }
     } finally {
@@ -285,5 +292,8 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
     topViewMarkerProjection,
     videoMarkerReprojection,
     applyHomography,
+    calibrationAssetSaveSuccess,
+    calibrationAssetUpdateSuccess,
+    calibrationAssetDeleteSuccess,
   };
 });

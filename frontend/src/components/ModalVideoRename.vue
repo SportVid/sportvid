@@ -1,6 +1,6 @@
 <template>
   <v-dialog v-model="dialog" width="800">
-    <template v-slot:activator="{ props }">
+    <template #activator="{ props }">
       <v-btn size="small" v-bind="props" variant="outlined">
         <v-icon class="mr-1">{{ "mdi-pencil" }}</v-icon>
         {{ $t("video_view.rename") }}
@@ -8,14 +8,14 @@
     </template>
 
     <v-card>
-      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.video.rename.title") }}
+      <v-toolbar color="primary">
+        <v-toolbar-title class="text-h6">
+          {{ $t("modal.video.rename.title") }}
+        </v-toolbar-title>
 
-        <v-spacer />
-
-        <v-btn icon @click="dialog = false" variant="plain" color="grey">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        <template #append>
+          <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
+        </template>
       </v-toolbar>
 
       <v-card-text class="pt-4 d-flex align-center">

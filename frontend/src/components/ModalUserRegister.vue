@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" max-width="350px">
+  <v-dialog v-model="dialog" width="450px">
     <v-card class="register">
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("user.register.title") }}
@@ -46,12 +46,15 @@
           clearable
         />
 
-        <p v-if="errorMessage.length > 0" class="text-uppercase font-weight-bold text-red">
+        <p
+          v-if="errorMessage.length > 0"
+          class="text-uppercase font-weight-bold text-red text-center mt-3 mb-n1"
+        >
           Error: {{ errorMessage }}
         </p>
       </v-card-text>
 
-      <v-card-actions class="px-6 mt-n4 mb-2">
+      <v-card-actions class="px-6 mt-n4">
         <v-btn
           @click="register"
           :disabled="disabled"
@@ -68,6 +71,14 @@
           {{ $t("user.register.title") }}
         </v-btn>
       </v-card-actions>
+
+      <div class="text-grey px-4 pb-4 pt-2" style="text-align: center">
+        {{ $t("user.register.text") }}
+
+        <a @click="openModalUserLogin" style="color: #1d3557; cursor: pointer">
+          {{ $t("user.login.title") }}
+        </a>
+      </div>
     </v-card>
   </v-dialog>
 </template>
@@ -83,7 +94,6 @@ const props = defineProps({
     default: false,
   },
 });
-
 const emit = defineEmits();
 
 const { t } = useI18n();
@@ -98,27 +108,30 @@ const dialog = ref(props.modelValue);
 const showPassword = ref(false);
 const errorMessage = ref("");
 
+const openModalUserLogin = () => {
+  emit("open-modal-user-login");
+};
+
 const register = async () => {
   const status = await userStore.register(user.value);
   if (status.status === "ok") {
     dialog.value = false;
-    errorMessage.value = "";
   } else {
     errorMessage.value = status.message;
   }
 };
 
 const checkLength = (value) => {
-  if (value) {
-    if (value.length < 5) {
-      return t("user.register.rules.min");
-    }
-    if (value.length > 50) {
-      return t("user.register.rules.max");
-    }
-    return true;
+  if (!value) {
+    return t("field.required");
   }
-  return t("field.required");
+  if (value.length < 5) {
+    return t("user.register.rules.min");
+  }
+  if (value.length > 50) {
+    return t("user.register.rules.max");
+  }
+  return true;
 };
 
 const disabled = computed(() => {
@@ -134,7 +147,6 @@ watch(
     emit("update:modelValue", newValue);
   }
 );
-
 watch(
   () => props.modelValue,
   (newValue) => {
@@ -144,21 +156,3 @@ watch(
   }
 );
 </script>
-
-<style scoped>
-.v-card.register .v-btn.login {
-  min-width: auto !important;
-  text-transform: capitalize;
-  display: inline-block;
-  letter-spacing: 0;
-  font-size: 1rem;
-  padding: 0 2px;
-  height: 20px;
-}
-
-.v-card.register .v-btn.login:before,
-.v-card.register .v-btn.login:hover:before,
-.v-card.register .v-btn.login:focus:before {
-  background-color: transparent;
-}
-</style>

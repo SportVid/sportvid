@@ -71,7 +71,7 @@
             </v-list-item-content>
             <v-list-item-action>
               <v-menu :disabled="!cluster.active">
-                <template v-slot:activator="{ on }">
+                <template #activator="{ on }">
                   <v-btn disable icon x-small :color="cluster.color" class="mr-1" v-on="on">
                     <v-icon>{{ "mdi-palette" }}</v-icon>
                   </v-btn>
@@ -103,7 +103,7 @@
             </v-list-item-content>
             <v-list-item-action>
               <v-menu :disabled="!timeline.active">
-                <template v-slot:activator="{ on }">
+                <template #activator="{ on }">
                   <v-btn disable icon x-small :color="timeline.color" class="mr-1" v-on="on">
                     <v-icon>{{ "mdi-palette" }}</v-icon>
                   </v-btn>

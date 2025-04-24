@@ -99,12 +99,39 @@
         </v-card>
       </v-col>
     </v-container>
+
+    <v-snackbar
+      v-model="showLogoutSnackbar"
+      location="top"
+      timeout="2000"
+      color="primary"
+      multi-line
+    >
+      <div class="d-flex justify-center">
+        <v-icon size="large" class="mt-1 mr-2">mdi-check-circle</v-icon>
+        <span class="text-h6">{{ $t("user.logout.success") }}</span>
+      </div>
+    </v-snackbar>
+
+    <v-snackbar
+      v-model="showVideoActionSnackbar"
+      location="bottom"
+      timeout="2000"
+      color="primary"
+      multi-line
+    >
+      <div class="d-flex justify-center">
+        <v-icon size="large" class="mt-1 mr-2">mdi-check-circle</v-icon>
+        <span class="text-h6">{{ videoActionMessage }}</span>
+      </div>
+    </v-snackbar>
   </v-main>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
@@ -115,6 +142,7 @@ import ModalVideoUpload from "@/components/ModalVideoUpload.vue";
 import ModalVideoRename from "@/components/ModalVideoRename.vue";
 
 const router = useRouter();
+const { t } = useI18n();
 const videoStore = useVideoStore();
 const userStore = useUserStore();
 const pluginRunStore = usePluginRunStore();
@@ -186,6 +214,42 @@ watch(
 
 const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
 const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
+
+const showLogoutSnackbar = ref(false);
+watch(
+  () => userStore.loggedIn,
+  (newValue, oldValue) => {
+    if (oldValue === true && newValue === false) {
+      showLogoutSnackbar.value = true;
+    }
+  }
+);
+
+const showVideoActionSnackbar = ref(false);
+const videoActionMessage = ref("");
+const resetVideoActionSnackbar = async () => {
+  showVideoActionSnackbar.value = false;
+  await nextTick();
+  showVideoActionSnackbar.value = true;
+};
+watch(
+  [() => videoStore.uploadSuccess, () => videoStore.renameSuccess, () => videoStore.deleteSuccess],
+  ([upload, rename, del]) => {
+    if (upload === true) {
+      videoActionMessage.value = t("modal.video.upload.success");
+      resetVideoActionSnackbar();
+      videoStore.uploadSuccess = false;
+    } else if (rename === true) {
+      videoActionMessage.value = t("modal.video.rename.success");
+      resetVideoActionSnackbar();
+      videoStore.renameSuccess = false;
+    } else if (del === true) {
+      videoActionMessage.value = t("modal.video.delete.success");
+      resetVideoActionSnackbar();
+      videoStore.deleteSuccess = false;
+    }
+  }
+);
 </script>
 
 <style scoped>

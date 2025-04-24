@@ -28,9 +28,9 @@
         }"
       /> -->
       <div
-        v-for="(position, index) in bboxesStore.bboxDataInterpolated[playerStore.currentTime]"
+        v-for="position in bboxesStore.bboxDataInterpolated[playerStore.currentTime]"
         v-show="bboxesStore.showBoundingBox"
-        :key="index"
+        :key="position.id"
         class="bounding-box-position"
         :style="{
           top: position.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
@@ -75,13 +75,13 @@
       </div>
 
       <v-menu offset-y top>
-        <template v-slot:activator="{ props }">
+        <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{ currentSpeed.title }}
           </v-btn>
         </template>
         <v-list>
-          <v-list-item v-for="(item, index) in speeds" :key="index" class="speed-item">
+          <v-list-item v-for="(item, index) in speeds" :key="item" class="speed-item">
             <v-list-item-title v-on:click="onSpeedChange(index)">
               {{ item.title }}
             </v-list-item-title>

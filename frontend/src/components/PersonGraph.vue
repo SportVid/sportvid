@@ -1,6 +1,6 @@
 <template>
   <v-dialog v-model="show" width="100%" persistent>
-    <template v-slot:activator="{}">
+    <template #activator="{}">
       <v-btn @click="openGraph" style="color: rgb(175, 20, 20)"
         >&nbsp; Show as Graph&nbsp;
         <v-icon color="primary">mdi-arrow-top-right-bold-box-outline</v-icon>

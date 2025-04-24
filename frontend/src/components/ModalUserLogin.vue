@@ -1,10 +1,14 @@
 <template>
-  <v-dialog v-model="dialog" max-width="350px">
+  <v-dialog v-model="dialog" width="450px">
     <v-card class="login">
-      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("user.login.title") }}
-        <v-spacer />
-        <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
+      <v-toolbar color="primary">
+        <v-toolbar-title class="text-h6">
+          {{ $t("user.login.title") }}
+        </v-toolbar-title>
+
+        <template #append>
+          <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
+        </template>
       </v-toolbar>
 
       <v-card-text class="mt-n2">
@@ -35,7 +39,10 @@
           clear-icon="mdi-close-circle-outline"
         />
 
-        <p v-if="errorMessage.length > 0" class="text-uppercase font-weight-bold text-red">
+        <p
+          v-if="errorMessage.length > 0"
+          class="text-uppercase font-weight-bold text-red text-center mt-3 mb-n1"
+        >
           Error: {{ errorMessage }}
         </p>
       </v-card-text>
@@ -61,11 +68,10 @@
       <div class="text-grey px-4 pb-4 pt-2" style="text-align: center">
         {{ $t("user.login.text") }}
 
-        <a @click="showModalRegister = true" style="color: #1d3557; cursor: pointer">
+        <a @click="openModalUserRegister" style="color: #1d3557; cursor: pointer">
           {{ $t("user.register.title") }}
         </a>
       </div>
-      <ModalUserRegister v-if="showModalRegister" v-model="showModalRegister" />
     </v-card>
   </v-dialog>
 </template>
@@ -73,7 +79,6 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import ModalUserRegister from "@/components/ModalUserRegister.vue";
 import { useUserStore } from "@/stores/user";
 
 const props = defineProps({
@@ -82,7 +87,6 @@ const props = defineProps({
     default: false,
   },
 });
-
 const emit = defineEmits();
 
 const { t } = useI18n();
@@ -94,30 +98,32 @@ const user = ref({
 });
 const dialog = ref(props.modelValue);
 const showPassword = ref(false);
-const showModalRegister = ref(false);
 const errorMessage = ref("");
+
+const openModalUserRegister = () => {
+  emit("open-modal-user-register");
+};
 
 const login = async () => {
   const status = await userStore.login(user.value);
   if (status.status === "ok") {
     dialog.value = false;
-    errorMessage.value = "";
   } else {
     errorMessage.value = status.message;
   }
 };
 
 const checkLength = (value) => {
-  if (value) {
-    if (value.length < 5) {
-      return t("user.login.rules.min");
-    }
-    if (value.length > 50) {
-      return t("user.login.rules.max");
-    }
-    return true;
+  if (!value) {
+    return t("field.required");
   }
-  return t("field.required");
+  if (value.length < 5) {
+    return t("user.login.rules.min");
+  }
+  if (value.length > 50) {
+    return t("user.login.rules.max");
+  }
+  return true;
 };
 
 const disabled = computed(() => {
@@ -137,7 +143,6 @@ watch(
     emit("update:modelValue", value);
   }
 );
-
 watch(
   () => props.modelValue,
   (value) => {
@@ -147,21 +152,3 @@ watch(
   }
 );
 </script>
-
-<style scoped>
-.v-card.login .v-btn.register {
-  min-width: auto !important;
-  text-transform: capitalize;
-  display: inline-block;
-  letter-spacing: 0;
-  font-size: 1rem;
-  padding: 0 2px;
-  height: 20px;
-}
-
-.v-card.login .v-btn.register:before,
-.v-card.login .v-btn.register:hover:before,
-.v-card.login .v-btn.register:focus:before {
-  background-color: transparent;
-}
-</style>

@@ -15,9 +15,9 @@
       />
 
       <div
-        v-for="(position, index) in bboxesStore.bboxDataTopView[currentTime]"
+        v-for="position in bboxesStore.bboxDataTopView[currentTime]"
         v-show="topViewStore.showItems"
-        :key="index"
+        :key="position"
         class="data-point-position"
         :style="{
           top:
@@ -48,8 +48,8 @@
 
       <svg v-if="bboxesStore.showSpaceControl" class="voronoi-overlay">
         <polygon
-          v-for="(cell, index) in voronoiCells[currentTime]"
-          :key="index"
+          v-for="cell in voronoiCells[currentTime]"
+          :key="cell"
           :points="cell.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')"
           stroke="gray"
           :fill="cell.team"
@@ -60,15 +60,15 @@
 
     <v-row ref="videoControl" class="video-control mt-6 mb-n2 justify-center">
       <v-menu location="top">
-        <template v-slot:activator="{ props }">
+        <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{ topViewStore.currentSport.title }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact">
           <v-list-item
-            v-for="(item, index) in topViewStore.sports"
-            :key="index"
+            v-for="item in topViewStore.sports"
+            :key="item"
             class="menu-item"
             v-on:click="topViewStore.onSportChange(item.title)"
           >
@@ -80,21 +80,21 @@
       </v-menu>
 
       <v-menu location="top">
-        <template v-slot:activator="{ props }">
+        <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{ $t("pos_data_vis.display_settings.title") }}
           </v-btn>
         </template>
-        <v-list class="py-0" density="compact">
+        <v-list class="py-0" density="compact" width="220px">
           <v-list-item class="menu-item" @click="bboxesStore.viewBoundingBox">
-            <v-list-item-title>
+            <v-list-item-title class="d-flex justify-space-between">
               {{ $t("pos_data_vis.display_settings.view_bounding_box") }}
               <v-icon
                 :class="{
                   'text-disabled': !bboxesStore.showBoundingBox,
                   'text-red': bboxesStore.showBoundingBox,
                 }"
-                class="ml-12 mb-1"
+                class="mb-1"
                 size="small"
               >
                 mdi-check
@@ -103,14 +103,14 @@
           </v-list-item>
 
           <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
-            <v-list-item-title>
+            <v-list-item-title class="d-flex justify-space-between">
               {{ $t("pos_data_vis.display_settings.video_sync") }}
               <v-icon
                 :class="{
                   'text-disabled': !playerStore.isSynced,
                   'text-red': playerStore.isSynced,
                 }"
-                class="ml-12 mb-1"
+                class="mb-1"
                 size="small"
               >
                 mdi-check
@@ -119,24 +119,24 @@
           </v-list-item>
 
           <v-menu location="end" open-on-hover>
-            <template v-slot:activator="{ props }">
+            <template #activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
-                <v-list-item-title>
+                <v-list-item-title class="d-flex justify-space-between">
                   {{ $t("pos_data_vis.display_settings.view_kpis.title") }}
-                  <v-icon class="ml-5 mb-1" size="small">mdi-chevron-right</v-icon>
+                  <v-icon class="mb-1" size="small">mdi-chevron-right</v-icon>
                 </v-list-item-title>
               </v-list-item>
             </template>
-            <v-list class="py-0" density="compact">
+            <v-list class="py-0" density="compact" width="180px">
               <v-list-item class="menu-item" @click="bboxesStore.viewSpaceControl">
-                <v-list-item-title>
+                <v-list-item-title class="d-flex justify-space-between">
                   {{ $t("pos_data_vis.display_settings.view_kpis.space_control") }}
                   <v-icon
                     :class="{
                       'text-disabled': !bboxesStore.showSpaceControl,
                       'text-red': bboxesStore.showSpaceControl,
                     }"
-                    class="ml-4 mb-1"
+                    class="mb-1"
                     size="small"
                   >
                     mdi-check
@@ -144,14 +144,14 @@
                 </v-list-item-title>
               </v-list-item>
               <v-list-item class="menu-item" @click="bboxesStore.viewEffectivePlayingSpace">
-                <v-list-item-title>
+                <v-list-item-title class="d-flex justify-space-between">
                   {{ $t("pos_data_vis.display_settings.view_kpis.eps") }}
                   <v-icon
                     :class="{
                       'text-disabled': !bboxesStore.showEffectivePlayingSpace,
                       'text-red': bboxesStore.showEffectivePlayingSpace,
                     }"
-                    class="ml-4 mb-1"
+                    class="mb-1"
                     size="small"
                   >
                     mdi-check
@@ -162,11 +162,11 @@
           </v-menu>
 
           <v-menu location="end" open-on-hover>
-            <template v-slot:activator="{ props }">
+            <template #activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
-                <v-list-item-title>
+                <v-list-item-title class="d-flex justify-space-between">
                   {{ $t("pos_data_vis.display_settings.pos_data.title") }}
-                  <v-icon class="ml-16 pl-10 mb-1" size="small">mdi-chevron-right</v-icon>
+                  <v-icon class="mb-1" size="small">mdi-chevron-right</v-icon>
                 </v-list-item-title>
               </v-list-item>
             </template>

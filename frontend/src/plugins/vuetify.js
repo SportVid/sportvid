@@ -1,9 +1,9 @@
-import 'vuetify/styles'
-import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
-import { VTreeview } from 'vuetify/labs/VTreeview';
-import '@mdi/font/css/materialdesignicons.css'
+import "vuetify/styles";
+import { createVuetify } from "vuetify";
+import * as components from "vuetify/components";
+import * as directives from "vuetify/directives";
+import { VTreeview } from "vuetify/labs/VTreeview";
+import "@mdi/font/css/materialdesignicons.css";
 
 export const vuetify = createVuetify({
   components: {
@@ -12,15 +12,15 @@ export const vuetify = createVuetify({
   },
   directives,
   theme: {
-    defaultTheme: 'light',
+    defaultTheme: "light",
+    options: { customProperties: true },
     themes: {
       light: {
         colors: {
-          primary: '#1D3557',
-          secondary: '#457B9D',
-          accent: '#E63946',
-        }
+          primary: "#1D3557",
+          accent: "#E63946",
+        },
       },
     },
   },
-})
+});

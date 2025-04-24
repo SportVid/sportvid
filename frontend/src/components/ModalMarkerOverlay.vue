@@ -71,7 +71,7 @@ onBeforeUnmount(() => {
 });
 </script>
 
-<style>
+<style scoped>
 .overlay-reference-marker {
   position: fixed;
   top: 64px;

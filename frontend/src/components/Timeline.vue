@@ -4,7 +4,7 @@
       <v-col cols="3" style="margin: 0px; padding: 0px; padding-right: 10px">
         <div style="margin-top: 2px; margin-bottom: 4px">
           <v-menu location="bottom">
-            <template v-slot:activator="{ props }">
+            <template #activator="{ props }">
               <v-btn v-bind="props" style="height: 40px; width: 100%">
                 <v-icon left>mdi-cog</v-icon>
                 {{ $t("modal.timeline.menu.title") }}
@@ -31,23 +31,23 @@
           :keepPlaceholder="true"
           @change="onChange"
         >
-          <template v-slot:default="{ node, stat }">
+          <template #default="{ node, stat }">
             <v-card style="height: 50px" class="my-1">
-              <v-row class="mt-3 ml-3 mr-2">
-                <v-icon
-                  v-if="stat.children.length"
-                  @click="toggleOpen(node, stat)"
-                  class="ml-n1 mr-1"
-                  color="grey darken-1"
-                >
-                  {{ stat.open ? "mdi-chevron-down" : "mdi-chevron-right" }}
-                </v-icon>
-                <span class="text-h6 mt-n1">{{ node.text }}</span>
-
-                <v-spacer></v-spacer>
+              <v-row class="mt-3 ml-3 mr-2 d-flex justify-space-between">
+                <div class="mt-n1">
+                  <v-icon
+                    v-if="stat.children.length"
+                    @click="toggleOpen(node, stat)"
+                    class="ml-n1 mr-1 mt-n1"
+                    color="grey darken-1"
+                  >
+                    {{ stat.open ? "mdi-chevron-down" : "mdi-chevron-right" }}
+                  </v-icon>
+                  <span class="text-h6">{{ node.text }}</span>
+                </div>
 
                 <v-menu location="end">
-                  <template v-slot:activator="{ props }">
+                  <template #activator="{ props }">
                     <v-btn icon variant="plain" v-bind="props" density="compact">
                       <v-icon>mdi-dots-vertical</v-icon>
                     </v-btn>
@@ -90,7 +90,7 @@
               </v-row>
             </v-card>
           </template>
-          <template v-slot:placeholder>
+          <template #placeholder>
             <div class="draggable-placeholder-inner"></div>
           </template>
         </Draggable>

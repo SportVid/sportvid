@@ -3,15 +3,22 @@
     <v-col cols="12">
       <div class="pa-4">
         <div v-for="(item, i) in current_annotations" :key="i" class="my-2">
-          <v-progress-linear :color="item.color" height="30" rounded
-            :value="((time - item.start) / (item.end - item.start)) * 100">
+          <v-progress-linear
+            :color="item.color"
+            height="30"
+            rounded
+            :value="((time - item.start) / (item.end - item.start)) * 100"
+          >
             <v-tooltip top>
-              <template v-slot:activator="{ on, attrs }">
-                <span v-bind="attrs" v-on="on" class="mx-2" style="
-                    overflow: hidden;
-                    white-space: nowrap;
-                    text-overflow: ellipsis;
-                  ">{{ item.timeline_name }} :: {{ item.name }}</span></template>
+              <template #activator="{ on, attrs }">
+                <span
+                  v-bind="attrs"
+                  v-on="on"
+                  class="mx-2"
+                  style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis"
+                  >{{ item.timeline_name }} :: {{ item.name }}</span
+                ></template
+              >
               <span>{{ item.timeline_name }} :: {{ item.name }}</span>
             </v-tooltip>
           </v-progress-linear>
@@ -22,14 +29,14 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
-import { usePlayerStore } from '../stores/player';
-import { useTimelineSegmentAnnotationStore } from '../stores/timeline_segment_annotation';
-import { useAnnotationStore } from '../stores/annotation';
-import { useTimelineSegmentStore } from '../stores/timeline_segment';
-import { useTimelineStore } from '../stores/timeline';
-import TimeMixin from '../mixins/time';
-import { mapStores } from 'pinia';
+import { ref, computed, onMounted } from "vue";
+import { usePlayerStore } from "../stores/player";
+import { useTimelineSegmentAnnotationStore } from "../stores/timeline_segment_annotation";
+import { useAnnotationStore } from "../stores/annotation";
+import { useTimelineSegmentStore } from "../stores/timeline_segment";
+import { useTimelineStore } from "../stores/timeline";
+import TimeMixin from "../mixins/time";
+import { mapStores } from "pinia";
 
 export default {
   setup() {
@@ -82,7 +89,13 @@ export default {
     return {
       time,
       current_annotations,
-      ...mapStores(usePlayerStore, useAnnotationStore, useTimelineStore, useTimelineSegmentAnnotationStore, useTimelineSegmentStore),
+      ...mapStores(
+        usePlayerStore,
+        useAnnotationStore,
+        useTimelineStore,
+        useTimelineSegmentAnnotationStore,
+        useTimelineSegmentStore
+      ),
     };
   },
   mixins: [TimeMixin],

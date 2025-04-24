@@ -1,8 +1,17 @@
 <template>
-  <v-virtual-scroll ref="parentContainer" :class="['d-flex', 'flex-column', 'pa-2']" :items="shots" item-height="140"
-    :bench="shotsLength">
-    <template v-slot:default="{ item }">
-      <ShotCard :shot="item" :ref="`childContainer-${item.id}`" @childHighlighted="scrollToHighlightedChild" />
+  <v-virtual-scroll
+    ref="parentContainer"
+    :class="['d-flex', 'flex-column', 'pa-2']"
+    :items="shots"
+    item-height="140"
+    :bench="shotsLength"
+  >
+    <template #default="{ item }">
+      <ShotCard
+        :shot="item"
+        :ref="`childContainer-${item.id}`"
+        @childHighlighted="scrollToHighlightedChild"
+      />
     </template>
   </v-virtual-scroll>
 </template>

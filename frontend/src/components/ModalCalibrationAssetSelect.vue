@@ -1,25 +1,25 @@
 <template>
   <v-dialog v-model="dialog" width="600px">
     <v-card>
-      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.calibration_asset.select.title") }}
+      <v-toolbar color="primary">
+        <v-toolbar-title class="text-h6">
+          {{ $t("modal.calibration_asset.select.title") }}
+        </v-toolbar-title>
 
-        <v-spacer></v-spacer>
-
-        <v-btn icon @click="dialog = false" variant="plain" color="grey">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        <template #append>
+          <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
+        </template>
       </v-toolbar>
 
       <v-card-text>
         <v-list density="compact" style="height: 210px; overflow-y: auto">
           <v-list-item
-            v-for="(asset, key) in calibrationAssetStore.calibrationAssetsList"
-            :key="key"
+            v-for="asset in calibrationAssetStore.calibrationAssetsList"
+            :key="asset.id"
             @click="loadCalibrationAsset(asset.id)"
             class="mr-4"
           >
-            <template v-slot:prepend>
+            <template #prepend>
               <v-btn
                 size="x-small"
                 color="red"

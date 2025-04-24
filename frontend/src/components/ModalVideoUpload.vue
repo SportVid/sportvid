@@ -7,7 +7,7 @@
     width="210"
   >
     <v-dialog v-model="dialog" width="700">
-      <template v-slot:activator="{ props }">
+      <template #activator="{ props }">
         <v-btn :disabled="!canUpload" :color="!canUpload ? 'light-grey' : 'primary'" v-bind="props">
           {{ $t("modal.video.upload.link") }}
           <v-icon class="ms-2">mdi-plus-circle</v-icon>
@@ -15,14 +15,14 @@
       </template>
 
       <v-card>
-        <v-toolbar color="primary" dark class="pl-4 pr-1 text-h6">
-          {{ $t("modal.video.upload.title") }}
+        <v-toolbar color="primary">
+          <v-toolbar-title class="text-h6">
+            {{ $t("modal.video.upload.title") }}
+          </v-toolbar-title>
 
-          <v-spacer />
-
-          <v-btn icon @click="dialog = false" variant="plain" color="grey">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
+          <template #append>
+            <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
+          </template>
         </v-toolbar>
 
         <v-card-text class="pt-4">
@@ -58,7 +58,7 @@
             />
 
             <v-checkbox v-model="checkbox" required class="ml-n2">
-              <template v-slot:label>
+              <template #label>
                 <span class="ml-2">Do you agree with the terms of services?</span>
               </template>
             </v-checkbox>

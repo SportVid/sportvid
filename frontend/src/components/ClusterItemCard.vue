@@ -3,9 +3,10 @@
     <v-row no-gutters align="center" class="px-2 py-0">
       <v-col cols="3">
         <v-list-item-content min-width>
-          <div style="font-size: 16px;">{{ cluster.name }}
+          <div style="font-size: 16px">
+            {{ cluster.name }}
             <v-dialog v-model="show" max-width="1000">
-              <template v-slot:activator="{ props }">
+              <template #activator="{ props }">
                 <v-btn v-bind="props" @click="show = true" icon size="16">
                   <v-icon>mdi-pencil</v-icon>
                 </v-btn>
@@ -19,8 +20,12 @@
                   </v-btn>
                 </v-card-title>
                 <v-card-text>
-                  <v-text-field ref="rename_input" :label="$t('modal.timeline.rename.name')" prepend-icon="mdi-pencil"
-                    v-model="renameValue"></v-text-field>
+                  <v-text-field
+                    ref="rename_input"
+                    :label="$t('modal.timeline.rename.name')"
+                    prepend-icon="mdi-pencil"
+                    v-model="renameValue"
+                  ></v-text-field>
                 </v-card-text>
                 <v-card-actions class="pt-0">
                   <v-btn class="mr-4" @click="renameCluster" :disabled="renaming || !cluster.name">
@@ -30,7 +35,6 @@
                 </v-card-actions>
               </v-card>
             </v-dialog>
-
           </div>
           <v-list-item-subtitle>{{ type_name }}s: {{ cluster.items.length }}</v-list-item-subtitle>
           <v-list-item-subtitle>First occurence: {{ firstOccurence }}</v-list-item-subtitle>
@@ -39,23 +43,42 @@
       </v-col>
 
       <v-col cols="8" style="width: 100%">
-        <div class="image-container"
-          style="width: 100%; gap: 10px; overflow-x: auto; justify-content: flex-start; display:flex; flex-direction: row;">
-          <v-img v-for="thumb in thumbnails" :key="thumb.id" :src="thumb.image_path" contain
-            style="cursor: pointer; height: 100px; max-width: 100px;" @click="goToFace(thumb.time)"></v-img>
+        <div
+          class="image-container"
+          style="
+            width: 100%;
+            gap: 10px;
+            overflow-x: auto;
+            justify-content: flex-start;
+            display: flex;
+            flex-direction: row;
+          "
+        >
+          <v-img
+            v-for="thumb in thumbnails"
+            :key="thumb.id"
+            :src="thumb.image_path"
+            contain
+            style="cursor: pointer; height: 100px; max-width: 100px"
+            @click="goToFace(thumb.time)"
+          ></v-img>
         </div>
       </v-col>
 
       <v-col align="end" cols="1">
         <v-menu v-model="showDotMenu" bottom right>
-          <template v-slot:activator="{ on, attrs }">
+          <template #activator="{ on, attrs }">
             <v-btn icon small>
               <v-icon v-bind="attrs" v-on="on">mdi-dots-vertical</v-icon>
             </v-btn>
           </template>
           <v-list>
             <v-list-item>
-              <ClusterExploration :cluster="cluster" :allClusters="allClusters" @deleteCluster="deleteCluster"></ClusterExploration>
+              <ClusterExploration
+                :cluster="cluster"
+                :allClusters="allClusters"
+                @deleteCluster="deleteCluster"
+              ></ClusterExploration>
             </v-list-item>
             <v-list-item>
               <v-btn text @click="createTimeline">
@@ -65,18 +88,19 @@
             </v-list-item>
             <v-list-item>
               <v-btn text @click="deleteCluster">
-                <v-icon left>{{ "mdi-trash-can-outline" }}</v-icon>{{ $t("button.deleteCluster") }}
+                <v-icon left>{{ "mdi-trash-can-outline" }}</v-icon
+                >{{ $t("button.deleteCluster") }}
               </v-btn>
             </v-list-item>
             <v-list-item>
               <v-dialog v-model="mergeDialog" width="500" :scrollable="false">
-                <template v-slot:activator="{ on, attrs }">
+                <template #activator="{ on, attrs }">
                   <v-btn :disabled="mergableClusters.length == 0" text v-bind="attrs" v-on="on">
                     <v-icon left>{{ "mdi-merge" }}</v-icon>
                     Merge Cluster
                   </v-btn>
                 </template>
-                <v-card style="max-height:80vh; overflow-y: auto;">
+                <v-card style="max-height: 80vh; overflow-y: auto">
                   <v-card-title class="text-h5 grey lighten-2">
                     You can merge this cluster with one of the other clusters. Select one below:
                   </v-card-title>
@@ -96,7 +120,13 @@
                   <v-card-actions>
                     <v-btn color="primary" text @click="cancelMergeClusters">Cancel</v-btn>
                     <v-spacer></v-spacer>
-                    <v-btn color="primary" text :disabled="toMergeCluster === undefined" @click="mergeClusters">Merge</v-btn>
+                    <v-btn
+                      color="primary"
+                      text
+                      :disabled="toMergeCluster === undefined"
+                      @click="mergeClusters"
+                      >Merge</v-btn
+                    >
                   </v-card-actions>
                 </v-card>
               </v-dialog>
@@ -109,14 +139,14 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import ClusterExploration from "@/components/ClusterExploration.vue";
 
 export default {
-  props: ['cluster', 'allClusters', 'type_name'],
+  props: ["cluster", "allClusters", "type_name"],
   setup(props) {
     const playerStore = usePlayerStore();
     const pluginRunStore = usePluginRunStore();
@@ -146,7 +176,7 @@ export default {
     });
 
     const mergableClusters = computed(() => {
-      return props.allClusters.filter(c => c.id !== props.cluster.id);
+      return props.allClusters.filter((c) => c.id !== props.cluster.id);
     });
 
     const thumbnails = computed(() => {
@@ -213,10 +243,9 @@ export default {
         },
       ];
 
-      pluginRunStore.submit({ plugin: "cluster_to_scalar", parameters })
-        .then(() => {
-          loading.value = false;
-        });
+      pluginRunStore.submit({ plugin: "cluster_to_scalar", parameters }).then(() => {
+        loading.value = false;
+      });
 
       showDotMenu.value = false;
     };
