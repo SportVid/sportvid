@@ -1,7 +1,7 @@
-FROM nginx:1.21.0-alpine
+FROM nginx:1.28.0-alpine
 
 RUN apk add --update npm git
-RUN npm install -g npm@8.1.3
+RUN npm install -g npm@11.3.0
 COPY ./default.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 WORKDIR /frontend
