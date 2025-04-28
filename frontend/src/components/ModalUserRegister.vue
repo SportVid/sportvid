@@ -8,43 +8,40 @@
       </v-toolbar>
 
       <v-card-text class="mt-n2">
-        <v-text-field
-          v-model="user.name"
-          :placeholder="$t('user.name')"
-          prepend-icon="mdi-account"
-          counter="50"
-          persistent-counter
-          :rules="[checkLength]"
-          variant="underlined"
-          clearable
-          clear-icon="mdi-close-circle-outline"
-        />
+        <form @keyup.enter="register">
+          <v-text-field
+            v-model="user.name"
+            :placeholder="$t('user.name')"
+            prepend-icon="mdi-account"
+            counter="50"
+            persistent-counter
+            :rules="[checkLength]"
+            variant="underlined"
+          />
 
-        <v-text-field
-          v-model="user.email"
-          :placeholder="$t('user.email')"
-          prepend-icon="mdi-email"
-          counter="50"
-          persistent-counter
-          :rules="[checkLength]"
-          variant="underlined"
-          clearable
-          clear-icon="mdi-close-circle-outline"
-        />
+          <v-text-field
+            v-model="user.email"
+            :placeholder="$t('user.email')"
+            prepend-icon="mdi-email"
+            counter="50"
+            persistent-counter
+            :rules="[checkLength]"
+            variant="underlined"
+          />
 
-        <v-text-field
-          v-model="user.password"
-          :append-inner-icon="showPassword ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
-          :placeholder="$t('user.password')"
-          prepend-icon="mdi-lock"
-          @click:append-inner="showPassword = !showPassword"
-          :type="showPassword ? 'text' : 'password'"
-          counter="50"
-          persistent-counter
-          :rules="[checkLength]"
-          variant="underlined"
-          clearable
-        />
+          <v-text-field
+            v-model="user.password"
+            :append-inner-icon="showPassword ? 'mdi-eye-outline' : 'mdi-eye-off-outline'"
+            :placeholder="$t('user.password')"
+            prepend-icon="mdi-lock"
+            @click:append-inner="showPassword = !showPassword"
+            :type="showPassword ? 'text' : 'password'"
+            counter="50"
+            persistent-counter
+            :rules="[checkLength]"
+            variant="underlined"
+          />
+        </form>
 
         <p
           v-if="errorMessage.length > 0"

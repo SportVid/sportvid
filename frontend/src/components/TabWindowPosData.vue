@@ -89,32 +89,28 @@
           <v-list-item class="menu-item" @click="bboxesStore.viewBoundingBox">
             <v-list-item-title class="d-flex justify-space-between">
               {{ $t("pos_data_vis.display_settings.view_bounding_box") }}
-              <v-icon
+              <tab-window-icon
                 :class="{
                   'text-disabled': !bboxesStore.showBoundingBox,
                   'text-red': bboxesStore.showBoundingBox,
                 }"
-                class="mb-1"
-                size="small"
               >
                 mdi-check
-              </v-icon>
+              </tab-window-icon>
             </v-list-item-title>
           </v-list-item>
 
           <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
             <v-list-item-title class="d-flex justify-space-between">
               {{ $t("pos_data_vis.display_settings.video_sync") }}
-              <v-icon
+              <tab-window-icon
                 :class="{
                   'text-disabled': !playerStore.isSynced,
                   'text-red': playerStore.isSynced,
                 }"
-                class="mb-1"
-                size="small"
               >
                 mdi-check
-              </v-icon>
+              </tab-window-icon>
             </v-list-item-title>
           </v-list-item>
 
@@ -123,7 +119,7 @@
               <v-list-item v-bind="props" class="menu-item">
                 <v-list-item-title class="d-flex justify-space-between">
                   {{ $t("pos_data_vis.display_settings.view_kpis.title") }}
-                  <v-icon class="mb-1" size="small">mdi-chevron-right</v-icon>
+                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
                 </v-list-item-title>
               </v-list-item>
             </template>
@@ -131,31 +127,27 @@
               <v-list-item class="menu-item" @click="bboxesStore.viewSpaceControl">
                 <v-list-item-title class="d-flex justify-space-between">
                   {{ $t("pos_data_vis.display_settings.view_kpis.space_control") }}
-                  <v-icon
+                  <tab-window-icon
                     :class="{
                       'text-disabled': !bboxesStore.showSpaceControl,
                       'text-red': bboxesStore.showSpaceControl,
                     }"
-                    class="mb-1"
-                    size="small"
                   >
                     mdi-check
-                  </v-icon>
+                  </tab-window-icon>
                 </v-list-item-title>
               </v-list-item>
               <v-list-item class="menu-item" @click="bboxesStore.viewEffectivePlayingSpace">
                 <v-list-item-title class="d-flex justify-space-between">
                   {{ $t("pos_data_vis.display_settings.view_kpis.eps") }}
-                  <v-icon
+                  <tab-window-icon
                     :class="{
                       'text-disabled': !bboxesStore.showEffectivePlayingSpace,
                       'text-red': bboxesStore.showEffectivePlayingSpace,
                     }"
-                    class="mb-1"
-                    size="small"
                   >
                     mdi-check
-                  </v-icon>
+                  </tab-window-icon>
                 </v-list-item-title>
               </v-list-item>
             </v-list>
@@ -166,7 +158,7 @@
               <v-list-item v-bind="props" class="menu-item">
                 <v-list-item-title class="d-flex justify-space-between">
                   {{ $t("pos_data_vis.display_settings.pos_data.title") }}
-                  <v-icon class="mb-1" size="small">mdi-chevron-right</v-icon>
+                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
                 </v-list-item-title>
               </v-list-item>
             </template>

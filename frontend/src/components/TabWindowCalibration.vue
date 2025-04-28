@@ -3,95 +3,93 @@
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
-      <div class="overlay-container">
-        <div
-          v-if="calibrationAssetStore.isAddingReferenceMarker"
-          ref="overlayMarker"
-          class="overlay-marker"
-          @click="calibrationAssetStore.setReferenceMarker"
-          :style="{
-            top: topViewStore.topViewSize.top + 'px',
-            left: topViewStore.topViewSize.left + 'px',
-            width: topViewStore.topViewSize.width + 'px',
-            height: topViewStore.topViewSize.height + 'px',
-          }"
-        />
+      <img
+        ref="topViewElement"
+        class="image"
+        :src="topViewStore.currentSport.pitchImage"
+        @load="onImageLoad"
+        :style="{
+          maxHeight: maxVideoHeight * 100 + 'vh',
+          height: videoStore.videoSize.height + 'px',
+        }"
+      />
 
-        <img
-          ref="topViewElement"
-          class="image"
-          :src="topViewStore.currentSport.pitchImage"
-          @load="updateTopViewSize"
-          :style="{
-            maxHeight: maxVideoHeight * 100 + 'vh',
-            height: videoStore.videoSize.height + 'px',
-          }"
-        />
+      <div
+        v-if="calibrationAssetStore.isAddingReferenceMarker"
+        ref="overlayMarker"
+        class="overlay-marker"
+        @click="calibrationAssetStore.setReferenceMarker"
+        :style="{
+          top: topViewStore.topViewSize.top + 'px',
+          left: topViewStore.topViewSize.left + 'px',
+          width: topViewStore.topViewSize.width + 'px',
+          height: topViewStore.topViewSize.height + 'px',
+        }"
+      />
 
-        <v-btn
-          v-for="m in filteredReferenceMarker"
-          v-show="topViewStore.showItems"
-          :key="m.id"
-          :disabled="calibrationAssetStore.isAddingReferenceMarker"
-          :color="m.active || calibrationAssetStore.hoveredVideoMarker === m.id ? 'red' : 'grey'"
-          icon="mdi-circle"
-          variant="plain"
-          density="compact"
-          @click="(event) => calibrationAssetStore.toggleReferenceMarker(event, m.id)"
-          :style="{
-            top:
-              m.compAreaCoordsRel.y *
-                (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-              (topViewStore.topViewSize.top +
-                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
-              'px',
-            left:
-              m.compAreaCoordsRel.x *
-                (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-              (topViewStore.topViewSize.left +
-                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
-              'px',
-          }"
-          class="marker-position"
-        />
+      <v-btn
+        v-for="m in filteredReferenceMarker"
+        v-show="topViewStore.showItems"
+        :key="m.id"
+        :disabled="calibrationAssetStore.isAddingReferenceMarker"
+        :color="m.active || calibrationAssetStore.hoveredVideoMarker === m.id ? 'red' : 'grey'"
+        icon="mdi-circle"
+        variant="plain"
+        density="compact"
+        @click="(event) => calibrationAssetStore.toggleReferenceMarker(event, m.id)"
+        :style="{
+          top:
+            m.compAreaCoordsRel.y *
+              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+            (topViewStore.topViewSize.top +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
+            'px',
+          left:
+            m.compAreaCoordsRel.x *
+              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+            (topViewStore.topViewSize.left +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
+            'px',
+        }"
+        class="marker-position"
+      />
 
-        <v-btn
-          v-for="m in filteredReferenceMarker"
-          v-show="showDeleteButton"
-          :key="'delete-' + m.id"
-          color="red"
-          icon="mdi-close"
-          variant="plain"
-          density="compact"
-          @click="calibrationAssetStore.deleteReferenceMarker(m.id)"
-          :style="{
-            top:
-              m.compAreaCoordsRel.y *
-                (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-              (topViewStore.topViewSize.top +
-                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
-              'px',
-            left:
-              m.compAreaCoordsRel.x *
-                (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-              (topViewStore.topViewSize.left +
-                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
-              'px',
-          }"
-          class="delete-marker-position"
-        />
+      <v-btn
+        v-for="m in filteredReferenceMarker"
+        v-show="showDeleteButton"
+        :key="'delete-' + m.id"
+        color="red"
+        icon="mdi-close"
+        variant="plain"
+        density="compact"
+        @click="calibrationAssetStore.deleteReferenceMarker(m.id)"
+        :style="{
+          top:
+            m.compAreaCoordsRel.y *
+              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+            (topViewStore.topViewSize.top +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
+            'px',
+          left:
+            m.compAreaCoordsRel.x *
+              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+            (topViewStore.topViewSize.left +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
+            'px',
+        }"
+        class="delete-marker-position"
+      />
 
-        <div
-          v-for="point in calibrationAssetStore.topViewMarkerProjection"
-          v-show="calibrationAssetStore.showVideoMarker"
-          :key="point"
-          :style="{
-            top: point.y * topViewStore.topViewSize.height + topViewStore.topViewSize.top + 'px',
-            left: point.x * topViewStore.topViewSize.width + topViewStore.topViewSize.left + 'px',
-          }"
-          class="field-marker-position"
-        />
-      </div>
+      <div
+        v-for="point in calibrationAssetStore.topViewMarkerProjection"
+        v-show="calibrationAssetStore.showVideoMarker"
+        :key="point"
+        :style="{
+          top: point.y * topViewStore.topViewSize.height + topViewStore.topViewSize.top + 'px',
+          left: point.x * topViewStore.topViewSize.width + topViewStore.topViewSize.left + 'px',
+        }"
+        class="field-marker-position"
+      />
     </v-row>
 
     <v-row
@@ -221,7 +219,6 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue"
 import { useTopViewStore } from "@/stores/top_view";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
-import { usePlayerStore } from "@/stores/player";
 import ModalCalibrationAssetMenu from "@/components/ModalCalibrationAssetMenu.vue";
 import ModalCalibrationAssetCreate from "@/components/ModalCalibrationAssetCreate.vue";
 import ModalCalibrationAssetSave from "@/components/ModalCalibrationAssetSave.vue";
@@ -231,7 +228,6 @@ import ModalCalibrationAssetUpdate from "@/components/ModalCalibrationAssetUpdat
 const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const videoStore = useVideoStore();
-const playerStore = usePlayerStore();
 
 const props = defineProps({
   showItems: {
@@ -241,6 +237,31 @@ const props = defineProps({
 });
 
 const topViewElement = ref(null);
+const updateTopViewSize = () => {
+  nextTick(() => {
+    if (topViewElement.value) {
+      const rect = topViewElement.value.getBoundingClientRect();
+      topViewStore.setTopViewSize({
+        width: rect.width,
+        height: rect.height,
+        top: rect.top,
+        left: rect.left,
+      });
+    }
+  });
+};
+onMounted(() => {
+  setTimeout(() => {
+    window.dispatchEvent(new Event("resize"));
+  }, 500);
+  updateTopViewSize();
+  window.addEventListener("resize", updateTopViewSize);
+  window.addEventListener("scroll", updateTopViewSize);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateTopViewSize);
+  window.removeEventListener("scroll", updateTopViewSize);
+});
 
 const showModalCalibrationAssetCreate = ref(false);
 const showModalCalibrationAssetSave = ref(false);
@@ -271,33 +292,6 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   window.removeEventListener("click", handleClickOverlayMarker);
-});
-
-const updateTopViewSize = () => {
-  nextTick(() => {
-    if (topViewElement.value) {
-      const rect = topViewElement.value.getBoundingClientRect();
-      topViewStore.setTopViewSize({
-        width: rect.width,
-        height: rect.height,
-        top: rect.top,
-        left: rect.left,
-      });
-    }
-  });
-};
-
-onMounted(() => {
-  setTimeout(() => {
-    window.dispatchEvent(new Event("resize"));
-  }, 500);
-  updateTopViewSize();
-  window.addEventListener("resize", updateTopViewSize);
-  window.addEventListener("scroll", updateTopViewSize);
-});
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", updateTopViewSize);
-  window.removeEventListener("scroll", updateTopViewSize);
 });
 
 const maxVideoHeight = ref(0);

@@ -3,7 +3,7 @@
     <v-menu location="bottom">
       <template #activator="{ props }">
         <v-btn v-bind="props" class="px-4 mr-1">
-          <v-icon size="x-large" color="primary" class="mr-1">mdi-account-circle</v-icon>
+          <app-bar-icon size="x-large" class="mr-1">mdi-account-circle</app-bar-icon>
           {{ loggedIn ? username : $t("app_bar.user_menu") }}
         </v-btn>
       </template>

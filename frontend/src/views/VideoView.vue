@@ -100,28 +100,16 @@
       </v-col>
     </v-container>
 
-    <v-snackbar
-      v-model="showLogoutSnackbar"
-      location="top"
-      timeout="2000"
-      color="primary"
-      multi-line
-    >
+    <v-snackbar v-model="showLogoutSnackbar">
       <div class="d-flex justify-center">
-        <v-icon size="large" class="mt-1 mr-2">mdi-check-circle</v-icon>
+        <snackbar-icon />
         <span class="text-h6">{{ $t("user.logout.success") }}</span>
       </div>
     </v-snackbar>
 
-    <v-snackbar
-      v-model="showVideoActionSnackbar"
-      location="bottom"
-      timeout="2000"
-      color="primary"
-      multi-line
-    >
+    <v-snackbar v-model="showVideoActionSnackbar" location="bottom">
       <div class="d-flex justify-center">
-        <v-icon size="large" class="mt-1 mr-2">mdi-check-circle</v-icon>
+        <snackbar-icon />
         <span class="text-h6">{{ videoActionMessage }}</span>
       </div>
     </v-snackbar>

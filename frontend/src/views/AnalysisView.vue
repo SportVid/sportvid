@@ -120,28 +120,16 @@
       <!-- <ModalTimelineSegmentAnnotate :show.sync="annotationDialog.show" /> -->
     </v-container>
 
-    <v-snackbar
-      v-model="showCalibrationAssetActionSnackbar"
-      location="top"
-      timeout="2000"
-      color="primary"
-      multi-line
-    >
+    <v-snackbar v-model="showCalibrationAssetActionSnackbar">
       <div class="d-flex justify-center">
-        <v-icon size="large" class="mt-1 mr-2">mdi-check-circle</v-icon>
+        <snackbar-icon />
         <span class="text-h6">{{ calibrationAssetActionMessage }}</span>
       </div>
     </v-snackbar>
 
-    <v-snackbar
-      v-model="showPosDataUploadSnackbar"
-      location="top"
-      timeout="2000"
-      color="primary"
-      multi-line
-    >
+    <v-snackbar v-model="showPosDataUploadSnackbar">
       <div class="d-flex justify-center">
-        <v-icon size="large" class="mt-1 mr-2">mdi-check-circle</v-icon>
+        <snackbar-icon />
         <span class="text-h6">{{ $t("modal.position_data.upload.success") }}</span>
       </div>
     </v-snackbar>

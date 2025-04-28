@@ -1,33 +1,81 @@
 <template>
-  <div>
-    <v-btn @click="showModalHistory = true">
-      <v-icon color="primary">mdi-history</v-icon>
-      <v-badge v-if="numRunningPlugins > 0" color="accent" :content="numRunningPlugins" floating>
-        {{ $t("app_bar.history_menu") }}
-      </v-badge>
-      <span v-else>
-        {{ $t("app_bar.history_menu") }}
-      </span>
-    </v-btn>
+  <v-app-bar>
+    <template #prepend>
+      <img :title="appName" src="@/assets/logo_tib_dshs.png" height="50" class="ml-1 mr-2" />
+      <v-app-bar-title class="text-h5 text-primary">
+        {{ $t("app_bar.plattform_name") }}
+      </v-app-bar-title>
+    </template>
 
+    <template #append>
+      <v-btn v-if="analysisView" to="/">
+        <app-bar-icon>mdi-movie</app-bar-icon>
+        {{ $t("app_bar.video_view") }}
+      </v-btn>
+
+      <v-btn v-if="analysisView" @click="showModalPlugin = true">
+        <app-bar-icon>mdi-plus</app-bar-icon>
+        {{ $t("app_bar.plugin_menu") }}
+      </v-btn>
+
+      <v-btn v-if="analysisView" @click="showModalHistory = true">
+        <app-bar-icon>mdi-history</app-bar-icon>
+        <v-badge v-if="numRunningPlugins > 0" color="accent" :content="numRunningPlugins" floating>
+          {{ $t("app_bar.history_menu") }}
+        </v-badge>
+        <span v-else>
+          {{ $t("app_bar.history_menu") }}
+        </span>
+      </v-btn>
+
+      <v-btn v-if="analysisView" @click="showModalShortcut = true">
+        <app-bar-icon>mdi-label-multiple-outline</app-bar-icon>
+        {{ $t("app_bar.shortcut_menu") }}
+      </v-btn>
+
+      <v-btn v-if="analysisView" @click="showModalExport = true">
+        <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
+        {{ $t("app_bar.export_menu") }}
+      </v-btn>
+
+      <v-divider vertical inset class="mx-2" />
+
+      <UserMenu />
+    </template>
+
+    <ModalPlugin v-if="showModalPlugin" v-model="showModalPlugin" :videoIds="[videoId]" />
     <ModalHistory v-if="showModalHistory" v-model="showModalHistory" :pluginRuns="pluginRuns" />
-  </div>
+    <ModalShortcut v-if="showModalShortcut" v-model="showModalShortcut" />
+    <ModalExport v-if="showModalExport" v-model="showModalExport" />
+  </v-app-bar>
 </template>
 
 <script setup>
 import { ref, computed } from "vue";
+import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import ModalHistory from "@/components/ModalHistory.vue";
+import ModalPlugin from "@/components/ModalPlugin.vue";
+import ModalShortcut from "@/components/ModalShortcut.vue";
+import ModalExport from "@/components/ModalExport.vue";
+import UserMenu from "@/components/UserMenu.vue";
 
-const pluginRunStore = usePluginRunStore();
-const playerStore = usePlayerStore();
-
+const route = useRoute();
 const { t } = useI18n();
 
-const showModalHistory = ref(false);
+const playerStore = usePlayerStore();
+const pluginRunStore = usePluginRunStore();
 
+const appName = process.env.VUE_APP_NAME;
+
+const analysisView = computed(() => route.name === "AnalysisView");
+
+const showModalPlugin = ref(false);
+const videoId = computed(() => playerStore.videoId);
+
+const showModalHistory = ref(false);
 const pluginRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
@@ -77,4 +125,8 @@ const pluginName = (type) => {
   };
   return t(typeMap[type] || type);
 };
+
+const showModalShortcut = ref(false);
+
+const showModalExport = ref(false);
 </script>
