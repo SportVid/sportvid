@@ -8,7 +8,7 @@
     </template>
 
     <template #append>
-      <v-btn v-if="analysisView" to="/">
+      <v-btn v-if="analysisView || termsOfServiceView" to="/">
         <app-bar-icon>mdi-movie</app-bar-icon>
         {{ $t("app_bar.video_view") }}
       </v-btn>
@@ -71,6 +71,7 @@ const pluginRunStore = usePluginRunStore();
 const appName = process.env.VUE_APP_NAME;
 
 const analysisView = computed(() => route.name === "AnalysisView");
+const termsOfServiceView = computed(() => route.name === "TermsOfServiceView");
 
 const showModalPlugin = ref(false);
 const videoId = computed(() => playerStore.videoId);

@@ -107,7 +107,7 @@
       </div>
     </v-snackbar>
 
-    <v-snackbar v-model="showVideoActionSnackbar" location="bottom">
+    <v-snackbar v-model="showVideoActionSnackbar">
       <div class="d-flex justify-center">
         <snackbar-icon />
         <span class="text-h6">{{ videoActionMessage }}</span>

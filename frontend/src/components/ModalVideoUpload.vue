@@ -45,21 +45,75 @@
               :label="$t('modal.video.upload.input')"
               prepend-icon="mdi-movie-filter"
               class="mt-2"
+              density="comfortable"
               show-size
               :hint="`Maximum file size: ${maxSizeInWords}`"
               persistent-hint
             />
 
+            <v-divider class="my-4 mx-16" />
+
+            <v-select
+              v-model="video.division"
+              :items="divisions"
+              :label="$t('modal.video.upload.division')"
+              density="compact"
+              variant="outlined"
+            />
+
+            <v-row dense>
+              <v-col cols="5">
+                <v-select
+                  v-model="video.currentPosition"
+                  :items="positions"
+                  :label="$t('modal.video.upload.position')"
+                  density="compact"
+                  variant="outlined"
+                />
+              </v-col>
+              <v-col cols="2" class="d-flex justify-center mt-2">
+                <span>out of</span>
+              </v-col>
+              <v-col cols="5">
+                <v-select
+                  v-model="video.totalNumberofTeams"
+                  :items="positions"
+                  :label="$t('modal.video.upload.total_teams')"
+                  density="compact"
+                  variant="outlined"
+                />
+              </v-col>
+            </v-row>
+
+            <v-select
+              v-model="video.ageGroup"
+              :items="ageGroups"
+              :label="$t('modal.video.upload.age_group')"
+              density="compact"
+              variant="outlined"
+            />
+
+            <v-divider class="mb-6 mx-16" />
+
             <v-progress-linear
               v-if="isUploading"
               v-model="uploadingProgress"
-              class="mt-1 ml-10 mb-n2"
-              style="max-width: calc(100% - 40px)"
+              class="mt-n1 ml-16"
+              style="max-width: calc(100% - 128px)"
             />
 
             <v-checkbox v-model="checkbox" required class="ml-n2">
               <template #label>
-                <span class="ml-2">Do you agree with the terms of services?</span>
+                <span class="ml-2">
+                  Do you agree with the
+                  <router-link
+                    to="/terms-of-service"
+                    target="_blank"
+                    class="text-primary terms-of-service-link"
+                  >
+                    Terms of Service</router-link
+                  >?
+                </span>
               </template>
             </v-checkbox>
 
@@ -89,8 +143,12 @@ const userStore = useUserStore();
 const videoStore = useVideoStore();
 
 const video = ref({
-  title: "",
+  title: null,
   file: null,
+  division: null,
+  currentPosition: null,
+  totalNumberofTeams: null,
+  ageGroup: null,
 });
 const analysers = ref([
   {
@@ -104,10 +162,41 @@ const checkbox = ref(false);
 const dialog = ref(false);
 const fileValid = ref(false);
 
+const divisions = ref([
+  "1. Bundesliga",
+  "2. Bundesliga",
+  "3. Liga",
+  "Regionalliga",
+  "Oberliga",
+  "Landesliga",
+  "Bezirksliga",
+  "Kreisliga",
+]);
+const positions = ref(Array.from({ length: 20 }, (_, i) => String(i + 1)));
+const ageGroups = ref([
+  "Herren",
+  "U19 Junioren",
+  "U17 Junioren",
+  "Damen",
+  "U19 Juniorinnen",
+  "U17 Juniorinnen",
+]);
+
 const canUpload = computed(() => userStore.allowance > videoStore.all.length);
-const disabled = computed(
-  () => !checkbox.value || !fileValid.value || uploadingProgress.value !== 0
-);
+const disabled = computed(() => {
+  const v = video.value;
+  return (
+    !checkbox.value ||
+    !fileValid.value ||
+    uploadingProgress.value !== 0 ||
+    !v.title ||
+    !v.file ||
+    !v.division ||
+    !v.currentPosition ||
+    !v.totalNumberofTeams ||
+    !v.ageGroup
+  );
+});
 const isUploading = computed(() => videoUploadStore.isUploading);
 const uploadingProgress = computed(() => videoUploadStore.progress);
 const allowance = computed(() => userStore.allowance);
@@ -159,3 +248,14 @@ const uploadVideo = async () => {
   fileValid.value = false;
 };
 </script>
+
+<style scoped>
+.terms-of-service-link {
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.terms-of-service-link:hover {
+  text-decoration: underline;
+}
+</style>

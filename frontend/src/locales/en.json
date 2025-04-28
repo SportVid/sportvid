@@ -88,7 +88,11 @@
         "name": "Video Title",
         "update": "Upload",
         "close": "Close",
-        "success": "Video successfully uploaded"
+        "success": "Video successfully uploaded",
+        "division": "Select division",
+        "position": "Select current position",
+        "age_group": "Select age group",
+        "total_teams": "Select total number of teams"
       },
       "delete": {
         "success": "Video successfully deleted"
@@ -551,5 +555,9 @@
         "select": "Select position data"
       }
     }
+  },
+  "terms_of_service": {
+    "title": "Terms of Service",
+    "text": "By using SportVid, you agree to the following terms and conditions: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Einverständnis für Nutzung der hochgeladenen und eingegeben Videos und Daten für wissenschaftliche Zwecke.</li><li>Einverständnis für Suche nach Videos durch andere Nutzer.</li><li>...</li></ol>"
   }
 }

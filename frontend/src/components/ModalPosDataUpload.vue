@@ -43,7 +43,16 @@
 
           <v-checkbox v-model="checkbox" required class="ml-n2">
             <template #label>
-              <span class="ml-2">Do you agree with the terms of services?</span>
+              <span class="ml-2">
+                Do you agree with the
+                <router-link
+                  to="/terms-of-service"
+                  target="_blank"
+                  class="text-primary terms-of-service-link"
+                >
+                  Terms of Service</router-link
+                >?
+              </span>
             </template>
           </v-checkbox>
 
@@ -117,3 +126,14 @@ watch(
   }
 );
 </script>
+
+<style scoped>
+.terms-of-service-link {
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.terms-of-service-link:hover {
+  text-decoration: underline;
+}
+</style>

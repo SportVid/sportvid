@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import VideoView from "@/views/VideoView.vue";
 import AnalysisView from "@/views/AnalysisView.vue";
+import TermsOfServiceView from "@/views/TermsOfServiceView.vue";
 
 const routes = [
   {
@@ -12,6 +13,11 @@ const routes = [
     path: "/video-analysis/:id",
     name: "AnalysisView",
     component: AnalysisView,
+  },
+  {
+    path: "/terms-of-service",
+    name: "TermsOfServiceView",
+    component: TermsOfServiceView,
   },
 ];
 
