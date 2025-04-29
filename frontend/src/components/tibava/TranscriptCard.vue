@@ -18,7 +18,7 @@
 </template>
 
 <script>
-import TimeMixin from "../mixins/time";
+import TimeMixin from "../../mixins/time";
 
 import { mapStores } from "pinia";
 import { usePlayerStore } from "@/stores/player";

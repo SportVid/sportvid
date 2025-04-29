@@ -30,7 +30,7 @@
 </template>
 
 <script>
-import TimeMixin from "../mixins/time";
+import TimeMixin from "../../mixins/time";
 import * as d3 from "d3";
 import cloud from "d3-cloud";
 import { mapStores } from "pinia";

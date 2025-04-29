@@ -229,13 +229,13 @@ import { useAnnotationCategoryStore } from "@/stores/annotation_category";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
-import ModalTimelineRename from "@/components/ModalTimelineRename.vue";
-import ModalTimelineCopy from "@/components/ModalTimelineCopy.vue";
-import ModalTimelineDelete from "@/components/ModalTimelineDelete.vue";
-import ModalTimelineExport from "@/components/ModalTimelineExport.vue";
-import ModalTimelineCreate from "@/components/ModalTimelineCreate.vue";
+import ModalTimelineRename from "@/components/timeline/ModalTimelineRename.vue";
+import ModalTimelineCopy from "@/components/timeline/ModalTimelineCopy.vue";
+import ModalTimelineDelete from "@/components/timeline/ModalTimelineDelete.vue";
+import ModalTimelineExport from "@/components/timeline/ModalTimelineExport.vue";
+import ModalTimelineCreate from "@/components/timeline/ModalTimelineCreate.vue";
 // import ModalTimelineVisualization from "@/components/ModalTimelineVisualization.vue";
-import ModalTimelineImport from "@/components/ModalTimelineImport.vue";
+import ModalTimelineImport from "@/components/timeline/ModalTimelineImport.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
 import {
   AnnotationTimeline,
@@ -246,7 +246,7 @@ import {
   TimeBar,
   HistTimeline,
   // generateFont,
-} from "../plugins/draw";
+} from "../../plugins/draw";
 
 const timelineStore = useTimelineStore();
 const timelineSegmentStore = useTimelineSegmentStore();

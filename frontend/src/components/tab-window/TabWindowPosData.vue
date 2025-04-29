@@ -207,9 +207,9 @@ import { useBboxesStore } from "@/stores/bboxes";
 import { useVideoStore } from "@/stores/video";
 import { getTimecode } from "@/plugins/time";
 import { Delaunay } from "d3-delaunay";
-import ModalPosDataMenu from "@/components/ModalPosDataMenu.vue";
-import ModalPosDataSelect from "@/components/ModalPosDataSelect.vue";
-import ModalPosDataUpload from "@/components/ModalPosDataUpload.vue";
+import ModalPosDataMenu from "@/components/pos-data/ModalPosDataMenu.vue";
+import ModalPosDataSelect from "@/components/pos-data/ModalPosDataSelect.vue";
+import ModalPosDataUpload from "@/components/pos-data/ModalPosDataUpload.vue";
 
 const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();

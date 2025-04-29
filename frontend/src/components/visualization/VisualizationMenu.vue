@@ -25,12 +25,23 @@
             </span>
           </v-tab>
           <v-tab-item>
-            <VisualizationGraph v-if="!collapsed" showLegend="true" plotType="scatter" style="height: 400px; width: calc(100vw - 120px);"></VisualizationGraph>
+            <VisualizationGraph
+              v-if="!collapsed"
+              showLegend="true"
+              plotType="scatter"
+              style="height: 400px; width: calc(100vw - 120px)"
+            ></VisualizationGraph>
           </v-tab-item>
           <v-tab-item>
-            <VisualizationGraph v-if="!collapsed" showLegend="true" plotType="line" style="height: 400px; width: calc(100vw - 120px);"></VisualizationGraph>
+            <VisualizationGraph
+              v-if="!collapsed"
+              showLegend="true"
+              plotType="line"
+              style="height: 400px; width: calc(100vw - 120px)"
+            ></VisualizationGraph>
           </v-tab-item>
-          <v-tab-item>
+          <v-tab-item
+            >./VisualisationCons./VisualizationGraph.vue
             <VisualisationConstellationGraph v-if="!collapsed"></VisualisationConstellationGraph>
           </v-tab-item>
         </v-tabs>
@@ -40,20 +51,20 @@
 </template>
 
 <script>
-import VisualisationConstellationGraph from "./VisualisationConstellationGraph.vue";
-import VisualizationGraph from "./VisualizationGraph.vue";
+import VisualisationConstellationGraph from "../VisualisationConstellationGraph.vue";
+import VisualizationGraph from "./visualization/VisualizationGraph.vuee";
 
 export default {
   data() {
     return {
-      collapsed: true
+      collapsed: true,
     };
   },
   methods: {
     change() {
       this.collapsed = !this.collapsed;
-    }
+    },
   },
-  components: { VisualizationGraph, VisualisationConstellationGraph }
+  components: { VisualizationGraph, VisualisationConstellationGraph },
 };
 </script>

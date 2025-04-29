@@ -182,10 +182,10 @@
 import { mapStores } from "pinia";
 import { useTimelineStore } from "@/stores/timeline";
 import { useShotStore } from "@/stores/shot";
-import { useClusterTimelineItemStore } from "../stores/cluster_timeline_item";
+import { useClusterTimelineItemStore } from "../../stores/cluster_timeline_item";
 import { Network } from "vis-network";
 import { DataSet } from "vis-data";
-import VisualizationGraph from "./VisualizationGraph.vue";
+import VisualizationGraph from "./visualization/VisualizationGraph.vue";
 import Vue from "vue";
 
 export default {

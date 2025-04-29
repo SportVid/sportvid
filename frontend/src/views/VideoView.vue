@@ -126,8 +126,8 @@ import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTimelineStore } from "@/stores/timeline";
 import { getDisplayTime } from "@/plugins/time";
 import ModalPlugin from "@/components/ModalPlugin.vue";
-import ModalVideoUpload from "@/components/ModalVideoUpload.vue";
-import ModalVideoRename from "@/components/ModalVideoRename.vue";
+import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
+import ModalVideoRename from "@/components/video/ModalVideoRename.vue";
 
 const router = useRouter();
 const { t } = useI18n();

@@ -219,11 +219,11 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue"
 import { useTopViewStore } from "@/stores/top_view";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
-import ModalCalibrationAssetMenu from "@/components/ModalCalibrationAssetMenu.vue";
-import ModalCalibrationAssetCreate from "@/components/ModalCalibrationAssetCreate.vue";
-import ModalCalibrationAssetSave from "@/components/ModalCalibrationAssetSave.vue";
-import ModalCalibrationAssetSelect from "@/components/ModalCalibrationAssetSelect.vue";
-import ModalCalibrationAssetUpdate from "@/components/ModalCalibrationAssetUpdate.vue";
+import ModalCalibrationAssetMenu from "@/components/calibration-asset/ModalCalibrationAssetMenu.vue";
+import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
+import ModalCalibrationAssetSave from "@/components/calibration-asset/ModalCalibrationAssetSave.vue";
+import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
+import ModalCalibrationAssetUpdate from "@/components/calibration-asset/ModalCalibrationAssetUpdate.vue";
 
 const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();

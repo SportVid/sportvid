@@ -133,9 +133,9 @@ import { mapStores } from "pinia";
 
 import { useTimelineStore } from "@/stores/timeline";
 import { useTimelineSegmentStore } from "@/stores/timeline_segment";
-import { useAnnotationCategoryStore } from "../stores/annotation_category";
-import { useAnnotationStore } from "../stores/annotation";
-import { useTimelineSegmentAnnotationStore } from "../stores/timeline_segment_annotation";
+import { useAnnotationCategoryStore } from "../../stores/annotation_category";
+import { useAnnotationStore } from "../../stores/annotation";
+import { useTimelineSegmentAnnotationStore } from "../../stores/timeline_segment_annotation";
 
 function uniqueIdArray(l) {
   let keys = {};

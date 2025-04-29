@@ -36,9 +36,9 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useUserStore } from "@/stores/user";
-import ModalUserLogin from "@/components/ModalUserLogin.vue";
-import ModalUserRegister from "@/components/ModalUserRegister.vue";
-import ModalUserAccount from "@/components/ModalUserAccount.vue";
+import ModalUserLogin from "@/components/user/ModalUserLogin.vue";
+import ModalUserRegister from "@/components/user/ModalUserRegister.vue";
+import ModalUserAccount from "@/components/user/ModalUserAccount.vue";
 
 const userStore = useUserStore();
 

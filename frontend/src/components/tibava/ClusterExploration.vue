@@ -124,8 +124,8 @@
 
 <script>
 import { ref, computed, watch, onMounted } from "vue";
-import { useClusterTimelineItemStore } from "../stores/cluster_timeline_item";
-import { useShotStore } from "../stores/shot";
+import { useClusterTimelineItemStore } from "../../stores/cluster_timeline_item";
+import { useShotStore } from "../../stores/shot";
 
 export default {
   props: ["cluster", "allClusters"],

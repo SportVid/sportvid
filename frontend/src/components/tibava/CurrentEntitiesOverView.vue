@@ -30,12 +30,12 @@
 
 <script>
 import { ref, computed, onMounted } from "vue";
-import { usePlayerStore } from "../stores/player";
-import { useTimelineSegmentAnnotationStore } from "../stores/timeline_segment_annotation";
-import { useAnnotationStore } from "../stores/annotation";
-import { useTimelineSegmentStore } from "../stores/timeline_segment";
-import { useTimelineStore } from "../stores/timeline";
-import TimeMixin from "../mixins/time";
+import { usePlayerStore } from "../../stores/player";
+import { useTimelineSegmentAnnotationStore } from "../../stores/timeline_segment_annotation";
+import { useAnnotationStore } from "../../stores/annotation";
+import { useTimelineSegmentStore } from "../../stores/timeline_segment";
+import { useTimelineStore } from "../../stores/timeline";
+import TimeMixin from "../../mixins/time";
 import { mapStores } from "pinia";
 
 export default {

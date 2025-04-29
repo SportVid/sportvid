@@ -5,7 +5,7 @@ import { VIcon } from "vuetify/components";
 import * as directives from "vuetify/directives";
 import { VTreeview } from "vuetify/labs/VTreeview";
 import "@mdi/font/css/materialdesignicons.css";
-import AppBar from "@/components/AppBar.vue";
+import AppBar from "@/components/app/AppBar.vue";
 
 export const vuetify = createVuetify({
   components: {

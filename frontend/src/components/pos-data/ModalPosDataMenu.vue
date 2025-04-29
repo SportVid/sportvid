@@ -30,8 +30,8 @@
 
 <script setup>
 import { ref } from "vue";
-import ModalPosDataUpload from "@/components/ModalPosDataUpload.vue";
-import ModalPosDataSelect from "@/components/ModalPosDataSelect.vue";
+import ModalPosDataUpload from "@/components/pos-data/ModalPosDataUpload.vue";
+import ModalPosDataSelect from "@/components/pos-data/ModalPosDataSelect.vue";
 
 const showModalPosDataUpload = ref(false);
 const showModalPosDataSelect = ref(false);

@@ -60,7 +60,7 @@ import ModalHistory from "@/components/ModalHistory.vue";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalShortcut from "@/components/ModalShortcut.vue";
 import ModalExport from "@/components/ModalExport.vue";
-import UserMenu from "@/components/UserMenu.vue";
+import UserMenu from "@/components/user/UserMenu.vue";
 
 const route = useRoute();
 const { t } = useI18n();
