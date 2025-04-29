@@ -7,7 +7,7 @@
             <template #activator="{ props }">
               <v-btn v-bind="props" style="height: 40px; width: 100%">
                 <v-icon left>mdi-cog</v-icon>
-                {{ $t("modal.timeline.menu.title") }}
+                {{ $t("modal.timeline.options") }}
               </v-btn>
             </template>
             <v-list class="py-0" density="compact" width="200">
@@ -53,14 +53,14 @@
                     </v-btn>
                   </template>
                   <v-list class="py-0" density="compact">
-                    <v-list-item class="menu-item" @click="openCopyModal(node.id)">
+                    <v-list-item class="menu-item" @click="openDuplicateModal(node.id)">
                       <v-icon>{{ "mdi-content-copy" }}</v-icon>
-                      {{ $t("modal.timeline.duplicate.button") }}
+                      {{ $t("button.duplicate") }}
                     </v-list-item>
 
                     <v-list-item class="menu-item" @click="openRenameModal(node.id)">
                       <v-icon>{{ "mdi-pencil" }}</v-icon>
-                      {{ $t("modal.timeline.rename.button") }}
+                      {{ $t("button.rename") }}
                     </v-list-item>
 
                     <v-list-item
@@ -69,7 +69,7 @@
                       @click="openVisualizationModal(node.id)"
                     >
                       <v-icon>{{ "mdi-chart-line-variant" }}</v-icon>
-                      {{ $t("modal.timeline.visualization.button") }}
+                      {{ $t("button.visualize") }}
                     </v-list-item>
 
                     <v-list-item
@@ -78,12 +78,12 @@
                       @click="openExportResultModal(node.id)"
                     >
                       <v-icon>{{ "mdi-swap-vertical" }}</v-icon>
-                      {{ $t("modal.timeline.export_result.button") }}
+                      {{ $t("button.export") }}
                     </v-list-item>
 
                     <v-list-item class="menu-item" @click="openDeleteModal(node.id)">
                       <v-icon>{{ "mdi-trash-can-outline" }}</v-icon>
-                      {{ $t("modal.timeline.delete.button") }}
+                      {{ $t("button.delete") }}
                     </v-list-item>
                   </v-list>
                 </v-menu>
@@ -94,9 +94,9 @@
             <div class="draggable-placeholder-inner"></div>
           </template>
         </Draggable>
-        <ModalTimelineCopy
-          v-if="showModalTimelineCopy"
-          v-model="showModalTimelineCopy"
+        <ModalTimelineDuplicate
+          v-if="showModalTimelineDuplicate"
+          v-model="showModalTimelineDuplicate"
           :timeline="selectedTimelineId"
         />
         <ModalTimelineRename
@@ -230,7 +230,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import ModalTimelineRename from "@/components/timeline/ModalTimelineRename.vue";
-import ModalTimelineCopy from "@/components/timeline/ModalTimelineCopy.vue";
+import ModalTimelineDuplicate from "@/components/timeline/ModalTimelineDuplicate.vue";
 import ModalTimelineDelete from "@/components/timeline/ModalTimelineDelete.vue";
 import ModalTimelineExport from "@/components/timeline/ModalTimelineExport.vue";
 import ModalTimelineCreate from "@/components/timeline/ModalTimelineCreate.vue";
@@ -388,10 +388,10 @@ watch(timelines, (values) => {
 });
 
 const selectedTimelineId = ref(null);
-const showModalTimelineCopy = ref(false);
-const openCopyModal = (id) => {
+const showModalTimelineDuplicate = ref(false);
+const openDuplicateModal = (id) => {
   selectedTimelineId.value = id;
-  showModalTimelineCopy.value = true;
+  showModalTimelineDuplicate.value = true;
 };
 const showModalTimelineCreate = ref(false);
 const showModalTimelineImport = ref(false);

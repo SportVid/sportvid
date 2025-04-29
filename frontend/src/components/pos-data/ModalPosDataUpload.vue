@@ -18,7 +18,7 @@
             :counter="120"
             persistent-counter
             variant="underlined"
-            :label="$t('modal.position_data.upload.file_name')"
+            :label="$t('modal.position_data.upload.name')"
             required
             clearable
             clear-icon="mdi-close-circle-outline"
@@ -27,7 +27,7 @@
 
           <v-file-input
             v-model="posData.file"
-            :label="$t('modal.position_data.upload.file_input')"
+            :label="$t('modal.position_data.upload.file')"
             prepend-icon="mdi-file-upload"
             class="mt-2"
             show-size
@@ -57,7 +57,7 @@
           </v-checkbox>
 
           <v-btn class="mr-4 mt-n4" :disabled="disabled" @click="uploadPosData">
-            {{ $t("modal.position_data.upload.upload") }}
+            {{ $t("button.upload") }}
           </v-btn>
         </v-form>
       </v-card-text>

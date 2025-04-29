@@ -10,16 +10,16 @@
           line-height: 1.5;
           height: 30vh;
         "
-        v-html="$t('pos_data_vis.no_bbox_data.text')"
+        v-html="$t('pos_data.not_selected')"
       />
       <v-row style="justify-content: center">
         <v-btn @click="showModalPosDataUpload = true">{{
-          $t("pos_data_vis.no_bbox_data.upload")
+          $t("pos_data.display_settings.pos_data.upload")
         }}</v-btn>
       </v-row>
       <v-row style="justify-content: center" class="mt-8">
         <v-btn @click="showModalPosDataSelect = true">{{
-          $t("pos_data_vis.no_bbox_data.select")
+          $t("pos_data.display_settings.pos_data.select")
         }}</v-btn>
         <ModalPosDataSelect v-if="showModalPosDataSelect" v-model="showModalPosDataSelect" />
         <ModalPosDataUpload v-if="showModalPosDataUpload" v-model="showModalPosDataUpload" />

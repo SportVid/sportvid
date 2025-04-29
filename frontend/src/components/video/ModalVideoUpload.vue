@@ -9,7 +9,7 @@
     <v-dialog v-model="dialog" width="700">
       <template #activator="{ props }">
         <v-btn :disabled="!canUpload" :color="!canUpload ? 'light-grey' : 'primary'" v-bind="props">
-          {{ $t("modal.video.upload.link") }}
+          {{ $t("button.upload_video") }}
           <v-icon class="ms-2">mdi-plus-circle</v-icon>
         </v-btn>
       </template>
@@ -32,7 +32,7 @@
               :counter="120"
               persistent-counter
               variant="underlined"
-              :label="$t('modal.video.upload.name')"
+              :label="$t('modal.video.upload.video_title')"
               required
               clearable
               clear-icon="mdi-close-circle-outline"
@@ -42,7 +42,7 @@
             <v-file-input
               v-model="video.file"
               :rules="[validateFile]"
-              :label="$t('modal.video.upload.input')"
+              :label="$t('modal.video.upload.file')"
               prepend-icon="mdi-movie-filter"
               class="mt-2"
               density="comfortable"
@@ -118,7 +118,7 @@
             </v-checkbox>
 
             <v-btn class="mr-4 mt-n4" :disabled="disabled" @click="uploadVideo">
-              {{ $t("modal.video.upload.update") }}
+              {{ $t("button.upload") }}
             </v-btn>
           </v-form>
         </v-card-text>
@@ -128,7 +128,9 @@
       You have uploaded the maximum amount of videos that you are allowed to. If you require more,
       please contact abc@xyz.de.
     </span>
-    <span v-if="canUpload"> Videos uploaded: {{ numVideos }} out of {{ allowance }} </span>
+    <span v-if="canUpload">
+      {{ $t("modal.video.upload.videos_uploaded", { numVideos: numVideos, allowance: allowance }) }}
+    </span>
   </v-card>
 </template>
 

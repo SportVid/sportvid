@@ -10,16 +10,16 @@
           line-height: 1.5;
           height: 25vh;
         "
-        v-html="$t('calibration_asset_vis.no_calibration_asset.text')"
+        v-html="$t('calibration_asset.not_selected')"
       />
       <v-row style="justify-content: center">
         <v-btn @click="showModalCalibrationAssetCreate = true">{{
-          $t("calibration_asset_vis.no_calibration_asset.create")
+          $t("calibration_asset.create")
         }}</v-btn>
       </v-row>
       <v-row style="justify-content: center" class="mt-8">
         <v-btn @click="showModalCalibrationAssetSelect = true">{{
-          $t("calibration_asset_vis.no_calibration_asset.select")
+          $t("calibration_asset.select")
         }}</v-btn>
         <ModalCalibrationAssetCreate
           v-if="showModalCalibrationAssetCreate"

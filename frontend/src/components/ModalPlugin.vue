@@ -84,7 +84,7 @@
                   runPlugin(selected.plugin, selected.parameters, selected.optional_parameters)
                 "
               >
-                {{ $t("modal.plugin.run") }}
+                {{ $t("button.run_plugin") }}
               </v-btn>
             </v-row>
           </v-col>

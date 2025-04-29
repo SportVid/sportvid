@@ -46,7 +46,7 @@
                 <v-row class="mt-n4 mb-1 mr-1">
                   <v-spacer />
                   <v-btn @click="downloadExport(exportFormat.export, exportFormat.parameters)">
-                    {{ $t("modal.timeline.export_result.export") }}
+                    {{ $t("button.export") }}
                   </v-btn>
                 </v-row>
               </v-tabs-window-item>
@@ -84,10 +84,10 @@ const tab = ref(null);
 
 const exportFormats = ref([
   {
-    name: t("modal.timeline.export_result.csv.export_name"),
+    name: t("modal.timeline.export_result.csv.title"),
     icon: "mdi-file",
     export: "csv",
-    text: t("modal.timeline.export_result.csv.export_text"),
+    text: t("modal.timeline.export_result.csv.text"),
     parameters: [],
   },
 ]);

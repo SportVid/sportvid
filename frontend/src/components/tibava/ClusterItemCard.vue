@@ -83,13 +83,13 @@
             <v-list-item>
               <v-btn text @click="createTimeline">
                 <v-icon left>{{ "mdi-barcode" }}</v-icon>
-                {{ $t("button.totimeline") }}
+                {{ $t("button.to_timeline") }}
               </v-btn>
             </v-list-item>
             <v-list-item>
               <v-btn text @click="deleteCluster">
                 <v-icon left>{{ "mdi-trash-can-outline" }}</v-icon
-                >{{ $t("button.deleteCluster") }}
+                >{{ $t("button.delete") }}
               </v-btn>
             </v-list-item>
             <v-list-item>

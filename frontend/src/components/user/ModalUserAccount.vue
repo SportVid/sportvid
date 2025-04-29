@@ -30,9 +30,11 @@
 <script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { useUserStore } from "@/stores/user";
 
 const router = useRouter();
+const { t } = useI18n();
 const userStore = useUserStore();
 
 const username = computed(() => userStore.username);
@@ -44,7 +46,7 @@ const nDays = computed(() => {
   const diffInMs = new Date() - dateObj;
   return Math.round(diffInMs / (1000 * 60 * 60 * 24));
 });
-const joined = computed(() => `Joined ${nDays.value} days ago`);
+const joined = computed(() => t("user.joined", { n_days: nDays.value }));
 
 const initials = computed(() => username.value.slice(0, 2));
 

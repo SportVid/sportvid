@@ -107,9 +107,9 @@
           </v-combobox>
 
           <v-btn class="mr-4" @click="submit" :disabled="isSubmitting">
-            {{ $t("timelineSegment.update") }}
+            {{ $t("button.update") }}
           </v-btn>
-          <v-btn @click="close">{{ $t("timelineSegment.close") }}</v-btn>
+          <v-btn @click="close">{{ $t("button.close") }}</v-btn>
         </v-form>
       </v-card-text>
     </v-card>

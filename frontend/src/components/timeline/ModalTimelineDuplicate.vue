@@ -32,7 +32,7 @@
           </v-row>
           <v-row>
             <v-btn @click="submit" :disabled="isSubmitting || !name" class="mt-n4">
-              {{ $t("modal.timeline.duplicate.update") }}
+              {{ $t("button.duplicate") }}
             </v-btn>
           </v-row>
         </v-col>

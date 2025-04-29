@@ -20,7 +20,7 @@
           class="mr-6"
         />
         <v-btn @click="submit" :disabled="isSubmitting || !name">
-          {{ $t("modal.timeline.rename.update") }}
+          {{ $t("button.rename") }}
         </v-btn>
       </v-card-text>
     </v-card>

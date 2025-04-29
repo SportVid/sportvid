@@ -19,7 +19,7 @@
               @click="showModalPlugin = true"
             >
               <v-icon>mdi-plus-circle</v-icon>
-              <p class="ms-2">{{ $t("video_view.run_plugin") }}</p>
+              <p class="ms-2">{{ $t("button.run_batch_plugin") }}</p>
             </v-btn>
             <ModalPlugin
               v-if="showModalPlugin"
@@ -48,7 +48,7 @@
                     <v-icon class="mr-1">
                       {{ "mdi-movie-search-outline" }}
                     </v-icon>
-                    {{ $t("video_view.analysis") }}
+                    {{ $t("button.analyse") }}
                   </v-btn>
 
                   <ModalVideoRename :video="item.id" />
@@ -57,7 +57,7 @@
                     <v-icon class="mr-1">
                       {{ "mdi-trash-can-outline" }}
                     </v-icon>
-                    {{ $t("video_view.delete") }}
+                    {{ $t("button.delete") }}
                   </v-btn>
                   <v-checkbox
                     v-model="selectedVideos[item.id]"
@@ -77,7 +77,7 @@
       <v-col justify="space-around">
         <v-card class="welcome pa-5" elevation="3">
           <v-card-title>
-            <h1 class="text-h2 mb-4 text-primary">{{ $t("welcome.title") }}</h1>
+            <h1 class="text-h2 mb-4 text-primary">{{ $t("plattform.title") }}</h1>
           </v-card-title>
 
           <v-card-text>

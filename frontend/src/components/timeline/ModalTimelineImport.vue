@@ -14,14 +14,14 @@
       <v-card-text class="d-flex align-center mt-6">
         <v-file-input
           v-model="importfile"
-          :label="$t('modal.timeline.import.input')"
+          :label="$t('modal.timeline.import.file')"
           filled
           prepend-icon="mdi-file"
           class="mr-6"
         />
 
         <v-btn class="mr-4 mt-n4" @click="submit" :disabled="isSubmitting">
-          {{ $t("modal.timeline.import.import") }}
+          {{ $t("button.import") }}
         </v-btn>
       </v-card-text>
     </v-card>

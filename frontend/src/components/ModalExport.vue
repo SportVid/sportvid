@@ -50,7 +50,7 @@
                 <v-row class="mt-n4 mb-1 mr-1">
                   <v-spacer />
                   <v-btn @click="downloadExport(exportFormat.export, exportFormat.parameters)">
-                    {{ $t("modal.export.export") }}
+                    {{ $t("button.export") }}
                   </v-btn>
                 </v-row>
               </v-tabs-window-item>

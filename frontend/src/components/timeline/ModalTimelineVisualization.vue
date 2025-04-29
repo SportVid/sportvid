@@ -1,11 +1,5 @@
 <template>
   <v-dialog v-model="show" max-width="1000">
-    <template #activator="{ on }">
-      <v-btn v-on="on" text block large>
-        <v-icon left>{{ "mdi-chart-line-variant" }}</v-icon>
-        {{ $t("modal.timeline.visualization.link") }}
-      </v-btn>
-    </template>
     <v-card>
       <v-card-title class="mb-2">
         {{ $t("modal.timeline.visualization.title") }}
@@ -57,9 +51,8 @@
       </v-card-text>
       <v-card-actions class="pt-0">
         <v-btn class="mr-4" @click="submit" :disabled="isSubmitting">
-          {{ $t("modal.timeline.visualization.update") }}
+          {{ $t("button.visualize") }}
         </v-btn>
-        <v-btn @click="show = false">{{ $t("modal.timeline.visualization.close") }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

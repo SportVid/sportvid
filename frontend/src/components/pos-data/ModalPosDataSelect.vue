@@ -67,7 +67,7 @@
           @click="confirmSelection(selectedCalibrationAsset, selectedBytetrack)"
           :disabled="isButtonDisabled"
         >
-          {{ $t("modal.position_data.select.select") }}
+          {{ $t("button.select") }}
         </v-btn>
       </v-card-text>
     </v-card>

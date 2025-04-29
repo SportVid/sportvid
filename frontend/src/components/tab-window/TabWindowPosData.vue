@@ -82,13 +82,13 @@
       <v-menu location="top">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
-            {{ $t("pos_data_vis.display_settings.title") }}
+            {{ $t("pos_data.display_settings.title") }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact" width="220px">
           <v-list-item class="menu-item" @click="bboxesStore.viewBoundingBox">
             <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("pos_data_vis.display_settings.view_bounding_box") }}
+              {{ $t("pos_data.display_settings.view_bounding_box") }}
               <tab-window-icon
                 :class="{
                   'text-disabled': !bboxesStore.showBoundingBox,
@@ -102,7 +102,7 @@
 
           <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
             <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("pos_data_vis.display_settings.video_sync") }}
+              {{ $t("pos_data.display_settings.video_sync") }}
               <tab-window-icon
                 :class="{
                   'text-disabled': !playerStore.isSynced,
@@ -118,7 +118,7 @@
             <template #activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
                 <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("pos_data_vis.display_settings.view_kpis.title") }}
+                  {{ $t("pos_data.display_settings.view_kpis.title") }}
                   <tab-window-icon>mdi-chevron-right</tab-window-icon>
                 </v-list-item-title>
               </v-list-item>
@@ -126,7 +126,7 @@
             <v-list class="py-0" density="compact" width="180px">
               <v-list-item class="menu-item" @click="bboxesStore.viewSpaceControl">
                 <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("pos_data_vis.display_settings.view_kpis.space_control") }}
+                  {{ $t("pos_data.display_settings.view_kpis.space_control") }}
                   <tab-window-icon
                     :class="{
                       'text-disabled': !bboxesStore.showSpaceControl,
@@ -139,7 +139,7 @@
               </v-list-item>
               <v-list-item class="menu-item" @click="bboxesStore.viewEffectivePlayingSpace">
                 <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("pos_data_vis.display_settings.view_kpis.eps") }}
+                  {{ $t("pos_data.display_settings.view_kpis.eps") }}
                   <tab-window-icon
                     :class="{
                       'text-disabled': !bboxesStore.showEffectivePlayingSpace,
@@ -157,7 +157,7 @@
             <template #activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
                 <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("pos_data_vis.display_settings.pos_data.title") }}
+                  {{ $t("pos_data.display_settings.pos_data.title") }}
                   <tab-window-icon>mdi-chevron-right</tab-window-icon>
                 </v-list-item-title>
               </v-list-item>
@@ -165,12 +165,12 @@
             <v-list class="py-0" density="compact">
               <v-list-item class="menu-item" @click="showModalPosDataUpload = true">
                 <v-list-item-title>
-                  {{ $t("pos_data_vis.display_settings.pos_data.upload") }}
+                  {{ $t("pos_data.display_settings.pos_data.upload") }}
                 </v-list-item-title>
               </v-list-item>
               <v-list-item class="menu-item" @click="showModalPosDataSelect = true">
                 <v-list-item-title>
-                  {{ $t("pos_data_vis.display_settings.pos_data.select") }}
+                  {{ $t("pos_data.display_settings.pos_data.select") }}
                 </v-list-item-title>
               </v-list-item>
             </v-list>

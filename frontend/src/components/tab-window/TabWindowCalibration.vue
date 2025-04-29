@@ -97,7 +97,7 @@
       class="video-control mt-6 mb-0 justify-center align-center"
       style="height: 60px"
     >
-      <v-menu location="top">
+      <v-menu location="top start">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{ topViewStore.currentSport.title }}
@@ -117,17 +117,17 @@
         </v-list>
       </v-menu>
 
-      <v-menu location="top">
+      <v-menu location="top center">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
-            {{ $t("calibration_asset_vis.calibration_asset.title") }}
+            {{ $t("calibration_asset.title") }}
           </v-btn>
         </template>
 
-        <v-list class="py-0" density="compact">
+        <v-list class="py-0" width="200px" density="compact">
           <v-list-item class="menu-item" @click="showModalCalibrationAssetCreate = true">
             <v-list-item-title>
-              {{ $t("calibration_asset_vis.calibration_asset.create") }}
+              {{ $t("calibration_asset.create") }}
             </v-list-item-title>
           </v-list-item>
 
@@ -137,7 +137,7 @@
             @click="showModalCalibrationAssetSave = true"
           >
             <v-list-item-title>
-              {{ $t("calibration_asset_vis.calibration_asset.save") }}
+              {{ $t("calibration_asset.save") }}
             </v-list-item-title>
           </v-list-item>
 
@@ -147,12 +147,12 @@
             @click="showModalCalibrationAssetUpdate = true"
           >
             <v-list-item-title>
-              {{ $t("calibration_asset_vis.calibration_asset.update") }}
+              {{ $t("calibration_asset.update") }}
             </v-list-item-title>
           </v-list-item>
           <v-list-item class="menu-item" @click="showModalCalibrationAssetSelect = true">
             <v-list-item-title>
-              {{ $t("calibration_asset_vis.calibration_asset.select") }}
+              {{ $t("calibration_asset.select") }}
             </v-list-item-title>
           </v-list-item>
         </v-list>
@@ -177,13 +177,13 @@
       <v-menu location="top">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
-            {{ $t("calibration_asset_vis.marker.title") }}
+            {{ $t("calibration_asset.marker.title") }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact" width="200px">
           <v-list-item class="menu-item" @click="calibrationAssetStore.toggleVideoMarker">
             <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("calibration_asset_vis.marker.view_vid_marker") }}
+              {{ $t("calibration_asset.marker.view_vid_marker") }}
               <v-icon
                 :class="{
                   'text-disabled': !calibrationAssetStore.showVideoMarker,
@@ -199,13 +199,13 @@
 
           <v-list-item class="menu-item" @click="addReferenceMarker">
             <v-list-item-title>
-              {{ $t("calibration_asset_vis.marker.add_ref_marker") }}
+              {{ $t("calibration_asset.marker.add_ref_marker") }}
             </v-list-item-title>
           </v-list-item>
 
           <v-list-item class="menu-item" @click="showDeleteButton = !showDeleteButton">
             <v-list-item-title>
-              {{ $t("calibration_asset_vis.marker.delete_ref_marker") }}
+              {{ $t("calibration_asset.marker.delete_ref_marker") }}
             </v-list-item-title>
           </v-list-item>
         </v-list>

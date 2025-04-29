@@ -33,7 +33,7 @@
           :disabled="!name || !template || !calibrationAssetStore.allMarkerValid"
           size="small"
         >
-          {{ $t("modal.calibration_asset.update.update") }}
+          {{ $t("button.update") }}
         </v-btn>
       </v-card-text>
     </v-card>

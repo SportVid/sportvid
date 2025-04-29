@@ -3,7 +3,7 @@
     <template #prepend>
       <img :title="appName" src="@/assets/logo_tib_dshs.png" height="50" class="ml-1 mr-2" />
       <v-app-bar-title class="text-h5 text-primary">
-        {{ $t("app_bar.plattform_name") }}
+        {{ $t("plattform.title") }}
       </v-app-bar-title>
     </template>
 
@@ -40,6 +40,19 @@
 
       <v-divider vertical inset class="mx-2" />
 
+      <v-menu location="bottom center">
+        <template #activator="{ props }">
+          <v-avatar v-bind="props" size="16" class="ml-2 mr-1">
+            <v-img :src="languages.find((lang) => lang.code === locale)?.flag" contain />
+          </v-avatar>
+        </template>
+        <v-list density="compact" class="py-0 mt-2" width="100px">
+          <v-list-item v-for="lang in languages" :key="lang.code" @click="setLanguage(lang.code)">
+            <v-list-item-title class="text-center">{{ lang.label }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+
       <UserMenu />
     </template>
 
@@ -63,12 +76,20 @@ import ModalExport from "@/components/ModalExport.vue";
 import UserMenu from "@/components/user/UserMenu.vue";
 
 const route = useRoute();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const playerStore = usePlayerStore();
 const pluginRunStore = usePluginRunStore();
 
 const appName = process.env.VUE_APP_NAME;
+
+const languages = [
+  { code: "en", label: "English", flag: require("@/assets/flags/en.svg") },
+  { code: "de", label: "Deutsch", flag: require("@/assets/flags/de.svg") },
+];
+const setLanguage = (code) => {
+  locale.value = code;
+};
 
 const analysisView = computed(() => route.name === "AnalysisView");
 const termsOfServiceView = computed(() => route.name === "TermsOfServiceView");

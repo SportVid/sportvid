@@ -58,7 +58,7 @@
 
         <v-row class="mt-6 mb-n2 justify-center">
           <v-btn class="mt-n2" @click="submit" :disabled="isSubmitting">
-            {{ $t("modal.shortcut.update") }}
+            {{ $t("button.update") }}
           </v-btn>
         </v-row>
       </v-card-text>

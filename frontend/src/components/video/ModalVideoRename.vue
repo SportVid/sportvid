@@ -3,7 +3,7 @@
     <template #activator="{ props }">
       <v-btn size="small" v-bind="props" variant="outlined">
         <v-icon class="mr-1">{{ "mdi-pencil" }}</v-icon>
-        {{ $t("video_view.rename") }}
+        {{ $t("button.rename") }}
       </v-btn>
     </template>
 
@@ -21,14 +21,14 @@
       <v-card-text class="pt-4 d-flex align-center">
         <v-text-field
           v-model="name"
-          :label="$t('modal.video.rename.name')"
+          :label="$t('modal.video.rename.video_title')"
           prepend-icon="mdi-pencil"
           variant="underlined"
           class="mr-6"
         />
 
         <v-btn @click="submit" :disabled="isSubmitting || !name">
-          {{ $t("modal.video.rename.update") }}
+          {{ $t("button.rename") }}
         </v-btn>
       </v-card-text>
     </v-card>

@@ -14,7 +14,7 @@
       <v-card-text class="d-flex align-center justify-center">
         {{ $t("modal.timeline.delete.question") }}
         <v-btn class="ml-6" @click="submit" :disabled="isSubmitting">
-          {{ $t("modal.timeline.delete.yes") }}
+          {{ $t("button.delete") }}
         </v-btn>
       </v-card-text>
     </v-card>

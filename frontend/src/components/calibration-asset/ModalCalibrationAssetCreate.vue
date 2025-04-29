@@ -21,7 +21,7 @@
         />
 
         <v-btn @click="createCalibrationAsset(template)" :disabled="!template" size="small">
-          {{ $t("modal.calibration_asset.create.create") }}
+          {{ $t("button.create") }}
         </v-btn>
       </v-card-text>
     </v-card>
