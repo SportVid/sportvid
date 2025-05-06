@@ -1,7 +1,7 @@
 <template>
   <v-app-bar>
     <template #prepend>
-      <img :title="appName" src="@/assets/logo_tib_dshs.png" height="50" class="ml-1 mr-2" />
+      <img src="@/assets/logo_tib_dshs.png" height="50" class="ml-1 mr-2" />
       <v-app-bar-title class="text-h5 text-primary">
         {{ $t("plattform.title") }}
       </v-app-bar-title>
@@ -80,8 +80,6 @@ const { t, locale } = useI18n();
 
 const playerStore = usePlayerStore();
 const pluginRunStore = usePluginRunStore();
-
-const appName = process.env.VUE_APP_NAME;
 
 const languages = [
   { code: "en", label: "English", flag: require("@/assets/flags/en.svg") },

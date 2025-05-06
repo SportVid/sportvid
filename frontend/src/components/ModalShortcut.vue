@@ -68,6 +68,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
 import { useShortcutStore } from "@/stores/shortcut";
 import { useAnnotationStore } from "@/stores/annotation";
@@ -80,6 +81,8 @@ const props = defineProps({
 });
 const emit = defineEmits(["update:modelValue"]);
 
+const { t } = useI18n();
+
 const dialog = ref(props.modelValue);
 const isSubmitting = ref(false);
 const search = ref("");
@@ -90,8 +93,8 @@ const shortcutStore = useShortcutStore();
 const annotationStore = useAnnotationStore();
 
 const headers = ref([
-  { title: "Annotation", key: "name" },
-  { title: "Shortcut", sortable: false, key: "actions" },
+  { title: t("modal.shortcut.annotation"), key: "name" },
+  { title: t("modal.shortcut.shortcut"), sortable: false, key: "actions" },
 ]);
 
 const annotations = computed(() => annotationStore.nonTranscripts);

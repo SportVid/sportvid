@@ -25,7 +25,7 @@
           </template>
           <template #item.status="{ value }">
             <v-chip :color="progressColor(value)" variant="flat">
-              {{ value }}
+              {{ getStatusText(value) }}
             </v-chip>
           </template>
         </v-data-table>
@@ -36,6 +36,7 @@
 
 <script setup>
 import { ref, watch, watchEffect } from "vue";
+import { useI18n } from "vue-i18n";
 
 const props = defineProps({
   modelValue: {
@@ -50,13 +51,15 @@ const props = defineProps({
 
 const emit = defineEmits();
 
+const { t } = useI18n();
+
 const dialog = ref(props.modelValue);
 
 const headers = [
-  { title: "Plugin Name", align: "start", key: "type", width: "40%" },
-  { title: "Date", align: "start", key: "date", width: "25%" },
-  { title: "Progress", align: "start", key: "progress", width: "20%" },
-  { title: "Status", align: "start", key: "status", width: "15%" },
+  { title: t("modal.history.plugin_name"), align: "start", key: "type", width: "40%" },
+  { title: t("modal.history.date"), align: "start", key: "date", width: "25%" },
+  { title: t("modal.history.progress"), align: "start", key: "progress", width: "20%" },
+  { title: t("modal.history.status"), align: "start", key: "status", width: "15%" },
 ];
 
 const progressColor = (status) => {
@@ -64,6 +67,10 @@ const progressColor = (status) => {
   if (status === "RUNNING") return "blue";
   if (status === "DONE") return "green";
   return "yellow";
+};
+
+const getStatusText = (status) => {
+  return t(`modal.plugin.status.${status.toLowerCase()}`);
 };
 
 const progressComputed = ref([]);

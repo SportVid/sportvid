@@ -76,11 +76,13 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { useBboxesStore } from "@/stores/bboxes";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
-import { group } from "d3";
+
+const { t } = useI18n();
 
 const playerStore = usePlayerStore();
 const bboxesStore = useBboxesStore();
@@ -113,8 +115,8 @@ watch(
 
 const selectedMode = ref(0);
 const PosDataModes = ref([
-  { id: 0, name: "Bytetrack Plugin" },
-  { id: 1, name: "Uploaded Data" },
+  { id: 0, name: t("modal.position_data.select.modes.bytetrack") },
+  { id: 1, name: t("modal.position_data.select.modes.manual") },
 ]);
 
 const selectedCalibrationAsset = ref(null);

@@ -47,7 +47,7 @@
               class="mt-2"
               density="comfortable"
               show-size
-              :hint="`Maximum file size: ${maxSizeInWords}`"
+              :hint="$t('modal.video.upload.hint', { maxSize: maxSizeInWords })"
               persistent-hint
             />
 
@@ -125,8 +125,7 @@
       </v-card>
     </v-dialog>
     <span v-if="!canUpload" class="text-error">
-      You have uploaded the maximum amount of videos that you are allowed to. If you require more,
-      please contact abc@xyz.de.
+      {{ $t("modal.video.upload.upload_denied") }}
     </span>
     <span v-if="canUpload">
       {{ $t("modal.video.upload.videos_uploaded", { numVideos: numVideos, allowance: allowance }) }}
@@ -136,9 +135,12 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { useVideoUploadStore } from "@/stores/video_upload";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
+
+const { t } = useI18n();
 
 const videoUploadStore = useVideoUploadStore();
 const userStore = useUserStore();
@@ -224,15 +226,15 @@ const validateFile = (file) => {
 
   if (!file || !file.name) {
     fileValid.value = false;
-    return "Please select a file with a maximum file size of " + maxSizeInWords.value;
+    return t("modal.video.upload.validate.file_required", { maxSize: maxSizeInWords.value });
   }
   if (file.size > maxSize.value) {
     fileValid.value = false;
-    return "File exceeds your maximum file size of " + maxSizeInWords.value;
+    return t("modal.video.upload.validate.file_exceeds", { maxSize: maxSizeInWords.value });
   }
   if (!file.name.endsWith(".mp4")) {
     fileValid.value = false;
-    return "File is not in the .mp4 format.";
+    return t("modal.video.upload.validate.file_format_invalid");
   }
 
   fileValid.value = true;

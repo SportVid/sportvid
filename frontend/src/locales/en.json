@@ -13,7 +13,8 @@
   },
   "terms_of_service": {
     "title": "Terms of Service",
-    "text": "By using SportVid, you agree to the following terms and conditions: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Consent to the use of uploaded and submitted videos and data for scientific research purposes.</li><li>Consent to allow other users to search for videos.</li><li>...</li></ol>"
+    "text": "By using SportVid, you agree to the following terms and conditions: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Consent to the use of uploaded and submitted videos and data for scientific research purposes.</li><li>Consent to allow other users to search for videos.</li><li>...</li></ol>",
+    "confirmation": "Do you agree with the <0>Terms of Service</0>?"
   },
   "user": {
     "name": "Username",
@@ -78,6 +79,18 @@
     "uploaded": "Uploaded:",
     "timelines": "Timelines:"
   },
+  "analysis_view": {
+    "tabs": {
+      "calibration": "Calibration",
+      "pos_data": "Position Data"
+    },
+    "sports": {
+      "soccer": "Soccer",
+      "handball": "Handball",
+      "basketball": "Basketball",
+      "climbing": "Climbing"
+    }
+  },
   "calibration_asset": {
     "not_selected": "No calibration asset selected.<br>Please create a new calibration asset or choose an existing one.",
     "title": "Calibration Asset",
@@ -133,6 +146,9 @@
       }
     }
   },
+  "timelines": {
+    "title": "Timelines"
+  },
   "timelineSegment": {
     "title": "Title",
     "delete": "Delete",
@@ -162,6 +178,13 @@
       "upload": {
         "title": "Upload new Video",
         "videos_uploaded": "Videos uploaded: {numVideos} out of {allowance}",
+        "upload_denied": "You have uploaded the maximum amount of videos that you are allowed to. If you require more, please contact abc@xyz.de.",
+        "validate": {
+          "file_required": "Please select a file with a maximum file size of {maxSize}",
+          "file_exceeds": "File exceeds your maximum file size of {maxSize}",
+          "file_format_invalid": "File is not in the .mp4 format."
+        },
+        "hint": "Maximum file size: {maxSize}",
         "file": "Select a video file [mp4]",
         "video_title": "Video title",
         "success": "Video successfully uploaded",
@@ -214,12 +237,12 @@
         "tracking": "Player and Object Tracking"
       },
       "status": {
-        "unknown": "Unknown",
-        "error": "Error",
-        "done": "Done",
-        "running": "Running",
-        "queued": "Queued",
-        "waiting": "Waiting"
+        "unknown": "UNKNOWN",
+        "error": "ERROR",
+        "done": "DONE",
+        "running": "RUNNING",
+        "queued": "QUEUED",
+        "waiting": "WAITING"
       },
       "timeline_name": "Timeline name",
       "shot_timeline_name": "Shot boundaries from timeline",
@@ -422,7 +445,9 @@
       }
     },
     "shortcut": {
-      "title": "Shortcuts"
+      "title": "Shortcuts",
+      "annotation": "Annotation",
+      "shortcut": "Shortcut"
     },
     "timeline": {
       "options": "Options",
@@ -471,7 +496,11 @@
       "move_existing": "Move to existing cluster"
     },
     "history": {
-      "title": "History"
+      "title": "History",
+      "plugin_name": "Plugin Name",
+      "date": "Date",
+      "progress": "Progress",
+      "status": "Status"
     },
     "calibration_asset": {
       "create": {
@@ -503,7 +532,11 @@
         "success": "Position data successfully uploaded"
       },
       "select": {
-        "title": "Select Position Data"
+        "title": "Select Position Data",
+        "modes": {
+          "bytetrack": "ByteTrack Plugin",
+          "manual": "Manual Upload"
+        }
       }
     }
   }

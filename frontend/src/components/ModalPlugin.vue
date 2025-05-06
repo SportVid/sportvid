@@ -49,7 +49,7 @@
               class="text-h4 text-grey font-weight-light"
               style="display: flex; justify-content: center; align-items: center; height: 60vh"
             >
-              {{ $t("modal.plugin.search.select") }}
+              {{ $t("modal.plugin.search") }}
             </div>
 
             <v-card v-else :key="selected.id" class="mx-auto" style="height: 60vh" flat>

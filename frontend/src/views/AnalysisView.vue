@@ -104,7 +104,7 @@
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" scrollable="False">
             <v-row>
               <v-col cols="3">
-                <v-card-title class="pl-2 mb-n2"> Timelines </v-card-title>
+                <v-card-title class="pl-2 mb-n2"> {{ $t("timelines.title") }} </v-card-title>
               </v-col>
               <v-col cols="9" class="mt-2">
                 <TimelineTimeSelector class="ml-n1" />
@@ -187,8 +187,8 @@ const shotStore = useShotStore();
 
 const analysisTabId = ref(0);
 const analysisTabs = ref([
-  { id: 0, name: "Calibration" },
-  { id: 1, name: "Position Data" },
+  { id: 0, name: t("analysis_view.tabs.calibration") },
+  { id: 1, name: t("analysis_view.tabs.pos_data") },
 ]);
 onMounted(() => {
   analysisTabId.value = analysisTabs.value.find((tab) => tab.name === "Calibration")?.id;
@@ -224,15 +224,12 @@ const fetchData = async ({ addResults = true }) => {
       videoId: route.params.id,
       addResults,
     });
-  } catch (error) {
-    console.error("Fehler beim Abrufen der Daten:", error);
-  }
+  } catch (error) {}
 };
 onMounted(async () => {
   try {
     await fetchData({ addResults: true });
   } catch (error) {
-    console.error("Fehler beim Laden der Daten:", error);
   } finally {
     isLoading.value = false;
   }
