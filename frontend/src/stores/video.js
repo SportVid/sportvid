@@ -248,6 +248,13 @@ export const useVideoStore = defineStore("video", () => {
     videoSize.value = size;
   };
 
+  const selectedVideos = ref({});
+  const selectedVideosIds = computed(() =>
+    Object.entries(selectedVideos.value)
+      .filter(([, isSelected]) => isSelected)
+      .map(([id]) => id)
+  );
+
   return {
     videos,
     videoList,
@@ -268,5 +275,7 @@ export const useVideoStore = defineStore("video", () => {
     uploadSuccess,
     deleteSuccess,
     renameSuccess,
+    selectedVideos,
+    selectedVideosIds,
   };
 });

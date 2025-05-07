@@ -1,13 +1,6 @@
 <template>
   <v-card :class="['d-flex', 'flex-column']" style="text-align: center" flat color="transparent">
     <v-dialog v-model="dialog" width="700">
-      <template #activator="{ props }">
-        <v-btn :disabled="!canUpload" :color="!canUpload ? 'light-grey' : 'primary'" v-bind="props">
-          {{ $t("button.upload_video") }}
-          <v-icon class="ms-2">mdi-plus-circle</v-icon>
-        </v-btn>
-      </template>
-
       <v-card>
         <v-toolbar color="primary">
           <v-toolbar-title class="text-h6">
@@ -20,7 +13,18 @@
         </v-toolbar>
 
         <v-card-text class="pt-4">
-          <v-form>
+          <v-form v-if="canUpload">
+            <div class="text-center">
+              <span class="span-border">
+                {{
+                  $t("modal.video.upload.videos_uploaded", {
+                    numVideos: numVideos,
+                    allowance: allowance,
+                  })
+                }}
+              </span>
+            </div>
+
             <v-text-field
               v-model="video.title"
               :counter="120"
@@ -116,24 +120,32 @@
               {{ $t("button.upload") }}
             </v-btn>
           </v-form>
+
+          <div v-else class="text-center my-4">
+            <span class="text-error">
+              {{ $t("modal.video.upload.upload_denied") }}
+            </span>
+          </div>
         </v-card-text>
       </v-card>
     </v-dialog>
-    <span v-if="!canUpload" class="text-error">
-      {{ $t("modal.video.upload.upload_denied") }}
-    </span>
-    <span v-if="canUpload">
-      {{ $t("modal.video.upload.videos_uploaded", { numVideos: numVideos, allowance: allowance }) }}
-    </span>
   </v-card>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useVideoUploadStore } from "@/stores/video_upload";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
+
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
+    default: false,
+  },
+});
+const emit = defineEmits();
 
 const { t } = useI18n();
 
@@ -158,8 +170,23 @@ const analysers = ref([
 ]);
 const selectedAnalysers = ref(["shotdetection"]);
 const checkbox = ref(false);
-const dialog = ref(false);
 const fileValid = ref(false);
+
+const dialog = ref(props.modelValue);
+watch(
+  () => dialog.value,
+  (value) => {
+    emit("update:modelValue", value);
+  }
+);
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (value) {
+      dialog.value = true;
+    }
+  }
+);
 
 const divisions = ref([
   "1. Bundesliga",
@@ -256,5 +283,12 @@ const uploadVideo = async () => {
 
 .terms-of-service-link:hover {
   text-decoration: underline;
+}
+
+.span-border {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
 }
 </style>

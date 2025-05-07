@@ -1,35 +1,6 @@
 <template>
   <v-main>
     <v-container v-if="userStore.loggedIn" fluid>
-      <v-row justify="center" class="mt-2">
-        <v-col xs="6" sm="5" md="3" xl="2" class="d-flex flex-column align-center">
-          <ModalVideoUpload />
-        </v-col>
-        <v-col xs="6" sm="5" md="3" xl="2" class="d-flex flex-column align-center">
-          <v-card
-            :class="['d-flex', 'flex-column']"
-            style="text-align: center"
-            flat
-            color="transparent"
-          >
-            <v-btn
-              :disabled="selectedVideosIds.length == 0"
-              :color="selectedVideosIds.length === 0 ? 'light-grey' : 'primary'"
-              @click="showModalPlugin = true"
-              :key="locale"
-            >
-              <v-icon>mdi-plus-circle</v-icon>
-              <p class="ms-2">{{ $t("button.run_batch_plugin") }}</p>
-            </v-btn>
-            <ModalPlugin
-              v-if="showModalPlugin"
-              v-model="showModalPlugin"
-              :videoIds="selectedVideosIds"
-            />
-          </v-card>
-        </v-col>
-      </v-row>
-
       <v-row>
         <v-col>
           <v-container class="d-flex flex-wrap justify-center video-gallery pa-0" fluid>
@@ -60,7 +31,7 @@
                     {{ $t("button.delete") }}
                   </v-btn>
                   <v-checkbox
-                    v-model="selectedVideos[item.id]"
+                    v-model="videoStore.selectedVideos[item.id]"
                     color="primary"
                     class="pt-5 ml-n1"
                   />
@@ -125,8 +96,6 @@ import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTimelineStore } from "@/stores/timeline";
 import { getDisplayTime } from "@/plugins/time";
-import ModalPlugin from "@/components/ModalPlugin.vue";
-import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 import ModalVideoRename from "@/components/video/ModalVideoRename.vue";
 
 const router = useRouter();
@@ -136,15 +105,7 @@ const userStore = useUserStore();
 const pluginRunStore = usePluginRunStore();
 const timelineStore = useTimelineStore();
 
-const showModalPlugin = ref(false);
-
 const videos = computed(() => videoStore.all);
-const selectedVideos = ref({});
-const selectedVideosIds = computed(() =>
-  Object.entries(selectedVideos.value)
-    .filter(([, isSelected]) => isSelected)
-    .map(([id]) => id)
-);
 
 const videosProgress = computed(() => {
   const progress = {};

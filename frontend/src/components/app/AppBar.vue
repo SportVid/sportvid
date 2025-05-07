@@ -43,6 +43,21 @@
         {{ $t("app_bar.export_menu") }}
       </v-btn>
 
+      <v-btn v-if="videoView" @click="showModalVideoUpload = true">
+        <app-bar-icon>mdi-plus</app-bar-icon>
+        {{ $t("app_bar.video_upload_menu") }}
+      </v-btn>
+
+      <v-btn
+        v-if="videoView"
+        @click="showModalBatchPlugin = true"
+        :videoIds="selectedVideosIds"
+        :disabled="selectedVideosIds.length == 0"
+      >
+        <app-bar-icon>mdi-plus</app-bar-icon>
+        {{ $t("app_bar.batch_plugin_menu") }}
+      </v-btn>
+
       <v-divider vertical inset class="mx-2" />
 
       <v-menu location="bottom center">
@@ -65,6 +80,12 @@
     <ModalHistory v-if="showModalHistory" v-model="showModalHistory" :pluginRuns="pluginRuns" />
     <ModalShortcut v-if="showModalShortcut" v-model="showModalShortcut" />
     <ModalExport v-if="showModalExport" v-model="showModalExport" />
+    <ModalVideoUpload v-if="showModalVideoUpload" v-model="showModalVideoUpload" />
+    <ModalPlugin
+      v-if="showModalBatchPlugin"
+      v-model="showModalBatchPlugin"
+      :videoIds="selectedVideosIds"
+    />
   </v-app-bar>
 </template>
 
@@ -75,12 +96,14 @@ import { useI18n } from "vue-i18n";
 import { useLocale } from "vuetify";
 import { usePlayerStore } from "@/stores/player";
 import { useUserStore } from "@/stores/user";
+import { useVideoStore } from "@/stores/video";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import ModalHistory from "@/components/ModalHistory.vue";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalShortcut from "@/components/ModalShortcut.vue";
 import ModalExport from "@/components/ModalExport.vue";
 import UserMenu from "@/components/user/UserMenu.vue";
+import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 
 const route = useRoute();
 const { t, locale } = useI18n();
@@ -88,6 +111,7 @@ const { current } = useLocale();
 
 const playerStore = usePlayerStore();
 const userStore = useUserStore();
+const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
@@ -101,6 +125,7 @@ const setLanguage = (code) => {
   current.value = code;
 };
 
+const videoView = computed(() => route.name === "VideoView");
 const analysisView = computed(() => route.name === "AnalysisView");
 const termsOfServiceView = computed(() => route.name === "TermsOfServiceView");
 
@@ -161,4 +186,9 @@ const pluginName = (type) => {
 const showModalShortcut = ref(false);
 
 const showModalExport = ref(false);
+
+const showModalVideoUpload = ref(false);
+
+const showModalBatchPlugin = ref(false);
+const selectedVideosIds = computed(() => videoStore.selectedVideosIds);
 </script>

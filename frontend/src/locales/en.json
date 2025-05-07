@@ -72,7 +72,9 @@
     "history_menu": "History",
     "shortcut_menu": "Shortcuts",
     "export_menu": "Export",
-    "user_menu": "Login"
+    "user_menu": "Login",
+    "batch_plugin_menu": "Run Batch Plugin",
+    "video_upload_menu": "Upload new Video"
   },
   "video_view": {
     "video_id": "Video ID:",

@@ -72,7 +72,9 @@
     "history_menu": "Verlauf",
     "shortcut_menu": "Kurzbefehle",
     "export_menu": "Exportieren",
-    "user_menu": "Anmelden"
+    "user_menu": "Anmelden",
+    "batch_plugin_menu": "Batch-Plugin ausführen",
+    "video_upload_menu": "Neues Video hochladen"
   },
   "video_view": {
     "video_id": "Video-ID:",
