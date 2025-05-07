@@ -1,7 +1,10 @@
 import { defineStore } from "pinia";
-import { nextTick, ref } from "vue";
+import { nextTick, ref, computed } from "vue";
+import { useI18n } from "vue-i18n";
 
 export const useTopViewStore = defineStore("top_view", () => {
+  const { t } = useI18n();
+
   const showItems = ref(false);
 
   const topViewSize = ref({ width: 0, height: 0, top: 0, left: 0 });
@@ -9,41 +12,42 @@ export const useTopViewStore = defineStore("top_view", () => {
     topViewSize.value = size;
   };
 
-  const currentSport = ref({
-    title: "Soccer",
-    pitchImage: require("../assets/pitch_soccer.png"),
+  const currentSport = computed(() => ({
+    title: t("analysis_view.sports.soccer"),
+    pitchImage: require("../assets/top-view/pitch_soccer.png"),
     widthRel: 2698 / 2910,
     heightRel: 1794 / 2010,
-  });
-  const sports = [
+  }));
+
+  const sports = computed(() => [
     {
-      title: "Soccer",
-      pitchImage: require("../assets/pitch_soccer.png"),
+      title: t("analysis_view.sports.soccer"),
+      pitchImage: require("../assets/top-view/pitch_soccer.png"),
       widthRel: 2698 / 2910,
       heightRel: 1794 / 2010,
     },
     {
-      title: "Handball",
-      pitchImage: require("../assets/pitch_handball.png"),
+      title: t("analysis_view.sports.handball"),
+      pitchImage: require("../assets/top-view/pitch_handball.png"),
       widthRel: 2428 / 2622,
       heightRel: 1216 / 1410,
     },
     {
-      title: "Basketball",
-      pitchImage: require("../assets/court_basketball.png"),
+      title: t("analysis_view.sports.basketball"),
+      pitchImage: require("../assets/top-view/court_basketball.png"),
       widthRel: 2278 / 2460,
       heightRel: 1322 / 1504,
     },
     {
-      title: "Climbing",
-      pitchImage: require("../assets/area_climbing.png"),
+      title: t("analysis_view.sports.climbing"),
+      pitchImage: require("../assets/top-view/area_climbing.png"),
       widthRel: 1492 / 2800,
       heightRel: 1866 / 1984,
     },
-  ];
+  ]);
   const onSportChange = (title) => {
     showItems.value = false;
-    const sport = sports.find((sport) => sport.title === title);
+    const sport = sports.value.find((sport) => sport.title === title);
     currentSport.value.title = sport.title;
     currentSport.value.pitchImage = sport.pitchImage;
     currentSport.value.widthRel = sport.widthRel;

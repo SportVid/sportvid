@@ -1,14 +1,14 @@
 <template>
   <v-dialog v-model="dialog" width="710px">
     <v-card>
-      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.export.title") }}
+      <v-toolbar color="primary">
+        <v-toolbar-title class="text-h6">
+          {{ $t("modal.export.title") }}
+        </v-toolbar-title>
 
-        <v-spacer />
-
-        <v-btn icon @click="dialog = false" variant="plain" color="grey">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        <template #append>
+          <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
+        </template>
       </v-toolbar>
 
       <v-card-text style="overflow: hidden">
@@ -50,7 +50,7 @@
                 <v-row class="mt-n4 mb-1 mr-1">
                   <v-spacer />
                   <v-btn @click="downloadExport(exportFormat.export, exportFormat.parameters)">
-                    {{ $t("modal.export.export") }}
+                    {{ $t("button.export") }}
                   </v-btn>
                 </v-row>
               </v-tabs-window-item>

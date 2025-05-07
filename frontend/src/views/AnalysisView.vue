@@ -17,9 +17,9 @@
       />
       <div>
         <div
-          v-for="(point, index) in calibrationAssetStore.videoMarkerReprojection"
+          v-for="point in calibrationAssetStore.videoMarkerReprojection"
           v-show="calibrationAssetStore.showVideoMarker"
-          :key="index"
+          :key="point"
           :style="{
             top: point.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
             left: point.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
@@ -83,8 +83,8 @@
               <v-col>
                 <v-tabs-window v-model="analysisTabId">
                   <v-tabs-window-item v-for="analysisTab in analysisTabs" :key="analysisTab.id">
-                    <TabWindowCalibration v-if="analysisTab.name === 'Calibration'" />
-                    <TabWindowPosData v-if="analysisTab.name === 'Position Data'" />
+                    <TabWindowCalibration v-if="analysisTab.id === 'calibration'" />
+                    <TabWindowPosData v-if="analysisTab.id === 'pos_data'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -104,7 +104,7 @@
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" scrollable="False">
             <v-row>
               <v-col cols="3">
-                <v-card-title class="pl-2 mb-n2"> Timelines </v-card-title>
+                <v-card-title class="pl-2 mb-n2"> {{ $t("timelines.title") }} </v-card-title>
               </v-col>
               <v-col cols="9" class="mt-2">
                 <TimelineTimeSelector class="ml-n1" />
@@ -119,12 +119,27 @@
       </v-row>
       <!-- <ModalTimelineSegmentAnnotate :show.sync="annotationDialog.show" /> -->
     </v-container>
+
+    <v-snackbar v-model="showCalibrationAssetActionSnackbar">
+      <div class="d-flex justify-center">
+        <snackbar-icon />
+        <span class="text-h6">{{ calibrationAssetActionMessage }}</span>
+      </div>
+    </v-snackbar>
+
+    <v-snackbar v-model="showPosDataUploadSnackbar">
+      <div class="d-flex justify-center">
+        <snackbar-icon />
+        <span class="text-h6">{{ $t("modal.position_data.upload.success") }}</span>
+      </div>
+    </v-snackbar>
   </v-main>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, watchEffect, nextTick } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
@@ -139,13 +154,13 @@ import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 import { useShotStore } from "@/stores/shot";
 // import * as Keyboard from "../plugins/keyboard";
-import VideoPlayer from "@/components/VideoPlayer.vue";
-import TabWindowPosData from "@/components/TabWindowPosData.vue";
-import TabWindowCalibration from "@/components/TabWindowCalibration.vue";
+import VideoPlayer from "@/components/video/VideoPlayer.vue";
+import TabWindowPosData from "@/components/tab-window/TabWindowPosData.vue";
+import TabWindowCalibration from "@/components/tab-window/TabWindowCalibration.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
-import Timeline from "@/components/Timeline.vue";
-import TimelineTimeSelector from "@/components/TimelineTimeSelector.vue";
+import Timeline from "@/components/timeline/Timeline.vue";
+import TimelineTimeSelector from "@/components/timeline/TimelineTimeSelector.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
 // import ShotsOverview from "@/components/ShotsOverview.vue";
@@ -155,6 +170,7 @@ import TimelineTimeSelector from "@/components/TimelineTimeSelector.vue";
 // import ClusterTimelineItemOverview from "@/components/ClusterTimelineItemOverview.vue";
 
 const route = useRoute();
+const { t } = useI18n();
 const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
@@ -169,29 +185,27 @@ const annotationShortcutStore = useAnnotationShortcutStore();
 const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
 
-const analysisTabId = ref(0);
-const analysisTabs = ref([
-  { id: 0, name: "Calibration" },
-  { id: 1, name: "Position Data" },
+const analysisTabId = ref("calibration");
+const analysisTabs = computed(() => [
+  { id: "calibration", name: t("analysis_view.tabs.calibration") },
+  { id: "pos_data", name: t("analysis_view.tabs.pos_data") },
 ]);
 onMounted(() => {
-  analysisTabId.value = analysisTabs.value.find((tab) => tab.name === "Calibration")?.id;
+  analysisTabId.value = analysisTabs.value.find((tab) => tab.id === "calibration")?.id;
 });
 watch(
   () => analysisTabId,
   (newTabId) => {
     topViewStore.showItems = false;
 
-    const currentTab = analysisTabs.value.find((tab) => tab.id === newTabId)?.name;
-
     nextTick(() => {
-      if (currentTab === "Calibration") {
+      if (newTabId === "calibration") {
         calibrationAssetStore.showVideoMarker = true;
       } else {
         calibrationAssetStore.showVideoMarker = false;
       }
 
-      if (currentTab === "Position Data") {
+      if (currnewTabIdentTab === "pos_data") {
         bboxesStore.showBoundingBox = true;
       } else {
         bboxesStore.showBoundingBox = false;
@@ -208,15 +222,12 @@ const fetchData = async ({ addResults = true }) => {
       videoId: route.params.id,
       addResults,
     });
-  } catch (error) {
-    console.error("Fehler beim Abrufen der Daten:", error);
-  }
+  } catch (error) {}
 };
 onMounted(async () => {
   try {
     await fetchData({ addResults: true });
   } catch (error) {
-    console.error("Fehler beim Laden der Daten:", error);
   } finally {
     isLoading.value = false;
   }
@@ -495,6 +506,52 @@ const onAnnotateSegment = () => {
 //     });
 //   }
 // };
+
+const showCalibrationAssetActionSnackbar = ref(false);
+const calibrationAssetActionMessage = ref("");
+const resetcalibrationAssetActionSnackbar = async () => {
+  showCalibrationAssetActionSnackbar.value = false;
+  await nextTick();
+  showCalibrationAssetActionSnackbar.value = true;
+};
+watch(
+  [
+    () => calibrationAssetStore.calibrationAssetSaveSuccess,
+    () => calibrationAssetStore.calibrationAssetUpdateSuccess,
+    () => calibrationAssetStore.calibrationAssetDeleteSuccess,
+  ],
+  ([save, update, del]) => {
+    if (save === true) {
+      calibrationAssetActionMessage.value = t("modal.calibration_asset.save.success");
+      resetcalibrationAssetActionSnackbar();
+      calibrationAssetStore.calibrationAssetSaveSuccess = false;
+    } else if (update === true) {
+      calibrationAssetActionMessage.value = t("modal.calibration_asset.update.success");
+      resetcalibrationAssetActionSnackbar();
+      calibrationAssetStore.calibrationAssetUpdateSuccess = false;
+    } else if (del === true) {
+      calibrationAssetActionMessage.value = t("modal.calibration_asset.delete.success");
+      resetcalibrationAssetActionSnackbar();
+      calibrationAssetStore.calibrationAssetDeleteSuccess = false;
+    }
+  }
+);
+
+const showPosDataUploadSnackbar = ref(false);
+const resetPosDataUploadSnackbar = async () => {
+  showPosDataUploadSnackbar.value = false;
+  await nextTick();
+  showPosDataUploadSnackbar.value = true;
+  bboxesStore.posDataUploadSuccess = false;
+};
+watch(
+  () => bboxesStore.posDataUploadSuccess,
+  (newValue) => {
+    if (newValue === true) {
+      resetPosDataUploadSnackbar();
+    }
+  }
+);
 
 watch(
   () => [calibrationAssetStore.marker, bboxesStore.bboxPluginRun],

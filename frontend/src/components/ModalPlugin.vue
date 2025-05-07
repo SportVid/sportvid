@@ -1,14 +1,14 @@
 <template>
-  <v-dialog v-model="dialog" max-width="90%" style="height: 85vh">
+  <v-dialog v-model="dialog" width="80%" style="height: 85vh">
     <v-card>
-      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.plugin.title") }}
+      <v-toolbar color="primary">
+        <v-toolbar-title class="text-h6">
+          {{ $t("modal.plugin.title") }}
+        </v-toolbar-title>
 
-        <v-spacer />
-
-        <v-btn icon @click="dialog = false" variant="plain" color="grey">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        <template #append>
+          <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
+        </template>
       </v-toolbar>
 
       <v-card-text style="overflow: hidden">
@@ -16,7 +16,7 @@
           <v-col cols="3" class="ml-n3">
             <v-text-field
               v-model="searchPlugin"
-              label="Search Plugin"
+              :label="$t('modal.plugin.search')"
               class="searchField"
               variant="solo-filled"
               hide-details
@@ -33,7 +33,7 @@
               item-title="name"
               style="cursor: pointer; overflow-y: auto; height: 55vh"
             >
-              <template v-slot:prepend="{ item }">
+              <template #prepend="{ item }">
                 <v-icon v-if="!item.children || item.children.length === 0">
                   {{ item.icon }}
                 </v-icon>
@@ -49,7 +49,7 @@
               class="text-h4 text-grey font-weight-light"
               style="display: flex; justify-content: center; align-items: center; height: 60vh"
             >
-              {{ $t("modal.plugin.search.select") }}
+              {{ $t("modal.plugin.search") }}
             </div>
 
             <v-card v-else :key="selected.id" class="mx-auto" style="height: 60vh" flat>
@@ -84,7 +84,7 @@
                   runPlugin(selected.plugin, selected.parameters, selected.optional_parameters)
                 "
               >
-                {{ $t("modal.plugin.run") }}
+                {{ $t("button.run_plugin") }}
               </v-btn>
             </v-row>
           </v-col>

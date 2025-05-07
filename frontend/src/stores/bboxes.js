@@ -127,67 +127,6 @@ export const useBboxesStore = defineStore("bboxes", () => {
     });
   };
 
-  const positionsFlat = ref([]);
-  const positionsNested = ref([]);
-  watch(
-    () => playerStore.videoDuration,
-    (newDuration) => {
-      if (newDuration > 0) {
-        positionsFlat.value = Array.from(
-          { length: newDuration * playerStore.videoFPS * 20 },
-          (_, index) => {
-            const image_id = Math.floor(index / 20);
-            const ref_id = (index % 20) + 1;
-            const isTeamA = ref_id <= 10;
-
-            const x = Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3);
-            const y = Math.random() * 0.8 + 0.1;
-            const w = 0.05;
-            const h = 0.1;
-
-            return {
-              x: x,
-              y: y,
-              w: w,
-              h: h,
-              new_x: x + w / 2,
-              new_y: y + h,
-              team: isTeamA ? "blue" : "red",
-              image_id: image_id,
-              time: image_id / playerStore.videoFPS,
-              ref_id: ref_id,
-              det_score: 1.0,
-            };
-          }
-        );
-        positionsNested.value = Array.from(
-          { length: newDuration * playerStore.videoFPS * 20 },
-          (_, frameIndex) =>
-            Array.from({ length: 20 }, (_, playerIndex) => {
-              const isTeamA = playerIndex < 10;
-              const x = Math.random() * 0.6 + (isTeamA ? 0.1 : 0.3);
-              const y = Math.random() * 0.8 + 0.1;
-              const w = 0.05;
-              const h = 0.1;
-              return {
-                bbox_top: y,
-                bbox_left: x,
-                bbox_width: w,
-                bbox_height: h,
-                new_x: x + w / 2,
-                new_y: y + h,
-                team: isTeamA ? "blue" : "red",
-                image_id: frameIndex,
-                time: frameIndex / playerStore.videoFPS,
-                ref_id: playerIndex,
-                det_score: 1.0,
-              };
-            })
-        );
-      }
-    }
-  );
-
   const showSpaceControl = ref(false);
   const viewSpaceControl = () => {
     showSpaceControl.value = !showSpaceControl.value;
@@ -205,6 +144,8 @@ export const useBboxesStore = defineStore("bboxes", () => {
     showBoundingBox.value = !showBoundingBox.value;
   };
 
+  const posDataUploadSuccess = ref(false);
+
   return {
     bboxData,
     setBboxData,
@@ -215,12 +156,11 @@ export const useBboxesStore = defineStore("bboxes", () => {
     viewSpaceControl,
     showEffectivePlayingSpace,
     viewEffectivePlayingSpace,
-    positionsNested,
-    positionsFlat,
     interpolateBboxData,
     bboxDataInterpolated,
     bboxPluginRun,
     bboxDataTopView,
     setbboxDataTopView,
+    posDataUploadSuccess,
   };
 });

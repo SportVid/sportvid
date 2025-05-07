@@ -1,11 +1,11 @@
-import { ref } from 'vue';
-import axios from '../plugins/axios';
-import config from '../../app.config';
-import { useVideoStore } from '@/stores/video';
-import { useErrorStore } from '@/stores/error';
-import { defineStore } from 'pinia';
+import { ref } from "vue";
+import axios from "../plugins/axios";
+import config from "../../app.config";
+import { useVideoStore } from "@/stores/video";
+import { useErrorStore } from "@/stores/error";
+import { defineStore } from "pinia";
 
-export const useVideoUploadStore = defineStore('videoUpload', () => {
+export const useVideoUploadStore = defineStore("videoUpload", () => {
   const isUploading = ref(false);
   const progress = ref(0.0);
 
@@ -15,7 +15,7 @@ export const useVideoUploadStore = defineStore('videoUpload', () => {
     formData.append("file", params.video.file);
     formData.append("title", params.video.title);
     formData.append("analyser", params.analyser);
-    
+
     isUploading.value = true;
 
     try {

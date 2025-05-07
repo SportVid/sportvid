@@ -16,6 +16,8 @@ import { useShortcutStore } from "./shortcut";
 import { useAnnotationShortcutStore } from "./annotation_shortcut";
 import { useClusterTimelineItemStore } from "./cluster_timeline_item";
 import { useShotStore } from "./shot";
+import { de } from "vis";
+import { re } from "mathjs";
 
 export const useVideoStore = defineStore("video", () => {
   const userStore = useUserStore();
@@ -23,6 +25,9 @@ export const useVideoStore = defineStore("video", () => {
   const videos = ref({});
   const videoList = ref([]);
   const isLoading = ref(false);
+  const uploadSuccess = ref(false);
+  const deleteSuccess = ref(false);
+  const renameSuccess = ref(false);
 
   const all = computed(() => videoList.value.map((id) => videos.value[id]));
   const get = computed(() => {
@@ -39,12 +44,14 @@ export const useVideoStore = defineStore("video", () => {
       let index = videoList.value.findIndex((f) => f === id);
       videoList.value.splice(index, 1);
       delete videos.value[id];
+      deleteSuccess.value = true;
     });
   };
 
   const addToStore = (video) => {
     videos.value[video.id] = video;
     videoList.value.push(video.id);
+    uploadSuccess.value = true;
   };
 
   const replaceStore = (newVideos) => {
@@ -164,7 +171,7 @@ export const useVideoStore = defineStore("video", () => {
     try {
       const res = await axios.post(`${config.API_LOCATION}/video/rename`, params);
       if (res.data.status === "ok") {
-        // Optionally commit to store
+        renameSuccess.value = true;
       }
     } finally {
       isLoading.value = false;
@@ -241,6 +248,13 @@ export const useVideoStore = defineStore("video", () => {
     videoSize.value = size;
   };
 
+  const selectedVideos = ref({});
+  const selectedVideosIds = computed(() =>
+    Object.entries(selectedVideos.value)
+      .filter(([, isSelected]) => isSelected)
+      .map(([id]) => id)
+  );
+
   return {
     videos,
     videoList,
@@ -258,5 +272,10 @@ export const useVideoStore = defineStore("video", () => {
     exportVideo,
     videoSize,
     setVideoSize,
+    uploadSuccess,
+    deleteSuccess,
+    renameSuccess,
+    selectedVideos,
+    selectedVideosIds,
   };
 });

@@ -1,35 +1,6 @@
 <template>
   <v-main>
     <v-container v-if="userStore.loggedIn" fluid>
-      <v-row justify="center" class="mt-2">
-        <v-col xs="6" sm="5" md="3" xl="2" class="d-flex flex-column align-center">
-          <ModalVideoUpload />
-        </v-col>
-        <v-col xs="6" sm="5" md="3" xl="2" class="d-flex flex-column align-center">
-          <v-card
-            :class="['d-flex', 'flex-column']"
-            style="text-align: center"
-            flat
-            color="transparent"
-            width="210"
-          >
-            <v-btn
-              :disabled="selectedVideosIds.length == 0"
-              :color="selectedVideosIds.length === 0 ? 'light-grey' : 'primary'"
-              @click="showModalPlugin = true"
-            >
-              <v-icon>mdi-plus-circle</v-icon>
-              <p class="ms-2">{{ $t("video_view.run_plugin") }}</p>
-            </v-btn>
-            <ModalPlugin
-              v-if="showModalPlugin"
-              v-model="showModalPlugin"
-              :videoIds="selectedVideosIds"
-            />
-          </v-card>
-        </v-col>
-      </v-row>
-
       <v-row>
         <v-col>
           <v-container class="d-flex flex-wrap justify-center video-gallery pa-0" fluid>
@@ -48,7 +19,7 @@
                     <v-icon class="mr-1">
                       {{ "mdi-movie-search-outline" }}
                     </v-icon>
-                    {{ $t("video_view.analysis") }}
+                    {{ $t("button.analyse") }}
                   </v-btn>
 
                   <ModalVideoRename :video="item.id" />
@@ -57,10 +28,10 @@
                     <v-icon class="mr-1">
                       {{ "mdi-trash-can-outline" }}
                     </v-icon>
-                    {{ $t("video_view.delete") }}
+                    {{ $t("button.delete") }}
                   </v-btn>
                   <v-checkbox
-                    v-model="selectedVideos[item.id]"
+                    v-model="videoStore.selectedVideos[item.id]"
                     color="primary"
                     class="pt-5 ml-n1"
                   />
@@ -77,7 +48,7 @@
       <v-col justify="space-around">
         <v-card class="welcome pa-5" elevation="3">
           <v-card-title>
-            <h1 class="text-h2 mb-4 text-primary">{{ $t("welcome.title") }}</h1>
+            <h1 class="text-h2 mb-4 text-primary">{{ $t("plattform.title") }}</h1>
           </v-card-title>
 
           <v-card-text>
@@ -99,36 +70,42 @@
         </v-card>
       </v-col>
     </v-container>
+
+    <v-snackbar v-model="showLogoutSnackbar">
+      <div class="d-flex justify-center">
+        <snackbar-icon />
+        <span class="text-h6">{{ $t("user.logout.success") }}</span>
+      </div>
+    </v-snackbar>
+
+    <v-snackbar v-model="showVideoActionSnackbar">
+      <div class="d-flex justify-center">
+        <snackbar-icon />
+        <span class="text-h6">{{ videoActionMessage }}</span>
+      </div>
+    </v-snackbar>
   </v-main>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTimelineStore } from "@/stores/timeline";
 import { getDisplayTime } from "@/plugins/time";
-import ModalPlugin from "@/components/ModalPlugin.vue";
-import ModalVideoUpload from "@/components/ModalVideoUpload.vue";
-import ModalVideoRename from "@/components/ModalVideoRename.vue";
+import ModalVideoRename from "@/components/video/ModalVideoRename.vue";
 
 const router = useRouter();
+const { t } = useI18n();
 const videoStore = useVideoStore();
 const userStore = useUserStore();
 const pluginRunStore = usePluginRunStore();
 const timelineStore = useTimelineStore();
 
-const showModalPlugin = ref(false);
-
 const videos = computed(() => videoStore.all);
-const selectedVideos = ref({});
-const selectedVideosIds = computed(() =>
-  Object.entries(selectedVideos.value)
-    .filter(([, isSelected]) => isSelected)
-    .map(([id]) => id)
-);
 
 const videosProgress = computed(() => {
   const progress = {};
@@ -186,6 +163,42 @@ watch(
 
 const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
 const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
+
+const showLogoutSnackbar = ref(false);
+watch(
+  () => userStore.loggedIn,
+  (newValue, oldValue) => {
+    if (oldValue === true && newValue === false) {
+      showLogoutSnackbar.value = true;
+    }
+  }
+);
+
+const showVideoActionSnackbar = ref(false);
+const videoActionMessage = ref("");
+const resetVideoActionSnackbar = async () => {
+  showVideoActionSnackbar.value = false;
+  await nextTick();
+  showVideoActionSnackbar.value = true;
+};
+watch(
+  [() => videoStore.uploadSuccess, () => videoStore.renameSuccess, () => videoStore.deleteSuccess],
+  ([upload, rename, del]) => {
+    if (upload === true) {
+      videoActionMessage.value = t("modal.video.upload.success");
+      resetVideoActionSnackbar();
+      videoStore.uploadSuccess = false;
+    } else if (rename === true) {
+      videoActionMessage.value = t("modal.video.rename.success");
+      resetVideoActionSnackbar();
+      videoStore.renameSuccess = false;
+    } else if (del === true) {
+      videoActionMessage.value = t("modal.video.delete.success");
+      resetVideoActionSnackbar();
+      videoStore.deleteSuccess = false;
+    }
+  }
+);
 </script>
 
 <style scoped>

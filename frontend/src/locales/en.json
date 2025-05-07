@@ -1,18 +1,129 @@
 {
+  "plattform": {
+    "title": "SportVid"
+  },
   "welcome": {
-    "title": "SportVid",
     "text": "Welcome to the SportVid video analysis platform for scholarly video analysis and sports science.",
     "demo_title": "Video Demonstration",
     "demo_text": "We are currently preparing a video that demonstrates the features of SportVid and explains how to use it to simplify the onboarding process. It is expected to be available by 2027 at the latest.",
     "login_title": "Need an account?",
     "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an E-Mail to {'xyz@123.de'} with a short explanation of your intended usecase.",
     "format_title": "Video File Support",
-    "format_text": "Please note that SportVid currently only supports the analysis of mp4 video files to avoid long processing times due to transcoding videos on our server."
+    "format_text": "Please note that SportVid currently only supports the analysis of <b>mp4</b> video files to avoid long processing times due to transcoding videos on our server."
   },
-  "plugin": {
-    "menu": {
-      "title": "Pipelines",
-      "new": "New"
+  "terms_of_service": {
+    "title": "Terms of Service",
+    "text": "By using SportVid, you agree to the following terms and conditions: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Consent to the use of uploaded and submitted videos and data for scientific research purposes.</li><li>Consent to allow other users to search for videos.</li><li>...</li></ol>",
+    "confirmation": "Do you agree with the {title}?"
+  },
+  "user": {
+    "name": "Username",
+    "password": "Password",
+    "email": "E-Mail",
+    "joined": "Joined {n_days} days ago",
+    "login": {
+      "title": "Login",
+      "text": "Don't have an account?",
+      "rules": {
+        "min": "Min. 5 characters.",
+        "max": "Max. 50 characters."
+      }
+    },
+    "logout": {
+      "title": "Logout",
+      "success": "Successfully logged out"
+    },
+    "register": {
+      "title": "Register",
+      "text": "Already have an account?",
+      "rules": {
+        "min": "Min. 5 characters.",
+        "max": "Max. 50 characters."
+      }
+    }
+  },
+  "button": {
+    "to_timeline": "To Timeline",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "create": "Create",
+    "rename": "Rename",
+    "update": "Update",
+    "upload": "Upload",
+    "export": "Export",
+    "select": "Select",
+    "analyse": "Analyse",
+    "duplicate": "Duplicate",
+    "visualize": "Visualize",
+    "save": "Save",
+    "run_batch_plugin": "Run Batch Plugin",
+    "run_plugin": "Run Plugin",
+    "upload_video": "Upload new Video"
+  },
+  "field": {
+    "required": "This field is required."
+  },
+  "app_bar": {
+    "home": "Home",
+    "video_view": "Videos",
+    "plugin_menu": "Run Plugin",
+    "history_menu": "History",
+    "shortcut_menu": "Shortcuts",
+    "export_menu": "Export",
+    "user_menu": "Login",
+    "batch_plugin_menu": "Run Batch Plugin",
+    "video_upload_menu": "Upload new Video"
+  },
+  "video_view": {
+    "video_id": "Video ID:",
+    "length": "Length:",
+    "uploaded": "Uploaded:",
+    "timelines": "Timelines:"
+  },
+  "analysis_view": {
+    "tabs": {
+      "calibration": "Calibration",
+      "pos_data": "Position Data"
+    },
+    "sports": {
+      "soccer": "Soccer",
+      "handball": "Handball",
+      "basketball": "Basketball",
+      "climbing": "Climbing"
+    }
+  },
+  "calibration_asset": {
+    "not_selected": "No calibration asset selected.<br>Please create a new calibration asset or choose an existing one.",
+    "title": "Calibration Asset",
+    "save": "Save Calibration Asset",
+    "select": "Select Calibration Asset",
+    "create": "Create new Calibration Asset",
+    "update": "Update Calibration Asset",
+    "marker": {
+      "title": "Marker",
+      "view_vid_marker": "View Video Marker",
+      "add_ref_marker": "Add Reference Marker",
+      "delete_ref_marker": "Delete Reference Marker"
+    }
+  },
+  "pos_data": {
+    "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload the position data manually.",
+    "display_settings": {
+      "title": "Display Settings",
+      "view_bounding_box": "View bounding-boxes",
+      "video_sync": "Sychronise with video",
+      "view_kpis": {
+        "title": "View performance indicator",
+        "space_control": "Space control",
+        "eps": "Effective playing space"
+      },
+      "pos_data": {
+        "title": "Position data",
+        "upload": "Upload position data",
+        "select": "Select position data"
+      }
     }
   },
   "visualization": {
@@ -21,8 +132,8 @@
     "reset": "Reset",
     "controls": {
       "plotTypes": {
-        "controlName": "Select Plot Type",
-        "resultControlName": "Select Timeline to Visualize",
+        "controlName": "Select plot type",
+        "resultControlName": "Select timeline to visualize",
         "linePlot": "Line Plot",
         "scatterPlot": "Scatter Plot",
         "histogramChart": "Histogram Chart",
@@ -30,7 +141,7 @@
         "constellationGraph": "Constellation Graph"
       },
       "mapping": {
-        "mappingTitle": "Visualization mapping",
+        "mappingTitle": "Visualization Mapping",
         "xTitle": "Select x axis data:",
         "xSelect": "Not selected",
         "yTitle": "Select y axis data:",
@@ -38,10 +149,11 @@
       }
     }
   },
+  "timelines": {
+    "title": "Timelines"
+  },
   "timelineSegment": {
     "title": "Title",
-    "close": "Close",
-    "update": "Update",
     "delete": "Delete",
     "annotate": {
       "selection": "Annotate selected segments",
@@ -56,41 +168,41 @@
     "mergeright": "Merge right segment",
     "color": "Color"
   },
-  "button": {
-    "search": "Search",
-    "totimeline": "To Timeline",
-    "deleteCluster": "Delete",
-    "edit": "Edit",
-    "apply": "Apply",
-    "cancel": "Cancel",
-    "close": "Close",
-    "delete": "Delete",
-    "create": "Create"
-  },
   "modal": {
     "error": {
-      "title": "Error",
-      "close": "Close"
+      "title": "Error"
     },
     "video": {
       "rename": {
         "title": "Rename Video",
-        "link": "Rename",
-        "name": "Video Title",
-        "update": "Rename",
-        "close": "Close"
+        "video_title": "Video title",
+        "success": "Video successfully renamed"
       },
       "upload": {
         "title": "Upload new Video",
-        "link": "Upload new Video",
-        "input": "Select a video file [mp4]",
-        "name": "Video Title",
-        "update": "Upload",
-        "close": "Close"
+        "videos_uploaded": "Videos uploaded: {numVideos} out of {allowance}",
+        "upload_denied": "You have uploaded the maximum amount of videos that you are allowed to. If you require more, please contact abc@xyz.de.",
+        "validate": {
+          "file_required": "Please select a file with a maximum file size of {maxSize}",
+          "file_exceeds": "File exceeds your maximum file size of {maxSize}",
+          "file_format_invalid": "File is not in the .mp4 format."
+        },
+        "hint": "Maximum file size: {maxSize}",
+        "file": "Select a video file [mp4]",
+        "video_title": "Video title",
+        "success": "Video successfully uploaded",
+        "division": "Select division",
+        "position": "Select current position",
+        "age_group": "Select age group",
+        "total_teams": "Select total number of teams",
+        "out_of": "out of"
+      },
+      "delete": {
+        "success": "Video successfully deleted"
       }
     },
     "export": {
-      "title": "Export Annotations",
+      "title": "Export Results",
       "merged_csv": {
         "export_name": "Merged CSV",
         "timeline_merge": "Merge annotations",
@@ -113,16 +225,12 @@
       },
       "elan": {
         "export_name": "ELAN"
-      },
-      "export": "export",
-      "close": "close",
-      "select": "Select Export"
+      }
     },
     "plugin": {
-      "search": {
-        "prompt": "Search Plugin",
-        "select": "Select Plugin"
-      },
+      "title": "Plugins",
+      "search": "Search Plugin",
+      "select": "Select Plugin",
       "groups": {
         "audio": "Audio Analysis",
         "aggregation": "Timeline Aggregation",
@@ -133,22 +241,19 @@
         "tracking": "Player and Object Tracking"
       },
       "status": {
-        "unknown": "Unknown",
-        "error": "Error",
-        "done": "Done",
-        "running": "Running",
-        "queued": "Queued",
-        "waiting": "Waiting"
+        "unknown": "UNKNOWN",
+        "error": "ERROR",
+        "done": "DONE",
+        "running": "RUNNING",
+        "queued": "QUEUED",
+        "waiting": "WAITING"
       },
-      "title": "Plugins",
-      "close": "Close",
-      "run": "Start Plugin",
-      "timeline_name": "Timeline Name",
-      "shot_timeline_name": "Shot Boundaries from Timeline",
+      "timeline_name": "Timeline name",
+      "shot_timeline_name": "Shot boundaries from timeline",
       "shot_timeline_hint": "Annotations are created based on shot boundaries of the selected timeline.",
-      "scalar_timeline_name": "Select Timeline",
-      "scalar_timeline_hint": "*The scalar values of the selected timelines will be aggregated.",
-      "position_data_name": "Select Team",
+      "scalar_timeline_name": "Select scalar timeline",
+      "scalar_timeline_hint": "The scalar values of the selected timelines will be aggregated.",
+      "position_data_name": "Select team",
       "position_data_hint": "Exporting the data for one of the teams or for both.",
       "fps": "Frames per Second (FPS)",
       "normalize": "Normalize Results?",
@@ -345,21 +450,17 @@
     },
     "shortcut": {
       "title": "Shortcuts",
+      "search": "Search",
       "annotation": "Annotation",
-      "shortcut": "Shortcut",
-      "create": "Create",
-      "update": "Update",
-      "close": "Close"
+      "shortcut": "Shortcut"
     },
     "timeline": {
+      "options": "Options",
       "export_result": {
-        "button": "Export Data",
-        "close": "Close",
         "title": "Export Timeline Data",
-        "export": "Export",
         "csv": {
-          "export_name": "CSV",
-          "export_text": "Export Timeline as CSV."
+          "title": "CSV",
+          "text": "Export timeline as CSV."
         }
       },
       "menu": {
@@ -367,173 +468,80 @@
       },
       "create": {
         "title": "Create Timeline",
-        "name": "Timeline Name",
-        "submit": "Create",
-        "close": "Close"
+        "name": "Timeline name"
       },
       "import": {
         "title": "Import Timeline",
-        "input": "Select an ELAN file to import [eaf]",
-        "eaf": "Import from ELAN .eaf file",
-        "import": "Import",
-        "close": "Close"
+        "file": "Select an ELAN file to import [eaf]"
       },
       "duplicate": {
         "title": "Duplicate Timeline",
-        "button": "Duplicate",
-        "name": "Timeline Name",
-        "includeannotations": "Duplicate with annotations?",
-        "update": "Duplicate",
-        "close": "Close"
+        "name": "Timeline name",
+        "includeannotations": "Duplicate with annotations?"
       },
       "rename": {
         "title": "Rename Timeline",
-        "button": "Rename",
-        "name": "Timeline Name",
-        "update": "Rename",
-        "close": "Close"
+        "name": "Timeline name"
       },
       "visualization": {
         "title": "Change Visualization",
-        "button": "Visualization",
-        "name": "Timeline Name",
-        "update": "OK",
-        "close": "Close",
+        "name": "Timeline name",
         "description": "The color map of the timeline can be changed to one of the following maps:",
         "colormap_inverse": "Invert color"
       },
       "delete": {
         "title": "Delete Timeline",
-        "button": "Delete",
-        "question": "Are you sure that you want to delete this timeline?",
-        "yes": "Yes",
-        "no": "No"
+        "question": "Are you sure that you want to delete this timeline?"
       }
     },
     "cluster_edit": {
-      "move_new": "Move to new Cluster",
+      "move_new": "Move to new cluster",
       "move": "Move",
-      "new_cluster": "New Cluster",
-      "move_existing": "Move to existing Cluster"
+      "new_cluster": "New cluster",
+      "move_existing": "Move to existing cluster"
     },
     "history": {
-      "close": "Close",
-      "title": "History"
+      "title": "History",
+      "plugin_name": "Plugin Name",
+      "date": "Date",
+      "progress": "Progress",
+      "status": "Status"
     },
     "calibration_asset": {
       "create": {
         "title": "Create Calibration Asset",
-        "template": "Select Sport",
-        "create": "Create"
+        "template": "Select sport"
       },
-      "select": { "title": "Select Calibration Asset" },
+      "select": {
+        "title": "Select Calibration Asset"
+      },
       "save": {
         "title": "Save Calibration Asset",
-        "save": "Save",
-        "name": "Calibration Asset Name",
-        "template": "Select Sport"
+        "name": "Calibration Asset name",
+        "template": "Select sport",
+        "success": "Calibration Asset successfully saved"
       },
-      "update": { "title": "Update Calibration Asset", "update": "Update" }
+      "update": {
+        "title": "Update Calibration Asset",
+        "success": "Calibration Asset successfully updated"
+      },
+      "delete": {
+        "success": "Calibration Asset successfully deleted"
+      }
     },
     "position_data": {
       "upload": {
         "title": "Upload Position Data",
-        "file_name": "File Title",
-        "file_input": "Select a file",
-        "upload": "Upload"
+        "name": "File name",
+        "file": "Select a file",
+        "success": "Position data successfully uploaded"
       },
-      "select": { "title": "Select Position Data", "select": "Select" }
-    }
-  },
-  "user": {
-    "name": "Username",
-    "password": "Password",
-    "email": "E-Mail",
-    "menu": {
-      "title": "Account",
-      "joined": "Joined {n_days} days ago"
-    },
-    "login": {
-      "title": "Login",
-      "text": "Don't have an account?",
-      "rules": {
-        "min": "Min. 5 characters.",
-        "max": "Max. 50 characters."
-      }
-    },
-    "logout": {
-      "title": "Logout"
-    },
-    "register": {
-      "title": "Register",
-      "text": "Already have an account?",
-      "rules": {
-        "min": "Min. 5 characters.",
-        "max": "Max. 50 characters."
-      }
-    }
-  },
-  "field": {
-    "required": "This field is required."
-  },
-  "app_bar": {
-    "plattform_name": "SportVid",
-    "video_view": "Videos",
-    "plugin_menu": "Run Plugin",
-    "history_menu": "History",
-    "shortcut_menu": "Shortcuts",
-    "export_menu": "Export",
-    "user_menu": "Login"
-  },
-  "video_view": {
-    "run_plugin": "Run Batch Plugin",
-    "analysis": "Analyse",
-    "delete": "Delete",
-    "rename": "Rename",
-    "video_id": "Video ID:",
-    "length": "Length:",
-    "uploaded": "Uploaded:",
-    "timelines": "Timelines:"
-  },
-  "calibration_asset_vis": {
-    "no_calibration_asset": {
-      "text": "No calibration asset selected.<br>Please create a new calibration asset or choose an existing one.",
-      "create": "Create new calibration asset",
-      "select": "Select calibration asset"
-    },
-    "marker": {
-      "title": "Marker",
-      "view_vid_marker": "View Video Marker",
-      "add_ref_marker": "Add Reference Marker",
-      "delete_ref_marker": "Delete Reference Marker"
-    },
-    "calibration_asset": {
-      "title": "Calibration Asset",
-      "save": "Save Calibration Asset",
-      "select": "Select Calibration Asset",
-      "create": "Create Calibration Asset",
-      "update": "Update Calibration Asset"
-    }
-  },
-  "pos_data_vis": {
-    "no_bbox_data": {
-      "text": "No position data selected.<br>Please run the Bytetrack plugin or upload the position data manually.",
-      "upload": "Upload position data",
-      "select": "Select position data"
-    },
-    "display_settings": {
-      "title": "Display Settings",
-      "view_bounding_box": "View bounding-boxes",
-      "video_sync": "Sychronise with video",
-      "view_kpis": {
-        "title": "View performance indicator",
-        "space_control": "Space control",
-        "eps": "Effective playing space"
-      },
-      "pos_data": {
-        "title": "Position data",
-        "upload": "Upload position data",
-        "select": "Select position data"
+      "select": {
+        "title": "Select Position Data",
+        "modes": {
+          "bytetrack": "ByteTrack Plugin",
+          "manual": "Manual Upload"
+        }
       }
     }
   }

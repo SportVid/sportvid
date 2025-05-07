@@ -1,0 +1,547 @@
+{
+  "plattform": {
+    "title": "SportVid"
+  },
+  "welcome": {
+    "text": "Willkommen auf der SportVid-Plattform für wissenschaftliche Videoanalyse und Sportwissenschaft.",
+    "demo_title": "Videodemonstration",
+    "demo_text": "Wir bereiten derzeit ein Video vor, das die Funktionen von SportVid demonstriert und erklärt, wie man es nutzt, um den Einstieg zu erleichtern. Die Veröffentlichung ist spätestens für 2027 geplant.",
+    "login_title": "Noch kein Account?",
+    "login_text": "Falls Sie noch keinen Account haben, können Sie oben rechts einen erstellen („Login“ → „Registrieren“) oder einen per E-Mail an {'xyz@123.de'} mit einer kurzen Beschreibung Ihres Anwendungszwecks anfordern.",
+    "format_title": "Unterstützte Videoformate",
+    "format_text": "Bitte beachten Sie, dass SportVid derzeit nur die Analyse von MP4-Videodateien unterstützt, um lange Verarbeitungszeiten durch serverseitiges Transkodieren zu vermeiden."
+  },
+  "terms_of_service": {
+    "title": "Nutzungsbedingungen",
+    "text": "Durch die Nutzung von SportVid erklären Sie sich mit den folgenden Bedingungen einverstanden: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Zustimmung zur Verwendung hochgeladener und eingereichter Videos und Daten zu wissenschaftlichen Forschungszwecken.</li><li>Zustimmung, dass andere Benutzer nach Videos suchen dürfen.</li><li>...</li></ol>",
+    "confirmation": "Stimmen Sie den {title} zu?"
+  },
+  "user": {
+    "name": "Benutzername",
+    "password": "Passwort",
+    "email": "E-Mail",
+    "joined": "Vor {n_days} Tagen beigetreten",
+    "login": {
+      "title": "Anmelden",
+      "text": "Noch kein Konto?",
+      "rules": {
+        "min": "Mindestens 5 Zeichen.",
+        "max": "Maximal 50 Zeichen."
+      }
+    },
+    "logout": {
+      "title": "Abmelden",
+      "success": "Erfolgreich abgemeldet"
+    },
+    "register": {
+      "title": "Registrieren",
+      "text": "Bereits ein Konto?",
+      "rules": {
+        "min": "Mindestens 5 Zeichen.",
+        "max": "Maximal 50 Zeichen."
+      }
+    }
+  },
+  "button": {
+    "to_timeline": "Zur Zeitleiste",
+    "edit": "Bearbeiten",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "delete": "Löschen",
+    "create": "Erstellen",
+    "rename": "Umbenennen",
+    "update": "Aktualisieren",
+    "upload": "Hochladen",
+    "export": "Exportieren",
+    "select": "Auswählen",
+    "analyse": "Analysieren",
+    "duplicate": "Duplizieren",
+    "visualize": "Visualisieren",
+    "save": "Speichern",
+    "run_batch_plugin": "Batch-Plugin ausführen",
+    "run_plugin": "Plugin ausführen",
+    "upload_video": "Neues Video hochladen"
+  },
+  "field": {
+    "required": "Dieses Feld ist erforderlich."
+  },
+  "app_bar": {
+    "home": "Startseite",
+    "video_view": "Videos",
+    "plugin_menu": "Plugin ausführen",
+    "history_menu": "Verlauf",
+    "shortcut_menu": "Kurzbefehle",
+    "export_menu": "Exportieren",
+    "user_menu": "Anmelden",
+    "batch_plugin_menu": "Batch-Plugin ausführen",
+    "video_upload_menu": "Neues Video hochladen"
+  },
+  "video_view": {
+    "video_id": "Video-ID:",
+    "length": "Länge:",
+    "uploaded": "Hochgeladen:",
+    "timelines": "Zeitleisten:"
+  },
+  "analysis_view": {
+    "tabs": {
+      "calibration": "Kalibrierung",
+      "pos_data": "Positionsdaten"
+    },
+    "sports": {
+      "soccer": "Fußball",
+      "handball": "Handball",
+      "basketball": "Basketball",
+      "climbing": "Klettern"
+    }
+  },
+  "calibration_asset": {
+    "not_selected": "Kein Kalibrierungs-Asset ausgewählt.<br>Bitte erstellen Sie ein neues Kalibrierungs-Asset oder wählen Sie ein bestehendes aus.",
+    "title": "Kalibrierungs-Asset",
+    "save": "Kalibrierungs-Asset speichern",
+    "select": "Kalibrierungs-Asset auswählen",
+    "create": "Neues Kalibrierungs-Asset erstellen",
+    "update": "Kalibrierungs-Asset aktualisieren",
+    "marker": {
+      "title": "Marker",
+      "view_vid_marker": "Video-Marker anzeigen",
+      "add_ref_marker": "Referenzmarker hinzufügen",
+      "delete_ref_marker": "Referenzmarker löschen"
+    }
+  },
+  "pos_data": {
+    "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das Bytetrack-Plugin aus oder laden Sie die Positionsdaten manuell hoch.",
+    "display_settings": {
+      "title": "Anzeigeeinstellungen",
+      "view_bounding_box": "Bounding-Boxen anzeigen",
+      "video_sync": "Mit Video synchronisieren",
+      "view_kpis": {
+        "title": "Leistungsindikator anzeigen",
+        "space_control": "Raumkontrolle",
+        "eps": "Effektiver Spielraum"
+      },
+      "pos_data": {
+        "title": "Positionsdaten",
+        "upload": "Positionsdaten hochladen",
+        "select": "Positionsdaten auswählen"
+      }
+    }
+  },
+  "visualization": {
+    "title": "Visualisieren",
+    "start": "Anwenden",
+    "reset": "Zurücksetzen",
+    "controls": {
+      "plotTypes": {
+        "controlName": "Diagrammtyp auswählen",
+        "resultControlName": "Zu visualisierende Zeitleiste auswählen",
+        "linePlot": "Liniendiagramm",
+        "scatterPlot": "Streudiagramm",
+        "histogramChart": "Histogramm",
+        "stackedBarChart": "Gestapeltes Balkendiagramm",
+        "constellationGraph": "Konstellationsdiagramm"
+      },
+      "mapping": {
+        "mappingTitle": "Visualisierungsmapping",
+        "xTitle": "X-Achsendaten auswählen:",
+        "xSelect": "Nicht ausgewählt",
+        "yTitle": "Y-Achsendaten auswählen:",
+        "ySelect": "Nicht ausgewählt"
+      }
+    }
+  },
+  "timelines": {
+    "title": "Zeitleisten"
+  },
+  "timelineSegment": {
+    "title": "Titel",
+    "delete": "Löschen",
+    "annotate": {
+      "selection": "Ausgewählte Segmente annotieren",
+      "range": "Ausgewählten Bereich annotieren"
+    },
+    "split": "Schnitt erstellen",
+    "merge": {
+      "selection": "Ausgewählte Segmente zusammenführen",
+      "range": "Ausgewählten Bereich zusammenführen"
+    },
+    "mergeleft": "Linkes Segment zusammenführen",
+    "mergeright": "Rechtes Segment zusammenführen",
+    "color": "Farbe"
+  },
+  "modal": {
+    "error": {
+      "title": "Fehler"
+    },
+    "video": {
+      "rename": {
+        "title": "Video umbenennen",
+        "video_title": "Videotitel",
+        "success": "Video erfolgreich umbenannt"
+      },
+      "upload": {
+        "title": "Neues Video hochladen",
+        "videos_uploaded": "Hochgeladene Videos: {numVideos} von {allowance}",
+        "upload_denied": "Sie haben die maximale Anzahl an Videos hochgeladen, die Ihnen erlaubt ist. Wenn Sie mehr benötigen, kontaktieren Sie bitte abc@xyz.de.",
+        "validate": {
+          "file_required": "Bitte wählen Sie eine Datei mit einer maximalen Dateigröße von {maxSize} aus",
+          "file_exceeds": "Datei überschreitet die maximale Dateigröße von {maxSize}",
+          "file_format_invalid": "Datei liegt nicht im .mp4-Format vor."
+        },
+        "hint": "Maximale Dateigröße: {maxSize}",
+        "file": "Wählen Sie eine Videodatei [mp4]",
+        "video_title": "Videotitel",
+        "success": "Video erfolgreich hochgeladen",
+        "division": "Division auswählen",
+        "position": "Aktuelle Position auswählen",
+        "age_group": "Altersgruppe auswählen",
+        "total_teams": "Gesamtzahl der Teams auswählen",
+        "out_of": "von"
+      },
+      "delete": {
+        "success": "Video erfolgreich gelöscht"
+      }
+    },
+    "export": {
+      "title": "Ergebnisse exportieren",
+      "merged_csv": {
+        "export_name": "Zusammengeführte CSV",
+        "timeline_merge": "Annotationen zusammenführen",
+        "use_timestamps": "Zeitstempel verwenden",
+        "use_seconds": "Sekunden verwenden",
+        "include_category": "Kategorie einbeziehen",
+        "split_places": "Platzkategorien in separaten Spalten anzeigen"
+      },
+      "individual_csv": {
+        "export_name": "Einzelne CSV",
+        "use_timestamps": "Zeitstempel verwenden",
+        "use_seconds": "Sekunden verwenden",
+        "include_category": "Kategorie einbeziehen"
+      },
+      "position_data": {
+        "export_name": "Positionsdaten"
+      },
+      "json": {
+        "export_name": "JSON"
+      },
+      "elan": {
+        "export_name": "ELAN"
+      }
+    },
+    "plugin": {
+      "title": "Plugins",
+      "search": "Plugin suchen",
+      "select": "Plugin auswählen",
+      "groups": {
+        "audio": "Audioanalyse",
+        "aggregation": "Zeitleistenaggregation",
+        "color": "Farb-Analyse",
+        "face": "Gesichtsanalyse",
+        "identification": "Konzept-Erkennung",
+        "shot": "Shot-Analyse",
+        "tracking": "Spieler- und Objektverfolgung"
+      },
+      "status": {
+        "unknown": "UNBEKANNT",
+        "error": "FEHLER",
+        "done": "FERTIG",
+        "running": "LÄUFT",
+        "queued": "EINGEREIHT",
+        "waiting": "WARTEND"
+      },
+      "timeline_name": "Zeitleiste",
+      "shot_timeline_name": "Schnittgrenzen aus Zeitleiste",
+      "shot_timeline_hint": "Annotationen werden basierend auf den Schnittgrenzen der ausgewählten Zeitleiste erstellt.",
+      "scalar_timeline_name": "Skalare Zeitleiste auswählen",
+      "scalar_timeline_hint": "Die skalaren Werte der ausgewählten Zeitleisten werden aggregiert.",
+      "position_data_name": "Mannschaft auswählen",
+      "position_data_hint": "Exportiert die Daten für eine der Mannschaften oder für beide.",
+      "fps": "Bilder pro Sekunde (FPS)",
+      "normalize": "Ergebnisse normalisieren?",
+      "aggregation": {
+        "plugin_name": "Zeitleisten aggregieren",
+        "plugin_description": "Dieses Plugin ermöglicht es, Informationen aus mehreren Zeitleisten mithilfe logischer Operatoren zu kombinieren. Auf diese Weise können komplexere Muster erkannt werden. Zum Beispiel kann das <em>logische UND</em> verwendet werden, um zu erkennen, wann zwei Konzepte oder Personen gleichzeitig sichtbar sind. <br><br><b>Tipp:</b> Sie können das Plugin mehrfach ausführen, um komplexere Muster zu erstellen. Das folgende Beispiel führt drei Aggregationen durch, um zu erkennen, wann ein <em>Konzept A</em> gleichzeitig mit <em>Konzept B</em> oder <em>Konzept C</em> sichtbar ist: <br><br>AGG1 = (Konzept A) Logisches UND (Konzept B) <br> AGG2 = (Konzept A) Logisches UND (Konzept C) <br> AGG3 = (AGG1) Logisches ODER (AGG2)",
+        "timeline_name": "Aggregierte Zeitleiste",
+        "method": "Aggregationsmethode",
+        "logical_or": "Logisches ODER",
+        "logical_and": "Logisches UND",
+        "mean": "Mittelwert",
+        "max": "Maximum",
+        "min": "Minimum",
+        "prod": "Produkt"
+      },
+      "bytetrack": {
+        "plugin_name": "ByteTrack",
+        "plugin_description": "Dieses Plugin führt Multi-Object-Tracking (MOT) durch. Es verwendet das Modell 'bytetrack_x_mot17' von https://github.com/ifzhang/ByteTrack.",
+        "timeline_name": "ByteTrack"
+      },
+      "calibration_static_dlt": {
+        "plugin_name": "DLT+RANSAC aus annotierten Landmarken",
+        "plugin_description": "Dieses Plugin führt eine statische Kalibrierung des Videos mittels Direct Linear Transformation (DLT) + RANSAC durch. Es nutzt die annotierten Marker-Korrespondenzen eines Kalibrierungs-Assets, um die Homographiematrix zu schätzen.",
+        "timeline_name": "Calibration Static DLT",
+        "calibration_id": "Kalibrierungs-Asset auswählen",
+        "calibration_id_hint": "Wählen Sie ein Kalibrierungs-Asset zur Verwendung bei der Kalibrierung aus."
+      },
+      "audio_waveform": {
+        "plugin_name": "Audio-Wellenform",
+        "plugin_description": "Dieses Plugin berechnet die Wellenform des Audiosignals zur grundlegenden Schallanalyse.",
+        "timeline_name": "Audio-Wellenform",
+        "sr": "Abtastrate"
+      },
+      "audio_rms": {
+        "plugin_name": "Audio-Lautstärke (Root Mean Square)",
+        "plugin_description": "Dieses Plugin berechnet die Audio-Lautstärke, indem der Root Mean Square (RMS) des Audiosignals ermittelt wird. Es könnte beispielsweise Szenen mit Stille oder plötzlichen Lautstärkeänderungen in einem Film aufzeigen.",
+        "timeline_name": "RMS-Lautstärke"
+      },
+      "whisper": {
+        "plugin_name": "Spracherkennung (Whisper)",
+        "plugin_description": "Dieses Plugin nutzt <a href=\"https://openai.com/research/whisper\">OpenAI's Whisper-Modell</a>, um automatisch eine Transkription der gesprochenen Sprache im Video zu erstellen. Es unterstützt mehr als 100 Sprachen. Eine Liste der unterstützten Sprachen finden Sie <a href=\"https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages\">hier</a>. <br><br> Nach der Ausführung des Plugins finden Sie das Transkript im Tab \"Transcript\" und können darin nach Wörtern suchen."
+      },
+      "audio_frequency": {
+        "plugin_name": "Audio-Spektrogramm",
+        "plugin_description": "Dieses Plugin berechnet das Spektrogramm des Audiosignals, das rhythmische Muster (z. B. Musik), Stimmen oder andere Klangmuster sichtbar machen kann.",
+        "timeline_name": "Audio-Spektrogramm",
+        "sr": "Abtastrate",
+        "n_fft": "Länge des FFT-Fensters (Fast Fourier Transform)"
+      },
+      "blip": {
+        "plugin_name": "Visuelle Fragebeantwortung (InstructBLIP)",
+        "plugin_description": "Dieses Plugin verwendet das große Vision-Language-Modell <a href=\"https://arxiv.org/abs/2305.06500\">InstructBLIP</a>, das GPT-4 ähnlich ist, um Fragen zum Video zu beantworten. Es kann für verschiedene Zwecke genutzt werden, zum Beispiel um automatisch Konzepte im Video zu finden. Hier einige Beispiele: <br><br> <em>Zeigt dieses Bild ein Auto? Bitte antworten Sie mit Ja oder Nein!<br> Zeigt dieses Bild mindestens drei Personen? Bitte antworten Sie mit Ja oder Nein!<br> Wurde dieses Foto in einem Restaurant aufgenommen? Bitte antworten Sie mit Ja oder Nein!</em>",
+        "timeline_name": "InstructBLIP Visual QA",
+        "search_term": "Frage"
+      },
+      "clip": {
+        "plugin_name": "Einzelobjekt-Klassifikation (CLIP)",
+        "plugin_description": "Dieses Plugin verwendet <a href=\"https://openai.com/research/clip\">OpenAI's CLIP (Contrastive Language-Image Pretraining) Modell</a>, das es ermöglicht, den Videoinhalt nach beliebigen visuellen Konzepten anhand einer textuellen Beschreibung zu durchsuchen. Die Beschreibung sollte das interessierende Konzept in einfachen, eindeutigen Worten darlegen. Hier ein Beispiel: <em>Ein Foto von einem Auto.</em> <br><br> CLIP funktioniert gut für eine Vielzahl von Konzepten (z. B. Objekte, Orte, Ereignisse, Tageszeiten, Wetterbedingungen usw.), die anhand eines einzelnen Videoframes identifiziert werden können. Um Konzepte zu identifizieren, die zeitlichen Kontext erfordern, wie menschliche Aktionen, empfehlen wir die Verwendung des Plugins \"Action Recognition\". <br><br> Bitte beachten Sie, dass das Plugin beim ersten Einsatz mehr Zeit benötigt. Nach dem ersten Einsatz werden die Ergebnisse deutlich schneller berechnet.",
+        "timeline_name": "Objektklassifikation",
+        "search_term": "Konzeptbeschreibung"
+      },
+      "clip_ontology": {
+        "plugin_name": "Mehrfachobjekt-Klassifikation (CLIP)",
+        "plugin_description": "Dieses Plugin verwendet <a href=\"https://openai.com/research/clip\">OpenAI's CLIP (Contrastive Language-Image Pretraining) Modell</a>, das es ermöglicht, den Videoinhalt nach einer Reihe beliebiger visueller Konzepte anhand einer CSV-Datei zu durchsuchen, in der der Konzeptname und eine zugehörige Beschreibung enthalten sind. Die Beschreibung sollte das interessierende Konzept in einfachen, eindeutigen Worten darlegen. Hier ein Beispiel: <br><br> \"tag\",\"ein Foto, aufgenommen bei Tageslicht\" <br> \"nacht\",\"ein Foto, aufgenommen während der Nacht\" <br><br> Es funktioniert gut für zahlreiche Konzepte (z. B. Objekte, Orte, Ereignisse, Tageszeiten, Wetterbedingungen usw.), die anhand eines einzelnen Frames identifiziert werden können. Um Konzepte zu identifizieren, die zeitlichen Kontext erfordern, wie menschliche Aktionen, empfehlen wir die Verwendung des Plugins \"Action Recognition\". <br><br> Bitte beachten Sie, dass das Plugin beim ersten Einsatz mehr Zeit benötigt. Danach werden die Ergebnisse wesentlich schneller berechnet.",
+        "timeline_name": "Objektklassifikation",
+        "concepts": "Konzeptlexikon",
+        "concepts_hint": "CSV-Datei mit Zeitleistenname und einer Beschreibung für jedes Konzept in einer Zeile"
+      },
+      "x_clip": {
+        "plugin_name": "Aktionsklassifikation (X-CLIP)",
+        "plugin_description": "Dieses Plugin verwendet <a href=\"https://arxiv.org/abs/2207.07285\">X-CLIP</a>, das es ermöglicht, den Videoinhalt nach beliebigen Aktionen anhand einer textuellen Beschreibung zu durchsuchen. Die Beschreibung sollte die Aktion in einfachen, eindeutigen Worten erläutern. Hier ein Beispiel: <em>Ein Video, das eine tanzende Person zeigt</em> <br><br> Bitte beachten Sie, dass das Plugin beim ersten Einsatz mehr Zeit benötigt. Nach dem ersten Einsatz werden die Ergebnisse wesentlich schneller berechnet.",
+        "timeline_name": "Aktionsklassifikation",
+        "search_term": "Aktionsbeschreibung"
+      },
+      "color_analysis": {
+        "plugin_name": "Dominante Farbe(n)",
+        "plugin_description": "Dieses Plugin verwendet einen Clustering-Algorithmus (k-Means), um die Top-k dominanten Farben im Video zu bestimmen. Die Anzahl der dominanten Farben kann über den untenstehenden Schieberegler ausgewählt werden.",
+        "timeline_name": "Dominante Farbe(n)",
+        "slider": "Anzahl der dominanten Farbe(n)",
+        "buttongroup": "Zeige dominante Farbe(n) in:",
+        "singletimeline": "Einzelzeitleiste",
+        "multipletimelines": "Einzelne Zeitleisten",
+        "max_resolution": "Maximale Bildauflösung",
+        "max_iter": "Maximale Anzahl Iterationen für k-Means Clustering"
+      },
+      "color_brightness_analysis": {
+        "plugin_name": "Videohelligkeit",
+        "plugin_description": "Dieses Plugin berechnet die Helligkeit der Frames im Video. Es kann dunklere und hellere Inhalte aufdecken, die beispielsweise den Tagesverlauf einer Szene sichtbar machen.",
+        "timeline_name": "Videohelligkeit"
+      },
+      "facedetection": {
+        "plugin_name": "Gesichtserkennung",
+        "timeline_name": "Gesichter"
+      },
+      "face_clustering": {
+        "plugin_name": "Gesichtsklusterung",
+        "clustering_method_name": "Wählen Sie eine Clustermethode",
+        "plugin_description": "Dieses Plugin führt automatisch einen Clustering-Algorithmus aus, um die dominanten Gesichter (Personen) im Video zu ermitteln. Die Auswahl des Schwellwerts für die Clusterbildung ist entscheidend, um gute Ergebnisse zu erzielen. Nach Durchführung der Clusterung sollte idealerweise jeder resultierende Cluster, der im Tab \"Gesichter\" sichtbar ist, nur Bilder derselben Person enthalten. Falls dies nicht der Fall ist, muss der Schwellwert gesenkt werden, sodass weniger Bilder in demselben Cluster gruppiert werden. <br><br>Beachten Sie, dass nach der Clusterung die Cluster manuell angepasst werden können und ein Personenkonstellationsdiagramm im Tab \"Gesichter\" erstellt werden kann. Zudem können Sie eine Zeitleiste für eine bestimmte Person erstellen, um zu sehen, wann diese im Video sichtbar ist.",
+        "threshold": {
+          "hint_left": "Mehr Cluster, höhere Clusterreinheit",
+          "hint_right": "Weniger Cluster, niedrigere Clusterreinheit"
+        },
+        "max_cluster": {
+          "hint_left": "Weniger Cluster zur Anzeige",
+          "hint_right": "Mehr Cluster zur Anzeige"
+        },
+        "max_faces": {
+          "hint_left": "Weniger Gesichter pro Cluster",
+          "hint_right": "Mehr Gesichter pro Cluster"
+        },
+        "min_face_height": {
+          "hint_left": "Kleinere minimale Gesichtsgröße",
+          "hint_right": "Größere minimale Gesichtsgröße"
+        }
+      },
+      "faceemotion": {
+        "plugin_name": "Gesichtsemotionserkennung",
+        "plugin_description": "Dieses Plugin erkennt automatisch den Gesichtsausdruck für jedes im Video gefundene Gesicht. Es unterscheidet zwischen sieben Grundemotionen: Wütend, Ekel, Angst, Glücklich, Traurig, Überraschung und Neutral. <br><br> Bitte beachten Sie, dass mehrere Gesichter gleichzeitig sichtbar sein können. Die durch dieses Plugin erstellten Zeitleisten zeigen den maximalen Wert für jede Emotion über alle gleichzeitig sichtbaren Gesichter.",
+        "timeline_name": "Gesichtsemotionen",
+        "fps": "Bilder pro Sekunde (FPS)",
+        "min_facesize": "Minimale Gesichtsgröße [px]"
+      },
+      "face_identification": {
+        "plugin_name": "Gesichtserkennung mithilfe eines Beispielbildes",
+        "plugin_description": "Dieses Plugin führt eine Gesichtserkennung basierend auf einem hochgeladenen Beispielbild der interessierenden Person durch. Bitte beachten Sie, dass das Bild als JPG-Datei hochgeladen werden muss und ausschließlich die Person enthalten sollte, an der Sie interessiert sind. Das Plugin könnte fehlschlagen, falls das Gesicht im hochgeladenen Foto nicht erkannt wird. Stellen Sie also bitte sicher, dass das Gesicht klar und vollständig sichtbar ist. <br><br> Um die Hauptcharaktere im Video automatisch zu identifizieren, empfehlen wir die Verwendung des Plugins „Face Clustering“.",
+        "timeline_name": "Gesichtserkennung",
+        "query_images": "Wählen Sie ein Abfragebild (JPG-Format)",
+        "query_images_hint": "*Das Bild sollte ausschließlich die Person enthalten, nach der Sie suchen möchten, in guter Auflösung und Qualität."
+      },
+      "ocr": {
+        "plugin_name": "OCR",
+        "timeline_name": "OCR",
+        "search_term": "Suchbegriff"
+      },
+      "facesize": {
+        "plugin_name": "Gesichtgrößenanalyse",
+        "timeline_name": "Gesichtsgröße"
+      },
+      "place_clustering": {
+        "plugin_name": "Ortsclusterung",
+        "plugin_description": "Dieses Plugin führt automatisch einen Clustering-Algorithmus aus, um die dominanten Orte im Video zu bestimmen. Die Auswahl des Schwellwerts für das Clustering ist entscheidend, um gute Ergebnisse zu erzielen. Nach Durchführung des Clusterings sollte idealerweise jeder resultierende Cluster, der im Tab \"Orte\" sichtbar ist, nur Bilder desselben Ortes enthalten. Falls dies nicht der Fall ist, muss der Schwellwert gesenkt werden, sodass weniger Bilder in demselben Cluster gruppiert werden. <br><br>Beachten Sie, dass nach dem Clustering die Cluster manuell angepasst werden können und ein Konstellationsdiagramm erstellt werden kann. Zudem können Sie eine Zeitleiste für einen bestimmten Ort erstellen, um zu sehen, wann dieser im Video sichtbar ist.",
+        "encoder_name": "Wählen Sie einen Bildencoder",
+        "clustering_method_name": "Wählen Sie eine Clustermethode",
+        "threshold": {
+          "hint_left": "Mehr Cluster, höhere Clusterreinheit",
+          "hint_right": "Weniger Cluster, niedrigere Clusterreinheit"
+        },
+        "max_cluster": {
+          "hint_left": "Weniger Cluster zur Anzeige",
+          "hint_right": "Mehr Cluster zur Anzeige"
+        }
+      },
+      "place_identification": {
+        "plugin_name": "Ortsidentifikation"
+      },
+      "places_classification": {
+        "plugin_name": "Orterkennung",
+        "plugin_description": "Dieses Plugin verwendet ein Modell, das auf dem <a href=\"http://places2.csail.mit.edu/\">Places365-Datensatz</a> trainiert wurde, um Orte im Video auf drei Hierarchieebenen mit 3, 16 und 365 Ortskategorien zu identifizieren. Die erste Hierarchieebene umfasst die Orte: innen, außen (natürlich) und außen (künstlich). Die Mengen an Ortskategorien der weiteren Ebenen finden Sie <a href=\"https://docs.google.com/spreadsheets/d/1H7ADoEIGgbF_eXh9kcJjCs5j_r3VJwke4nebhkdzksg/edit#gid=142478777\">hier</a>.",
+        "timeline_name": "Orte"
+      },
+      "shot_detection": {
+        "plugin_name": "Schnittgrenzenerkennung",
+        "plugin_description": "Dieses Plugin erkennt automatisch die Schnittgrenzen im Video mithilfe eines Deep-Learning-Modells. Sie können Schnitte erstellen oder zusammenführen, indem Sie mit der rechten Maustaste auf die resultierende Zeitleiste klicken.",
+        "timeline_name": "Schnitte"
+      },
+      "shot_density": {
+        "plugin_name": "Shot-Dichte",
+        "plugin_description": "Dieses Plugin prognostiziert die Dichte der Schnitte in einem Video. Dadurch können Sie zwischen langsamen und schnelllebigen Szenen unterscheiden. Die Berechnung erfolgt auf Basis einer ausgewählten Zeitleiste, z. B. der Zeitleiste, die vom Plugin \"Schnittgrenzenerkennung\" erstellt wurde.",
+        "timeline_name": "Shot-Dichte",
+        "input_timeline": "Zeitleiste auswählen",
+        "kernel": "Gauß",
+        "bandwidth": "Bandbreite"
+      },
+      "shot_scalar_annotation": {
+        "plugin_name": "Skalare Shot-Anmerkung",
+        "plugin_description": "Dieses Plugin annotiert Schnitte basierend auf einer ausgewählten Schnittzeitleiste mit dem Durchschnittswert einer Zeitleiste mit skalaren Werten. Es kann hauptsächlich dazu verwendet werden, Informationen, die in TIB-AV-A erstellt wurden, in <a href=\"https://archive.mpi.nl/tla/elan\">ELAN</a> zu importieren.",
+        "timeline_name": "Skalare Shot-Anmerkung"
+      },
+      "shot_type_classification": {
+        "plugin_name": "Klassifikation der Shot-Größe",
+        "plugin_description": "Dieses Plugin prognostiziert die Shot-Größen im Video basierend auf einem Deep-Learning-Modell. Es unterscheidet zwischen fünf Shot-Größen: Extreme Nahaufnahme, Nahaufnahme, Halbtotale, Totale und Weitaufnahme. <br><br>Durch Auswahl einer Zeitleiste, die Schnitte enthält – z. B. der vom Plugin \"Schnittgrenzenerkennung\" erstellten Zeitleiste – wird jeder Schnitt automatisch mit seiner dominanten Shot-Größe beschriftet.",
+        "timeline_name": "Shot-Größen"
+      },
+      "thumbnail": {
+        "plugin_name": "Thumbnail-Generierung",
+        "plugin_description": "Dieses Plugin erstellt Thumbnails für das Video, die im Tab \"Schnitte\" verwendet werden. Das Plugin wird automatisch nach dem Hochladen eines Videos ausgeführt. Bitte führen Sie es nur erneut aus, wenn die Thumbnails nicht angezeigt werden."
+      },
+      "invert": {
+        "plugin_name": "Zeitleiste invertieren",
+        "plugin_description": "Invertiert eine Zeitleiste, indem 1-y berechnet wird. Falls die ursprüngliche Zeitleiste Werte größer als 1 oder kleiner als 0 aufweist, werden diese zuvor auf den Bereich [0,1] normalisiert.",
+        "timeline_name": "Invertierte Zeitleiste"
+      }
+    },
+    "shortcut": {
+      "title": "Kurzbefehle",
+      "search": "Kurzbefehl suchen",
+      "annotation": "Annotation",
+      "shortcut": "Kurzbefehl"
+    },
+    "timeline": {
+      "options": "Optionen",
+      "export_result": {
+        "title": "Zeitleistendaten exportieren",
+        "csv": {
+          "title": "CSV",
+          "text": "Zeitleiste als CSV exportieren."
+        }
+      },
+      "menu": {
+        "title": "Optionen"
+      },
+      "create": {
+        "title": "Zeitleiste erstellen",
+        "name": "Zeitleistenname"
+      },
+      "import": {
+        "title": "Zeitleiste importieren",
+        "file": "Wählen Sie eine ELAN-Datei zum Importieren [eaf]"
+      },
+      "duplicate": {
+        "title": "Zeitleiste duplizieren",
+        "name": "Zeitleistenname",
+        "includeannotations": "Mit Anmerkungen duplizieren?"
+      },
+      "rename": {
+        "title": "Zeitleiste umbenennen",
+        "name": "Zeitleistenname"
+      },
+      "visualization": {
+        "title": "Visualisierung ändern",
+        "name": "Zeitleistenname",
+        "description": "Die Farbskala der Zeitleiste kann auf eine der folgenden Skalen geändert werden:",
+        "colormap_inverse": "Farbe invertieren"
+      },
+      "delete": {
+        "title": "Zeitleiste löschen",
+        "question": "Sind Sie sicher, dass Sie diese Zeitleiste löschen möchten?"
+      }
+    },
+    "cluster_edit": {
+      "move_new": "In neuen Cluster verschieben",
+      "move": "Verschieben",
+      "new_cluster": "Neuer Cluster",
+      "move_existing": "In bestehenden Cluster verschieben"
+    },
+    "history": {
+      "title": "Verlauf",
+      "plugin_name": "Plugin-Name",
+      "date": "Datum",
+      "progress": "Fortschritt",
+      "status": "Status"
+    },
+    "calibration_asset": {
+      "create": {
+        "title": "Kalibrierungs-Asset erstellen",
+        "template": "Sportart auswählen"
+      },
+      "select": {
+        "title": "Kalibrierungs-Asset auswählen"
+      },
+      "save": {
+        "title": "Kalibrierungs-Asset speichern",
+        "name": "Name des Kalibrierungs-Assets",
+        "template": "Sportart auswählen",
+        "success": "Kalibrierungs-Asset erfolgreich gespeichert"
+      },
+      "update": {
+        "title": "Kalibrierungs-Asset aktualisieren",
+        "success": "Kalibrierungs-Asset erfolgreich aktualisiert"
+      },
+      "delete": {
+        "success": "Kalibrierungs-Asset erfolgreich gelöscht"
+      }
+    },
+    "position_data": {
+      "upload": {
+        "title": "Positionsdaten hochladen",
+        "name": "Dateiname",
+        "file": "Wählen Sie eine Datei",
+        "success": "Positionsdaten erfolgreich hochgeladen"
+      },
+      "select": {
+        "title": "Positionsdaten auswählen",
+        "modes": {
+          "bytetrack": "ByteTrack Plugin",
+          "manual": "Manueller Upload"
+        }
+      }
+    }
+  }
+}

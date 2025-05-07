@@ -1,15 +1,19 @@
 <template>
-  <v-dialog v-model="dialog" max-width="90%">
+  <v-dialog v-model="dialog" width="900px">
     <v-card>
-      <v-card-title class="mt-2 ml-2">
-        <span class="text-accent">{{ $t("modal.error.title") }}</span>
-      </v-card-title>
+      <v-toolbar color="accent">
+        <v-toolbar-title class="text-h6">
+          {{ $t("modal.error.title") }}
+        </v-toolbar-title>
+
+        <template #append>
+          <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
+        </template>
+      </v-toolbar>
+
       <v-card-text>
         {{ errorMessage }}
       </v-card-text>
-      <v-card-actions class="mb-2 mr-2">
-        <v-btn @click="clearError" variant="elevated">{{ $t("modal.error.close") }}</v-btn>
-      </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
@@ -22,14 +26,9 @@ const dialog = ref(false);
 
 const errorStore = useErrorStore();
 
-const errorDate = computed(() => errorStore.error_date);
-const errorComponent = computed(() => errorStore.error_component);
 const errorMessage = computed(() => errorStore.errorMessage);
-const error = computed(() => errorStore.error);
 
-const clearError = () => {
-  dialog.value = false;
-};
+const error = computed(() => errorStore.error);
 
 watch(error, (value) => {
   if (value) {

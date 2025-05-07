@@ -48,7 +48,6 @@ export const useShotStore = defineStore("shot", () => {
       });
 
       if (!timeline.length) {
-        console.error("Shots: No annotation timeline");
         return results;
       }
       currentSelectedShots = timeline[0].id;
@@ -69,7 +68,6 @@ export const useShotStore = defineStore("shot", () => {
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
     if (!thumbnail.length) {
-      console.error("Shots: No thumbnail run");
       return [];
     }
 
@@ -121,7 +119,6 @@ export const useShotStore = defineStore("shot", () => {
         params
       );
       if (res.data.status === "ok") {
-        console.log("Selected shots set successfully.");
       }
     } catch (err) {
       console.error("Error setting selected shots:", err);
@@ -159,14 +156,12 @@ export const useShotStore = defineStore("shot", () => {
             .filter((e) => e.type == "ANNOTATION");
 
           if (!timeline.length) {
-            console.error("Shots: No annotation timeline");
             return;
           }
           fetchedSelectedShots = timeline[0].id;
         }
 
         selectedShots.value = fetchedSelectedShots;
-        console.log("Selected shots:", selectedShots.value);
       }
     } catch (err) {
       console.error("Error fetching data for video:", err);

@@ -1,21 +1,21 @@
 <template>
   <v-dialog v-model="dialog" max-width="1000">
     <v-card>
-      <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
-        {{ $t("modal.shortcut.title") }}
+      <v-toolbar color="primary">
+        <v-toolbar-title class="text-h6">
+          {{ $t("modal.shortcut.title") }}
+        </v-toolbar-title>
 
-        <v-spacer />
-
-        <v-btn icon @click="dialog = false" variant="plain" color="grey">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
+        <template #append>
+          <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
+        </template>
       </v-toolbar>
 
       <v-card-text>
         <v-text-field
           v-model="search"
           append-inner-icon="mdi-magnify"
-          label="Search"
+          :label="$t('modal.shortcut.search')"
           variant="underlined"
           hide-details
           class="mt-n2 mb-4"
@@ -28,7 +28,7 @@
           class="elevation-1"
           :search="search"
         >
-          <template v-slot:item.name="{ value }">
+          <template #item.name="{ value }">
             <v-chip class="annotation-chip">
               <v-btn disable icon x-small :color="value.color" class="mr-1">
                 <v-icon>mdi-palette</v-icon>
@@ -37,7 +37,7 @@
             </v-chip>
           </template>
 
-          <template v-slot:item.actions="{ value }">
+          <template #item.actions="{ value }">
             <v-text-field
               solo
               flat
@@ -47,7 +47,7 @@
               @click:append-outer="clear(value)"
               append-outer-icon="mdi-close"
             >
-              <template v-slot:prepend-inner>
+              <template #prepend-inner>
                 <v-chip v-for="key in value.keys" :key="key">
                   <span>{{ key }}</span>
                 </v-chip>
@@ -58,7 +58,7 @@
 
         <v-row class="mt-6 mb-n2 justify-center">
           <v-btn class="mt-n2" @click="submit" :disabled="isSubmitting">
-            {{ $t("modal.shortcut.update") }}
+            {{ $t("button.update") }}
           </v-btn>
         </v-row>
       </v-card-text>
@@ -68,6 +68,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
 import { useShortcutStore } from "@/stores/shortcut";
 import { useAnnotationStore } from "@/stores/annotation";
@@ -80,6 +81,8 @@ const props = defineProps({
 });
 const emit = defineEmits(["update:modelValue"]);
 
+const { t } = useI18n();
+
 const dialog = ref(props.modelValue);
 const isSubmitting = ref(false);
 const search = ref("");
@@ -90,8 +93,8 @@ const shortcutStore = useShortcutStore();
 const annotationStore = useAnnotationStore();
 
 const headers = ref([
-  { title: "Annotation", key: "name" },
-  { title: "Shortcut", sortable: false, key: "actions" },
+  { title: t("modal.shortcut.annotation"), key: "name" },
+  { title: t("modal.shortcut.shortcut"), sortable: false, key: "actions" },
 ]);
 
 const annotations = computed(() => annotationStore.nonTranscripts);
