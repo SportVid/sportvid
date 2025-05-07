@@ -43,13 +43,13 @@
         {{ $t("app_bar.export_menu") }}
       </v-btn>
 
-      <v-btn v-if="videoView" @click="showModalVideoUpload = true">
+      <v-btn v-if="videoView && loggedIn" @click="showModalVideoUpload = true">
         <app-bar-icon>mdi-plus</app-bar-icon>
         {{ $t("app_bar.video_upload_menu") }}
       </v-btn>
 
       <v-btn
-        v-if="videoView"
+        v-if="videoView && loggedIn"
         @click="showModalBatchPlugin = true"
         :videoIds="selectedVideosIds"
         :disabled="selectedVideosIds.length == 0"

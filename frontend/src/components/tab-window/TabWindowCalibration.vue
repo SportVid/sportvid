@@ -124,7 +124,7 @@
           </v-btn>
         </template>
 
-        <v-list class="py-0" width="200px" density="compact">
+        <v-list class="py-0" density="compact">
           <v-list-item class="menu-item" @click="showModalCalibrationAssetCreate = true">
             <v-list-item-title>
               {{ $t("calibration_asset.create") }}
@@ -180,7 +180,7 @@
             {{ $t("calibration_asset.marker.title") }}
           </v-btn>
         </template>
-        <v-list class="py-0" density="compact" width="200px">
+        <v-list class="py-0" density="compact" width="220px">
           <v-list-item class="menu-item" @click="calibrationAssetStore.toggleVideoMarker">
             <v-list-item-title class="d-flex justify-space-between">
               {{ $t("calibration_asset.marker.view_vid_marker") }}

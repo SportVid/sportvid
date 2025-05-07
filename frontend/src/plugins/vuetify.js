@@ -7,7 +7,6 @@ import { VTreeview } from "vuetify/labs/VTreeview";
 import "@mdi/font/css/materialdesignicons.css";
 import { createVueI18nAdapter } from "vuetify/locale/adapters/vue-i18n";
 import { useI18n } from "vue-i18n";
-import { en, de } from "vuetify/locale";
 import { i18n } from "./i18n";
 
 export const vuetify = createVuetify({

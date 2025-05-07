@@ -198,10 +198,12 @@ export class AnnotationTimeline extends Timeline {
       });
     }
 
-    this.pRenderer.render({
-      container: segmentRects,
-      target: rt,
-    });
+    if (this.pRenderer) {
+      this.pRenderer.render({
+        container: segmentRects,
+        target: rt,
+      });
+    }
     return sprite;
   }
 
@@ -238,10 +240,12 @@ export class AnnotationTimeline extends Timeline {
       });
     }
 
-    this.pRenderer.render({
-      container: segmentRects,
-      target: rt,
-    });
+    if (this.pRenderer) {
+      this.pRenderer.render({
+        container: segmentRects,
+        target: rt,
+      });
+    }
     return sprite;
   }
 

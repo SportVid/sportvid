@@ -85,7 +85,7 @@
             {{ $t("pos_data.display_settings.title") }}
           </v-btn>
         </template>
-        <v-list class="py-0" density="compact" width="220px">
+        <v-list class="py-0" density="compact" width="225px">
           <v-list-item class="menu-item" @click="bboxesStore.viewBoundingBox">
             <v-list-item-title class="d-flex justify-space-between">
               {{ $t("pos_data.display_settings.view_bounding_box") }}

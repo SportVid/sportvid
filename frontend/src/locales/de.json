@@ -102,17 +102,17 @@
     "create": "Neues Kalibrierungs-Asset erstellen",
     "update": "Kalibrierungs-Asset aktualisieren",
     "marker": {
-      "title": "Markierung",
-      "view_vid_marker": "Video-Markierung anzeigen",
-      "add_ref_marker": "Referenzmarkierung hinzufügen",
-      "delete_ref_marker": "Referenzmarkierung löschen"
+      "title": "Marker",
+      "view_vid_marker": "Video-Marker anzeigen",
+      "add_ref_marker": "Referenzmarker hinzufügen",
+      "delete_ref_marker": "Referenzmarker löschen"
     }
   },
   "pos_data": {
     "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das Bytetrack-Plugin aus oder laden Sie die Positionsdaten manuell hoch.",
     "display_settings": {
       "title": "Anzeigeeinstellungen",
-      "view_bounding_box": "Begrenzungsrahmen anzeigen",
+      "view_bounding_box": "Bounding-Boxen anzeigen",
       "video_sync": "Mit Video synchronisieren",
       "view_kpis": {
         "title": "Leistungsindikator anzeigen",
