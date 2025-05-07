@@ -16,7 +16,7 @@
           <v-col cols="3" class="ml-n3">
             <v-text-field
               v-model="searchPlugin"
-              label="Search Plugin"
+              :label="$t('modal.plugin.search')"
               class="searchField"
               variant="solo-filled"
               hide-details

@@ -11,12 +11,12 @@
             style="text-align: center"
             flat
             color="transparent"
-            width="210"
           >
             <v-btn
               :disabled="selectedVideosIds.length == 0"
               :color="selectedVideosIds.length === 0 ? 'light-grey' : 'primary'"
               @click="showModalPlugin = true"
+              :key="locale"
             >
               <v-icon>mdi-plus-circle</v-icon>
               <p class="ms-2">{{ $t("button.run_batch_plugin") }}</p>

@@ -14,7 +14,7 @@
   "terms_of_service": {
     "title": "Terms of Service",
     "text": "By using SportVid, you agree to the following terms and conditions: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Consent to the use of uploaded and submitted videos and data for scientific research purposes.</li><li>Consent to allow other users to search for videos.</li><li>...</li></ol>",
-    "confirmation": "Do you agree with the <0>Terms of Service</0>?"
+    "confirmation": "Do you agree with the {title}?"
   },
   "user": {
     "name": "Username",
@@ -66,6 +66,7 @@
     "required": "This field is required."
   },
   "app_bar": {
+    "home": "Home",
     "video_view": "Videos",
     "plugin_menu": "Run Plugin",
     "history_menu": "History",
@@ -191,7 +192,8 @@
         "division": "Select division",
         "position": "Select current position",
         "age_group": "Select age group",
-        "total_teams": "Select total number of teams"
+        "total_teams": "Select total number of teams",
+        "out_of": "out of"
       },
       "delete": {
         "success": "Video successfully deleted"
@@ -446,6 +448,7 @@
     },
     "shortcut": {
       "title": "Shortcuts",
+      "search": "Search",
       "annotation": "Annotation",
       "shortcut": "Shortcut"
     },

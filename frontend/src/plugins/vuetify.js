@@ -5,7 +5,10 @@ import { VIcon } from "vuetify/components";
 import * as directives from "vuetify/directives";
 import { VTreeview } from "vuetify/labs/VTreeview";
 import "@mdi/font/css/materialdesignicons.css";
-import AppBar from "@/components/app/AppBar.vue";
+import { createVueI18nAdapter } from "vuetify/locale/adapters/vue-i18n";
+import { useI18n } from "vue-i18n";
+import { en, de } from "vuetify/locale";
+import { i18n } from "./i18n";
 
 export const vuetify = createVuetify({
   components: {
@@ -24,6 +27,9 @@ export const vuetify = createVuetify({
         },
       },
     },
+  },
+  locale: {
+    adapter: createVueI18nAdapter({ i18n, useI18n }),
   },
   aliases: {
     snackbarIcon: VIcon,

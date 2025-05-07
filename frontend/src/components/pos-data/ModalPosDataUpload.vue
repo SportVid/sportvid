@@ -43,16 +43,17 @@
 
           <v-checkbox v-model="checkbox" required class="ml-n2">
             <template #label>
-              <span class="ml-2">
-                Do you agree with the
-                <router-link
-                  to="/terms-of-service"
-                  target="_blank"
-                  class="text-primary terms-of-service-link"
-                >
-                  Terms of Service</router-link
-                >?
-              </span>
+              <i18n-t keypath="terms_of_service.confirmation" tag="span">
+                <template #title>
+                  <router-link
+                    to="/terms-of-service"
+                    target="_blank"
+                    class="text-primary terms-of-service-link"
+                  >
+                    {{ $t("terms_of_service.title") }}
+                  </router-link>
+                </template>
+              </i18n-t>
             </template>
           </v-checkbox>
 

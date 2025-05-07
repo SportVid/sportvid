@@ -8,7 +8,12 @@
     </template>
 
     <template #append>
-      <v-btn v-if="analysisView || termsOfServiceView" to="/">
+      <v-btn v-if="termsOfServiceView && !loggedIn" to="/">
+        <app-bar-icon>mdi-home</app-bar-icon>
+        {{ $t("app_bar.home") }}
+      </v-btn>
+
+      <v-btn v-if="(analysisView || termsOfServiceView) && loggedIn" to="/">
         <app-bar-icon>mdi-movie</app-bar-icon>
         {{ $t("app_bar.video_view") }}
       </v-btn>
@@ -67,7 +72,9 @@
 import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
+import { useLocale } from "vuetify";
 import { usePlayerStore } from "@/stores/player";
+import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import ModalHistory from "@/components/ModalHistory.vue";
 import ModalPlugin from "@/components/ModalPlugin.vue";
@@ -77,9 +84,13 @@ import UserMenu from "@/components/user/UserMenu.vue";
 
 const route = useRoute();
 const { t, locale } = useI18n();
+const { current } = useLocale();
 
 const playerStore = usePlayerStore();
+const userStore = useUserStore();
 const pluginRunStore = usePluginRunStore();
+
+const loggedIn = computed(() => userStore.loggedIn);
 
 const languages = [
   { code: "en", label: "English", flag: require("@/assets/flags/en.svg") },
@@ -87,6 +98,7 @@ const languages = [
 ];
 const setLanguage = (code) => {
   locale.value = code;
+  current.value = code;
 };
 
 const analysisView = computed(() => route.name === "AnalysisView");

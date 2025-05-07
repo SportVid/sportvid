@@ -83,8 +83,8 @@
               <v-col>
                 <v-tabs-window v-model="analysisTabId">
                   <v-tabs-window-item v-for="analysisTab in analysisTabs" :key="analysisTab.id">
-                    <TabWindowCalibration v-if="analysisTab.name === 'Calibration'" />
-                    <TabWindowPosData v-if="analysisTab.name === 'Position Data'" />
+                    <TabWindowCalibration v-if="analysisTab.id === 'calibration'" />
+                    <TabWindowPosData v-if="analysisTab.id === 'pos_data'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -185,29 +185,27 @@ const annotationShortcutStore = useAnnotationShortcutStore();
 const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
 
-const analysisTabId = ref(0);
-const analysisTabs = ref([
-  { id: 0, name: t("analysis_view.tabs.calibration") },
-  { id: 1, name: t("analysis_view.tabs.pos_data") },
+const analysisTabId = ref("calibration");
+const analysisTabs = computed(() => [
+  { id: "calibration", name: t("analysis_view.tabs.calibration") },
+  { id: "pos_data", name: t("analysis_view.tabs.pos_data") },
 ]);
 onMounted(() => {
-  analysisTabId.value = analysisTabs.value.find((tab) => tab.name === "Calibration")?.id;
+  analysisTabId.value = analysisTabs.value.find((tab) => tab.id === "calibration")?.id;
 });
 watch(
   () => analysisTabId,
   (newTabId) => {
     topViewStore.showItems = false;
 
-    const currentTab = analysisTabs.value.find((tab) => tab.id === newTabId)?.name;
-
     nextTick(() => {
-      if (currentTab === "Calibration") {
+      if (newTabId === "calibration") {
         calibrationAssetStore.showVideoMarker = true;
       } else {
         calibrationAssetStore.showVideoMarker = false;
       }
 
-      if (currentTab === "Position Data") {
+      if (currnewTabIdentTab === "pos_data") {
         bboxesStore.showBoundingBox = true;
       } else {
         bboxesStore.showBoundingBox = false;

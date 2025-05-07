@@ -1,11 +1,5 @@
 <template>
-  <v-card
-    :class="['d-flex', 'flex-column']"
-    style="text-align: center"
-    flat
-    color="transparent"
-    width="210"
-  >
+  <v-card :class="['d-flex', 'flex-column']" style="text-align: center" flat color="transparent">
     <v-dialog v-model="dialog" width="700">
       <template #activator="{ props }">
         <v-btn :disabled="!canUpload" :color="!canUpload ? 'light-grey' : 'primary'" v-bind="props">
@@ -72,7 +66,7 @@
                 />
               </v-col>
               <v-col cols="2" class="d-flex justify-center mt-2">
-                <span>out of</span>
+                <span>{{ $t("modal.video.upload.out_of") }}</span>
               </v-col>
               <v-col cols="5">
                 <v-select
@@ -104,16 +98,17 @@
 
             <v-checkbox v-model="checkbox" required class="ml-n2">
               <template #label>
-                <span class="ml-2">
-                  Do you agree with the
-                  <router-link
-                    to="/terms-of-service"
-                    target="_blank"
-                    class="text-primary terms-of-service-link"
-                  >
-                    Terms of Service</router-link
-                  >?
-                </span>
+                <i18n-t keypath="terms_of_service.confirmation" tag="span">
+                  <template #title>
+                    <router-link
+                      to="/terms-of-service"
+                      target="_blank"
+                      class="text-primary terms-of-service-link"
+                    >
+                      {{ $t("terms_of_service.title") }}
+                    </router-link>
+                  </template>
+                </i18n-t>
               </template>
             </v-checkbox>
 

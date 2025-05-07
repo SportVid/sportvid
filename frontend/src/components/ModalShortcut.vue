@@ -15,7 +15,7 @@
         <v-text-field
           v-model="search"
           append-inner-icon="mdi-magnify"
-          label="Search"
+          :label="$t('modal.shortcut.search')"
           variant="underlined"
           hide-details
           class="mt-n2 mb-4"

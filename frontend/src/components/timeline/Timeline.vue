@@ -10,7 +10,7 @@
                 {{ $t("modal.timeline.options") }}
               </v-btn>
             </template>
-            <v-list class="py-0" density="compact" width="200">
+            <v-list class="py-0" density="compact" width="220">
               <v-list-item class="menu-item" @click="showModalTimelineCreate = true">
                 <v-icon size="small" class="mt-n1">mdi-plus</v-icon>
                 {{ $t("modal.timeline.create.title") }}
