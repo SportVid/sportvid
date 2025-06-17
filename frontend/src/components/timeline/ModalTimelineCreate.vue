@@ -21,7 +21,7 @@
         />
 
         <v-btn @click="submit" :disabled="isSubmitting || !name">
-          {{ $t("modal.timeline.create.submit") }}
+          {{ $t("button.create") }}
         </v-btn>
       </v-card-text>
     </v-card>

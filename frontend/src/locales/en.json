@@ -58,6 +58,7 @@
     "duplicate": "Duplicate",
     "visualize": "Visualize",
     "save": "Save",
+    "import": "Import",
     "run_batch_plugin": "Run Batch Plugin",
     "run_plugin": "Run Plugin",
     "upload_video": "Upload new Video"
@@ -83,9 +84,14 @@
     "timelines": "Timelines:"
   },
   "analysis_view": {
-    "tabs": {
+    "analysis_tabs": {
       "calibration": "Calibration",
       "pos_data": "Position Data"
+    },
+    "visualization_tabs": {
+      "select": "Select Visualization",
+      "timeline": "Timeline",
+      "list": "List"
     },
     "sports": {
       "soccer": "Soccer",
