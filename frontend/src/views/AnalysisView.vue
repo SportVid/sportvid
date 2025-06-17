@@ -101,19 +101,26 @@
 
       <v-row v-if="analysisTabId !== 0" class="ma-n2">
         <v-col>
-          <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" scrollable="False">
-            <v-row>
-              <v-col cols="3">
-                <v-card-title class="pl-2 mb-n2"> {{ $t("timelines.title") }} </v-card-title>
-              </v-col>
-              <v-col cols="9" class="mt-2">
-                <TimelineTimeSelector class="ml-n1" />
+          <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2">
+            <v-tabs fixed-tabs slider-color="primary" v-model="visualizationTabId">
+              <v-tab v-for="visualizationTab in visualizationTabs" :key="visualizationTab.id">
+                {{ visualizationTab.name }}
+              </v-tab>
+            </v-tabs>
+
+            <v-row class="flex-grow-1 my-0">
+              <v-col>
+                <v-tabs-window v-model="visualizationTabId">
+                  <v-tabs-window-item
+                    v-for="visualizationTab in visualizationTabs"
+                    :key="visualizationTab.id"
+                  >
+                    <TabWindowTimeline v-if="visualizationTab.id === 'timeline'" />
+                    <TabWindowList v-if="visualizationTab.id === 'list'" />
+                  </v-tabs-window-item>
+                </v-tabs-window>
               </v-col>
             </v-row>
-
-            <v-sheet class="px-4 mb-6 mt-2">
-              <Timeline ref="timeline" :style="{ width: '100%' }" />
-            </v-sheet>
           </v-card>
         </v-col>
       </v-row>
@@ -157,10 +164,10 @@ import { useShotStore } from "@/stores/shot";
 import VideoPlayer from "@/components/video/VideoPlayer.vue";
 import TabWindowPosData from "@/components/tab-window/TabWindowPosData.vue";
 import TabWindowCalibration from "@/components/tab-window/TabWindowCalibration.vue";
+import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
+import TabWindowList from "@/components/tab-window/TabWindowList.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
-import Timeline from "@/components/timeline/Timeline.vue";
-import TimelineTimeSelector from "@/components/timeline/TimelineTimeSelector.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
 // import ShotsOverview from "@/components/ShotsOverview.vue";
@@ -187,8 +194,8 @@ const shotStore = useShotStore();
 
 const analysisTabId = ref("calibration");
 const analysisTabs = computed(() => [
-  { id: "calibration", name: t("analysis_view.tabs.calibration") },
-  { id: "pos_data", name: t("analysis_view.tabs.pos_data") },
+  { id: "calibration", name: t("analysis_view.analysis_tabs.calibration") },
+  { id: "pos_data", name: t("analysis_view.analysis_tabs.pos_data") },
 ]);
 onMounted(() => {
   analysisTabId.value = analysisTabs.value.find((tab) => tab.id === "calibration")?.id;
@@ -214,6 +221,15 @@ watch(
     });
   }
 );
+
+const visualizationTabId = ref("timeline");
+const visualizationTabs = computed(() => [
+  { id: "timeline", name: t("analysis_view.visualization_tabs.timeline") },
+  { id: "list", name: t("analysis_view.visualization_tabs.list") },
+]);
+onMounted(() => {
+  visualizationTabId.value = visualizationTabs.value.find((tab) => tab.id === "timeline")?.id;
+});
 
 const isLoading = ref(true);
 const fetchData = async ({ addResults = true }) => {
