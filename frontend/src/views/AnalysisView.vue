@@ -73,7 +73,11 @@
           >
             <v-row class="sticky-tabs-bar" justify="center">
               <v-tabs fixed-tabs slider-color="primary" v-model="analysisTabId">
-                <v-tab v-for="analysisTab in analysisTabs" :key="analysisTab.id">
+                <v-tab
+                  v-for="analysisTab in analysisTabs"
+                  :key="analysisTab.id"
+                  :value="analysisTab.id"
+                >
                   {{ analysisTab.name }}
                 </v-tab>
               </v-tabs>
@@ -82,7 +86,11 @@
             <v-row class="flex-grow-1">
               <v-col>
                 <v-tabs-window v-model="analysisTabId">
-                  <v-tabs-window-item v-for="analysisTab in analysisTabs" :key="analysisTab.id">
+                  <v-tabs-window-item
+                    v-for="analysisTab in analysisTabs"
+                    :key="analysisTab.id"
+                    :value="analysisTab.id"
+                  >
                     <TabWindowCalibration v-if="analysisTab.id === 'calibration'" />
                     <TabWindowPosData v-if="analysisTab.id === 'pos_data'" />
                   </v-tabs-window-item>
@@ -197,11 +205,8 @@ const analysisTabs = computed(() => [
   { id: "calibration", name: t("analysis_view.analysis_tabs.calibration") },
   { id: "pos_data", name: t("analysis_view.analysis_tabs.pos_data") },
 ]);
-onMounted(() => {
-  analysisTabId.value = analysisTabs.value.find((tab) => tab.id === "calibration")?.id;
-});
 watch(
-  () => analysisTabId,
+  () => analysisTabId.value,
   (newTabId) => {
     topViewStore.showItems = false;
 
@@ -212,7 +217,7 @@ watch(
         calibrationAssetStore.showVideoMarker = false;
       }
 
-      if (currnewTabIdentTab === "pos_data") {
+      if (newTabId === "pos_data") {
         bboxesStore.showBoundingBox = true;
       } else {
         bboxesStore.showBoundingBox = false;

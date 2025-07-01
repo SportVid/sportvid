@@ -14,7 +14,7 @@
       <v-card-text>
         <v-row justify="center" class="mt-0 mb-1">
           <v-tabs v-model="selectedMode" fixed-tabs slider-color="primary">
-            <v-tab v-for="mode in PosDataModes" :key="mode.id">
+            <v-tab v-for="mode in PosDataModes" :key="mode.id" :value="mode.id">
               {{ mode.name }}
             </v-tab>
           </v-tabs>
@@ -23,8 +23,8 @@
         <v-row>
           <v-col>
             <v-tabs-window v-model="selectedMode">
-              <v-tabs-window-item v-for="mode in PosDataModes" :key="mode.id">
-                <template v-if="mode.name === 'Bytetrack Plugin'">
+              <v-tabs-window-item v-for="mode in PosDataModes" :key="mode.id" :value="mode.id">
+                <template v-if="mode.id === 'bytetrack'">
                   <v-select
                     v-model="selectedCalibrationAsset"
                     :items="Object.values(calibrationAssetStore.calibrationAssetsList)"
@@ -46,7 +46,7 @@
                   />
                 </template>
 
-                <template v-else-if="mode.name === 'Uploaded Data'">
+                <template v-else-if="mode.id === 'manual'">
                   <v-select
                     v-model="selectedUploadedPosData"
                     :items="uploadedPosDataList"
@@ -113,10 +113,10 @@ watch(
   }
 );
 
-const selectedMode = ref(0);
+const selectedMode = ref("bytetrack");
 const PosDataModes = ref([
-  { id: 0, name: t("modal.position_data.select.modes.bytetrack") },
-  { id: 1, name: t("modal.position_data.select.modes.manual") },
+  { id: "bytetrack", name: t("modal.position_data.select.modes.bytetrack") },
+  { id: "manual", name: t("modal.position_data.select.modes.manual") },
 ]);
 
 const selectedCalibrationAsset = ref(null);
@@ -209,20 +209,20 @@ function processCsvPositions(csvText, fps = 30) {
 }
 
 const isButtonDisabled = computed(() => {
-  if (selectedMode.value === 0) {
+  if (selectedMode.value === "bytetrack") {
     return selectedCalibrationAsset.value === null || selectedBytetrack.value === null;
-  } else if (selectedMode.value === 1) {
+  } else if (selectedMode.value === "manual") {
     return !selectedUploadedPosData.value;
   }
   return true;
 });
 
 const confirmSelection = (calibrationAssetId, bytetrackPluginIndex) => {
-  if (selectedMode.value === 0) {
+  if (selectedMode.value === "bytetrack") {
     calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
     bboxesStore.bboxPluginRun = bytetrackPluginIndex;
     console.log("selected posdata plugin", bboxesStore.bboxDataTopView);
-  } else if (selectedMode.value === 1) {
+  } else if (selectedMode.value === "manual") {
     bboxesStore.bboxDataTopView = processCsvPositions(selectedUploadedPosData.value);
     calibrationAssetStore.marker = [];
     calibrationAssetStore.calibrationAssetId = null;
