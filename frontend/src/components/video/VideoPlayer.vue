@@ -39,8 +39,43 @@
           height: position.h * videoStore.videoSize.height + 'px',
           border: `2px solid red`,
         }"
-      />
+      >
+        <v-tooltip activator="parent" location="top" class="tracklet-tooltip">
+          <div><strong>ref_id:</strong> {{ position.ref_id }}</div>
+          <div><strong>team_id:</strong> red</div>
+        </v-tooltip>
+
+        <v-menu activator="parent" location="bottom center">
+          <v-list density="compact" class="py-0 tracklet-list">
+            <v-list-item @click="openEditField(position, 'ref_id')" class="menu-item">
+              <v-list-item-title>Change ref_id</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="openEditField(position, 'team_id')" class="menu-item">
+              <v-list-item-title>Change team_id</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </div>
     </v-row>
+
+    <ModalTrackletUpdate
+      v-model="editDialog"
+      :bbox="editBBox"
+      :field="editField"
+      @save="saveBBoxField"
+    />
+    <!-- Bearbeiten-Dialog -->
+    <!-- <v-dialog v-model="editDialog" max-width="400">
+      <v-card v-if="editPosition">
+        <v-card-title>{{ editField }} bearbeiten</v-card-title>
+        <v-card-text>
+          <v-text-field v-if="editField" v-model="editPosition[editField]" :label="editField" />
+        </v-card-text>
+        <v-card-actions>
+          <v-btn color="primary" @click="editDialog = false">OK</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog> -->
 
     <v-row ref="videoControl" class="video-control mt-6">
       <v-btn @click="deltaSeek(-1)" size="small">
@@ -127,6 +162,7 @@ import { useVideoStore } from "@/stores/video";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
+import ModalTrackletUpdate from "./ModalTrackletUpdate.vue";
 
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
@@ -345,6 +381,23 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", updateMaxHeight);
 });
 watch(() => window.innerHeight, updateMaxHeight);
+
+const editDialog = ref(false);
+const editField = ref(null);
+const editBBox = ref(null);
+
+function openEditField(bbox, field) {
+  editBBox.value = bbox;
+  editField.value = field;
+  editDialog.value = true;
+}
+
+function saveBBoxField({ field, value }) {
+  if (editBBox.value && field) {
+    editBBox.value[field] = value;
+    // Optional: Hier kannst du Änderungen ins Backend speichern
+  }
+}
 </script>
 
 <style scoped>
@@ -372,5 +425,27 @@ watch(() => window.innerHeight, updateMaxHeight);
 .bounding-box-position {
   position: fixed;
   z-index: 1000;
+}
+
+.tracklet-tooltip ::v-deep .v-overlay__content {
+  background: rgb(var(--v-theme-primary));
+  border-radius: 2px;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  padding: 5px 10px;
+  color: #fff;
+}
+
+.menu-item {
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background-color: #f0f0f0;
+}
+
+.menu-item .v-list-item-title {
+  font-size: 12px;
 }
 </style>
