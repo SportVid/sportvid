@@ -1,4 +1,4 @@
-import { ref, computed, watch } from "vue";
+import { ref } from "vue";
 import { defineStore } from "pinia";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";

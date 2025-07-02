@@ -93,6 +93,7 @@
                   >
                     <TabWindowCalibration v-if="analysisTab.id === 'calibration'" />
                     <TabWindowPosData v-if="analysisTab.id === 'pos_data'" />
+                    <TabWindowHeatmap v-if="analysisTab.id === 'heatmap'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -107,7 +108,7 @@
         </v-col>
       </v-row> -->
 
-      <v-row v-if="analysisTabId !== 0" class="ma-n2">
+      <v-row v-if="analysisTabId === 'pos_data'" class="ma-n2">
         <v-col>
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2">
             <v-tabs fixed-tabs slider-color="primary" v-model="visualizationTabId">
@@ -129,6 +130,13 @@
                 </v-tabs-window>
               </v-col>
             </v-row>
+          </v-card>
+          <v-card
+            else-if="analysisTabId === 'heatmap'"
+            class="d-flex flex-column flex-nowrap px-2"
+            elevation="2"
+          >
+            test
           </v-card>
         </v-col>
       </v-row>
@@ -172,6 +180,7 @@ import { useShotStore } from "@/stores/shot";
 import VideoPlayer from "@/components/video/VideoPlayer.vue";
 import TabWindowPosData from "@/components/tab-window/TabWindowPosData.vue";
 import TabWindowCalibration from "@/components/tab-window/TabWindowCalibration.vue";
+import TabWindowHeatmap from "@/components/tab-window/TabWindowHeatmap.vue";
 import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
 import TabWindowList from "@/components/tab-window/TabWindowList.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
@@ -204,6 +213,7 @@ const analysisTabId = ref("calibration");
 const analysisTabs = computed(() => [
   { id: "calibration", name: t("analysis_view.analysis_tabs.calibration") },
   { id: "pos_data", name: t("analysis_view.analysis_tabs.pos_data") },
+  { id: "heatmap", name: t("analysis_view.analysis_tabs.heatmap") },
 ]);
 watch(
   () => analysisTabId.value,
@@ -217,7 +227,7 @@ watch(
         calibrationAssetStore.showVideoMarker = false;
       }
 
-      if (newTabId === "pos_data") {
+      if (newTabId === "pos_data" || newTabId === "heatmap") {
         bboxesStore.showBoundingBox = true;
       } else {
         bboxesStore.showBoundingBox = false;

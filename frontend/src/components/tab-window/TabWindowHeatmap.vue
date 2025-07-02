@@ -1,0 +1,310 @@
+<template>
+  <PosDataMenu v-if="Object.keys(bboxesStore.bboxDataTopView).length === 0" />
+
+  <v-container v-else class="d-flex flex-column">
+    <v-row class="mt-1" justify="center" style="position: relative">
+      <img
+        ref="topViewElement"
+        class="visualizer-image"
+        :src="topViewStore.currentSport.pitchImage"
+        @load="updateTopViewSize"
+        :style="{
+          maxHeight: maxVideoHeight * 100 + 'vh',
+          height: videoStore.videoSize.height + 'px',
+        }"
+      />
+
+      <div
+        v-for="position in selectedPositions"
+        v-show="topViewStore.showItems"
+        :key="position"
+        class="data-point-position"
+        :style="{
+          top:
+            position.new_y *
+              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+            (topViewStore.topViewSize.top +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
+            'px',
+          left:
+            position.new_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+            (topViewStore.topViewSize.left +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
+            'px',
+          backgroundColor: !position.team ? 'grey' : position.team,
+        }"
+      />
+
+      <div
+        ref="heatmapContainer"
+        class="heatmap-overlay"
+        :style="{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: topViewStore.topViewSize.width + 'px',
+          height: topViewStore.topViewSize.height + 'px',
+          pointerEvents: 'none',
+          zIndex: 20,
+        }"
+      ></div>
+    </v-row>
+
+    <v-row ref="playerSelector" class="justify-center">
+      <div class="player-selector mt-2">
+        <div
+          v-for="refId in uniqueRefIds"
+          :key="refId"
+          class="player-dot"
+          :class="{ selected: selectedRefIds.includes(refId) }"
+          @click="toggleRefId(refId)"
+        >
+          {{ refId }}
+        </div>
+      </div>
+    </v-row>
+
+    <v-row ref="videoControl" class="video-control mt-4 mb-n2 justify-center">
+      <v-menu location="top">
+        <template #activator="{ props }">
+          <v-btn v-bind="props" size="small">
+            {{ topViewStore.currentSport.title }}
+          </v-btn>
+        </template>
+        <v-list class="py-0" density="compact">
+          <v-list-item
+            v-for="item in topViewStore.sports"
+            :key="item"
+            class="menu-item"
+            v-on:click="topViewStore.onSportChange(item.title)"
+          >
+            <v-list-item-title class="my-0">
+              {{ item.title }}
+            </v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+    </v-row>
+  </v-container>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { useTopViewStore } from "@/stores/top_view";
+import { useBboxesStore } from "@/stores/bboxes";
+import { useVideoStore } from "@/stores/video";
+import PosDataMenu from "@/components/pos-data/PosDataMenu.vue";
+import h337 from "heatmap.js";
+
+const topViewStore = useTopViewStore();
+const bboxesStore = useBboxesStore();
+const videoStore = useVideoStore();
+
+const topViewElement = ref(null);
+
+const updateTopViewSize = () => {
+  nextTick(() => {
+    if (topViewElement.value) {
+      const rect = topViewElement.value.getBoundingClientRect();
+      topViewStore.setTopViewSize({
+        width: rect.width,
+        height: rect.height,
+        top: rect.top,
+        left: rect.left,
+      });
+    }
+  });
+};
+onMounted(() => {
+  setTimeout(() => {
+    window.dispatchEvent(new Event("resize"));
+  }, 500);
+  updateTopViewSize();
+  window.addEventListener("resize", updateTopViewSize);
+  window.addEventListener("scroll", updateTopViewSize);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateTopViewSize);
+  window.removeEventListener("scroll", updateTopViewSize);
+});
+
+const maxVideoHeight = ref(0);
+const videoControl = ref(null);
+const playerSelector = ref(null);
+const updateMaxHeight = () => {
+  if (!videoControl.value || !playerSelector.value) return;
+  maxVideoHeight.value = (window.innerHeight - 104 - 32 - 120 - 60) / window.innerHeight;
+};
+onMounted(() => {
+  nextTick(() => updateMaxHeight());
+  window.addEventListener("resize", updateMaxHeight);
+});
+watch(() => window.innerHeight, updateMaxHeight);
+watch(videoControl, (newVal) => {
+  if (newVal) {
+    nextTick(() => updateMaxHeight());
+  }
+});
+
+const selectedRefIds = ref([]);
+const uniqueRefIds = computed(() => {
+  const all = bboxesStore.bboxData || [];
+  return [...new Set(all.map((p) => p.ref_id))].sort((a, b) => a - b);
+});
+function toggleRefId(refId) {
+  if (selectedRefIds.value.includes(refId)) {
+    selectedRefIds.value = selectedRefIds.value.filter((id) => id !== refId);
+  } else {
+    selectedRefIds.value.push(refId);
+  }
+}
+
+const selectedPositions = computed(() => {
+  if (selectedRefIds.value.length === 0) return [];
+  const allPositions = [];
+  Object.values(bboxesStore.bboxDataTopView).forEach((arr) => {
+    if (Array.isArray(arr)) {
+      arr.forEach((pos) => {
+        if (selectedRefIds.value.includes(pos.ref_id)) {
+          allPositions.push(pos);
+        }
+      });
+    }
+  });
+  return allPositions;
+});
+watch(selectedPositions, (newVal) => {
+  console.log("selectedPositions changed:", newVal);
+});
+
+const heatmapContainer = ref(null);
+let heatmapInstance = null;
+function createHeatmap() {
+  if (heatmapInstance) {
+    heatmapInstance.setData({ max: 1, data: [] });
+    return;
+  }
+  if (heatmapContainer.value) {
+    heatmapInstance = h337.create({
+      container: heatmapContainer.value,
+      radius: 20,
+      maxOpacity: 0.6,
+      minOpacity: 0,
+      blur: 0.85,
+      gradient: {
+        // Optional: eigene Farben
+        0.4: "blue",
+        0.6: "cyan",
+        0.7: "lime",
+        0.8: "yellow",
+        1.0: "red",
+      },
+    });
+  }
+}
+function renderHeatmap() {
+  if (!heatmapInstance || !topViewStore.topViewSize.width || !topViewStore.topViewSize.height)
+    return;
+
+  // Heatmap.js erwartet Daten im Format {x, y, value}
+  const points = selectedPositions.value.map((pos) => {
+    const x =
+      pos.new_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+      ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
+    const y =
+      pos.new_y * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+      ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
+    return { x: Math.round(x), y: Math.round(y), value: 1 };
+  });
+
+  heatmapInstance.setData({
+    max: 10,
+    data: points,
+  });
+}
+
+// Heatmap neu zeichnen, wenn sich die Auswahl oder Größe ändert
+watch(
+  [selectedPositions, () => topViewStore.topViewSize.width, () => topViewStore.topViewSize.height],
+  () => {
+    nextTick(() => {
+      createHeatmap();
+      renderHeatmap();
+    });
+  }
+);
+</script>
+
+<style scoped>
+.visualizer-image {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.video-control {
+  gap: 5px;
+}
+
+.video-control > .time-code {
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.menu-item {
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background-color: #f0f0f0;
+}
+
+.menu-item .v-list-item-title {
+  font-size: 12px;
+}
+
+.player-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+  margin: 12px 0 8px 0;
+}
+.player-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #eee;
+  color: #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  border: 2px solid #bbb;
+  transition: background 0.2s, border 0.2s;
+  user-select: none;
+}
+.player-dot.selected {
+  background: rgb(var(--v-theme-primary));
+  color: #fff;
+  border: 2px solid rgb(var(--v-theme-primary));
+}
+
+.data-point-position {
+  position: fixed;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+}
+
+.heatmap-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+</style>

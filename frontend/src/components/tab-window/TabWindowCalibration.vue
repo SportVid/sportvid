@@ -1,5 +1,5 @@
 <template>
-  <ModalCalibrationAssetMenu v-if="calibrationAssetStore.marker.length === 0" />
+  <CalibrationAssetMenu v-if="calibrationAssetStore.marker.length === 0" />
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
@@ -219,7 +219,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue"
 import { useTopViewStore } from "@/stores/top_view";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
-import ModalCalibrationAssetMenu from "@/components/calibration-asset/ModalCalibrationAssetMenu.vue";
+import CalibrationAssetMenu from "@/components/calibration-asset/CalibrationAssetMenu.vue";
 import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 import ModalCalibrationAssetSave from "@/components/calibration-asset/ModalCalibrationAssetSave.vue";
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";

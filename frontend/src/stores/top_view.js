@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { nextTick, ref, computed } from "vue";
+import { nextTick, ref } from "vue";
 import { useI18n } from "vue-i18n";
 
 export const useTopViewStore = defineStore("top_view", () => {
@@ -12,14 +12,13 @@ export const useTopViewStore = defineStore("top_view", () => {
     topViewSize.value = size;
   };
 
-  const currentSport = computed(() => ({
+  const currentSport = ref({
     title: t("analysis_view.sports.soccer"),
     pitchImage: require("../assets/top-view/pitch_soccer.png"),
     widthRel: 2698 / 2910,
     heightRel: 1794 / 2010,
-  }));
-
-  const sports = computed(() => [
+  });
+  const sports = ref([
     {
       title: t("analysis_view.sports.soccer"),
       pitchImage: require("../assets/top-view/pitch_soccer.png"),

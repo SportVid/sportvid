@@ -1,5 +1,5 @@
 <template>
-  <ModalPosDataMenu v-if="Object.keys(bboxesStore.bboxDataTopView).length === 0" />
+  <PosDataMenu v-if="Object.keys(bboxesStore.bboxDataTopView).length === 0" />
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
@@ -207,7 +207,7 @@ import { useBboxesStore } from "@/stores/bboxes";
 import { useVideoStore } from "@/stores/video";
 import { getTimecode } from "@/plugins/time";
 import { Delaunay } from "d3-delaunay";
-import ModalPosDataMenu from "@/components/pos-data/ModalPosDataMenu.vue";
+import PosDataMenu from "@/components/pos-data/PosDataMenu.vue";
 import ModalPosDataSelect from "@/components/pos-data/ModalPosDataSelect.vue";
 import ModalPosDataUpload from "@/components/pos-data/ModalPosDataUpload.vue";
 

@@ -39,43 +39,22 @@
           height: position.h * videoStore.videoSize.height + 'px',
           border: `2px solid red`,
         }"
+        @click="openEditBBox(position)"
       >
-        <v-tooltip activator="parent" location="top" class="tracklet-tooltip">
-          <div><strong>ref_id:</strong> {{ position.ref_id }}</div>
-          <div><strong>team_id:</strong> red</div>
+        <v-tooltip activator="parent" location="top" class="bounding-box-tooltip">
+          <!-- <div><strong>ref_id:</strong> {{ position.ref_id }}</div>
+          <div><strong>team_id:</strong> red</div> -->
+          <div v-for="(value, key) in position" :key="key">
+            <strong>{{ key }}:</strong> {{ value }}
+          </div>
         </v-tooltip>
-
-        <v-menu activator="parent" location="bottom center">
-          <v-list density="compact" class="py-0 tracklet-list">
-            <v-list-item @click="openEditField(position, 'ref_id')" class="menu-item">
-              <v-list-item-title>Change ref_id</v-list-item-title>
-            </v-list-item>
-            <v-list-item @click="openEditField(position, 'team_id')" class="menu-item">
-              <v-list-item-title>Change team_id</v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
+        <div class="bounding-box-ref-id">
+          {{ position.ref_id }}
+        </div>
       </div>
     </v-row>
 
-    <ModalTrackletUpdate
-      v-model="editDialog"
-      :bbox="editBBox"
-      :field="editField"
-      @save="saveBBoxField"
-    />
-    <!-- Bearbeiten-Dialog -->
-    <!-- <v-dialog v-model="editDialog" max-width="400">
-      <v-card v-if="editPosition">
-        <v-card-title>{{ editField }} bearbeiten</v-card-title>
-        <v-card-text>
-          <v-text-field v-if="editField" v-model="editPosition[editField]" :label="editField" />
-        </v-card-text>
-        <v-card-actions>
-          <v-btn color="primary" @click="editDialog = false">OK</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog> -->
+    <ModalBBoxUpdate v-model="editDialog" :bbox="editBBox" @update="updateBBox" />
 
     <v-row ref="videoControl" class="video-control mt-6">
       <v-btn @click="deltaSeek(-1)" size="small">
@@ -162,7 +141,7 @@ import { useVideoStore } from "@/stores/video";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
-import ModalTrackletUpdate from "./ModalTrackletUpdate.vue";
+import ModalBBoxUpdate from "./ModalBboxUpdate.vue";
 
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
@@ -383,20 +362,78 @@ onBeforeUnmount(() => {
 watch(() => window.innerHeight, updateMaxHeight);
 
 const editDialog = ref(false);
-const editField = ref(null);
 const editBBox = ref(null);
-
-function openEditField(bbox, field) {
+function openEditBBox(bbox) {
   editBBox.value = bbox;
-  editField.value = field;
   editDialog.value = true;
 }
+function updateBBox({ ref_id, team_id, updateAllRefId, updateAllTeamId }) {
+  if (!editBBox.value) return;
 
-function saveBBoxField({ field, value }) {
-  if (editBBox.value && field) {
-    editBBox.value[field] = value;
-    // Optional: Hier kannst du Änderungen ins Backend speichern
+  let allBboxes = null;
+  if (updateAllRefId || updateAllTeamId) {
+    allBboxes = [];
+    Object.values(bboxesStore.bboxDataInterpolated).forEach((arr) => {
+      if (Array.isArray(arr)) allBboxes.push(...arr);
+    });
   }
+
+  if (updateAllRefId && allBboxes) {
+    const oldRefId = String(editBBox.value.ref_id);
+    allBboxes.forEach((bbox) => {
+      if (String(bbox.ref_id) === oldRefId) bbox.ref_id = ref_id;
+    });
+  } else {
+    editBBox.value.ref_id = ref_id;
+  }
+
+  if (updateAllTeamId && allBboxes) {
+    const oldTeamId = String(editBBox.value.team_id);
+    allBboxes.forEach((bbox) => {
+      if (String(bbox.team_id) === oldTeamId) bbox.team_id = team_id;
+    });
+  } else {
+    editBBox.value.team_id = team_id;
+  }
+}
+function updateBBoxBackend({ ref_id, team_id, updateAllRefId, updateAllTeamId }) {
+  if (!editBBox.value) return;
+
+  const bboxes = bboxesStore.bboxData;
+
+  if (updateAllRefId) {
+    const oldRefId = String(editBBox.value.ref_id);
+    bboxes.forEach((bbox) => {
+      if (String(bbox.ref_id) === oldRefId) bbox.ref_id = ref_id;
+    });
+  } else {
+    const bbox = bboxes.find(
+      (b) =>
+        String(b.ref_id) === String(editBBox.value.ref_id) &&
+        String(b.image_id) === String(editBBox.value.image_id)
+    );
+    if (bbox) bbox.ref_id = ref_id;
+  }
+
+  if (updateAllTeamId) {
+    const oldTeamId = String(editBBox.value.team_id);
+    bboxes.forEach((bbox) => {
+      if (String(bbox.team_id) === oldTeamId) bbox.team_id = team_id;
+    });
+  } else {
+    const bbox = bboxes.find(
+      (b) =>
+        String(b.team_id) === String(editBBox.value.team_id) &&
+        String(b.image_id) === String(editBBox.value.image_id)
+    );
+    if (bbox) bbox.team_id = team_id;
+  }
+
+  // Nach Änderung: Interpolierte Daten neu berechnen
+  const _bboxDataInterpolated = bboxesStore.interpolateBboxData(bboxes, playerStore.videoFPS, 30);
+  bboxesStore.bboxDataInterpolated = groupDataByTime(_bboxDataInterpolated);
+
+  // Backend-Update -> siehe calibrationAssetStore.updateCalibrationAsset
 }
 </script>
 
@@ -427,7 +464,7 @@ function saveBBoxField({ field, value }) {
   z-index: 1000;
 }
 
-.tracklet-tooltip ::v-deep .v-overlay__content {
+.bounding-box-tooltip ::v-deep .v-overlay__content {
   background: rgb(var(--v-theme-primary));
   border-radius: 2px;
   font-size: 0.7rem;
@@ -447,5 +484,16 @@ function saveBBoxField({ field, value }) {
 
 .menu-item .v-list-item-title {
   font-size: 12px;
+}
+
+.bounding-box-ref-id {
+  position: absolute;
+  left: 50%;
+  bottom: -20px;
+  transform: translateX(-50%);
+  color: red;
+  font-size: 0.8rem;
+  pointer-events: none;
+  z-index: 1100;
 }
 </style>

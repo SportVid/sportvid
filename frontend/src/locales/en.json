@@ -86,7 +86,8 @@
   "analysis_view": {
     "analysis_tabs": {
       "calibration": "Calibration",
-      "pos_data": "Position Data"
+      "pos_data": "Position Data",
+      "heatmap": "Heatmap"
     },
     "visualization_tabs": {
       "select": "Select Visualization",
@@ -548,6 +549,13 @@
           "bytetrack": "ByteTrack Plugin",
           "manual": "Manual Upload"
         }
+      }
+    },
+    "bounding_box": {
+      "edit": {
+        "title": "Edit Bounding Box",
+        "all_ref_id": "Update all Bounding Boxes with the same ref_id",
+        "all_team_id": "Update all Bounding Boxes with the same team_id"
       }
     }
   }
