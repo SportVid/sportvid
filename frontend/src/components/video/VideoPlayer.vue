@@ -16,7 +16,7 @@
       />
       <!-- <div
         v-for="(position, index) in bboxesStore.bboxData.filter((p) => p.time === playerStore.currentTime)"
-        v-show="bboxesStore.showBoundingBox"
+        v-show="playerStore.showBoundingBox"
         :key="index"
         class="bounding-box-position"
         :style="{
@@ -29,7 +29,7 @@
       /> -->
       <div
         v-for="position in bboxesStore.bboxDataInterpolated[playerStore.currentTime]"
-        v-show="bboxesStore.showBoundingBox"
+        v-show="playerStore.showBoundingBox"
         :key="position.id"
         class="bounding-box-position"
         :style="{

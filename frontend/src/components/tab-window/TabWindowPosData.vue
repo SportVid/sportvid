@@ -35,7 +35,7 @@
         }"
       />
 
-      <svg v-if="bboxesStore.showEffectivePlayingSpace" class="hull-overlay">
+      <svg v-if="topViewStore.showEffectivePlayingSpace" class="hull-overlay">
         <polygon
           v-for="(hull, team) in convexHullPlayer[currentTime]"
           :key="team"
@@ -46,7 +46,7 @@
         />
       </svg>
 
-      <svg v-if="bboxesStore.showSpaceControl" class="voronoi-overlay">
+      <svg v-if="topViewStore.showSpaceControl" class="voronoi-overlay">
         <polygon
           v-for="cell in voronoiCells[currentTime]"
           :key="cell"
@@ -86,13 +86,13 @@
           </v-btn>
         </template>
         <v-list class="py-0" density="compact" width="225px">
-          <v-list-item class="menu-item" @click="bboxesStore.viewBoundingBox">
+          <v-list-item class="menu-item" @click="playerStore.viewBoundingBox">
             <v-list-item-title class="d-flex justify-space-between">
               {{ $t("pos_data.display_settings.view_bounding_box") }}
               <tab-window-icon
                 :class="{
-                  'text-disabled': !bboxesStore.showBoundingBox,
-                  'text-red': bboxesStore.showBoundingBox,
+                  'text-disabled': !playerStore.showBoundingBox,
+                  'text-red': playerStore.showBoundingBox,
                 }"
               >
                 mdi-check
@@ -124,26 +124,26 @@
               </v-list-item>
             </template>
             <v-list class="py-0" density="compact" width="180px">
-              <v-list-item class="menu-item" @click="bboxesStore.viewSpaceControl">
+              <v-list-item class="menu-item" @click="topViewStore.viewSpaceControl">
                 <v-list-item-title class="d-flex justify-space-between">
                   {{ $t("pos_data.display_settings.view_kpis.space_control") }}
                   <tab-window-icon
                     :class="{
-                      'text-disabled': !bboxesStore.showSpaceControl,
-                      'text-red': bboxesStore.showSpaceControl,
+                      'text-disabled': !topViewStore.showSpaceControl,
+                      'text-red': topViewStore.showSpaceControl,
                     }"
                   >
                     mdi-check
                   </tab-window-icon>
                 </v-list-item-title>
               </v-list-item>
-              <v-list-item class="menu-item" @click="bboxesStore.viewEffectivePlayingSpace">
+              <v-list-item class="menu-item" @click="topViewStore.viewEffectivePlayingSpace">
                 <v-list-item-title class="d-flex justify-space-between">
                   {{ $t("pos_data.display_settings.view_kpis.eps") }}
                   <tab-window-icon
                     :class="{
-                      'text-disabled': !bboxesStore.showEffectivePlayingSpace,
-                      'text-red': bboxesStore.showEffectivePlayingSpace,
+                      'text-disabled': !topViewStore.showEffectivePlayingSpace,
+                      'text-red': topViewStore.showEffectivePlayingSpace,
                     }"
                   >
                     mdi-check

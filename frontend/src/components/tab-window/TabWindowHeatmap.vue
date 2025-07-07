@@ -3,51 +3,59 @@
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center" style="position: relative">
-      <img
-        ref="topViewElement"
-        class="visualizer-image"
-        :src="topViewStore.currentSport.pitchImage"
-        @load="updateTopViewSize"
-        :style="{
-          maxHeight: maxVideoHeight * 100 + 'vh',
-          height: videoStore.videoSize.height + 'px',
-        }"
-      />
+      <div style="position: relative; display: inline-block">
+        <img
+          ref="topViewElement"
+          class="visualizer-image"
+          :src="topViewStore.currentSport.pitchImage"
+          @load="updateTopViewSize"
+          :style="{
+            maxHeight: maxVideoHeight * 100 + 'vh',
+            height: videoStore.videoSize.height + 'px',
+          }"
+        />
+        <template v-if="topViewStore.showMovement">
+          <div
+            v-for="position in selectedPositions"
+            v-show="topViewStore.showItems"
+            :key="position"
+            class="data-point-position"
+            :style="{
+              top:
+                position.new_y *
+                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                (topViewStore.topViewSize.top +
+                  ((1 - topViewStore.currentSport.heightRel) / 2) *
+                    topViewStore.topViewSize.height) +
+                'px',
+              left:
+                position.new_x *
+                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                (topViewStore.topViewSize.left +
+                  ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
+                'px',
+              backgroundColor: !position.team ? 'grey' : position.team,
+            }"
+          />
+        </template>
 
-      <div
-        v-for="position in selectedPositions"
-        v-show="topViewStore.showItems"
-        :key="position"
-        class="data-point-position"
-        :style="{
-          top:
-            position.new_y *
-              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-            (topViewStore.topViewSize.top +
-              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
-            'px',
-          left:
-            position.new_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-            (topViewStore.topViewSize.left +
-              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
-            'px',
-          backgroundColor: !position.team ? 'grey' : position.team,
-        }"
-      />
-
-      <div
-        ref="heatmapContainer"
-        class="heatmap-overlay"
-        :style="{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: topViewStore.topViewSize.width + 'px',
-          height: topViewStore.topViewSize.height + 'px',
-          pointerEvents: 'none',
-          zIndex: 20,
-        }"
-      ></div>
+        <div
+          v-if="topViewStore.showHeatmap"
+          v-show="topViewStore.showItems"
+          ref="heatmapContainer"
+          class="heatmap-overlay"
+          :style="{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: topViewStore.topViewSize.width + 'px',
+            height: topViewStore.topViewSize.height + 'px',
+            pointerEvents: 'none',
+            zIndex: 20,
+            border: '1px solid red',
+          }"
+        ></div>
+      </div>
     </v-row>
 
     <v-row ref="playerSelector" class="justify-center">
@@ -80,6 +88,43 @@
           >
             <v-list-item-title class="my-0">
               {{ item.title }}
+            </v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+
+      <v-menu location="top">
+        <template #activator="{ props }">
+          <v-btn v-bind="props" size="small">
+            {{ $t("heatmap.display_settings.title") }}
+          </v-btn>
+        </template>
+        <v-list class="py-0" density="compact">
+          <v-list-item class="menu-item" @click="topViewStore.viewHeatmap">
+            <v-list-item-title class="d-flex justify-space-between">
+              {{ $t("heatmap.display_settings.view_heatmap") }}
+              <tab-window-icon
+                :class="{
+                  'text-disabled': !topViewStore.showHeatmap,
+                  'text-red': topViewStore.showHeatmap,
+                }"
+              >
+                mdi-check
+              </tab-window-icon>
+            </v-list-item-title>
+          </v-list-item>
+
+          <v-list-item class="menu-item" @click="topViewStore.viewMovement">
+            <v-list-item-title class="d-flex justify-space-between">
+              {{ $t("heatmap.display_settings.view_movement") }}
+              <tab-window-icon
+                :class="{
+                  'text-disabled': !topViewStore.showMovement,
+                  'text-red': topViewStore.showMovement,
+                }"
+              >
+                mdi-check
+              </tab-window-icon>
             </v-list-item-title>
           </v-list-item>
         </v-list>
@@ -173,40 +218,31 @@ const selectedPositions = computed(() => {
   });
   return allPositions;
 });
-watch(selectedPositions, (newVal) => {
-  console.log("selectedPositions changed:", newVal);
-});
 
 const heatmapContainer = ref(null);
 let heatmapInstance = null;
 function createHeatmap() {
-  if (heatmapInstance) {
-    heatmapInstance.setData({ max: 1, data: [] });
-    return;
-  }
-  if (heatmapContainer.value) {
-    heatmapInstance = h337.create({
-      container: heatmapContainer.value,
-      radius: 20,
-      maxOpacity: 0.6,
-      minOpacity: 0,
-      blur: 0.85,
-      gradient: {
-        // Optional: eigene Farben
-        0.4: "blue",
-        0.6: "cyan",
-        0.7: "lime",
-        0.8: "yellow",
-        1.0: "red",
-      },
-    });
-  }
+  if (!heatmapContainer.value) return;
+  // Immer neu erzeugen, Canvas kann aus dem DOM verschwinden!
+  heatmapInstance = h337.create({
+    container: heatmapContainer.value,
+    radius: 18,
+    maxOpacity: 0.7,
+    minOpacity: 0,
+    blur: 0.7,
+    gradient: {
+      0.2: "blue",
+      0.4: "cyan",
+      0.6: "lime",
+      0.8: "yellow",
+      1.0: "red",
+    },
+  });
 }
 function renderHeatmap() {
   if (!heatmapInstance || !topViewStore.topViewSize.width || !topViewStore.topViewSize.height)
     return;
 
-  // Heatmap.js erwartet Daten im Format {x, y, value}
   const points = selectedPositions.value.map((pos) => {
     const x =
       pos.new_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
@@ -222,13 +258,21 @@ function renderHeatmap() {
     data: points,
   });
 }
-
-// Heatmap neu zeichnen, wenn sich die Auswahl oder Größe ändert
+watch(
+  () => topViewStore.showHeatmap,
+  (val) => {
+    if (val) {
+      nextTick(() => {
+        createHeatmap();
+        renderHeatmap();
+      });
+    }
+  }
+);
 watch(
   [selectedPositions, () => topViewStore.topViewSize.width, () => topViewStore.topViewSize.height],
   () => {
     nextTick(() => {
-      createHeatmap();
       renderHeatmap();
     });
   }

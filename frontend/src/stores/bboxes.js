@@ -127,35 +127,12 @@ export const useBboxesStore = defineStore("bboxes", () => {
     });
   };
 
-  const showSpaceControl = ref(false);
-  const viewSpaceControl = () => {
-    showSpaceControl.value = !showSpaceControl.value;
-    showEffectivePlayingSpace.value = false;
-  };
-
-  const showEffectivePlayingSpace = ref(false);
-  const viewEffectivePlayingSpace = () => {
-    showEffectivePlayingSpace.value = !showEffectivePlayingSpace.value;
-    showSpaceControl.value = false;
-  };
-
-  const showBoundingBox = ref(false);
-  const viewBoundingBox = () => {
-    showBoundingBox.value = !showBoundingBox.value;
-  };
-
   const posDataUploadSuccess = ref(false);
 
   return {
     bboxData,
     setBboxData,
     bboxDataLoaded,
-    showBoundingBox,
-    viewBoundingBox,
-    showSpaceControl,
-    viewSpaceControl,
-    showEffectivePlayingSpace,
-    viewEffectivePlayingSpace,
     interpolateBboxData,
     bboxDataInterpolated,
     bboxPluginRun,

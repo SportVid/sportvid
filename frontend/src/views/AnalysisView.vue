@@ -125,18 +125,12 @@
                     :key="visualizationTab.id"
                   >
                     <TabWindowTimeline v-if="visualizationTab.id === 'timeline'" />
-                    <TabWindowList v-if="visualizationTab.id === 'list'" />
+                    <TabWindowEvents v-if="visualizationTab.id === 'events'" />
+                    <TabWindowData v-if="visualizationTab.id === 'data'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
             </v-row>
-          </v-card>
-          <v-card
-            else-if="analysisTabId === 'heatmap'"
-            class="d-flex flex-column flex-nowrap px-2"
-            elevation="2"
-          >
-            test
           </v-card>
         </v-col>
       </v-row>
@@ -182,7 +176,8 @@ import TabWindowPosData from "@/components/tab-window/TabWindowPosData.vue";
 import TabWindowCalibration from "@/components/tab-window/TabWindowCalibration.vue";
 import TabWindowHeatmap from "@/components/tab-window/TabWindowHeatmap.vue";
 import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
-import TabWindowList from "@/components/tab-window/TabWindowList.vue";
+import TabWindowEvents from "@/components/tab-window/TabWindowEvents.vue";
+import TabWindowData from "@/components/tab-window/TabWindowData.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
@@ -228,9 +223,9 @@ watch(
       }
 
       if (newTabId === "pos_data" || newTabId === "heatmap") {
-        bboxesStore.showBoundingBox = true;
+        playerStore.showBoundingBox = true;
       } else {
-        bboxesStore.showBoundingBox = false;
+        playerStore.showBoundingBox = false;
       }
       topViewStore.showItems = true;
     });
@@ -240,7 +235,8 @@ watch(
 const visualizationTabId = ref("timeline");
 const visualizationTabs = computed(() => [
   { id: "timeline", name: t("analysis_view.visualization_tabs.timeline") },
-  { id: "list", name: t("analysis_view.visualization_tabs.list") },
+  { id: "events", name: t("analysis_view.visualization_tabs.events") },
+  { id: "data", name: t("analysis_view.visualization_tabs.data") },
 ]);
 onMounted(() => {
   visualizationTabId.value = visualizationTabs.value.find((tab) => tab.id === "timeline")?.id;
