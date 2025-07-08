@@ -1,20 +1,21 @@
 <template>
   <v-container ref="videoContainer" class="d-flex flex-column">
     <v-row justify="center">
-      <video
-        class="video"
-        ref="videoElement"
-        @play="onPlay"
-        @pause="onPause"
-        @ended="onEnded"
-        @timeupdate="onTimeUpdate"
-        @loadedmetadata="updateVideoSize"
-        :src="playerStore.videoUrl"
-        :style="{
-          maxHeight: maxVideoHeight * 100 + 'vh',
-        }"
-      />
-      <!-- <div
+      <div style="position: relative; display: inline-block">
+        <video
+          class="video"
+          ref="videoElement"
+          @play="onPlay"
+          @pause="onPause"
+          @ended="onEnded"
+          @timeupdate="onTimeUpdate"
+          @loadedmetadata="updateVideoSize"
+          :src="playerStore.videoUrl"
+          :style="{
+            maxHeight: maxVideoHeight * 100 + 'vh',
+          }"
+        />
+        <!-- <div
         v-for="(position, index) in bboxesStore.bboxData.filter((p) => p.time === playerStore.currentTime)"
         v-show="playerStore.showBoundingBox"
         :key="index"
@@ -27,30 +28,66 @@
           border: `2px solid red`,
         }"
       /> -->
-      <div
-        v-for="position in bboxesStore.bboxDataInterpolated[playerStore.currentTime]"
-        v-show="playerStore.showBoundingBox"
-        :key="position.id"
-        class="bounding-box-position"
-        :style="{
-          top: position.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
-          left: position.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
-          width: position.w * videoStore.videoSize.width + 'px',
-          height: position.h * videoStore.videoSize.height + 'px',
-          border: `2px solid red`,
-        }"
-        @click="openEditBBox(position)"
-      >
-        <v-tooltip activator="parent" location="top" class="bounding-box-tooltip">
-          <!-- <div><strong>ref_id:</strong> {{ position.ref_id }}</div>
-          <div><strong>team_id:</strong> red</div> -->
-          <div v-for="(value, key) in position" :key="key">
-            <strong>{{ key }}:</strong> {{ value }}
+        <div
+          v-for="position in bboxesStore.bboxDataInterpolated[playerStore.currentTime]"
+          v-show="playerStore.showBoundingBox"
+          :key="position.id"
+          :style="{
+            position: 'absolute',
+            top: position.y * videoStore.videoSize.height + 'px',
+            left: position.x * videoStore.videoSize.width + 'px',
+            width: position.w * videoStore.videoSize.width + 'px',
+            height: position.h * videoStore.videoSize.height + 'px',
+            border: `2px solid red`,
+          }"
+          @click="openEditBBox(position)"
+        >
+          <v-tooltip activator="parent" location="top" class="bounding-box-tooltip">
+            <div><strong>ref_id:</strong> {{ position.ref_id }}</div>
+            <div><strong>team_id:</strong> red</div>
+            <!-- <div v-for="(value, key) in position" :key="key">
+              <strong>{{ key }}:</strong> {{ value }}
+            </div> -->
+          </v-tooltip>
+          <div class="bounding-box-ref-id">
+            {{ position.ref_id }}
           </div>
-        </v-tooltip>
-        <div class="bounding-box-ref-id">
-          {{ position.ref_id }}
         </div>
+
+        <div
+          v-for="m in calibrationAssetStore.filteredVideoMarker"
+          v-show="calibrationAssetStore.showVideoMarker"
+          :key="m.id"
+          :style="{
+            position: 'absolute',
+            width: '12px',
+            height: '12px',
+            backgroundColor: 'red',
+            borderRadius: '50%',
+            transform: 'translate(-50%, -50%)',
+            top: m.videoCoordsRel.y * videoStore.videoSize.height + 'px',
+            left: m.videoCoordsRel.x * videoStore.videoSize.width + 'px',
+          }"
+          @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
+          @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
+        />
+
+        <div
+          v-for="point in calibrationAssetStore.videoMarkerReprojection"
+          v-show="calibrationAssetStore.showVideoMarker"
+          :key="point"
+          :style="{
+            position: 'absolute',
+            width: '5px',
+            height: '5px',
+            backgroundColor: 'blue',
+            borderRadius: '50%',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            top: point.y * videoStore.videoSize.height + 'px',
+            left: point.x * videoStore.videoSize.width + 'px',
+          }"
+        />
       </div>
     </v-row>
 
@@ -322,11 +359,9 @@ const updateVideoSize = () => {
 onMounted(() => {
   updateVideoSize();
   window.addEventListener("resize", updateVideoSize);
-  window.addEventListener("scroll", updateVideoSize);
 });
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateVideoSize);
-  window.removeEventListener("scroll", updateVideoSize);
 });
 watch(
   () => calibrationAssetStore.isAnyReferenceMarkerActive,
@@ -459,11 +494,6 @@ function updateBBoxBackend({ ref_id, team_id, updateAllRefId, updateAllTeamId })
   background-color: #f0f0f0;
 }
 
-.bounding-box-position {
-  position: fixed;
-  z-index: 1000;
-}
-
 .bounding-box-tooltip ::v-deep .v-overlay__content {
   background: rgb(var(--v-theme-primary));
   border-radius: 2px;
@@ -494,6 +524,5 @@ function updateBBoxBackend({ ref_id, team_id, updateAllRefId, updateAllTeamId })
   color: red;
   font-size: 0.8rem;
   pointer-events: none;
-  z-index: 1100;
 }
 </style>

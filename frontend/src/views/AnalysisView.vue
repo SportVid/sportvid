@@ -3,31 +3,6 @@
     <v-container fluid>
       <ModalMarkerOverlay v-if="calibrationAssetStore.isAnyReferenceMarkerActive" />
 
-      <div
-        v-for="m in calibrationAssetStore.filteredVideoMarker"
-        v-show="calibrationAssetStore.showVideoMarker"
-        :key="m.id"
-        :style="{
-          top: m.videoCoordsRel.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
-          left: m.videoCoordsRel.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
-        }"
-        @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
-        @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
-        class="reference-marker-position"
-      />
-      <div>
-        <div
-          v-for="point in calibrationAssetStore.videoMarkerReprojection"
-          v-show="calibrationAssetStore.showVideoMarker"
-          :key="point"
-          :style="{
-            top: point.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
-            left: point.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
-          }"
-          class="reprojection-marker-position"
-        />
-      </div>
-
       <v-row class="ma-n2">
         <v-col cols="6">
           <v-card
@@ -280,19 +255,6 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", setCardHeight);
 });
 watch(() => [videoCard, topViewCard, windowHeight], setCardHeight, { flush: "post" });
-
-const previousShowVideoMarker = ref(false);
-watch(
-  () => calibrationAssetStore.isAnyReferenceMarkerActive,
-  (newValue) => {
-    if (newValue) {
-      previousShowVideoMarker.value = calibrationAssetStore.showVideoMarker;
-      calibrationAssetStore.showVideoMarker = true;
-    } else {
-      calibrationAssetStore.showVideoMarker = previousShowVideoMarker.value;
-    }
-  }
-);
 
 const groupDataByTime = (data) => {
   const grouped = {};
@@ -642,24 +604,5 @@ watch(
 .loading-text {
   margin-top: 10px;
   font-size: 18px;
-}
-
-.reference-marker-position {
-  position: fixed;
-  width: 12px;
-  height: 12px;
-  background-color: red;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-}
-.reprojection-marker-position {
-  position: fixed;
-  width: 5px;
-  height: 5px;
-  background-color: blue;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1001;
 }
 </style>

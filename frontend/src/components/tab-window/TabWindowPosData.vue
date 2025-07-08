@@ -3,59 +3,82 @@
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
-      <img
-        ref="topViewElement"
-        class="visualizer-image"
-        :src="topViewStore.currentSport.pitchImage"
-        @load="updateTopViewSize"
-        :style="{
-          maxHeight: maxVideoHeight * 100 + 'vh',
-          height: videoStore.videoSize.height + 'px',
-        }"
-      />
-
-      <div
-        v-for="position in bboxesStore.bboxDataTopView[currentTime]"
-        v-show="topViewStore.showItems"
-        :key="position"
-        class="data-point-position"
-        :style="{
-          top:
-            position.new_y *
-              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-            (topViewStore.topViewSize.top +
-              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
-            'px',
-          left:
-            position.new_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-            (topViewStore.topViewSize.left +
-              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
-            'px',
-          backgroundColor: !position.team ? 'grey' : position.team,
-        }"
-      />
-
-      <svg v-if="topViewStore.showEffectivePlayingSpace" class="hull-overlay">
-        <polygon
-          v-for="(hull, team) in convexHullPlayer[currentTime]"
-          :key="team"
-          :points="hull.map((p) => `${p.left},${p.top}`).join(' ')"
-          :stroke="team"
-          :fill="team"
-          fill-opacity="0.4"
+      <div style="position: relative; display: inline-block">
+        <img
+          ref="topViewElement"
+          class="visualizer-image"
+          :src="topViewStore.currentSport.pitchImage"
+          @load="updateTopViewSize"
+          :style="{
+            maxHeight: maxVideoHeight * 100 + 'vh',
+            height: videoStore.videoSize.height + 'px',
+          }"
         />
-      </svg>
 
-      <svg v-if="topViewStore.showSpaceControl" class="voronoi-overlay">
-        <polygon
-          v-for="cell in voronoiCells[currentTime]"
-          :key="cell"
-          :points="cell.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')"
-          stroke="gray"
-          :fill="cell.team"
-          fill-opacity="0.4"
+        <div
+          v-for="position in bboxesStore.bboxDataTopView[currentTime]"
+          v-show="topViewStore.showItems"
+          :key="position"
+          :style="{
+            position: 'absolute',
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            transform: 'translate(-50%, -50%)',
+            top:
+              position.new_y *
+                (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+              'px',
+            left:
+              position.new_x *
+                (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+              'px',
+            backgroundColor: !position.team ? 'grey' : position.team,
+          }"
         />
-      </svg>
+
+        <svg
+          v-if="topViewStore.showEffectivePlayingSpace"
+          :style="{
+            position: 'absolute',
+            top: '0px',
+            left: '0px',
+            width: topViewStore.topViewSize.width + 'px',
+            height: topViewStore.topViewSize.height + 'px',
+          }"
+        >
+          <polygon
+            v-for="(hull, team) in convexHullPlayer[currentTime]"
+            :key="team"
+            :points="hull.map((p) => `${p.left},${p.top}`).join(' ')"
+            :stroke="team"
+            :fill="team"
+            fill-opacity="0.4"
+          />
+        </svg>
+
+        <svg
+          v-if="topViewStore.showSpaceControl"
+          :style="{
+            position: 'absolute',
+            top: '0px',
+            left: '0px',
+            width: topViewStore.topViewSize.width + 'px',
+            height: topViewStore.topViewSize.height + 'px',
+          }"
+        >
+          <polygon
+            v-for="cell in voronoiCells[currentTime]"
+            :key="cell"
+            :points="cell.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')"
+            stroke="gray"
+            :fill="cell.team"
+            fill-opacity="0.4"
+          />
+        </svg>
+      </div>
     </v-row>
 
     <v-row ref="videoControl" class="video-control mt-6 mb-n2 justify-center">
@@ -258,11 +281,9 @@ onMounted(() => {
   }, 500);
   updateTopViewSize();
   window.addEventListener("resize", updateTopViewSize);
-  window.addEventListener("scroll", updateTopViewSize);
 });
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateTopViewSize);
-  window.removeEventListener("scroll", updateTopViewSize);
 });
 
 const computeConvexHull = (points) => {
@@ -306,12 +327,10 @@ const convexHullPlayer = computed(() => {
       .forEach((position) => {
         const top =
           position.new_y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
-          (topViewStore.topViewSize.top +
-            ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height);
+          ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
         const left =
           position.new_x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
-          (topViewStore.topViewSize.left +
-            ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width);
+          ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
         if (!teams[position.team]) {
           teams[position.team] = [];
         }
@@ -332,15 +351,14 @@ const computeVoronoi = (players) => {
 
   const delaunay = Delaunay.from(players.map((p) => [p.left, p.top]));
   const voronoi = delaunay.voronoi([
-    topViewStore.topViewSize.left +
-      ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width,
-    topViewStore.topViewSize.top +
-      ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height,
-    topViewStore.topViewSize.left +
-      ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+    ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width,
+
+    ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height,
+
+    ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
       topViewStore.topViewSize.width * topViewStore.currentSport.widthRel,
-    topViewStore.topViewSize.top +
-      ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+
+    ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
       topViewStore.topViewSize.height * topViewStore.currentSport.heightRel,
   ]);
 
@@ -362,12 +380,10 @@ const voronoiCells = computed(() => {
       .map((player) => {
         const top =
           player.new_y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
-          (topViewStore.topViewSize.top +
-            ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height);
+          ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
         const left =
           player.new_x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
-          (topViewStore.topViewSize.left +
-            ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width);
+          ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
         return { left, top, team: player.team };
       });
     result[timeKey] = computeVoronoi(allPlayers);
@@ -409,15 +425,6 @@ watch(videoControl || videoSlider, (newVal) => {
   max-height: 100%;
 }
 
-.data-point-position {
-  position: fixed;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-}
-
 .video-control {
   gap: 5px;
 }
@@ -437,25 +444,5 @@ watch(videoControl || videoSlider, (newVal) => {
 
 .menu-item .v-list-item-title {
   font-size: 12px;
-}
-
-.hull-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.voronoi-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 10;
 }
 </style>

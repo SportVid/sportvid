@@ -3,93 +3,103 @@
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
-      <img
-        ref="topViewElement"
-        class="image"
-        :src="topViewStore.currentSport.pitchImage"
-        @load="onImageLoad"
-        :style="{
-          maxHeight: maxVideoHeight * 100 + 'vh',
-          height: videoStore.videoSize.height + 'px',
-        }"
-      />
+      <div style="position: relative; display: inline-block">
+        <img
+          ref="topViewElement"
+          class="image"
+          :src="topViewStore.currentSport.pitchImage"
+          @load="onImageLoad"
+          :style="{
+            maxHeight: maxVideoHeight * 100 + 'vh',
+            height: videoStore.videoSize.height + 'px',
+          }"
+        />
 
-      <div
-        v-if="calibrationAssetStore.isAddingReferenceMarker"
-        ref="overlayMarker"
-        class="overlay-marker"
-        @click="calibrationAssetStore.setReferenceMarker"
-        :style="{
-          top: topViewStore.topViewSize.top + 'px',
-          left: topViewStore.topViewSize.left + 'px',
-          width: topViewStore.topViewSize.width + 'px',
-          height: topViewStore.topViewSize.height + 'px',
-        }"
-      />
+        <div
+          v-if="calibrationAssetStore.isAddingReferenceMarker"
+          ref="overlayMarker"
+          @click="calibrationAssetStore.setReferenceMarker"
+          :style="{
+            position: 'absolute',
+            background: 'rgba(255, 255, 255, 0.5)',
+            border: '4px solid red',
+            cursor: 'crosshair',
+            top: '0px',
+            left: '0px',
+            width: topViewStore.topViewSize.width + 'px',
+            height: topViewStore.topViewSize.height + 'px',
+          }"
+        />
 
-      <v-btn
-        v-for="m in filteredReferenceMarker"
-        v-show="topViewStore.showItems"
-        :key="m.id"
-        :disabled="calibrationAssetStore.isAddingReferenceMarker"
-        :color="m.active || calibrationAssetStore.hoveredVideoMarker === m.id ? 'red' : 'grey'"
-        icon="mdi-circle"
-        variant="plain"
-        density="compact"
-        @click="(event) => calibrationAssetStore.toggleReferenceMarker(event, m.id)"
-        :style="{
-          top:
-            m.compAreaCoordsRel.y *
-              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-            (topViewStore.topViewSize.top +
-              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
-            'px',
-          left:
-            m.compAreaCoordsRel.x *
-              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-            (topViewStore.topViewSize.left +
-              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
-            'px',
-        }"
-        class="marker-position"
-      />
+        <v-btn
+          v-for="m in filteredReferenceMarker"
+          v-show="topViewStore.showItems"
+          :key="m.id"
+          :disabled="calibrationAssetStore.isAddingReferenceMarker"
+          :color="m.active || calibrationAssetStore.hoveredVideoMarker === m.id ? 'red' : 'grey'"
+          icon="mdi-circle"
+          variant="plain"
+          density="compact"
+          @click="(event) => calibrationAssetStore.toggleReferenceMarker(event, m.id)"
+          :style="{
+            position: 'absolute',
+            transform: 'translate(-50%, -50%)',
+            top:
+              m.compAreaCoordsRel.y *
+                (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+              'px',
+            left:
+              m.compAreaCoordsRel.x *
+                (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+              'px',
+          }"
+        />
 
-      <v-btn
-        v-for="m in filteredReferenceMarker"
-        v-show="showDeleteButton"
-        :key="'delete-' + m.id"
-        color="red"
-        icon="mdi-close"
-        variant="plain"
-        density="compact"
-        @click="calibrationAssetStore.deleteReferenceMarker(m.id)"
-        :style="{
-          top:
-            m.compAreaCoordsRel.y *
-              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-            (topViewStore.topViewSize.top +
-              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height) +
-            'px',
-          left:
-            m.compAreaCoordsRel.x *
-              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-            (topViewStore.topViewSize.left +
-              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
-            'px',
-        }"
-        class="delete-marker-position"
-      />
+        <v-btn
+          v-for="m in filteredReferenceMarker"
+          v-show="showDeleteButton"
+          :key="'delete-' + m.id"
+          color="red"
+          icon="mdi-close"
+          variant="plain"
+          density="compact"
+          @click="calibrationAssetStore.deleteReferenceMarker(m.id)"
+          class="delete-marker-position"
+          :style="{
+            position: 'absolute',
+            transform: 'translate(-50%, -50%)',
+            top:
+              m.compAreaCoordsRel.y *
+                (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+              'px',
+            left:
+              m.compAreaCoordsRel.x *
+                (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+              'px',
+          }"
+        />
 
-      <div
-        v-for="point in calibrationAssetStore.topViewMarkerProjection"
-        v-show="calibrationAssetStore.showVideoMarker"
-        :key="point"
-        :style="{
-          top: point.y * topViewStore.topViewSize.height + topViewStore.topViewSize.top + 'px',
-          left: point.x * topViewStore.topViewSize.width + topViewStore.topViewSize.left + 'px',
-        }"
-        class="field-marker-position"
-      />
+        <div
+          v-for="point in calibrationAssetStore.topViewMarkerProjection"
+          v-show="calibrationAssetStore.showVideoMarker"
+          :key="point"
+          :style="{
+            position: 'absolute',
+            width: '5px',
+            height: '5px',
+            backgroundColor: 'blue',
+            borderRadius: '50%',
+            transform: 'translate(-50%, -50%)',
+            top: point.y * topViewStore.topViewSize.height + 'px',
+            left: point.x * topViewStore.topViewSize.width + 'px',
+            pointerEvents: 'none',
+          }"
+        />
+      </div>
     </v-row>
 
     <v-row
@@ -256,11 +266,9 @@ onMounted(() => {
   }, 500);
   updateTopViewSize();
   window.addEventListener("resize", updateTopViewSize);
-  window.addEventListener("scroll", updateTopViewSize);
 });
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateTopViewSize);
-  window.removeEventListener("scroll", updateTopViewSize);
 });
 
 const showModalCalibrationAssetCreate = ref(false);
@@ -319,18 +327,6 @@ watch(videoControl, (newVal) => {
   object-fit: cover;
 }
 
-.marker-position {
-  position: fixed;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-}
-
-.delete-marker-position {
-  position: fixed;
-  transform: translate(-50%, -50%);
-  z-index: 1001;
-}
-
 .delete-marker-position .v-icon {
   transform: scale(0.7);
 }
@@ -354,31 +350,4 @@ watch(videoControl, (newVal) => {
 .menu-item .v-list-item-title {
   font-size: 12px;
 }
-
-.overlay-marker {
-  position: fixed;
-  background: rgba(255, 255, 255, 0.5);
-  z-index: 5;
-  border: 4px solid red;
-  cursor: crosshair;
-}
-
-.field-marker-position {
-  position: fixed;
-  width: 5px;
-  height: 5px;
-  background-color: blue;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1001;
-}
-
-/* .overlay-container {
-  position: relative;
-}
-.video-overlay {
-  position: absolute;
-  object-fit: cover;
-  z-index: 1;
-} */
 </style>

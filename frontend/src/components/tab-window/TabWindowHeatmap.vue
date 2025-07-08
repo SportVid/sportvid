@@ -2,7 +2,7 @@
   <PosDataMenu v-if="Object.keys(bboxesStore.bboxDataTopView).length === 0" />
 
   <v-container v-else class="d-flex flex-column">
-    <v-row class="mt-1" justify="center" style="position: relative">
+    <v-row class="mt-1" justify="center">
       <div style="position: relative; display: inline-block">
         <img
           ref="topViewElement"
@@ -14,47 +14,44 @@
             height: videoStore.videoSize.height + 'px',
           }"
         />
+
+        <div
+          v-if="topViewStore.showHeatmap"
+          ref="heatmapContainer"
+          :style="{
+            position: 'absolute',
+            top: '0px',
+            left: '0px',
+            width: topViewStore.topViewSize.width + 'px',
+            height: topViewStore.topViewSize.height + 'px',
+          }"
+        ></div>
+
         <template v-if="topViewStore.showMovement">
           <div
             v-for="position in selectedPositions"
             v-show="topViewStore.showItems"
             :key="position"
-            class="data-point-position"
             :style="{
+              position: 'absolute',
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              transform: 'translate(-50%, -50%)',
               top:
                 position.new_y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-                (topViewStore.topViewSize.top +
-                  ((1 - topViewStore.currentSport.heightRel) / 2) *
-                    topViewStore.topViewSize.height) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px',
               left:
                 position.new_x *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-                (topViewStore.topViewSize.left +
-                  ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
               backgroundColor: !position.team ? 'grey' : position.team,
             }"
           />
         </template>
-
-        <div
-          v-if="topViewStore.showHeatmap"
-          v-show="topViewStore.showItems"
-          ref="heatmapContainer"
-          class="heatmap-overlay"
-          :style="{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: topViewStore.topViewSize.width + 'px',
-            height: topViewStore.topViewSize.height + 'px',
-            pointerEvents: 'none',
-            zIndex: 20,
-            border: '1px solid red',
-          }"
-        ></div>
       </div>
     </v-row>
 
@@ -166,11 +163,9 @@ onMounted(() => {
   }, 500);
   updateTopViewSize();
   window.addEventListener("resize", updateTopViewSize);
-  window.addEventListener("scroll", updateTopViewSize);
 });
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateTopViewSize);
-  window.removeEventListener("scroll", updateTopViewSize);
 });
 
 const maxVideoHeight = ref(0);
@@ -223,7 +218,9 @@ const heatmapContainer = ref(null);
 let heatmapInstance = null;
 function createHeatmap() {
   if (!heatmapContainer.value) return;
-  // Immer neu erzeugen, Canvas kann aus dem DOM verschwinden!
+
+  heatmapContainer.value.innerHTML = "";
+
   heatmapInstance = h337.create({
     container: heatmapContainer.value,
     radius: 18,
@@ -259,22 +256,31 @@ function renderHeatmap() {
   });
 }
 watch(
-  () => topViewStore.showHeatmap,
-  (val) => {
-    if (val) {
-      nextTick(() => {
-        createHeatmap();
-        renderHeatmap();
-      });
-    }
+  () => topViewStore.topViewSize.height,
+  () => {
+    renderHeatmap();
+    updateTopViewSize();
   }
 );
+watch(selectedPositions, () => {
+  createHeatmap();
+  nextTick(() => {
+    renderHeatmap();
+    updateTopViewSize();
+  });
+});
 watch(
-  [selectedPositions, () => topViewStore.topViewSize.width, () => topViewStore.topViewSize.height],
-  () => {
-    nextTick(() => {
-      renderHeatmap();
-    });
+  () => topViewStore.showHeatmap,
+  (val) => {
+    if (val === true) {
+      nextTick(() => {
+        createHeatmap();
+        nextTick(() => {
+          renderHeatmap();
+          updateTopViewSize();
+        });
+      });
+    }
   }
 );
 </script>
@@ -333,22 +339,5 @@ watch(
   background: rgb(var(--v-theme-primary));
   color: #fff;
   border: 2px solid rgb(var(--v-theme-primary));
-}
-
-.data-point-position {
-  position: fixed;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-}
-
-.heatmap-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  z-index: 20;
 }
 </style>

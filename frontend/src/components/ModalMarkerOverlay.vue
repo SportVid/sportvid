@@ -63,11 +63,13 @@ onMounted(() => {
   updateVideoSize();
   window.addEventListener("click", handleClickOverlayReferenceMarker);
   window.addEventListener("resize", updateVideoSize);
+  window.addEventListener("scroll", updateVideoSize);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("click", handleClickOverlayReferenceMarker);
   window.removeEventListener("resize", updateVideoSize);
+  window.addEventListener("scroll", updateVideoSize);
 });
 </script>
 
