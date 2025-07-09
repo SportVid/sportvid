@@ -143,29 +143,77 @@ const bboxesStore = useBboxesStore();
 const videoStore = useVideoStore();
 
 const topViewElement = ref(null);
+const updateTopViewSize = async () => {
+  await nextTick();
+  await waitForStableElement(topViewElement);
 
-const updateTopViewSize = () => {
-  nextTick(() => {
-    if (topViewElement.value) {
-      const rect = topViewElement.value.getBoundingClientRect();
-      topViewStore.setTopViewSize({
-        width: rect.width,
-        height: rect.height,
-        top: rect.top,
-        left: rect.left,
-      });
-    }
-  });
+  if (topViewElement.value) {
+    const rect = topViewElement.value.getBoundingClientRect();
+    topViewStore.setTopViewSize({
+      width: rect.width,
+      height: rect.height,
+      top: rect.top,
+      left: rect.left,
+    });
+  }
 };
-onMounted(() => {
-  setTimeout(() => {
-    window.dispatchEvent(new Event("resize"));
-  }, 500);
+function waitForStableElement(elRef) {
+  return new Promise((resolve) => {
+    let lastRect = null;
+    let stableCounter = 0;
+
+    const check = () => {
+      const el = elRef.value;
+      if (!el) {
+        requestAnimationFrame(check);
+        return;
+      }
+
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0 || rect.top === 0 || rect.left === 0) {
+        requestAnimationFrame(check);
+        return;
+      }
+
+      if (
+        lastRect &&
+        rect.top === lastRect.top &&
+        rect.left === lastRect.left &&
+        rect.width === lastRect.width &&
+        rect.height === lastRect.height
+      ) {
+        stableCounter++;
+      } else {
+        stableCounter = 0;
+      }
+
+      lastRect = rect;
+
+      if (stableCounter >= 3) {
+        resolve();
+      } else {
+        requestAnimationFrame(check);
+      }
+    };
+
+    check();
+  });
+}
+const resizeObserver = new ResizeObserver(() => {
   updateTopViewSize();
+});
+onMounted(() => {
   window.addEventListener("resize", updateTopViewSize);
+  if (topViewElement.value) {
+    resizeObserver.observe(topViewElement.value);
+    updateTopViewSize();
+  }
 });
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateTopViewSize);
+  if (topViewElement.value) {
+    resizeObserver.unobserve(topViewElement.value);
+  }
 });
 
 const maxVideoHeight = ref(0);

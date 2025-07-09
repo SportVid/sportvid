@@ -5,12 +5,7 @@
 
       <v-row class="ma-n2">
         <v-col cols="6">
-          <v-card
-            class="loading-container"
-            elevation="2"
-            ref="videoCard"
-            :style="{ maxHeight: analysisViewHeight + 'px' }"
-          >
+          <v-card elevation="2" ref="videoCard" class="fill-height">
             <v-row justify="center">
               <v-card-title class="mt-5 mb-n1">
                 {{ playerStore.videoName }}
@@ -26,13 +21,7 @@
         </v-col>
 
         <v-col cols="6">
-          <v-card
-            v-if="isLoading"
-            class="loading-card"
-            elevation="2"
-            ref="topViewCard"
-            :style="{ maxHeight: analysisViewHeight + 'px', height: cardHeight + 'px' }"
-          >
+          <v-card v-if="isLoading" class="loading-card fill-height" elevation="2" ref="topViewCard">
             <div class="spinner">
               <i class="mdi mdi-loading mdi-spin" />
             </div>
@@ -41,10 +30,9 @@
 
           <v-card
             v-else
-            class="d-flex flex-column flex-nowrap px-2"
+            class="d-flex flex-column flex-nowrap px-2 fill-height"
             elevation="2"
             ref="topViewCard"
-            :style="{ maxHeight: analysisViewHeight + 'px', height: cardHeight + 'px' }"
           >
             <v-row class="sticky-tabs-bar" justify="center">
               <v-tabs fixed-tabs slider-color="primary" v-model="analysisTabId">
@@ -187,23 +175,24 @@ const analysisTabs = computed(() => [
 ]);
 watch(
   () => analysisTabId.value,
-  (newTabId) => {
+  async (newTabId) => {
     topViewStore.showItems = false;
 
-    nextTick(() => {
-      if (newTabId === "calibration") {
-        calibrationAssetStore.showVideoMarker = true;
-      } else {
-        calibrationAssetStore.showVideoMarker = false;
-      }
+    await nextTick();
 
-      if (newTabId === "pos_data" || newTabId === "heatmap") {
-        playerStore.showBoundingBox = true;
-      } else {
-        playerStore.showBoundingBox = false;
-      }
-      topViewStore.showItems = true;
-    });
+    if (newTabId === "calibration") {
+      calibrationAssetStore.showVideoMarker = true;
+    } else {
+      calibrationAssetStore.showVideoMarker = false;
+    }
+
+    if (newTabId === "pos_data" || newTabId === "heatmap") {
+      playerStore.showBoundingBox = true;
+    } else {
+      playerStore.showBoundingBox = false;
+    }
+
+    topViewStore.showItems = true;
   }
 );
 
@@ -234,27 +223,6 @@ onMounted(async () => {
     isLoading.value = false;
   }
 });
-
-const videoCard = ref(null);
-const topViewCard = ref(null);
-const windowHeight = ref(window.innerHeight);
-const analysisViewHeight = ref(null);
-const cardHeight = ref(null);
-const setCardHeight = () => {
-  windowHeight.value = window.innerHeight;
-  nextTick(() => {
-    analysisViewHeight.value = window.innerHeight - 64 - 40;
-    cardHeight.value = videoCard.value.$el.offsetHeight;
-  });
-};
-onMounted(() => {
-  setCardHeight();
-  window.addEventListener("resize", setCardHeight);
-});
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", setCardHeight);
-});
-watch(() => [videoCard, topViewCard, windowHeight], setCardHeight, { flush: "post" });
 
 const groupDataByTime = (data) => {
   const grouped = {};
