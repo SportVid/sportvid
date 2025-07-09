@@ -564,6 +564,19 @@ watch(
     console.log("Selected Calibration Matrix:", newMatrix);
   }
 );
+
+watch(
+  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  (active) => {
+    if (active) {
+      calibrationAssetStore.previousShowVideoMarker = calibrationAssetStore.showVideoMarker;
+      calibrationAssetStore.showVideoMarker = true;
+    } else {
+      calibrationAssetStore.showVideoMarker = calibrationAssetStore.previousShowVideoMarker;
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>

@@ -120,6 +120,7 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
   };
 
   const showVideoMarker = ref(false);
+  const previousShowVideoMarker = ref(false);
   const hoveredVideoMarker = ref(null);
   const filteredVideoMarker = computed(() => {
     return marker.value.filter(
