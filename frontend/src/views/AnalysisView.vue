@@ -175,23 +175,24 @@ const analysisTabs = computed(() => [
 ]);
 watch(
   () => analysisTabId.value,
-  (newTabId) => {
+  async (newTabId) => {
     topViewStore.showItems = false;
 
-    nextTick(() => {
-      if (newTabId === "calibration") {
-        calibrationAssetStore.showVideoMarker = true;
-      } else {
-        calibrationAssetStore.showVideoMarker = false;
-      }
+    await nextTick();
 
-      if (newTabId === "pos_data" || newTabId === "heatmap") {
-        playerStore.showBoundingBox = true;
-      } else {
-        playerStore.showBoundingBox = false;
-      }
-      topViewStore.showItems = true;
-    });
+    if (newTabId === "calibration") {
+      calibrationAssetStore.showVideoMarker = true;
+    } else {
+      calibrationAssetStore.showVideoMarker = false;
+    }
+
+    if (newTabId === "pos_data" || newTabId === "heatmap") {
+      playerStore.showBoundingBox = true;
+    } else {
+      playerStore.showBoundingBox = false;
+    }
+
+    topViewStore.showItems = true;
   }
 );
 
