@@ -8,12 +8,12 @@
     </template>
 
     <template #append>
-      <v-btn v-if="termsOfServiceView && !loggedIn" to="/">
+      <v-btn v-if="(termsOfServiceView || guidelinesView) && !loggedIn" to="/">
         <app-bar-icon>mdi-home</app-bar-icon>
         {{ $t("app_bar.home") }}
       </v-btn>
 
-      <v-btn v-if="(analysisView || termsOfServiceView) && loggedIn" to="/">
+      <v-btn v-if="(analysisView || termsOfServiceView || guidelinesView) && loggedIn" to="/">
         <app-bar-icon>mdi-movie</app-bar-icon>
         {{ $t("app_bar.video_view") }}
       </v-btn>
@@ -128,6 +128,7 @@ const setLanguage = (code) => {
 const videoView = computed(() => route.name === "VideoView");
 const analysisView = computed(() => route.name === "AnalysisView");
 const termsOfServiceView = computed(() => route.name === "TermsOfServiceView");
+const guidelinesView = computed(() => route.name === "GuidelinesView");
 
 const showModalPlugin = ref(false);
 const videoId = computed(() => playerStore.videoId);
