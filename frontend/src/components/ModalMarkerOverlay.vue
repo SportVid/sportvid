@@ -4,21 +4,58 @@
     class="overlay-reference-marker"
     @click="calibrationAssetStore.setVideoMarker"
   >
-    <video
-      class="video-overlay"
-      ref="videoOverlayElement"
-      :src="playerStore.videoUrl"
-      @loadedmetadata="seekToCurrentTime"
-      :style="{
-        width: videoStore.videoSize.width + 'px',
-        height: videoStore.videoSize.height + 'px',
-      }"
-    />
+    <div style="position: relative; display: inline-block">
+      <video
+        class="video-overlay"
+        ref="videoOverlayElement"
+        :src="playerStore.videoUrl"
+        @loadedmetadata="seekToCurrentTime"
+        :style="{
+          width: videoStore.videoSize.width + 'px',
+          height: videoStore.videoSize.height + 'px',
+        }"
+      />
+
+      <div
+        v-for="m in calibrationAssetStore.filteredVideoMarker"
+        v-show="calibrationAssetStore.showVideoMarker"
+        :key="m.id"
+        :style="{
+          position: 'absolute',
+          width: '12px',
+          height: '12px',
+          backgroundColor: 'red',
+          borderRadius: '50%',
+          transform: 'translate(-50%, -50%)',
+          top: m.videoCoordsRel.y * videoStore.videoSize.height + 'px',
+          left: m.videoCoordsRel.x * videoStore.videoSize.width + 'px',
+        }"
+        @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
+        @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
+      />
+
+      <div
+        v-for="point in calibrationAssetStore.videoMarkerReprojection"
+        v-show="calibrationAssetStore.showVideoMarker"
+        :key="point"
+        :style="{
+          position: 'absolute',
+          width: '5px',
+          height: '5px',
+          backgroundColor: 'blue',
+          borderRadius: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          top: point.y * videoStore.videoSize.height + 'px',
+          left: point.x * videoStore.videoSize.width + 'px',
+        }"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { ref, computed, onMounted, nextTick, watch } from "vue";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
@@ -58,17 +95,15 @@ const updateVideoSize = () => {
     }
   });
 };
-
-onMounted(() => {
-  updateVideoSize();
-  window.addEventListener("click", handleClickOverlayReferenceMarker);
-  window.addEventListener("resize", updateVideoSize);
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener("click", handleClickOverlayReferenceMarker);
-  window.removeEventListener("resize", updateVideoSize);
-});
+watch(
+  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  (active) => {
+    if (active) {
+      updateVideoSize();
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>

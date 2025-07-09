@@ -86,19 +86,21 @@
   "analysis_view": {
     "analysis_tabs": {
       "calibration": "Calibration",
-      "pos_data": "Position Data"
+      "pos_data": "Position Data",
+      "heatmap": "Heatmap"
     },
     "visualization_tabs": {
       "select": "Select Visualization",
       "timeline": "Timeline",
-      "list": "List"
-    },
-    "sports": {
-      "soccer": "Soccer",
-      "handball": "Handball",
-      "basketball": "Basketball",
-      "climbing": "Climbing"
+      "events": "Events",
+      "data": "data"
     }
+  },
+  "sports": {
+    "soccer": "Soccer",
+    "handball": "Handball",
+    "basketball": "Basketball",
+    "climbing": "Climbing"
   },
   "calibration_asset": {
     "not_selected": "No calibration asset selected.<br>Please create a new calibration asset or choose an existing one.",
@@ -130,6 +132,22 @@
         "upload": "Upload position data",
         "select": "Select position data"
       }
+    }
+  },
+  "heatmap": {
+    "display_settings": {
+      "title": "Display Settings",
+      "view_heatmap": "View heatmap",
+      "view_movement": "View movement"
+    }
+  },
+  "data": {
+    "options": {
+      "title": "Options",
+      "aggregated_full": "Aggregated full match",
+      "aggregated_first": "Aggregated first half",
+      "aggregated_second": "Aggregated second half",
+      "progress": "Progress"
     }
   },
   "visualization": {
@@ -548,6 +566,13 @@
           "bytetrack": "ByteTrack Plugin",
           "manual": "Manual Upload"
         }
+      }
+    },
+    "bounding_box": {
+      "edit": {
+        "title": "Edit Bounding Box",
+        "all_ref_id": "Update all Bounding Boxes with the same ref_id",
+        "all_team_id": "Update all Bounding Boxes with the same team_id"
       }
     }
   }

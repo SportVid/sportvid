@@ -3,31 +3,6 @@
     <v-container fluid>
       <ModalMarkerOverlay v-if="calibrationAssetStore.isAnyReferenceMarkerActive" />
 
-      <div
-        v-for="m in calibrationAssetStore.filteredVideoMarker"
-        v-show="calibrationAssetStore.showVideoMarker"
-        :key="m.id"
-        :style="{
-          top: m.videoCoordsRel.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
-          left: m.videoCoordsRel.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
-        }"
-        @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
-        @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
-        class="reference-marker-position"
-      />
-      <div>
-        <div
-          v-for="point in calibrationAssetStore.videoMarkerReprojection"
-          v-show="calibrationAssetStore.showVideoMarker"
-          :key="point"
-          :style="{
-            top: point.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
-            left: point.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
-          }"
-          class="reprojection-marker-position"
-        />
-      </div>
-
       <v-row class="ma-n2">
         <v-col cols="6">
           <v-card
@@ -73,7 +48,11 @@
           >
             <v-row class="sticky-tabs-bar" justify="center">
               <v-tabs fixed-tabs slider-color="primary" v-model="analysisTabId">
-                <v-tab v-for="analysisTab in analysisTabs" :key="analysisTab.id">
+                <v-tab
+                  v-for="analysisTab in analysisTabs"
+                  :key="analysisTab.id"
+                  :value="analysisTab.id"
+                >
                   {{ analysisTab.name }}
                 </v-tab>
               </v-tabs>
@@ -82,9 +61,14 @@
             <v-row class="flex-grow-1">
               <v-col>
                 <v-tabs-window v-model="analysisTabId">
-                  <v-tabs-window-item v-for="analysisTab in analysisTabs" :key="analysisTab.id">
+                  <v-tabs-window-item
+                    v-for="analysisTab in analysisTabs"
+                    :key="analysisTab.id"
+                    :value="analysisTab.id"
+                  >
                     <TabWindowCalibration v-if="analysisTab.id === 'calibration'" />
                     <TabWindowPosData v-if="analysisTab.id === 'pos_data'" />
+                    <TabWindowHeatmap v-if="analysisTab.id === 'heatmap'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -99,7 +83,7 @@
         </v-col>
       </v-row> -->
 
-      <v-row v-if="analysisTabId !== 0" class="ma-n2">
+      <v-row v-if="analysisTabId === 'pos_data'" class="ma-n2">
         <v-col>
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2">
             <v-tabs fixed-tabs slider-color="primary" v-model="visualizationTabId">
@@ -116,7 +100,8 @@
                     :key="visualizationTab.id"
                   >
                     <TabWindowTimeline v-if="visualizationTab.id === 'timeline'" />
-                    <TabWindowList v-if="visualizationTab.id === 'list'" />
+                    <TabWindowEvents v-if="visualizationTab.id === 'events'" />
+                    <TabWindowData v-if="visualizationTab.id === 'data'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -164,8 +149,10 @@ import { useShotStore } from "@/stores/shot";
 import VideoPlayer from "@/components/video/VideoPlayer.vue";
 import TabWindowPosData from "@/components/tab-window/TabWindowPosData.vue";
 import TabWindowCalibration from "@/components/tab-window/TabWindowCalibration.vue";
+import TabWindowHeatmap from "@/components/tab-window/TabWindowHeatmap.vue";
 import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
-import TabWindowList from "@/components/tab-window/TabWindowList.vue";
+import TabWindowEvents from "@/components/tab-window/TabWindowEvents.vue";
+import TabWindowData from "@/components/tab-window/TabWindowData.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
@@ -196,12 +183,10 @@ const analysisTabId = ref("calibration");
 const analysisTabs = computed(() => [
   { id: "calibration", name: t("analysis_view.analysis_tabs.calibration") },
   { id: "pos_data", name: t("analysis_view.analysis_tabs.pos_data") },
+  { id: "heatmap", name: t("analysis_view.analysis_tabs.heatmap") },
 ]);
-onMounted(() => {
-  analysisTabId.value = analysisTabs.value.find((tab) => tab.id === "calibration")?.id;
-});
 watch(
-  () => analysisTabId,
+  () => analysisTabId.value,
   (newTabId) => {
     topViewStore.showItems = false;
 
@@ -212,10 +197,10 @@ watch(
         calibrationAssetStore.showVideoMarker = false;
       }
 
-      if (currnewTabIdentTab === "pos_data") {
-        bboxesStore.showBoundingBox = true;
+      if (newTabId === "pos_data" || newTabId === "heatmap") {
+        playerStore.showBoundingBox = true;
       } else {
-        bboxesStore.showBoundingBox = false;
+        playerStore.showBoundingBox = false;
       }
       topViewStore.showItems = true;
     });
@@ -225,7 +210,8 @@ watch(
 const visualizationTabId = ref("timeline");
 const visualizationTabs = computed(() => [
   { id: "timeline", name: t("analysis_view.visualization_tabs.timeline") },
-  { id: "list", name: t("analysis_view.visualization_tabs.list") },
+  { id: "events", name: t("analysis_view.visualization_tabs.events") },
+  { id: "data", name: t("analysis_view.visualization_tabs.data") },
 ]);
 onMounted(() => {
   visualizationTabId.value = visualizationTabs.value.find((tab) => tab.id === "timeline")?.id;
@@ -269,19 +255,6 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", setCardHeight);
 });
 watch(() => [videoCard, topViewCard, windowHeight], setCardHeight, { flush: "post" });
-
-const previousShowVideoMarker = ref(false);
-watch(
-  () => calibrationAssetStore.isAnyReferenceMarkerActive,
-  (newValue) => {
-    if (newValue) {
-      previousShowVideoMarker.value = calibrationAssetStore.showVideoMarker;
-      calibrationAssetStore.showVideoMarker = true;
-    } else {
-      calibrationAssetStore.showVideoMarker = previousShowVideoMarker.value;
-    }
-  }
-);
 
 const groupDataByTime = (data) => {
   const grouped = {};
@@ -591,6 +564,19 @@ watch(
     console.log("Selected Calibration Matrix:", newMatrix);
   }
 );
+
+watch(
+  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  (active) => {
+    if (active) {
+      calibrationAssetStore.previousShowVideoMarker = calibrationAssetStore.showVideoMarker;
+      calibrationAssetStore.showVideoMarker = true;
+    } else {
+      calibrationAssetStore.showVideoMarker = calibrationAssetStore.previousShowVideoMarker;
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -631,24 +617,5 @@ watch(
 .loading-text {
   margin-top: 10px;
   font-size: 18px;
-}
-
-.reference-marker-position {
-  position: fixed;
-  width: 12px;
-  height: 12px;
-  background-color: red;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-}
-.reprojection-marker-position {
-  position: fixed;
-  width: 5px;
-  height: 5px;
-  background-color: blue;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1001;
 }
 </style>
