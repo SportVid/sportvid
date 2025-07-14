@@ -1,5 +1,8 @@
 # SportVid
 
+## Visit project website
+https://sportvid.github.io/
+
 ## Development setup
 
 
