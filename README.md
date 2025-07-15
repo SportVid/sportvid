@@ -42,6 +42,10 @@
 
 5. Go to the frontend instance at `http://localhost/`.
 
+6. Move into container, e.g. inference-server:
+    ```
+    sudo docker-compose exec inference_ray bash
+    ```
 
 ### Code reloading
 Hot reloading is enabled for `backend`. To display frontend changes, run:

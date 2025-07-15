@@ -28,7 +28,10 @@ DEBUG = True
 FORCE_SCRIPT_NAME = "/"
 
 
-ALLOWED_HOSTS = ["localhost"]
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost"
+]
 CSRF_TRUSTED_ORIGINS = ["http://localhost", "https://localhost"]
 
 
@@ -179,7 +182,7 @@ DATA_CACHE_ROOT = os.path.join("/cache/")
 DATA_OUTPUT_PATH = os.path.join("/predictions")
 
 
-GRPC_HOST = "localhost"
+GRPC_HOST = "localhost"  # NOTE: "analyser"
 GRPC_PORT = 50051
 
 INDEXER_PATH = "/indexer"
