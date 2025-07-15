@@ -30,7 +30,7 @@ from backend.models import (
     PluginRun,
 )
 from enum import Enum
-from analyser.data import DataManager, Shot
+from data import DataManager, Shot
 import numpy as np
 
 

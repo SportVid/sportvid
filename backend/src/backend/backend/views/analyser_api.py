@@ -14,7 +14,7 @@
 # from backend.utils import download_file, media_url_to_video
 
 # from analyser.client import AnalyserClient
-# from analyser.data import DataManager
+# from data import DataManager
 # from analyser import analyser_pb2, analyser_pb2_grpc
 
 # from django.views.decorators.csrf import csrf_exempt

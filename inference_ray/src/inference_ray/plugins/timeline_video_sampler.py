@@ -1,13 +1,13 @@
 import logging
 import sys
 
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.data import (
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from data import (
     VideoData,
     ShotsData,
     ImagesData,
 )
-from analyser.data import DataManager, Data
+from data import DataManager, Data
 
 from typing import Callable, Optional, Dict, Union
 

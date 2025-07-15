@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 import sys
 
 from analyser.analyser.client import AnalyserClient
-from analyser.proto import analyser_pb2
+from interface import analyser_pb2
 
 args = ArgumentParser()
 args.add_argument("--job_id", type=str, required=True)

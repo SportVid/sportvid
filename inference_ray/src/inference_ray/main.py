@@ -3,8 +3,8 @@ from ray import serve
 from typing import Dict
 from ray.serve import Application
 
-from analyser.data import DataManager
-from analyser.inference.plugin import AnalyserPluginManager, AnalyserPlugin
+from data import DataManager
+from inference_ray.plugin import AnalyserPluginManager, AnalyserPlugin
 
 
 @serve.deployment

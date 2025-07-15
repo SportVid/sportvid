@@ -52,7 +52,7 @@ def populate_cluster_item_fields(apps, schema_editor):
 
 @lru_cache(100)
 def get_data(data_id):
-    from analyser.data import DataManager
+    from data import DataManager
     data_manager = DataManager('/predictions')
     data = data_manager.load(data_id)
     with data:

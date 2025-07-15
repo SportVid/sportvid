@@ -1,7 +1,7 @@
 from typing import Dict, List
 import imageio.v3 as iio
 
-from analyser.data import DataManager
+from data import DataManager
 from backend.models import (
     PluginRun,
     PluginRunResult,

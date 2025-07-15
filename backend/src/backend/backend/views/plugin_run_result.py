@@ -11,7 +11,7 @@ from django.conf import settings
 
 from backend.models import PluginRunResult, Video, PluginRun
 from backend.plugin_manager import PluginManager
-from analyser.data import DataManager
+from data import DataManager
 
 
 logger = logging.getLogger(__name__)

@@ -9,7 +9,7 @@ from backend.utils import media_path_to_video
 from ..utils.analyser_client import TaskAnalyserClient
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-from analyser.data import DataManager
+from data import DataManager
 from django.db import transaction
 from django.conf import settings
 

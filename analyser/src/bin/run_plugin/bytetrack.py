@@ -5,7 +5,7 @@ import os
 import sys
 import logging
 
-from analyser.analyser.client import AnalyserClient
+from analyser.client import AnalyserClient
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run ByteTrack object tracking on a video")

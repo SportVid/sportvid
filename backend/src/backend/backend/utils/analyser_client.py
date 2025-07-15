@@ -3,9 +3,13 @@ import logging
 
 import grpc
 
-from analyser.analyser.client import AnalyserClient
-from analyser.proto import analyser_pb2
-from analyser.proto import analyser_pb2_grpc
+from analyser.client import AnalyserClient
+# TODO: Where does the 'interface' namespace originates from ?!
+# from interface import analyser_pb2
+# from interface import analyser_pb2_grpc
+from interface import analyser_pb2
+from interface import analyser_pb2_grpc
+
 from backend.models import PluginRun
 from backend.utils import RetryOnRpcErrorClientInterceptor, ExponentialBackoff
 

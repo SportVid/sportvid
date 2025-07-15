@@ -1,15 +1,15 @@
 from typing import Iterator
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.utils import VideoDecoder
-from analyser.data import KpssData, FacesData, ImagesData, ImageEmbedding, ImageEmbeddings, VideoData
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from utils import VideoDecoder
+from data import KpssData, FacesData, ImagesData, ImageEmbedding, ImageEmbeddings, VideoData
 import logging
 import numpy as np
-from analyser.data import DataManager, Data
+from data import DataManager, Data
 
 from typing import Callable, Optional, Dict
 
 
-# from analyser.inference import InferenceServer
+# from inference_ray import InferenceServer
 
 src1 = np.array(
     [[51.642, 50.115], [57.617, 49.990], [35.740, 69.007], [51.157, 89.050], [57.025, 89.702]], dtype=np.float32

@@ -1,7 +1,7 @@
 from packaging import version
 from typing import Union, Dict, Any
 
-from analyser.utils.helper import convert_name
+from utils.helper import convert_name
 
 
 class Plugin:

@@ -1,8 +1,8 @@
 import logging
 from typing import Dict
 
-from analyser.utils.plugin import Plugin
-from analyser.utils.plugin import Factory
+from utils.plugin import Plugin
+from utils.plugin import Factory
 
 
 class Cache(Plugin):

@@ -9,10 +9,11 @@ from typing import Iterator, Any
 
 import grpc
 import json
-from analyser.proto import analyser_pb2
-from analyser.proto import analyser_pb2_grpc
 
-from analyser.data import DataManager
+from interface import analyser_pb2
+from interface import analyser_pb2_grpc
+
+from data import DataManager
 
 import time
 import msgpack

@@ -7,7 +7,7 @@ import numpy as np
 
 from ..manager import DataManager
 from ..data import Data
-from analyser.proto import analyser_pb2
+from interface import analyser_pb2
 
 
 @DataManager.export("StringData", analyser_pb2.STRING_DATA)

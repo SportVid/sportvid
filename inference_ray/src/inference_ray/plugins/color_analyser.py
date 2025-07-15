@@ -1,7 +1,7 @@
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.data import VideoData, ListData, RGBData
-from analyser.utils import VideoDecoder
-from analyser.data import DataManager, Data
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from data import VideoData, ListData, RGBData
+from utils import VideoDecoder
+from data import DataManager, Data
 
 import logging
 from typing import Callable, Optional, Dict

@@ -8,9 +8,6 @@ services:
 
     volumes:
       - type: bind
-        source: ./data/inference_ray_venv
-        target: /app/.venv
-      - type: bind
         source: ./data/analyser
         target: /data/
       - type: bind
@@ -46,9 +43,6 @@ services:
     image: ghcr.io/astral-sh/uv:debian
 
     volumes:
-      - type: bind
-        source: ./data/analyser_venv
-        target: /app/.venv
       - type: bind
         source: ./inference_ray
         target: /app/inference_ray
@@ -102,9 +96,6 @@ services:
 
     volumes:
       - type: bind
-        source: ./data/celery_venv
-        target: /app/.venv
-      - type: bind
         source: ./inference_ray
         target: /app/inference_ray
       - type: bind
@@ -153,9 +144,6 @@ services:
       - 8000:8000
 
     volumes:
-      - type: bind
-        source: ./data/backend_venv
-        target: /app/.venv
       - type: bind
         source: ./inference_ray
         target: /app/inference_ray

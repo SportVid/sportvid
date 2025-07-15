@@ -1,8 +1,8 @@
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.data import VideoData, BboxesData, BboxData
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from data import VideoData, BboxesData, BboxData
 
-from analyser.data import DataManager, Data
-from analyser.utils import VideoDecoder
+from data import DataManager, Data
+from utils import VideoDecoder
 
 from typing import Any, Callable, Dict, List, Tuple
 import argparse

@@ -1,13 +1,14 @@
 from typing import Any, List, Iterator
 import logging
 
-import redis
+# import redis
+import valkey
 import msgpack
 
-from analyser.utils.cache import CacheManager, Cache
+from utils.cache import CacheManager, Cache
 
-default_config = {"db": 0, "host": "analyser_redisai", "port": 6379, "tag": "data"}
-
+default_config = {"db": 0, "host": "valkey", "port": 6379, "tag": "data"}
+# NOTE: previous host 'analyser_redisai'
 
 class Batcher:
     def __init__(self, iterable, n=1):
@@ -20,11 +21,12 @@ class Batcher:
             yield self.iterable[ndx : min(ndx + self.n, l)]
 
 
-@CacheManager.export("redis")
-class RedisCache(Cache, config=default_config, version="0.1"):
+@CacheManager.export("valkey")
+class valkeyCache(Cache, config=default_config, version="0.1"):
     def __init__(self, config=None):
         super().__init__(config)
-        self.r = redis.Redis(
+        # NOTE: previous call 'redis.Redis(...)'
+        self.r = valkey.Valkey(
             host=self.config.get("host"),
             port=self.config.get("port"),
             db=self.config.get("db"),
@@ -36,14 +38,14 @@ class RedisCache(Cache, config=default_config, version="0.1"):
             tag = self.config.get("tag")
             self.r.set(f"{tag}:{id}", packed)
         except Exception as e:
-            logging.error(f"RedisCache {e}")
+            logging.error(f"valKeyCache {e}")
 
     def delete(self, id: str) -> bool:
         try:
             tag = self.config.get("tag")
             return self.r.delete(f"{tag}:{id}")
         except Exception as e:
-            logging.error(f"RedisCache {e}")
+            logging.error(f"valKeyCache {e}")
             return None
 
     def get(self, id: str) -> Any:
@@ -54,7 +56,7 @@ class RedisCache(Cache, config=default_config, version="0.1"):
                 return None
             return msgpack.unpackb(packed)
         except Exception as e:
-            logging.error(f"RedisCache {e}")
+            logging.error(f"valKeyCache {e}")
             return None
 
     def keys(self) -> List[str]:
@@ -66,7 +68,7 @@ class RedisCache(Cache, config=default_config, version="0.1"):
             # print([x for x in Batcher(keys, 2)])
             return [key[start:].decode("utf-8") for key in keys]
         except Exception as e:
-            logging.error(f"RedisCache {e}")
+            logging.error(f"valKeyCache {e}")
             return []
 
     def __iter__(self) -> Iterator:
@@ -83,5 +85,5 @@ class RedisCache(Cache, config=default_config, version="0.1"):
                     yield k[start:].decode("utf-8"), msgpack.unpackb(v)
 
         except Exception as e:
-            logging.error(f"RedisCache {e}")
+            logging.error(f"valKeyCache {e}")
             yield from []

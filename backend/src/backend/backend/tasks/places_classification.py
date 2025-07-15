@@ -2,8 +2,8 @@ from typing import Dict, List
 import logging
 from ..utils.analyser_client import TaskAnalyserClient
 
-from analyser.data import Shot, ShotsData
-from analyser.data import DataManager
+from data import Shot, ShotsData
+from data import DataManager
 
 from backend.models import (
     Annotation,

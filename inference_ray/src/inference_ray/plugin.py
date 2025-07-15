@@ -8,14 +8,14 @@ import json
 import requests
 import uuid
 
-from analyser.utils import convert_name
-from analyser.utils.plugin import Plugin, Manager
-from analyser.data import Data, DataManager
+from utils import convert_name
+from utils.plugin import Plugin, Manager
+from data import Data, DataManager
 
 from packaging import version
 from typing import Union, Dict, Any
 
-# from analyser.inference.callback import AnalyserPluginCallback
+# from inference_ray.callback import AnalyserPluginCallback
 
 
 def convert_name(name):
@@ -183,7 +183,7 @@ class AnalyserPluginManager(Manager):
             match = re.match(file_re, pl)
             if match:
                 importlib.import_module(
-                    "analyser.inference.plugins.{}".format(match.group(1))
+                    "inference_ray.plugins.{}".format(match.group(1))
                 )
 
     def build_plugin(self, plugin: str, config: Dict = None) -> AnalyserPlugin:

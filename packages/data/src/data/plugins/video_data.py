@@ -2,10 +2,10 @@ import logging
 
 from ..manager import DataManager
 from ..data import Data
-from analyser.proto import analyser_pb2
+from interface import analyser_pb2
 from dataclasses import dataclass, field, fields
 from collections.abc import Iterable
-from analyser.utils import VideoDecoder
+from utils import VideoDecoder
 
 
 

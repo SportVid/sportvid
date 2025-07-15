@@ -14,7 +14,7 @@ from dataclasses import field
 from .data import Data
 from .fs_handler import ZipFSHandler
 from .utils import create_data_path, generate_id
-from analyser.utils.cache import Cache
+from utils.cache import Cache
 
 
 class DataManager:

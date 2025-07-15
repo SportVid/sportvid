@@ -1,9 +1,9 @@
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 
-from analyser.data import Annotation, AnnotationData, ShotsData, ScalarData
+from data import Annotation, AnnotationData, ShotsData, ScalarData
 
 import numpy as np
-from analyser.data import DataManager, Data
+from data import DataManager, Data
 
 from typing import Callable, Optional, Dict
 

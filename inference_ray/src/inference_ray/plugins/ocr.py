@@ -1,10 +1,10 @@
 from pprint import pprint
 
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.utils import VideoDecoder
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from utils import VideoDecoder
 
-# from analyser.inference import InferenceServer
-from analyser.data import (
+# from inference_ray import InferenceServer
+from data import (
     BboxData,
     BboxesData,
     StringData,
@@ -14,11 +14,11 @@ from analyser.data import (
     AnnotationData,
     Annotation,
 )
-from analyser.data import DataManager, Data
+from data import DataManager, Data
 
 from typing import Callable, Optional, Dict
 
-from analyser.utils import VideoDecoder
+from utils import VideoDecoder
 
 import numpy as np
 import time

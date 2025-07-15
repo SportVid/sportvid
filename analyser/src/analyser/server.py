@@ -16,13 +16,13 @@ from google.protobuf.json_format import MessageToDict
 import grpc
 
 
-from analyser.proto import analyser_pb2
-from analyser.proto import analyser_pb2_grpc
-from analyser.inference.plugin import AnalyserProgressCallback
-from analyser.inference.plugin import AnalyserPluginManager
-from analyser.data import DataManager, Data
-from analyser.utils.cache import get_hash_for_plugin
-from analyser.utils.cache import CacheManager
+from interface import analyser_pb2
+from interface import analyser_pb2_grpc
+from inference_ray.plugin import AnalyserProgressCallback
+from inference_ray.plugin import AnalyserPluginManager
+from data import DataManager, Data
+from utils.cache import get_hash_for_plugin
+from utils.cache import CacheManager
 
 
 class AnalyserCacheWrapper:
@@ -437,8 +437,8 @@ def parse_args():
     parser.add_argument("--host", help="host")
     parser.add_argument("--data_dir", help="data dir")
     parser.add_argument("--no_cache", action="store_true", help="disable cache")
-    parser.add_argument("--cache_redis_host", help="redis cache host")
-    parser.add_argument("--cache_redis_port", type=int, help="redis cache port")
+    parser.add_argument("--cache_valkey_host", help="valkey cache host")
+    parser.add_argument("--cache_valkey_port", type=int, help="valkey cache port")
     parser.add_argument("--inference_ray_host", help="inference ray host")
     parser.add_argument("--inference_ray_port", type=int, help="inference ray port")
     parser.add_argument(
@@ -490,19 +490,19 @@ def main():
             config["data"] = {}
         config["data"]["cache"] = None
 
-    if args.cache_redis_host:
+    if args.cache_valkey_host:
         if "data" not in config:
             config["data"] = {}
         if "cache" not in config["data"]:
-            config["data"]["cache"] = {"type": "redis", "params": {}}
-        config["data"]["cache"]["params"]["host"] = args.cache_redis_host
+            config["data"]["cache"] = {"type": "valkey", "params": {}}
+        config["data"]["cache"]["params"]["host"] = args.cache_valkey_host
 
-    if args.cache_redis_port:
+    if args.cache_valkey_port:
         if "data" not in config:
             config["data"] = {}
         if "cache" not in config["data"]:
-            config["data"]["cache"] = {"type": "redis", "params": {}}
-        config["data"]["cache"]["params"]["port"] = args.cache_redis_port
+            config["data"]["cache"] = {"type": "valkey", "params": {}}
+        config["data"]["cache"]["params"]["port"] = args.cache_valkey_port
 
     if args.inference_ray_host:
         if "inference" not in config:

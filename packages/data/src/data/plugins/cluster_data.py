@@ -11,7 +11,7 @@ from .face_data import FacesData, FaceData
 from .keypoint_data import KpssData, KpsData
 from .bounding_box_data import BboxesData, BboxData
 from .image_data import ImagesData, ImageData
-from analyser.proto import analyser_pb2
+from interface import analyser_pb2
 from .image_embedding import ImageEmbedding
 
 

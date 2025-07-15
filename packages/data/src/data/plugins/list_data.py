@@ -10,7 +10,7 @@ import numpy as np
 from ..manager import DataManager
 from ..data import Data
 from ..fs_handler import LocalFSHandler, ZipFSHandler
-from analyser.proto import analyser_pb2
+from interface import analyser_pb2
 
 
 @DataManager.export("ListData", analyser_pb2.LIST_DATA)

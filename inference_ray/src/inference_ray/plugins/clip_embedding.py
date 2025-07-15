@@ -2,8 +2,8 @@ import os
 import logging
 import numpy as np
 
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.data import (
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from data import (
     VideoData,
     ScalarData,
     ImageEmbedding,
@@ -12,13 +12,13 @@ from analyser.data import (
     TextEmbeddings,
     ListData,
 )
-from analyser.data import DataManager, Data
+from data import DataManager, Data
 
 from typing import Callable, Optional, Dict
 
-# from analyser.inference import InferenceServer
-from analyser.utils import VideoDecoder
-from analyser.utils.imageops import image_resize, image_crop, image_pad
+# from inference_ray import InferenceServer
+from utils import VideoDecoder
+from utils.imageops import image_resize, image_crop, image_pad
 
 
 class ImagePreprozessorWrapper:

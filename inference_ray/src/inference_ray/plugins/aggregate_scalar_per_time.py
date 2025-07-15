@@ -1,6 +1,6 @@
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.data import DataManager, Data
-from analyser.data import ScalarData, ListData
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from data import DataManager, Data
+from data import ScalarData, ListData
 
 from typing import Callable, Optional, Dict
 

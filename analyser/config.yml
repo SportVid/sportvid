@@ -4,7 +4,7 @@ data:
       type: valkey
       params:
         db: 1
-        host: backend_redis
+        host: valkey
         port: 6380
         tag: analyser
 inference:

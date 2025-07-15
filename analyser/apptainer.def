@@ -12,8 +12,8 @@ From: pytorch/pytorch:2.6.0-cuda12.6-cudnn9-runtime
     python3 -m pip install "imageio[pyav]"
     python3 -m pip install "msgpack==1.0.7"
     python3 -m pip install PyYAML
+    python3 -m pip install "valkey==6.1.0" 
     python3 -m pip install "grpcio==1.71.0"
     python3 -m pip install "grpcio-tools==1.71.0"
     python3 -m pip install "msgpack-numpy==0.4.8"
-    python3 -m pip install "librosa==0.10.1" 
-
+    python3 -m pip install "librosa==0.10.1"

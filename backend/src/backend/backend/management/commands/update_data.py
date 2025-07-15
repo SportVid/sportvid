@@ -6,9 +6,9 @@ import pathlib
 
 from django.conf import settings
 
-from analyser.data.v1.manager import DataManager as DataManagerV1
+from data.v1.manager import DataManager as DataManagerV1
 
-from analyser.data.manager import DataManager
+from data.manager import DataManager
 
 import imageio.v3 as iio
 

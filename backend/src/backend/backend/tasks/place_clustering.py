@@ -18,7 +18,7 @@ from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_video
 
 from ..utils.analyser_client import TaskAnalyserClient
-from analyser.data import DataManager, Shot
+from data import DataManager, Shot
 from backend.utils.parser import Parser
 from backend.utils.task import Task
 from django.db import transaction

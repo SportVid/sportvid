@@ -7,7 +7,7 @@ from typing import List
 
 from celery import shared_task
 from backend.models import PluginRun, Video, TibavaUser, PluginRunResult
-from analyser.data import DataManager
+from data import DataManager
 
 from django.conf import settings
 

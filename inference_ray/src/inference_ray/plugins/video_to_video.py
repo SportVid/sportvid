@@ -1,6 +1,6 @@
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.data import VideoData
-from analyser.data import DataManager, Data
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from data import VideoData
+from data import DataManager, Data
 
 from typing import Callable, Optional, Dict
 

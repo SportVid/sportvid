@@ -1,9 +1,9 @@
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.utils import VideoDecoder, image_pad
-from analyser.data import ListData, ScalarData, VideoData, ListData
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from utils import VideoDecoder, image_pad
+from data import ListData, ScalarData, VideoData, ListData
 
-# from analyser.inference import InferenceServer
-from analyser.data import DataManager, Data
+# from inference_ray import InferenceServer
+from data import DataManager, Data
 
 from typing import Callable, Optional, Dict
 

@@ -1,16 +1,16 @@
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.utils import VideoDecoder
-from analyser.data import ImagesData, ScalarData, ListData, BboxesData, FacesData, VideoData
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from utils import VideoDecoder
+from data import ImagesData, ScalarData, ListData, BboxesData, FacesData, VideoData
 import logging
 import numpy as np
-from analyser.data import DataManager, Data
+from data import DataManager, Data
 
 from typing import Callable, Optional, Dict
 
 import sys
 import traceback
 
-# from analyser.inference import InferenceServer
+# from inference_ray import InferenceServer
 
 
 class InsightfaceGenderAgeCalculator(AnalyserPlugin):

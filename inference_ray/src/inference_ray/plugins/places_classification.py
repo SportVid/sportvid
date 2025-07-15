@@ -1,6 +1,6 @@
-from analyser.inference.plugin import AnalyserPlugin, AnalyserPluginManager
-from analyser.utils import VideoDecoder, image_pad
-from analyser.data import (
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from utils import VideoDecoder, image_pad
+from data import (
     ListData,
     ImagesData,
     VideoData,
@@ -13,11 +13,11 @@ from analyser.data import (
 
 import logging
 
-# from analyser.inference import InferenceServer
+# from inference_ray import InferenceServer
 
 import csv
 import numpy as np
-from analyser.data import DataManager, Data
+from data import DataManager, Data
 
 from typing import Callable, Optional, Dict
 
