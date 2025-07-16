@@ -200,7 +200,7 @@ try:
 except:
     pass
 
-MEDIA_URL = "/tibava/media/"
+MEDIA_URL = "/media/"
 THUMBNAIL_URL = "http://localhost/thumbnails/"
 
 # the last resolution will use for indexing
