@@ -28,18 +28,22 @@ DEBUG = True
 FORCE_SCRIPT_NAME = "/"
 
 
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost"
+ALLOWED_HOSTS = ["localhost"]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost",
+    "https://localhost",
+    "http://localhost:8080",
+    "https://localhost:8080",
 ]
-CSRF_TRUSTED_ORIGINS = ["http://localhost", "https://localhost"]
 
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
 
 # CORS_ORIGIN_ALLOW_ALL = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-]
-CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:8080",
+# ]
+# CORS_ALLOW_CREDENTIALS = True
 
 LOGGING = {
     "version": 1,
@@ -67,9 +71,9 @@ LOGGING = {
 }
 
 INSTALLED_APPS = [
+    "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
-    "corsheaders",
     "backend",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -182,7 +186,7 @@ DATA_CACHE_ROOT = os.path.join("/cache/")
 DATA_OUTPUT_PATH = os.path.join("/predictions")
 
 
-GRPC_HOST = "analyser"  # NOTE: "analyser", "localhost"
+GRPC_HOST = "analyser"
 GRPC_PORT = 50051
 
 INDEXER_PATH = "/indexer"
