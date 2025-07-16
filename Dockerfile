@@ -7,7 +7,6 @@ WORKDIR /app
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
-
 COPY uv.lock /app/uv.lock
 COPY .python-version /app/.python-version
 COPY pyproject.toml /app/pyproject.toml

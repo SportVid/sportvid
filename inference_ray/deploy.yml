@@ -21,7 +21,7 @@ applications:
             uv:
               # version with corrected numpy.float aliases (original repo: https://github.com/ifzhang/ByteTrack.git)
               - git+https://github.com/kXborg/ByteTrack.git
-              - numpy
+              - numpy==1.26.4
               - torch>=1.7
               - opencv_python
               - loguru
@@ -54,7 +54,7 @@ applications:
           num_cpus: 2
           runtime_env:
             uv:
-              - numpy==2.2.4
+              - numpy==1.26.4
               - opencv-python-headless==4.11.0.86
   - name: video_to_audio
     route_prefix: /video_to_audio

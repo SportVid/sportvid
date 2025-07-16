@@ -3,7 +3,7 @@ name = "inference_ray"
 version = "0.1.0"
 description = "inference server package"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = "==3.12.3"
 dependencies = [
     "interface",
     "data",
@@ -17,6 +17,7 @@ dependencies = [
     "requests>=2.32.3",
     "scikit-learn>=1.6.1",
     "torch>=2.6.0",
+    "numpy==1.26.4",
     "tqdm>=4.67.1",
     "transformers>=4.48.3",
     "valkey>=6.1.0",

@@ -43,9 +43,10 @@
 
 5. Go to the frontend instance at `http://localhost/`.
 
-6. Move into container, e.g. inference-server:
+6. Move into container, e.g. inference-server and check status of plugin execution:
     ```
     sudo docker-compose exec inference_ray bash
+    ray status
     ```
 
 ### Code reloading
@@ -56,6 +57,7 @@ sudo docker-compose exec frontend npm run build
 Alternatively, use `serve` to enable a hot reloaded instance on `http://localhost:8080/`:
 ```sh
 sudo docker-compose exec frontend npm run serve
+
 ```
 
 ### HowTos/Docs/ToDos

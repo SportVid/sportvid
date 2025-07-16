@@ -1,5 +1,4 @@
-FROM python:3.10
-
+FROM python:3.12
 
 WORKDIR /app/analyser/inference/
 
@@ -14,9 +13,6 @@ RUN mkdir -p /data
 RUN useradd appuser 
 RUN chown -R appuser /data
 USER appuser
-
-
-
 
 ENV PYTHONPATH="/app/"
 # Run the binary
