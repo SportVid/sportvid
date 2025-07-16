@@ -89,7 +89,7 @@
                   >
                     <TabWindowTimeline v-if="visualizationTab.id === 'timeline'" />
                     <TabWindowEvents v-if="visualizationTab.id === 'events'" />
-                    <TabWindowData v-if="visualizationTab.id === 'data'" />
+                    <TabWindowRunningDistance v-if="visualizationTab.id === 'running_distance'" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -140,7 +140,7 @@ import TabWindowCalibration from "@/components/tab-window/TabWindowCalibration.v
 import TabWindowHeatmap from "@/components/tab-window/TabWindowHeatmap.vue";
 import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
 import TabWindowEvents from "@/components/tab-window/TabWindowEvents.vue";
-import TabWindowData from "@/components/tab-window/TabWindowData.vue";
+import TabWindowRunningDistance from "@/components/tab-window/TabWindowRunningDistance.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
@@ -200,7 +200,7 @@ const visualizationTabId = ref("timeline");
 const visualizationTabs = computed(() => [
   { id: "timeline", name: t("analysis_view.visualization_tabs.timeline") },
   { id: "events", name: t("analysis_view.visualization_tabs.events") },
-  { id: "data", name: t("analysis_view.visualization_tabs.data") },
+  { id: "running_distance", name: t("analysis_view.visualization_tabs.running_distance") },
 ]);
 onMounted(() => {
   visualizationTabId.value = visualizationTabs.value.find((tab) => tab.id === "timeline")?.id;

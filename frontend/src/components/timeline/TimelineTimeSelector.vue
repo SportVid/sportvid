@@ -1,9 +1,12 @@
 <template>
   <div ref="container" style="width: 100%">
     <canvas
-      :style="canvasStyle"
-      style="background-color: #bbbbbb; border-radius: 5px"
       ref="canvas"
+      :style="{
+        ...canvasStyle,
+        backgroundColor: '#bbbbbb',
+        borderRadius: '5px',
+      }"
     ></canvas>
   </div>
 </template>
@@ -37,9 +40,7 @@ const container = ref(null);
 const canvas = ref(null);
 const canvasStyle = ref({ width: props.width, height: props.height });
 
-// Canvas/State Data
 let scope, tool;
-let mainStrokes, otherStrokes, textGroup;
 let handleGroup, handleLeft, handleRight, handleBar;
 let selectionLayer, scaleLayer;
 
@@ -294,8 +295,10 @@ function drawSelection() {
 function onSelectionChange() {
   const posStart = timeToX(hiddenStartTime.value);
   const posEnd = timeToX(hiddenEndTime.value);
+
   handleLeft.position.x = posStart;
   handleRight.position.x = posEnd;
+
   const seg = handleBar.segments;
   seg[0].point.x = posStart + props.radius;
   seg[1].point.x = posStart;
