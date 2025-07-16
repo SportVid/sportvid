@@ -182,7 +182,7 @@ DATA_CACHE_ROOT = os.path.join("/cache/")
 DATA_OUTPUT_PATH = os.path.join("/predictions")
 
 
-GRPC_HOST = "localhost"  # NOTE: "analyser"
+GRPC_HOST = "analyser"  # NOTE: "analyser", "localhost"
 GRPC_PORT = 50051
 
 INDEXER_PATH = "/indexer"

@@ -29,6 +29,7 @@
 
 3. Build and start the container:
     ```sh
+    uv sync
     sudo docker-compose up --build
     ```
 

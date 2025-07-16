@@ -417,6 +417,7 @@ class Server:
                 num_jobs_done = len(
                     [x for x in self.commune.futures if x["future"].done()]
                 )
+                self.server
                 time.sleep(10)
         except KeyboardInterrupt:
             self.server.stop(0)
