@@ -1,9 +1,9 @@
-FROM python:3.12
+FROM python:3.10
 
 WORKDIR /app/analyser/inference/
 
-COPY ./requirements.txt /app/analyser/inference/
-RUN pip install -r requirements.txt
+# COPY ./requirements.txt /app/analyser/inference/
+# RUN pip install -r requirements.txt
 
 COPY ./src/ /app/analyser/inference/
 COPY ./deploy.yml /app/analyser/deploy.yml

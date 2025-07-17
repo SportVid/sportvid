@@ -19,10 +19,9 @@ applications:
           num_cpus: 4
           runtime_env:
             uv:
-              # version with corrected numpy.float aliases (original repo: https://github.com/ifzhang/ByteTrack.git)
-              - git+https://github.com/kXborg/ByteTrack.git
+              - git+https://github.com/Alexk1704/ByteTrack.git
+              - torch>=2.6.0
               - numpy==1.26.4
-              - torch>=1.7
               - opencv_python
               - loguru
               - scikit-image
@@ -37,8 +36,11 @@ applications:
               - motmetrics
               - filterpy
               - h5py
-              - cython-bbox
-              - pycocotools
+              - onnx==1.13.0
+              - onnxruntime==1.13.1
+              - onnx-simplifier==0.3.5
+            # pip_install_args:
+            #  - "--no-build-isolation"  # builds ByteTrack in the main env
   - name: calibration_static_dlt
     route_prefix: /calibration_static_dlt
     import_path: inference_ray.main:app_builder
