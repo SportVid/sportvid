@@ -80,6 +80,9 @@ services:
       - POSTGRES_DB=tibava
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+    ports:
+      # TODO: do not expose port for production!
+      - "127.0.0.1:5432:5432"
 
   memcached:
     image: memcached:1.6.10-buster

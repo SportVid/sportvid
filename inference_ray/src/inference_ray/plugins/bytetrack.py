@@ -18,6 +18,7 @@ default_config = {
     "data_dir": "/data/",
     "host": "localhost",
     "port": 6379,
+    "model_name": "bytetrack",
     "model_file": "/models/bytetrack/bytetrack_x_mot17.pth.tar",
 }
 
@@ -47,7 +48,7 @@ provides = {
 
 
 class Predictor(object):
-    def __init__(self, model, exp, decoder=None, device="cpu", fp16=False):
+    def __init__(self, model, exp, decoder=None, device='cpu', fp16=False):
         self.model = model
         self.decoder = decoder
         self.num_classes = exp.num_classes
@@ -65,6 +66,9 @@ class Predictor(object):
 
     def inference(self, img):
         import torch
+        
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
         from yolox.data.data_augment import preproc
         from yolox.utils import postprocess
 
