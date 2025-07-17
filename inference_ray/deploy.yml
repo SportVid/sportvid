@@ -22,7 +22,7 @@ applications:
               - git+https://github.com/Alexk1704/ByteTrack.git
               - torch>=2.6.0
               - numpy==1.26.4
-              - opencv_python
+              - opencv-python-headless>=4.11.0.86
               - loguru
               - scikit-image
               - tqdm
@@ -36,9 +36,9 @@ applications:
               - motmetrics
               - filterpy
               - h5py
-              - onnx==1.13.0
-              - onnxruntime==1.13.1
-              - onnx-simplifier==0.3.5
+              # - onnx==1.13.0
+              # - onnxruntime==1.13.1
+              # - onnx-simplifier==0.3.5
             # pip_install_args:
             #  - "--no-build-isolation"  # builds ByteTrack in the main env
   - name: calibration_static_dlt

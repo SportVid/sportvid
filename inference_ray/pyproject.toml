@@ -9,8 +9,11 @@ dependencies = [
     "data",
     "utils",
     "grpcio>=1.70.0",
+    "grpcio-tools==1.70.0",
     "imageio>=2.37.0",
     "msgpack>=1.1.0",
+    "packaging>=24.2",
+    "pip>=25.0.1",
     "protobuf>=5.29.3",
     "requests>=2.32.3",
     "scikit-learn>=1.6.1",
@@ -23,16 +26,21 @@ dependencies = [
     "imageio[ffmpeg,pyav]>=2.37.0",
     "librosa>=0.11.0",
     "onnx>=1.17.0",
+    "open-clip-torch==2.24.0",
     "onnxruntime-gpu>=1.21.1",
-    "opencv-python-headless>=4.11.0.86",
     "qdrant-client>=1.13.2",
     "ray[serve,serve-grpc]==2.42.0",
     "scipy>=1.15.2",
+    "scikit-learn>=1.6.1",
+    "opencv-python-headless>=4.11.0.86",
 ]
 
 [tool.uv]
 package = true
 no-build-isolation-package = [ "torch>=2.6.0" ]
+# pip-install-args = [
+#    "--no-build-isolation"
+# ]
 
 [tool.uv.sources]
 interface = { workspace = true }
