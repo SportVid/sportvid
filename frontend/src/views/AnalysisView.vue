@@ -545,6 +545,18 @@ watch(
   },
   { immediate: true }
 );
+
+onMounted(() => {
+  console.log("video", playerStore.video);
+});
+
+watch(
+  () => playerStore.video,
+  () => {
+    console.log("video", playerStore.video);
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>

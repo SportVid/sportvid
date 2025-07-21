@@ -114,7 +114,6 @@ import { useBboxesStore } from "@/stores/bboxes";
 import { usePlayerStore } from "@/stores/player";
 
 import RunningDistanceTimeSelector from "../visualization/RunningDistanceTimeSelector.vue";
-import { distance } from "mathjs";
 import { useI18n } from "vue-i18n";
 
 const bboxesStore = useBboxesStore();
@@ -243,10 +242,9 @@ const items = computed(() => {
           continue;
         }
 
-        const dist = distance(
-          [currPlayer.new_x, currPlayer.new_y],
-          [prevPlayer.new_x, prevPlayer.new_y]
-        );
+        const dx = (currPlayer.new_x - prevPlayer.new_x) * playerStore.video.field_length;
+        const dy = (currPlayer.new_y - prevPlayer.new_y) * playerStore.video.field_width;
+        const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (!distancesByRefId.has(currPlayer.ref_id)) {
           distancesByRefId.set(currPlayer.ref_id, {

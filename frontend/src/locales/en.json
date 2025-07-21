@@ -229,7 +229,10 @@
         "position": "Select current position",
         "age_group": "Select age group",
         "total_teams": "Select total number of teams",
-        "out_of": "out of"
+        "out_of": "out of",
+        "field_length": "Field length [m]",
+        "field_width": "Field width [m]",
+        "field_warning": "If no dimensions are specified, default dimensions of {defaultLength}x{defaultWidth} m are used. This may affect the accuracy of the analysis."
       },
       "delete": {
         "success": "Video successfully deleted"

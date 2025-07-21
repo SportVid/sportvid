@@ -15,6 +15,12 @@ export const useVideoUploadStore = defineStore("videoUpload", () => {
     formData.append("file", params.video.file);
     formData.append("title", params.video.title);
     formData.append("analyser", params.analyser);
+    formData.append("fieldLength", params.video.fieldLength);
+    formData.append("fieldWidth", params.video.fieldWidth);
+    formData.append("division", params.video.division);
+    formData.append("currentPosition", params.video.currentPosition);
+    formData.append("totalNumberofTeams", params.video.totalNumberofTeams);
+    formData.append("ageGroup", params.video.ageGroup);
 
     isUploading.value = true;
 
