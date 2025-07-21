@@ -27,3 +27,5 @@ from .ocr import *
 
 from .bytetrack import *
 from .calibration_static_dlt import *
+
+from .kinexion_import import *

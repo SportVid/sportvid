@@ -43,6 +43,30 @@ class TibavaUser(AbstractUser):
         return self.username
 
 
+class CSVFile(models.Model):
+    # TODO
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.CASCADE
+    )
+    name = models.CharField(max_length=256)
+    file =  models.UUIDField(default=uuid.uuid4,blank=True, null=True)
+    ext = models.CharField(max_length=256)
+    date = models.DateTimeField(auto_now_add=True)
+    # 'kinexion', 'dfl', ...
+    file_type = models.CharField(max_length=256)
+    
+    def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
+        return {
+            "name": self.name,
+            "file": self.file.hex,
+            "id": self.id.hex,
+            "ext": self.ext,
+            "date": self.date,
+            "file_type": self.file_type
+        }
+     
+
 class Video(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(
