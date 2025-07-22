@@ -1,7 +1,7 @@
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 
 import logging
-from data import ScalarData
+from data import PositionsData
 from data import DataManager, Data
 
 from typing import Callable, Dict
@@ -17,12 +17,12 @@ default_parameters = {}
 requires = {} # TODO
 
 provides = {
-    "converted_kinexion_csv": ScalarData, # TODO: type
+    "converted_kinexon_data": PositionsData, # PositionData or PositionsData ???
 }
 
 
-@AnalyserPluginManager.export("kinexion_convert")
-class KinexionConvert(
+@AnalyserPluginManager.export("kinexon_convert")
+class KinexonConvert(
     AnalyserPlugin,
     config=default_config,
     parameters=default_parameters,
@@ -48,32 +48,32 @@ class KinexionConvert(
         import json
         import numpy as np
         import pandas as pd
+        # import flashlight as fl
         # -----------------
 
-        # ----------------- DATEN LADEN
+        # ----------------- DATA LOADING
+        logging.debug(f'Inputs: {inputs}')
         logging.debug(f"Parameters: {parameters}")
-        if "some_data" not in parameters:
-            raise ValueError("some_data is required for the conversion.")
         
-        kinexion_data = json.loads(parameters["some_data"])
-        # NOTE: value checks hier empfohlen
+        #if "some_data" not in parameters:
+        #    raise ValueError("some_data is required for the conversion.")
+        # kinexon_data = json.loads(parameters["some_data"])
+        
+        # NOTE: Value checks falls nötig
         # -----------------
         
         # ----------------- COMPUTE
         # TODO: Irgendwelche Berechnungen/Conversions der Eingabedaten durchführen
         # -----------------
-        x = 13
-        y = 37
 
         # ----------------- OUTPUT
         # NOTE: Typ von create_data an den Output anpassen
-        with data_manager.create_data("ScalarData") as output_data:
-            output_data.x = x.tolist()
-            output_data.y = y.tolist()
-            output_data.name = "converted_kinexion_csv"
-            output_data.time = [0.0]  # Required field
-            output_data.delta_time = 1.0  # Required field
+        with data_manager.create_data("PositionsData") as pos_data:
+            pos_data.name = "converted_kinexon_data"
+            pos_data.time = [0.0]  # Required field
+            pos_data.delta_time = 1.0  # Required field
+            pos_data.pos = np.zeros(shape=[100,22*2], dtype=np.float32)
             
             self.update_callbacks(callbacks, progress=1.0)
-            return {"converted_kinexion_csv": output_data}
-        # ----------------- OUTPUT
+            return {"converted_kinexon_data": pos_data}
+        # -----------------

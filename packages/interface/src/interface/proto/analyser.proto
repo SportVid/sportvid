@@ -60,6 +60,8 @@ enum PluginDataType {
   PLACES_DATA = 22;
 
   CLUSTER_DATA = 23;
+
+  POSS_DATA = 24;
 }
 
 message PluginInfoData {

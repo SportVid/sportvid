@@ -4,11 +4,11 @@ http_options:
   port: 8000
 
 applications:
-  - name: kinexion_convert
-    route_prefix: /kinexion_convert
+  - name: kinexon_convert
+    route_prefix: /kinexon_convert
     import_path: inference_ray.main:app_builder
     args:
-      model: kinexion_convert
+      model: kinexon_convert
       data_path: /data
       params: {}
     deployments:

@@ -3,7 +3,13 @@ import logging
 
 from ..utils.analyser_client import TaskAnalyserClient
 
-from backend.models import PluginRun, PluginRunResult, Video, Timeline
+from backend.models import (
+    PluginRun, 
+    PluginRunResult, 
+    Video, 
+    Timeline,
+    TrackingData
+)
 from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_video
 from backend.utils.parser import Parser
@@ -16,7 +22,7 @@ from django.conf import settings
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 
 import logging
-from data import ScalarData
+from data import PositionsData
 from data import DataManager, Data
 
 from typing import Callable, Dict
@@ -33,17 +39,16 @@ default_parameters = {
 }
 
 requires = {
-    
+    # TODO
 }
 
 provides = {
-    # TODO
-    # "homography": ScalarData, 
+    "pos_data": PositionsData, 
 }
 
 
-@PluginManager.export_plugin("kinexion_import")
-class KinexionImport(Task):
+@PluginManager.export_plugin("kinexon_convert")
+class KinexonConvert(Task):
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",
@@ -59,6 +64,8 @@ class KinexionImport(Task):
         dry_run: bool = False,
         **kwargs
     ):
+        
+        
         manager = DataManager(self.config["output_path"])
         client = TaskAnalyserClient(
             host=self.config["analyser_host"],
@@ -66,29 +73,18 @@ class KinexionImport(Task):
             plugin_run_db=plugin_run,
             manager=manager,
         )
+        
+        # obtain ref to position data
+        data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
 
         video_id = self.upload_video(client, video)
         result = self.run_analyser(
             client,
-            "clip_image_embedding",
-            parameters={"fps": parameters.get("fps")},
-            inputs={"video": video_id},
-            outputs=["embeddings"],
-        )
-
-        if plugin_run is not None:
-            plugin_run.progress = 0.3
-            plugin_run.save()
-
-        if result is None:
-            raise Exception
-
-        result = self.run_analyser(
-            client,
-            "clip_probs",
-            parameters={"search_term": parameters.get("search_term")},
-            inputs={**result[0]},
-            outputs=["probs"],
+            "kinexon_convert",
+            parameters={}, # TODO
+            inputs={"video": video_id}, # TODO
+            outputs=[""], # TODO
+            downloads=["pos_data"]
         )
 
         if plugin_run is not None:
@@ -98,40 +94,21 @@ class KinexionImport(Task):
         if result is None:
             raise Exception
 
-        result = self.run_analyser(
-            client,
-            "min_max_norm",
-            parameters={"normalize": parameters.get("normalize")},
-            inputs={"scalar": result[0]["probs"]},
-            downloads=["scalar"],
-        )
-        if result is None:
-            raise Exception
-
         if dry_run or plugin_run is None:
             logging.warning("dry_run or plugin_run is None")
             return {}
 
         with transaction.atomic():
-            with result[1]["scalar"] as data:
+            with result[1]["poss"] as pos_data:
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
                     data_id=data.id,
-                    name="clip",
-                    type=PluginRunResult.TYPE_SCALAR,
-                )
-
-                timeline_db = Timeline.objects.create(
-                    video=video,
-                    name=parameters.get("timeline"),
-                    type=Timeline.TYPE_PLUGIN_RESULT,
-                    plugin_run_result=plugin_run_result_db,
-                    visualization=Timeline.VISUALIZATION_SCALAR_COLOR,
+                    name="poss",
+                    type=PluginRunResult.TYPE_POSS,
                 )
 
                 return {
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [plugin_run_result_db.id.hex],
-                    "timelines": {"rms": timeline_db.id.hex},
-                    "data": {"rms": result[1]["scalar"].id},
+                    "data": {"poss": result[1]["poss"].id},
                 }

@@ -43,8 +43,7 @@ class TibavaUser(AbstractUser):
         return self.username
 
 
-class CSVFile(models.Model):
-    # TODO
+class TrackingData(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.CASCADE
@@ -53,8 +52,7 @@ class CSVFile(models.Model):
     file =  models.UUIDField(default=uuid.uuid4,blank=True, null=True)
     ext = models.CharField(max_length=256)
     date = models.DateTimeField(auto_now_add=True)
-    # 'kinexion', 'dfl', ...
-    file_type = models.CharField(max_length=256)
+    file_type = models.CharField(max_length=256)  
     
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {
@@ -191,6 +189,7 @@ class PluginRunResult(models.Model):
     TYPE_FACE = "FA"
     TYPE_IMAGE_EMBEDDINGS = "E"
     TYPE_BBOXES = "B"
+    TYPE_POSS = "P"
     TYPE = {
         TYPE_VIDEO: "VIDEO",
         TYPE_IMAGES: "IMAGES",
@@ -202,6 +201,7 @@ class PluginRunResult(models.Model):
         TYPE_FACE: "FACE",
         TYPE_IMAGE_EMBEDDINGS: "IMAGE_EMBEDDINGS",
         TYPE_BBOXES: "BBOXES",
+        TYPE_POSS: "POSS"
     }
 
     type = models.CharField(

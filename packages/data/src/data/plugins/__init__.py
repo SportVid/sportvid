@@ -19,4 +19,4 @@ from .face_data import FaceData, FacesData
 from .keypoint_data import KpsData, KpssData
 from .video_temporal_embedding import VideoTemporalEmbeddings, VideoTemporalEmbedding
 
-from .kinexion_pos_data import KinexionPData, KinexionPsData
+from .position_data import PositionData, PositionsData
