@@ -54,7 +54,7 @@ applications:
           num_cpus: 2
           runtime_env:
             pip:
-              - numpy==2.2.4
+              - numpy==1.26.3
               - opencv-python-headless==4.11.0.86
   - name: video_to_audio
     route_prefix: /video_to_audio

@@ -12,11 +12,13 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted, nextTick } from "vue";
+import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import paper from "paper";
 import { getTimecode } from "@/plugins/time";
 import { usePlayerStore } from "@/stores/player";
+import { useTabStore } from "@/stores/tabs";
 
+const tabStore = useTabStore();
 const playerStore = usePlayerStore();
 
 const props = defineProps({
@@ -330,5 +332,13 @@ onMounted(() => {
   };
 
   draw();
+});
+onBeforeUnmount(() => {
+  if (scope) {
+    scope.view.onFrame = null;
+    scope.view.onResize = null;
+    scope.project.clear();
+    scope.remove();
+  }
 });
 </script>

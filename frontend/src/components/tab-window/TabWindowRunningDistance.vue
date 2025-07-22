@@ -242,8 +242,10 @@ const items = computed(() => {
           continue;
         }
 
-        const dx = (currPlayer.new_x - prevPlayer.new_x) * playerStore.video.field_length;
-        const dy = (currPlayer.new_y - prevPlayer.new_y) * playerStore.video.field_width;
+        const dx = (currPlayer.new_x - prevPlayer.new_x) * 99.94;
+        const dy = (currPlayer.new_y - prevPlayer.new_y) * 65.88;
+        // const dx = (currPlayer.new_x - prevPlayer.new_x) * playerStore.video.field_length;
+        // const dy = (currPlayer.new_y - prevPlayer.new_y) * playerStore.video.field_width;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (!distancesByRefId.has(currPlayer.ref_id)) {

@@ -15,6 +15,9 @@
 import { ref, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
 import paper from "paper";
 import { getTimecode } from "@/plugins/time";
+import { useTabStore } from "@/stores/tabs";
+
+const tabStore = useTabStore();
 
 const props = defineProps({
   duration: {
@@ -276,6 +279,7 @@ function onSelectionChange() {
 }
 
 onMounted(() => {
+  console.log("mounted vis-tab");
   scope = new paper.PaperScope();
   scope.setup(canvas.value);
 
@@ -295,6 +299,15 @@ onMounted(() => {
   };
 
   draw();
+});
+onBeforeUnmount(() => {
+  console.log("unmounted vis-tab");
+  if (scope) {
+    scope.view.onFrame = null;
+    scope.view.onResize = null;
+    scope.project.clear();
+    scope.remove();
+  }
 });
 
 onMounted(() => {
