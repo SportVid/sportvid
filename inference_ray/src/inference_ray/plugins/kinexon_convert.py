@@ -14,7 +14,9 @@ default_config = {
 
 default_parameters = {}
 
-requires = {} # TODO
+requires = {
+    
+}
 
 provides = {
     "converted_kinexon_data": PositionsData, # PositionData or PositionsData ???
@@ -31,6 +33,7 @@ class KinexonConvert(
     provides=provides,
 ):
     def __init__(self, config=None, **kwargs):
+        logging.debug('calling __init__ of KinexonConvert()')
         super().__init__(config, **kwargs)
 
     def call(
@@ -48,7 +51,7 @@ class KinexonConvert(
         import json
         import numpy as np
         import pandas as pd
-        # import flashlight as fl
+        # TODO: import flashlight as fl
         # -----------------
 
         # ----------------- DATA LOADING

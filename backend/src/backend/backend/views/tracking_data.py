@@ -46,8 +46,10 @@ class TrackingDataUpload(View):
                 return JsonResponse(
                     {"status": "error", "type": "database_error"}, status=500
                 )
+
             tracking_data_id_uuid = uuid.uuid4()
             tracking_data_id = tracking_data_id_uuid.hex
+            
             if "file" in request.FILES:
                 output_dir = media_dir_to_video(tracking_data_id)  # TODO: what is this for?
 
@@ -66,19 +68,19 @@ class TrackingDataUpload(View):
                 path = Path(request.FILES["file"].name)
                 ext = "".join(path.suffixes)
 
-                # TODO: check which meta-information is needed
+                # TODO: check what meta-information is needed
                 # format: ['kinexon', 'dfl', ... ] -> 
                 meta = {  
                     "name": request.POST.get("title"),
                     "ext": ext,
-                    "format": "kinexon"  # TODO: obtain automatically from meta data...
+                    "format": request.POST.get("format")  # TODO: obtain automatically from meta data...?
                 }
                 tracking_data_db, created = TrackingData.objects.get_or_create(
                     name=meta["name"],
                     id=tracking_data_id_uuid,
                     file=tracking_data_id_uuid,
                     ext=meta["ext"],
-
+                    file_type=meta["format"],
                     owner=request.user,
                 )
                 if not created:
@@ -105,4 +107,109 @@ class TrackingDataUpload(View):
 
         except Exception:
             logger.exception("Video upload by user failed")
+            return JsonResponse({"status": "error"}, status=500)
+
+
+class TrackingDataList(View):
+    def get(self, request):
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({"status": "error"}, status=500)
+            entries = []
+            for tdata in TrackingData.objects.filter(owner=request.user):
+                entries.append(tdata.to_dict())
+            return JsonResponse({"status": "ok", "entries": entries})
+        except Exception as e:
+            logger.exception("Error listing videos")
+            return JsonResponse({"status": "error"}, status=500)
+
+
+class TrackingDataGet(View):
+    def get(self, request):
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({"status": "error"}, status=500)
+
+            entries = []
+            for tdata in TrackingData.objects.filter(id=request.GET.get("id"), owner=request.user):
+                tracking_data_id_hex = tdata.id.hex if not tdata.file else tdata.file.hex
+                entries.append(
+                    {
+                        **tdata.to_dict(),
+                        "url": media_url_to_video(tracking_data_id_hex, tdata.ext),
+                    }
+                )
+            if len(entries) != 1:
+                return JsonResponse({"status": "error"}, status=500)
+            return JsonResponse({"status": "ok", "entry": entries[0]})
+        except Exception:
+            logger.exception("Failed to get tracking data")
+            return JsonResponse({"status": "error"}, status=500)
+
+
+class TrackingDataRename(View):
+    def post(self, request):
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({"status": "error"}, status=500)
+            try:
+                body = request.body.decode("utf-8")
+            except (UnicodeDecodeError, AttributeError):
+                body = request.body
+
+            try:
+                data = json.loads(body)
+            except Exception as e:
+                return JsonResponse({"status": "error"}, status=500)
+
+            if "id" not in data:
+                return JsonResponse(
+                    {"status": "error", "type": "missing_values"}, status=500
+                )
+            if "name" not in data:
+                return JsonResponse(
+                    {"status": "error", "type": "missing_values"}, status=500
+                )
+            if not isinstance(data.get("name"), str):
+                return JsonResponse(
+                    {"status": "error", "type": "wrong_request_body"}, status=500
+                )
+
+            try:
+                tracking_data_db = TrackingData.objects.get(id=data.get("id"))
+            except TrackingData.DoesNotExist:
+                return JsonResponse(
+                    {"status": "error", "type": "not_exist"}, status=500
+                )
+
+            tracking_data_db.name = data.get("name")
+            tracking_data_db.save()
+            return JsonResponse({"status": "ok", "entry": tracking_data_db.to_dict()})
+        except Exception:
+            logger.exception("Failed to rename tracking data")
+            return JsonResponse({"status": "error"}, status=500)
+
+
+class TrackingDataDelete(View):
+    def post(self, request):
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({"status": "error"}, status=500)
+            try:
+                body = request.body.decode("utf-8")
+            except (UnicodeDecodeError, AttributeError):
+                body = request.body
+
+            try:
+                data = json.loads(body)
+            except Exception as e:
+                return JsonResponse({"status": "error"}, status=500)
+            count, _ = TrackingData.objects.filter(
+                id=data.get("id"), owner=request.user
+            ).delete()
+            if count:
+                return JsonResponse({"status": "ok"})
+            return JsonResponse({"status": "error"}, status=500)
+        except Exception:
+            logger.exception("Failed to delete video")
             return JsonResponse({"status": "error"}, status=500)

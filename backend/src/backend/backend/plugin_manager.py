@@ -167,7 +167,7 @@ def generate_plugin_run_result_cache(
             except Exception:
                 logger.exception("Cache couldn't write")
 
-
+# NOTE: async call of run_plugin fails!
 @shared_task(bind=True)
 def run_plugin(self, args):
     plugin = args.get("plugin")

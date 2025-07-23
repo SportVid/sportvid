@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from ..utils.analyser_client import TaskAnalyserClient
 
-from backend.models import PluginRun, PluginRunResult, Video, Timeline
+from backend.models import PluginRun, PluginRunResult, Video, Timeline, TrackingData
 from backend.utils import media_path_to_video
 
 
@@ -18,10 +18,15 @@ class Task:
     def __call__(self):
         pass
 
+    # NOTE: refactor to upload_file
     def upload_video(self, client: TaskAnalyserClient, video: Video) -> str:
         video_file = media_path_to_video(video.file.hex, video.ext)
-
         data_id = client.upload_file(video_file)
+        return data_id
+    
+    def upload_file(self, client: TaskAnalyserClient, tracking_data: TrackingData) -> str:
+        file = media_path_to_video(tracking_data.file.hex, tracking_data.ext)
+        data_id = client.upload_file(file)
         return data_id
 
     def run_analyser(

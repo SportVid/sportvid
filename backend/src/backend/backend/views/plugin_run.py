@@ -107,7 +107,9 @@ class PluginRunNew(View):
                     )
 
             plugin_manager = PluginManager()
+
             if plugin not in plugin_manager:
+                logger.error(plugin)
                 return JsonResponse({"status": "error", "type": "not_exist"})
 
             try:
@@ -116,7 +118,7 @@ class PluginRunNew(View):
                 return JsonResponse({"status": "error", "type": "not_exist"})
 
             user_db = request.user
-
+            
             result = plugin_manager(
                 plugin,
                 user=user_db,

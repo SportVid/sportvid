@@ -54,6 +54,7 @@ class VideoUpload(View):
                 )
             video_id_uuid = uuid.uuid4()
             video_id = video_id_uuid.hex
+            logger.error(request.FILES)
             if "file" in request.FILES:
                 output_dir = media_dir_to_video(video_id)
 

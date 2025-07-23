@@ -30,33 +30,33 @@
 3. Build and start the container:
     ```sh
     uv sync
-    sudo docker-compose up --build
+    sudo docker compose up --build
     ```
 
 4. Apply database migrations and build frontend packages:
     ```sh
-    sudo docker-compose exec backend uv run python3 backend/src/backend/manage.py migrate auth
-    sudo docker-compose exec backend uv run python3 backend/src/backend/manage.py migrate
-    sudo docker-compose exec frontend npm install
-    sudo docker-compose exec frontend npm run build
+    sudo docker compose exec backend uv run python3 backend/src/backend/manage.py migrate auth
+    sudo docker compose exec backend uv run python3 backend/src/backend/manage.py migrate
+    sudo docker compose exec frontend npm install
+    sudo docker compose exec frontend npm run build
     ```
 
 5. Go to the frontend instance at `http://localhost/`.
 
 6. Move into container, e.g. inference-server and check status of plugin execution:
     ```
-    sudo docker-compose exec inference_ray bash
+    sudo docker compose exec inference_ray bash
     ray status
     ```
 
 ### Code reloading
 Hot reloading is enabled for `backend`. To display frontend changes, run:
 ```sh
-sudo docker-compose exec frontend npm run build
+sudo docker compose exec frontend npm run build
 ```
 Alternatively, use `serve` to enable a hot reloaded instance on `http://localhost:8080/`:
 ```sh
-sudo docker-compose exec frontend npm run serve
+sudo docker compose exec frontend npm run serve
 
 ```
 
