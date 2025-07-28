@@ -21,6 +21,7 @@ applications:
             uv:
               - numpy==1.26.4
               - pandas
+              - floodlight
   - name: bytetrack
     route_prefix: /bytetrack
     import_path: inference_ray.main:app_builder

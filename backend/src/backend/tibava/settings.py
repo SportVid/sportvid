@@ -27,7 +27,6 @@ DEBUG = True
 # FORCE_SCRIPT_NAME = "/"
 FORCE_SCRIPT_NAME = "/"
 
-
 ALLOWED_HOSTS = ["localhost"]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
@@ -35,15 +34,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8080",
     "https://localhost:8080",
 ]
-
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
-
-# CORS_ORIGIN_ALLOW_ALL = True
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:8080",
-# ]
-# CORS_ALLOW_CREDENTIALS = True
 
 LOGGING = {
     "version": 1,
@@ -127,7 +119,6 @@ CACHES = {
 
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
-
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -139,52 +130,34 @@ DATABASES = {
     }
 }
 
-
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"}
 ]
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "UTC"
-
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
-
-
 STATICFILES_DIRS = []
-
 STATIC_URL = FORCE_SCRIPT_NAME + "/static/"
 
-# MEDIA_ROOT = os.path.join(os.path.dirname(__file__), "..", "media")
-
+#MEDIA_ROOT = os.path.join(os.path.dirname(__file__), "..", "media")
 MEDIA_ROOT = os.path.join("/media/")
+
 DATA_CACHE_ROOT = os.path.join("/cache/")
 DATA_OUTPUT_PATH = os.path.join("/predictions")
-
 
 GRPC_HOST = "analyser"
 GRPC_PORT = 50051
@@ -193,19 +166,14 @@ INDEXER_PATH = "/indexer"
 
 ANNOTATION_MAX_LENGTH = 1000
 
-
-try:
-    from .user_settings import *
-
-except:
-    pass
+try: from .user_settings import *
+except: pass
 
 MEDIA_URL = "/media/"
 THUMBNAIL_URL = "http://localhost/thumbnails/"
 
 # the last resolution will use for indexing
 IMAGE_RESOLUTIONS = [{"min_dim": 200, "suffix": "_m"}, {"min_dim": 1080, "suffix": ""}]
-
 
 import json
 

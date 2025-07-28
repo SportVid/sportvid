@@ -18,5 +18,5 @@ from .shot_data import Shot, ShotsData
 from .face_data import FaceData, FacesData
 from .keypoint_data import KpsData, KpssData
 from .video_temporal_embedding import VideoTemporalEmbeddings, VideoTemporalEmbedding
-
-from .position_data import PositionData, PositionsData
+from .tracking_data import TrackingData
+from .position_data import PositionData

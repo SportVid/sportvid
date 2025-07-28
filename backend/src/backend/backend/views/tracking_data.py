@@ -84,7 +84,7 @@ class TrackingDataUpload(View):
                     owner=request.user,
                 )
                 if not created:
-                    logger.error("VideoUpload::database_create_failed")
+                    logger.error("TrackingDataUpload::database_create_failed")
                     return JsonResponse(
                         {"status": "error", "type": "database_error"}, status=500
                     )
@@ -106,7 +106,7 @@ class TrackingDataUpload(View):
             return JsonResponse({"status": "error"}, status=500)
 
         except Exception:
-            logger.exception("Video upload by user failed")
+            logger.exception("TrackingData upload by user failed")
             return JsonResponse({"status": "error"}, status=500)
 
 
@@ -120,7 +120,7 @@ class TrackingDataList(View):
                 entries.append(tdata.to_dict())
             return JsonResponse({"status": "ok", "entries": entries})
         except Exception as e:
-            logger.exception("Error listing videos")
+            logger.exception("Error listing tracking data")
             return JsonResponse({"status": "error"}, status=500)
 
 
@@ -211,5 +211,5 @@ class TrackingDataDelete(View):
                 return JsonResponse({"status": "ok"})
             return JsonResponse({"status": "error"}, status=500)
         except Exception:
-            logger.exception("Failed to delete video")
+            logger.exception("Failed to delete tracking data")
             return JsonResponse({"status": "error"}, status=500)

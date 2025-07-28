@@ -95,6 +95,8 @@ class AnalyserClient:
             data_type = analyser_pb2.AUDIO_DATA
         if re.match(r"image/*", mimetype[0]):
             data_type = analyser_pb2.IMAGES_DATA
+        if re.match(r"text/*", mimetype[0]):
+            data_type = analyser_pb2.TRACKING_DATA
 
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
 

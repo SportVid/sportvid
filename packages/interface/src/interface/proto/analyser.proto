@@ -61,7 +61,8 @@ enum PluginDataType {
 
   CLUSTER_DATA = 23;
 
-  POSS_DATA = 24;
+  TRACKING_DATA = 24;
+  POS_DATA = 25;
 }
 
 message PluginInfoData {

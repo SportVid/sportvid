@@ -1,7 +1,7 @@
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 
 import logging
-from data import PositionsData
+from data import PositionData#, PositionsData
 from data import DataManager, Data
 
 from typing import Callable, Dict
@@ -12,14 +12,16 @@ default_config = {
     "port": 6379,
 }
 
-default_parameters = {}
+default_parameters = {
+    # TODO
+}
 
 requires = {
-    
+    # TODO
 }
 
 provides = {
-    "converted_kinexon_data": PositionsData, # PositionData or PositionsData ???
+    "converted_kinexon_data": PositionData, # PositionsData
 }
 
 
@@ -33,7 +35,6 @@ class KinexonConvert(
     provides=provides,
 ):
     def __init__(self, config=None, **kwargs):
-        logging.debug('calling __init__ of KinexonConvert()')
         super().__init__(config, **kwargs)
 
     def call(
@@ -44,39 +45,41 @@ class KinexonConvert(
         callbacks: Callable = None,
     ) -> Dict[str, Data]:
 
-        # NOTE: imports für die eigentliche Logik hier definieren, könnte auch ein Import der 
-        # Floodlight library sein, solange das Plugin korrekt registriert ist und alle Abhängikeiten beim
-        # bauen        
+        # NOTE: Imports definieren; müssen vorher in 'deploy.yml' & 'deploy.cuda.yml' registriert sein      
         # ----------------- IMPORTS
-        import json
         import numpy as np
         import pandas as pd
-        # TODO: import flashlight as fl
+        import floodlight as fl
         # -----------------
 
         # ----------------- DATA LOADING
-        logging.debug(f'Inputs: {inputs}')
-        logging.debug(f"Parameters: {parameters}")
+        logging.error(f'[PLUGIN]\tinputs: {inputs}')
+        logging.error(f'[PLUGIN]\tparams: {parameters}')
         
-        #if "some_data" not in parameters:
-        #    raise ValueError("some_data is required for the conversion.")
-        # kinexon_data = json.loads(parameters["some_data"])
+        if "tracking_data_db" not in parameters:
+            raise ValueError("'tracking_data_db' is required for the conversion.")
         
-        # NOTE: Value checks falls nötig
-        # -----------------
-        
-        # ----------------- COMPUTE
-        # TODO: Irgendwelche Berechnungen/Conversions der Eingabedaten durchführen
-        # -----------------
+        with inputs["tracking_data"] as input_data:
+            with input_data.open_file() as t_data:        
+                kinexon_df = pd.read_csv(t_data, sep=';')
+                xy_col = kinexon_df.columns.values.tolist()[-3:-1]
+                xy_slice = kinexon_df[xy_col][:100]
+                np_pos_data = xy_slice.to_numpy(dtype=np.float32)
+                logging.error(f'[PLUGIN]\tkinexon data frame: {kinexon_df.shape}, {kinexon_df.columns.values.tolist()}')
+                logging.error(f'[PLUGIN]\tnumpy pos data: {np_pos_data.shape}')
+                # ----------------- COMPUTE
+                # TODO: Logik
+                # -----------------
 
         # ----------------- OUTPUT
-        # NOTE: Typ von create_data an den Output anpassen
-        with data_manager.create_data("PositionsData") as pos_data:
-            pos_data.name = "converted_kinexon_data"
-            pos_data.time = [0.0]  # Required field
+        # NOTE: Ausgabe definieren; TYPE von create_data('TYPE') an den Output anpassen
+        with data_manager.create_data("PositionData") as pos_data:
+            # pos_data.name = "pos_data"
+            pos_data.ref_id = parameters.get('tracking_data_db')  # Required field
             pos_data.delta_time = 1.0  # Required field
-            pos_data.pos = np.zeros(shape=[100,22*2], dtype=np.float32)
+            pos_data.pos = np_pos_data.copy()
             
             self.update_callbacks(callbacks, progress=1.0)
-            return {"converted_kinexon_data": pos_data}
+            logging.error(f'[PLUGIN]\tpos_data: {pos_data}')
+            return {"pos_data": pos_data}
         # -----------------
