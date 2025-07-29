@@ -16,7 +16,7 @@ class PositionData(Data):
     type: str = field(default="PositionData")
     
     ref_id: str = None
-    delta_time: float = field(default=None)
+    delta_time: float = field(default=None) # type: ignore
     
     pos: npt.NDArray = None  # np.ndarray: ["P1_x", "P1_y", "P2_x", "P2_y", ..., "PN_x", "PN_y"]
     
@@ -24,10 +24,10 @@ class PositionData(Data):
         super().load()
         data = self.load_dict("pos_data.yml")
         
-        self.ref_id = data.get("ref_id")
-        self.delta_time = data.get("delta_time")
+        self.ref_id = data.get("ref_id") # type: ignore
+        self.delta_time = data.get("delta_time") # type: ignore
         
-        with self.fs.open_file("pos.npz", "r") as f:
+        with self.fs.open_file("pos.npz", "r") as f: # type: ignore
             self.pos = np.load(f)
 
     def save(self) -> None:

@@ -61,11 +61,11 @@ class KinexonConvert(Task):
         logging.error(f'[TASKS]\ttdid: {parameters.get("tracking_data_id")}')
         
         # NOTE: upload_video & upload_file transfers video via gRPC to the analyser
-        video_id = self.upload_video(client, video)
+        video_ = self.upload_video(client, video)
         tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
-        logging.error(f'[TASKS]\ttdid_db:{type(tracking_data_db)}, {tracking_data_db}')
+        logging.error(f'[TASKS]\ttdid_db: {tracking_data_db}')
         # NOTE: refactor "task.py" -> "upload_file()"
-        tracking_data_id = self.upload_file(client, tracking_data_db)
+        tracking_data_ = self.upload_file(client, tracking_data_db)
 
         # --------> RUN ANALYSER PLUGIN
         # NOTE: specify parameters for plugin execution;
@@ -73,12 +73,12 @@ class KinexonConvert(Task):
         result = self.run_analyser(
             client,
             "kinexon_convert",
-            parameters={"db_id": tracking_data_db}, # TODO: specify parameters if needed  
-            inputs={"video": video_id, "tracking_data": tracking_data_id},
+            parameters={"tracking_data_id": parameters.get("tracking_data_id")}, # TODO: specify parameters if needed  
+            inputs={"video": video_, "tracking_data": tracking_data_},
             outputs=["pos_data"],
             downloads=["pos_data"]
         )
-        logging.error(f'[TASKS]\result: {result}') 
+        logging.error(f'[TASKS]\tresult: {result}') 
 
         if plugin_run is not None:
             plugin_run.progress = 0.6
@@ -92,24 +92,18 @@ class KinexonConvert(Task):
             return {}
         
         # --------> OUTPUT
-        # with transaction.atomic():
-        #     with result[1]["pos_data"] as pos_data:
-        #         # saves analyser results to the database (PluginRunResult)
-        #         plugin_run_result_db = PluginRunResult.objects.create(
-        #             plugin_run=plugin_run,
-        #             data_id=data.id,
-        #             name="pos_data",
-        #             type=PluginRunResult.TYPE_POSS,
-        #         )
-        #         # output results via backend
-        #         return {
-        #             "plugin_run": plugin_run.id.hex,
-        #             "plugin_run_results": [plugin_run_result_db.id.hex],
-        #             "data": {"pos_data": result[1]["pos_data"].id},
-        #         }
-        
-        return {
-            "plugin_run": plugin_run.id.hex,
-            # "plugin_run_results": [plugin_run_result_db.id.hex],
-            # "data": {"pos_data": result[1]["pos_data"].id}
-        }
+        with transaction.atomic():
+            with result[1]["pos_data"] as pos_data:
+                # saves analyser results to the database (PluginRunResult)
+                plugin_run_result_db = PluginRunResult.objects.create(
+                    plugin_run=plugin_run,
+                    data_id=pos_data.id,
+                    name="pos_data",
+                    type=PluginRunResult.TYPE_POS,
+                )
+                # output results to the backend
+                return {
+                    "plugin_run": plugin_run.id.hex,
+                    "plugin_run_results": [plugin_run_result_db.id.hex],
+                    "data": {"pos_data": pos_data.id},
+                }

@@ -201,7 +201,7 @@ class PluginRunResult(models.Model):
         TYPE_FACE: "FACE",
         TYPE_IMAGE_EMBEDDINGS: "IMAGE_EMBEDDINGS",
         TYPE_BBOXES: "BBOXES",
-        TYPE_POS: "POSS"
+        TYPE_POS: "POS"
     }
 
     type = models.CharField(

@@ -21,7 +21,7 @@ requires = {
 }
 
 provides = {
-    "converted_kinexon_data": PositionData, # PositionsData
+    "pos_data": PositionData, # PositionsData
 }
 
 
@@ -56,8 +56,8 @@ class KinexonConvert(
         logging.error(f'[PLUGIN]\tinputs: {inputs}')
         logging.error(f'[PLUGIN]\tparams: {parameters}')
         
-        if "tracking_data_db" not in parameters:
-            raise ValueError("'tracking_data_db' is required for the conversion.")
+        # if "some_params" not in parameters:
+        #     raise ValueError("'some_params' is required for the conversion.")
         
         with inputs["tracking_data"] as input_data:
             with input_data.open_file() as t_data:        
@@ -74,8 +74,8 @@ class KinexonConvert(
         # ----------------- OUTPUT
         # NOTE: Ausgabe definieren; TYPE von create_data('TYPE') an den Output anpassen
         with data_manager.create_data("PositionData") as pos_data:
-            # pos_data.name = "pos_data"
-            pos_data.ref_id = parameters.get('tracking_data_db')  # Required field
+            pos_data.name = "pos_data"
+            pos_data.ref_id = parameters.get('tracking_data_id')  # Required field
             pos_data.delta_time = 1.0  # Required field
             pos_data.pos = np_pos_data.copy()
             
