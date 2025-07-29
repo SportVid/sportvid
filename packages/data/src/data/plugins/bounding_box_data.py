@@ -14,6 +14,7 @@ from interface import analyser_pb2
 class BboxData(Data):
     image_id: int = None
     ref_id: str = None
+    team_id: str = None
     time: float = None
     delta_time: float = field(default=None)
     x: int = None
@@ -34,6 +35,7 @@ class BboxData(Data):
             "time": self.time,
             "delta_time": self.delta_time,
             "ref_id": self.ref_id,
+            "team_id": self.team_id,
             "image_id": self.image_id,
         }
 

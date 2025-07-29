@@ -277,8 +277,9 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
         data, hash = self.managers["data_manager"].load_file_from_stream(
             request_iterator
         )
-
-        # data, hash = self.managers["data_manager"].load_data_from_stream(request_iterator)
+        # data, hash = self.managers["data_manager"].load_data_from_stream(
+        #   request_iterator
+        # )
 
         return analyser_pb2.UploadDataResponse(success=True, id=data.id, hash=hash)
 

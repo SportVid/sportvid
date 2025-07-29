@@ -11,9 +11,15 @@ from interface import analyser_pb2
 
 
 @DataManager.export("PositionData", analyser_pb2.POS_DATA)
-@dataclass(kw_only=True)
+@dataclass(kw_only=True)  # Pydantic ???
 class PositionData(Data):
     type: str = field(default="PositionData")
+    
+    # Ggf. feinere Definition möglich die dann in eine Liste gewrapped wird.
+    # Dann wird Klasse "PositionsData" benötigt, siehe unten.
+    # x.pos
+    # y.pos
+    # ...
     
     ref_id: str = None
     delta_time: float = field(default=None) # type: ignore

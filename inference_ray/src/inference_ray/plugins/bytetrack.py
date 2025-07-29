@@ -162,6 +162,7 @@ class ByteTrack(
                             h=int(box[3]) / img_info["height"],
                             image_id=frame_info["frame_id"],
                             ref_id=id,
+                            team_id="None",
                             det_score=score,
                             time=i / args.fps,
                         )

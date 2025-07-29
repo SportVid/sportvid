@@ -1,27 +1,28 @@
-from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
-
 import logging
-from data import PositionData#, PositionsData
-from data import DataManager, Data
 
 from typing import Callable, Dict
 
+from data import PositionData, TrackingData
+from data import DataManager, Data
+
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+
+# Config params are passed during the building process of a plugin
 default_config = {
     "data_dir": "/data/",
     "host": "localhost",
     "port": 6379,
 }
 
-default_parameters = {
-    # TODO
-}
+# Define parameters that are required uring the runtime of a plugin
+default_parameters = {}
 
 requires = {
-    # TODO
+    "tracking_data": TrackingData
 }
 
 provides = {
-    "pos_data": PositionData, # PositionsData
+    "pos_data": PositionData,
 }
 
 
@@ -45,7 +46,7 @@ class KinexonConvert(
         callbacks: Callable = None,
     ) -> Dict[str, Data]:
 
-        # NOTE: Imports definieren; müssen vorher in 'deploy.yml' & 'deploy.cuda.yml' registriert sein      
+        # NOTE: Imports definieren -> müssen vorher in 'deploy.yml', 'deploy.cuda.yml' registriert sein      
         # ----------------- IMPORTS
         import numpy as np
         import pandas as pd
@@ -68,11 +69,11 @@ class KinexonConvert(
                 logging.error(f'[PLUGIN]\tkinexon data frame: {kinexon_df.shape}, {kinexon_df.columns.values.tolist()}')
                 logging.error(f'[PLUGIN]\tnumpy pos data: {np_pos_data.shape}')
                 # ----------------- COMPUTE
-                # TODO: Logik
+                # TODO: Logik implementieren
                 # -----------------
 
         # ----------------- OUTPUT
-        # NOTE: Ausgabe definieren; TYPE von create_data('TYPE') an den Output anpassen
+        # NOTE: Ausgabe definieren -> OUTPUT_TYPE von create_data('OUTPUT_TYPE') anpassen
         with data_manager.create_data("PositionData") as pos_data:
             pos_data.name = "pos_data"
             pos_data.ref_id = parameters.get('tracking_data_id')  # Required field
@@ -81,5 +82,7 @@ class KinexonConvert(
             
             self.update_callbacks(callbacks, progress=1.0)
             logging.error(f'[PLUGIN]\tpos_data: {pos_data}')
-            return {"pos_data": pos_data}
+        
+        return {"pos_data": pos_data}
         # -----------------
+        

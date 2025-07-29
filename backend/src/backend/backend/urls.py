@@ -39,6 +39,11 @@ urlpatterns = [
         views.TrackingDataRename.as_view(), name="tracking_data_rename"),
     path("tracking_data/delete",
         views.TrackingDataDelete.as_view(), name="tracking_data_delete"),
+    # ---------- POSITION DATA / BBOXES
+    path("position_data/bboxes/edit",
+         views.BoundingBoxesChange.as_view(), name="position_data_bboxes_edit"),
+    path("position_data/bboxes/delete",
+        views.BoundingBoxesDelete.as_view(), name="position_data_bboxes_delete"),
     # ---------- PLUGIN
     path("plugin/list",
         views.PluginList.as_view(), name="plugin_list"),
@@ -51,35 +56,28 @@ urlpatterns = [
     path("plugin/run/result/list",
         views.PluginRunResultList.as_view(), name="plugin_run_list"),
     # ---------- CLUSTER
-    path(
-        "cluster/timeline/item/create",
+    path("cluster/timeline/item/create",
         views.ClusterTimelineItemCreate.as_view(),
         name="cluster_timeline_item_create"),
-    path(
-        "cluster/timeline/item/fetch",
+    path("cluster/timeline/item/fetch",
         views.ClusterTimelineItemFetch.as_view(),
         name="cluster_timeline_item_fetch"),
-    path(
-        "cluster/timeline/item/rename",
+    path("cluster/timeline/item/rename",
         views.ClusterTimelineItemRename.as_view(),
         name="cluster_timeline_item_rename"),
-    path(
-        "cluster/timeline/item/delete",
+    path("cluster/timeline/item/delete",
         views.ClusterTimelineItemDelete.as_view(),
         name="cluster_timeline_item_delete"),
     path("cluster/timeline/item/merge", 
         views.ClusterTimelineItemMerge.as_view(),
         name="cluster_timeline_item_merge"),
-    path(
-        "cluster/item/fetch",
+    path("cluster/item/fetch",
         views.ClusterItemFetch.as_view(),
         name="cluster_item_fetch",),
-    path(
-        "cluster/item/delete",
+    path("cluster/item/delete",
         views.ClusterItemDelete.as_view(),
         name="cluster_item_delete"),
-    path(
-        "cluster/item/move",
+    path("cluster/item/move",
         views.ClusterItemMove.as_view(),
         name="cluster_item_move"),
     # ---------- TIMELINE

@@ -65,12 +65,14 @@ class AnalyserClient:
 
     def upload_data(self, data):
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
+        logging.error(data, data.id)
 
         def generate_requests(data, chunk_size=128 * 1024):
             # data_manager.save(data)
             # data = data_manager.load(data.id)
             """Lazy function (generator) to read a file piece by piece.
             Default chunk size: 1k"""
+            # TODO: manager.dump_to_stream expects a data_id (str)
             for x in self.manager.dump_to_stream(data.id):
                 yield analyser_pb2.UploadDataRequest(
                     id=data.id, data_encoded=x["data_encoded"]

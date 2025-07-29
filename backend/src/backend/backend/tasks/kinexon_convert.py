@@ -43,7 +43,6 @@ class KinexonConvert(Task):
     def __call__(
         self,
         parameters: Dict,
-        video: Video = None,
         plugin_run: PluginRun = None,
         dry_run: bool = False,
         **kwargs
@@ -60,26 +59,26 @@ class KinexonConvert(Task):
         logging.error(f'[TASKS]\tparams: {parameters}')
         logging.error(f'[TASKS]\ttdid: {parameters.get("tracking_data_id")}')
         
-        # NOTE: upload_video & upload_file transfers video via gRPC to the analyser
-        video_ = self.upload_video(client, video)
         tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
         logging.error(f'[TASKS]\ttdid_db: {tracking_data_db}')
-        # NOTE: refactor "task.py" -> "upload_file()"
-        tracking_data_ = self.upload_file(client, tracking_data_db)
+        
+        # NOTE: Which method is preferred?
+        tracking_data_ = self.upload_td(client, tracking_data_db)  # uses the FSHandler, file is zipped before transfer
+        # NOTE: This one doesn't work currently
+        # tracking_data_ = self.upload_td_from_stream(client, tracking_data_db)  # uploads directly from the file stream
 
         # --------> RUN ANALYSER PLUGIN
-        # NOTE: specify parameters for plugin execution;
-        # needs to match call()-method of "/inference_ray/plugins/kinexon_convert.py"
+        # NOTE: specify parameters for plugin execution -> needs to match call()-method of "/inference_ray/plugins/kinexon_convert.py"
         result = self.run_analyser(
             client,
             "kinexon_convert",
-            parameters={"tracking_data_id": parameters.get("tracking_data_id")}, # TODO: specify parameters if needed  
-            inputs={"video": video_, "tracking_data": tracking_data_},
-            outputs=["pos_data"],
-            downloads=["pos_data"]
+            parameters={"tracking_data_id": parameters.get("tracking_data_id")},  # NOTE: specify more params if needed  
+            inputs={"tracking_data": tracking_data_},
+            outputs=["pos_data"],   # this only outputs the reference (id)
+            downloads=["pos_data"]  # this actually transfers "real" data
         )
-        logging.error(f'[TASKS]\tresult: {result}') 
-
+        logging.error(f'[TASKS]\tresult: {result}')
+        
         if plugin_run is not None:
             plugin_run.progress = 0.6
             plugin_run.save()
@@ -101,9 +100,9 @@ class KinexonConvert(Task):
                     name="pos_data",
                     type=PluginRunResult.TYPE_POS,
                 )
-                # output results to the backend
-                return {
-                    "plugin_run": plugin_run.id.hex,
-                    "plugin_run_results": [plugin_run_result_db.id.hex],
-                    "data": {"pos_data": pos_data.id},
-                }
+        # output results to the backend
+        return {
+            "plugin_run": plugin_run.id.hex,
+            "plugin_run_results": [plugin_run_result_db.id.hex],
+            "data": {"pos_data": pos_data.id},
+        }

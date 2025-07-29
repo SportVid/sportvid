@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 class TrackingDataUpload(View):
     
-    # TODO: What is this for?
     # def submit_analyse(self, plugins, **kwargs):
     #     plugin_manager = PluginManager()
     #     for plugin in plugins:
@@ -51,14 +50,14 @@ class TrackingDataUpload(View):
             tracking_data_id = tracking_data_id_uuid.hex
             
             if "file" in request.FILES:
-                output_dir = media_dir_to_video(tracking_data_id)  # TODO: what is this for?
+                output_dir = media_dir_to_video(tracking_data_id)
 
                 download_result = download_file(
                     output_dir=output_dir,
                     output_name=tracking_data_id,
                     file=request.FILES["file"],
                     max_size=request.user.max_video_size,
-                    extensions=(".csv", ".xml"),  # TODO: adjust if other formats are needed
+                    extensions=(".csv", ".xml"),  # NOTE: adjust if other formats are needed
                 )
 
                 if download_result["status"] != "ok":
@@ -68,12 +67,12 @@ class TrackingDataUpload(View):
                 path = Path(request.FILES["file"].name)
                 ext = "".join(path.suffixes)
 
-                # TODO: check what meta-information is needed
-                # format: ['kinexon', 'dfl', ... ] -> 
+                # TODO: check which meta-information is needed
+                # format: ['kinexon', 'dfl', ... ]
                 meta = {  
                     "name": request.POST.get("title"),
                     "ext": ext,
-                    "format": request.POST.get("format")  # TODO: obtain automatically from meta data...?
+                    "format": request.POST.get("format")
                 }
                 tracking_data_db, created = TrackingData.objects.get_or_create(
                     name=meta["name"],

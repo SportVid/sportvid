@@ -12,7 +12,7 @@ from .annotation import *
 from .shortcut import *
 from .annotation_shortcut import *
 from .calibration_assets import *
-# from .bounding_boxes import *
+from .bounding_boxes import *
 from .tracking_data import *
 
 from .analyser_api import *
