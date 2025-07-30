@@ -1,14 +1,13 @@
-from typing import Any, List, Iterator
 import logging
-
-# import redis
 import valkey
 import msgpack
+
+from typing import Any, List, Iterator
 
 from utils.cache import CacheManager, Cache
 
 default_config = {"db": 0, "host": "valkey", "port": 6379, "tag": "data"}
-# NOTE: previous host 'analyser_redisai'
+
 
 class Batcher:
     def __init__(self, iterable, n=1):
@@ -22,7 +21,7 @@ class Batcher:
 
 
 @CacheManager.export("valkey")
-class valkeyCache(Cache, config=default_config, version="0.1"):
+class ValkeyCache(Cache, config=default_config, version="0.1"):
     def __init__(self, config=None):
         super().__init__(config)
         # NOTE: previous call 'redis.Redis(...)'

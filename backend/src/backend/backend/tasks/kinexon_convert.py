@@ -64,7 +64,7 @@ class KinexonConvert(Task):
         
         # NOTE: Which method is preferred?
         tracking_data_ = self.upload_td(client, tracking_data_db)  # uses the FSHandler, file is zipped before transfer
-        # NOTE: This one doesn't work currently
+        # TODO: This one isn't working yet
         # tracking_data_ = self.upload_td_from_stream(client, tracking_data_db)  # uploads directly from the file stream
 
         # --------> RUN ANALYSER PLUGIN

@@ -65,7 +65,7 @@ class AnalyserClient:
 
     def upload_data(self, data):
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
-        logging.error(data, data.id)
+        logging.error(data)
 
         def generate_requests(data, chunk_size=128 * 1024):
             # data_manager.save(data)

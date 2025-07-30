@@ -48,8 +48,9 @@ class CalibrationStaticDlt(Task):
         data_db = CalibrationAssets.objects.get(id=parameters.get("calibration_id"))
 
         point_correspondences = data_db.marker_data.all()
-        logging.info(point_correspondences)
-        # Convert point correspondences
+        # logging.error(point_correspondences)
+        
+        # convert point correspondences
         point_correspondences_dict = []
         for point in point_correspondences:
             point_correspondences_dict.append({
@@ -92,10 +93,9 @@ class CalibrationStaticDlt(Task):
             with result[1]["homography"] as homography_data:
                 # update homography matrix in database
                 homography_matrix = homography_data.y.tolist()
-                logging.info(f"Homography matrix: {homography_matrix}")
                 data_db.homography_matrix = homography_matrix
                 data_db.save()
-                logging.info(f"Updated homography matrix for calibration asset {data_db.id}")
+                logging.info(f"Updated homography matrix {homography_matrix} for calibration asset {data_db.id}")
 
         return {
             "plugin_run": plugin_run.id.hex,

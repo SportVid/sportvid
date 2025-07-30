@@ -106,7 +106,7 @@ class ByteTrack(
     def __init__(self, config=None, **kwargs):
         super().__init__(config, **kwargs)
         self.model = None
-        self.model_name = self.config.get("model", "byte-track")
+        self.model_name = self.config.get("model_name")
 
     def call(
         self,
@@ -118,7 +118,6 @@ class ByteTrack(
         import torch
         from yolox.exp import get_exp
 
-        
         with inputs["video"] as input_data, data_manager.create_data(
             "BboxesData"
         ) as output_data:
@@ -153,7 +152,6 @@ class ByteTrack(
                         frame_info["track_scores"],
                         frame_info["track_boxes"],
                     ):
-                        
                         # normalize the box coordinates
                         bbox = BboxData(
                             x=int(box[0]) / img_info["width"],

@@ -1,5 +1,8 @@
+import hashlib
+import json
 import logging
-from typing import Dict
+
+from typing import List, Dict
 
 from utils.plugin import Plugin
 from utils.plugin import Factory
@@ -28,11 +31,6 @@ class CacheManager(Factory):
             return None
 
         return cls._plugins[name](config)
-
-import hashlib
-import json
-import logging
-from typing import List, Dict
 
 
 def flat_dict(data_dict, parse_json=False):

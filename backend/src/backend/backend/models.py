@@ -1,7 +1,8 @@
 import logging
 import os
-from random import random
 import uuid
+
+from random import random
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -26,9 +27,21 @@ def default_homography_matrix():
     return [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
 
 
+def receiver_with_multiple_senders(signal, senders, **kwargs):
+    def decorator(receiver_func):
+        for sender in senders:
+            if isinstance(signal, (list, tuple)):
+                for s in signal:
+                    s.connect(receiver_func, sender=sender, **kwargs)
+            else:
+                signal.connect(receiver_func, sender=sender, **kwargs)
+        return receiver_func
+    return decorator
+
+
 class TibavaUser(AbstractUser):
     allowance = models.IntegerField(default=10)
-    max_video_size = models.BigIntegerField(default=500 * 1024 * 1024)  # 50 Mb
+    max_video_size = models.BigIntegerField(default=500 * 1024 * 1024)  # 500 Mb
     objects = TibavaUserManager()
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
@@ -49,7 +62,7 @@ class TrackingData(models.Model):
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.CASCADE
     )
     name = models.CharField(max_length=256)
-    file =  models.UUIDField(default=uuid.uuid4,blank=True, null=True)
+    file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
     ext = models.CharField(max_length=256)
     date = models.DateTimeField(auto_now_add=True)
     file_type = models.CharField(max_length=256)  
@@ -63,7 +76,7 @@ class TrackingData(models.Model):
             "date": self.date,
             "file_type": self.file_type
         }
-     
+
 
 class Video(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -71,7 +84,7 @@ class Video(models.Model):
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.CASCADE
     )
     name = models.CharField(max_length=256)
-    file =  models.UUIDField(default=uuid.uuid4,blank=True, null=True)
+    file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
     ext = models.CharField(max_length=256)
     date = models.DateTimeField(auto_now_add=True)
     # some extracted meta information
@@ -106,25 +119,21 @@ class Video(models.Model):
                 timeline.clone(
                     video=new_video_db, include_annotations=include_annotations
                 )
-
         return new_video_db  # FIXME
 
 
-@receiver(post_delete, sender=Video)
-def delete_video_file(sender, instance, **kwargs):
-    logger.info(f"Deleting video {instance.id.hex} by user {instance.owner.username}")
+@receiver_with_multiple_senders(signal=post_delete, senders=[Video,TrackingData])
+def delete_file(sender, instance, **kwargs):
+    logger.info(f"Deleting file {instance.id.hex} of user {instance.owner.username}")
     path = media_path_to_video(instance.id.hex, instance.ext)
-    if os.path.exists(path):
-        os.remove(path)
+    if os.path.exists(path): os.remove(path)
 
 
 class Plugin(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
-        result = {
-            "id": self.id.hex,
-        }
+        result = {"id": self.id.hex}
         return result
 
 
@@ -151,7 +160,6 @@ class PluginRun(models.Model):
         STATUS_QUEUED: "QUEUED",
         STATUS_WAITING: "WAITING",
     }
-
     status = models.CharField(
         max_length=2,
         choices=[(k, v) for k, v in STATUS.items()],
@@ -203,7 +211,6 @@ class PluginRunResult(models.Model):
         TYPE_BBOXES: "BBOXES",
         TYPE_POS: "POS"
     }
-
     type = models.CharField(
         max_length=2,
         choices=[(k, v) for k, v in TYPE.items()],
@@ -224,10 +231,10 @@ class PluginRunResult(models.Model):
 @receiver(post_delete, sender=PluginRunResult)
 def delete_pluginresult_data(sender, instance, **kwargs):
     logger.info(
-        f"Deleting PluginRunResult {instance.id} by user {instance.plugin_run.video.owner.username}"
+        f"Deleting PluginRunResult {instance.id} from user {instance.plugin_run.video.owner.username}"
     )
     data_manager = DataManager("/predictions/")
-
+    # --- images
     if instance.type == PluginRunResult.TYPE_IMAGES:
         data = data_manager.load(instance.data_id)
         try:
@@ -240,16 +247,16 @@ def delete_pluginresult_data(sender, instance, **kwargs):
             path = data_manager._create_file_path(image.id, image.ext)
             if os.path.exists(path):
                 os.remove(path)
-
+    # --- cluster items
     for clusteritem in instance.cluster_items.all():
         filename, ext = clusteritem.image_path.split("/")[-1].split(".")
 
         path = data_manager._create_file_path(filename, ext)
         if os.path.exists(path):
             os.remove(path)
-
+    # --- delete from physical storage
     data_manager.delete(instance.data_id)
-
+    
 
 class Timeline(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -267,7 +274,6 @@ class Timeline(models.Model):
         TYPE_PLUGIN_RESULT: "PLUGIN_RESULT",
         TYPE_TRANSCRIPT: "TRANSCRIPT",
     }
-
     type = models.CharField(
         max_length=2,
         choices=[(k, v) for k, v in TYPE.items()],
@@ -300,11 +306,9 @@ class Timeline(models.Model):
     def save(self, *args, **kwargs):
         if self.order < 0:
             self.order = Timeline.objects.filter(video=self.video).count()
-
         super(Timeline, self).save(*args, **kwargs)
 
-    class Meta:
-        ordering = ["order"]
+    class Meta: ordering = ["order"]
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         result = {
@@ -343,21 +347,20 @@ class Timeline(models.Model):
         return result
 
     def clone(self, video=None, include_annotations=True):
-        if not video:
-            video = self.video
+        if not video: video = self.video
+        
         new_timeline_db = Timeline.objects.create(
             video=video, name=self.name, type=self.type
         )
-
         timeline_segment_added = []
         timeline_segment_annotations_added = []
+        
         for segment in self.timelinesegment_set.all():
             result = segment.clone(new_timeline_db, include_annotations)
             timeline_segment_added.extend(result["timeline_segment_added"])
             timeline_segment_annotations_added.extend(
                 result["timeline_segment_annotation_added"]
             )
-
         return {
             "timeline_added": new_timeline_db,
             "timeline_segment_added": timeline_segment_added,
@@ -420,8 +423,7 @@ class TimelineSegment(models.Model):
     start = models.FloatField(default=0)
     end = models.FloatField(default=0)
 
-    class Meta:
-        ordering = ["start"]
+    class Meta: ordering = ["start"]
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         result = {
@@ -446,9 +448,7 @@ class TimelineSegment(models.Model):
         new_timeline_segment_db = TimelineSegment.objects.create(
             timeline=timeline, color=self.color, start=self.start, end=self.end
         )
-
-        if not include_annotations:
-            return new_timeline_segment_db
+        if not include_annotations: return new_timeline_segment_db
 
         timeline_segment_annotation_added = []
         for annotation in self.timelinesegmentannotation_set.all():
@@ -457,15 +457,13 @@ class TimelineSegment(models.Model):
                     "timeline_segment_annotation_added"
                 ]
             )
-
         return {
             "timeline_segment_added": [new_timeline_segment_db],
             "timeline_segment_annotation_added": timeline_segment_annotation_added,
         }
 
 
-# This is basically a many to many connection
-class TimelineSegmentAnnotation(models.Model):
+class TimelineSegmentAnnotation(models.Model):  # many-to-many connection
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     timeline_segment = models.ForeignKey(TimelineSegment, on_delete=models.CASCADE)
     annotation = models.ForeignKey(Annotation, on_delete=models.CASCADE)
@@ -500,7 +498,6 @@ class Shortcut(models.Model):
     type = models.CharField(max_length=256, null=True)
     keys = models.JSONField(null=True)
     keys_string = models.CharField(max_length=256, null=True)
-
     date = models.DateTimeField(auto_now_add=True)
 
     def to_dict(self, include_refs_hashes=True, **kwargs):
@@ -526,7 +523,6 @@ class Shortcut(models.Model):
             keys.remove("shift")
         for key in keys:
             keys_string.append(key)
-
         return "+".join(keys_string)
 
 
@@ -560,7 +556,6 @@ class ClusterTimelineItem(models.Model):
         TYPE_FACE: "FACE",
         TYPE_PLACE: "PLACE",
     }
-
     type = models.CharField(
         max_length=2,
         choices=[(k, v) for k, v in TYPE.items()],
@@ -579,7 +574,6 @@ class ClusterTimelineItem(models.Model):
 
         if self.video:
             result["video"] = self.video.id.hex
-
         return result
 
 
@@ -589,7 +583,6 @@ class ClusterItem(models.Model):
         ClusterTimelineItem, on_delete=models.CASCADE, related_name="items"
     )
     video = models.ForeignKey(Video, null=True, on_delete=models.CASCADE)
-    # plugin_item_ref = models.UUIDField()
     embedding_id = models.CharField(max_length=100)
     image_path = models.CharField(max_length=128, null=True)
     plugin_run_result = models.ForeignKey(
@@ -605,7 +598,6 @@ class ClusterItem(models.Model):
         TYPE_FACE: "FACE",
         TYPE_PLACE: "PLACE",
     }
-
     type = models.CharField(
         max_length=2,
         choices=[(k, v) for k, v in TYPE.items()],
@@ -621,12 +613,10 @@ class ClusterItem(models.Model):
             "delta_time": self.delta_time,
             "is_sample": self.is_sample,
         }
-
         return result
 
 
 class VideoAnalysisState(models.Model):
-
     video = models.OneToOneField(
         Video,
         on_delete=models.CASCADE,
@@ -669,12 +659,10 @@ class VideoAnalysisState(models.Model):
                 else None
             ),
         }
-
         return result
 
 
 class CalibrationAssets(models.Model):
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     video = models.ForeignKey(Video, blank=True, null=True, on_delete=models.CASCADE)
     owner = models.ForeignKey(
@@ -693,15 +681,12 @@ class CalibrationAssets(models.Model):
             "template": self.template,
         }
         if include_refs:
-            result["marker_data"] = [
-                x.to_dict() for x in self.marker_data.all()
-            ]
+            result["marker_data"] = [x.to_dict() for x in self.marker_data.all()]
         return result
 
 
 class PointCorrespondence(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False) # set editable to True?
-    
     calibration_asset = models.ForeignKey(
         CalibrationAssets, 
         on_delete=models.CASCADE,
@@ -732,4 +717,3 @@ class PointCorrespondence(models.Model):
                 "z": self.videoCoord_z
             }
         }
-

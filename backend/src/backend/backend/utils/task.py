@@ -28,10 +28,10 @@ class Task:
         data_id = client.upload_file(file)
         return data_id
     
-    # TODO: this one is not working yet
+    # TODO: What data to pass here?
     def upload_td_from_stream(self, client: TaskAnalyserClient, tracking_data: TrackingData) -> str:
-        # file = media_path_to_video(tracking_data.file.hex, tracking_data.ext)
-        data_id = client.upload_data(tracking_data)
+        file = media_path_to_video(tracking_data.file.hex, tracking_data.ext)
+        data_id = client.upload_data(file)
         return data_id
 
     def run_analyser(

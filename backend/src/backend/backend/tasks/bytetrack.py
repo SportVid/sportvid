@@ -22,8 +22,7 @@ class ByteTrackParser(Parser):
     def __init__(self):
 
         self.valid_parameter = {
-            "timeline": {"parser": str, "default": "ByteTrack"},
-            "fps": {"parser": int, "default": 25},
+            "fps": {"parser": int, "default": 5}
         }
 
 
@@ -40,7 +39,6 @@ class ByteTrack(Task):
         self,
         parameters: Dict,
         video: Video = None,
-        user: TibavaUser = None,
         plugin_run: PluginRun = None,
         dry_run: bool = False,
         **kwargs

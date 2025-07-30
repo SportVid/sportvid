@@ -63,7 +63,10 @@ class KinexonConvert(
         with inputs["tracking_data"] as input_data:
             with input_data.open_file() as t_data:        
                 kinexon_df = pd.read_csv(t_data, sep=';')
-                xy_col = kinexon_df.columns.values.tolist()[-3:-1]
+                logging.error(kinexon_df)
+                # xy_col = kinexon_df.columns.values.tolist()[-3:-1]
+                xy_col = kinexon_df.columns.values.tolist()[-2::]
+                logging.error(xy_col)
                 xy_slice = kinexon_df[xy_col][:100]
                 np_pos_data = xy_slice.to_numpy(dtype=np.float32)
                 logging.error(f'[PLUGIN]\tkinexon data frame: {kinexon_df.shape}, {kinexon_df.columns.values.tolist()}')
