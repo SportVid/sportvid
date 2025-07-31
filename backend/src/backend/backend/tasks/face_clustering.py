@@ -23,6 +23,9 @@ from backend.utils.task import Task
 from django.db import transaction
 from django.conf import settings
 
+# NOTE: Person re-identifizieren auf Basis des Gesichts; Randfall
+# Eher BBox clustering
+
 
 @PluginManager.export_parser("face_clustering")
 class FaceClusteringParser(Parser):

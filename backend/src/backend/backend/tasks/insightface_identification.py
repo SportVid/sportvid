@@ -14,6 +14,7 @@ from django.db import transaction
 
 from django.conf import settings
 
+# NOTE: Falls reidentification via face
 
 @PluginManager.export_parser("insightface_identification")
 class InsightfaceIdentificationParser(Parser):

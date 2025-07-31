@@ -23,6 +23,7 @@ from data import Shot, DataManager
 from django.db import transaction
 from django.conf import settings
 
+# NOTE: raus
 
 @PluginManager.export_parser("clip_ontology")
 class CLIPParser(Parser):

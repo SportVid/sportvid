@@ -31,6 +31,7 @@ LABEL_LUT = {
     "p_LS": "Long Shot",
 }
 
+# NOTE: raus
 
 @PluginManager.export_parser("insightface_facesize")
 class InsightfaceFacesizeParser(Parser):

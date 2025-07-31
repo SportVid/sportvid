@@ -15,6 +15,8 @@ from django.db import transaction
 
 from django.conf import settings
 
+# NOTE: Für Aktionserkennung (Clip für Videos)
+# Fine-tuning, wsl. bessere Optionen mit dedizierten Methoden
 
 @PluginManager.export_parser("x_clip")
 class XCLIPParser(Parser):

@@ -84,7 +84,7 @@ class BoundingBoxesChange(View):
                 prr_to_update = PluginRunResult.objects.get(pk=bytetrack_prr_db.pk)
                 prr_to_update.data_id = altered_bbx.id
                 prr_to_update.save()
-
+            # NOTE: check performance for "larger" requests
             # If the transaction was successful, clean up the old file
             manager.delete(old_data_id)
             logging.info(f"Successfully updated DB and deleted old data {old_data_id}.")
@@ -95,6 +95,8 @@ class BoundingBoxesChange(View):
             if altered_bbx and altered_bbx.id:
                 logging.warning(f"Rolling back: deleting temporary data {altered_bbx.id}")
                 manager.delete(altered_bbx.id)
+                # TODO: delete cache path of old data
+                # TODO: check settings.py -> 115 django.core.cache.backends.memcached.PyMemcacheCache
 
             # Re-raise the exception so Django's error handling can take over
             # raise

@@ -24,6 +24,7 @@ from backend.utils.task import Task
 from django.db import transaction
 from django.conf import settings
 
+# NOTE: Unterschiedliche Umgebungen clustern (Places2); raus; Nach Szenen clustern -> eher CLIP
 
 @PluginManager.export_parser("place_clustering")
 class PlaceClusteringParser(Parser):

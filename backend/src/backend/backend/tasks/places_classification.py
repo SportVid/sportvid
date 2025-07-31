@@ -32,6 +32,7 @@ CATEGORY_LUT = {
     "probs_places3": "Places3",
 }
 
+# NOTE: raus, besser was Eigenes fine-tunen um Spielfeld/Sportart zu klassifizieren
 
 @PluginManager.export_parser("places_classification")
 class PlacesClassifierParser(Parser):

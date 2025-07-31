@@ -20,6 +20,7 @@ from data import DataManager
 from django.db import transaction
 from django.conf import settings
 
+# NOTE: raus
 
 @PluginManager.export_parser("shot_density")
 class ShotDensityParser(Parser):

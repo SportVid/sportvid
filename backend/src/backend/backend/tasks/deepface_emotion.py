@@ -34,6 +34,9 @@ LABEL_LUT = {
     "p_neutral": "Neutral",
 }
 
+# NOTE: funktioniert nicht gut, lieber LLM verwenden, kann erstmal raus
+# use case für close-ups? wsl. eher nicht vorhanden (broadcast wäre ausnahme)
+# bouldering (selten weil aufnahmen eher auf den rücken/seite)
 
 @PluginManager.export_parser("deepface_emotion")
 class DeepfaceEmotionParser(Parser):

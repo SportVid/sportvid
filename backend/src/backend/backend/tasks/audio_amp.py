@@ -14,6 +14,7 @@ from backend.utils.task import Task
 from django.db import transaction
 from django.conf import settings
 
+# NOTE: kann raus
 
 @PluginManager.export_parser("audio_amp")
 class AudioAmpParser(Parser):

@@ -21,6 +21,7 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+# NOTE: sinnvoll
 
 @PluginManager.export_parser("aggregate_scalar")
 class AggregateScalarParser(Parser):

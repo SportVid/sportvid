@@ -14,6 +14,7 @@ from backend.utils.task import Task
 from django.db import transaction
 from django.conf import settings
 
+# NOTE: raus
 
 @PluginManager.export_parser("color_brightness_analysis")
 class ColorBrightnessAnalyserParser(Parser):

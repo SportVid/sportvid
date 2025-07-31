@@ -13,6 +13,7 @@ from ..utils.analyser_client import TaskAnalyserClient
 from django.db import transaction
 from django.conf import settings
 
+# NOTE: sinnvoll für team assignment von tracklets
 
 @PluginManager.export_parser("color_analysis")
 class ColorAnalyserParser(Parser):

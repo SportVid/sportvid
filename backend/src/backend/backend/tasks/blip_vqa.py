@@ -19,7 +19,8 @@ from backend.models import (
 from django.db import transaction
 from django.conf import settings
 
-
+# NOTE: blip outdated, wsl. raus (nicht applikabel wg. ressourcen)
+#   VQA ggf. interessant QWEN -> s. TIB-AV-A (soon) ChatAI academics
 @PluginManager.export_parser("blip_vqa")
 class BLIPVQAParser(Parser):
     def __init__(self):
