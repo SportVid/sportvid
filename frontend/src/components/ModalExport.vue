@@ -184,7 +184,7 @@ const exportFormats = ref([
       {
         field: "select_pos_data_team",
         name: "position_data_team",
-        value: null,
+        value: "both",
         text: t("modal.plugin.position_data_name"),
         hint: t("modal.plugin.position_data_hint"),
       },
@@ -234,15 +234,6 @@ const exportPositionsLocal = async ({ parameters = [] }) => {
 };
 
 const downloadExport = async (format, parameters) => {
-  // const processedParams = parameters.map((e) => {
-  //   if ("file" in e) {
-  //     return { name: e.name, file: e.file };
-  //   } else if (e.name === "shot_timeline_id") {
-  //     return { name: e.name, value: e.value.timeline_ids[0] };
-  //   } else {
-  //     return { name: e.name, value: e.value };
-  //   }
-  // });
   const processedParams = parameters.map((e) => {
     if ("file" in e) {
       return { name: e.name, file: e.file };

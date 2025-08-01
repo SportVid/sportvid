@@ -35,9 +35,9 @@
             ref="topViewCard"
           >
             <v-row class="sticky-tabs-bar" justify="center">
-              <v-tabs fixed-tabs slider-color="primary" v-model="analysisTabId">
+              <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.analysisTabId">
                 <v-tab
-                  v-for="analysisTab in analysisTabs"
+                  v-for="analysisTab in tabStore.analysisTabs"
                   :key="analysisTab.id"
                   :value="analysisTab.id"
                 >
@@ -48,15 +48,13 @@
 
             <v-row class="flex-grow-1">
               <v-col>
-                <v-tabs-window v-model="analysisTabId">
+                <v-tabs-window v-model="tabStore.analysisTabId">
                   <v-tabs-window-item
-                    v-for="analysisTab in analysisTabs"
+                    v-for="analysisTab in tabStore.analysisTabs"
                     :key="analysisTab.id"
                     :value="analysisTab.id"
                   >
-                    <TabWindowCalibration v-if="analysisTab.id === 'calibration'" />
-                    <TabWindowPosData v-if="analysisTab.id === 'pos_data'" />
-                    <TabWindowHeatmap v-if="analysisTab.id === 'heatmap'" />
+                    <component :is="getAnalysisTabComponent(analysisTab.id)" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -71,25 +69,40 @@
         </v-col>
       </v-row> -->
 
-      <v-row v-if="analysisTabId === 'pos_data'" class="ma-n2">
+      <v-row v-if="tabStore.analysisTabId === 'pos_data'" class="ma-n2">
         <v-col>
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2">
-            <v-tabs fixed-tabs slider-color="primary" v-model="visualizationTabId">
-              <v-tab v-for="visualizationTab in visualizationTabs" :key="visualizationTab.id">
+            <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.visualizationTabId">
+              <v-tab
+                v-for="visualizationTab in tabStore.visualizationTabs"
+                :key="visualizationTab.id"
+                :value="visualizationTab.id"
+              >
                 {{ visualizationTab.name }}
               </v-tab>
             </v-tabs>
 
             <v-row class="flex-grow-1 my-0">
               <v-col>
-                <v-tabs-window v-model="visualizationTabId">
+                <v-tabs-window v-model="tabStore.visualizationTabId">
                   <v-tabs-window-item
-                    v-for="visualizationTab in visualizationTabs"
+                    v-for="visualizationTab in tabStore.visualizationTabs"
                     :key="visualizationTab.id"
+                    :value="visualizationTab.id"
                   >
-                    <TabWindowTimeline v-if="visualizationTab.id === 'timeline'" />
-                    <TabWindowEvents v-if="visualizationTab.id === 'events'" />
-                    <TabWindowData v-if="visualizationTab.id === 'data'" />
+                    <!-- <TabWindowTimeline
+                      v-if="visualizationTab.id === 'timeline'"
+                      :key="tabStore.visualizationTabId"
+                    />
+                    <TabWindowEvents
+                      v-if="visualizationTab.id === 'events'"
+                      :key="tabStore.visualizationTabId"
+                    />
+                    <TabWindowRunningDistance
+                      v-if="visualizationTab.id === 'running_distance'"
+                      :key="tabStore.visualizationTabId"
+                    /> -->
+                    <component :is="getVisualizationTabComponent(visualizationTab.id)" />
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -117,7 +130,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, watchEffect, nextTick } from "vue";
+import { ref, computed, onMounted, watch, watchEffect, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
@@ -133,6 +146,7 @@ import { useShortcutStore } from "@/stores/shortcut";
 import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 import { useShotStore } from "@/stores/shot";
+import { useTabStore } from "@/stores/tabs";
 // import * as Keyboard from "../plugins/keyboard";
 import VideoPlayer from "@/components/video/VideoPlayer.vue";
 import TabWindowPosData from "@/components/tab-window/TabWindowPosData.vue";
@@ -140,7 +154,7 @@ import TabWindowCalibration from "@/components/tab-window/TabWindowCalibration.v
 import TabWindowHeatmap from "@/components/tab-window/TabWindowHeatmap.vue";
 import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
 import TabWindowEvents from "@/components/tab-window/TabWindowEvents.vue";
-import TabWindowData from "@/components/tab-window/TabWindowData.vue";
+import TabWindowRunningDistance from "@/components/tab-window/TabWindowRunningDistance.vue";
 import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
@@ -166,16 +180,35 @@ const shortcutStore = useShortcutStore();
 const annotationShortcutStore = useAnnotationShortcutStore();
 const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
+const tabStore = useTabStore();
 
-const analysisTabId = ref("calibration");
-const analysisTabs = computed(() => [
-  { id: "calibration", name: t("analysis_view.analysis_tabs.calibration") },
-  { id: "pos_data", name: t("analysis_view.analysis_tabs.pos_data") },
-  { id: "heatmap", name: t("analysis_view.analysis_tabs.heatmap") },
-]);
+function getAnalysisTabComponent(tabId) {
+  if (tabId === "calibration") {
+    return TabWindowCalibration;
+  } else if (tabId === "pos_data") {
+    return TabWindowPosData;
+  } else if (tabId === "heatmap") {
+    return TabWindowHeatmap;
+  } else {
+    return null;
+  }
+}
+function getVisualizationTabComponent(tabId) {
+  if (tabId === "timeline") {
+    return TabWindowTimeline;
+  } else if (tabId === "events") {
+    return TabWindowEvents;
+  } else if (tabId === "running_distance") {
+    return TabWindowRunningDistance;
+  } else {
+    return null;
+  }
+}
+
 watch(
-  () => analysisTabId.value,
+  () => tabStore.analysisTabId,
   async (newTabId) => {
+    console.log("changed analysis-tab:", newTabId);
     topViewStore.showItems = false;
 
     await nextTick();
@@ -195,15 +228,8 @@ watch(
     topViewStore.showItems = true;
   }
 );
-
-const visualizationTabId = ref("timeline");
-const visualizationTabs = computed(() => [
-  { id: "timeline", name: t("analysis_view.visualization_tabs.timeline") },
-  { id: "events", name: t("analysis_view.visualization_tabs.events") },
-  { id: "data", name: t("analysis_view.visualization_tabs.data") },
-]);
 onMounted(() => {
-  visualizationTabId.value = visualizationTabs.value.find((tab) => tab.id === "timeline")?.id;
+  tabStore.visualizationTabId = tabStore.visualizationTabs.find((tab) => tab.id === "timeline")?.id;
 });
 
 const isLoading = ref(true);
@@ -542,6 +568,18 @@ watch(
     } else {
       calibrationAssetStore.showVideoMarker = calibrationAssetStore.previousShowVideoMarker;
     }
+  },
+  { immediate: true }
+);
+
+onMounted(() => {
+  console.log("video", playerStore.video);
+});
+
+watch(
+  () => playerStore.video,
+  () => {
+    console.log("video", playerStore.video);
   },
   { immediate: true }
 );

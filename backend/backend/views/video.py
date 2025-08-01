@@ -32,7 +32,12 @@ from backend.models import Video
 
 logger = logging.getLogger(__name__)
 
-
+def parse_number(val):
+                try:
+                    return float(val.replace(',', '.')) if val else None
+                except ValueError:
+                    return None
+                
 class VideoUpload(View):
     def submit_analyse(self, plugins, **kwargs):
         plugin_manager = PluginManager()
@@ -76,6 +81,15 @@ class VideoUpload(View):
                 fps = reader.get_meta_data()["fps"]
                 duration = reader.get_meta_data()["duration"]
                 size = reader.get_meta_data()["size"]
+
+                field_length = parse_number(request.POST.get("fieldLength"))
+                if not field_length:
+                    field_length = 105
+
+                field_width = parse_number(request.POST.get("fieldWidth"))
+                if not field_width:
+                    field_width = 68
+
                 meta = {
                     "name": request.POST.get("title"),
                     "width": size[0],
@@ -83,6 +97,12 @@ class VideoUpload(View):
                     "ext": ext,
                     "fps": fps,
                     "duration": duration,
+                    "field_length": field_length,
+                    "field_width": field_width,
+                    "division": request.POST.get("division"),
+                    "current_position": request.POST.get("currentPosition"),
+                    "total_number_of_teams": request.POST.get("totalNumberofTeams"),
+                    "age_group": request.POST.get("ageGroup"),
                 }
                 video_db, created = Video.objects.get_or_create(
                     name=meta["name"],
@@ -94,6 +114,12 @@ class VideoUpload(View):
                     width=meta["width"],
                     height=meta["height"],
                     owner=request.user,
+                    field_length=meta["field_length"],
+                    field_width=meta["field_width"],
+                    division=meta["division"],
+                    current_position=meta["current_position"],
+                    total_number_of_teams=meta["total_number_of_teams"],
+                    age_group=meta["age_group"],
                 )
                 if not created:
                     logger.error("VideoUpload::database_create_failed")

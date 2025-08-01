@@ -16,8 +16,6 @@ import { useShortcutStore } from "./shortcut";
 import { useAnnotationShortcutStore } from "./annotation_shortcut";
 import { useClusterTimelineItemStore } from "./cluster_timeline_item";
 import { useShotStore } from "./shot";
-import { de } from "vis";
-import { re } from "mathjs";
 
 export const useVideoStore = defineStore("video", () => {
   const userStore = useUserStore();

@@ -1,19 +1,24 @@
 <template>
   <div ref="container" style="width: 100%">
     <canvas
-      :style="canvasStyle"
-      style="background-color: #bbbbbb; border-radius: 5px"
       ref="canvas"
+      :style="{
+        ...canvasStyle,
+        backgroundColor: '#bbbbbb',
+        borderRadius: '5px',
+      }"
     ></canvas>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted, nextTick } from "vue";
+import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import paper from "paper";
 import { getTimecode } from "@/plugins/time";
 import { usePlayerStore } from "@/stores/player";
+import { useTabStore } from "@/stores/tabs";
 
+const tabStore = useTabStore();
 const playerStore = usePlayerStore();
 
 const props = defineProps({
@@ -37,9 +42,7 @@ const container = ref(null);
 const canvas = ref(null);
 const canvasStyle = ref({ width: props.width, height: props.height });
 
-// Canvas/State Data
 let scope, tool;
-let mainStrokes, otherStrokes, textGroup;
 let handleGroup, handleLeft, handleRight, handleBar;
 let selectionLayer, scaleLayer;
 
@@ -294,8 +297,10 @@ function drawSelection() {
 function onSelectionChange() {
   const posStart = timeToX(hiddenStartTime.value);
   const posEnd = timeToX(hiddenEndTime.value);
+
   handleLeft.position.x = posStart;
   handleRight.position.x = posEnd;
+
   const seg = handleBar.segments;
   seg[0].point.x = posStart + props.radius;
   seg[1].point.x = posStart;
@@ -327,5 +332,13 @@ onMounted(() => {
   };
 
   draw();
+});
+onBeforeUnmount(() => {
+  if (scope) {
+    scope.view.onFrame = null;
+    scope.view.onResize = null;
+    scope.project.clear();
+    scope.remove();
+  }
 });
 </script>

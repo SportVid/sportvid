@@ -43,11 +43,11 @@
           @click="openEditBBox(position)"
         >
           <v-tooltip activator="parent" location="top" class="bounding-box-tooltip">
-            <div><strong>ref_id:</strong> {{ position.ref_id }}</div>
-            <div><strong>team_id:</strong> red</div>
-            <!-- <div v-for="(value, key) in position" :key="key">
+            <!-- <div><strong>ref_id:</strong> {{ position.ref_id }}</div>
+            <div><strong>team_id:</strong> red</div> -->
+            <div v-for="(value, key) in position" :key="key">
               <strong>{{ key }}:</strong> {{ value }}
-            </div> -->
+            </div>
           </v-tooltip>
           <div class="bounding-box-ref-id">
             {{ position.ref_id }}

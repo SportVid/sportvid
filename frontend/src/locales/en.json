@@ -19,7 +19,6 @@
   "guidelines": {
     "title": "Guidelines",
     "text": "<ol style=\"margin-left:20px; line-height:1.5;\"><li><strong>How to Start:</strong> <ol style='margin-left:20px; margin-top:5px;'><li>Register or log in to your SportVid account.</li><li>Upload a match or training video.</li></ol></li><li><strong>How to Get Position Data:</strong> <ol style='margin-left:20px; margin-top:5px;'><li>Run the <strong>ByteTrack Plugin</strong> to automatically detect players in the video and create bounding boxes.</li><li>Use the <strong>DLT + RANSAC from annotated landmarks Plugin</strong> to compute the homography matrix for top-view projection.</li><li>After calibration, the positional data can be displayed on the top view pitch.</li><li>Alternatively, you can manually upload position data if it's already available.</li></ol></li><li><strong>How to Export:</strong> <ol style='margin-left:20px; margin-top:5px;'><li>Use the export button in the app bar to download CSV files of raw or aggregated positional data (e.g., full match, 1st half, 2nd half).</li><li>In the KPI or heatmap views, you can save snapshots or video exports of the top view or video view.</li></ol></li></ol>"
-
   },
   "user": {
     "name": "Username",
@@ -98,7 +97,7 @@
       "select": "Select Visualization",
       "timeline": "Timeline",
       "events": "Events",
-      "data": "data"
+      "running_distance": "Running Distance"
     }
   },
   "sports": {
@@ -122,7 +121,7 @@
     }
   },
   "pos_data": {
-    "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload the position data manually.",
+    "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
     "display_settings": {
       "title": "Display Settings",
       "view_bounding_box": "View bounding-boxes",
@@ -176,6 +175,12 @@
         "yTitle": "Select y axis data:",
         "ySelect": "Not selected"
       }
+    },
+    "running_distance": {
+      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+      "id": "ID",
+      "team": "Team",
+      "distance": "Distance [m]"
     }
   },
   "timelines": {
@@ -224,7 +229,10 @@
         "position": "Select current position",
         "age_group": "Select age group",
         "total_teams": "Select total number of teams",
-        "out_of": "out of"
+        "out_of": "out of",
+        "field_length": "Field length [m]",
+        "field_width": "Field width [m]",
+        "field_warning": "If no dimensions are specified, default dimensions of {defaultLength}x{defaultWidth} m are used. This may affect the accuracy of the analysis."
       },
       "delete": {
         "success": "Video successfully deleted"

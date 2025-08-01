@@ -58,6 +58,14 @@ class Video(models.Model):
     height = models.IntegerField(blank=True, null=True)
     width = models.IntegerField(blank=True, null=True)
 
+    field_length = models.FloatField(blank=True, null=True)
+    field_width = models.FloatField(blank=True, null=True)
+    division = models.CharField(blank=True, null=True)
+    current_position = models.IntegerField(blank=True, null=True)
+    total_number_of_teams = models.IntegerField(blank=True, null=True)
+    age_group = models.CharField(blank=True, null=True)
+
+
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {
             "name": self.name,
@@ -70,6 +78,12 @@ class Video(models.Model):
             "height": self.height,
             "width": self.width,
             "num_timelines": len(Timeline.objects.filter(video=self)),
+            "field_length": self.field_length,
+            "field_width": self.field_width,
+            "division": self.division,
+            "current_position": self.current_position,
+            "total_number_of_teams": self.total_number_of_teams,
+            "age_group": self.age_group,
         }
 
     def clone(self, owner=None, include_timelines=True, include_annotations=True):

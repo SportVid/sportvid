@@ -11,10 +11,10 @@
         </template>
       </v-toolbar>
 
-      <v-card-text class="mt-2" style="overflow-y: auto">
+      <v-card-text class="mt-2 scrollable-content">
         <v-data-table
           color="primary"
-          :items-per-page="10"
+          hide-default-footer
           :headers="headers"
           :items="props.pluginRuns"
           item-key="id"
@@ -94,3 +94,10 @@ watch(
   }
 );
 </script>
+
+<style scoped>
+.scrollable-content {
+  max-height: 500px;
+  overflow-y: auto;
+}
+</style>

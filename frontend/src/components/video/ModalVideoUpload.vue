@@ -12,7 +12,7 @@
           </template>
         </v-toolbar>
 
-        <v-card-text class="pt-4">
+        <v-card-text class="pt-4 scrollable-content">
           <v-form v-if="canUpload">
             <div class="text-center">
               <span class="span-border">
@@ -48,6 +48,54 @@
               :hint="$t('modal.video.upload.hint', { maxSize: maxSizeInWords })"
               persistent-hint
             />
+
+            <v-row dense class="mt-2">
+              <v-col cols="6">
+                <v-text-field
+                  v-model.number="video.fieldLength"
+                  type="number"
+                  step="any"
+                  :label="$t('modal.video.upload.field_length')"
+                  prepend-icon="mdi-ruler"
+                  clearable
+                  min="1"
+                  density="comfortable"
+                  hide-spin-buttons
+                />
+              </v-col>
+
+              <v-col cols="6">
+                <v-text-field
+                  v-model.number="video.fieldWidth"
+                  type="number"
+                  step="any"
+                  :label="$t('modal.video.upload.field_width')"
+                  prepend-icon="mdi-ruler"
+                  clearable
+                  min="1"
+                  density="comfortable"
+                  hide-spin-buttons
+                />
+              </v-col>
+            </v-row>
+
+            <v-alert
+              v-if="!video.fieldLength || !video.fieldWidth"
+              type="warning"
+              density="compact"
+              border="start"
+              variant="tonal"
+              icon="mdi-alert-circle-outline"
+              style="font-size: 0.8rem"
+            >
+              {{
+                $t("modal.video.upload.field_warning", {
+                  defaultLength: 105,
+                  defaultWidth: 68,
+                })
+              }}
+            </v-alert>
+            <div v-else class="mt-n6" />
 
             <v-divider class="my-4 mx-16" />
 
@@ -99,6 +147,7 @@
               class="mt-n1 ml-16"
               style="max-width: calc(100% - 128px)"
             />
+            <div v-else class="mt-n6" />
 
             <v-checkbox v-model="checkbox" required class="ml-n2">
               <template #label>
@@ -156,6 +205,8 @@ const videoStore = useVideoStore();
 const video = ref({
   title: null,
   file: null,
+  fieldLength: null,
+  fieldWidth: null,
   division: null,
   currentPosition: null,
   totalNumberofTeams: null,
@@ -290,5 +341,10 @@ const uploadVideo = async () => {
   padding: 10px;
   margin-bottom: 10px;
   border-radius: 4px;
+}
+
+.scrollable-content {
+  max-height: 500px;
+  overflow-y: auto;
 }
 </style>

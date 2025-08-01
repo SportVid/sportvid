@@ -185,7 +185,7 @@ import { computed, onMounted } from "vue";
 import { useTimelineStore } from "../stores/timeline";
 import { usePluginRunResultStore } from "../stores/plugin_run_result";
 import { useBboxesStore } from "../stores/bboxes";
-import { useCalibrationAssetStore } from "@/stores/calibration_asset"; // Import hinzufügen
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 
 const props = defineProps({
   parameters: Array,
