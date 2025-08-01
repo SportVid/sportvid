@@ -59,8 +59,3 @@ Alternatively, use `serve` to enable a hot reloaded instance on `http://localhos
 sudo docker compose exec frontend npm run serve
 
 ```
-
-### HowTos/Docs/ToDos
-* [How to Add New Backend Functionality in Django](docs/DJANGO_MODEL_VIEW.md)
-* [How to Create a New Plugin](docs/PLUGIN_CREATE.md)
-* [autocompile protobuf grpc](docs/TODO.md)
