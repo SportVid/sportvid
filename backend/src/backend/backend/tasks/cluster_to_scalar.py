@@ -23,7 +23,6 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-# NOTE: ggf. interessant für tracklets clustering
 
 @PluginManager.export_parser("cluster_to_scalar")
 class ClusterToScalarParser(Parser):

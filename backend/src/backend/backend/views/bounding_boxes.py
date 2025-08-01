@@ -1,7 +1,9 @@
+import os
 import json
 import logging
 from functools import wraps
 
+from django.conf import settings
 from django.db import transaction
 from django.views import View
 from django.http import JsonResponse
@@ -40,7 +42,7 @@ class BoundingBoxesChange(View):
                 if data.get("update_all_team_id") in ['true', 'True']:
                     update_all_team_id = True   
   
-            # Get the DB record and store the old data_id before changing anything.
+            # get the DB record and store the old data_id before changing anything.
             bytetrack_prr_db = PluginRunResult.objects.get(
                 plugin_run_id=bytetrack_result_id
             )
@@ -50,9 +52,9 @@ class BoundingBoxesChange(View):
             manager = DataManager("/predictions/")
             altered_bbx = None
 
-            # Prepare the new data on the file system
-            # If this fails, we haven't touched the DB and can exit safely
-            # TODO: find a more efficient solution; right now recreates data entry by entry...
+            # prepare the new data on the file system
+            # if this fails, we haven't touched the DB and can exit safely
+            # NOTE: look for a more efficient solution; right now recreates data entry by entry...
             with manager.load(old_data_id) as bboxes_data:
                 bbd = bboxes_data.to_dict()
                 bbd_data = bbd["bboxes"]
@@ -74,32 +76,29 @@ class BoundingBoxesChange(View):
                                 if new_team_id: entry["team_id"] = new_team_id
                             bbox = BboxData(**entry)
                             altered_bbx.bboxes.append(bbox)   
-
             logging.info(f"Successfully created new temporary data with id: {altered_bbx.id}")
 
-            # Perform the database switch inside a transaction.
+            # perform the database switch inside a transaction
             with transaction.atomic():
-                # Re-fetch the object inside the transaction to ensure it's not stale
-                # and to lock the row (if using select_for_update).
+                # re-fetch the object inside the transaction to ensure it's not stale
+                # and to lock the row (if using select_for_update)
                 prr_to_update = PluginRunResult.objects.get(pk=bytetrack_prr_db.pk)
                 prr_to_update.data_id = altered_bbx.id
                 prr_to_update.save()
-            # NOTE: check performance for "larger" requests
-            # If the transaction was successful, clean up the old file
+            # if the transaction was successful, clean up the old file
             manager.delete(old_data_id)
+            # delete backend cache path of old data
+            cache_path = os.path.join(settings.DATA_CACHE_ROOT, f"{x.id}.json")
+            if os.path.exists(cache_path): os.remove(cache_path)
             logging.info(f"Successfully updated DB and deleted old data {old_data_id}.")
             return JsonResponse({"status": "ok", "entry": altered_bbx.to_dict()})
         except Exception as e:
             logging.error(f"Failed to update bounding box data: {e}", exc_info=True)
-            # If anything failed, delete the newly created (now orphaned) file
+            # if anything failed, delete the newly created (now orphaned) file
             if altered_bbx and altered_bbx.id:
                 logging.warning(f"Rolling back: deleting temporary data {altered_bbx.id}")
                 manager.delete(altered_bbx.id)
-                # TODO: delete cache path of old data
-                # TODO: check settings.py -> 115 django.core.cache.backends.memcached.PyMemcacheCache
-
-            # Re-raise the exception so Django's error handling can take over
-            # raise
+            # raise  # re-raise the exception so Django's error handling can take over
             return JsonResponse(
                 {'status': 'error', 
                  'message': ''
@@ -124,7 +123,6 @@ class BoundingBoxesDelete(View):
                 if data.get("delete_all_ref_id") in ['true', 'True']:
                     delete_all_ref_id = True
   
-            # Get the DB record and store the old data_id before changing anything.
             bytetrack_prr_db = PluginRunResult.objects.get(
                 plugin_run_id=bytetrack_result_id
             )
@@ -134,9 +132,7 @@ class BoundingBoxesDelete(View):
             manager = DataManager("/predictions/")
             altered_bbx = None
 
-            # Prepare the new data on the file system
-            # If this fails, we haven't touched the DB and can exit safely
-            # TODO: find a more efficient solution; right now recreates data entry by entry...
+            # NOTE: look for a more efficient solution;; right now recreates data entry by entry...
             with manager.load(old_data_id) as bboxes_data:
                 bbd = bboxes_data.to_dict()
                 bbd_data = bbd["bboxes"]
@@ -157,26 +153,20 @@ class BoundingBoxesDelete(View):
                             altered_bbx.bboxes.append(bbox) 
             logging.info(f"Successfully created new temporary data with id: {altered_bbx.id}")
 
-            # Perform the database switch inside a transaction.
             with transaction.atomic():
-                # Re-fetch the object inside the transaction to ensure it's not stale
-                # and to lock the row (if using select_for_update).
                 prr_to_update = PluginRunResult.objects.get(pk=bytetrack_prr_db.pk)
                 prr_to_update.data_id = altered_bbx.id
                 prr_to_update.save()
 
-            # If the transaction was successful, clean up the old file
             manager.delete(old_data_id)
             logging.info(f"Successfully updated DB and deleted old data {old_data_id}.")
             return JsonResponse({"status": "ok", "entry": altered_bbx.to_dict()})
         except Exception as e:
             logging.error(f"Failed to delete bounding box data: {e}", exc_info=True)
-            # If anything failed, delete the newly created (now orphaned) file
             if altered_bbx and altered_bbx.id:
                 logging.warning(f"Rolling back: deleting temporary data {altered_bbx.id}")
                 manager.delete(altered_bbx.id)
 
-            # Re-raise the exception so Django's error handling can take over
             # raise
             return JsonResponse(
                 {'status': 'error', 

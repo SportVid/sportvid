@@ -22,6 +22,7 @@ applications:
               - numpy==1.26.4
               - pandas
               - floodlight
+
   - name: bytetrack
     route_prefix: /bytetrack
     import_path: inference_ray.main:app_builder
@@ -60,8 +61,7 @@ applications:
               # - onnx==1.13.0
               # - onnxruntime==1.13.1
               # - onnx-simplifier==0.3.5
-            # pip_install_args:
-            #  - "--no-build-isolation"  # builds ByteTrack in the main env
+  
   - name: calibration_static_dlt
     route_prefix: /calibration_static_dlt
     import_path: inference_ray.main:app_builder
@@ -79,6 +79,7 @@ applications:
             uv:
               - numpy==1.26.4
               - opencv-python-headless==4.11.0.86
+
   - name: video_to_audio
     route_prefix: /video_to_audio
     import_path: inference_ray.main:app_builder
@@ -95,22 +96,7 @@ applications:
           runtime_env:
             uv:
               - requests==2.26.0
-  - name: audio_amp_analysis
-    route_prefix: /audio_amp_analysis
-    import_path: inference_ray.main:app_builder
-    args:
-      model: audio_amp_analysis
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        autoscaling_config:
-          min_replicas: 0
-        ray_actor_options:
-          num_cpus: 2
-          runtime_env:
-            uv:
-              - librosa==0.10.1
+
   - name: audio_freq_analysis
     route_prefix: /audio_freq_analysis
     import_path: inference_ray.main:app_builder
@@ -127,6 +113,7 @@ applications:
           runtime_env:
             uv:
               - librosa==0.10.1
+
   - name: audio_rms_analysis
     route_prefix: /audio_rms_analysis
     import_path: inference_ray.main:app_builder
@@ -143,6 +130,7 @@ applications:
           runtime_env:
             uv:
               - librosa==0.10.1
+
     route_prefix: /clip_probs
     import_path: inference_ray.main:app_builder
     args:
@@ -164,6 +152,7 @@ applications:
               - torch==2.2.0
               - scikit-learn==1.4.0
               - transformers==4.37.2
+  
   - name: color_analyser
     route_prefix: /color_analyser
     import_path: inference_ray.main:app_builder
@@ -180,59 +169,7 @@ applications:
           runtime_env:
             uv:
               - scikit-learn==1.4.0
-  - name: color_brightness_analyser
-    route_prefix: /color_brightness_analyser
-    import_path: inference_ray.main:app_builder
-    args:
-      model: color_brightness_analyser
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        autoscaling_config:
-          min_replicas: 0
-        ray_actor_options:
-          num_cpus: 2
-          runtime_env:
-            uv:
-              - scikit-learn==1.4.0
-              - opencv-python-headless==4.9.0.80
-  - name: deepface_emotion
-    route_prefix: /deepface_emotion
-    import_path: inference_ray.main:app_builder
-    args:
-      model: deepface_emotion
-      data_path: /data
-      params: 
-        model_path: /models/deepface_emotion/facial_expression_model.onnx
-    deployments:
-      - name: Deployment
-        autoscaling_config:
-          min_replicas: 0
-        ray_actor_options:
-          num_cpus: 2
-          runtime_env:
-            uv:
-              - scikit-learn==1.4.0
-              - opencv-python-headless==4.9.0.80
-              - onnxruntime==1.21.0
-              - onnx==1.17.0
-  - name: insightface_facesize
-    route_prefix: /insightface_facesize
-    import_path: inference_ray.main:app_builder
-    args:
-      model: insightface_facesize
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        autoscaling_config:
-          min_replicas: 0
-        ray_actor_options:
-          num_cpus: 2
-          runtime_env:
-            uv:
-              - scikit-learn==1.4.0
+
   - name: insightface_video_feature_extractor
     route_prefix: /insightface_video_feature_extractor
     import_path: inference_ray.main:app_builder
@@ -253,6 +190,7 @@ applications:
               - opencv-python-headless==4.9.0.80
               - onnxruntime==1.21.0
               - onnx==1.17.0
+  
   - name: insightface_image_feature_extractor
     route_prefix: /insightface_image_feature_extractor
     import_path: inference_ray.main:app_builder
@@ -273,6 +211,7 @@ applications:
               - opencv-python-headless==4.9.0.80
               - onnxruntime==1.21.0
               - onnx==1.17.0
+  
   - name: min_max_norm
     route_prefix: /min_max_norm
     import_path: inference_ray.main:app_builder
@@ -307,33 +246,7 @@ applications:
       - name: Deployment
         autoscaling_config:
           min_replicas: 0
-  - name: shot_density
-    route_prefix: /shot_density
-    import_path: inference_ray.main:app_builder
-    args:
-      model: shot_density
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        autoscaling_config:
-          min_replicas: 0
-        ray_actor_options:
-          num_cpus: 2
-          runtime_env:
-            uv: 
-              - scikit-learn==1.4.0
-  - name: shot_scalar_annotator
-    route_prefix: /shot_scalar_annotator
-    import_path: inference_ray.main:app_builder
-    args:
-      model: shot_scalar_annotator
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        autoscaling_config:
-          min_replicas: 0
+
   - name: shot_type_classifier
     route_prefix: /shot_type_classifier
     import_path: inference_ray.main:app_builder
@@ -352,6 +265,7 @@ applications:
           runtime_env:
             uv:
               - torch==2.2.0
+  
   - name: thumbnail_generator
     route_prefix: /thumbnail_generator
     import_path: inference_ray.main:app_builder
@@ -364,7 +278,6 @@ applications:
         autoscaling_config:
           min_replicas: 0
 
-            
   - name: transnet_shotdetection
     route_prefix: /transnet_shotdetection
     import_path: inference_ray.main:app_builder
@@ -394,7 +307,6 @@ applications:
       - name: Deployment
         autoscaling_config:
           min_replicas: 0
-
 
   - name: aggregate_list_scalar_per_time
     route_prefix: /aggregate_list_scalar_per_time
@@ -463,22 +375,8 @@ applications:
           num_cpus: 2
           runtime_env:
             uv:
-              - scipy==1.12.0  
-  - name: place_clustering
-    route_prefix: /place_clustering
-    import_path: inference_ray.main:app_builder
-    args:
-      model: place_clustering
-      data_path: /data
-    deployments:
-      - name: Deployment
-        autoscaling_config:
-          min_replicas: 0
-        ray_actor_options:
-          num_cpus: 2
-          runtime_env:
-            uv:
               - scipy==1.12.0
+
   - name: clustering
     route_prefix: /clustering
     import_path: inference_ray.main:app_builder
@@ -494,6 +392,7 @@ applications:
           runtime_env:
             uv:
               - scipy==1.12.0
+
   - name: dbscanclustering
     route_prefix: /dbscanclustering
     import_path: inference_ray.main:app_builder
@@ -536,6 +435,7 @@ applications:
           min_replicas: 0
         ray_actor_options:
           num_cpus: 2
+
   - name: timeline_video_sampler
     route_prefix: /timeline_video_sampler
     import_path: inference_ray.main:app_builder
@@ -548,6 +448,7 @@ applications:
           min_replicas: 0
         ray_actor_options:
           num_cpus: 1
+
   - name: invert_scalar
     route_prefix: /invert_scalar
     import_path: inference_ray.main:app_builder

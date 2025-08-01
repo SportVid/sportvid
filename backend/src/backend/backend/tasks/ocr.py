@@ -24,7 +24,6 @@ from django.db import transaction
 
 from django.conf import settings
 
-# NOTE: für spielstände etc. wsl sinnvoll
 
 @PluginManager.export_parser("ocr_video_detector_onnx")
 class OCRParser(Parser):
