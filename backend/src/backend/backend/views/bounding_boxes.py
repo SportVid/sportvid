@@ -88,7 +88,7 @@ class BoundingBoxesChange(View):
             # if the transaction was successful, clean up the old file
             manager.delete(old_data_id)
             # delete backend cache path of old data
-            cache_path = os.path.join(settings.DATA_CACHE_ROOT, f"{x.id}.json")
+            cache_path = os.path.join(settings.DATA_CACHE_ROOT, f"{bytetrack_prr_db.pk}.json")
             if os.path.exists(cache_path): os.remove(cache_path)
             logging.info(f"Successfully updated DB and deleted old data {old_data_id}.")
             return JsonResponse({"status": "ok", "entry": altered_bbx.to_dict()})
@@ -159,6 +159,9 @@ class BoundingBoxesDelete(View):
                 prr_to_update.save()
 
             manager.delete(old_data_id)
+            # delete backend cache path of old data
+            cache_path = os.path.join(settings.DATA_CACHE_ROOT, f"{bytetrack_prr_db.pk}.json")
+            if os.path.exists(cache_path): os.remove(cache_path)
             logging.info(f"Successfully updated DB and deleted old data {old_data_id}.")
             return JsonResponse({"status": "ok", "entry": altered_bbx.to_dict()})
         except Exception as e:
