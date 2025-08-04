@@ -43,7 +43,11 @@
         {{ $t("app_bar.export_menu") }}
       </v-btn>
 
-      <v-btn v-if="videoView && loggedIn" @click="showModalVideoUpload = true">
+      <v-btn
+        v-if="videoView && loggedIn"
+        @click="showModalVideoUpload = true"
+        data-tour="video-upload-button"
+      >
         <app-bar-icon>mdi-plus</app-bar-icon>
         {{ $t("app_bar.video_upload_menu") }}
       </v-btn>
@@ -60,9 +64,11 @@
 
       <v-divider vertical inset class="mx-2" />
 
+      <v-btn @click="showModalTutorial = true" icon="mdi-school" density="compact" class="mx-3" />
+
       <v-menu location="bottom center">
         <template #activator="{ props }">
-          <v-avatar v-bind="props" size="16" class="ml-2 mr-1">
+          <v-avatar v-bind="props" size="20" class="ml-2 mr-1">
             <v-img :src="languages.find((lang) => lang.code === locale)?.flag" contain />
           </v-avatar>
         </template>
@@ -86,6 +92,11 @@
       v-model="showModalBatchPlugin"
       :videoIds="selectedVideosIds"
     />
+    <ModalTutorial
+      v-if="showModalTutorial"
+      v-model="showModalTutorial"
+      @start-tutorial="startTutorialFromModal"
+    />
   </v-app-bar>
 </template>
 
@@ -103,6 +114,7 @@ import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalShortcut from "@/components/ModalShortcut.vue";
 import ModalExport from "@/components/ModalExport.vue";
 import UserMenu from "@/components/user/UserMenu.vue";
+import ModalTutorial from "../ModalTutorial.vue";
 import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 
 const route = useRoute();
@@ -192,4 +204,6 @@ const showModalVideoUpload = ref(false);
 
 const showModalBatchPlugin = ref(false);
 const selectedVideosIds = computed(() => videoStore.selectedVideosIds);
+
+const showModalTutorial = ref(false);
 </script>

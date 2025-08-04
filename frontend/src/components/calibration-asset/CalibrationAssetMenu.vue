@@ -13,9 +13,11 @@
         v-html="$t('calibration_asset.not_selected')"
       />
       <v-row style="justify-content: center">
-        <v-btn @click="showModalCalibrationAssetCreate = true">{{
-          $t("calibration_asset.create")
-        }}</v-btn>
+        <v-btn
+          @click="showModalCalibrationAssetCreate = true"
+          data-tour="calibration-asset-create-button"
+          >{{ $t("calibration_asset.create") }}</v-btn
+        >
       </v-row>
       <v-row style="justify-content: center" class="mt-8">
         <v-btn @click="showModalCalibrationAssetSelect = true">{{

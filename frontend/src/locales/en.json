@@ -544,6 +544,10 @@
       "progress": "Progress",
       "status": "Status"
     },
+    "tutorial": {
+      "title": "Tutorial",
+      "text": "This is a short tutorial that explains how to use SportVid. It is currently under construction and will be available soon."
+    },
     "calibration_asset": {
       "create": {
         "title": "Create Calibration Asset",
