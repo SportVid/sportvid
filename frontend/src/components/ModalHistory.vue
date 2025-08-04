@@ -20,6 +20,9 @@
           item-key="id"
           class="elevation-1 mb-3"
         >
+          <template #item.date="{ item }">
+            {{ formatLocalDate(item.date) }}
+          </template>
           <template #item.progress="{ index }">
             <v-progress-linear v-model="progressComputed[index]" height="8" color="primary" />
           </template>
@@ -77,6 +80,20 @@ const progressComputed = ref([]);
 watchEffect(() => {
   progressComputed.value = props.pluginRuns.map((run) => run.progress * 100);
 });
+
+const formatLocalDate = (dateString) => {
+  if (!dateString) return "";
+
+  let isoString = dateString.replace(" ", "T");
+  if (!isoString.endsWith("Z")) {
+    isoString += "Z";
+  }
+  const date = new Date(isoString);
+  const isoDate = date.toISOString().slice(0, 10);
+  const localTime = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  return `${isoDate} ${localTime}`;
+};
 
 watch(
   () => dialog.value,
