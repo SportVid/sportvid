@@ -135,6 +135,19 @@ onMounted(() => {
 });
 
 const selectedBytetrack = ref(null);
+const formatLocalDate = (dateString) => {
+  if (!dateString) return "";
+
+  let isoString = dateString.replace(" ", "T");
+  if (!isoString.endsWith("Z")) {
+    isoString += "Z";
+  }
+  const date = new Date(isoString);
+  const isoDate = date.toISOString().slice(0, 10);
+  const localTime = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  return `${isoDate} ${localTime}`;
+};
 const bytetrackRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
@@ -142,10 +155,7 @@ const bytetrackRuns = computed(() => {
     .map((pluginRun, index) => ({
       id: index,
       type: "Bytetrack",
-      date: pluginRun.date
-        .replace("T", " ")
-        .replace("Z", "")
-        .substring(0, pluginRun.date.length - 8),
+      date: formatLocalDate(pluginRun.date),
     }));
 });
 
