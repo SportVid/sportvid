@@ -38,8 +38,16 @@
 
 <script setup>
 import { ref, watch } from "vue";
+import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import Shepherd from "shepherd.js";
 import "shepherd.js/dist/css/shepherd.css";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+
+const router = useRouter();
+const { t } = useI18n();
+
+const calibrationAssetStore = useCalibrationAssetStore();
 
 const props = defineProps({
   modelValue: {
@@ -47,17 +55,11 @@ const props = defineProps({
     default: false,
   },
 });
-const emit = defineEmits(["update:modelValue", "start-tutorial"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const dialog = ref(props.modelValue);
 
 const tutorials = [
-  {
-    id: "video-upload",
-    name: "Video Upload",
-    description: "Upload video, fill out questionnaire",
-    icon: "mdi-video-plus",
-  },
   {
     id: "calibration-tracking-flow",
     name: "Calibration & Tracking",
@@ -90,38 +92,29 @@ const tutorials = [
   },
 ];
 
-const runTutorial = (id) => {
+const runTutorial = async (id) => {
   const config = tutorialSteps[id];
   if (!config) return;
 
   const tour = new Shepherd.Tour({
     defaultStepOptions: {
       cancelIcon: { enabled: true },
-      classes: "bg-primary",
       scrollTo: { behavior: "smooth", block: "center" },
     },
     useModalOverlay: true,
+    keyboardNavigation: false,
   });
+  window.currentTutorial = tour;
+
+  const totalSteps = config.steps.length;
 
   config.steps.forEach((step, index) => {
-    const isLast = index === config.steps.length - 1;
+    const stepNum = index + 1;
+    const titleWithCount = `${stepNum}/${totalSteps}`;
 
     tour.addStep({
       ...step,
-      buttons: [
-        ...(index > 0
-          ? [
-              {
-                text: "Back",
-                action: tour.back,
-              },
-            ]
-          : []),
-        {
-          text: isLast ? "Done" : "Next",
-          action: isLast ? tour.complete : tour.next,
-        },
-      ],
+      title: titleWithCount,
     });
   });
 
@@ -130,36 +123,168 @@ const runTutorial = (id) => {
 };
 
 const tutorialSteps = {
-  "video-upload": {
-    steps: [
-      {
-        id: "upload-1",
-        text: "Click here to upload a video.",
-        attachTo: {
-          element: '[data-tour="video-upload-button"]',
-          on: "bottom",
-        },
-        buttons: [{ text: "Done", action: () => tour.complete() }],
-      },
-    ],
-  },
-
   "calibration-tracking-flow": {
     steps: [
       {
-        id: "calibration-1",
-        text: "Add a new calibration asset.",
+        id: "check-view",
+        text: "Bitte wähle ein Video aus, um mit der Kalibrierung zu beginnen.",
         attachTo: {
-          element: '[data-tour="calibration-asset-create-button"]',
+          element: '[data-tour="select-video"]',
+          on: "top",
+        },
+        buttons: [],
+        beforeShowPromise: () => {
+          return new Promise((resolve) => {
+            if (router.currentRoute.value.path.startsWith("/video-analysis")) {
+              window.currentTutorial?.next();
+            } else if (router.currentRoute.value.path !== "/") {
+              router.push({ name: "VideoView" }).then(() => {
+                window.currentTutorial?.show(0);
+              });
+            } else {
+              resolve();
+            }
+          });
+        },
+        when: createClickToNextStepHandler(0, []),
+      },
+      {
+        id: "calibration-asset-select",
+        text: "Please create a new calibration asset or choose an existing one.",
+        attachTo: {
+          element: '[data-tour="calibration-asset-menu"]',
+          on: "left",
+        },
+        buttons: [],
+        beforeShowPromise: () => {
+          return new Promise((resolve) => {
+            const showMenu = calibrationAssetStore.marker.length === 0;
+            if (!showMenu) {
+              window.currentTutorial?.next();
+            } else {
+              resolve();
+            }
+          });
+        },
+        when: createClickToNextStepHandler(1, ["modal-plugin-button"]),
+      },
+      {
+        id: "calibration-asset-edit",
+        text: "Edit the calibration asset by adding or deleting marker and save it for plugin usage.",
+        attachTo: {
+          element: '[data-tour="calibration-asset-edit-row"]',
           on: "bottom",
         },
-        buttons: [{ text: "Done", action: () => tour.complete() }],
+        buttons: [
+          {
+            text: "Next",
+            action: () => {
+              stepModalPluginButton.value = true;
+              window.currentTutorial?.next();
+            },
+          },
+        ],
+        when: createClickToNextStepHandler(2, []),
+      },
+      {
+        id: "modal-plugin-button",
+        text: "Open the plugin overview.",
+        attachTo: {
+          element: '[data-tour="modal-plugin-button"]',
+          on: "bottom",
+        },
+        buttons: [],
+        beforeShowPromise: () => {
+          return new Promise((resolve) => {
+            if (stepModalPluginButton.value === true) {
+              resolve();
+            } else if (stepModalPluginButton.value === false) {
+              window.currentTutorial?.next();
+            }
+          });
+        },
+        when: createClickToNextStepHandler(3, []),
+      },
+      {
+        id: "modal-plugin-overview",
+        text: "Run those 2 plugins to get the tracking data.",
+        attachTo: {
+          element: '[data-tour="plugin-object-tracking-overview"]',
+          on: "right",
+        },
+        buttons: [],
+        when: createClickToNextStepHandler(4, []),
       },
     ],
   },
-
-  // Weitere Tutorials …
 };
+
+const stepModalPluginButton = ref(null);
+
+function createClickToNextStepHandler(currentStepIndex, forbiddenStepIds = []) {
+  let targetEl = null;
+  let onClick;
+
+  return {
+    show() {
+      const steps = window.currentTutorial?.steps || [];
+      if (!steps.length) return;
+
+      const currentStepSelector = steps[currentStepIndex]?.options?.attachTo?.element;
+      if (!currentStepSelector) return;
+
+      targetEl = document.querySelector(currentStepSelector);
+      if (!targetEl) return;
+
+      onClick = (event) => {
+        if (event.target.closest('[data-tour="calibration-asset-edit-row"]')) {
+          stepModalPluginButton.value = false;
+        }
+
+        window.currentTutorial.hide();
+
+        targetEl.removeEventListener("click", onClick);
+        document.removeEventListener("click", onClick);
+
+        const waitForNextStep = () => {
+          const nextStepsToCheck = [currentStepIndex + 1, currentStepIndex + 2];
+          for (const stepIdx of nextStepsToCheck) {
+            if (stepIdx >= steps.length) continue;
+
+            const stepId = steps[stepIdx]?.id;
+            if (!stepId) continue;
+
+            if (forbiddenStepIds.includes(stepId)) {
+              continue;
+            } else {
+              const selector = steps[stepIdx].options?.attachTo?.element;
+              if (!selector) continue;
+
+              const el = document.querySelector(selector);
+              if (el) {
+                window.currentTutorial.show(stepIdx);
+                return;
+              }
+            }
+          }
+          requestAnimationFrame(waitForNextStep);
+        };
+
+        waitForNextStep();
+      };
+
+      targetEl.addEventListener("click", onClick);
+      document.addEventListener("click", onClick, true);
+    },
+
+    hide() {
+      if (targetEl && onClick) {
+        targetEl.removeEventListener("click", onClick);
+        document.removeEventListener("click", onClick);
+      }
+    },
+  };
+}
 
 watch(
   () => dialog.value,

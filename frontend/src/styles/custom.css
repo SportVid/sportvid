@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap");
 
 .v-input.lang .v-select__selections {
-  color: #457B9D !important;
+  color: #457b9d !important;
 }
 
 .theme--light.v-chip,
@@ -16,5 +16,63 @@
 .v-card.login .v-btn.register,
 .v-banner .v-btn--text:hover .v-icon,
 .vis-button:after {
-  color: #1D3557 !important;
+  color: #1d3557 !important;
+}
+
+/* Shepherd */
+.shepherd-has-title .shepherd-content .shepherd-header {
+  background-color: #457b9d !important;
+  color: white !important;
+  padding-bottom: 0 !important;
+  padding-top: 0.5rem !important;
+}
+
+.shepherd-title {
+  color: white !important;
+  font-size: 0.8rem !important;
+}
+
+.shepherd-text {
+  color: white !important;
+  font-size: 0.9rem !important;
+  margin-left: 0.25rem !important;
+}
+
+.shepherd-element {
+  background-color: #457b9d !important;
+  color: white !important;
+  border-radius: 8px;
+}
+
+.shepherd-button {
+  background-color: #457b9d !important;
+  color: white !important;
+  border-radius: 6px;
+  border: 1px solid white !important;
+
+  padding: 0.4rem 1rem !important;
+  font-size: 1rem !important;
+  margin-right: 0.25rem !important;
+  line-height: 1.2 !important;
+}
+
+.shepherd-button:hover {
+  background-color: white !important;
+  color: #457b9d !important;
+  border-radius: 6px;
+  border: 1px solid white !important;
+
+  padding: 0.4rem 1rem !important;
+  font-size: 1rem !important;
+  margin-right: 0.25rem !important;
+  line-height: 1.2 !important;
+}
+
+.shepherd-cancel-icon {
+  color: white !important;
+  font-size: 1.5rem !important;
+}
+
+.shepherd-arrow:before {
+  background: #457b9d !important;
 }

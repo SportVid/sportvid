@@ -1,5 +1,5 @@
 <template>
-  <div style="height: 60vh">
+  <div style="height: 60vh" data-tour="calibration-asset-menu">
     <v-col>
       <v-row
         class="text-h6 text-grey font-weight-light mx-16 px-10 mt-8"
@@ -13,11 +13,9 @@
         v-html="$t('calibration_asset.not_selected')"
       />
       <v-row style="justify-content: center">
-        <v-btn
-          @click="showModalCalibrationAssetCreate = true"
-          data-tour="calibration-asset-create-button"
-          >{{ $t("calibration_asset.create") }}</v-btn
-        >
+        <v-btn @click="showModalCalibrationAssetCreate = true">{{
+          $t("calibration_asset.create")
+        }}</v-btn>
       </v-row>
       <v-row style="justify-content: center" class="mt-8">
         <v-btn @click="showModalCalibrationAssetSelect = true">{{

@@ -10,46 +10,44 @@
     <template #append>
       <v-btn v-if="(termsOfServiceView || guidelinesView) && !loggedIn" to="/">
         <app-bar-icon>mdi-home</app-bar-icon>
-        {{ $t("app_bar.home") }}
+        <span class="text-primary">
+          {{ $t("app_bar.home") }}
+        </span>
       </v-btn>
 
       <v-btn v-if="(analysisView || termsOfServiceView || guidelinesView) && loggedIn" to="/">
         <app-bar-icon>mdi-movie</app-bar-icon>
-        {{ $t("app_bar.video_view") }}
+        <span class="text-primary">{{ $t("app_bar.video_view") }}</span>
       </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalPlugin = true">
+      <v-btn v-if="analysisView" @click="showModalPlugin = true" data-tour="modal-plugin-button">
         <app-bar-icon>mdi-plus</app-bar-icon>
-        {{ $t("app_bar.plugin_menu") }}
+        <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
       </v-btn>
 
       <v-btn v-if="analysisView" @click="showModalHistory = true">
         <app-bar-icon>mdi-history</app-bar-icon>
         <v-badge v-if="numRunningPlugins > 0" color="accent" :content="numRunningPlugins" floating>
-          {{ $t("app_bar.history_menu") }}
+          <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
         </v-badge>
         <span v-else>
-          {{ $t("app_bar.history_menu") }}
+          <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
         </span>
       </v-btn>
 
       <v-btn v-if="analysisView" @click="showModalShortcut = true">
         <app-bar-icon>mdi-label-multiple-outline</app-bar-icon>
-        {{ $t("app_bar.shortcut_menu") }}
+        <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
       </v-btn>
 
       <v-btn v-if="analysisView" @click="showModalExport = true">
         <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
-        {{ $t("app_bar.export_menu") }}
+        <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
       </v-btn>
 
-      <v-btn
-        v-if="videoView && loggedIn"
-        @click="showModalVideoUpload = true"
-        data-tour="video-upload-button"
-      >
+      <v-btn v-if="videoView && loggedIn" @click="showModalVideoUpload = true">
         <app-bar-icon>mdi-plus</app-bar-icon>
-        {{ $t("app_bar.video_upload_menu") }}
+        <span class="text-primary">{{ $t("app_bar.video_upload_menu") }}</span>
       </v-btn>
 
       <v-btn
@@ -59,12 +57,18 @@
         :disabled="selectedVideosIds.length == 0"
       >
         <app-bar-icon>mdi-plus</app-bar-icon>
-        {{ $t("app_bar.batch_plugin_menu") }}
+        <span class="text-primary">{{ $t("app_bar.batch_plugin_menu") }}</span>
       </v-btn>
 
       <v-divider vertical inset class="mx-2" />
 
-      <v-btn @click="showModalTutorial = true" icon="mdi-school" density="compact" class="mx-3" />
+      <v-btn
+        @click="showModalTutorial = true"
+        icon="mdi-school"
+        color="primary"
+        density="compact"
+        class="mx-3"
+      />
 
       <v-menu location="bottom center">
         <template #activator="{ props }">
@@ -92,11 +96,7 @@
       v-model="showModalBatchPlugin"
       :videoIds="selectedVideosIds"
     />
-    <ModalTutorial
-      v-if="showModalTutorial"
-      v-model="showModalTutorial"
-      @start-tutorial="startTutorialFromModal"
-    />
+    <ModalTutorial v-if="showModalTutorial" v-model="showModalTutorial" />
   </v-app-bar>
 </template>
 

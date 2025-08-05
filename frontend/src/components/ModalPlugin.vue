@@ -32,6 +32,7 @@
               item-value="id"
               item-title="name"
               style="cursor: pointer; overflow-y: auto; height: 55vh"
+              data-tour="plugin-object-tracking-overview"
             >
               <template #prepend="{ item }">
                 <v-icon v-if="!item.children || item.children.length === 0">

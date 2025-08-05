@@ -8,6 +8,7 @@ import "@mdi/font/css/materialdesignicons.css";
 import { createVueI18nAdapter } from "vuetify/locale/adapters/vue-i18n";
 import { useI18n } from "vue-i18n";
 import { i18n } from "./i18n";
+import App from "@/App.vue";
 
 export const vuetify = createVuetify({
   components: {
@@ -22,6 +23,7 @@ export const vuetify = createVuetify({
       light: {
         colors: {
           primary: "#1D3557",
+          secondary: "#457B9D",
           accent: "#E63946",
         },
       },
