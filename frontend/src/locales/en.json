@@ -546,7 +546,26 @@
     },
     "tutorial": {
       "title": "Tutorial",
-      "text": "This is a short tutorial that explains how to use SportVid. It is currently under construction and will be available soon."
+      "calibration_tracking": {
+        "name": "Calibration & Tracking",
+        "description": "Calibrate camera, run homography, track players"
+      },
+      "timeline_plugin": {
+        "name": "Timelines",
+        "description": "View events per player & more"
+      },
+      "run_aggregation": {
+        "name": "Running Data",
+        "description": "Aggregate running distance & speed by interval"
+      },
+      "kpi_visualization": {
+        "name": "KPI Visualization",
+        "description": "Visualize space control, EPS & player zones"
+      },
+      "data_export": {
+        "name": "Export",
+        "description": "Export position data, stats & visualizations"
+      }
     },
     "calibration_asset": {
       "create": {

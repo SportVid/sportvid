@@ -208,7 +208,6 @@ function getVisualizationTabComponent(tabId) {
 watch(
   () => tabStore.analysisTabId,
   async (newTabId) => {
-    console.log("changed analysis-tab:", newTabId);
     topViewStore.showItems = false;
 
     await nextTick();
@@ -572,14 +571,20 @@ watch(
   { immediate: true }
 );
 
-onMounted(() => {
-  console.log("video", playerStore.video);
-});
-
 watch(
   () => playerStore.video,
   () => {
     console.log("video", playerStore.video);
+  },
+  { immediate: true }
+);
+
+import { useTutorialStore } from "@/stores/tutorial";
+const tutorialStore = useTutorialStore();
+watch(
+  () => tutorialStore.modalPluginVisible,
+  (value) => {
+    console.log("modalPluginVisible", value);
   },
   { immediate: true }
 );

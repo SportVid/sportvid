@@ -20,7 +20,7 @@
 }
 
 /* Shepherd */
-.shepherd-has-title .shepherd-content .shepherd-header {
+.shepherd-content .shepherd-header {
   background-color: #457b9d !important;
   color: white !important;
   padding-bottom: 0 !important;
@@ -75,4 +75,63 @@
 
 .shepherd-arrow:before {
   background: #457b9d !important;
+}
+
+/* Shepherd: Final Step green */
+.tutorial-final-step .shepherd-content,
+.tutorial-final-step .shepherd-header {
+  background-color: green !important;
+  color: white !important;
+  padding-bottom: 0 !important;
+  padding-top: 0.5rem !important;
+}
+
+.tutorial-final-step .shepherd-title {
+  color: white !important;
+  font-size: 0.8rem !important;
+}
+
+.tutorial-final-step .shepherd-text {
+  color: white !important;
+  font-size: 0.9rem !important;
+  margin-left: 0.25rem !important;
+}
+
+.tutorial-final-step .shepherd-element {
+  background-color: green !important;
+  color: white !important;
+  border-radius: 8px;
+}
+
+.tutorial-final-step .shepherd-button {
+  background-color: green !important;
+  color: white !important;
+  border-radius: 6px;
+  border: 1px solid white !important;
+
+  padding: 0.4rem 1rem !important;
+  font-size: 1rem !important;
+  margin-right: 0.25rem !important;
+  line-height: 1.2 !important;
+}
+
+.tutorial-final-step .shepherd-button:hover {
+  background-color: white !important;
+  color: green !important;
+  border-radius: 6px;
+  border: 1px solid white !important;
+
+  padding: 0.4rem 1rem !important;
+  font-size: 1rem !important;
+  margin-right: 0.25rem !important;
+  line-height: 1.2 !important;
+}
+
+.tutorial-final-step .shepherd-cancel-icon {
+  color: white !important;
+  font-size: 1.5rem !important;
+}
+
+.tutorial-final-step .shepherd-arrow:before {
+  background: green !important;
 }
