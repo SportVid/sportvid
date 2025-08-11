@@ -20,7 +20,7 @@
         <span class="text-primary">{{ $t("app_bar.video_view") }}</span>
       </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalPlugin = true" data-tour="modal-plugin-button">
+      <v-btn v-if="analysisView" @click="showModalPlugin = true" data-tour="modal-plugin-open">
         <app-bar-icon>mdi-plus</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
       </v-btn>
@@ -62,13 +62,41 @@
 
       <v-divider vertical inset class="mx-2" />
 
-      <v-btn
-        @click="showModalTutorial = true"
-        icon="mdi-school"
-        color="primary"
-        density="compact"
-        class="mx-3"
-      />
+      <v-btn @click="showModalTutorial = true" icon density="compact" class="mx-3">
+        <app-bar-icon>mdi-school</app-bar-icon>
+        <v-badge
+          v-if="tutorialStore.isTutorialRunning"
+          :offset-y="-4"
+          color="accent"
+          floating
+          dot
+        />
+        <v-tooltip
+          v-if="tutorialStore.isTutorialRunning"
+          activator="parent"
+          location="bottom"
+          class="tutorial-icon-tooltip"
+        >
+          <div style="max-width: 400px">
+            <div class="text-yellow">
+              <strong>
+                <v-icon small>mdi-arrow-right</v-icon>
+                {{ tutorialStore.currentStepIdx }} / {{ tutorialStore.totalSteps }}</strong
+              ><br />
+              {{ tutorialStore.currentStepText }}
+            </div>
+
+            <v-divider class="my-3" style="width: 70%; margin: 0 auto" />
+
+            <div>
+              <strong
+                >{{ tutorialStore.currentStepIdx + 1 }} / {{ tutorialStore.totalSteps }}</strong
+              ><br />
+              {{ tutorialStore.nextStepText }}
+            </div>
+          </div>
+        </v-tooltip>
+      </v-btn>
 
       <v-menu location="bottom center">
         <template #activator="{ props }">
@@ -109,6 +137,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
 import { usePluginRunStore } from "@/stores/plugin_run";
+import { useTutorialStore } from "@/stores/tutorial";
 import ModalHistory from "@/components/ModalHistory.vue";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalShortcut from "@/components/ModalShortcut.vue";
@@ -125,6 +154,7 @@ const playerStore = usePlayerStore();
 const userStore = useUserStore();
 const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
+const tutorialStore = useTutorialStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
 
@@ -207,3 +237,15 @@ const selectedVideosIds = computed(() => videoStore.selectedVideosIds);
 
 const showModalTutorial = ref(false);
 </script>
+
+<style scoped>
+.tutorial-icon-tooltip ::v-deep .v-overlay__content {
+  background: rgb(var(--v-theme-primary));
+  border-radius: 2px;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  padding: 10px 15px;
+  color: #fff;
+}
+</style>

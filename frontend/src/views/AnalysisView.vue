@@ -578,16 +578,6 @@ watch(
   },
   { immediate: true }
 );
-
-import { useTutorialStore } from "@/stores/tutorial";
-const tutorialStore = useTutorialStore();
-watch(
-  () => tutorialStore.modalPluginVisible,
-  (value) => {
-    console.log("modalPluginVisible", value);
-  },
-  { immediate: true }
-);
 </script>
 
 <style scoped>

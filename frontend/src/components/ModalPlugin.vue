@@ -1080,7 +1080,7 @@ const opened = ref([]);
 watch(
   () => tutorialStore.currentStepId,
   (stepId) => {
-    if (stepId === "modal-plugin-overview") {
+    if (stepId === "modal-plugin-select") {
       opened.value = [7];
     }
   }

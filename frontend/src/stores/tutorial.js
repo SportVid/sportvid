@@ -14,17 +14,23 @@ export const useTutorialStore = defineStore("tutorial", () => {
   const tabStore = useTabStore();
   const bboxesStore = useBboxesStore();
 
+  const currentTutorialId = ref(null);
   const currentStepId = ref(null);
-  const stepModalPluginButton = ref(null);
+  const currentStepIdx = ref(null);
+  const currentStepText = ref("");
+  const nextStepText = ref("");
+  const totalSteps = ref(0);
+
+  const isTutorialRunning = ref(false);
 
   const modalPluginVisible = ref(false);
 
   const tutorials = [
     {
-      id: "calibration-tracking",
-      name: t("modal.tutorial.calibration_tracking.name"),
-      description: t("modal.tutorial.calibration_tracking.description"),
-      icon: "mdi-camera-control",
+      id: "position-data-generation",
+      name: t("modal.tutorial.position_data_generation.name"),
+      description: t("modal.tutorial.position_data_generation.description"),
+      icon: "mdi-crosshairs-gps",
       disabled: false,
     },
     {
@@ -58,23 +64,23 @@ export const useTutorialStore = defineStore("tutorial", () => {
   ];
 
   const tutorialSteps = {
-    "calibration-tracking": {
+    "position-data-generation": {
       steps: [
         {
-          id: "check-view",
-          text: "Bitte wähle ein Video aus, um mit der Kalibrierung zu beginnen.",
+          id: "video-select",
+          text: t("tutorials.position_data_generation.video_select"),
           attachTo: {
-            element: '[data-tour="select-video"]',
+            element: '[data-tour="video-select"]',
             on: "top",
           },
           buttons: [],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
               if (router.currentRoute.value.path.startsWith("/video-analysis")) {
-                window.currentTutorial?.next();
+                tour.value.next();
               } else if (router.currentRoute.value.path !== "/") {
                 router.push({ name: "VideoView" }).then(() => {
-                  window.currentTutorial?.show(0);
+                  tour.value.show(0);
                 });
               } else {
                 resolve();
@@ -85,7 +91,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
         },
         {
           id: "calibration-asset-select",
-          text: "Please create a new calibration asset or choose an existing one.",
+          text: t("tutorials.position_data_generation.calibration_asset_select"),
           attachTo: {
             element: '[data-tour="calibration-asset-menu"]',
             on: "left",
@@ -98,17 +104,17 @@ export const useTutorialStore = defineStore("tutorial", () => {
               }
               const showMenu = calibrationAssetStore.marker.length === 0;
               if (!showMenu) {
-                window.currentTutorial?.next();
+                tour.value.next();
               } else {
                 resolve();
               }
             });
           },
-          when: createClickToNextStepHandler(1, ["modal-plugin-button"]),
+          when: createClickToNextStepHandler(1, ["modal-plugin-open"]),
         },
         {
           id: "calibration-asset-edit",
-          text: "Edit the calibration asset by adding or deleting marker and save it for plugin usage.",
+          text: t("tutorials.position_data_generation.calibration_asset_edit"),
           attachTo: {
             element: '[data-tour="calibration-asset-edit-row"]',
             on: "bottom",
@@ -117,8 +123,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
             {
               text: "Next",
               action: () => {
-                stepModalPluginButton.value = true;
-                window.currentTutorial?.next();
+                tour.value.next();
               },
             },
           ],
@@ -130,30 +135,21 @@ export const useTutorialStore = defineStore("tutorial", () => {
               resolve();
             });
           },
-          when: createClickToNextStepHandler(2, []),
+          when: createClickToNextStepHandler(2, ["modal-plugin-open"]),
         },
         {
-          id: "modal-plugin-button",
-          text: "Open the plugin overview.",
+          id: "modal-plugin-open",
+          text: t("tutorials.position_data_generation.modal_plugin_open"),
           attachTo: {
-            element: '[data-tour="modal-plugin-button"]',
+            element: '[data-tour="modal-plugin-open"]',
             on: "bottom",
           },
           buttons: [],
-          beforeShowPromise: () => {
-            return new Promise((resolve) => {
-              if (stepModalPluginButton.value === true) {
-                resolve();
-              } else if (stepModalPluginButton.value === false) {
-                window.currentTutorial?.next();
-              }
-            });
-          },
           when: createClickToNextStepHandler(3, []),
         },
         {
-          id: "modal-plugin-overview",
-          text: "Run those 2 plugins to get the tracking data.",
+          id: "modal-plugin-select",
+          text: t("tutorials.position_data_generation.modal_plugin_select"),
           attachTo: {
             element: '[data-tour="plugin-object-tracking-overview"]',
             on: "right",
@@ -173,7 +169,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
         },
         {
           id: "position-data-select",
-          text: "Please select calibration asset and position data.",
+          text: t("tutorials.position_data_generation.position_data_select"),
           attachTo: {
             element: '[data-tour="position-data-menu"]',
             on: "left",
@@ -184,7 +180,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
               if (tabStore.analysisTabId === "pos_data" && modalPluginVisible.value === false) {
                 const showMenu = Object.keys(bboxesStore.bboxDataTopView).length === 0;
                 if (!showMenu) {
-                  window.currentTutorial?.next();
+                  tour.value.next();
                 } else {
                   resolve();
                 }
@@ -194,8 +190,8 @@ export const useTutorialStore = defineStore("tutorial", () => {
           when: createClickToNextStepHandler(5, []),
         },
         {
-          id: "position-data-analysis",
-          text: "Now you finished the tutorial and can analyse your data with your individual settings",
+          id: "position-data-analyse",
+          text: t("tutorials.position_data_generation.position_data_analyse"),
           attachTo: {
             element: '[data-tour="position-data-edit-row"]',
             on: "bottom",
@@ -204,7 +200,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
             {
               text: "Analyse",
               action: () => {
-                window.currentTutorial?.complete();
+                stopTutorial();
               },
             },
           ],
@@ -227,27 +223,35 @@ export const useTutorialStore = defineStore("tutorial", () => {
 
     return {
       show() {
-        const steps = window.currentTutorial?.steps || [];
+        if (!tour.value || !isTutorialRunning.value) return;
+
+        const steps = tour.value.steps || [];
         if (!steps.length) return;
+        totalSteps.value = steps.length;
 
         const currentStepSelector = steps[currentStepIndex]?.options?.attachTo?.element;
+
         currentStepId.value = steps[currentStepIndex]?.options?.id;
+        currentStepIdx.value = currentStepIndex + 1;
+        currentStepText.value = steps[currentStepIndex]?.options?.text;
+        nextStepText.value = steps[currentStepIndex + 1]?.options?.text;
+
         if (!currentStepSelector) return;
 
         targetEl = document.querySelector(currentStepSelector);
         if (!targetEl) return;
 
-        onClick = (event) => {
-          if (event.target.closest('[data-tour="calibration-asset-edit-row"]')) {
-            stepModalPluginButton.value = false;
-          }
+        onClick = () => {
+          if (!isTutorialRunning.value) return;
 
-          window.currentTutorial.hide();
+          tour.value.hide();
 
           targetEl.removeEventListener("click", onClick);
-          // document.removeEventListener("click", onClick);
+          document.removeEventListener("click", onClick, true);
 
           const waitForNextStep = () => {
+            if (!isTutorialRunning.value) return;
+
             const nextStepsToCheck = [currentStepIndex + 1, currentStepIndex + 2];
             for (const stepIdx of nextStepsToCheck) {
               if (stepIdx >= steps.length) continue;
@@ -264,7 +268,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
                 const el = document.querySelector(selector);
 
                 if (el) {
-                  window.currentTutorial.show(stepIdx);
+                  tour.value.show(stepIdx);
                   return;
                 }
               }
@@ -276,17 +280,50 @@ export const useTutorialStore = defineStore("tutorial", () => {
         };
 
         targetEl.addEventListener("click", onClick);
-        // document.addEventListener("click", onClick, true);
+        document.addEventListener("click", onClick, true);
       },
 
       hide() {
         if (targetEl && onClick) {
           targetEl.removeEventListener("click", onClick);
-          // document.removeEventListener("click", onClick);
+          document.removeEventListener("click", onClick);
         }
       },
     };
   }
 
-  return { tutorials, tutorialSteps, currentStepId, modalPluginVisible };
+  function startTutorial(id) {
+    isTutorialRunning.value = true;
+    currentTutorialId.value = id;
+    tour.value.start();
+  }
+
+  function stopTutorial() {
+    isTutorialRunning.value = false;
+    currentTutorialId.value = null;
+    currentStepId.value = null;
+
+    if (tour.value) {
+      tour.value.complete();
+      tour.value = null;
+    }
+  }
+
+  const tour = ref(null);
+
+  return {
+    tutorials,
+    tutorialSteps,
+    modalPluginVisible,
+    isTutorialRunning,
+    currentTutorialId,
+    currentStepId,
+    currentStepIdx,
+    currentStepText,
+    nextStepText,
+    totalSteps,
+    startTutorial,
+    stopTutorial,
+    tour,
+  };
 });
