@@ -10,42 +10,44 @@
     <template #append>
       <v-btn v-if="(termsOfServiceView || guidelinesView) && !loggedIn" to="/">
         <app-bar-icon>mdi-home</app-bar-icon>
-        {{ $t("app_bar.home") }}
+        <span class="text-primary">
+          {{ $t("app_bar.home") }}
+        </span>
       </v-btn>
 
       <v-btn v-if="(analysisView || termsOfServiceView || guidelinesView) && loggedIn" to="/">
         <app-bar-icon>mdi-movie</app-bar-icon>
-        {{ $t("app_bar.video_view") }}
+        <span class="text-primary">{{ $t("app_bar.video_view") }}</span>
       </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalPlugin = true">
+      <v-btn v-if="analysisView" @click="showModalPlugin = true" data-tour="modal-plugin-open">
         <app-bar-icon>mdi-plus</app-bar-icon>
-        {{ $t("app_bar.plugin_menu") }}
+        <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
       </v-btn>
 
       <v-btn v-if="analysisView" @click="showModalHistory = true">
         <app-bar-icon>mdi-history</app-bar-icon>
         <v-badge v-if="numRunningPlugins > 0" color="accent" :content="numRunningPlugins" floating>
-          {{ $t("app_bar.history_menu") }}
+          <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
         </v-badge>
         <span v-else>
-          {{ $t("app_bar.history_menu") }}
+          <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
         </span>
       </v-btn>
 
       <v-btn v-if="analysisView" @click="showModalShortcut = true">
         <app-bar-icon>mdi-label-multiple-outline</app-bar-icon>
-        {{ $t("app_bar.shortcut_menu") }}
+        <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
       </v-btn>
 
       <v-btn v-if="analysisView" @click="showModalExport = true">
         <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
-        {{ $t("app_bar.export_menu") }}
+        <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
       </v-btn>
 
       <v-btn v-if="videoView && loggedIn" @click="showModalVideoUpload = true">
         <app-bar-icon>mdi-plus</app-bar-icon>
-        {{ $t("app_bar.video_upload_menu") }}
+        <span class="text-primary">{{ $t("app_bar.video_upload_menu") }}</span>
       </v-btn>
 
       <v-btn
@@ -55,14 +57,50 @@
         :disabled="selectedVideosIds.length == 0"
       >
         <app-bar-icon>mdi-plus</app-bar-icon>
-        {{ $t("app_bar.batch_plugin_menu") }}
+        <span class="text-primary">{{ $t("app_bar.batch_plugin_menu") }}</span>
       </v-btn>
 
       <v-divider vertical inset class="mx-2" />
 
+      <v-btn @click="showModalTutorial = true" icon density="compact" class="mx-3">
+        <app-bar-icon>mdi-school</app-bar-icon>
+        <v-badge
+          v-if="tutorialStore.isTutorialRunning"
+          :offset-y="-4"
+          color="accent"
+          floating
+          dot
+        />
+        <v-tooltip
+          v-if="tutorialStore.isTutorialRunning"
+          activator="parent"
+          location="bottom"
+          class="tutorial-icon-tooltip"
+        >
+          <div style="max-width: 400px">
+            <div class="text-yellow">
+              <strong>
+                <v-icon small>mdi-arrow-right</v-icon>
+                {{ tutorialStore.currentStepIdx }} / {{ tutorialStore.totalSteps }}</strong
+              ><br />
+              {{ tutorialStore.currentStepText }}
+            </div>
+
+            <v-divider class="my-3" style="width: 70%; margin: 0 auto" />
+
+            <div>
+              <strong
+                >{{ tutorialStore.currentStepIdx + 1 }} / {{ tutorialStore.totalSteps }}</strong
+              ><br />
+              {{ tutorialStore.nextStepText }}
+            </div>
+          </div>
+        </v-tooltip>
+      </v-btn>
+
       <v-menu location="bottom center">
         <template #activator="{ props }">
-          <v-avatar v-bind="props" size="16" class="ml-2 mr-1">
+          <v-avatar v-bind="props" size="20" class="ml-2 mr-1">
             <v-img :src="languages.find((lang) => lang.code === locale)?.flag" contain />
           </v-avatar>
         </template>
@@ -86,6 +124,7 @@
       v-model="showModalBatchPlugin"
       :videoIds="selectedVideosIds"
     />
+    <ModalTutorial v-if="showModalTutorial" v-model="showModalTutorial" />
   </v-app-bar>
 </template>
 
@@ -98,11 +137,13 @@ import { usePlayerStore } from "@/stores/player";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
 import { usePluginRunStore } from "@/stores/plugin_run";
+import { useTutorialStore } from "@/stores/tutorial";
 import ModalHistory from "@/components/ModalHistory.vue";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalShortcut from "@/components/ModalShortcut.vue";
 import ModalExport from "@/components/ModalExport.vue";
 import UserMenu from "@/components/user/UserMenu.vue";
+import ModalTutorial from "../ModalTutorial.vue";
 import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 
 const route = useRoute();
@@ -113,6 +154,7 @@ const playerStore = usePlayerStore();
 const userStore = useUserStore();
 const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
+const tutorialStore = useTutorialStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
 
@@ -192,4 +234,18 @@ const showModalVideoUpload = ref(false);
 
 const showModalBatchPlugin = ref(false);
 const selectedVideosIds = computed(() => videoStore.selectedVideosIds);
+
+const showModalTutorial = ref(false);
 </script>
+
+<style scoped>
+.tutorial-icon-tooltip ::v-deep .v-overlay__content {
+  background: rgb(var(--v-theme-primary));
+  border-radius: 2px;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  padding: 10px 15px;
+  color: #fff;
+}
+</style>

@@ -81,7 +81,11 @@
       </div>
     </v-row>
 
-    <v-row ref="videoControl" class="video-control mt-6 mb-n2 justify-center">
+    <v-row
+      ref="videoControl"
+      class="video-control mt-6 mb-n2 justify-center"
+      data-tour="position-data-edit-row"
+    >
       <v-menu location="top">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">

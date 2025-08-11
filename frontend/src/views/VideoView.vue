@@ -1,6 +1,6 @@
 <template>
   <v-main>
-    <v-container v-if="userStore.loggedIn" fluid>
+    <v-container v-if="userStore.loggedIn" fluid data-tour="video-select">
       <v-row>
         <v-col>
           <v-container class="d-flex flex-wrap justify-center video-gallery pa-0" fluid>

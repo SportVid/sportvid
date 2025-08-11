@@ -202,6 +202,17 @@
     "mergeright": "Merge right segment",
     "color": "Color"
   },
+  "tutorials": {
+    "position_data_generation": {
+      "video_select": "Please select a video to start the position data generation process.",
+      "calibration_asset_select": "Create a new calibration asset or select an existing one.",
+      "calibration_asset_edit": "Edit the calibration asset by adding or removing markers, then save it for plugin use.",
+      "modal_plugin_open": "Open the plugin menu.",
+      "modal_plugin_select": "Run the two plugins from the Player and Object Tracking section (ByteTrack & DLT+RANSAC from annotated landmarks) to generate tracking data.",
+      "position_data_select": "Switch to the position data tab and select both the calibration asset and the position data.",
+      "position_data_analyse": "You’ve completed the tutorial! You can now analyze your data using your preferred settings."
+    }
+  },
   "modal": {
     "error": {
       "title": "Error"
@@ -543,6 +554,31 @@
       "date": "Date",
       "progress": "Progress",
       "status": "Status"
+    },
+    "tutorial": {
+      "title": "Tutorials",
+      "show_steps": "Show Steps",
+      "step": "Step",
+      "position_data_generation": {
+        "name": "Position Data Generation",
+        "description": "Calibrate camera, run homography, track players"
+      },
+      "timeline_plugin": {
+        "name": "Timelines",
+        "description": "View events per player & more"
+      },
+      "run_aggregation": {
+        "name": "Running Data",
+        "description": "Aggregate running distance & speed by interval"
+      },
+      "kpi_visualization": {
+        "name": "KPI Visualization",
+        "description": "Visualize space control, EPS & player zones"
+      },
+      "data_export": {
+        "name": "Export",
+        "description": "Export position data, stats & visualizations"
+      }
     },
     "calibration_asset": {
       "create": {

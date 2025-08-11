@@ -106,6 +106,7 @@
       ref="videoControl"
       class="video-control mt-6 mb-0 justify-center align-center"
       style="height: 60px"
+      data-tour="calibration-asset-edit-row"
     >
       <v-menu location="top start">
         <template #activator="{ props }">
