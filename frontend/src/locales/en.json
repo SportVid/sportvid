@@ -607,6 +607,11 @@
         "title": "Upload Position Data",
         "name": "File name",
         "file": "Select a file",
+        "format": "Select the data provider",
+        "validate": {
+          "file_required": "Please select a file.",
+          "file_format_invalid": "File is not in .csv oder .xml format."
+        },
         "success": "Position data successfully uploaded"
       },
       "select": {
@@ -614,7 +619,10 @@
         "modes": {
           "bytetrack": "ByteTrack Plugin",
           "manual": "Manual Upload"
-        }
+        },
+        "asset": "Select Calibration Asset",
+        "bytetrack": "Select Bytetrack Plugin",
+        "uploaded_pos_data": "Select uploaded position data"
       }
     },
     "bounding_box": {

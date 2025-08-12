@@ -30,7 +30,7 @@
                     :items="Object.values(calibrationAssetStore.calibrationAssetsList)"
                     item-title="name"
                     item-value="id"
-                    label="Select Calibration Asset"
+                    :label="$t('modal.position_data.select.asset')"
                     variant="underlined"
                     class="mt-0"
                   />
@@ -40,7 +40,7 @@
                     :items="bytetrackRuns"
                     item-title="date"
                     item-value="id"
-                    label="Select Bytetrack Plugin"
+                    :label="$t('modal.position_data.select.bytetrack')"
                     variant="underlined"
                     class="mt-2"
                   />
@@ -52,7 +52,7 @@
                     :items="uploadedPosDataList"
                     item-title="title"
                     item-value="file"
-                    label="Select uploaded position data"
+                    :label="$t('modal.position_data.select.uploaded_pos_data')"
                     variant="underlined"
                     class="mt-2"
                   />

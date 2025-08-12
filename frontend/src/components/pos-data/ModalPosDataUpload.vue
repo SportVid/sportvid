@@ -27,11 +27,22 @@
 
           <v-file-input
             v-model="posData.file"
+            :rules="[validateFile]"
             :label="$t('modal.position_data.upload.file')"
             prepend-icon="mdi-file-upload"
             class="mt-2"
             show-size
             persistent-hint
+          />
+
+          <v-select
+            v-model="posData.format"
+            :items="trackingDataStore.provider"
+            item-title="name"
+            item-value="id"
+            label="$t('modal.position_data.upload.format')"
+            variant="underlined"
+            class="mt-2"
           />
 
           <v-progress-linear
@@ -68,9 +79,9 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useBboxesStore } from "@/stores/bboxes";
+import { useTrackingDataStore } from "@/stores/tracking_data";
 
-const bboxesStore = useBboxesStore();
+const trackingDataStore = useTrackingDataStore();
 
 const props = defineProps({
   modelValue: {
@@ -81,34 +92,42 @@ const props = defineProps({
 const emit = defineEmits();
 
 const posData = ref({
-  title: "",
+  title: null,
   file: null,
+  format: null,
 });
 
 const checkbox = ref(false);
+const fileValid = ref(false);
+const validateFile = (file) => {
+  if (Array.isArray(file)) {
+    file = file[0];
+  }
 
-const isUploading = ref(0);
-const uploadingProgress = ref(0);
+  if (!file || !file.name) {
+    fileValid.value = false;
+    return t("modal.position_data.upload.validate.file_required");
+  }
+  if (!file.name.endsWith(".mp4")) {
+    fileValid.value = false;
+    return t("modal.position_data.upload.validate.file_format_invalid");
+  }
 
-const disabled = computed(() => !checkbox.value || !posData.value.title || !posData.value.file);
+  fileValid.value = true;
+  return true;
+};
+
+const isUploading = computed(() => trackingDataStore.isUploading);
+const uploadingProgress = computed(() => trackingDataStore.progress);
+
+const disabled = computed(
+  () => !checkbox.value || !posData.value.title || !posData.value.file || !posData.value.file
+);
 
 const uploadPosData = async () => {
-  const file = posData.value.file;
-  const reader = new FileReader();
-  reader.readAsText(file, "UTF-8");
-  reader.onload = function () {
-    const csvText = reader.result;
-    const newUpload = {
-      id: Date.now(),
-      title: posData.value.title,
-      file: csvText,
-    };
-    const existing = JSON.parse(localStorage.getItem("uploadedPosDataList") || "[]");
-    existing.push(newUpload);
-    localStorage.setItem("uploadedPosDataList", JSON.stringify(existing));
-    bboxesStore.posDataUploadSuccess = true;
-    dialog.value = false;
-  };
+  await trackingDataStore.uploadTrackingData(posData);
+  dialog.value = false;
+  fileValid.value = false;
 };
 
 const dialog = ref(props.modelValue);
