@@ -27,8 +27,11 @@
             <v-treeview
               v-model="activeNode"
               class="mt-2 pr-4"
+              fluid
+              open-on-click
               :items="pluginsSorted"
               :search="searchPlugin"
+              v-model:opened="opened"
               item-value="id"
               item-title="name"
               style="cursor: pointer; overflow-y: auto; height: 55vh"
@@ -95,14 +98,16 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePlayerStore } from "@/stores/player";
+import { useTutorialStore } from "@/stores/tutorial";
 import Parameters from "./Parameters.vue";
 
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
+const tutorialStore = useTutorialStore();
 
 const props = defineProps({
   modelValue: {
@@ -1056,6 +1061,9 @@ watch(
   () => dialog.value,
   (value) => {
     emit("update:modelValue", value);
+    if (!value) {
+      window.dispatchEvent(new Event("plugin-overview-closed"));
+    }
   }
 );
 
@@ -1067,4 +1075,26 @@ watch(
     }
   }
 );
+
+const opened = ref([]);
+watch(
+  () => tutorialStore.currentStepId,
+  (stepId) => {
+    if (stepId === "modal-plugin-select") {
+      opened.value = [7];
+    }
+  }
+);
+
+onMounted(() => {
+  // window.dispatchEvent(new Event("plugin-overview-mounted"));
+  tutorialStore.modalPluginVisible = true;
+  document
+    .querySelector("#v-list-group--id-7")
+    .parentElement.setAttribute("data-tour", "plugin-object-tracking-overview");
+});
+
+onBeforeUnmount(() => {
+  tutorialStore.modalPluginVisible = false;
+});
 </script>

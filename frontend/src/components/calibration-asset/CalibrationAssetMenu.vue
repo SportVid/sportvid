@@ -1,5 +1,5 @@
 <template>
-  <div style="height: 60vh">
+  <div style="height: 60vh" data-tour="calibration-asset-menu">
     <v-col>
       <v-row
         class="text-h6 text-grey font-weight-light mx-16 px-10 mt-8"
