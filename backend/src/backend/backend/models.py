@@ -12,7 +12,7 @@ from django.dispatch import receiver
 from backend.utils.color import rgb_to_hex, random_rgb
 
 from data import DataManager
-from backend.utils import media_path_to_video
+from backend.utils import media_path_to_file
 from .managers import TibavaUserManager
 
 
@@ -42,6 +42,7 @@ def receiver_with_multiple_senders(signal, senders, **kwargs):
 class TibavaUser(AbstractUser):
     allowance = models.IntegerField(default=40) # 10
     max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # 5GB, 500MB: 500*1024*1024
+    max_file_size = models.BigIntegerField(default=10 * 1024 * 1024 * 1024)  # 1GB
     objects = TibavaUserManager()
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
@@ -50,6 +51,7 @@ class TibavaUser(AbstractUser):
             "username": self.username,
             "allowance": self.allowance,
             "max_video_size": self.max_video_size,
+            
         }
 
     def __str__(self):
@@ -139,7 +141,7 @@ class Video(models.Model):
 @receiver_with_multiple_senders(signal=post_delete, senders=[Video,TrackingData])
 def delete_file(sender, instance, **kwargs):
     logger.info(f"Deleting file {instance.id.hex} of user {instance.owner.username}")
-    path = media_path_to_video(instance.id.hex, instance.ext)
+    path = media_path_to_file(instance.id.hex, instance.ext)
     if os.path.exists(path): os.remove(path)
 
 

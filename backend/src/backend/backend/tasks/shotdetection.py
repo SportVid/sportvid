@@ -16,7 +16,7 @@ from celery import shared_task
 from backend.models import PluginRun, PluginRunResult, Video, Timeline, TimelineSegment
 from django.conf import settings
 from backend.plugin_manager import PluginManager
-from backend.utils import media_path_to_video
+from backend.utils import media_path_to_file
 
 from ..utils.analyser_client import TaskAnalyserClient
 from data import DataManager

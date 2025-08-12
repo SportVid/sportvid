@@ -16,7 +16,7 @@ import imageio
 
 import wand.image as wimage
 
-from backend.utils import download_url, download_file, media_url_to_video
+from backend.utils import download_url, download_file, media_url_to_file
 
 from django.views import View
 from django.http import HttpResponse, JsonResponse

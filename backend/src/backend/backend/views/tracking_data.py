@@ -13,8 +13,8 @@ from urllib.parse import urlparse
 from backend.plugin_manager import PluginManager
 from backend.utils import (
     download_file,
-    media_url_to_video,
-    media_dir_to_video,
+    media_url_to_file,
+    media_dir_to_file,
 )
 from backend.models import TrackingData
 
@@ -27,10 +27,10 @@ logger = logging.getLogger(__name__)
 
 class TrackingDataUpload(View):
     
-    # def submit_analyse(self, plugins, **kwargs):
-    #     plugin_manager = PluginManager()
-    #     for plugin in plugins:
-    #         plugin_manager(plugin, **kwargs)
+    def submit_analyse(self, plugins, **kwargs):
+        plugin_manager = PluginManager()
+        for plugin in plugins:
+            plugin_manager(plugin, **kwargs)
 
     def post(self, request):
         try:
@@ -50,7 +50,7 @@ class TrackingDataUpload(View):
             tracking_data_id = tracking_data_id_uuid.hex
             
             if "file" in request.FILES:
-                output_dir = media_dir_to_video(tracking_data_id)
+                output_dir = media_dir_to_file(tracking_data_id)
 
                 download_result = download_file(
                     output_dir=output_dir,
@@ -66,9 +66,7 @@ class TrackingDataUpload(View):
 
                 path = Path(request.FILES["file"].name)
                 ext = "".join(path.suffixes)
-
-                # TODO: check which meta-information is needed
-                # format: ['kinexon', 'dfl', ... ]
+                
                 meta = {  
                     "name": request.POST.get("title"),
                     "ext": ext,
@@ -79,7 +77,7 @@ class TrackingDataUpload(View):
                     id=tracking_data_id_uuid,
                     file=tracking_data_id_uuid,
                     ext=meta["ext"],
-                    file_type=meta["format"],
+                    file_type=meta["format"],  # NOTE: format: ['kinexon', 'dfl', ... ]
                     owner=request.user,
                 )
                 if not created:
@@ -87,6 +85,17 @@ class TrackingDataUpload(View):
                     return JsonResponse(
                         {"status": "error", "type": "database_error"}, status=500
                     )
+                
+                # TODO: submit conversion plugin on upload of tracking data
+                # since the data can come from a range of different providers
+                # we have to pass the right arguments to the conversion plugin
+                # Additionally, DFL data contains two .xml files.
+                # self.submit_analyse(
+                #     plugins=["TODO"], 
+                #     video=tracking_data_db,
+                #     user=request.user,
+                #     parameters={},
+                # )
 
                 tracking_data_id_hex = tracking_data_db.id.hex if not tracking_data_db.file.hex else tracking_data_db.id.hex
                 return JsonResponse(
@@ -96,7 +105,7 @@ class TrackingDataUpload(View):
                             {
                                 "id": tracking_data_id,
                                 **tracking_data_db.to_dict(),
-                                "url": media_url_to_video(tracking_data_id_hex, meta["ext"]),
+                                "url": media_url_to_file(tracking_data_id_hex, meta["ext"]),
                             }
                         ],
                     }
@@ -135,7 +144,7 @@ class TrackingDataGet(View):
                 entries.append(
                     {
                         **tdata.to_dict(),
-                        "url": media_url_to_video(tracking_data_id_hex, tdata.ext),
+                        "url": media_url_to_file(tracking_data_id_hex, tdata.ext),
                     }
                 )
             if len(entries) != 1:

@@ -16,9 +16,9 @@ from backend.plugin_manager import PluginManager
 from backend.utils import (
     download_url,
     download_file,
-    media_url_to_video,
-    media_path_to_video,
-    media_dir_to_video,
+    media_url_to_file,
+    media_path_to_file,
+    media_dir_to_file,
 )
 
 from django.views import View
@@ -61,7 +61,7 @@ class VideoUpload(View):
             video_id = video_id_uuid.hex
 
             if "file" in request.FILES:
-                output_dir = media_dir_to_video(video_id)
+                output_dir = media_dir_to_file(video_id)
 
                 download_result = download_file(
                     output_dir=output_dir,
@@ -141,7 +141,7 @@ class VideoUpload(View):
                             {
                                 "id": video_id,
                                 **video_db.to_dict(),
-                                "url": media_url_to_video(video_id_hex, meta["ext"]),
+                                "url": media_url_to_file(video_id_hex, meta["ext"]),
                             }
                         ],
                     }
@@ -180,7 +180,7 @@ class VideoGet(View):
                 entries.append(
                     {
                         **video.to_dict(),
-                        "url": media_url_to_video(video_id_hex, video.ext),
+                        "url": media_url_to_file(video_id_hex, video.ext),
                     }
                 )
             if len(entries) != 1:

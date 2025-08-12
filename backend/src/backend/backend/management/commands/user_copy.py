@@ -12,9 +12,9 @@
 # from backend.utils import (
 #     download_url,
 #     download_file,
-#     media_url_to_video,
-#     media_path_to_video,
-#     media_dir_to_video,
+#     media_url_to_file,
+#     media_path_to_file,
+#     media_dir_to_file,
 # )
 
 # from backend.plugin_manager import PluginManager
@@ -66,11 +66,11 @@
 
 #                 video_id_uuid = uuid.uuid4()
 #                 video_id = video_id_uuid.hex
-#                 origin_path = media_path_to_video(video_db.id.hex, video_db.ext)
+#                 origin_path = media_path_to_file(video_db.id.hex, video_db.ext)
 
-#                 output_dir = media_dir_to_video(video_id)
+#                 output_dir = media_dir_to_file(video_id)
 #                 os.makedirs(output_dir, exist_ok=True)
-#                 destination_path = media_path_to_video(video_id, video_db.ext)
+#                 destination_path = media_path_to_file(video_id, video_db.ext)
 #                 # os.symlink(origin_path, destination_path)
 #                 shutil.copy(origin_path, destination_path)
 

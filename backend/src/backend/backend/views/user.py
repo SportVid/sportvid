@@ -41,6 +41,7 @@ class UserGet(View):
                         "date": user.date_joined,
                         "allowance": user.allowance,
                         "max_video_size": user.max_video_size,
+                        "max_file_size": user.max_file_size
                     },
                 }
             )
@@ -88,6 +89,7 @@ def login(request):
                     "date": user.date_joined,
                     "allowance": user.allowance,
                     "max_video_size": user.max_video_size,
+                    "max_file_size": user.max_file_size
                 },
             }
         )
