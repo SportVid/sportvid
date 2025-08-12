@@ -51,7 +51,7 @@ class TibavaUser(AbstractUser):
             "username": self.username,
             "allowance": self.allowance,
             "max_video_size": self.max_video_size,
-            
+            "max_file_size": self.max_file_size
         }
 
     def __str__(self):
