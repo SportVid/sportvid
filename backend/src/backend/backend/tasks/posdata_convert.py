@@ -59,8 +59,9 @@ class PosDataConvert(Task):
         )
         # obtain ref. object from DB to position data table
         tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
+        logging.error(f'{tracking_data_db.meta_file}')
         
-        # TODO: rather transfer a binary file than to use the FSHandler?
+        # TODO: rather transfer binaries instead of using the FSHandler?
         tracking_data_ = self.upload_td(client, tracking_data_db)  # uses the FSHandler, file is zipped before transfer
 
         # --------> RUN
@@ -72,7 +73,7 @@ class PosDataConvert(Task):
                 "fps": parameters.get("fps"),
                 "delimiter": parameters.get("delimiter")
             },
-            inputs={"tracking_data": tracking_data_},
+            inputs={"tracking_data": tracking_data_[0]},
             outputs=["pos_data"],   # this only outputs the reference (id)
             downloads=["pos_data"]  # this actually transfers "real" data
         )

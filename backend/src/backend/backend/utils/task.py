@@ -23,16 +23,21 @@ class Task:
         data_id = client.upload_file(video_file)
         return data_id
     
-    def upload_td(self, client: TaskAnalyserClient, tracking_data: TrackingData) -> str:
-        file = media_path_to_file(tracking_data.file.hex, tracking_data.ext)
-        data_id = client.upload_file(file)
-        return data_id
+    def upload_td(self, client: TaskAnalyserClient, tracking_data: TrackingData) -> List[str]:
+        td_file = media_path_to_file(tracking_data.file.hex, tracking_data.ext)
+        td_meta_file = media_path_to_file(tracking_data.meta_file.hex, tracking_data.meta_ext)
+        td_file_data_id = client.upload_file(td_file)
+        td_meta_file_data_id = client.upload_file(td_meta_file)
+        
+        return [td_file_data_id, td_meta_file_data_id]
     
-    # TODO: What data to pass here?
-    def upload_td_from_stream(self, client: TaskAnalyserClient, tracking_data: TrackingData) -> str:
-        file = media_path_to_file(tracking_data.file.hex, tracking_data.ext)
-        data_id = client.upload_data(file)
-        return data_id
+    def upload_td_from_stream(self, client: TaskAnalyserClient, tracking_data: TrackingData) -> List[str]:
+        td_file = media_path_to_file(tracking_data.file.hex, tracking_data.ext)
+        td_meta_file = media_path_to_file(tracking_data.meta_file.hex, tracking_data.meta_ext)
+        td_file_data_id = client.upload_data(td_file)
+        td_meta_file_data_id = client.upload_data(td_meta_file)
+        
+        return [td_file_data_id, td_meta_file_data_id]
 
     def run_analyser(
         self,
