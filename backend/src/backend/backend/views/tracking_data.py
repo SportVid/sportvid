@@ -46,6 +46,8 @@ class TrackingDataUpload(View):
                     {"status": "error", "type": "database_error"}, status=500
                 )
 
+            logger.error(request.POST.fps)
+            
             tracking_data_id_uuid = uuid.uuid4()
             tracking_data_id = tracking_data_id_uuid.hex
             
@@ -56,29 +58,53 @@ class TrackingDataUpload(View):
                     output_dir=output_dir,
                     output_name=tracking_data_id,
                     file=request.FILES["file"],
-                    max_size=request.user.max_video_size,
-                    extensions=(".csv", ".xml"),  # NOTE: adjust if other formats are needed
+                    max_size=request.user.max_file_size,
+                    extensions=(".csv", ".xml"),
                 )
 
                 if download_result["status"] != "ok":
                     logger.error("TrackingDataUpload::failed")
                     return JsonResponse(download_result, status=500)
-
-                path = Path(request.FILES["file"].name)
-                ext = "".join(path.suffixes)
+            
+                meta_data_id_uuid = uuid.uuid4()
+                meta_data_id = meta_data_id_uuid.hex
                 
-                meta = {  
+                if "meta_data" in request.FILES:
+                    output_dir = media_dir_to_file(meta_data_id)
+                    
+                    download_result = download_file(
+                        output_dir=output_dir,
+                        output_name=meta_data_id,
+                        file=request.FILES["meta_data"],
+                        max_size=request.user.max_file_size,
+                        extensions=(".csv", ".xml"),
+                    )
+                    
+                    if download_result["status"] != "ok":
+                        logger.error("TrackingDataUpload::failed")
+                        return JsonResponse(download_result, status=500)
+
+                td_path = Path(request.FILES["file"].name)
+                td_ext = "".join(td_path.suffixes)
+                
+                meta_path = Path(request.FILES["meta_data"].name)
+                meta_ext = "".join(meta_path.suffixes)
+                
+                meta = {
                     "name": request.POST.get("title"),
-                    "ext": ext,
+                    "ext": td_ext,
+                    "meta_ext": meta_ext,
                     "format": request.POST.get("format")
                 }
                 tracking_data_db, created = TrackingData.objects.get_or_create(
                     name=meta["name"],
                     id=tracking_data_id_uuid,
                     file=tracking_data_id_uuid,
+                    meta_file=meta_data_id_uuid,
                     ext=meta["ext"],
-                    file_type=meta["format"],  # NOTE: format: ['kinexon', 'dfl', ... ]
-                    owner=request.user,
+                    meta_ext=meta["meta_ext"],
+                    file_type=meta["format"],  # NOTE: specifies the format -> ['kinexon', 'dfl', ... ]
+                    owner=request.user
                 )
                 if not created:
                     logger.error("TrackingDataUpload::database_create_failed")
@@ -89,15 +115,20 @@ class TrackingDataUpload(View):
                 # TODO: submit conversion plugin on upload of tracking data
                 # since the data can come from a range of different providers
                 # we have to pass the right arguments to the conversion plugin
-                # Additionally, DFL data contains two .xml files.
-                # self.submit_analyse(
-                #     plugins=["TODO"], 
-                #     video=tracking_data_db,
-                #     user=request.user,
-                #     parameters={},
-                # )
+                # Additionally, tracking data may contain a meta file.
+                self.submit_analyse(
+                    plugins=["posdata_convert"], 
+                    tracking_data=tracking_data_db,
+                    user=request.user,
+                    parameters={
+                        "format": meta["format"],
+                        "fps": request.POST.fps,
+                        "delimiter": request.POST.delimiter if request.POST.delimiter else ';'
+                    }
+                )
 
                 tracking_data_id_hex = tracking_data_db.id.hex if not tracking_data_db.file.hex else tracking_data_db.id.hex
+                meta_data_id_hex = tracking_data_db.meta_file.hex
                 return JsonResponse(
                     {
                         "status": "ok",
@@ -106,11 +137,11 @@ class TrackingDataUpload(View):
                                 "id": tracking_data_id,
                                 **tracking_data_db.to_dict(),
                                 "url": media_url_to_file(tracking_data_id_hex, meta["ext"]),
+                                "meta_url": media_url_to_file(meta_data_id_hex, meta["meta_ext"])
                             }
                         ],
                     }
                 )
-
             return JsonResponse({"status": "error"}, status=500)
 
         except Exception:

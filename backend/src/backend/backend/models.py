@@ -65,7 +65,9 @@ class TrackingData(models.Model):
     )
     name = models.CharField(max_length=256)
     file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
+    meta_file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
     ext = models.CharField(max_length=256)
+    meta_ext = models.CharField(max_length=256)
     date = models.DateTimeField(auto_now_add=True)
     file_type = models.CharField(max_length=256)  
     
@@ -73,8 +75,10 @@ class TrackingData(models.Model):
         return {
             "name": self.name,
             "file": self.file.hex,
+            "meta_file": self.meta_file.hex,
             "id": self.id.hex,
             "ext": self.ext,
+            "meta_ext": self.meta_ext,
             "date": self.date,
             "file_type": self.file_type
         }
