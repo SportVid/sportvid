@@ -623,6 +623,14 @@
         "asset": "Select Calibration Asset",
         "bytetrack": "Select Bytetrack Plugin",
         "uploaded_pos_data": "Select uploaded position data"
+      },
+      "rename": {
+        "title": "Rename Position Data",
+        "name": "Calibration Asset name",
+        "success": "Position data successfully renamed"
+      },
+      "delete": {
+        "success": "Position data successfully deleted"
       }
     },
     "bounding_box": {

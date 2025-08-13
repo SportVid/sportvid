@@ -5,14 +5,15 @@ import config from "../../app.config";
 
 export const useTrackingDataStore = defineStore("trackingData", () => {
   const trackingDataList = ref([]);
+  const trackingDataId = ref(null);
   const trackingDataCurrent = ref(null);
 
   const isUploading = ref(false);
   const progress = ref(0);
 
-  const uploadSuccess = ref(false);
-  const renameSuccess = ref(false);
-  const deleteSuccess = ref(false);
+  const trackingDataUploadSuccess = ref(false);
+  const trackingDataRenameSuccess = ref(false);
+  const trackingDataDeleteSuccess = ref(false);
 
   const provider = [
     { name: "Kinexon", id: "kinexon" },
@@ -30,27 +31,22 @@ export const useTrackingDataStore = defineStore("trackingData", () => {
     }
   };
 
-  const loadTrackingData = async (id) => {
-    try {
-      const res = await axios.get(`${config.API_LOCATION}/tracking_data/get`, {
-        params: { id },
-      });
-      if (res.data.status === "ok") {
-        trackingDataCurrent.value = res.data.entry;
-      }
-    } catch (error) {
-      console.error("Failed to get tracking data:", error);
+  const loadTrackingData = (id) => {
+    const trackingData = trackingDataList.value.find((data) => data.id === id);
+    if (trackingData) {
+      trackingDataId.value = id;
+      trackingDataCurrent.value = trackingData;
     }
   };
 
-  const uploadTrackingData = async (file, title, format) => {
-    if (!file || !title || !format) return;
+  const uploadTrackingData = async (params) => {
+    if (!params) return;
     isUploading.value = true;
     try {
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("title", title);
-      formData.append("format", format);
+      formData.append("file", params.file);
+      formData.append("title", params.title);
+      formData.append("format", params.format);
 
       const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -62,7 +58,7 @@ export const useTrackingDataStore = defineStore("trackingData", () => {
       });
 
       if (res.data.status === "ok") {
-        uploadSuccess.value = true;
+        trackingDataUploadSuccess.value = true;
         await loadTrackingDataList();
       }
     } catch (error) {
@@ -81,7 +77,7 @@ export const useTrackingDataStore = defineStore("trackingData", () => {
         name: newName,
       });
       if (res.data.status === "ok") {
-        renameSuccess.value = true;
+        trackingDataRenameSuccess.value = true;
         await loadTrackingDataList();
       }
     } catch (error) {
@@ -97,7 +93,7 @@ export const useTrackingDataStore = defineStore("trackingData", () => {
         id,
       });
       if (res.data.status === "ok") {
-        deleteSuccess.value = true;
+        trackingDataDeleteSuccess.value = true;
         await loadTrackingDataList();
       }
     } catch (error) {
@@ -108,10 +104,11 @@ export const useTrackingDataStore = defineStore("trackingData", () => {
 
   return {
     trackingDataList,
+    trackingDataId,
     trackingDataCurrent,
-    uploadSuccess,
-    renameSuccess,
-    deleteSuccess,
+    trackingDataUploadSuccess,
+    trackingDataRenameSuccess,
+    trackingDataDeleteSuccess,
     loadTrackingDataList,
     loadTrackingData,
     uploadTrackingData,

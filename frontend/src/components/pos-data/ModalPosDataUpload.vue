@@ -40,9 +40,10 @@
             :items="trackingDataStore.provider"
             item-title="name"
             item-value="id"
-            label="$t('modal.position_data.upload.format')"
+            :label="$t('modal.position_data.upload.format')"
             variant="underlined"
             class="mt-2"
+            prepend-icon="mdi-menu-swap"
           />
 
           <v-progress-linear
@@ -79,9 +80,11 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useTrackingDataStore } from "@/stores/tracking_data";
 
 const trackingDataStore = useTrackingDataStore();
+const { t } = useI18n();
 
 const props = defineProps({
   modelValue: {
@@ -108,7 +111,7 @@ const validateFile = (file) => {
     fileValid.value = false;
     return t("modal.position_data.upload.validate.file_required");
   }
-  if (!file.name.endsWith(".mp4")) {
+  if (!(file.name.endsWith(".csv") || file.name.endsWith(".xml"))) {
     fileValid.value = false;
     return t("modal.position_data.upload.validate.file_format_invalid");
   }
@@ -121,11 +124,22 @@ const isUploading = computed(() => trackingDataStore.isUploading);
 const uploadingProgress = computed(() => trackingDataStore.progress);
 
 const disabled = computed(
-  () => !checkbox.value || !posData.value.title || !posData.value.file || !posData.value.file
+  () =>
+    !checkbox.value ||
+    !posData.value.title ||
+    !posData.value.file ||
+    !posData.value.file ||
+    !fileValid.value
 );
 
 const uploadPosData = async () => {
-  await trackingDataStore.uploadTrackingData(posData);
+  const params = {
+    title: posData.value.title,
+    file: posData.value.file,
+    format: posData.value.format,
+  };
+
+  await trackingDataStore.uploadTrackingData(params);
   dialog.value = false;
   fileValid.value = false;
 };

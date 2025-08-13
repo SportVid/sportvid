@@ -19,7 +19,7 @@
             @click="loadCalibrationAsset(asset.id)"
             class="mr-4"
           >
-            <template #prepend>
+            <template #append>
               <v-btn
                 size="x-small"
                 color="red"

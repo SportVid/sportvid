@@ -11,8 +11,4 @@
 import AppBar from "@/components/app/AppBar.vue";
 import ModalError from "@/components/ModalError.vue";
 import AppFooter from "./components/app/AppFooter.vue";
-
-import { useTutorialStore } from "./stores/tutorial";
-import { watch } from "vue";
-const tutorialStore = useTutorialStore();
 </script>
