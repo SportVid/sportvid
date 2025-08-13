@@ -120,10 +120,10 @@
       </div>
     </v-snackbar>
 
-    <v-snackbar v-model="showPosDataUploadSnackbar">
+    <v-snackbar v-model="showPosDataActionSnackbar">
       <div class="d-flex justify-center">
         <snackbar-icon />
-        <span class="text-h6">{{ $t("modal.position_data.upload.success") }}</span>
+        <span class="text-h6">{{ posDataActionMessage }}</span>
       </div>
     </v-snackbar>
   </v-main>
@@ -147,6 +147,7 @@ import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 import { useShotStore } from "@/stores/shot";
 import { useTabStore } from "@/stores/tabs";
+import { useTrackingDataStore } from "@/stores/tracking_data";
 // import * as Keyboard from "../plugins/keyboard";
 import VideoPlayer from "@/components/video/VideoPlayer.vue";
 import TabWindowPosData from "@/components/tab-window/TabWindowPosData.vue";
@@ -181,6 +182,7 @@ const annotationShortcutStore = useAnnotationShortcutStore();
 const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
 const tabStore = useTabStore();
+const trackingDataStore = useTrackingDataStore();
 
 function getAnalysisTabComponent(tabId) {
   if (tabId === "calibration") {
@@ -519,18 +521,33 @@ watch(
   }
 );
 
-const showPosDataUploadSnackbar = ref(false);
-const resetPosDataUploadSnackbar = async () => {
-  showPosDataUploadSnackbar.value = false;
+const showPosDataActionSnackbar = ref(false);
+const posDataActionMessage = ref("");
+const resetPosDataActionSnackbar = async () => {
+  showPosDataActionSnackbar.value = false;
   await nextTick();
-  showPosDataUploadSnackbar.value = true;
-  bboxesStore.posDataUploadSuccess = false;
+  showPosDataActionSnackbar.value = true;
+  // bboxesStore.posDataUploadSuccess = false;
 };
 watch(
-  () => bboxesStore.posDataUploadSuccess,
-  (newValue) => {
-    if (newValue === true) {
-      resetPosDataUploadSnackbar();
+  [
+    () => trackingDataStore.trackingDataUploadSuccess,
+    () => trackingDataStore.trackingDataRenameSuccess,
+    () => trackingDataStore.trackingDataDeleteSuccess,
+  ],
+  ([upload, rename, del]) => {
+    if (upload === true) {
+      posDataActionMessage.value = t("modal.position_data.upload.success");
+      resetPosDataActionSnackbar();
+      trackingDataStore.trackingDataUploadSuccess = false;
+    } else if (rename === true) {
+      posDataActionMessage.value = t("modal.position_data.rename.success");
+      resetPosDataActionSnackbar();
+      trackingDataStore.trackingDataRenameSuccess = false;
+    } else if (del === true) {
+      posDataActionMessage.value = t("modal.position_data.delete.success");
+      resetPosDataActionSnackbar();
+      trackingDataStore.trackingDataDeleteSuccess = false;
     }
   }
 );

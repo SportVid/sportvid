@@ -30,7 +30,7 @@
                     :items="Object.values(calibrationAssetStore.calibrationAssetsList)"
                     item-title="name"
                     item-value="id"
-                    label="Select Calibration Asset"
+                    :label="$t('modal.position_data.select.asset')"
                     variant="underlined"
                     class="mt-0"
                   />
@@ -40,22 +40,51 @@
                     :items="bytetrackRuns"
                     item-title="date"
                     item-value="id"
-                    label="Select Bytetrack Plugin"
+                    :label="$t('modal.position_data.select.bytetrack')"
                     variant="underlined"
                     class="mt-2"
                   />
                 </template>
 
                 <template v-else-if="mode.id === 'manual'">
-                  <v-select
-                    v-model="selectedUploadedPosData"
-                    :items="uploadedPosDataList"
-                    item-title="title"
-                    item-value="file"
-                    label="Select uploaded position data"
-                    variant="underlined"
-                    class="mt-2"
-                  />
+                  <v-list density="compact" style="height: 210px; overflow-y: auto">
+                    <v-list-item
+                      v-for="data in trackingDataStore.trackingDataList"
+                      :key="data.id"
+                      class="mr-4"
+                      :active="selectedTrackingData && selectedTrackingData.id === data.id"
+                      @click="selectedTrackingData = data.id"
+                    >
+                      <template #append>
+                        <v-btn
+                          size="x-small"
+                          color="primary"
+                          variant="plain"
+                          class="mr-1"
+                          @click.stop="showModalPosDataRename = true"
+                        >
+                          <v-icon>mdi-pencil</v-icon>
+                        </v-btn>
+
+                        <v-btn
+                          size="x-small"
+                          color="red"
+                          variant="plain"
+                          class="mr-2"
+                          @click.stop="trackingDataStore.deleteTrackingData(data.id)"
+                        >
+                          <v-icon>mdi-delete</v-icon>
+                        </v-btn>
+                      </template>
+                      {{ data.name }}
+
+                      <ModalPosDataRename
+                        v-if="showModalPosDataRename"
+                        v-model="showModalPosDataRename"
+                        :trackingDataId="data.id"
+                      />
+                    </v-list-item>
+                  </v-list>
                 </template>
               </v-tabs-window-item>
             </v-tabs-window>
@@ -64,7 +93,9 @@
 
         <v-btn
           class="mt-2"
-          @click="confirmSelection(selectedCalibrationAsset, selectedBytetrack)"
+          @click="
+            confirmSelection(selectedCalibrationAsset, selectedBytetrack, selectedTrackingData)
+          "
           :disabled="isButtonDisabled"
         >
           {{ $t("button.select") }}
@@ -81,6 +112,8 @@ import { usePlayerStore } from "@/stores/player";
 import { useBboxesStore } from "@/stores/bboxes";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import { useTrackingDataStore } from "@/stores/tracking_data";
+import ModalPosDataRename from "./ModalPosDataRename.vue";
 
 const { t } = useI18n();
 
@@ -88,6 +121,7 @@ const playerStore = usePlayerStore();
 const bboxesStore = useBboxesStore();
 const pluginRunStore = usePluginRunStore();
 const calibrationAssetStore = useCalibrationAssetStore();
+const trackingDataStore = useTrackingDataStore();
 
 const props = defineProps({
   modelValue: {
@@ -124,14 +158,13 @@ onMounted(() => {
   calibrationAssetStore.loadCalibrationAssetsList();
 });
 
-const selectedUploadedPosData = ref(null);
-const uploadedPosDataList = ref([]);
-const loadUploadedPosDataList = () => {
-  const list = JSON.parse(localStorage.getItem("uploadedPosDataList") || "[]");
-  uploadedPosDataList.value = list;
+const selectedTrackingData = ref(null);
+const loadTrackingData = (id) => {
+  trackingDataStore.loadTrackingData(id);
+  dialog.value = false;
 };
 onMounted(() => {
-  loadUploadedPosDataList();
+  trackingDataStore.loadTrackingDataList();
 });
 
 const selectedBytetrack = ref(null);
@@ -159,85 +192,88 @@ const bytetrackRuns = computed(() => {
     }));
 });
 
-function processCsvPositions(csvText, fps = 30) {
-  const lines = csvText
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line !== "");
-  if (lines.length < 2) return [];
-
-  const headers = lines
-    .shift()
-    .split(";")
-    .map((h) => h.trim());
-  const timeIdx = headers.indexOf("ts in ms");
-  const xIdx = headers.indexOf("x in m");
-  const yIdx = headers.indexOf("y in m");
-  const groupIdx = headers.indexOf("group id");
-
-  const items = lines.map((line) => {
-    const parts = line.split(";").map((s) => s.trim());
-    return {
-      origTime: parts[timeIdx],
-      x: parseFloat(parts[xIdx]),
-      y: parseFloat(parts[yIdx]),
-      groupId: parseInt(parts[groupIdx]),
-    };
-  });
-
-  const uniqueTimes = Array.from(new Set(items.map((item) => item.origTime))).sort(
-    (a, b) => parseInt(a) - parseInt(b)
-  );
-
-  const timeMapping = {};
-  uniqueTimes.forEach((time, index) => {
-    timeMapping[time] = playerStore.roundTimeToFPS(index / fps, fps);
-  });
-
-  const teamColorMapping = {
-    1: "red",
-    2: "blue",
-    5: "black",
-  };
-
-  const enrichedItems = items.map((item) => ({
-    ...item,
-    newTime: timeMapping[item.origTime],
-    new_x: (item.x + 99.94 / 2) / 99.94,
-    new_y: (65.88 / 2 - item.y) / 65.88,
-    team: teamColorMapping[item.groupId] || null,
-  }));
-
-  return enrichedItems.reduce((groupedData, item) => {
-    const key = item.newTime;
-    if (!groupedData[key]) {
-      groupedData[key] = [];
-    }
-    groupedData[key].push(item);
-    return groupedData;
-  }, {});
-}
-
 const isButtonDisabled = computed(() => {
   if (selectedMode.value === "bytetrack") {
     return selectedCalibrationAsset.value === null || selectedBytetrack.value === null;
   } else if (selectedMode.value === "manual") {
-    return !selectedUploadedPosData.value;
+    return !selectedTrackingData.value;
   }
   return true;
 });
 
-const confirmSelection = (calibrationAssetId, bytetrackPluginIndex) => {
+const confirmSelection = (calibrationAssetId, bytetrackPluginIndex, trackingDataId) => {
   if (selectedMode.value === "bytetrack") {
     calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
     bboxesStore.bboxPluginRun = bytetrackPluginIndex;
     console.log("selected posdata plugin", bboxesStore.bboxDataTopView);
   } else if (selectedMode.value === "manual") {
-    bboxesStore.bboxDataTopView = processCsvPositions(selectedUploadedPosData.value);
-    calibrationAssetStore.marker = [];
-    calibrationAssetStore.calibrationAssetId = null;
+    trackingDataStore.loadTrackingData(trackingDataId);
+    // bboxesStore.bboxDataTopView = processCsvPositions(selectedTrackingData.value);
+    // calibrationAssetStore.marker = [];
+    // calibrationAssetStore.calibrationAssetId = null;
     console.log("selected posdata upload", bboxesStore.bboxDataTopView);
   }
   dialog.value = false;
 };
+
+const showModalPosDataRename = ref(false);
+
+// function processCsvPositions(csvText, fps = 30) {
+//   const lines = csvText
+//     .split("\n")
+//     .map((line) => line.trim())
+//     .filter((line) => line !== "");
+//   if (lines.length < 2) return [];
+
+//   const headers = lines
+//     .shift()
+//     .split(";")
+//     .map((h) => h.trim());
+//   const timeIdx = headers.indexOf("ts in ms");
+//   const xIdx = headers.indexOf("x in m");
+//   const yIdx = headers.indexOf("y in m");
+//   const groupIdx = headers.indexOf("group id");
+
+//   const items = lines.map((line) => {
+//     const parts = line.split(";").map((s) => s.trim());
+//     return {
+//       origTime: parts[timeIdx],
+//       x: parseFloat(parts[xIdx]),
+//       y: parseFloat(parts[yIdx]),
+//       groupId: parseInt(parts[groupIdx]),
+//     };
+//   });
+
+//   const uniqueTimes = Array.from(new Set(items.map((item) => item.origTime))).sort(
+//     (a, b) => parseInt(a) - parseInt(b)
+//   );
+
+//   const timeMapping = {};
+//   uniqueTimes.forEach((time, index) => {
+//     timeMapping[time] = playerStore.roundTimeToFPS(index / fps, fps);
+//   });
+
+//   const teamColorMapping = {
+//     1: "red",
+//     2: "blue",
+//     5: "black",
+//   };
+
+//   const enrichedItems = items.map((item) => ({
+//     ...item,
+//     newTime: timeMapping[item.origTime],
+//     new_x: (item.x + 99.94 / 2) / 99.94,
+//     new_y: (65.88 / 2 - item.y) / 65.88,
+//     team: teamColorMapping[item.groupId] || null,
+//   }));
+
+//   return enrichedItems.reduce((groupedData, item) => {
+//     const key = item.newTime;
+//     if (!groupedData[key]) {
+//       groupedData[key] = [];
+//     }
+//     groupedData[key].push(item);
+//     return groupedData;
+//   }, {});
+// }
 </script>
