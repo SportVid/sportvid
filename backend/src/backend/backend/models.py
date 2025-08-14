@@ -65,17 +65,17 @@ class TrackingData(models.Model):
     )
     name = models.CharField(max_length=256)
     file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
-    meta_file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
-    ext = models.CharField(max_length=256)
-    meta_ext = models.CharField(max_length=256)
+    meta_file = models.UUIDField(blank=True, null=True)
+    ext = models.CharField(default="", max_length=256)
+    meta_ext = models.CharField(default="", max_length=256)
     date = models.DateTimeField(auto_now_add=True)
-    file_type = models.CharField(max_length=256)  
+    file_type = models.CharField(default="", max_length=256)
     
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {
             "name": self.name,
             "file": self.file.hex,
-            "meta_file": self.meta_file.hex,
+            "meta_file": self.meta_file.hex if self.meta_file else None,
             "id": self.id.hex,
             "ext": self.ext,
             "meta_ext": self.meta_ext,

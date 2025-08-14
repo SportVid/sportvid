@@ -19,9 +19,9 @@ applications:
           num_cpus: 1
           runtime_env:
             uv:
-              - numpy==1.26.4
+              - numpy
               - pandas
-              - json
+              - lxml
   
   - name: kinexon_convert
     route_prefix: /kinexon_convert
@@ -38,7 +38,7 @@ applications:
           num_cpus: 1
           runtime_env:
             uv:
-              - numpy==1.26.4
+              - numpy
               - pandas
               - floodlight
 

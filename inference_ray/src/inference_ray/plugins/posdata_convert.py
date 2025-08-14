@@ -14,7 +14,7 @@ default_config = {
     "port": 6379,
 }
 
-# Define parameters that are required uring the runtime of a plugin
+# Define parameters that are required during the runtime of a plugin
 default_parameters = {
     "delimiter": ";",
     "fps": None
@@ -51,20 +51,23 @@ class PosDataConvert(
         # ----------------- IMPORTS
         import numpy as np
         import pandas as pd
+        from io import StringIO
+        from lxml import etree
         # -----------------
 
         # ----------------- DATA LOADING
         logging.error(f'[PLUGIN]\tinputs: {inputs}')
         logging.error(f'[PLUGIN]\tparams: {parameters}')
         
-        # if "some_params" not in parameters:
-        #     raise ValueError("'some_params' is required for plugin execution.")
-    
+        if "format" not in parameters:
+            raise ValueError("'format' is required for plugin execution.")
+
+        # TODO: Create a JSON with the same format, no matter the format.
         with inputs["tracking_data"] as input_data:
             with input_data.open_file() as t_data:
                 # ----------------- COMPUTE
                 if parameters["format"] == "kinexon":
-                    df = pd.read_csv(input_data, delimiter=parameters["delimiter"])
+                    df = pd.read_csv(t_data, delimiter=parameters["delimiter"])
                     unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
                     
                     # NOTE: checks if specified fps parameter is in an applicable range
@@ -72,7 +75,7 @@ class PosDataConvert(
                     origin_fps = 1000/freq
                     logging.error(origin_fps)
                     
-                    if parameters["fps"]:
+                    if parameters["fps"] > 0:
                         logging.error(parameters["fps"])
                         if parameters["fps"] > origin_fps:
                             raise ValueError("framerate needs to be lower than the original framerate of the tracking data.")
@@ -80,9 +83,8 @@ class PosDataConvert(
                     step_size = np.int32(origin_fps/parameters["fps"]) # compute step size for filtering
                     selected_timestamps = unique_timestamps[::step_size]
                     df_downsampled = df[df[df.columns[0]].isin(selected_timestamps)]  # keeps all rows where 'timestamp' is in the selected list
+                    logging.error(df_downsampled)
                 elif parameters["format"] == "dfl":
-                    
-                    
                     # -------------> DFL XML PARSING
                     # FrameSet: PersonId
                     # Frame: N T X Y
@@ -148,12 +150,15 @@ class PosDataConvert(
                         </record>
                     </xsl:template>
                     </xsl:stylesheet>"""
-                    
-                    df = pd.read_xml(xml_,
-                    #     stylesheet=StringIO(xsl_),
-                    #     xpath='//record'
-                    # )
-                    
+                    # TODO: https://pandas.pydata.org/docs/user_guide/io.html#io-read-xml
+                    # memory-efficient solution using lxml’s iterparse and etree’s iterparse
+                    df = pd.read_xml(
+                        input_data,
+                        stylesheet=StringIO(dfl_xsl), 
+                        xpath='//record'
+                    )
+                    logging.error(df)
+                    # TODO: FPS filtering
                     
                 else:
                     raise ValueError("'format' has to be either one of ['dfl', 'kinexon'], other formats are not supported yet for conversion.")
@@ -163,7 +168,7 @@ class PosDataConvert(
             pos_data.name = "pos_data"
             pos_data.ref_id = parameters.get('tracking_data_id')  # Required field
             pos_data.delta_time = 1.0  # Required field
-            pos_data.pos = df_downsampled.to_json()
+            pos_data.pos = 'TODO' # TODO: use actual JSON-ified string
       
             self.update_callbacks(callbacks, progress=1.0)
         

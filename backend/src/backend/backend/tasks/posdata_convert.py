@@ -28,8 +28,9 @@ class PosDataConvertParser(Parser):
     def __init__(self):
         self.valid_parameter = {
             "tracking_data_id": {"parser": str, "required": True},
-            "fps": {"parser": int, "required": False},
-            "delimiter": {"parser": str, "required": False}
+            "format": {"parser": str, "required": True},
+            "fps": {"parser": int, "required": False, "default": -1},
+            "delimiter": {"parser": str, "required": False, "default": ";"}
         }
 
 
@@ -59,21 +60,26 @@ class PosDataConvert(Task):
         )
         # obtain ref. object from DB to position data table
         tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
-        logging.error(f'{tracking_data_db.meta_file}')
         
-        # TODO: rather transfer binaries instead of using the FSHandler?
-        tracking_data_ = self.upload_td(client, tracking_data_db)  # uses the FSHandler, file is zipped before transfer
+        # TODO: should we rather transfer binaries instead of using the FSHandler?
+        tracking_data_ = self.upload_td(client, tracking_data_db.file.hex, tracking_data_db.ext)  # uses the FSHandler, file is zipped before transfer
+
+        input_dict = {"tracking_data": tracking_data_}
+
+        if parameters.get("format") == 'dfl':
+            meta_data_ = self.upload_td(client, tracking_data_db.meta_file.hex, tracking_data_db.meta_ext)
+            input_dict.update({"meta_data": meta_data_})
 
         # --------> RUN
         result = self.run_analyser(
             client,
             "posdata_convert",
             parameters={
-                "tracking_data_id": parameters.get("tracking_data_id"),
+                "format": parameters.get("format"),
                 "fps": parameters.get("fps"),
                 "delimiter": parameters.get("delimiter")
             },
-            inputs={"tracking_data": tracking_data_[0]},
+            inputs={**input_dict},
             outputs=["pos_data"],   # this only outputs the reference (id)
             downloads=["pos_data"]  # this actually transfers "real" data
         )
