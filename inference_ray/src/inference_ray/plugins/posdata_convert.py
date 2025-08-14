@@ -83,6 +83,9 @@ class PosDataConvert(
                     step_size = np.int32(origin_fps/parameters["fps"]) # compute step size for filtering
                     selected_timestamps = unique_timestamps[::step_size]
                     df_downsampled = df[df[df.columns[0]].isin(selected_timestamps)]  # keeps all rows where 'timestamp' is in the selected list
+                    df_downsampled.drop(['B', 'C'], axis=1)
+                    df_downsampled.rename(columns={"A": "a", "B": "c"})
+                    
                     logging.error(df_downsampled)
                 elif parameters["format"] == "dfl":
                     # -------------> DFL XML PARSING
@@ -144,6 +147,8 @@ class PosDataConvert(
                         <record>
                             <frame_id><xsl:value-of select="@N"/></frame_id>
                             <player_id><xsl:value-of select="../@PersonId"/></player_id>
+                            <team_id><xsl:value-of select="../@TeamId"/></team_id>
+                            <game_section><xsl:value-of select="../@GameSection"/></game_section>
                             <time_t><xsl:value-of select="@T"/></time_t>
                             <pos_x><xsl:value-of select="@X"/></pos_x>
                             <pos_y><xsl:value-of select="@Y"/></pos_y>
@@ -153,7 +158,7 @@ class PosDataConvert(
                     # TODO: https://pandas.pydata.org/docs/user_guide/io.html#io-read-xml
                     # memory-efficient solution using lxml’s iterparse and etree’s iterparse
                     df = pd.read_xml(
-                        input_data,
+                        t_data,
                         stylesheet=StringIO(dfl_xsl), 
                         xpath='//record'
                     )
