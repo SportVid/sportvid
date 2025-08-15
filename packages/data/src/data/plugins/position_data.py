@@ -21,8 +21,11 @@ class PositionData(Data):
         
         self.ref_id = data.get("ref_id") # type: ignore
         self.delta_time = data.get("delta_time") # type: ignore
-        self.pos = data.get("pos") # type: ignore
+        self.pos = data.get("pos")
         
+        # with self.fs.open_file("pos.json", "r") as f: # type: ignore
+        #     self.pos = json.dumps(json.load(f))
+
         # with self.fs.open_file("pos.npz", "r") as f: # type: ignore
         #     self.pos = np.load(f)
 
@@ -34,9 +37,12 @@ class PositionData(Data):
             {
                 "ref_id": self.ref_id,
                 "delta_time": self.delta_time,
-                "pos_data": self.pos
+                "pos": self.pos
             },
         )
+        # with self.fs.open_file("pos.json", "w") as f:
+        #     json.dump(self.pos, f)
+
         # with self.fs.open_file("pos.npz", "w") as f:
         #     np.save(f, self.pos)
 
@@ -46,5 +52,5 @@ class PositionData(Data):
             **meta,
             "ref_id": self.ref_id,
             "delta_time": self.delta_time,
-            "pos_data": json.loads(self.pos)  # parse as dict()
+            "pos_data": self.pos
         }
