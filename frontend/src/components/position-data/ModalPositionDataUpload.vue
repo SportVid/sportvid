@@ -25,6 +25,17 @@
             prepend-icon="mdi-pencil"
           />
 
+          <v-select
+            v-model="positionData.format"
+            :items="positionDataStore.provider"
+            item-title="name"
+            item-value="id"
+            :label="$t('modal.position_data.upload.format')"
+            variant="underlined"
+            class="mt-2"
+            prepend-icon="mdi-menu"
+          />
+
           <v-file-input
             v-model="positionData.file"
             :rules="[validateFile]"
@@ -35,15 +46,37 @@
             persistent-hint
           />
 
+          <v-file-input
+            v-if="positionData.format === 'dfl'"
+            v-model="positionData.meta_data"
+            :rules="[validateFile]"
+            :label="$t('modal.position_data.upload.meta_data')"
+            prepend-icon="mdi-file-upload"
+            class="mt-5"
+            show-size
+            persistent-hint
+          />
+
           <v-select
-            v-model="positionData.format"
-            :items="positionDataStore.provider"
-            item-title="name"
-            item-value="id"
-            :label="$t('modal.position_data.upload.format')"
+            v-if="positionData.format === 'kinexon'"
+            v-model="positionData.delimiter"
+            :items="delimiters"
+            item-title="title"
+            item-value="value"
+            :label="$t('modal.position_data.upload.delimiter')"
+            variant="underlined"
+            class="mt-4"
+            prepend-icon="mdi-menu"
+          />
+
+          <v-text-field
+            v-model="positionData.fps"
+            type="number"
+            min="1"
             variant="underlined"
             class="mt-2"
-            prepend-icon="mdi-menu-swap"
+            :label="$t('modal.position_data.upload.fps')"
+            prepend-icon="mdi-numeric"
           />
 
           <v-progress-linear
@@ -96,9 +129,19 @@ const emit = defineEmits();
 
 const positionData = ref({
   title: null,
-  file: null,
   format: null,
+  file: null,
+  meta_data: null,
+  delimiter: null,
+  fps: null,
 });
+const delimiters = [
+  { value: ",", title: t("modal.position_data.upload.delimiters.comma") },
+  { value: ";", title: t("modal.position_data.upload.delimiters.semicolon") },
+  { value: "\t", title: t("modal.position_data.upload.delimiters.tab") },
+  { value: " ", title: t("modal.position_data.upload.delimiters.space") },
+  { value: "|", title: t("modal.position_data.upload.delimiters.pipe") },
+];
 
 const checkbox = ref(false);
 const fileValid = ref(false);
@@ -123,20 +166,34 @@ const validateFile = (file) => {
 const isUploading = computed(() => positionDataStore.isUploading);
 const uploadingProgress = computed(() => positionDataStore.progress);
 
-const disabled = computed(
-  () =>
+const disabled = computed(() => {
+  if (
     !checkbox.value ||
     !positionData.value.title ||
-    !positionData.value.file ||
+    !positionData.value.format ||
     !positionData.value.file ||
     !fileValid.value
-);
+  ) {
+    return true;
+  }
+  if (positionData.value.format === "dfl" && !positionData.value.meta_data) {
+    return true;
+  }
+  if (positionData.value.format === "kinexon" && !positionData.value.delimiter) {
+    return true;
+  }
+
+  return false;
+});
 
 const uploadPositionData = async () => {
   const params = {
     title: positionData.value.title,
-    file: positionData.value.file,
     format: positionData.value.format,
+    file: positionData.value.file,
+    meta_data: positionData.value.meta_data,
+    delimiter: positionData.value.delimiter,
+    fps: positionData.value.fps,
   };
 
   await positionDataStore.uploadPositionData(params);

@@ -44,9 +44,12 @@ export const usePositionDataStore = defineStore("position_data", () => {
     isUploading.value = true;
     try {
       const formData = new FormData();
-      formData.append("file", params.file);
       formData.append("title", params.title);
       formData.append("format", params.format);
+      formData.append("file", params.file);
+      formData.append("meta_data", params.meta_data);
+      formData.append("delimiter", params.delimiter);
+      formData.append("fps", params.fps);
 
       const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
