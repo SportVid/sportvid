@@ -4,6 +4,25 @@ http_options:
   port: 8000
 
 applications:
+  - name: posdata_convert
+    route_prefix: /posdata_convert
+    import_path: inference_ray.main:app_builder
+    args:
+      model: posdata_convert
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        autoscaling_config:
+          min_replicas: 0
+        ray_actor_options:
+          num_cpus: 1
+          runtime_env:
+            uv:
+              - numpy
+              - pandas
+              - lxml
+
   - name: kinexon_convert
     route_prefix: /kinexon_convert
     import_path: inference_ray.main:app_builder
@@ -19,7 +38,7 @@ applications:
           num_cpus: 1
           runtime_env:
             uv:
-              - numpy==1.26.4
+              - numpy
               - pandas
               - floodlight
 

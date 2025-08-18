@@ -23,16 +23,19 @@ from django.conf import settings
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 
 
-@PluginManager.export_parser("kinexon_convert")
-class KinexonConvertParser(Parser):
+@PluginManager.export_parser("posdata_convert")
+class PosDataConvertParser(Parser):
     def __init__(self):
         self.valid_parameter = {
             "tracking_data_id": {"parser": str, "required": True},
+            "format": {"parser": str, "required": True},
+            "fps": {"parser": int, "required": False, "default": -1},
+            "delimiter": {"parser": str, "required": False, "default": ";"}
         }
 
 
-@PluginManager.export_plugin("kinexon_convert")
-class KinexonConvert(Task):
+@PluginManager.export_plugin("posdata_convert")
+class PosDataConvert(Task):
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",
@@ -56,24 +59,27 @@ class KinexonConvert(Task):
             manager=manager,
         )
         # obtain ref. object from DB to position data table
-        logging.error(f'[TASKS]\tparams: {parameters}')
-        logging.error(f'[TASKS]\ttdid: {parameters.get("tracking_data_id")}')
-        
         tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
-        logging.error(f'[TASKS]\ttdid_db: {tracking_data_db}')
         
-        # NOTE: Which method is preferred?
-        tracking_data_ = self.upload_td(client, tracking_data_db)  # uses the FSHandler, file is zipped before transfer
-        # TODO: This one isn't working yet
-        # tracking_data_ = self.upload_td_from_stream(client, tracking_data_db)  # uploads directly from the file stream
+        # TODO: should we rather transfer binaries instead of using the FSHandler?
+        tracking_data_ = self.upload_td(client, tracking_data_db.file.hex, tracking_data_db.ext)  # uses the FSHandler, file is zipped before transfer
 
-        # --------> RUN ANALYSER PLUGIN
-        # NOTE: specify parameters for plugin execution -> needs to match call()-method of "/inference_ray/plugins/kinexon_convert.py"
+        input_dict = {"tracking_data": tracking_data_}
+
+        if parameters.get("format") == 'dfl':
+            meta_data_ = self.upload_td(client, tracking_data_db.meta_file.hex, tracking_data_db.meta_ext)
+            input_dict.update({"meta_data": meta_data_})
+
+        # --------> RUN
         result = self.run_analyser(
             client,
-            "kinexon_convert",
-            parameters={"tracking_data_id": parameters.get("tracking_data_id")},  # NOTE: specify more params if needed  
-            inputs={"tracking_data": tracking_data_},
+            "posdata_convert",
+            parameters={
+                "format": parameters.get("format"),
+                "fps": parameters.get("fps"),
+                "delimiter": parameters.get("delimiter")
+            },
+            inputs={**input_dict},
             outputs=["pos_data"],   # this only outputs the reference (id)
             downloads=["pos_data"]  # this actually transfers "real" data
         )
