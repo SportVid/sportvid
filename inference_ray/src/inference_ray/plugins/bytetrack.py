@@ -158,6 +158,8 @@ class ByteTrack(
                             y=int(box[1]) / img_info["height"],
                             w=int(box[2]) / img_info["width"],
                             h=int(box[3]) / img_info["height"],
+                            top_x=(int(box[0]) / img_info["width"]) + (int(box[2]) / img_info["width"]) / 2,
+                            top_y=(int(box[1]) / img_info["height"]) + (int(box[3]) / img_info["height"]),
                             image_id=frame_info["frame_id"],
                             ref_id=id,
                             team_id="None",

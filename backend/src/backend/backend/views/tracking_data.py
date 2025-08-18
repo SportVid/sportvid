@@ -119,10 +119,7 @@ class TrackingDataUpload(View):
                 if request.POST.get("delimiter"):
                     analyser_params.append({"name": "delimiter", "value": request.POST.get("delimiter")})
                 
-                # TODO: make the video reference from analyser/plugin manager/plugin optional, if not needed!
-                # Or: allow passing of generic object that encapsulates TD and Video?
-                
-                # NOTE: when something goes wrong with plugin execution, we do not know...?
+                # NOTE: What happens if something goes wrong with the plugin execution, we simply do not know...?
                 # try:
                 #     video_db = Video.objects.get(id=request.POST.get("video_id"))       
                 #     self.submit_analyse(

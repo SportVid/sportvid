@@ -77,7 +77,8 @@ class PosDataConvert(Task):
             parameters={
                 "format": parameters.get("format"),
                 "fps": parameters.get("fps"),
-                "delimiter": parameters.get("delimiter")
+                "delimiter": parameters.get("delimiter"),
+                "tracking_data_id": parameters.get("tracking_data_id")
             },
             inputs={**input_dict},
             outputs=["pos_data"],   # this only outputs the reference (id)
@@ -111,4 +112,5 @@ class PosDataConvert(Task):
             "plugin_run": plugin_run.id.hex,
             "plugin_run_results": [plugin_run_result_db.id.hex],
             "data": {"pos_data": pos_data.id},
+            "tracking_data_id": parameters.get("tracking_data_id")
         }

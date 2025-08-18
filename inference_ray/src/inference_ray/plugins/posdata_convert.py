@@ -196,8 +196,7 @@ class PosDataConvert(
         # ----------------- OUTPUT
         with data_manager.create_data("PositionData") as pos_data:
             pos_data.name = "pos_data"
-            pos_data.ref_id = parameters.get('tracking_data_id')  # Required field
-            pos_data.delta_time = 1.0  # Required field
+            pos_data.tracking_data_id = parameters.get('tracking_data_id')  # Required field
             pos_data.pos = json.dumps(py_dict)
 
             self.update_callbacks(callbacks, progress=1.0)

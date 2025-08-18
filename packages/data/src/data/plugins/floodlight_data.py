@@ -1,4 +1,6 @@
 import json
+import numpy.typing as npt
+import numpy as np
 
 from dataclasses import dataclass, field
 
@@ -7,46 +9,40 @@ from ..data import Data
 from interface import analyser_pb2
 
 
-@DataManager.export("PositionData", analyser_pb2.POS_DATA)
+@DataManager.export("FloodlightData", analyser_pb2.FL_DATA)
 @dataclass(kw_only=True)  # Pydantic ???
-class PositionData(Data):
-    type: str = field(default="PositionData")
+class FloodlightData(Data):
+    type: str = field(default="FloodlightData")
     tracking_data_id: str = None
-    pos: str = None  # uses JSON representation for the output data
+    meta_data: int = None  # TODO
+    xy_pos: npt.NDArray = None  # TODO
  
     def load(self) -> None:
         super().load()
         data = self.load_dict("pos_data.yml")
         
         self.tracking_data_id = data.get("tracking_data_id") # type: ignore
-        self.pos = data.get("pos")
-        
-        # with self.fs.open_file("pos.json", "r") as f: # type: ignore
-        #     self.pos = json.dumps(json.load(f))
 
-        # with self.fs.open_file("pos.npz", "r") as f: # type: ignore
-        #     self.pos = np.load(f)
+        with self.fs.open_file("xy_pos.npz", "r") as f: # type: ignore
+            self.xy_pos = np.load(f)
 
     def save(self) -> None:
         super().save()
 
         self.save_dict(
-            "pos_data.yml",
+            "fl_data.yml",
             {
                 "tracking_data_id": self.tracking_data_id,
-                "pos": self.pos
             },
         )
-        # with self.fs.open_file("pos.json", "w") as f:
-        #     json.dump(self.pos, f)
 
-        # with self.fs.open_file("pos.npz", "w") as f:
-        #     np.save(f, self.pos)
+        with self.fs.open_file("pos.npz", "w") as f:
+            np.save(f, self.pos)
 
     def to_dict(self) -> dict:
         meta = super().to_dict()
         return {
             **meta,
             "tracking_data_id": self.tracking_data_id,
-            "pos_data": self.pos
+            "xy_pos": self.xy_pos.tolist(),
         }

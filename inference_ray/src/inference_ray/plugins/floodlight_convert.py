@@ -22,12 +22,12 @@ requires = {
 }
 
 provides = {
-    "position_data": PositionData,
+    "floodlight_data": FloodlightData,
 }
 
 
-@AnalyserPluginManager.export("kinexon_convert")
-class KinexonConvert(
+@AnalyserPluginManager.export("floodlight_convert")
+class FloodlightConvert(
     AnalyserPlugin,
     config=default_config,
     parameters=default_parameters,

@@ -21,6 +21,8 @@ class BboxData(Data):
     y: int = None
     w: int = None
     h: int = None
+    top_x: int = None
+    top_y: int = None
     det_score: float = 1.0
 
     def to_dict(self) -> dict:
@@ -31,6 +33,8 @@ class BboxData(Data):
             "y": self.y,
             "w": self.w,
             "h": self.h,
+            "top_x": self.top_x,
+            "top_y": self.top_y,
             "det_score": self.det_score,
             "time": self.time,
             "delta_time": self.delta_time,
