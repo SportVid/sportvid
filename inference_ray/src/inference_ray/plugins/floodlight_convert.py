@@ -2,7 +2,7 @@ import logging
 
 from typing import Callable, Dict
 
-from data import PositionData, TrackingData
+from data import FloodlightData, TrackingData
 from data import DataManager, Data
 
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager

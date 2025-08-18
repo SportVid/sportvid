@@ -63,6 +63,7 @@ enum PluginDataType {
 
   TRACKING_DATA = 24;
   POS_DATA = 25;
+  FL_DATA = 26;
 }
 
 message PluginInfoData {
