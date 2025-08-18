@@ -44,13 +44,11 @@ class KinexonConvert(
         data_manager: DataManager,
         parameters: Dict = None,
         callbacks: Callable = None,
-    ) -> Dict[str, Data]:
-
-        # NOTE: Imports definieren -> müssen vorher in 'deploy.yml', 'deploy.cuda.yml' registriert sein      
+    ) -> Dict[str, Data]:    
         # ----------------- IMPORTS
         import numpy as np
         import pandas as pd
-        import floodlight as fl
+        from floodlight.io.kinexon import read_position_data_csv
         # -----------------
 
         # ----------------- DATA LOADING
@@ -61,7 +59,7 @@ class KinexonConvert(
         #     raise ValueError("'some_params' is required for the conversion.")
         
         with inputs["tracking_data"] as input_data:
-            with input_data.open_file() as t_data:        
+            with input_data.open_file() as t_data:
                 kinexon_df = pd.read_csv(t_data, sep=';')
                 logging.error(kinexon_df)
                 # xy_col = kinexon_df.columns.values.tolist()[-3:-1]

@@ -89,7 +89,7 @@ class AnalyserClient:
     def upload_file(self, path, id=None):
         ext = os.path.splitext(path)[-1][1:]
         filename = os.path.basename(path)
-
+        
         mimetype = mimetypes.guess_type(path)
         if re.match(r"video/*", mimetype[0]):
             data_type = analyser_pb2.VIDEO_DATA
@@ -97,7 +97,7 @@ class AnalyserClient:
             data_type = analyser_pb2.AUDIO_DATA
         if re.match(r"image/*", mimetype[0]):
             data_type = analyser_pb2.IMAGES_DATA
-        if re.match(r"text/*", mimetype[0]):
+        if re.match(r"text/*", mimetype[0]) or re.match(r"application/xml", mimetype[0]):
             data_type = analyser_pb2.TRACKING_DATA
 
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
