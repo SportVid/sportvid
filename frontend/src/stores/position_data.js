@@ -2,11 +2,18 @@ import { ref } from "vue";
 import { defineStore } from "pinia";
 import axios from "../plugins/axios";
 import config from "../../app.config";
+import { usePlayerStore } from "@/stores/player";
+import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 
 export const usePositionDataStore = defineStore("position_data", () => {
+  const playerStore = usePlayerStore();
+  const pluginRunStore = usePluginRunStore();
+  const pluginRunResultStore = usePluginRunResultStore();
+
   const positionDataList = ref([]);
   const positionDataId = ref(null);
-  const positionDataCurrent = ref(null);
+  const positionDataActive = ref(null);
 
   const isUploading = ref(false);
   const progress = ref(0);
@@ -32,10 +39,21 @@ export const usePositionDataStore = defineStore("position_data", () => {
   };
 
   const loadPositionData = (id) => {
-    const positionData = positionDataList.value.find((data) => data.id === id);
-    if (positionData) {
+    const selectedPositionData = positionDataList.value.find((data) => data.id === id);
+    if (selectedPositionData) {
       positionDataId.value = id;
-      positionDataCurrent.value = positionData;
+
+      positionDataActive.value = pluginRunStore
+        .forVideo(playerStore.videoId)
+        .filter(
+          (e) => e.type === "posdata_convert" && e.status === "DONE" && e.tracking_data_id === id
+        )
+        .map((e) => {
+          e.results = pluginRunResultStore.forPluginRun(e.id);
+          return e;
+        });
+
+      console.log("PosData", positionDataId.value, positionDataActive.value);
     }
   };
 
@@ -44,6 +62,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
     isUploading.value = true;
     try {
       const formData = new FormData();
+      formData.append("video_id", playerStore.videoId);
       formData.append("title", params.title);
       formData.append("format", params.format);
       formData.append("file", params.file);
@@ -108,7 +127,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
   return {
     positionDataList,
     positionDataId,
-    positionDataCurrent,
+    positionDataActive,
     positionDataUploadSuccess,
     positionDataRenameSuccess,
     positionDataDeleteSuccess,
