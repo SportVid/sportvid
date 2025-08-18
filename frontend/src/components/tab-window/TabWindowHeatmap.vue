@@ -1,5 +1,5 @@
 <template>
-  <PosDataMenu v-if="Object.keys(bboxesStore.bboxDataTopView).length === 0" />
+  <PositionDataMenu v-if="Object.keys(bboxesStore.bboxDataTopView).length === 0" />
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
@@ -135,7 +135,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue"
 import { useTopViewStore } from "@/stores/top_view";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useVideoStore } from "@/stores/video";
-import PosDataMenu from "@/components/pos-data/PosDataMenu.vue";
+import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import h337 from "heatmap.js";
 
 const topViewStore = useTopViewStore();

@@ -182,7 +182,7 @@ const exportFormats = ref([
     export: "positions_csv",
     parameters: [
       {
-        field: "select_pos_data_team",
+        field: "select_position_data_team",
         name: "position_data_team",
         value: "both",
         text: t("modal.plugin.position_data_name"),

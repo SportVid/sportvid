@@ -14,7 +14,7 @@
       <v-card-text class="pt-4">
         <v-form>
           <v-text-field
-            v-model="posData.title"
+            v-model="positionData.title"
             :counter="120"
             persistent-counter
             variant="underlined"
@@ -26,7 +26,7 @@
           />
 
           <v-file-input
-            v-model="posData.file"
+            v-model="positionData.file"
             :rules="[validateFile]"
             :label="$t('modal.position_data.upload.file')"
             prepend-icon="mdi-file-upload"
@@ -36,8 +36,8 @@
           />
 
           <v-select
-            v-model="posData.format"
-            :items="trackingDataStore.provider"
+            v-model="positionData.format"
+            :items="positionDataStore.provider"
             item-title="name"
             item-value="id"
             :label="$t('modal.position_data.upload.format')"
@@ -69,7 +69,7 @@
             </template>
           </v-checkbox>
 
-          <v-btn class="mr-4 mt-n4" :disabled="disabled" @click="uploadPosData">
+          <v-btn class="mr-4 mt-n4" :disabled="disabled" @click="uploadPositionData">
             {{ $t("button.upload") }}
           </v-btn>
         </v-form>
@@ -81,9 +81,9 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { useTrackingDataStore } from "@/stores/tracking_data";
+import { usePositionDataStore } from "@/stores/position_data";
 
-const trackingDataStore = useTrackingDataStore();
+const positionDataStore = usePositionDataStore();
 const { t } = useI18n();
 
 const props = defineProps({
@@ -94,7 +94,7 @@ const props = defineProps({
 });
 const emit = defineEmits();
 
-const posData = ref({
+const positionData = ref({
   title: null,
   file: null,
   format: null,
@@ -120,26 +120,26 @@ const validateFile = (file) => {
   return true;
 };
 
-const isUploading = computed(() => trackingDataStore.isUploading);
-const uploadingProgress = computed(() => trackingDataStore.progress);
+const isUploading = computed(() => positionDataStore.isUploading);
+const uploadingProgress = computed(() => positionDataStore.progress);
 
 const disabled = computed(
   () =>
     !checkbox.value ||
-    !posData.value.title ||
-    !posData.value.file ||
-    !posData.value.file ||
+    !positionData.value.title ||
+    !positionData.value.file ||
+    !positionData.value.file ||
     !fileValid.value
 );
 
-const uploadPosData = async () => {
+const uploadPositionData = async () => {
   const params = {
-    title: posData.value.title,
-    file: posData.value.file,
-    format: posData.value.format,
+    title: positionData.value.title,
+    file: positionData.value.file,
+    format: positionData.value.format,
   };
 
-  await trackingDataStore.uploadTrackingData(params);
+  await positionDataStore.uploadPositionData(params);
   dialog.value = false;
   fileValid.value = false;
 };

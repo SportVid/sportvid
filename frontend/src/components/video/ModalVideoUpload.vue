@@ -215,11 +215,19 @@ const video = ref({
 const analysers = ref([
   {
     label: "Shot Detection",
-    disabled: false,
+    disabled: true,
     model: "shotdetection",
   },
 ]);
-const selectedAnalysers = ref(["shotdetection"]);
+const selectedAnalysers = ref(analysers.value.filter((a) => !a.disabled).map((a) => a.model));
+watch(
+  analysers,
+  (list) => {
+    selectedAnalysers.value = list.filter((a) => !a.disabled).map((a) => a.model);
+  },
+  { immediate: true }
+);
+
 const checkbox = ref(false);
 const fileValid = ref(false);
 

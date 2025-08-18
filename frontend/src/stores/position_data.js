@@ -3,43 +3,43 @@ import { defineStore } from "pinia";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 
-export const useTrackingDataStore = defineStore("trackingData", () => {
-  const trackingDataList = ref([]);
-  const trackingDataId = ref(null);
-  const trackingDataCurrent = ref(null);
+export const usePositionDataStore = defineStore("position_data", () => {
+  const positionDataList = ref([]);
+  const positionDataId = ref(null);
+  const positionDataCurrent = ref(null);
 
   const isUploading = ref(false);
   const progress = ref(0);
 
-  const trackingDataUploadSuccess = ref(false);
-  const trackingDataRenameSuccess = ref(false);
-  const trackingDataDeleteSuccess = ref(false);
+  const positionDataUploadSuccess = ref(false);
+  const positionDataRenameSuccess = ref(false);
+  const positionDataDeleteSuccess = ref(false);
 
   const provider = [
     { name: "Kinexon", id: "kinexon" },
     { name: "DFL", id: "dfl" },
   ];
 
-  const loadTrackingDataList = async () => {
+  const loadPositionDataList = async () => {
     try {
       const res = await axios.get(`${config.API_LOCATION}/tracking_data/list`);
       if (res.data.status === "ok") {
-        trackingDataList.value = res.data.entries;
+        positionDataList.value = res.data.entries;
       }
     } catch (error) {
       console.error("Failed to list tracking data:", error);
     }
   };
 
-  const loadTrackingData = (id) => {
-    const trackingData = trackingDataList.value.find((data) => data.id === id);
-    if (trackingData) {
-      trackingDataId.value = id;
-      trackingDataCurrent.value = trackingData;
+  const loadPositionData = (id) => {
+    const positionData = positionDataList.value.find((data) => data.id === id);
+    if (positionData) {
+      positionDataId.value = id;
+      positionDataCurrent.value = positionData;
     }
   };
 
-  const uploadTrackingData = async (params) => {
+  const uploadPositionData = async (params) => {
     if (!params) return;
     isUploading.value = true;
     try {
@@ -58,18 +58,18 @@ export const useTrackingDataStore = defineStore("trackingData", () => {
       });
 
       if (res.data.status === "ok") {
-        trackingDataUploadSuccess.value = true;
-        await loadTrackingDataList();
+        positionDataUploadSuccess.value = true;
+        await loadPositionDataList();
       }
     } catch (error) {
-      console.error("Failed to upload tracking data:", error);
+      console.error("Failed to upload position data:", error);
     } finally {
       isUploading.value = false;
       progress.value = 0;
     }
   };
 
-  const renameTrackingData = async (id, newName) => {
+  const renamePositionData = async (id, newName) => {
     if (!id || !newName) return;
     try {
       const res = await axios.post(`${config.API_LOCATION}/tracking_data/rename`, {
@@ -77,43 +77,43 @@ export const useTrackingDataStore = defineStore("trackingData", () => {
         name: newName,
       });
       if (res.data.status === "ok") {
-        trackingDataRenameSuccess.value = true;
-        await loadTrackingDataList();
+        positionDataRenameSuccess.value = true;
+        await loadPositionDataList();
       }
     } catch (error) {
-      console.error("Failed to rename tracking data:", error);
+      console.error("Failed to rename position data:", error);
     } finally {
     }
   };
 
-  const deleteTrackingData = async (id) => {
+  const deletePositionData = async (id) => {
     if (!id) return;
     try {
       const res = await axios.post(`${config.API_LOCATION}/tracking_data/delete`, {
         id,
       });
       if (res.data.status === "ok") {
-        trackingDataDeleteSuccess.value = true;
-        await loadTrackingDataList();
+        positionDataDeleteSuccess.value = true;
+        await loadPositionDataList();
       }
     } catch (error) {
-      console.error("Failed to delete tracking data:", error);
+      console.error("Failed to delete position data:", error);
     } finally {
     }
   };
 
   return {
-    trackingDataList,
-    trackingDataId,
-    trackingDataCurrent,
-    trackingDataUploadSuccess,
-    trackingDataRenameSuccess,
-    trackingDataDeleteSuccess,
-    loadTrackingDataList,
-    loadTrackingData,
-    uploadTrackingData,
-    renameTrackingData,
-    deleteTrackingData,
+    positionDataList,
+    positionDataId,
+    positionDataCurrent,
+    positionDataUploadSuccess,
+    positionDataRenameSuccess,
+    positionDataDeleteSuccess,
+    loadPositionDataList,
+    loadPositionData,
+    uploadPositionData,
+    renamePositionData,
+    deletePositionData,
     isUploading,
     progress,
     provider,

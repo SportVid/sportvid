@@ -127,7 +127,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
     });
   };
 
-  const posDataUploadSuccess = ref(false);
+  const positionDataUploadSuccess = ref(false);
 
   return {
     bboxData,
@@ -138,6 +138,6 @@ export const useBboxesStore = defineStore("bboxes", () => {
     bboxPluginRun,
     bboxDataTopView,
     setbboxDataTopView,
-    posDataUploadSuccess,
+    positionDataUploadSuccess,
   };
 });
