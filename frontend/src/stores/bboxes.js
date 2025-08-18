@@ -16,17 +16,16 @@ export const useBboxesStore = defineStore("bboxes", () => {
   const bboxDataTopView = ref({});
   const bboxDataLoaded = ref(false);
 
-  const bboxPluginRun = ref(0);
+  const bboxPluginRunId = ref(0);
 
-  const setBboxData = (pluginRun) => {
+  const setBboxData = (pluginRunId) => {
     let _bboxData;
     let hasValidData = false;
 
     try {
       _bboxData = pluginRunStore
         .forVideo(playerStore.videoId)
-        .filter((e) => e.type === "bytetrack" && e.status === "DONE")
-        .slice(pluginRun)
+        .filter((e) => e.type === "bytetrack" && e.status === "DONE" && e.id === pluginRunId)
         .map((e) => {
           e.results = pluginRunResultStore.forPluginRun(e.id);
           return e;
@@ -135,7 +134,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
     bboxDataLoaded,
     interpolateBboxData,
     bboxDataInterpolated,
-    bboxPluginRun,
+    bboxPluginRunId,
     bboxDataTopView,
     setbboxDataTopView,
     positionDataUploadSuccess,

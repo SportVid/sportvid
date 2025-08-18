@@ -263,7 +263,7 @@ const groupDataByTime = (data) => {
   return grouped;
 };
 watchEffect(() => {
-  const newBboxes = bboxesStore.setBboxData(bboxesStore.bboxPluginRun);
+  const newBboxes = bboxesStore.setBboxData(bboxesStore.bboxPluginRunId);
 
   if (newBboxes && newBboxes.length > 0) {
     bboxesStore.bboxData = newBboxes;
