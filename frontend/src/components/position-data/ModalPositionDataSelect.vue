@@ -14,7 +14,7 @@
       <v-card-text>
         <v-row justify="center" class="mt-0 mb-1">
           <v-tabs v-model="selectedMode" fixed-tabs slider-color="primary">
-            <v-tab v-for="mode in PosDataModes" :key="mode.id" :value="mode.id">
+            <v-tab v-for="mode in PositionDataModes" :key="mode.id" :value="mode.id">
               {{ mode.name }}
             </v-tab>
           </v-tabs>
@@ -23,7 +23,7 @@
         <v-row>
           <v-col>
             <v-tabs-window v-model="selectedMode">
-              <v-tabs-window-item v-for="mode in PosDataModes" :key="mode.id" :value="mode.id">
+              <v-tabs-window-item v-for="mode in PositionDataModes" :key="mode.id" :value="mode.id">
                 <template v-if="mode.id === 'bytetrack'">
                   <v-select
                     v-model="selectedCalibrationAsset"
@@ -49,11 +49,11 @@
                 <template v-else-if="mode.id === 'manual'">
                   <v-list density="compact" style="height: 210px; overflow-y: auto">
                     <v-list-item
-                      v-for="data in trackingDataStore.trackingDataList"
+                      v-for="data in positionDataStore.positionDataList"
                       :key="data.id"
                       class="mr-4"
-                      :active="selectedTrackingData && selectedTrackingData.id === data.id"
-                      @click="selectedTrackingData = data.id"
+                      :active="selectedPositionData && selectedPositionData.id === data.id"
+                      @click="selectedPositionData = data.id"
                     >
                       <template #append>
                         <v-btn
@@ -61,7 +61,7 @@
                           color="primary"
                           variant="plain"
                           class="mr-1"
-                          @click.stop="showModalPosDataRename = true"
+                          @click.stop="showModalPositionDataRename = true"
                         >
                           <v-icon>mdi-pencil</v-icon>
                         </v-btn>
@@ -71,17 +71,17 @@
                           color="red"
                           variant="plain"
                           class="mr-2"
-                          @click.stop="trackingDataStore.deleteTrackingData(data.id)"
+                          @click.stop="positionDataStore.deletePositionData(data.id)"
                         >
                           <v-icon>mdi-delete</v-icon>
                         </v-btn>
                       </template>
                       {{ data.name }}
 
-                      <ModalPosDataRename
-                        v-if="showModalPosDataRename"
-                        v-model="showModalPosDataRename"
-                        :trackingDataId="data.id"
+                      <ModalPositionDataRename
+                        v-if="showModalPositionDataRename"
+                        v-model="showModalPositionDataRename"
+                        :positionDataId="data.id"
                       />
                     </v-list-item>
                   </v-list>
@@ -94,7 +94,7 @@
         <v-btn
           class="mt-2"
           @click="
-            confirmSelection(selectedCalibrationAsset, selectedBytetrack, selectedTrackingData)
+            confirmSelection(selectedCalibrationAsset, selectedBytetrack, selectedPositionData)
           "
           :disabled="isButtonDisabled"
         >
@@ -112,8 +112,8 @@ import { usePlayerStore } from "@/stores/player";
 import { useBboxesStore } from "@/stores/bboxes";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
-import { useTrackingDataStore } from "@/stores/tracking_data";
-import ModalPosDataRename from "./ModalPosDataRename.vue";
+import { usePositionDataStore } from "@/stores/position_data";
+import ModalPositionDataRename from "./ModalPositionDataRename.vue";
 
 const { t } = useI18n();
 
@@ -121,7 +121,7 @@ const playerStore = usePlayerStore();
 const bboxesStore = useBboxesStore();
 const pluginRunStore = usePluginRunStore();
 const calibrationAssetStore = useCalibrationAssetStore();
-const trackingDataStore = useTrackingDataStore();
+const positionDataStore = usePositionDataStore();
 
 const props = defineProps({
   modelValue: {
@@ -148,7 +148,7 @@ watch(
 );
 
 const selectedMode = ref("bytetrack");
-const PosDataModes = ref([
+const PositionDataModes = ref([
   { id: "bytetrack", name: t("modal.position_data.select.modes.bytetrack") },
   { id: "manual", name: t("modal.position_data.select.modes.manual") },
 ]);
@@ -158,13 +158,13 @@ onMounted(() => {
   calibrationAssetStore.loadCalibrationAssetsList();
 });
 
-const selectedTrackingData = ref(null);
-const loadTrackingData = (id) => {
-  trackingDataStore.loadTrackingData(id);
+const selectedPositionData = ref(null);
+const loadPositionData = (id) => {
+  positionDataStore.loadPositionData(id);
   dialog.value = false;
 };
 onMounted(() => {
-  trackingDataStore.loadTrackingDataList();
+  positionDataStore.loadPositionDataList();
 });
 
 const selectedBytetrack = ref(null);
@@ -196,19 +196,19 @@ const isButtonDisabled = computed(() => {
   if (selectedMode.value === "bytetrack") {
     return selectedCalibrationAsset.value === null || selectedBytetrack.value === null;
   } else if (selectedMode.value === "manual") {
-    return !selectedTrackingData.value;
+    return !selectedPositionData.value;
   }
   return true;
 });
 
-const confirmSelection = (calibrationAssetId, bytetrackPluginIndex, trackingDataId) => {
+const confirmSelection = (calibrationAssetId, bytetrackPluginIndex, positionDataId) => {
   if (selectedMode.value === "bytetrack") {
     calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
     bboxesStore.bboxPluginRun = bytetrackPluginIndex;
     console.log("selected posdata plugin", bboxesStore.bboxDataTopView);
   } else if (selectedMode.value === "manual") {
-    trackingDataStore.loadTrackingData(trackingDataId);
-    // bboxesStore.bboxDataTopView = processCsvPositions(selectedTrackingData.value);
+    positionDataStore.loadPositionData(positionDataId);
+    // bboxesStore.bboxDataTopView = processCsvPositions(selectedPositionData.value);
     // calibrationAssetStore.marker = [];
     // calibrationAssetStore.calibrationAssetId = null;
     console.log("selected posdata upload", bboxesStore.bboxDataTopView);
@@ -216,7 +216,7 @@ const confirmSelection = (calibrationAssetId, bytetrackPluginIndex, trackingData
   dialog.value = false;
 };
 
-const showModalPosDataRename = ref(false);
+const showModalPositionDataRename = ref(false);
 
 // function processCsvPositions(csvText, fps = 30) {
 //   const lines = csvText

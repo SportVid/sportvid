@@ -69,7 +69,7 @@
         </v-col>
       </v-row> -->
 
-      <v-row v-if="tabStore.analysisTabId === 'pos_data'" class="ma-n2">
+      <v-row v-if="tabStore.analysisTabId === 'position_data'" class="ma-n2">
         <v-col>
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2">
             <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.visualizationTabId">
@@ -120,10 +120,10 @@
       </div>
     </v-snackbar>
 
-    <v-snackbar v-model="showPosDataActionSnackbar">
+    <v-snackbar v-model="showPositionDataActionSnackbar">
       <div class="d-flex justify-center">
         <snackbar-icon />
-        <span class="text-h6">{{ posDataActionMessage }}</span>
+        <span class="text-h6">{{ positionDataActionMessage }}</span>
       </div>
     </v-snackbar>
   </v-main>
@@ -147,10 +147,10 @@ import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 import { useShotStore } from "@/stores/shot";
 import { useTabStore } from "@/stores/tabs";
-import { useTrackingDataStore } from "@/stores/tracking_data";
+import { usePositionDataStore } from "@/stores/position_data";
 // import * as Keyboard from "../plugins/keyboard";
 import VideoPlayer from "@/components/video/VideoPlayer.vue";
-import TabWindowPosData from "@/components/tab-window/TabWindowPosData.vue";
+import TabWindowPositionData from "@/components/tab-window/TabWindowPositionData.vue";
 import TabWindowCalibration from "@/components/tab-window/TabWindowCalibration.vue";
 import TabWindowHeatmap from "@/components/tab-window/TabWindowHeatmap.vue";
 import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
@@ -182,13 +182,13 @@ const annotationShortcutStore = useAnnotationShortcutStore();
 const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
 const tabStore = useTabStore();
-const trackingDataStore = useTrackingDataStore();
+const positionDataStore = usePositionDataStore();
 
 function getAnalysisTabComponent(tabId) {
   if (tabId === "calibration") {
     return TabWindowCalibration;
-  } else if (tabId === "pos_data") {
-    return TabWindowPosData;
+  } else if (tabId === "position_data") {
+    return TabWindowPositionData;
   } else if (tabId === "heatmap") {
     return TabWindowHeatmap;
   } else {
@@ -220,7 +220,7 @@ watch(
       calibrationAssetStore.showVideoMarker = false;
     }
 
-    if (newTabId === "pos_data" || newTabId === "heatmap") {
+    if (newTabId === "position_data" || newTabId === "heatmap") {
       playerStore.showBoundingBox = true;
     } else {
       playerStore.showBoundingBox = false;
@@ -521,33 +521,33 @@ watch(
   }
 );
 
-const showPosDataActionSnackbar = ref(false);
-const posDataActionMessage = ref("");
-const resetPosDataActionSnackbar = async () => {
-  showPosDataActionSnackbar.value = false;
+const showPositionDataActionSnackbar = ref(false);
+const positionDataActionMessage = ref("");
+const resetPositionDataActionSnackbar = async () => {
+  showPositionDataActionSnackbar.value = false;
   await nextTick();
-  showPosDataActionSnackbar.value = true;
-  // bboxesStore.posDataUploadSuccess = false;
+  showPositionDataActionSnackbar.value = true;
+  // bboxesStore.positionDataUploadSuccess = false;
 };
 watch(
   [
-    () => trackingDataStore.trackingDataUploadSuccess,
-    () => trackingDataStore.trackingDataRenameSuccess,
-    () => trackingDataStore.trackingDataDeleteSuccess,
+    () => positionDataStore.positionDataUploadSuccess,
+    () => positionDataStore.positionDataRenameSuccess,
+    () => positionDataStore.positionDataDeleteSuccess,
   ],
   ([upload, rename, del]) => {
     if (upload === true) {
-      posDataActionMessage.value = t("modal.position_data.upload.success");
-      resetPosDataActionSnackbar();
-      trackingDataStore.trackingDataUploadSuccess = false;
+      positionDataActionMessage.value = t("modal.position_data.upload.success");
+      resetPositionDataActionSnackbar();
+      positionDataStore.positionDataUploadSuccess = false;
     } else if (rename === true) {
-      posDataActionMessage.value = t("modal.position_data.rename.success");
-      resetPosDataActionSnackbar();
-      trackingDataStore.trackingDataRenameSuccess = false;
+      positionDataActionMessage.value = t("modal.position_data.rename.success");
+      resetPositionDataActionSnackbar();
+      positionDataStore.positionDataRenameSuccess = false;
     } else if (del === true) {
-      posDataActionMessage.value = t("modal.position_data.delete.success");
-      resetPosDataActionSnackbar();
-      trackingDataStore.trackingDataDeleteSuccess = false;
+      positionDataActionMessage.value = t("modal.position_data.delete.success");
+      resetPositionDataActionSnackbar();
+      positionDataStore.positionDataDeleteSuccess = false;
     }
   }
 );

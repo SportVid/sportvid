@@ -90,7 +90,7 @@
   "analysis_view": {
     "analysis_tabs": {
       "calibration": "Calibration",
-      "pos_data": "Position Data",
+      "position_data": "Position Data",
       "heatmap": "Heatmap"
     },
     "visualization_tabs": {
@@ -120,7 +120,7 @@
       "delete_ref_marker": "Delete Reference Marker"
     }
   },
-  "pos_data": {
+  "position_data": {
     "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
     "display_settings": {
       "title": "Display Settings",
@@ -131,7 +131,7 @@
         "space_control": "Space control",
         "eps": "Effective playing space"
       },
-      "pos_data": {
+      "position_data": {
         "title": "Position data",
         "upload": "Upload position data",
         "select": "Select position data"
@@ -208,7 +208,7 @@
       "calibration_asset_select": "Create a new calibration asset or select an existing one.",
       "calibration_asset_edit": "Edit the calibration asset by adding or removing markers, then save it for plugin use.",
       "modal_plugin_open": "Open the plugin menu.",
-      "modal_plugin_select": "Run the two plugins from the Player and Object Tracking section (ByteTrack & DLT+RANSAC from annotated landmarks) to generate tracking data.",
+      "modal_plugin_select": "Run the two plugins from the Player and Object Tracking section (ByteTrack & DLT+RANSAC from annotated landmarks) to generate position data.",
       "position_data_select": "Switch to the position data tab and select both the calibration asset and the position data.",
       "position_data_analyse": "You’ve completed the tutorial! You can now analyze your data using your preferred settings."
     }
@@ -622,7 +622,7 @@
         },
         "asset": "Select Calibration Asset",
         "bytetrack": "Select Bytetrack Plugin",
-        "uploaded_pos_data": "Select uploaded position data"
+        "uploaded_position_data": "Select uploaded position data"
       },
       "rename": {
         "title": "Rename Position Data",

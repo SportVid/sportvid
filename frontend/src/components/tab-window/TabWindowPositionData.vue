@@ -1,5 +1,5 @@
 <template>
-  <PosDataMenu v-if="Object.keys(bboxesStore.bboxDataTopView).length === 0" />
+  <PositionDataMenu v-if="Object.keys(bboxesStore.bboxDataTopView).length === 0" />
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
@@ -109,13 +109,13 @@
       <v-menu location="top">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
-            {{ $t("pos_data.display_settings.title") }}
+            {{ $t("position_data.display_settings.title") }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact" width="225px">
           <v-list-item class="menu-item" @click="playerStore.viewBoundingBox">
             <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("pos_data.display_settings.view_bounding_box") }}
+              {{ $t("position_data.display_settings.view_bounding_box") }}
               <tab-window-icon
                 :class="{
                   'text-disabled': !playerStore.showBoundingBox,
@@ -129,7 +129,7 @@
 
           <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
             <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("pos_data.display_settings.video_sync") }}
+              {{ $t("position_data.display_settings.video_sync") }}
               <tab-window-icon
                 :class="{
                   'text-disabled': !playerStore.isSynced,
@@ -145,7 +145,7 @@
             <template #activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
                 <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("pos_data.display_settings.view_kpis.title") }}
+                  {{ $t("position_data.display_settings.view_kpis.title") }}
                   <tab-window-icon>mdi-chevron-right</tab-window-icon>
                 </v-list-item-title>
               </v-list-item>
@@ -153,7 +153,7 @@
             <v-list class="py-0" density="compact" width="180px">
               <v-list-item class="menu-item" @click="topViewStore.viewSpaceControl">
                 <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("pos_data.display_settings.view_kpis.space_control") }}
+                  {{ $t("position_data.display_settings.view_kpis.space_control") }}
                   <tab-window-icon
                     :class="{
                       'text-disabled': !topViewStore.showSpaceControl,
@@ -166,7 +166,7 @@
               </v-list-item>
               <v-list-item class="menu-item" @click="topViewStore.viewEffectivePlayingSpace">
                 <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("pos_data.display_settings.view_kpis.eps") }}
+                  {{ $t("position_data.display_settings.view_kpis.eps") }}
                   <tab-window-icon
                     :class="{
                       'text-disabled': !topViewStore.showEffectivePlayingSpace,
@@ -184,28 +184,34 @@
             <template #activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
                 <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("pos_data.display_settings.pos_data.title") }}
+                  {{ $t("position_data.display_settings.position_data.title") }}
                   <tab-window-icon>mdi-chevron-right</tab-window-icon>
                 </v-list-item-title>
               </v-list-item>
             </template>
             <v-list class="py-0" density="compact">
-              <v-list-item class="menu-item" @click="showModalPosDataUpload = true">
+              <v-list-item class="menu-item" @click="showModalPositionDataUpload = true">
                 <v-list-item-title>
-                  {{ $t("pos_data.display_settings.pos_data.upload") }}
+                  {{ $t("position_data.display_settings.position_data.upload") }}
                 </v-list-item-title>
               </v-list-item>
-              <v-list-item class="menu-item" @click="showModalPosDataSelect = true">
+              <v-list-item class="menu-item" @click="showModalPositionDataSelect = true">
                 <v-list-item-title>
-                  {{ $t("pos_data.display_settings.pos_data.select") }}
+                  {{ $t("position_data.display_settings.position_data.select") }}
                 </v-list-item-title>
               </v-list-item>
             </v-list>
           </v-menu>
         </v-list>
       </v-menu>
-      <ModalPosDataUpload v-if="showModalPosDataUpload" v-model="showModalPosDataUpload" />
-      <ModalPosDataSelect v-if="showModalPosDataSelect" v-model="showModalPosDataSelect" />
+      <ModalPositionDataUpload
+        v-if="showModalPositionDataUpload"
+        v-model="showModalPositionDataUpload"
+      />
+      <ModalPositionDataSelect
+        v-if="showModalPositionDataSelect"
+        v-model="showModalPositionDataSelect"
+      />
 
       <div class="time-code ml-2">
         {{ getTimecode(currentTime) }}
@@ -234,17 +240,17 @@ import { useBboxesStore } from "@/stores/bboxes";
 import { useVideoStore } from "@/stores/video";
 import { getTimecode } from "@/plugins/time";
 import { Delaunay } from "d3-delaunay";
-import PosDataMenu from "@/components/pos-data/PosDataMenu.vue";
-import ModalPosDataSelect from "@/components/pos-data/ModalPosDataSelect.vue";
-import ModalPosDataUpload from "@/components/pos-data/ModalPosDataUpload.vue";
+import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
+import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
+import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
 
 const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();
 const bboxesStore = useBboxesStore();
 const videoStore = useVideoStore();
 
-const showModalPosDataSelect = ref(false);
-const showModalPosDataUpload = ref(false);
+const showModalPositionDataSelect = ref(false);
+const showModalPositionDataUpload = ref(false);
 
 const progress = ref(0);
 const currentTime = computed(() => {

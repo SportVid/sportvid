@@ -8,7 +8,7 @@ export const useTabStore = defineStore("tabs", () => {
   const analysisTabId = ref("calibration");
   const analysisTabs = computed(() => [
     { id: "calibration", name: t("analysis_view.analysis_tabs.calibration") },
-    { id: "pos_data", name: t("analysis_view.analysis_tabs.pos_data") },
+    { id: "position_data", name: t("analysis_view.analysis_tabs.position_data") },
     { id: "heatmap", name: t("analysis_view.analysis_tabs.heatmap") },
   ]);
 

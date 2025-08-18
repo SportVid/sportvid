@@ -177,7 +177,10 @@ export const useTutorialStore = defineStore("tutorial", () => {
           buttons: [],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
-              if (tabStore.analysisTabId === "pos_data" && modalPluginVisible.value === false) {
+              if (
+                tabStore.analysisTabId === "position_data" &&
+                modalPluginVisible.value === false
+              ) {
                 const showMenu = Object.keys(bboxesStore.bboxDataTopView).length === 0;
                 if (!showMenu) {
                   tour.value.next();
@@ -206,7 +209,10 @@ export const useTutorialStore = defineStore("tutorial", () => {
           ],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
-              if (tabStore.analysisTabId === "pos_data" && modalPluginVisible.value === false) {
+              if (
+                tabStore.analysisTabId === "position_data" &&
+                modalPluginVisible.value === false
+              ) {
                 resolve();
               }
             });

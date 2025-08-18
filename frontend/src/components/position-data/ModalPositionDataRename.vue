@@ -19,7 +19,7 @@
           class="mr-6"
         />
 
-        <v-btn @click="renameTrackingData(props.trackingDataId, name)" :disabled="!name">
+        <v-btn @click="renamePositionData(props.positionDataId, name)" :disabled="!name">
           {{ $t("button.update") }}
         </v-btn>
       </v-card-text>
@@ -29,16 +29,16 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useTrackingDataStore } from "@/stores/tracking_data";
+import { usePositionDataStore } from "@/stores/position_data";
 
-const trackingDataStore = useTrackingDataStore();
+const positionDataStore = usePositionDataStore();
 
 const props = defineProps({
   modelValue: {
     type: Boolean,
     default: false,
   },
-  trackingDataId: {
+  positionDataId: {
     type: Number,
     required: true,
   },
@@ -49,8 +49,8 @@ const emit = defineEmits(["update:modelValue"]);
 const nameProxy = ref(null);
 const name = computed({
   get() {
-    const name = trackingDataStore.trackingDataList.find(
-      (data) => data.id === props.trackingDataId
+    const name = positionDataStore.positionDataList.find(
+      (data) => data.id === props.positionDataId
     )?.name;
     return nameProxy.value === null ? name : nameProxy.value;
   },
@@ -59,8 +59,8 @@ const name = computed({
   },
 });
 
-const renameTrackingData = (trackingDataId, name) => {
-  trackingDataStore.renameTrackingData(trackingDataId, name);
+const renamePositionData = (positionDataId, name) => {
+  positionDataStore.renamePositionData(positionDataId, name);
   dialog.value = false;
 };
 

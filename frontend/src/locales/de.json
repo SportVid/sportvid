@@ -85,7 +85,7 @@
   "analysis_view": {
     "tabs": {
       "calibration": "Kalibrierung",
-      "pos_data": "Positionsdaten"
+      "position_data": "Positionsdaten"
     },
     "sports": {
       "soccer": "Fußball",
@@ -108,7 +108,7 @@
       "delete_ref_marker": "Referenzmarker löschen"
     }
   },
-  "pos_data": {
+  "position_data": {
     "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das Bytetrack-Plugin aus oder laden Sie die Positionsdaten manuell hoch.",
     "display_settings": {
       "title": "Anzeigeeinstellungen",
@@ -119,7 +119,7 @@
         "space_control": "Raumkontrolle",
         "eps": "Effektiver Spielraum"
       },
-      "pos_data": {
+      "position_data": {
         "title": "Positionsdaten",
         "upload": "Positionsdaten hochladen",
         "select": "Positionsdaten auswählen"

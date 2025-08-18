@@ -49,7 +49,7 @@
         :hint="parameter.hint"
         item-title="name"
         item-value="id"
-        v-if="parameter.field == 'select_pos_data_team'"
+        v-if="parameter.field == 'select_position_data_team'"
         :key="parameter.name"
         persistent-hint
         variant="underlined"
