@@ -18,7 +18,7 @@
   },
   "guidelines": {
     "title": "Guidelines",
-    "text": "<ol style=\"margin-left:20px; line-height:1.5;\"><li><strong>How to Start:</strong> <ol style='margin-left:20px; margin-top:5px;'><li>Register or log in to your SportVid account.</li><li>Upload a match or training video.</li></ol></li><li><strong>How to Get Position Data:</strong> <ol style='margin-left:20px; margin-top:5px;'><li>Run the <strong>ByteTrack Plugin</strong> to automatically detect players in the video and create bounding boxes.</li><li>Use the <strong>DLT + RANSAC from annotated landmarks Plugin</strong> to compute the homography matrix for top-view projection.</li><li>After calibration, the positional data can be displayed on the top view pitch.</li><li>Alternatively, you can manually upload position data if it's already available.</li></ol></li><li><strong>How to Export:</strong> <ol style='margin-left:20px; margin-top:5px;'><li>Use the export button in the app bar to download CSV files of raw or aggregated positional data (e.g., full match, 1st half, 2nd half).</li><li>In the KPI or heatmap views, you can save snapshots or video exports of the top view or video view.</li></ol></li></ol>"
+    "text": "<ol style=\"margin-left:20px; line-height:1.5;\"><li><strong>How to Start:</strong> <ol style='margin-left:20px; margin-top:5px;'><li>Register or log in to your SportVid account.</li><li>Upload a match or training video.</li></ol></li><li><strong>How to Get Position Data:</strong> <ol style='margin-left:20px; margin-top:5px;'><li>Run the <strong>ByteTrack Plugin</strong> to automatically detect players in the video and create bounding boxes.</li><li>Use the <strong>DLT + RANSAC from annotated landmarks Plugin</strong> to compute the homography matrix for top-view projection.</li><li>After calibration, the positional data can be displayed on the top view pitch.</li><li>Alternatively, you can manually upload position data if it's already available.</li></ol></li><li><strong>How to Export:</strong> <ol style='margin-left:20px; margin-top:5px;'><li>Use the export button in the app bar to download csv files of raw or aggregated positional data (e.g., full match, 1st half, 2nd half).</li><li>In the KPI or heatmap views, you can save snapshots or video exports of the top view or video view.</li></ol></li></ol>"
   },
   "user": {
     "name": "Username",
@@ -369,7 +369,7 @@
         "plugin_description": "This plugin uses <a href=\"https://openai.com/research/clip\">OpenAI's CLIP (Contrastive Language-Image Pretraining) model</a> that allows to search the video content for a set of arbritrary visual concepts given a csv file containing the concept name and an associated textual description. The textual description should describe the concept of interest in simple, unambigous terms. Here is an example: <br><br> \"day\",\"a photo taken at daylight\" <br> \"night\",\"a photo taken during the night\" <br><br> It works well for a large variety of concepts (e.g., objects, places, events, daytimes, weather conditions, etc.) that can be identified from a single video frame. To identify concepts that require temporal context from the video such as human actions, we recommend using the \"Action Recognition\" plugin. <br><br> Please note that the plugin required more time if you first use it for a video. After the first use, the results will be computed much faster.",
         "timeline_name": "Object Classification",
         "concepts": "Concept Lexicon",
-        "concepts_hint": "CSV file with timeline name and a description for the concept in each row"
+        "concepts_hint": "Csv file with timeline name and a description for the concept in each row"
       },
       "x_clip": {
         "plugin_name": "Action Classification (X-CLIP)",
@@ -606,8 +606,18 @@
       "upload": {
         "title": "Upload Position Data",
         "name": "File name",
-        "file": "Select a file",
         "format": "Select the data provider",
+        "file": "Select the position data file",
+        "meta_data": "Select the meta data file",
+        "delimiter": "Select the delimiter used in the csv file",
+        "fps": "Enter FPS of the position data (optional)",
+        "delimiters": {
+          "comma": "Comma",
+          "semicolon": "Semicolon",
+          "tab": "Tabulator",
+          "space": "Space",
+          "pipe": "Pipe"
+        },
         "validate": {
           "file_required": "Please select a file.",
           "file_format_invalid": "File is not in .csv oder .xml format."

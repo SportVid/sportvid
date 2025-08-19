@@ -39,12 +39,12 @@
               borderRadius: '50%',
               transform: 'translate(-50%, -50%)',
               top:
-                position.new_y *
+                position.tv_y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px',
               left:
-                position.new_x *
+                position.tv_x *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
@@ -236,7 +236,7 @@ watch(videoControl, (newVal) => {
 
 const selectedRefIds = ref([]);
 const uniqueRefIds = computed(() => {
-  const all = bboxesStore.bboxData || [];
+  const all = bboxesStore.bboxDataRaw || [];
   return [...new Set(all.map((p) => p.ref_id))].sort((a, b) => a - b);
 });
 function toggleRefId(refId) {
@@ -290,10 +290,10 @@ function renderHeatmap() {
 
   const points = selectedPositions.value.map((pos) => {
     const x =
-      pos.new_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+      pos.tv_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
       ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
     const y =
-      pos.new_y * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+      pos.tv_y * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
       ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
     return { x: Math.round(x), y: Math.round(y), value: 1 };
   });

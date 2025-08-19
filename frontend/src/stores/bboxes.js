@@ -11,22 +11,21 @@ export const useBboxesStore = defineStore("bboxes", () => {
   const pluginRunResultStore = usePluginRunResultStore();
   const calibrationAssetStore = useCalibrationAssetStore();
 
-  const bboxData = ref({});
+  const bboxDataRaw = ref({});
   const bboxDataInterpolated = ref({});
   const bboxDataTopView = ref({});
   const bboxDataLoaded = ref(false);
 
-  const bboxPluginRun = ref(0);
+  const bboxPluginRunId = ref(0);
 
-  const setBboxData = (pluginRun) => {
+  const setBboxData = (pluginRunId) => {
     let _bboxData;
     let hasValidData = false;
 
     try {
       _bboxData = pluginRunStore
         .forVideo(playerStore.videoId)
-        .filter((e) => e.type === "bytetrack" && e.status === "DONE")
-        .slice(pluginRun)
+        .filter((e) => e.type === "bytetrack" && e.status === "DONE" && e.id === pluginRunId)
         .map((e) => {
           e.results = pluginRunResultStore.forPluginRun(e.id);
           return e;
@@ -102,42 +101,16 @@ export const useBboxesStore = defineStore("bboxes", () => {
     return bboxDatainterpolated;
   }
 
-  const setbboxDataTopView = (bboxData) => {
-    return bboxData.map((bbox) => {
-      const point = {
-        x: bbox.x + bbox.w / 2,
-        y: bbox.y + bbox.h,
-      };
-      if (calibrationAssetStore.calibrationMatrix) {
-        const transformed = calibrationAssetStore.applyHomography(
-          calibrationAssetStore.calibrationMatrix,
-          point
-        );
-        return {
-          ...bbox,
-          new_x: transformed.x,
-          new_y: transformed.y,
-        };
-      }
-      return {
-        ...bbox,
-        new_x: point.x,
-        new_y: point.y,
-      };
-    });
-  };
-
   const positionDataUploadSuccess = ref(false);
 
   return {
-    bboxData,
     setBboxData,
-    bboxDataLoaded,
     interpolateBboxData,
+    bboxDataRaw,
+    bboxDataLoaded,
     bboxDataInterpolated,
-    bboxPluginRun,
+    bboxPluginRunId,
     bboxDataTopView,
-    setbboxDataTopView,
     positionDataUploadSuccess,
   };
 });

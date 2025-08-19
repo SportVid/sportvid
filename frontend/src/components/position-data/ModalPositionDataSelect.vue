@@ -159,10 +159,6 @@ onMounted(() => {
 });
 
 const selectedPositionData = ref(null);
-const loadPositionData = (id) => {
-  positionDataStore.loadPositionData(id);
-  dialog.value = false;
-};
 onMounted(() => {
   positionDataStore.loadPositionDataList();
 });
@@ -185,8 +181,8 @@ const bytetrackRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
     .filter((e) => e.type === "bytetrack" && e.status === "DONE")
-    .map((pluginRun, index) => ({
-      id: index,
+    .map((pluginRun) => ({
+      id: pluginRun.id,
       type: "Bytetrack",
       date: formatLocalDate(pluginRun.date),
     }));
@@ -201,17 +197,17 @@ const isButtonDisabled = computed(() => {
   return true;
 });
 
-const confirmSelection = (calibrationAssetId, bytetrackPluginIndex, positionDataId) => {
+const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId) => {
   if (selectedMode.value === "bytetrack") {
     calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
-    bboxesStore.bboxPluginRun = bytetrackPluginIndex;
+    bboxesStore.bboxPluginRunId = bytetrackPluginId;
     console.log("selected posdata plugin", bboxesStore.bboxDataTopView);
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
     // bboxesStore.bboxDataTopView = processCsvPositions(selectedPositionData.value);
     // calibrationAssetStore.marker = [];
     // calibrationAssetStore.calibrationAssetId = null;
-    console.log("selected posdata upload", bboxesStore.bboxDataTopView);
+    console.log("selected posdata upload", positionDataStore.positionDataActive);
   }
   dialog.value = false;
 };
