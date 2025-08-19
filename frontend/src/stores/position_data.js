@@ -15,7 +15,6 @@ export const usePositionDataStore = defineStore("position_data", () => {
 
   const positionDataList = ref([]);
   const positionDataId = ref(null);
-  const positionDataActive = ref(null);
 
   const isUploading = ref(false);
   const progress = ref(0);
@@ -54,8 +53,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
         })
         .filter((e) => e.results?.[0]?.data?.tracking_data_id === id);
 
-      positionDataActive.value = _positionData[0]?.results?.data?.pos_data;
-      topViewStore.positionDataTopView = _positionData[0]?.results?.data?.pos_data;
+      topViewStore.positionDataTopView = _positionData[0]?.results[0]?.data?.pos_data;
     }
   };
 
@@ -129,7 +127,6 @@ export const usePositionDataStore = defineStore("position_data", () => {
   return {
     positionDataList,
     positionDataId,
-    positionDataActive,
     positionDataUploadSuccess,
     positionDataRenameSuccess,
     positionDataDeleteSuccess,

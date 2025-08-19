@@ -18,6 +18,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
 
   const loadBboxData = (pluginRunId) => {
     let hasValidData = false;
+    bboxPluginRunId.value = pluginRunId;
 
     try {
       const _bboxData = pluginRunStore

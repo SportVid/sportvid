@@ -265,7 +265,7 @@ const groupDataByTime = (data) => {
 watchEffect(() => {
   if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
     const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
-      rawBboxes,
+      bboxesStore.bboxDataActive,
       playerStore.videoFPS,
       30
     );
@@ -567,19 +567,17 @@ watch(
 );
 
 watch(
-  () => [calibrationAssetStore.marker, bboxesStore.bboxPluginRunId],
-  ([newmarker, newBytetrack]) => {
+  () => [
+    calibrationAssetStore.marker,
+    calibrationAssetStore.calibrationMatrix,
+    bboxesStore.bboxPluginRunId,
+  ],
+  ([newmarker, newMatrix, newBytetrack]) => {
     console.log("Selected Calibration Asset:", newmarker);
+    console.log("Selected Calibration Matrix:", newMatrix);
     console.log("Selected Bytetrack Plugin:", newBytetrack);
   },
   { deep: true }
-);
-
-watch(
-  () => calibrationAssetStore.calibrationMatrix,
-  (newMatrix) => {
-    console.log("Selected Calibration Matrix:", newMatrix);
-  }
 );
 
 watch(

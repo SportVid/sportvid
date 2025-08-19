@@ -12,8 +12,8 @@ export const useVisualizationStore = defineStore("visualization", () => {
 
   const halftimesExist = computed(() => {
     const allBboxes = Object.values(topViewStore.positionDataTopView).flat();
-    const halftimeIds = new Set(allBboxes.map((bbox) => bbox.halftime_id));
-    return halftimeIds.has("hf_1") && halftimeIds.has("hf_2");
+    const gameSections = new Set(allBboxes.map((bbox) => bbox.game_section));
+    return gameSections.has("firstHalf") && gameSections.has("secondHalf");
   });
 
   function resetAndActivate(targetRef) {

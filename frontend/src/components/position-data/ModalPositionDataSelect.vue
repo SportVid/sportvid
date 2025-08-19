@@ -202,8 +202,12 @@ const topViewStore = useTopViewStore();
 const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId) => {
   if (selectedMode.value === "bytetrack") {
     calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
-    bboxesStore.bboxPluginRunId = bytetrackPluginId;
-    console.log("selected posdata plugin", topViewStore.positionDataTopView);
+    bboxesStore.loadBboxData(bytetrackPluginId);
+    console.log(
+      "selected posdata plugin",
+      topViewStore.positionDataTopView,
+      bboxesStore.bboxDataActive
+    );
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
     // bboxesStore.bboxDataTopView = processCsvPositions(selectedPositionData.value);
