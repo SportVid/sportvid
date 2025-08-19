@@ -263,11 +263,7 @@ const groupDataByTime = (data) => {
   return grouped;
 };
 watchEffect(() => {
-  const rawBboxes = bboxesStore.setBboxData(bboxesStore.bboxPluginRunId);
-
-  if (rawBboxes && rawBboxes.length > 0) {
-    bboxesStore.bboxDataRaw = rawBboxes;
-
+  if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
     const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
       rawBboxes,
       playerStore.videoFPS,
@@ -281,9 +277,9 @@ watchEffect(() => {
           calibrationAssetStore.calibrationMatrix,
           { x: b.top_x, y: b.top_y }
         );
-        return { ...b, tv_x: x, tv_y: y };
+        return { ...b, pos_x: x, pos_y: y };
       });
-      bboxesStore.bboxDataTopView = groupDataByTime(_bboxDataTopView);
+      topViewStore.positionDataTopView = groupDataByTime(_bboxDataTopView);
     }
   }
 });
@@ -558,29 +554,6 @@ watch(
 );
 
 watch(
-  () => [calibrationAssetStore.marker, bboxesStore.bboxPluginRunId],
-  ([newmarker, newBytetrack]) => {
-    console.log("Selected Calibration Asset:", newmarker);
-    console.log("Selected Bytetrack Plugin:", newBytetrack);
-  },
-  { deep: true }
-);
-
-watch(
-  () => bboxesStore.bboxDataTopView,
-  (newBboxDataTopView) => {
-    console.log("Selected Bbox Data Top View:", newBboxDataTopView);
-  }
-);
-
-watch(
-  () => calibrationAssetStore.calibrationMatrix,
-  (newMatrix) => {
-    console.log("Selected Calibration Matrix:", newMatrix);
-  }
-);
-
-watch(
   () => calibrationAssetStore.isAnyReferenceMarkerActive,
   (active) => {
     if (active) {
@@ -591,6 +564,22 @@ watch(
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => [calibrationAssetStore.marker, bboxesStore.bboxPluginRunId],
+  ([newmarker, newBytetrack]) => {
+    console.log("Selected Calibration Asset:", newmarker);
+    console.log("Selected Bytetrack Plugin:", newBytetrack);
+  },
+  { deep: true }
+);
+
+watch(
+  () => calibrationAssetStore.calibrationMatrix,
+  (newMatrix) => {
+    console.log("Selected Calibration Matrix:", newMatrix);
+  }
 );
 
 watch(

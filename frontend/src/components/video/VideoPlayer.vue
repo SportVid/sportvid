@@ -434,7 +434,7 @@ function updateBBox({ ref_id, team_id, updateAllRefId, updateAllTeamId }) {
 function updateBBoxBackend({ ref_id, team_id, updateAllRefId, updateAllTeamId }) {
   if (!editBBox.value) return;
 
-  const bboxes = bboxesStore.bboxDataRaw;
+  const bboxes = bboxesStore.bboxDataActive;
 
   if (updateAllRefId) {
     const oldRefId = String(editBBox.value.ref_id);

@@ -1,5 +1,5 @@
 <template>
-  <PositionDataMenu v-if="Object.keys(bboxesStore.bboxDataTopView).length === 0" />
+  <PositionDataMenu v-if="Object.keys(topViewStore.positionDataTopView).length === 0" />
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
@@ -39,16 +39,16 @@
               borderRadius: '50%',
               transform: 'translate(-50%, -50%)',
               top:
-                position.tv_y *
+                position.pos_y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px',
               left:
-                position.tv_x *
+                position.pos_x *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
-              backgroundColor: !position.team ? 'grey' : position.team,
+              backgroundColor: !position.team_id ? 'grey' : position.team_id,
             }"
           />
         </template>
@@ -236,7 +236,7 @@ watch(videoControl, (newVal) => {
 
 const selectedRefIds = ref([]);
 const uniqueRefIds = computed(() => {
-  const all = bboxesStore.bboxDataRaw || [];
+  const all = bboxesStore.bboxDataActive || [];
   return [...new Set(all.map((p) => p.ref_id))].sort((a, b) => a - b);
 });
 function toggleRefId(refId) {
@@ -250,7 +250,7 @@ function toggleRefId(refId) {
 const selectedPositions = computed(() => {
   if (selectedRefIds.value.length === 0) return [];
   const allPositions = [];
-  Object.values(bboxesStore.bboxDataTopView).forEach((arr) => {
+  Object.values(topViewStore.positionDataTopView).forEach((arr) => {
     if (Array.isArray(arr)) {
       arr.forEach((pos) => {
         if (selectedRefIds.value.includes(pos.ref_id)) {
@@ -290,10 +290,10 @@ function renderHeatmap() {
 
   const points = selectedPositions.value.map((pos) => {
     const x =
-      pos.tv_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+      pos.pos_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
       ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
     const y =
-      pos.tv_y * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+      pos.pos_y * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
       ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
     return { x: Math.round(x), y: Math.round(y), value: 1 };
   });

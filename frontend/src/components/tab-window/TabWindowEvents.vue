@@ -11,12 +11,12 @@ const headers = [
   { title: "Timestamp", value: "timestamp" },
   { title: "Event", value: "event" },
   { title: "ID", value: "id" },
-  { title: "Team", value: "team" },
+  { title: "Team", value: "team_id" },
 ];
 
 const items = ref([
-  { timestamp: "00:01", event: "Goal", id: "Player 1", team: "Team A" },
-  { timestamp: "00:03", event: "Foul", id: "Player 2", team: "Team B" },
-  { timestamp: "00:05", event: "Substitution", id: "Player 3", team: "Team A" },
+  { timestamp: "00:01", event: "Goal", id: "Player 1", team_id: "Team A" },
+  { timestamp: "00:03", event: "Foul", id: "Player 2", team_id: "Team B" },
+  { timestamp: "00:05", event: "Substitution", id: "Player 3", team_id: "Team A" },
 ]);
 </script>

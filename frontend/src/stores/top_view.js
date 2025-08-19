@@ -80,6 +80,8 @@ export const useTopViewStore = defineStore("top_view", () => {
     showHeatmap.value = false;
   };
 
+  const positionDataTopView = ref({});
+
   return {
     topViewSize,
     setTopViewSize,
@@ -95,5 +97,6 @@ export const useTopViewStore = defineStore("top_view", () => {
     viewHeatmap,
     showMovement,
     viewMovement,
+    positionDataTopView,
   };
 });

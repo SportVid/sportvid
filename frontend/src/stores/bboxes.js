@@ -3,27 +3,24 @@ import { defineStore } from "pinia";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
-import { useCalibrationAssetStore } from "./calibration_asset";
 
 export const useBboxesStore = defineStore("bboxes", () => {
   const playerStore = usePlayerStore();
   const pluginRunStore = usePluginRunStore();
   const pluginRunResultStore = usePluginRunResultStore();
-  const calibrationAssetStore = useCalibrationAssetStore();
 
-  const bboxDataRaw = ref({});
+  const bboxDataActive = ref({});
   const bboxDataInterpolated = ref({});
   const bboxDataTopView = ref({});
   const bboxDataLoaded = ref(false);
 
   const bboxPluginRunId = ref(0);
 
-  const setBboxData = (pluginRunId) => {
-    let _bboxData;
+  const loadBboxData = (pluginRunId) => {
     let hasValidData = false;
 
     try {
-      _bboxData = pluginRunStore
+      const _bboxData = pluginRunStore
         .forVideo(playerStore.videoId)
         .filter((e) => e.type === "bytetrack" && e.status === "DONE" && e.id === pluginRunId)
         .map((e) => {
@@ -36,7 +33,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
       }
 
       hasValidData = true;
-      return _bboxData[0]?.results[0]?.data?.bboxes || [];
+      bboxDataActive.value = _bboxData[0]?.results[0]?.data?.bboxes;
     } finally {
       if (hasValidData) {
         bboxDataLoaded.value = true;
@@ -83,7 +80,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
               y: prev.y + (next.y - prev.y) * alpha,
               w: prev.w + (next.w - prev.w) * alpha,
               h: prev.h + (next.h - prev.h) * alpha,
-              team: prev.team,
+              team_id: prev.team_id,
               image_id: frame,
               time: frame / VideoFPS,
               ref_id: prev.ref_id,
@@ -104,9 +101,9 @@ export const useBboxesStore = defineStore("bboxes", () => {
   const positionDataUploadSuccess = ref(false);
 
   return {
-    setBboxData,
+    loadBboxData,
     interpolateBboxData,
-    bboxDataRaw,
+    bboxDataActive,
     bboxDataLoaded,
     bboxDataInterpolated,
     bboxPluginRunId,

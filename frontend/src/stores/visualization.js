@@ -11,7 +11,7 @@ export const useVisualizationStore = defineStore("visualization", () => {
   const showProgress = ref(false);
 
   const halftimesExist = computed(() => {
-    const allBboxes = Object.values(bboxesStore.bboxDataTopView).flat();
+    const allBboxes = Object.values(topViewStore.positionDataTopView).flat();
     const halftimeIds = new Set(allBboxes.map((bbox) => bbox.halftime_id));
     return halftimeIds.has("hf_1") && halftimeIds.has("hf_2");
   });

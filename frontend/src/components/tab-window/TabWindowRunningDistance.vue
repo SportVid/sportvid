@@ -123,7 +123,7 @@ const visualizationStore = useVisualizationStore();
 const { t } = useI18n();
 
 const allFrameKeys = computed(() =>
-  Object.keys(bboxesStore.bboxDataTopView)
+  Object.keys(topViewStore.positionDataTopView)
     .map(Number)
     .sort((a, b) => a - b)
 );
@@ -141,13 +141,13 @@ watch(
 
 function findFirstFrameWithHalftime(halfId) {
   return allFrameKeys.value.find((frame) =>
-    bboxesStore.bboxDataTopView[frame]?.some((p) => p.halftime_id === halfId)
+    topViewStore.positionDataTopView[frame]?.some((p) => p.halftime_id === halfId)
   );
 }
 function findLastFrameWithHalftime(halfId) {
   const reversed = [...allFrameKeys.value].reverse();
   return reversed.find((frame) =>
-    bboxesStore.bboxDataTopView[frame]?.some((p) => p.halftime_id === halfId)
+    topViewStore.positionDataTopView[frame]?.some((p) => p.halftime_id === halfId)
   );
 }
 watch(
@@ -181,7 +181,7 @@ const headers = [
 const items = computed(() => {
   const distancesByRefId = new Map();
 
-  const allTimes = Object.keys(bboxesStore.bboxDataTopView)
+  const allTimes = Object.keys(topViewStore.positionDataTopView)
     .map(Number)
     .sort((a, b) => a - b);
 
@@ -197,7 +197,7 @@ const items = computed(() => {
   const allPlayersSet = new Map();
 
   for (const frame of allTimes) {
-    const players = bboxesStore.bboxDataTopView[frame];
+    const players = topViewStore.positionDataTopView[frame];
     if (!players) continue;
     for (const p of players) {
       if (
@@ -226,8 +226,8 @@ const items = computed(() => {
       const tPrev = timeRange[i - 1];
       const tCurr = timeRange[i];
 
-      const playersPrev = bboxesStore.bboxDataTopView[tPrev];
-      const playersCurr = bboxesStore.bboxDataTopView[tCurr];
+      const playersPrev = topViewStore.positionDataTopView[tPrev];
+      const playersCurr = topViewStore.positionDataTopView[tCurr];
 
       if (!playersPrev || !playersCurr) continue;
 
@@ -242,10 +242,10 @@ const items = computed(() => {
           continue;
         }
 
-        const dx = (currPlayer.tv_x - prevPlayer.tv_x) * 99.94;
-        const dy = (currPlayer.tv_y - prevPlayer.tv_y) * 65.88;
-        // const dx = (currPlayer.tv_x - prevPlayer.tv_x) * playerStore.video.field_length;
-        // const dy = (currPlayer.tv_y - prevPlayer.tv_y) * playerStore.video.field_width;
+        const dx = (currPlayer.pos_x - prevPlayer.pos_x) * 99.94;
+        const dy = (currPlayer.pos_y - prevPlayer.pos_y) * 65.88;
+        // const dx = (currPlayer.pos_x - prevPlayer.pos_x) * playerStore.video.field_length;
+        // const dy = (currPlayer.pos_y - prevPlayer.pos_y) * playerStore.video.field_width;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (!distancesByRefId.has(currPlayer.ref_id)) {
@@ -269,7 +269,7 @@ const items = computed(() => {
 });
 
 const hasPositionData = computed(() => {
-  return Object.keys(bboxesStore.bboxDataTopView).length > 0;
+  return Object.keys(topViewStore.positionDataTopView).length > 0;
 });
 </script>
 
