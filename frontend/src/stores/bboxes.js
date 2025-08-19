@@ -11,7 +11,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
   const pluginRunResultStore = usePluginRunResultStore();
   const calibrationAssetStore = useCalibrationAssetStore();
 
-  const bboxData = ref({});
+  const bboxDataRaw = ref({});
   const bboxDataInterpolated = ref({});
   const bboxDataTopView = ref({});
   const bboxDataLoaded = ref(false);
@@ -101,42 +101,16 @@ export const useBboxesStore = defineStore("bboxes", () => {
     return bboxDatainterpolated;
   }
 
-  const setbboxDataTopView = (bboxData) => {
-    return bboxData.map((bbox) => {
-      const point = {
-        x: bbox.x + bbox.w / 2,
-        y: bbox.y + bbox.h,
-      };
-      if (calibrationAssetStore.calibrationMatrix) {
-        const transformed = calibrationAssetStore.applyHomography(
-          calibrationAssetStore.calibrationMatrix,
-          point
-        );
-        return {
-          ...bbox,
-          new_x: transformed.x,
-          new_y: transformed.y,
-        };
-      }
-      return {
-        ...bbox,
-        new_x: point.x,
-        new_y: point.y,
-      };
-    });
-  };
-
   const positionDataUploadSuccess = ref(false);
 
   return {
-    bboxData,
     setBboxData,
-    bboxDataLoaded,
     interpolateBboxData,
+    bboxDataRaw,
+    bboxDataLoaded,
     bboxDataInterpolated,
     bboxPluginRunId,
     bboxDataTopView,
-    setbboxDataTopView,
     positionDataUploadSuccess,
   };
 });

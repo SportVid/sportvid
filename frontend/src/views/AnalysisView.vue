@@ -263,22 +263,27 @@ const groupDataByTime = (data) => {
   return grouped;
 };
 watchEffect(() => {
-  const newBboxes = bboxesStore.setBboxData(bboxesStore.bboxPluginRunId);
+  const rawBboxes = bboxesStore.setBboxData(bboxesStore.bboxPluginRunId);
 
-  if (newBboxes && newBboxes.length > 0) {
-    bboxesStore.bboxData = newBboxes;
+  if (rawBboxes && rawBboxes.length > 0) {
+    bboxesStore.bboxDataRaw = rawBboxes;
 
     const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
-      newBboxes,
+      rawBboxes,
       playerStore.videoFPS,
       30
     );
     bboxesStore.bboxDataInterpolated = groupDataByTime(_bboxDataInterpolated);
 
     if (calibrationAssetStore.calibrationMatrix) {
-      const _bboxDataTopView = bboxesStore.setbboxDataTopView(_bboxDataInterpolated);
+      const _bboxDataTopView = _bboxDataInterpolated.map((b) => {
+        const { x, y } = calibrationAssetStore.applyHomography(
+          calibrationAssetStore.calibrationMatrix,
+          { x: b.top_x, y: b.top_y }
+        );
+        return { ...b, tv_x: x, tv_y: y };
+      });
       bboxesStore.bboxDataTopView = groupDataByTime(_bboxDataTopView);
-      console.log("bboxDataTopView", bboxesStore.bboxDataTopView);
     }
   }
 });
@@ -553,7 +558,7 @@ watch(
 );
 
 watch(
-  () => [calibrationAssetStore.marker, bboxesStore.bboxPluginRun],
+  () => [calibrationAssetStore.marker, bboxesStore.bboxPluginRunId],
   ([newmarker, newBytetrack]) => {
     console.log("Selected Calibration Asset:", newmarker);
     console.log("Selected Bytetrack Plugin:", newBytetrack);

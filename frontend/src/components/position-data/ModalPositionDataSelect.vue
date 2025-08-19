@@ -207,7 +207,7 @@ const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId)
     // bboxesStore.bboxDataTopView = processCsvPositions(selectedPositionData.value);
     // calibrationAssetStore.marker = [];
     // calibrationAssetStore.calibrationAssetId = null;
-    console.log("selected posdata upload", bboxesStore.bboxDataTopView);
+    console.log("selected posdata upload", positionDataStore.positionDataActive);
   }
   dialog.value = false;
 };

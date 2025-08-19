@@ -26,12 +26,12 @@
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             top:
-              position.new_y *
+              position.tv_y *
                 (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
               ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
               'px',
             left:
-              position.new_x *
+              position.tv_x *
                 (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
               ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
               'px',
@@ -238,6 +238,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "@/stores/top_view";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useVideoStore } from "@/stores/video";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { getTimecode } from "@/plugins/time";
 import { Delaunay } from "d3-delaunay";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
@@ -248,6 +249,7 @@ const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();
 const bboxesStore = useBboxesStore();
 const videoStore = useVideoStore();
+const calibrationAssetStore = useCalibrationAssetStore();
 
 const showModalPositionDataSelect = ref(false);
 const showModalPositionDataUpload = ref(false);
@@ -344,6 +346,18 @@ onBeforeUnmount(() => {
   }
 });
 
+const groupDataByTime = (data) => {
+  const grouped = {};
+  data.forEach((position) => {
+    const time = playerStore.roundTimeToFPS(position.time, playerStore.videoFPS);
+    if (!grouped[time]) {
+      grouped[time] = [];
+    }
+    grouped[time].push(position);
+  });
+  return grouped;
+};
+
 const computeConvexHull = (points) => {
   if (points.length < 3) return [];
   const sortedPoints = points.slice().sort((a, b) => a.left - b.left || a.top - b.top);
@@ -384,10 +398,10 @@ const convexHullPlayer = computed(() => {
       .filter((position) => position.team === "red" || position.team === "blue")
       .forEach((position) => {
         const top =
-          position.new_y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+          position.tv_y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
           ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
         const left =
-          position.new_x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+          position.tv_x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
           ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
         if (!teams[position.team]) {
           teams[position.team] = [];
@@ -437,10 +451,10 @@ const voronoiCells = computed(() => {
       .filter((player) => player.team === "red" || player.team === "blue")
       .map((player) => {
         const top =
-          player.new_y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+          player.tv_y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
           ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
         const left =
-          player.new_x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+          player.tv_x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
           ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
         return { left, top, team: player.team };
       });
