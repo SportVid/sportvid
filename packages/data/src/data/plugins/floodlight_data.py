@@ -37,7 +37,7 @@ class FloodlightData(Data):
         )
 
         with self.fs.open_file("pos.npz", "w") as f:
-            np.save(f, self.pos)
+            np.save(f, self.xy_pos)
 
     def to_dict(self) -> dict:
         meta = super().to_dict()
