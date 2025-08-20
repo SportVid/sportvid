@@ -263,22 +263,23 @@ const groupDataByTime = (data) => {
   return grouped;
 };
 watchEffect(() => {
-  const newBboxes = bboxesStore.setBboxData(bboxesStore.bboxPluginRunId);
-
-  if (newBboxes && newBboxes.length > 0) {
-    bboxesStore.bboxData = newBboxes;
-
+  if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
     const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
-      newBboxes,
+      bboxesStore.bboxDataActive,
       playerStore.videoFPS,
       30
     );
     bboxesStore.bboxDataInterpolated = groupDataByTime(_bboxDataInterpolated);
 
     if (calibrationAssetStore.calibrationMatrix) {
-      const _bboxDataTopView = bboxesStore.setbboxDataTopView(_bboxDataInterpolated);
-      bboxesStore.bboxDataTopView = groupDataByTime(_bboxDataTopView);
-      console.log("bboxDataTopView", bboxesStore.bboxDataTopView);
+      const _bboxDataTopView = _bboxDataInterpolated.map((b) => {
+        const { x, y } = calibrationAssetStore.applyHomography(
+          calibrationAssetStore.calibrationMatrix,
+          { x: b.top_x, y: b.top_y }
+        );
+        return { ...b, pos_x: x, pos_y: y };
+      });
+      topViewStore.positionDataTopView = groupDataByTime(_bboxDataTopView);
     }
   }
 });
@@ -553,29 +554,6 @@ watch(
 );
 
 watch(
-  () => [calibrationAssetStore.marker, bboxesStore.bboxPluginRun],
-  ([newmarker, newBytetrack]) => {
-    console.log("Selected Calibration Asset:", newmarker);
-    console.log("Selected Bytetrack Plugin:", newBytetrack);
-  },
-  { deep: true }
-);
-
-watch(
-  () => bboxesStore.bboxDataTopView,
-  (newBboxDataTopView) => {
-    console.log("Selected Bbox Data Top View:", newBboxDataTopView);
-  }
-);
-
-watch(
-  () => calibrationAssetStore.calibrationMatrix,
-  (newMatrix) => {
-    console.log("Selected Calibration Matrix:", newMatrix);
-  }
-);
-
-watch(
   () => calibrationAssetStore.isAnyReferenceMarkerActive,
   (active) => {
     if (active) {
@@ -586,6 +564,20 @@ watch(
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => [
+    calibrationAssetStore.marker,
+    calibrationAssetStore.calibrationMatrix,
+    bboxesStore.bboxPluginRunId,
+  ],
+  ([newmarker, newMatrix, newBytetrack]) => {
+    console.log("Selected Calibration Asset:", newmarker);
+    console.log("Selected Calibration Matrix:", newMatrix);
+    console.log("Selected Bytetrack Plugin:", newBytetrack);
+  },
+  { deep: true }
 );
 
 watch(

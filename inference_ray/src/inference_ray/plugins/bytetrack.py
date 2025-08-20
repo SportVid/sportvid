@@ -1,17 +1,19 @@
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
-from data import VideoData, BboxesData, BboxData
-
-from data import DataManager, Data
+from data import (
+    Data, DataManager, 
+    VideoData, 
+    # BBoxData,
+    BboxesData
+)
 from utils import VideoDecoder
 
 from typing import Any, Callable, Dict, List, Tuple
 import argparse
 
-"""ByteTrack model from https://github.com/ifzhang/ByteTrack
+"""ByteTrack, see original repo: https://github.com/ifzhang/ByteTrack
 
-TODO: Replace with ONNX version from https://github.com/ifzhang/ByteTrack/tree/main/deploy/ONNXRuntime
+TODO: Replace with ONNX version, see https://github.com/ifzhang/ByteTrack/tree/main/deploy/ONNXRuntime
 TODO: stream output_data to avoid memory issues in future plugins?
-
 """
 
 default_config = {
@@ -25,10 +27,10 @@ default_config = {
 # args from tools/demo_track.py
 default_parameters = {
     "fps": 2,
-    "track_thresh": 0.5,  # tracking confidence threshold
-    "track_buffer": 30,  # the frames for keep lost tracks
-    "match_thresh": 0.8,  # matching threshold for tracking
-    "fp16": False,  # TODO True does not work
+    "track_thresh": 0.5,    # tracking confidence threshold
+    "track_buffer": 30,     # the frames for keep lost tracks
+    "match_thresh": 0.8,    # matching threshold for tracking
+    "fp16": False,          # TODO True does not work
     "fuse": True,
     "aspect_ratio_thresh": 1.6,
     "min_box_area": 10,
@@ -114,13 +116,14 @@ class ByteTrack(
         data_manager: DataManager,
         parameters: Dict = None,
         callbacks: Callable = None,
-    ) -> Dict[str, Data]:
+    ) -> Dict[str, Data]:        
+        import json
+        from collections import defaultdict
+        
         import torch
         from yolox.exp import get_exp
 
-        with inputs["video"] as input_data, data_manager.create_data(
-            "BboxesData"
-        ) as output_data:
+        with inputs["video"] as input_data:
             with input_data.open_video() as f_video:
                 video_decoder = VideoDecoder(
                     f_video,
@@ -146,32 +149,40 @@ class ByteTrack(
 
                 results, img_info = self.track(video_decoder, predictor, args)
 
+                bboxes_dict = defaultdict(list)
                 for i, frame_info in enumerate(results):
+                    frame_time = int((i/args.fps)*1000)
                     for id, score, box in zip(
                         frame_info["track_ids"],
                         frame_info["track_scores"],
                         frame_info["track_boxes"],
                     ):
-                        # normalize the box coordinates
-                        bbox = BboxData(
-                            x=int(box[0]) / img_info["width"],
-                            y=int(box[1]) / img_info["height"],
-                            w=int(box[2]) / img_info["width"],
-                            h=int(box[3]) / img_info["height"],
-                            top_x=(int(box[0]) / img_info["width"]) + (int(box[2]) / img_info["width"]) / 2,
-                            top_y=(int(box[1]) / img_info["height"]) + (int(box[3]) / img_info["height"]),
-                            image_id=frame_info["frame_id"],
-                            player_id=id,
-                            team_id="None",
-                            det_score=score,
-                            time=int((i/args.fps)*1000),
-                        )
-                        output_data.bboxes.append(bbox)
-                self.update_callbacks(callbacks, progress=1.0)
-
-                return {
-                    "tracklets": output_data,
-                }
+                        # Normalize coordinates once
+                        x_norm = int(box[0]) / img_info["width"]
+                        y_norm = int(box[1]) / img_info["height"]
+                        w_norm = int(box[2]) / img_info["width"]
+                        h_norm = int(box[3]) / img_info["height"]
+                        # bbox = BboxData(...)  # NOTE: old code used custom data type
+                        
+                        bbox = { # normalize the box coordinates
+                            'x': x_norm,
+                            'y': y_norm,
+                            'w': w_norm,
+                            'h': h_norm,
+                            'top_x': x_norm + (w_norm / 2),
+                            'top_y': y_norm + h_norm,
+                            'image_id': frame_info["frame_id"],
+                            'player_id': id,
+                            'team_id': "None",
+                            'det_score': score
+                        }
+                        bboxes_dict[frame_time].append(bbox)
+                    
+                with data_manager.create_data("BboxesData") as output_data:
+                    output_data.bboxes = json.dumps(bboxes_dict)
+                    self.update_callbacks(callbacks, progress=1.0)
+                
+                return {"tracklets": output_data}
 
     def track(
         self,

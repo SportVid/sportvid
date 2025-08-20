@@ -181,7 +181,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
                 tabStore.analysisTabId === "position_data" &&
                 modalPluginVisible.value === false
               ) {
-                const showMenu = Object.keys(bboxesStore.bboxDataTopView).length === 0;
+                const showMenu = Object.keys(topViewStore.positionDataTopView).length === 0;
                 if (!showMenu) {
                   tour.value.next();
                 } else {

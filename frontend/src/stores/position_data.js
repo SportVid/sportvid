@@ -5,15 +5,16 @@ import config from "../../app.config";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
+import { useTopViewStore } from "./top_view";
 
 export const usePositionDataStore = defineStore("position_data", () => {
   const playerStore = usePlayerStore();
   const pluginRunStore = usePluginRunStore();
   const pluginRunResultStore = usePluginRunResultStore();
+  const topViewStore = useTopViewStore();
 
   const positionDataList = ref([]);
   const positionDataId = ref(null);
-  const positionDataActive = ref(null);
 
   const isUploading = ref(false);
   const progress = ref(0);
@@ -43,17 +44,16 @@ export const usePositionDataStore = defineStore("position_data", () => {
     if (selectedPositionData) {
       positionDataId.value = id;
 
-      positionDataActive.value = pluginRunStore
+      const _positionData = pluginRunStore
         .forVideo(playerStore.videoId)
-        .filter(
-          (e) => e.type === "posdata_convert" && e.status === "DONE" && e.tracking_data_id === id
-        )
+        .filter((e) => e.type === "posdata_convert" && e.status === "DONE")
         .map((e) => {
           e.results = pluginRunResultStore.forPluginRun(e.id);
           return e;
-        });
+        })
+        .filter((e) => e.results?.[0]?.data?.tracking_data_id === id);
 
-      console.log("PosData", positionDataId.value, positionDataActive.value);
+      topViewStore.positionDataTopView = _positionData[0]?.results[0]?.data?.pos_data;
     }
   };
 
@@ -127,7 +127,6 @@ export const usePositionDataStore = defineStore("position_data", () => {
   return {
     positionDataList,
     positionDataId,
-    positionDataActive,
     positionDataUploadSuccess,
     positionDataRenameSuccess,
     positionDataDeleteSuccess,

@@ -240,13 +240,13 @@ const scalar_timelines = computed(() => {
 });
 
 const position_data_teams = computed(() => {
-  // const teams = new Set(bboxesStore.positionsNested.flat().map((player) => player.team));
-  const teams = new Set(bboxesStore.positionsFlat.map((player) => player.team));
+  // const teams = new Set(bboxesStore.positionsNested.flat().map((player) => player.team_id));
+  const teams = new Set(bboxesStore.positionsFlat.map((player) => player.team_id));
   return [
     { name: "Both Teams", id: "both" },
-    ...[...teams].map((team) => ({
-      name: `Team ${team.charAt(0).toUpperCase() + team.slice(1)}`,
-      id: team,
+    ...[...teams].map((team_id) => ({
+      name: `Team ${team_id.charAt(0).toUpperCase() + team_id.slice(1)}`,
+      id: team_id,
     })),
   ];
 });

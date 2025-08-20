@@ -123,7 +123,7 @@ const visualizationStore = useVisualizationStore();
 const { t } = useI18n();
 
 const allFrameKeys = computed(() =>
-  Object.keys(bboxesStore.bboxDataTopView)
+  Object.keys(topViewStore.positionDataTopView)
     .map(Number)
     .sort((a, b) => a - b)
 );
@@ -141,13 +141,13 @@ watch(
 
 function findFirstFrameWithHalftime(halfId) {
   return allFrameKeys.value.find((frame) =>
-    bboxesStore.bboxDataTopView[frame]?.some((p) => p.halftime_id === halfId)
+    topViewStore.positionDataTopView[frame]?.some((p) => p.game_section === halfId)
   );
 }
 function findLastFrameWithHalftime(halfId) {
   const reversed = [...allFrameKeys.value].reverse();
   return reversed.find((frame) =>
-    bboxesStore.bboxDataTopView[frame]?.some((p) => p.halftime_id === halfId)
+    topViewStore.positionDataTopView[frame]?.some((p) => p.game_section === halfId)
   );
 }
 watch(
@@ -161,11 +161,11 @@ watch(
       selectedStartFrame.value = allFrameKeys.value[0];
       selectedEndFrame.value = allFrameKeys.value[allFrameKeys.value.length - 1];
     } else if (first) {
-      selectedStartFrame.value = findFirstFrameWithHalftime("hf_1");
-      selectedEndFrame.value = findLastFrameWithHalftime("hf_1");
+      selectedStartFrame.value = findFirstFrameWithHalftime("firstHalf");
+      selectedEndFrame.value = findLastFrameWithHalftime("firstHalf");
     } else if (second) {
-      selectedStartFrame.value = findFirstFrameWithHalftime("hf_2");
-      selectedEndFrame.value = findLastFrameWithHalftime("hf_2");
+      selectedStartFrame.value = findFirstFrameWithHalftime("secondHalf");
+      selectedEndFrame.value = findLastFrameWithHalftime("secondHalf");
     }
   },
   { immediate: true }
@@ -181,7 +181,7 @@ const headers = [
 const items = computed(() => {
   const distancesByRefId = new Map();
 
-  const allTimes = Object.keys(bboxesStore.bboxDataTopView)
+  const allTimes = Object.keys(topViewStore.positionDataTopView)
     .map(Number)
     .sort((a, b) => a - b);
 
@@ -197,12 +197,12 @@ const items = computed(() => {
   const allPlayersSet = new Map();
 
   for (const frame of allTimes) {
-    const players = bboxesStore.bboxDataTopView[frame];
+    const players = topViewStore.positionDataTopView[frame];
     if (!players) continue;
     for (const p of players) {
       if (
-        (visualizationStore.showAggregatedFirst && p.halftime_id !== "hf_1") ||
-        (visualizationStore.showAggregatedSecond && p.halftime_id !== "hf_2")
+        (visualizationStore.showAggregatedFirst && p.game_section !== "firstHalf") ||
+        (visualizationStore.showAggregatedSecond && p.game_section !== "secondHalf")
       ) {
         continue;
       }
@@ -226,8 +226,8 @@ const items = computed(() => {
       const tPrev = timeRange[i - 1];
       const tCurr = timeRange[i];
 
-      const playersPrev = bboxesStore.bboxDataTopView[tPrev];
-      const playersCurr = bboxesStore.bboxDataTopView[tCurr];
+      const playersPrev = topViewStore.positionDataTopView[tPrev];
+      const playersCurr = topViewStore.positionDataTopView[tCurr];
 
       if (!playersPrev || !playersCurr) continue;
 
@@ -236,16 +236,14 @@ const items = computed(() => {
         if (!prevPlayer) continue;
 
         if (
-          (visualizationStore.showAggregatedFirst && currPlayer.halftime_id !== "hf_1") ||
-          (visualizationStore.showAggregatedSecond && currPlayer.halftime_id !== "hf_2")
+          (visualizationStore.showAggregatedFirst && currPlayer.game_section !== "firstHalf") ||
+          (visualizationStore.showAggregatedSecond && currPlayer.game_section !== "secondHalf")
         ) {
           continue;
         }
 
-        const dx = (currPlayer.new_x - prevPlayer.new_x) * 99.94;
-        const dy = (currPlayer.new_y - prevPlayer.new_y) * 65.88;
-        // const dx = (currPlayer.new_x - prevPlayer.new_x) * playerStore.video.field_length;
-        // const dy = (currPlayer.new_y - prevPlayer.new_y) * playerStore.video.field_width;
+        const dx = (currPlayer.pos_x - prevPlayer.pos_x) * playerStore.video.field_length;
+        const dy = (currPlayer.pos_y - prevPlayer.pos_y) * playerStore.video.field_width;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (!distancesByRefId.has(currPlayer.ref_id)) {
@@ -269,7 +267,7 @@ const items = computed(() => {
 });
 
 const hasPositionData = computed(() => {
-  return Object.keys(bboxesStore.bboxDataTopView).length > 0;
+  return Object.keys(topViewStore.positionDataTopView).length > 0;
 });
 </script>
 

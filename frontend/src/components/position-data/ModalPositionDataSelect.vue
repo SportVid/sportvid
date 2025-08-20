@@ -197,17 +197,23 @@ const isButtonDisabled = computed(() => {
   return true;
 });
 
+import { useTopViewStore } from "@/stores/top_view";
+const topViewStore = useTopViewStore();
 const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId) => {
   if (selectedMode.value === "bytetrack") {
     calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
-    bboxesStore.bboxPluginRunId = bytetrackPluginId;
-    console.log("selected posdata plugin", bboxesStore.bboxDataTopView);
+    bboxesStore.loadBboxData(bytetrackPluginId);
+    console.log(
+      "selected posdata plugin",
+      topViewStore.positionDataTopView,
+      bboxesStore.bboxDataActive
+    );
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
     // bboxesStore.bboxDataTopView = processCsvPositions(selectedPositionData.value);
     // calibrationAssetStore.marker = [];
     // calibrationAssetStore.calibrationAssetId = null;
-    console.log("selected posdata upload", bboxesStore.bboxDataTopView);
+    console.log("selected posdata upload", topViewStore.positionDataTopView);
   }
   dialog.value = false;
 };
@@ -260,7 +266,7 @@ const showModalPositionDataRename = ref(false);
 //     newTime: timeMapping[item.origTime],
 //     new_x: (item.x + 99.94 / 2) / 99.94,
 //     new_y: (65.88 / 2 - item.y) / 65.88,
-//     team: teamColorMapping[item.groupId] || null,
+//     team_id: teamColorMapping[item.groupId] || null,
 //   }));
 
 //   return enrichedItems.reduce((groupedData, item) => {

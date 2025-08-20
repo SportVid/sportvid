@@ -16,6 +16,7 @@ class PositionData(Data):
  
     def load(self) -> None:
         super().load()
+        assert self.check_fs(), "No filesystem handler installed"
         data = self.load_dict("pos_data.yml")
         
         self.tracking_data_id = data.get("tracking_data_id") # type: ignore
@@ -29,7 +30,8 @@ class PositionData(Data):
 
     def save(self) -> None:
         super().save()
-
+        assert self.check_fs(), "No filesystem handler installed"
+        assert self.fs.mode == "w", "Data package is opened as 'read only'"
         self.save_dict(
             "pos_data.yml",
             {

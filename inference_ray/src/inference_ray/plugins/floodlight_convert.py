@@ -25,7 +25,6 @@ provides = {
     "floodlight_data": FloodlightData,
 }
 
-
 @AnalyserPluginManager.export("floodlight_convert")
 class FloodlightConvert(
     AnalyserPlugin,
@@ -48,7 +47,24 @@ class FloodlightConvert(
         # ----------------- IMPORTS
         import numpy as np
         import pandas as pd
-        from floodlight.io.kinexon import read_position_data_csv
+        
+        from floodlight.core import (
+            code,
+            events,
+            pitch,
+            teamsheet,
+            xy
+        )
+        from floodlight.utils.types import Numeric
+        from floodlight.io.kinexon import (
+            get_meta_data, read_position_data_csv
+        )
+        from floodlight.io.dfl import (
+            read_event_data_xml, 
+            read_teamsheets_from_mat_info_xml, 
+            read_pitch_from_mat_info_xml, 
+            read_position_data_xml
+        )
         # -----------------
 
         # ----------------- DATA LOADING
@@ -60,6 +76,18 @@ class FloodlightConvert(
         
         with inputs["tracking_data"] as input_data:
             with input_data.open_file() as t_data:
+                # if kinexon:
+                #    knx_data = read_position_data_csv(t_data, delimiter=',')
+                # TODO: meta data handling or kinexon
+                # if meta_data:
+                #     with meta_data.open_file() as meta_data:
+                            # NOTE: returns Tuple[Dict[str, Dict[str, List[str]]], int, int, int]
+                #           pID_dict, no_frames, framerate, t_null = get_meta_data(meta_data, _delimiter=';')
+                #
+                # elif dfl:
+                #    
+                # else: 
+                # ----------------- COMPUTE
                 kinexon_df = pd.read_csv(t_data, sep=';')
                 logging.error(kinexon_df)
                 # xy_col = kinexon_df.columns.values.tolist()[-3:-1]
@@ -69,21 +97,15 @@ class FloodlightConvert(
                 np_position_data = xy_slice.to_numpy(dtype=np.float32)
                 logging.error(f'[PLUGIN]\tkinexon data frame: {kinexon_df.shape}, {kinexon_df.columns.values.tolist()}')
                 logging.error(f'[PLUGIN]\tnumpy pos data: {np_position_data.shape}')
-                # ----------------- COMPUTE
-                # TODO: Logik implementieren
                 # -----------------
-
         # ----------------- OUTPUT
-        # NOTE: Ausgabe definieren -> OUTPUT_TYPE von create_data('OUTPUT_TYPE') anpassen
-        with data_manager.create_data("PositionData") as pos_data:
-            pos_data.name = "pos_data"
-            pos_data.ref_id = parameters.get('tracking_data_id')  # Required field
-            pos_data.delta_time = 1.0  # Required field
-            pos_data.pos = np_pos_data.copy()
+        with data_manager.create_data("FloodlightData") as fl_data:
+            fl_data.name = "pos_data"
+            fl_data.tracking_data_id = parameters.get('tracking_data_id') 
+            fl_data.meta_data = 1337  # TODO
+            fl_data.xy_pos = np_position_data.copy()
             
             self.update_callbacks(callbacks, progress=1.0)
-            logging.error(f'[PLUGIN]\tpos_data: {pos_data}')
-        
-        return {"pos_data": pos_data}
+        return {"pos_data": fl_data}
         # -----------------
         
