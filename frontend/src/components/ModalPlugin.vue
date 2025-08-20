@@ -991,7 +991,6 @@ const plugins = ref([
         id: 702,
         parameters: [
           {
-            // TODO needs to be replaced by a dropdown list of CalibrationAssets
             field: "select_calibration",
             // field: "text_field",
             name: "calibration_id",

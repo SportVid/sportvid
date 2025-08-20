@@ -243,12 +243,11 @@ export const useCalibrationAssetStore = defineStore("calibration_asset", () => {
   });
 
   function applyHomography(matrix, point) {
-    const [x, y, w] = [
-      matrix[0][0] * point.x + matrix[0][1] * point.y + matrix[0][2] * 1,
-      matrix[1][0] * point.x + matrix[1][1] * point.y + matrix[1][2] * 1,
-      matrix[2][0] * point.x + matrix[2][1] * point.y + matrix[2][2] * 1,
-    ];
-    return { x: x / w, y: y / w };
+    const X = matrix[0][0] * point.x + matrix[0][1] * point.y + matrix[0][2] * 1;
+    const Y = matrix[1][0] * point.x + matrix[1][1] * point.y + matrix[1][2] * 1;
+    const W = matrix[2][0] * point.x + matrix[2][1] * point.y + matrix[2][2] * 1;
+
+    return { x: X / W, y: Y / W };
   }
   const videoMarker = ref([]);
   const topViewMarkerProjection = computed(() => {

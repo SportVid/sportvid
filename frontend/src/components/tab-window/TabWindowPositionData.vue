@@ -35,7 +35,8 @@
                 (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
               ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
               'px',
-            backgroundColor: !position.team_id ? 'grey' : position.team_id,
+            backgroundColor:
+              !position.team_id || position.team_id === 'None' ? 'grey' : position.team_id,
           }"
         />
 
@@ -345,18 +346,6 @@ onBeforeUnmount(() => {
     resizeObserver.unobserve(topViewElement.value);
   }
 });
-
-const groupDataByTime = (data) => {
-  const grouped = {};
-  data.forEach((position) => {
-    const time = playerStore.roundTimeToFPS(position.time, playerStore.videoFPS);
-    if (!grouped[time]) {
-      grouped[time] = [];
-    }
-    grouped[time].push(position);
-  });
-  return grouped;
-};
 
 const computeConvexHull = (points) => {
   if (points.length < 3) return [];
