@@ -12,7 +12,8 @@ from interface import analyser_pb2
 class PositionData(Data):
     type: str = field(default="PositionData")
     tracking_data_id: str = None
-    pos: str = None  # uses JSON representation for the output data
+    meta_data: str = None  # JSON string
+    pos: str = None  # JSON string
  
     def load(self) -> None:
         super().load()
@@ -20,11 +21,12 @@ class PositionData(Data):
         data = self.load_dict("pos_data.yml")
         
         self.tracking_data_id = data.get("tracking_data_id") # type: ignore
+        self.meta_data = data.get("meta_data")
         self.pos = data.get("pos")
         
+        # ----
         # with self.fs.open_file("pos.json", "r") as f: # type: ignore
         #     self.pos = json.dumps(json.load(f))
-
         # with self.fs.open_file("pos.npz", "r") as f: # type: ignore
         #     self.pos = np.load(f)
 
@@ -36,12 +38,14 @@ class PositionData(Data):
             "pos_data.yml",
             {
                 "tracking_data_id": self.tracking_data_id,
+                "meta_data": self.meta_data,
                 "pos": self.pos
             },
         )
+        
+        # ----
         # with self.fs.open_file("pos.json", "w") as f:
         #     json.dump(self.pos, f)
-
         # with self.fs.open_file("pos.npz", "w") as f:
         #     np.save(f, self.pos)
 
@@ -50,5 +54,6 @@ class PositionData(Data):
         return {
             **meta,
             "tracking_data_id": self.tracking_data_id,
-            "pos_data": self.pos
+            "meta_data": json.loads(self.meta_data),
+            "pos_data": json.loads(self.pos)
         }

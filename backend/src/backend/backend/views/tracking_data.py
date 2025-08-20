@@ -29,9 +29,10 @@ class TrackingDataUpload(View):
     
     def submit_analyse(self, plugins, **kwargs):
         plugin_manager = PluginManager()
+        result = {"status": False}
         for plugin in plugins:
-            logging.error(plugin)
-            plugin_manager(plugin, **kwargs)
+            result = plugin_manager(plugin, **kwargs)
+        return result
 
     def post(self, request):
         try:
@@ -119,22 +120,8 @@ class TrackingDataUpload(View):
                 if request.POST.get("delimiter"):
                     analyser_params.append({"name": "delimiter", "value": request.POST.get("delimiter")})
                 
-                # NOTE: What happens if something goes wrong with the plugin execution, we simply do not know...?
-                # try:
-                #     video_db = Video.objects.get(id=request.POST.get("video_id"))       
-                #     self.submit_analyse(
-                #         plugins=["posdata_convert"],
-                #         video=video_db,
-                #         user=request.user,
-                #         parameters=analyser_params
-                #     )
-                # except Exception as e:
-                #     logging.error(f"Failed to run pos_data conversion for tracking data: {e}", exc_info=True)
-                #     tracking_data_db.delete()
-                #     return JsonResponse({"status": "error"}, status=500)
-                
                 video_db = Video.objects.get(id=request.POST.get("video_id"))       
-                self.submit_analyse(
+                result = self.submit_analyse(
                     plugins=["posdata_convert"],
                     video=video_db,
                     user=request.user,
@@ -260,7 +247,9 @@ class TrackingDataDelete(View):
                 data = json.loads(body)
             except Exception as e:
                 return JsonResponse({"status": "error"}, status=500)
-            if data.get("id") == 'all':
+            
+            # TODO: delete for prod
+            if data.get("id") == 'all': 
                 count, _ = TrackingData.objects.all().delete()
             else:
                 count, _ = TrackingData.objects.filter(

@@ -57,7 +57,6 @@ class PluginManager:
             parameters = []
 
         if plugin not in self._plugins:
-            print("Unknown Plugin")
             return {"status": False}
 
         logger.info(

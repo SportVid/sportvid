@@ -122,6 +122,7 @@ class PosDataConvert(
         
         from datetime import timezone
         from io import StringIO
+        from lxml import etree
         import json
 
         # ----------------- DATA LOADING
@@ -134,6 +135,7 @@ class PosDataConvert(
         with inputs["tracking_data"] as input_data:
             with input_data.open_file() as t_data:
                 # ----------------- COMPUTE
+                meta_data = {}
                 if parameters["format"] == "kinexon":
                     df = pd.read_csv(t_data, delimiter=parameters["delimiter"])
                     df = df.drop(['formatted local time', 'mapped id', 'full name', 'group id'], axis=1)
@@ -146,8 +148,7 @@ class PosDataConvert(
                         "y in m": "pos_y"
                     })
                     df["pos_x"] = df["pos_x"].apply(lambda x: round(x, ndigits=2))
-                    df["pos_y"] = df["pos_y"].apply(lambda x: round(x, ndigits=2))
-                    
+                    df["pos_y"] = df["pos_y"].apply(lambda x: round(x, ndigits=2))  
                 elif parameters["format"] == "dfl":
                     from datetime import datetime
                     # TODO: memory-efficient solution using lxml’s iterparse or etree’s iterparse -> https://lxml.de/3.2/parsing.html#iterparse-and-iterwalk
@@ -157,12 +158,38 @@ class PosDataConvert(
                         xpath='//record'
                     )                 
                     df[df.columns[0]] = df[df.columns[0]].apply(lambda x: int(datetime.fromisoformat(x).timestamp()*1000))
+                    
+                    # DFL origin (0,0)^T is the kick-off / center point
+                    with inputs["meta_data"] as meta_data:
+                        with meta_data.open_file() as m_data:
+                            tree = etree.parse(m_data)
+                            root = tree.getroot()
+                            DFL_PITCH_SIZE_X = float(root.findall("./MatchInformation/Environment")[0].attrib["PitchX"])
+                            DFL_PITCH_SIZE_Y = float(root.findall("./MatchInformation/Environment")[0].attrib["PitchY"])
+                            MAX_X = DFL_PITCH_SIZE_X/2
+                            MAX_Y = DFL_PITCH_SIZE_Y/2
+                            
+                            meta_data = {
+                                "kickoff_time": int(datetime.fromisoformat(root.findall("./MatchInformation/General")[0].attrib["KickoffTime"]).timestamp()*1000),
+                                "total_time_first_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["TotalTimeFirstHalf"],
+                                "total_time_second_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["TotalTimeSecondHalf"],
+                                "playing_time_first_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["PlayingTimeFirstHalf"],
+                                "playing_time_second_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["PlayingTimeSecondHalf"]
+                            }
+                    
+                    df["pos_x"] = (df["pos_x"] + MAX_X) / DFL_PITCH_SIZE_X 
+                    df["pos_y"] = (MAX_Y - df["pos_y"]) / DFL_PITCH_SIZE_Y  # inverted Y-axis, since images start at top left corner
+                    # df["pos_y"] = (df["pos_y"] + MAX_Y) / DFL_PITCH_SIZE_Y 
                 else:
                     raise ValueError("'format' has to be either one of ['dfl', 'kinexon'], other formats are not supported yet for conversion.")
             
                 # ---- FPS filtering
                 unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
                 df[df.columns[0]] = df[df.columns[0]] - unique_timestamps.min()  # reset timestamps to zero
+                
+                if "kickoff_time" in meta_data:
+                    meta_data["kickoff_time"] = int(meta_data["kickoff_time"] - unique_timestamps.min())
+                
                 # df[df.columns[0]] = df[df.columns[0]].apply(lambda x: x - unique_timestamps.min())
                 # NOTE: checks if specified fps parameter is in an applicable range
                 freq = unique_timestamps[1] - unique_timestamps[0]
@@ -177,6 +204,11 @@ class PosDataConvert(
                         df = df[df[df.columns[0]].isin(selected_timestamps)]  # keeps all rows where 'timestamp' is in the selected list
                     else:
                         raise ValueError("framerate needs to be larger than zero.")
+                # default color assignment
+                unique_teams = df["team_id"].unique()
+                for _, (team_label, col) in enumerate(zip(unique_teams, ["blue", "red"])):
+                    df["team_id"] = df["team_id"].replace(team_label, col)
+                    # df.loc[df["team_id"] == team_label, "team_id"] = col
                 
                 grouped_dict = df.groupby(
                     'timestamp', group_keys=False
@@ -192,6 +224,7 @@ class PosDataConvert(
         with data_manager.create_data("PositionData") as pos_data:
             pos_data.name = "pos_data"
             pos_data.tracking_data_id = parameters.get('tracking_data_id')  # Required field
+            pos_data.meta_data = json.dumps(meta_data)
             pos_data.pos = json.dumps(py_dict)
 
             self.update_callbacks(callbacks, progress=1.0)

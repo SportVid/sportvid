@@ -49,7 +49,6 @@ class Data:
             return yaml.safe_load(decoded_data)
 
     def save(self) -> None:
-
         data_dict = {}
         for x in fields(Data):
             data_dict[x.name] = getattr(self, x.name)
@@ -57,7 +56,7 @@ class Data:
 
     def save_dict(self, filename: str, data: Dict) -> None:
         assert self.check_fs(), "No filesystem handler installed"
-        assert self.fs.mode == "w", "Data packet is open read only"
+        assert self.fs.mode == "w", "Data package is open read only"
 
         with self.fs.open_file(filename, "w") as f:
 

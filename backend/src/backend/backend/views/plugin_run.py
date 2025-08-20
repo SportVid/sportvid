@@ -161,11 +161,15 @@ class PluginRunDelete(View):
                     {"status": "error", "type": "missing_values_plugin_list"}
                 )
 
-            plugins_to_be_deleted = [
-                PluginRun.objects.get(id=p) for p in list(data.get("plugin_list"))
-            ]
-            for p in plugins_to_be_deleted:
-                response = p.delete()
+            # TODO: delete for prod
+            if list(data.get("plugin_list"))[0] == 'all':
+                response, _ = PluginRun.objects.all().delete()
+            else:
+                plugins_to_be_deleted = [
+                    PluginRun.objects.get(id=p) for p in list(data.get("plugin_list"))
+                ]
+                for p in plugins_to_be_deleted:
+                    response = p.delete()
 
             return JsonResponse({"status": "ok", "deleted_items": response})
         except Exception:
