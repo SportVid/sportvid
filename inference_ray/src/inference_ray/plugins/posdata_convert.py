@@ -145,10 +145,6 @@ class PosDataConvert(
                         "x in m": "pos_x", 
                         "y in m": "pos_y"
                     })
-                    
-                    unique_timestamps = df[df.columns[0]].unique()
-                    df[df.columns[0]] = df[df.columns[0]] - unique_timestamps.min()  # reset timestamps to zero
-                    # df[df.columns[0]] = df[df.columns[0]].apply(lambda x: x - unique_timestamps.min())
                     df["pos_x"] = df["pos_x"].apply(lambda x: round(x, ndigits=2))
                     df["pos_y"] = df["pos_y"].apply(lambda x: round(x, ndigits=2))
                     
@@ -159,16 +155,15 @@ class PosDataConvert(
                         t_data,
                         stylesheet=StringIO(DFL_XSL),
                         xpath='//record'
-                    )
-                    # TODO: FPS filtering                    
+                    )                 
                     df[df.columns[0]] = df[df.columns[0]].apply(lambda x: int(datetime.fromisoformat(x).timestamp()*1000))
-                    unique_timestamps = df[df.columns[0]].unique()
-                     
                 else:
                     raise ValueError("'format' has to be either one of ['dfl', 'kinexon'], other formats are not supported yet for conversion.")
-                
+            
                 # ---- FPS filtering
                 unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
+                df[df.columns[0]] = df[df.columns[0]] - unique_timestamps.min()  # reset timestamps to zero
+                # df[df.columns[0]] = df[df.columns[0]].apply(lambda x: x - unique_timestamps.min())
                 # NOTE: checks if specified fps parameter is in an applicable range
                 freq = unique_timestamps[1] - unique_timestamps[0]
                 origin_fps = 1000/freq

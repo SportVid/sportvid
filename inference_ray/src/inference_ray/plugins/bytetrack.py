@@ -161,10 +161,10 @@ class ByteTrack(
                             top_x=(int(box[0]) / img_info["width"]) + (int(box[2]) / img_info["width"]) / 2,
                             top_y=(int(box[1]) / img_info["height"]) + (int(box[3]) / img_info["height"]),
                             image_id=frame_info["frame_id"],
-                            ref_id=id,
+                            player_id=id,
                             team_id="None",
                             det_score=score,
-                            time=i / args.fps,
+                            time=int((i/args.fps)*1000),
                         )
                         output_data.bboxes.append(bbox)
                 self.update_callbacks(callbacks, progress=1.0)

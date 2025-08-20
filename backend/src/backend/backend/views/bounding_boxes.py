@@ -11,7 +11,11 @@ from django.http import JsonResponse
 from backend.models import PluginRunResult
 from backend.utils.decode_auth import decode_and_authenticate
 
-from data import DataManager, BboxesData, BboxData
+from data import (
+    DataManager, 
+    BboxesData, 
+    BboxData
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,22 +26,22 @@ class BoundingBoxesChange(View):
         try:
             bbox_id = data.get("bbox_id")
             bytetrack_result_id = data.get("bytetrack_run_id")
-            current_ref_id = None
-            if "ref_id" in data: current_ref_id = int(data.get("ref_id"))
+            current_player_id = None
+            if "player_id" in data: current_player_id = int(data.get("player_id"))
         
-            new_ref_id = None; new_team_id = None
-            if "new_ref_id" in data: new_ref_id = int(data.get("new_ref_id"))
+            new_player_id = None; new_team_id = None
+            if "new_player_id" in data: new_player_id = int(data.get("new_player_id"))
             if "new_team_id" in data: new_team_id = data.get("new_team_id")
             
             if bbox_id is None or ( 
-                current_ref_id is None) or (
-                    new_ref_id is None and new_team_id is None):
+                current_player_id is None) or (
+                    new_player_id is None and new_team_id is None):
                 return JsonResponse({"status": "error", "type": "missing_args"})
  
-            update_all_ref_id = False; update_all_team_id = False
-            if "update_all_ref_id" in data:
-                if data.get("update_all_ref_id") in ['true', 'True']:
-                    update_all_ref_id = True
+            update_all_player_id = False; update_all_team_id = False
+            if "update_all_player_id" in data:
+                if data.get("update_all_player_id") in ['true', 'True']:
+                    update_all_player_id = True
             if "update_all_team_id" in data:
                 if data.get("update_all_team_id") in ['true', 'True']:
                     update_all_team_id = True   
@@ -59,11 +63,11 @@ class BoundingBoxesChange(View):
                 bbd = bboxes_data.to_dict()
                 bbd_data = bbd["bboxes"]
                 with manager.create_data("BboxesData") as altered_bbx:
-                    if update_all_ref_id:
+                    if update_all_player_id:
                         # --- bulk delete; iterate each entry O(n)
                         for entry in bbd_data:
-                            if entry.get("ref_id") == current_ref_id:
-                                entry["ref_id"] = new_ref_id
+                            if entry.get("player_id") == current_player_id:
+                                entry["player_id"] = new_player_id
                                 if update_all_team_id:
                                     entry["team_id"] = new_team_id
                             bbox = BboxData(**entry)
@@ -72,7 +76,7 @@ class BoundingBoxesChange(View):
                         # --- single delete; O(n)
                         for entry in bbd_data:
                             if entry.get("id") == bbox_id:
-                                entry["ref_id"] = new_ref_id
+                                entry["player_id"] = new_player_id
                                 if new_team_id: entry["team_id"] = new_team_id
                             bbox = BboxData(**entry)
                             altered_bbx.bboxes.append(bbox)   
@@ -113,15 +117,15 @@ class BoundingBoxesDelete(View):
         try:
             bbox_id = data.get("bbox_id")
             bytetrack_result_id = data.get("bytetrack_run_id")
-            ref_id_to_delete = None
-            if "ref_id" in data: ref_id_to_delete = int(data.get("ref_id"))
-            if ref_id_to_delete is None:
+            player_id_to_delete = None
+            if "player_id" in data: player_id_to_delete = int(data.get("player_id"))
+            if player_id_to_delete is None:
                 return JsonResponse({"status": "error", "type": "missing_args"})
  
-            delete_all_ref_id = False
-            if "delete_all_ref_id" in data:
-                if data.get("delete_all_ref_id") in ['true', 'True']:
-                    delete_all_ref_id = True
+            delete_all_player_id = False
+            if "delete_all_player_id" in data:
+                if data.get("delete_all_player_id") in ['true', 'True']:
+                    delete_all_player_id = True
   
             bytetrack_prr_db = PluginRunResult.objects.get(
                 plugin_run_id=bytetrack_result_id
@@ -137,10 +141,10 @@ class BoundingBoxesDelete(View):
                 bbd = bboxes_data.to_dict()
                 bbd_data = bbd["bboxes"]
                 with manager.create_data("BboxesData") as altered_bbx:
-                    if delete_all_ref_id:
+                    if delete_all_player_id:
                         # --- bulk delete; iterate each entry O(n)
                         for entry in bbd_data:
-                            if entry.get("ref_id") == ref_id_to_delete:
+                            if entry.get("player_id") == player_id_to_delete:
                                 continue
                             bbox = BboxData(**entry)
                             altered_bbx.bboxes.append(bbox)
