@@ -15,7 +15,9 @@ default_config = {
 }
 
 # Define parameters that are required uring the runtime of a plugin
-default_parameters = {}
+default_parameters = {
+    "delimiter": ";"
+}
 
 requires = {
     "tracking_data": TrackingData
@@ -48,14 +50,14 @@ class FloodlightConvert(
         import numpy as np
         import pandas as pd
         
-        from floodlight.core import (
-            code,
-            events,
-            pitch,
-            teamsheet,
-            xy
-        )
-        from floodlight.utils.types import Numeric
+        # from floodlight.core import (
+        #     code,
+        #     events,
+        #     pitch,
+        #     teamsheet,
+        #     xy
+        # )
+        # from floodlight.utils.types import Numeric
         from floodlight.io.kinexon import (
             get_meta_data, read_position_data_csv
         )
@@ -65,26 +67,20 @@ class FloodlightConvert(
             read_pitch_from_mat_info_xml, 
             read_position_data_xml
         )
-        # -----------------
-
         # ----------------- DATA LOADING
-        logging.error(f'[PLUGIN]\tinputs: {inputs}')
-        logging.error(f'[PLUGIN]\tparams: {parameters}')
-        
-        # if "some_params" not in parameters:
-        #     raise ValueError("'some_params' is required for the conversion.")
+        if "format" not in parameters:
+            raise ValueError("'format' is required for plugin execution.")
         
         with inputs["tracking_data"] as input_data:
             with input_data.open_file() as t_data:
-                # if kinexon:
-                #    knx_data = read_position_data_csv(t_data, delimiter=',')
-                # TODO: meta data handling or kinexon
-                # if meta_data:
+                if parameters["format"] == "kinexon":
+                    knx_data = read_position_data_csv(t_data, delimiter=parameters["delimiter"])
+                # TODO: meta data handling for kinexon?
+                # if parameters["meta_data_provided"]:
                 #     with meta_data.open_file() as meta_data:
                             # NOTE: returns Tuple[Dict[str, Dict[str, List[str]]], int, int, int]
                 #           pID_dict, no_frames, framerate, t_null = get_meta_data(meta_data, _delimiter=';')
-                #
-                # elif dfl:
+                elif parameters["format"] == "dfl":
                 #    
                 # else: 
                 # ----------------- COMPUTE
@@ -100,7 +96,7 @@ class FloodlightConvert(
                 # -----------------
         # ----------------- OUTPUT
         with data_manager.create_data("FloodlightData") as fl_data:
-            fl_data.name = "pos_data"
+            fl_data.name = "fl_data"
             fl_data.tracking_data_id = parameters.get('tracking_data_id') 
             fl_data.meta_data = 1337  # TODO
             fl_data.xy_pos = np_position_data.copy()

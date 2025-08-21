@@ -22,15 +22,18 @@ from django.conf import settings
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 
 
-@PluginManager.export_parser("fl_convert")
+@PluginManager.export_parser("floodlight_convert")
 class FloodlightConvertParser(Parser):
     def __init__(self):
         self.valid_parameter = {
             "tracking_data_id": {"parser": str, "required": True},
+            "provided_meta_data": {"parser": bool, "default": False},
+            "format": {"parser": str, "required": True},
+            "delimiter": {"parser": str, "required": False, "default": ";"}
         }
 
 
-@PluginManager.export_plugin("fl_convert")
+@PluginManager.export_plugin("floodlight_convert")
 class FloodlightConvert(Task):
     def __init__(self):
         self.config = {
@@ -55,24 +58,24 @@ class FloodlightConvert(Task):
             manager=manager,
         )
         # obtain ref. object from DB to position data table
-        logging.error(f'[TASKS]\tparams: {parameters}')
-        logging.error(f'[TASKS]\ttdid: {parameters.get("tracking_data_id")}')
-        
         tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
-        logging.error(f'[TASKS]\ttdid_db: {tracking_data_db}')
         
         # TODO: rather use file transfer as binary?
         tracking_data_ = self.upload_td(client, tracking_data_db)  # uses the FSHandler, file is zipped before transfer
+
+        if parameters.get("provided_meta_data"):
+            meta_data_ = self.upload_td(client, tracking_data_db.meta_file.hex, tracking_data_db.meta_ext)
+            input_dict.update({"meta_data": meta_data_})
 
         # --------> RUN ANALYSER PLUGIN
         # NOTE: specify parameters for plugin execution -> needs to match call()-method of "/inference_ray/plugins/kinexon_convert.py"
         result = self.run_analyser(
             client,
             "kinexon_convert",
-            parameters={"tracking_data_id": parameters.get("tracking_data_id")},  # NOTE: specify more params if needed  
+            parameters={"tracking_data_id": parameters.get("tracking_data_id")},
             inputs={"tracking_data": tracking_data_},
-            outputs=["pos_data"],   # this only outputs the reference (id)
-            downloads=["pos_data"]  # this actually transfers "real" data
+            outputs=["fl_data"],   # outputs the reference (id)
+            # downloads=["fl_data"]  # actually transfers "real" data
         )
         logging.error(f'[TASKS]\tresult: {result}')
         
@@ -88,19 +91,19 @@ class FloodlightConvert(Task):
             return {}
         
         # --------> OUTPUT
-        # TODO: dynamic output depending on format!
+        # TODO: define output of FL conversion, is it dynamic?
         with transaction.atomic():
-            with result[1]["pos_data"] as pos_data:
+            with result[1]["fl_data"] as fl_data:
                 # saves analyser results to the database (PluginRunResult)
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
-                    data_id=pos_data.id,
-                    name="pos_data",
-                    type=PluginRunResult.TYPE_POS,
+                    data_id=fl_data.id,
+                    name="fl_data",
+                    type=PluginRunResult.TYPE_FL,
                 )
         # output results to the backend
         return {
             "plugin_run": plugin_run.id.hex,
             "plugin_run_results": [plugin_run_result_db.id.hex],
-            "data": {"pos_data": pos_data.id},
+            "data": {"fl_data": fl_data.id},
         }

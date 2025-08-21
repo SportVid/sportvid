@@ -218,6 +218,7 @@ class PluginRunResult(models.Model):
     TYPE_IMAGE_EMBEDDINGS = "E"
     TYPE_BBOXES = "B"
     TYPE_POS = "P"
+    TYPE_FL = "FL"
     TYPE = {
         TYPE_VIDEO: "VIDEO",
         TYPE_IMAGES: "IMAGES",
@@ -229,7 +230,8 @@ class PluginRunResult(models.Model):
         TYPE_FACE: "FACE",
         TYPE_IMAGE_EMBEDDINGS: "IMAGE_EMBEDDINGS",
         TYPE_BBOXES: "BBOXES",
-        TYPE_POS: "POS"
+        TYPE_POS: "POS",
+        TYPE_FL: "FL"
     }
     type = models.CharField(
         max_length=2,
