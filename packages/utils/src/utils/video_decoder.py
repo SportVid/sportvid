@@ -30,7 +30,7 @@ def parse_meta_imageio(path, **kwargs):
             "width": meta.width,
             "height": meta.height,
             "size": (meta.width, meta.height),
-            "duration": float(meta.duration * meta.time_base),
+            "duration": float(meta.duration * meta.time_base)*1000.,  # NOTE: ms
         }
 
     except:
