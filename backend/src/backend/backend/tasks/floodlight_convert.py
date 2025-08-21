@@ -78,7 +78,7 @@ class FloodlightConvert(Task):
             },
             inputs={**input_dict},
             outputs=["fl_data"],   # outputs the reference (id)
-            # downloads=["fl_data"]  # actually transfers "real" data
+            downloads=["fl_data"]  # actually transfers "real" data
         )
         
         if plugin_run is not None:
@@ -93,7 +93,7 @@ class FloodlightConvert(Task):
             return {}
         
         # --------> OUTPUT
-        # TODO: define output type
+        # TODO: define correct output type
         with transaction.atomic():
             with result[1]["fl_data"] as fl_data:
                 # saves analyser results to the database (PluginRunResult)

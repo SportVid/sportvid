@@ -4,6 +4,25 @@ http_options:
   port: 8000
 
 applications:
+  - name: floodlight_convert
+    route_prefix: /floodlight_convert
+    import_path: inference_ray.main:app_builder
+    args:
+      model: floodlight_convert
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        autoscaling_config:
+          min_replicas: 0
+        ray_actor_options:
+          num_cpus: 1
+          runtime_env:
+            uv:
+              - numpy
+              - pandas
+              - floodlight
+
   - name: posdata_convert
     route_prefix: /posdata_convert
     import_path: inference_ray.main:app_builder
@@ -23,25 +42,6 @@ applications:
               - pandas
               - lxml
   
-  - name: kinexon_convert
-    route_prefix: /kinexon_convert
-    import_path: inference_ray.main:app_builder
-    args:
-      model: kinexon_convert
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        autoscaling_config:
-          min_replicas: 0
-        ray_actor_options:
-          num_cpus: 1
-          runtime_env:
-            uv:
-              - numpy
-              - pandas
-              - floodlight
-
   - name: bytetrack
     route_prefix: /bytetrack
     import_path: inference_ray.main:app_builder
