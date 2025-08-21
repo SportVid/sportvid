@@ -14,7 +14,7 @@ from interface import analyser_pb2
 class FloodlightData(Data):
     type: str = field(default="FloodlightData")
     tracking_data_id: str = None
-    meta_data: int = None  # TODO
+    meta_data: str = None  # TODO
     xy_pos: npt.NDArray = None  # TODO
  
     def load(self) -> None:

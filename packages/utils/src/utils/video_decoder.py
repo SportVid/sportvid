@@ -88,10 +88,10 @@ class VideoDecoder:
         )
         fps = self._real_fps if self._fps is None else self._fps
         for i, frame in enumerate(video_reader):
-            yield {"time": int(float(i / fps)*1000), "index": i, "frame": frame, "ref_id": self._ref_id, "delta_time": int(float(i / fps)*1000)}
+            yield {"time": int(float(i / fps)*1000), "index": i, "frame": frame, "ref_id": self._ref_id, "delta_time": float(i / fps)}
 
     def __len__(self):
-        return self.duration() * self.fps()
+        return (self.duration() / 1000) * self.fps()
 
     def fps(self):
         return float(self._real_fps if self._fps is None else self._fps)

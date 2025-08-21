@@ -1,42 +1,34 @@
-import os
-import shutil
-import sys
+import imageio
 import json
 import uuid
 import logging
-import traceback
-import tempfile
 import logging
+
 from pathlib import Path
-
 from urllib.parse import urlparse
-import imageio
-from backend.plugin_manager import PluginManager
-
-from backend.utils import (
-    download_url,
-    download_file,
-    media_url_to_file,
-    media_path_to_file,
-    media_dir_to_file,
-)
 
 from django.views import View
 from django.http import JsonResponse
 from django.conf import settings
 
-# from django.core.exceptions import BadRequest
-
+from backend.plugin_manager import PluginManager
+from backend.utils import (
+    download_file,
+    media_url_to_file,
+    media_dir_to_file,
+)
 from backend.models import Video
 
 
 logger = logging.getLogger(__name__)
 
+
 def parse_number(val):
-                try:
-                    return float(val.replace(',', '.')) if val else None
-                except ValueError:
-                    return None
+    try:
+        return float(val.replace(',', '.')) if val else None
+    except ValueError:
+        return None
+            
                 
 class VideoUpload(View):
     def submit_analyse(self, plugins, **kwargs):
@@ -84,12 +76,10 @@ class VideoUpload(View):
                 size = reader.get_meta_data()["size"]
 
                 field_length = parse_number(request.POST.get("fieldLength"))
-                if not field_length:
-                    field_length = 105
+                if not field_length: field_length = 105.
 
                 field_width = parse_number(request.POST.get("fieldWidth"))
-                if not field_width:
-                    field_width = 68
+                if not field_width: field_width = 68.
 
                 meta = {
                     "name": request.POST.get("title"),

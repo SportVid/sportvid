@@ -77,31 +77,31 @@ class TrackingDataUpload(View):
                 }
             
                 meta_ext = ""
-                if request.POST.get("format") == 'dfl':
-                    if "meta_data" in request.FILES:
-                        meta_data_id_uuid = uuid.uuid4()
-                        meta_data_id = meta_data_id_uuid.hex
-                        
-                        output_dir = media_dir_to_file(meta_data_id)
-                        
-                        download_result = download_file(
-                            output_dir=output_dir,
-                            output_name=meta_data_id,
-                            file=request.FILES["meta_data"],
-                            max_size=request.user.max_file_size,
-                            extensions=(".csv", ".xml")
-                        )
-                        
-                        if download_result["status"] != "ok":
-                            logger.error("TrackingDataUpload::failed")
-                            return JsonResponse(download_result, status=500)
-                        
-                        meta_path = Path(request.FILES["meta_data"].name)
-                        meta_ext = meta_ext.join(meta_path.suffixes)
-                        
-                        db_params.update({"meta_file": meta_data_id_uuid, "meta_ext": meta_ext})
-                    else:
-                        logger.error("TrackingData upload by user failed, please provide a meta_data file for dfl.")
+                if "meta_data" in request.FILES:
+                    meta_data_id_uuid = uuid.uuid4()
+                    meta_data_id = meta_data_id_uuid.hex
+                    
+                    output_dir = media_dir_to_file(meta_data_id)
+                    
+                    download_result = download_file(
+                        output_dir=output_dir,
+                        output_name=meta_data_id,
+                        file=request.FILES["meta_data"],
+                        max_size=request.user.max_file_size,
+                        extensions=(".csv", ".xml")
+                    )
+                    
+                    if download_result["status"] != "ok":
+                        logger.error("TrackingDataUpload::failed")
+                        return JsonResponse(download_result, status=500)
+                    
+                    meta_path = Path(request.FILES["meta_data"].name)
+                    meta_ext = meta_ext.join(meta_path.suffixes)
+                    
+                    db_params.update({"meta_file": meta_data_id_uuid, "meta_ext": meta_ext})
+                else:
+                    if request.POST.get("format") == 'dfl':  # meta_data file is mandatory for DFL data
+                        logger.error("TrackingDataUpload::failed")
                         return JsonResponse(
                             {"status": "error"}, status=500)
 
@@ -142,7 +142,7 @@ class TrackingDataUpload(View):
                     "url": media_url_to_file(tracking_data_id_hex, td_ext),
                 }]
                 
-                if request.POST.get("format") == 'dfl':  # optional handling of meta data for dfl
+                if meta_ext != "":  # optional handling of meta data
                     meta_data_id_hex = tracking_data_db.meta_file.hex
                     json_entries[0].update({"meta_url": media_url_to_file(meta_data_id_hex, meta_ext)})
                 
@@ -155,7 +155,7 @@ class TrackingDataUpload(View):
             return JsonResponse({"status": "error"}, status=500)
 
         except Exception:
-            logger.exception("TrackingData upload by user failed")
+            logger.exception("TrackingDataUpload::failed")
             return JsonResponse({"status": "error"}, status=500)
 
 

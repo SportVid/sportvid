@@ -50,7 +50,7 @@ class ThumbnailGenerator(
                     extension=f".{input_data.ext}",
                 )
 
-                num_frames = video_decoder.duration() * video_decoder.fps()
+                num_frames = (video_decoder.duration() / 1000.) * video_decoder.fps()
                 for i, frame in enumerate(video_decoder):
                     self.update_callbacks(callbacks, progress=i / num_frames)
 

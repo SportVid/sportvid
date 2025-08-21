@@ -68,8 +68,7 @@ class PosDataConvert(Task):
         tracking_data_ = self.upload_td(client, tracking_data_db.file.hex, tracking_data_db.ext)  # uses the FSHandler, file is zipped before transfer
 
         input_dict = {"tracking_data": tracking_data_}
-
-        if parameters.get("format") == 'dfl':
+        if tracking_data_db.meta_ext != "":
             meta_data_ = self.upload_td(client, tracking_data_db.meta_file.hex, tracking_data_db.meta_ext)
             input_dict.update({"meta_data": meta_data_})
 
