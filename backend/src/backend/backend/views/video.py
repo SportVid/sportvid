@@ -80,7 +80,7 @@ class VideoUpload(View):
 
                 reader = imageio.get_reader(download_result["path"])
                 fps = reader.get_meta_data()["fps"]
-                duration = reader.get_meta_data()["duration"]
+                duration = reader.get_meta_data()["duration"]*1000.
                 size = reader.get_meta_data()["size"]
 
                 field_length = parse_number(request.POST.get("fieldLength"))
