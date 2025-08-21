@@ -251,35 +251,41 @@ onMounted(async () => {
   }
 });
 
-const groupDataByTime = (data) => {
-  const grouped = {};
-  data.forEach((position) => {
-    const time = playerStore.roundTimeToFPS(position.time, playerStore.videoFPS);
-    if (!grouped[time]) {
-      grouped[time] = [];
-    }
-    grouped[time].push(position);
-  });
-  return grouped;
-};
+// const groupDataByTime = (data) => {
+//   const grouped = {};
+//   data.forEach((position) => {
+//     const time = playerStore.roundTimeToFPS(position.time, playerStore.videoFPS);
+//     if (!grouped[time]) {
+//       grouped[time] = [];
+//     }
+//     grouped[time].push(position);
+//   });
+//   return grouped;
+// };
 watchEffect(() => {
   if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
+    const _parsedData = JSON.parse(bboxesStore.bboxDataActive);
+
     const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
-      bboxesStore.bboxDataActive,
+      _parsedData,
       playerStore.videoFPS,
       30
     );
-    bboxesStore.bboxDataInterpolated = groupDataByTime(_bboxDataInterpolated);
+    // bboxesStore.bboxDataInterpolated = groupDataByTime(_bboxDataInterpolated);
 
     if (calibrationAssetStore.calibrationMatrix) {
-      const _bboxDataTopView = _bboxDataInterpolated.map((b) => {
-        const { x, y } = calibrationAssetStore.applyHomography(
-          calibrationAssetStore.calibrationMatrix,
-          { x: b.top_x, y: b.top_y }
-        );
-        return { ...b, pos_x: x, pos_y: y };
-      });
-      topViewStore.positionDataTopView = groupDataByTime(_bboxDataTopView);
+      const _bboxDataTopView = ref({});
+      for (const [time, boxes] of Object.entries(_bboxDataInterpolated)) {
+        _bboxDataTopView.value[time] = boxes.map((b) => {
+          const { x, y } = calibrationAssetStore.applyHomography(
+            calibrationAssetStore.calibrationMatrix,
+            { x: b.top_x, y: b.top_y }
+          );
+          return { ...b, pos_x: x, pos_y: y };
+        });
+      }
+      // topViewStore.positionDataTopView = _bboxDataTopView.value;
+      // console.log("positionDataTopView", topViewStore.positionDataTopView);
     }
   }
 });
@@ -584,6 +590,13 @@ watch(
   () => playerStore.video,
   () => {
     console.log("video", playerStore.video);
+  },
+  { immediate: true }
+);
+watch(
+  () => playerStore.currentTime,
+  () => {
+    console.log("currentTime", playerStore.currentTime);
   },
   { immediate: true }
 );
