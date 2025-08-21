@@ -30,7 +30,10 @@ class PosDataConvertParser(Parser):
             "tracking_data_id": {"parser": str, "required": True},
             "format": {"parser": str, "required": True},
             "fps": {"parser": int, "required": False, "default": -1},
-            "delimiter": {"parser": str, "required": False, "default": ";"}
+            "delimiter": {"parser": str, "required": False, "default": ";"},
+            "origin": {"parser": str, "required": False, "default": "kickoff"},
+            "field_length": {"parser": float, "required": False, "default": 105.0},
+            "field_width": {"parser": float, "required": False, "default": 68.0},
         }
 
 
@@ -78,13 +81,15 @@ class PosDataConvert(Task):
                 "format": parameters.get("format"),
                 "fps": parameters.get("fps"),
                 "delimiter": parameters.get("delimiter"),
-                "tracking_data_id": parameters.get("tracking_data_id")
+                "tracking_data_id": parameters.get("tracking_data_id"),
+                "origin": parameters.get("origin"),
+                "field_length": parameters.get("field_length"),
+                "field_width" : parameters.get("field_width")
             },
             inputs={**input_dict},
             outputs=["pos_data"],   # this only outputs the reference (id)
             downloads=["pos_data"]  # this actually transfers "real" data
         )
-        logging.error(f'[TASKS]\tresult: {result}')
         
         if plugin_run is not None:
             plugin_run.progress = 0.6

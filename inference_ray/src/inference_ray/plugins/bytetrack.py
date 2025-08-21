@@ -164,16 +164,17 @@ class ByteTrack(
                         h_norm = int(box[3]) / img_info["height"]
                         # bbox = BboxData(...)  # NOTE: old code used custom data type
                         
-                        bbox = { # normalize the box coordinates
+                        bbox = {
                             'x': x_norm,
                             'y': y_norm,
                             'w': w_norm,
                             'h': h_norm,
                             'top_x': x_norm + (w_norm / 2),
                             'top_y': y_norm + h_norm,
-                            'image_id': frame_info["frame_id"],
+                            # 'image_id': frame_info["frame_id"],
                             'player_id': id,
-                            'team_id': "None",
+                            'team_id': "",
+                            'game_section': "",
                             'det_score': score
                         }
                         bboxes_dict[frame_time].append(bbox)

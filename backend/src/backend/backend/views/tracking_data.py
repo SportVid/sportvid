@@ -72,7 +72,7 @@ class TrackingDataUpload(View):
                     "file": tracking_data_id_uuid,
                     "name": request.POST.get("title"),
                     "ext": td_ext,
-                    "file_type": request.POST.get("format"),  # NOTE: specifies the format -> ['kinexon', 'dfl', ... ]
+                    "file_type": request.POST.get("format"),
                     "owner": request.user
                 }
             
@@ -120,7 +120,13 @@ class TrackingDataUpload(View):
                 if request.POST.get("delimiter"):
                     analyser_params.append({"name": "delimiter", "value": request.POST.get("delimiter")})
                 
-                video_db = Video.objects.get(id=request.POST.get("video_id"))       
+                video_db = Video.objects.get(id=request.POST.get("video_id"))
+                if request.POST.get("format") == "kinexon":
+                    analyser_params.extend([
+                        {"name": "field_length", "value": video_db.field_length},
+                        {"name": "field_width", "value": video_db.field_width}
+                    ])
+  
                 result = self.submit_analyse(
                     plugins=["posdata_convert"],
                     video=video_db,

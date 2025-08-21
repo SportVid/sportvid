@@ -17,7 +17,10 @@ default_config = {
 # Define parameters that are required during the runtime of a plugin
 default_parameters = {
     "delimiter": ";",
-    "fps": "-1"
+    "fps": -1,
+    "origin": "kickoff",
+    "field_length": 105.,
+    "field_width": 68.
 }
 
 requires = {
@@ -125,10 +128,6 @@ class PosDataConvert(
         from lxml import etree
         import json
 
-        # ----------------- DATA LOADING
-        logging.error(f'[PLUGIN]\tinputs: {inputs}')
-        logging.error(f'[PLUGIN]\tparams: {parameters}')
-        
         if "format" not in parameters:
             raise ValueError("'format' is required for plugin execution.")
 
@@ -148,7 +147,12 @@ class PosDataConvert(
                         "y in m": "pos_y"
                     })
                     df["pos_x"] = df["pos_x"].apply(lambda x: round(x, ndigits=2))
-                    df["pos_y"] = df["pos_y"].apply(lambda x: round(x, ndigits=2))  
+                    df["pos_y"] = df["pos_y"].apply(lambda x: round(x, ndigits=2))
+                    
+                    # obtain field length, field width from params for kinexon
+                    PITCH_SIZE_X = parameters["field_length"]
+                    PITCH_SIZE_Y = parameters["field_width"]
+                    
                 elif parameters["format"] == "dfl":
                     from datetime import datetime
                     # TODO: memory-efficient solution using lxml’s iterparse or etree’s iterparse -> https://lxml.de/3.2/parsing.html#iterparse-and-iterwalk
@@ -159,15 +163,13 @@ class PosDataConvert(
                     )                 
                     df[df.columns[0]] = df[df.columns[0]].apply(lambda x: int(datetime.fromisoformat(x).timestamp()*1000))
                     
-                    # DFL origin (0,0)^T is the kick-off / center point
                     with inputs["meta_data"] as meta_data:
                         with meta_data.open_file() as m_data:
                             tree = etree.parse(m_data)
                             root = tree.getroot()
-                            DFL_PITCH_SIZE_X = float(root.findall("./MatchInformation/Environment")[0].attrib["PitchX"])
-                            DFL_PITCH_SIZE_Y = float(root.findall("./MatchInformation/Environment")[0].attrib["PitchY"])
-                            MAX_X = DFL_PITCH_SIZE_X/2
-                            MAX_Y = DFL_PITCH_SIZE_Y/2
+
+                            PITCH_SIZE_X = float(root.findall("./MatchInformation/Environment")[0].attrib["PitchX"])
+                            PITCH_SIZE_Y = float(root.findall("./MatchInformation/Environment")[0].attrib["PitchY"])
                             
                             meta_data = {
                                 "kickoff_time": int(datetime.fromisoformat(root.findall("./MatchInformation/General")[0].attrib["KickoffTime"]).timestamp()*1000),
@@ -176,10 +178,20 @@ class PosDataConvert(
                                 "playing_time_first_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["PlayingTimeFirstHalf"],
                                 "playing_time_second_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["PlayingTimeSecondHalf"]
                             }
-                    
-                    df["pos_x"] = (df["pos_x"] + MAX_X) / DFL_PITCH_SIZE_X 
-                    df["pos_y"] = (MAX_Y - df["pos_y"]) / DFL_PITCH_SIZE_Y  # inverted Y-axis, since images start at top left corner
-                    # df["pos_y"] = (df["pos_y"] + MAX_Y) / DFL_PITCH_SIZE_Y 
+
+                    # origin (0,0)^T is at the kickoff, i.e. x values left of kickoff are negative & y values below kickoff are engative
+                    if parameters["origin"] == "kickoff":  
+                        MAX_X = PITCH_SIZE_X / 2.0
+                        MAX_Y = PITCH_SIZE_Y / 2.0
+                        df["pos_x"] = (df["pos_x"] + MAX_X) / PITCH_SIZE_X
+                        df["pos_y"] = 1.0 - ((df["pos_y"] + MAX_X) / PITCH_SIZE_Y)  # correct for inverted Y-axis
+                        
+                    # origin (0,0)^T is at the bottom left, i.e. all values on both axes are >= 0
+                    elif parameters["origin"] == "bottom_left":
+                        MAX_X = PITCH_SIZE_X
+                        MAX_Y = PITCH_SIZE_Y
+                        df["pos_x"] = df["pos_x"] / PITCH_SIZE_X  # normalize to a range of [0,1]
+                        df["pos_y"] = (MAX_Y - df["pos_y"]) / PITCH_SIZE_Y  # inverted Y-axis, images start at top left corner
                 else:
                     raise ValueError("'format' has to be either one of ['dfl', 'kinexon'], other formats are not supported yet for conversion.")
             
