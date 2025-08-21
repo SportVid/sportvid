@@ -251,17 +251,6 @@ onMounted(async () => {
   }
 });
 
-// const groupDataByTime = (data) => {
-//   const grouped = {};
-//   data.forEach((position) => {
-//     const time = playerStore.roundTimeToFPS(position.time, playerStore.videoFPS);
-//     if (!grouped[time]) {
-//       grouped[time] = [];
-//     }
-//     grouped[time].push(position);
-//   });
-//   return grouped;
-// };
 watchEffect(() => {
   if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
     const _parsedData = JSON.parse(bboxesStore.bboxDataActive);
@@ -590,13 +579,6 @@ watch(
   () => playerStore.video,
   () => {
     console.log("video", playerStore.video);
-  },
-  { immediate: true }
-);
-watch(
-  () => playerStore.currentTime,
-  () => {
-    console.log("currentTime", playerStore.currentTime);
   },
   { immediate: true }
 );

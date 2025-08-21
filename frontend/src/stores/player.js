@@ -9,8 +9,8 @@ export const usePlayerStore = defineStore(
     const videoElement = ref(null);
 
     const video = ref(null);
-    const currentTime = ref(0.0);
-    const targetTime = ref(0.0);
+    const currentTime = ref(0);
+    const targetTime = ref(0);
     const playing = ref(false);
     const ended = ref(false);
     const isSynced = ref(true);
@@ -49,11 +49,11 @@ export const usePlayerStore = defineStore(
     const isLoading = ref(false);
 
     const videoDuration = computed(() => {
-      return video.value && "duration" in video.value ? video.value.duration : 0.0;
+      return video.value && "duration" in video.value ? video.value.duration : 0;
     });
 
     const videoFPS = computed(() => {
-      return video.value && "fps" in video.value ? video.value.fps : 24;
+      return video.value && "fps" in video.value ? video.value.fps : 30;
     });
 
     const videoName = computed(() => {
@@ -70,8 +70,8 @@ export const usePlayerStore = defineStore(
 
     const clearStore = () => {
       video.value = null;
-      currentTime.value = 0.0;
-      targetTime.value = 0.0;
+      currentTime.value = 0;
+      targetTime.value = 0;
       playing.value = false;
       ended.value = false;
       selectedTimeRange.value.start = 0;
@@ -92,12 +92,10 @@ export const usePlayerStore = defineStore(
 
     const setTargetTime = (time) => {
       targetTime.value = time;
-      // targetTime.value = Math.round(time * 100) / 100;
     };
 
     const setCurrentTime = (time) => {
       currentTime.value = time;
-      // currentTime.value = Math.round(time * 100) / 100;
     };
 
     const setEnded = (endedValue) => {
@@ -134,12 +132,6 @@ export const usePlayerStore = defineStore(
       }
     };
 
-    const roundTimeToFPS = (time, fps) => {
-      const frameDuration = 1 / fps;
-      const frame = Math.round(time / frameDuration) * frameDuration;
-      return frame;
-    };
-
     const showBoundingBox = ref(false);
     const viewBoundingBox = () => {
       showBoundingBox.value = !showBoundingBox.value;
@@ -172,7 +164,6 @@ export const usePlayerStore = defineStore(
       togglePlaying,
       fetchVideo,
       toggleSliderSync,
-      roundTimeToFPS,
       isMuted,
       volume,
       previousVolume,
