@@ -164,7 +164,9 @@
         hide-details
         color="primary"
         :thumb-size="15"
-        :step="100 / (playerStore.videoFPS * playerStore.videoDuration)"
+        :step="1000 / playerStore.videoFPS"
+        min="0"
+        :max="playerStore.videoDuration"
       />
     </v-row>
   </v-container>
@@ -191,51 +193,38 @@ onMounted(() => {
   if (videoElement.value) playerStore.videoElement = videoElement.value;
 });
 
-// const throttledUpdateTime = throttle((currentTime) => {
-//   playerStore.setCurrentTime(playerStore.roundTimeToFPS(currentTime, playerStore.videoFPS));
-// }, 40);
 let animationFrameId = null;
 const throttledUpdateTime = throttle((currentTime) => {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
   }
   animationFrameId = requestAnimationFrame(() => {
-    playerStore.setCurrentTime(playerStore.roundTimeToFPS(currentTime, playerStore.videoFPS));
+    playerStore.setCurrentTime(Math.round(currentTime * 1000));
   });
-}, (1 / playerStore.videoFPS) * 1000);
+}, 1 / playerStore.videoFPS);
 const onTimeUpdate = (event) => {
   throttledUpdateTime(event.target.currentTime);
   playerStore.setEnded(event.target.ended);
 };
-// const onTimeUpdate = (event) => {
-//   playerStore.setCurrentTime(
-//     playerStore.roundTimeToFPS(event.target.currentTime, playerStore.videoFPS)
-//   );
-//   playerStore.setEnded(event.target.ended);
-// };
 const deltaSeek = (delta) => {
   if (videoElement.value) {
     const newTime = videoElement.value.currentTime + delta;
-    playerStore.setCurrentTime(newTime);
+    playerStore.setCurrentTime(newTime * 1000);
     videoElement.value.currentTime = newTime;
   }
 };
 
 const targetTime = computed(() => playerStore.targetTime);
-const onProgressChange = (percentage) => {
+const onProgressChange = (time) => {
   if (videoElement.value) {
-    const targetTime = playerStore.roundTimeToFPS(
-      (playerStore.videoDuration * percentage) / 100,
-      playerStore.videoFPS
-    );
+    const targetTime = Math.round(time);
     playerStore.setCurrentTime(targetTime);
-    videoElement.value.currentTime = targetTime;
+    videoElement.value.currentTime = targetTime / 1000;
   }
 };
 watch(targetTime, (newTargetTime) => {
   if (videoElement.value) {
-    const roundedTargetTime = playerStore.roundTimeToFPS(newTargetTime, playerStore.videoFPS);
-    playerStore.currentTime = roundedTargetTime;
+    playerStore.currentTime = Math.round(newTargetTime);
   }
 });
 
@@ -243,13 +232,11 @@ let updateTimer = null;
 const startUpdatingTime = () => {
   if (updateTimer) clearInterval(updateTimer);
 
-  const interval = (1 / playerStore.videoFPS) * 1000;
+  const interval = 1 / (playerStore.videoFPS * 1000);
 
   updateTimer = setInterval(() => {
     if (videoElement.value) {
-      playerStore.setCurrentTime(
-        playerStore.roundTimeToFPS(videoElement.value.currentTime, playerStore.videoFPS)
-      );
+      playerStore.setCurrentTime(Math.round(videoElement.value.currentTime * 1000));
     }
   }, interval);
 };
@@ -294,13 +281,12 @@ const progress = ref(0);
 watch(
   () => playerStore.currentTime,
   (newTime) => {
-    progress.value = (newTime / playerStore.videoDuration) * 100;
+    progress.value = newTime;
   }
 );
 watch(progress, (newProgress) => {
   if (videoElement.value) {
-    const newTime = (playerStore.videoDuration * newProgress) / 100;
-    playerStore.setCurrentTime(playerStore.roundTimeToFPS(newTime, playerStore.videoFPS));
+    playerStore.setCurrentTime(Math.round(newProgress));
   }
 });
 
@@ -321,9 +307,6 @@ watch(playing, (isPlaying) => {
     isPlaying ? videoElement.value.play() : videoElement.value.pause();
   }
 });
-
-// const syncTime = computed(() => playerStore.syncTime);
-// const toggleSyncTime = () => playerStore.toggleSyncTime();
 
 const currentSpeed = ref({ title: "1.00", value: 1.0 });
 const speeds = [
