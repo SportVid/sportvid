@@ -43,14 +43,14 @@
           @click="openEditBBox(position)"
         >
           <v-tooltip activator="parent" location="top" class="bounding-box-tooltip">
-            <!-- <div><strong>ref_id:</strong> {{ position.ref_id }}</div>
+            <!-- <div><strong>player_id:</strong> {{ position.player_id }}</div>
             <div><strong>team_id:</strong> red</div> -->
             <div v-for="(value, key) in position" :key="key">
               <strong>{{ key }}:</strong> {{ value }}
             </div>
           </v-tooltip>
           <div class="bounding-box-ref-id">
-            {{ position.ref_id }}
+            {{ position.player_id }}
           </div>
         </div>
 
@@ -285,12 +285,6 @@ watch(
     progress.value = newTime;
   }
 );
-watch(
-  () => progress.value,
-  (newTime) => {
-    console.log("Progress changed video:", newTime);
-  }
-);
 
 watch(
   () => playerStore.volume,
@@ -387,27 +381,27 @@ function openEditBBox(bbox) {
   editBBox.value = bbox;
   editDialog.value = true;
 }
-function updateBBox({ ref_id, team_id, updateAllRefId, updateAllTeamId }) {
+function updateBBox({ player_id, team_id, updateSamePlayerId, updateSameTeamId }) {
   if (!editBBox.value) return;
 
   let allBboxes = null;
-  if (updateAllRefId || updateAllTeamId) {
+  if (updateSamePlayerId || updateSameTeamId) {
     allBboxes = [];
     Object.values(bboxesStore.bboxDataInterpolated).forEach((arr) => {
       if (Array.isArray(arr)) allBboxes.push(...arr);
     });
   }
 
-  if (updateAllRefId && allBboxes) {
-    const oldRefId = String(editBBox.value.ref_id);
+  if (updateSamePlayerId && allBboxes) {
+    const oldPlayerId = String(editBBox.value.player_id);
     allBboxes.forEach((bbox) => {
-      if (String(bbox.ref_id) === oldRefId) bbox.ref_id = ref_id;
+      if (String(bbox.player_id) === oldPlayerId) bbox.player_id = player_id;
     });
   } else {
-    editBBox.value.ref_id = ref_id;
+    editBBox.value.player_id = player_id;
   }
 
-  if (updateAllTeamId && allBboxes) {
+  if (updateSameTeamId && allBboxes) {
     const oldTeamId = String(editBBox.value.team_id);
     allBboxes.forEach((bbox) => {
       if (String(bbox.team_id) === oldTeamId) bbox.team_id = team_id;
@@ -416,26 +410,26 @@ function updateBBox({ ref_id, team_id, updateAllRefId, updateAllTeamId }) {
     editBBox.value.team_id = team_id;
   }
 }
-function updateBBoxBackend({ ref_id, team_id, updateAllRefId, updateAllTeamId }) {
+function updateBBoxBackend({ player_id, team_id, updateSamePlayerId, updateSameTeamId }) {
   if (!editBBox.value) return;
 
   const bboxes = bboxesStore.bboxDataActive;
 
-  if (updateAllRefId) {
-    const oldRefId = String(editBBox.value.ref_id);
+  if (updateSamePlayerId) {
+    const oldPlayerId = String(editBBox.value.player_id);
     bboxes.forEach((bbox) => {
-      if (String(bbox.ref_id) === oldRefId) bbox.ref_id = ref_id;
+      if (String(bbox.player_id) === oldPlayerId) bbox.player_id = player_id;
     });
   } else {
     const bbox = bboxes.find(
       (b) =>
-        String(b.ref_id) === String(editBBox.value.ref_id) &&
+        String(b.player_id) === String(editBBox.value.player_id) &&
         String(b.image_id) === String(editBBox.value.image_id)
     );
-    if (bbox) bbox.ref_id = ref_id;
+    if (bbox) bbox.player_id = player_id;
   }
 
-  if (updateAllTeamId) {
+  if (updateSameTeamId) {
     const oldTeamId = String(editBBox.value.team_id);
     bboxes.forEach((bbox) => {
       if (String(bbox.team_id) === oldTeamId) bbox.team_id = team_id;

@@ -13,8 +13,8 @@
 
       <v-card-text class="pt-4">
         <v-text-field
-          v-model="localRefId"
-          label="ref_id"
+          v-model="localPlayerId"
+          label="player_id"
           prepend-icon="mdi-pencil"
           variant="underlined"
           type="number"
@@ -28,19 +28,19 @@
           variant="underlined"
         />
 
-        <v-checkbox v-model="updateAllRefId" class="ml-n2">
+        <v-checkbox v-model="updateSamePlayerId" class="ml-n2">
           <template #label>
-            <span style="margin-left: 8px">{{ $t("modal.bounding_box.edit.all_ref_id") }}</span>
+            <span style="margin-left: 8px">{{ $t("modal.bounding_box.edit.same_player_id") }}</span>
           </template>
         </v-checkbox>
 
-        <v-checkbox v-model="updateAllTeamId" class="my-n6 ml-n2">
+        <v-checkbox v-model="updateSameTeamId" class="my-n6 ml-n2">
           <template #label>
-            <span style="margin-left: 8px">{{ $t("modal.bounding_box.edit.all_team_id") }}</span>
+            <span style="margin-left: 8px">{{ $t("modal.bounding_box.edit.same_team_id") }}</span>
           </template>
         </v-checkbox>
 
-        <v-btn @click="update" :disabled="!localRefId || !localTeamId" class="mt-4">
+        <v-btn @click="update" :disabled="!localPlayerId || !localTeamId" class="mt-4">
           {{ $t("button.update") }}
         </v-btn>
       </v-card-text>
@@ -62,16 +62,16 @@ const emit = defineEmits();
 
 const dialog = ref(props.modelValue);
 
-const localRefId = ref("");
+const localPlayerId = ref("");
 const localTeamId = ref("");
-const updateAllRefId = ref(false);
-const updateAllTeamId = ref(false);
+const updateSamePlayerId = ref(false);
+const updateSameTeamId = ref(false);
 
 watch(
   () => [props.bbox, dialog.value],
   ([bbox, open]) => {
     if (open && bbox) {
-      localRefId.value = bbox.ref_id ?? "";
+      localPlayerId.value = bbox.player_id ?? "";
       localTeamId.value = bbox.team_id ?? "";
     }
   },
@@ -80,10 +80,10 @@ watch(
 
 async function update() {
   emit("update", {
-    ref_id: localRefId.value,
+    player_id: localPlayerId.value,
     team_id: localTeamId.value,
-    updateAllRefId: updateAllRefId.value,
-    updateAllTeamId: updateAllTeamId.value,
+    updateSamePlayerId: updateSamePlayerId.value,
+    updateSameTeamId: updateSameTeamId.value,
   });
   dialog.value = false;
 }

@@ -281,12 +281,6 @@ watch(
     }
   }
 );
-watch(
-  () => progress.value,
-  (newTime) => {
-    console.log("Progress changed:", newTime);
-  }
-);
 
 const topViewElement = ref(null);
 const updateTopViewSize = async () => {

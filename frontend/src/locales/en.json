@@ -178,8 +178,8 @@
     },
     "running_distance": {
       "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
-      "id": "ID",
-      "team": "Team",
+      "player_id": "Player-ID",
+      "team_id": "Team",
       "distance": "Distance [m]"
     }
   },
@@ -646,8 +646,8 @@
     "bounding_box": {
       "edit": {
         "title": "Edit Bounding Box",
-        "all_ref_id": "Update all Bounding Boxes with the same ref_id",
-        "all_team_id": "Update all Bounding Boxes with the same team_id"
+        "same_player_id": "Update all Bounding Boxes with the same player_id",
+        "same_team_id": "Update all Bounding Boxes with the same team_id"
       }
     }
   }

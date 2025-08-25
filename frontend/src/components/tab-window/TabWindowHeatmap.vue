@@ -237,7 +237,7 @@ watch(videoControl, (newVal) => {
 const selectedRefIds = ref([]);
 const uniqueRefIds = computed(() => {
   const all = bboxesStore.bboxDataActive || [];
-  return [...new Set(all.map((p) => p.ref_id))].sort((a, b) => a - b);
+  return [...new Set(all.map((p) => p.player_id))].sort((a, b) => a - b);
 });
 function toggleRefId(refId) {
   if (selectedRefIds.value.includes(refId)) {
@@ -253,7 +253,7 @@ const selectedPositions = computed(() => {
   Object.values(topViewStore.positionDataTopView).forEach((arr) => {
     if (Array.isArray(arr)) {
       arr.forEach((pos) => {
-        if (selectedRefIds.value.includes(pos.ref_id)) {
+        if (selectedRefIds.value.includes(pos.player_id)) {
           allPositions.push(pos);
         }
       });

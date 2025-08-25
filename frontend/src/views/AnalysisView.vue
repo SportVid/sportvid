@@ -260,7 +260,7 @@ watchEffect(() => {
       playerStore.videoFPS,
       30
     );
-    // bboxesStore.bboxDataInterpolated = groupDataByTime(_bboxDataInterpolated);
+    bboxesStore.bboxDataInterpolated = _bboxDataInterpolated;
 
     if (calibrationAssetStore.calibrationMatrix) {
       const _bboxDataTopView = ref({});
@@ -273,8 +273,8 @@ watchEffect(() => {
           return { ...b, pos_x: x, pos_y: y };
         });
       }
-      // topViewStore.positionDataTopView = _bboxDataTopView.value;
-      // console.log("positionDataTopView", topViewStore.positionDataTopView);
+      topViewStore.positionDataTopView = _bboxDataTopView.value;
+      console.log("positionDataTopView", topViewStore.positionDataTopView);
     }
   }
 });

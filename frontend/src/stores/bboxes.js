@@ -37,20 +37,20 @@ export const useBboxesStore = defineStore("bboxes", () => {
 
       hasValidData = true;
       bboxDataActive.value = _bboxData[0]?.results[0]?.data?.bboxes;
-      topViewStore.positionDataTopView = {
-        0: [
-          { pos_x: 0.45285255859549833, pos_y: 1.0432065609928973, ref_id: 1, team_id: "None" },
-          { pos_x: 0.4095171526402028, pos_y: 1.0441847099654447, ref_id: 2, team_id: "None" },
-          { pos_x: 0.4008530607134673, pos_y: 1.0488220057471758, ref_id: 3, team_id: "None" },
-          { pos_x: 0.5380372403756356, pos_y: 0.6981593840609488, ref_id: 4, team_id: "None" },
-          { pos_x: 0.44680095813270015, pos_y: 0.6285184907187099, ref_id: 5, team_id: "None" },
-          { pos_x: 0.5581394042998931, pos_y: 0.613133534848689, ref_id: 6, team_id: "None" },
-          { pos_x: 0.5568072860251395, pos_y: 0.4688643697498366, ref_id: 7, team_id: "None" },
-          { pos_x: 0.3656300156149409, pos_y: 1.0543413650538709, ref_id: 8, team_id: "None" },
-          { pos_x: 0.4461924959356261, pos_y: 0.5045449659830928, ref_id: 9, team_id: "None" },
-          { pos_x: 0.5040426385038732, pos_y: 0.4739950972301284, ref_id: 10, team_id: "None" },
-        ],
-      };
+      // topViewStore.positionDataTopView = {
+      //   0: [
+      //     { pos_x: 0.45285255859549833, pos_y: 1.0432065609928973, player_id: 1, team_id: "None" },
+      //     { pos_x: 0.4095171526402028, pos_y: 1.0441847099654447, player_id: 2, team_id: "None" },
+      //     { pos_x: 0.4008530607134673, pos_y: 1.0488220057471758, player_id: 3, team_id: "None" },
+      //     { pos_x: 0.5380372403756356, pos_y: 0.6981593840609488, player_id: 4, team_id: "None" },
+      //     { pos_x: 0.44680095813270015, pos_y: 0.6285184907187099, player_id: 5, team_id: "None" },
+      //     { pos_x: 0.5581394042998931, pos_y: 0.613133534848689, player_id: 6, team_id: "None" },
+      //     { pos_x: 0.5568072860251395, pos_y: 0.4688643697498366, player_id: 7, team_id: "None" },
+      //     { pos_x: 0.3656300156149409, pos_y: 1.0543413650538709, player_id: 8, team_id: "None" },
+      //     { pos_x: 0.4461924959356261, pos_y: 0.5045449659830928, player_id: 9, team_id: "None" },
+      //     { pos_x: 0.5040426385038732, pos_y: 0.4739950972301284, player_id: 10, team_id: "None" },
+      //   ],
+      // };
     } finally {
       if (hasValidData) {
         bboxDataLoaded.value = true;
@@ -88,7 +88,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
         const nextBboxes = bboxMap.get(nextFrame);
 
         prevBboxes.forEach((prev, index) => {
-          const next = nextBboxes.find((b) => b.ref_id === prev.ref_id);
+          const next = nextBboxes.find((b) => b.player_id === prev.player_id);
 
           if (next) {
             const alpha = srcFrame - prevFrame;
@@ -100,7 +100,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
               team_id: prev.team_id,
               image_id: frame,
               time: frame / VideoFPS,
-              ref_id: prev.ref_id,
+              player_id: prev.player_id,
               det_score: prev.det_score + (next.det_score - prev.det_score) * alpha,
             });
           }

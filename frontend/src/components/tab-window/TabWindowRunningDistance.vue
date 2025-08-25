@@ -172,8 +172,8 @@ watch(
 );
 
 const headers = [
-  { title: t("visualization.running_distance.id"), key: "ref_id" },
-  { title: t("visualization.running_distance.team"), key: "team_id" },
+  { title: t("visualization.running_distance.player_id"), key: "player_id" },
+  { title: t("visualization.running_distance.team_id"), key: "team_id" },
   { title: t("visualization.running_distance.distance"), key: "distance" },
   { title: "", key: "settings", sortable: false, align: "end", width: "1px" },
 ];
@@ -204,16 +204,16 @@ const items = computed(() => {
       ) {
         continue;
       }
-      if (!allPlayersSet.has(p.ref_id)) {
-        allPlayersSet.set(p.ref_id, {
-          ref_id: p.ref_id,
+      if (!allPlayersSet.has(p.player_id)) {
+        allPlayersSet.set(p.player_id, {
+          player_id: p.player_id,
           team_id: p.team_id ?? "-",
         });
       }
     }
   }
   for (const player of allPlayersSet.values()) {
-    distancesByRefId.set(player.ref_id, {
+    distancesByRefId.set(player.player_id, {
       ...player,
       distance: 0,
     });
@@ -230,7 +230,7 @@ const items = computed(() => {
       if (!playersPrev || !playersCurr) continue;
 
       for (const currPlayer of playersCurr) {
-        const prevPlayer = playersPrev.find((p) => p.ref_id === currPlayer.ref_id);
+        const prevPlayer = playersPrev.find((p) => p.player_id === currPlayer.player_id);
         if (!prevPlayer) continue;
 
         if (
@@ -244,15 +244,15 @@ const items = computed(() => {
         const dy = (currPlayer.pos_y - prevPlayer.pos_y) * playerStore.video.field_width;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (!distancesByRefId.has(currPlayer.ref_id)) {
-          distancesByRefId.set(currPlayer.ref_id, {
-            ref_id: currPlayer.ref_id,
+        if (!distancesByRefId.has(currPlayer.player_id)) {
+          distancesByRefId.set(currPlayer.player_id, {
+            player_id: currPlayer.player_id,
             team_id: currPlayer.team_id ?? "-",
             distance: 0,
           });
         }
 
-        distancesByRefId.get(currPlayer.ref_id).distance += dist;
+        distancesByRefId.get(currPlayer.player_id).distance += dist;
       }
     }
   }
@@ -261,7 +261,7 @@ const items = computed(() => {
       ...item,
       distance: item.distance.toFixed(2),
     }))
-    .sort((a, b) => a.ref_id - b.ref_id);
+    .sort((a, b) => a.player_id - b.player_id);
 });
 
 const hasPositionData = computed(() => {
