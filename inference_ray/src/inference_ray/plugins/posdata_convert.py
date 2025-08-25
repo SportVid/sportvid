@@ -120,25 +120,27 @@ class PosDataConvert(
         callbacks: Callable = None,
     ) -> Dict[str, Data]: 
         # ----------------- IMPORTS
+        import json
         import numpy as np
         import pandas as pd
         
+        from collections import defaultdict
         from datetime import timezone
         from io import StringIO
         from lxml import etree
-        import json
-
+        from pandas.api.types import is_numeric_dtype
+        
         if "format" not in parameters:
             raise ValueError("'format' is required for plugin execution.")
-
+        
         with inputs["tracking_data"] as input_data:
             with input_data.open_file() as t_data:
                 # ----------------- COMPUTE
-                meta_data = {}
+                meta_dict = defaultdict(team_ids={}, player_ids={})
                 if parameters["format"] == "kinexon":
                     df = pd.read_csv(t_data, delimiter=parameters["delimiter"])
                     df = df.drop(['formatted local time', 'mapped id', 'full name', 'group id'], axis=1)
-                    df["game_section"] = ""
+                    df["game_section"] = 0
                     df = df.rename(columns={
                         "ts in ms": "timestamp", 
                         "number": "player_id", 
@@ -180,13 +182,13 @@ class PosDataConvert(
                             PITCH_SIZE_X = float(root.findall("./MatchInformation/Environment")[0].attrib["PitchX"])
                             PITCH_SIZE_Y = float(root.findall("./MatchInformation/Environment")[0].attrib["PitchY"])
                             
-                            meta_data = {
+                            meta_dict.update({
                                 "kickoff_time": int(datetime.fromisoformat(root.findall("./MatchInformation/General")[0].attrib["KickoffTime"]).timestamp()*1000),
                                 "total_time_first_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["TotalTimeFirstHalf"],
                                 "total_time_second_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["TotalTimeSecondHalf"],
                                 "playing_time_first_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["PlayingTimeFirstHalf"],
                                 "playing_time_second_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["PlayingTimeSecondHalf"]
-                            }
+                            })
 
                     # origin (0,0)^T is at the kickoff, i.e. x values left of kickoff are negative & y values below kickoff are engative
                     if parameters["origin"] == "kickoff":  
@@ -206,35 +208,50 @@ class PosDataConvert(
             
                 # ---- FPS filtering
                 unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
-                df[df.columns[0]] = df[df.columns[0]] - unique_timestamps.min()  # reset timestamps to zero
                 
-                if "kickoff_time" in meta_data:
-                    meta_data["kickoff_time"] = int(meta_data["kickoff_time"] - unique_timestamps.min())
+                if "kickoff_time" in meta_dict:
+                    meta_dict["kickoff_time"] = int(meta_dict["kickoff_time"] - unique_timestamps.min())
                 
                 # df[df.columns[0]] = df[df.columns[0]].apply(lambda x: x - unique_timestamps.min())
                 # NOTE: checks if specified fps parameter is in an applicable range
                 freq = unique_timestamps[1] - unique_timestamps[0]
                 origin_fps = 1000/freq
-                if parameters["fps"] != -1:  # default case; skip
-                    if parameters["fps"] > 0:
-                        logging.error(parameters["fps"])
-                        if parameters["fps"] > origin_fps:
-                            raise ValueError("framerate needs to be lower than the original framerate.")
+                if parameters["fps"] > 0:
+                    if parameters["fps"] > origin_fps:
+                        raise ValueError("framerate needs to be lower than the original framerate.")
+                    else:
                         step_size = np.int32(origin_fps/parameters["fps"])  # compute step size for filtering
                         selected_timestamps = unique_timestamps[::step_size]
                         df = df[df[df.columns[0]].isin(selected_timestamps)]  # keeps all rows where 'timestamp' is in the selected list
-                    else:
-                        raise ValueError("framerate needs to be larger than zero.")
-                # default color assignment
-                unique_teams = df["team_id"].unique()
-                for _, (team_label, col) in enumerate(zip(unique_teams, ["blue", "red"])):
-                    df["team_id"] = df["team_id"].replace(team_label, col)
-                    # df.loc[df["team_id"] == team_label, "team_id"] = col
+                else:
+                    raise ValueError("framerate needs to be larger than zero.")
+                df[df.columns[0]] = df[df.columns[0]] - unique_timestamps.min()  # reset timestamps to zero    
+                
+                # map player and team ids
+                if not is_numeric_dtype(df["team_id"].dtype):
+                    unique_teams = df["team_id"].unique()
+                    for i, team_label in enumerate(unique_teams):
+                        # df.loc[df["team_id"] == team_label, "team_id"] = col
+                        df["team_id"] = df["team_id"].replace(team_label, i)
+                        meta_dict.update({ "team_ids" : { i : team_label}})
+
+                if not is_numeric_dtype(df["player_id"].dtype):
+                    unique_players = df["player_id"].unique()
+                    for i, player_label in enumerate(unique_players):
+                        df["player_id"] = df["player_id"].replace(player_label, i)
+                        meta_dict.update({ "player_ids" : { i : player_label}})
+                    
+                # TODO: do this while XML parsing?
+                if parameters["format"] == "dfl":
+                    df["game_section"] = df["game_section"].replace("firstHalf", 1)
+                    df["game_section"] = df["game_section"].replace("secondHalf", 2)
                 
                 grouped_dict = df.groupby(
                     'timestamp', group_keys=False
                 ).apply(
-                    lambda x: x.to_dict(orient='records'), 
+                    # lambda x: x.to_dict(orient='records'),
+                    # lambda x: x.to_numpy().tolist(), # NOTE: numpy solution, faster but upcasts every value to float
+                    lambda x: [list(row) for row in x.itertuples(index=False)],
                     include_groups=False
                 )
                 del df
@@ -245,7 +262,7 @@ class PosDataConvert(
         with data_manager.create_data("PositionData") as pos_data:
             pos_data.name = "pos_data"
             pos_data.tracking_data_id = parameters.get('tracking_data_id')  # Required field
-            pos_data.meta_data = json.dumps(meta_data)
+            pos_data.meta_data = json.dumps(meta_dict)
             pos_data.pos = json.dumps(py_dict)
 
             self.update_callbacks(callbacks, progress=1.0)
