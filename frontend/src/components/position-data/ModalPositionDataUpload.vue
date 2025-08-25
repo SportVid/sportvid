@@ -69,6 +69,18 @@
             prepend-icon="mdi-menu"
           />
 
+          <v-select
+            v-if="positionData.format === 'kinexon'"
+            v-model="positionData.origin"
+            :items="origins"
+            item-title="title"
+            item-value="value"
+            :label="$t('modal.position_data.upload.origin')"
+            variant="underlined"
+            class="mt-4"
+            prepend-icon="mdi-menu"
+          />
+
           <v-text-field
             v-model="positionData.fps"
             type="number"
@@ -133,6 +145,7 @@ const positionData = ref({
   file: null,
   meta_data: null,
   delimiter: null,
+  origin: null,
   fps: null,
 });
 const delimiters = [
@@ -141,6 +154,10 @@ const delimiters = [
   { value: "\t", title: t("modal.position_data.upload.delimiters.tab") },
   { value: " ", title: t("modal.position_data.upload.delimiters.space") },
   { value: "|", title: t("modal.position_data.upload.delimiters.pipe") },
+];
+const origins = [
+  { value: "kickoff", title: t("modal.position_data.upload.origins.kickoff") },
+  { value: "bottom-left", title: t("modal.position_data.upload.origins.bottom_left") },
 ];
 
 const checkbox = ref(false);
@@ -179,7 +196,11 @@ const disabled = computed(() => {
   if (positionData.value.format === "dfl" && !positionData.value.meta_data) {
     return true;
   }
-  if (positionData.value.format === "kinexon" && !positionData.value.delimiter) {
+  if (
+    positionData.value.format === "kinexon" &&
+    !positionData.value.delimiter &&
+    !positionData.value.origin
+  ) {
     return true;
   }
 
@@ -187,16 +208,17 @@ const disabled = computed(() => {
 });
 
 const uploadPositionData = async () => {
-  const params = {
-    title: positionData.value.title,
-    format: positionData.value.format,
-    file: positionData.value.file,
-    meta_data: positionData.value.meta_data,
-    delimiter: positionData.value.delimiter,
-    fps: positionData.value.fps,
-  };
+  // const params = {
+  //   title: positionData.value.title,
+  //   format: positionData.value.format,
+  //   file: positionData.value.file,
+  //   meta_data: positionData.value.meta_data,
+  //   delimiter: positionData.value.delimiter,
+  //   origin: positionData.value.origin,
+  //   fps: positionData.value.fps,
+  // };
 
-  await positionDataStore.uploadPositionData(params);
+  await positionDataStore.uploadPositionData(positionData.value);
   dialog.value = false;
   fileValid.value = false;
 };

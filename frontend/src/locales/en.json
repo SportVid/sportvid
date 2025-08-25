@@ -610,6 +610,7 @@
         "file": "Select the position data file",
         "meta_data": "Select the meta data file",
         "delimiter": "Select the delimiter used in the csv file",
+        "origin": "Select the origin (0/0) of the coordinate system",
         "fps": "Enter FPS of the position data (optional)",
         "delimiters": {
           "comma": "Comma",
@@ -617,6 +618,10 @@
           "tab": "Tabulator",
           "space": "Space",
           "pipe": "Pipe"
+        },
+        "origins": {
+          "kickoff": "Kickoff",
+          "bottom_left": "Bottom-Left"
         },
         "validate": {
           "file_required": "Please select a file.",

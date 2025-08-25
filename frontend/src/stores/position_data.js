@@ -69,6 +69,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
       formData.append("file", params.file);
       formData.append("meta_data", params.meta_data);
       formData.append("delimiter", params.delimiter);
+      formData.append("origin", params.origin);
       formData.append("fps", params.fps);
 
       const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {
