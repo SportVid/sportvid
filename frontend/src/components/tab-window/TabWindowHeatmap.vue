@@ -58,13 +58,13 @@
     <v-row ref="playerSelector" class="justify-center">
       <div class="player-selector mt-2">
         <div
-          v-for="refId in uniqueRefIds"
-          :key="refId"
+          v-for="playerId in uniquePlayerIds"
+          :key="playerId"
           class="player-dot"
-          :class="{ selected: selectedRefIds.includes(refId) }"
-          @click="toggleRefId(refId)"
+          :class="{ selected: selectedPlayerIds.includes(playerId) }"
+          @click="togglePlayerId(playerId)"
         >
-          {{ refId }}
+          {{ playerId }}
         </div>
       </div>
     </v-row>
@@ -234,26 +234,26 @@ watch(videoControl, (newVal) => {
   }
 });
 
-const selectedRefIds = ref([]);
-const uniqueRefIds = computed(() => {
+const selectedPlayerIds = ref([]);
+const uniquePlayerIds = computed(() => {
   const all = bboxesStore.bboxDataActive || [];
   return [...new Set(all.map((p) => p.player_id))].sort((a, b) => a - b);
 });
-function toggleRefId(refId) {
-  if (selectedRefIds.value.includes(refId)) {
-    selectedRefIds.value = selectedRefIds.value.filter((id) => id !== refId);
+function togglePlayerId(playerId) {
+  if (selectedPlayerIds.value.includes(playerId)) {
+    selectedPlayerIds.value = selectedPlayerIds.value.filter((id) => id !== playerId);
   } else {
-    selectedRefIds.value.push(refId);
+    selectedPlayerIds.value.push(playerId);
   }
 }
 
 const selectedPositions = computed(() => {
-  if (selectedRefIds.value.length === 0) return [];
+  if (selectedPlayerIds.value.length === 0) return [];
   const allPositions = [];
   Object.values(topViewStore.positionDataTopView).forEach((arr) => {
     if (Array.isArray(arr)) {
       arr.forEach((pos) => {
-        if (selectedRefIds.value.includes(pos.player_id)) {
+        if (selectedPlayerIds.value.includes(pos.player_id)) {
           allPositions.push(pos);
         }
       });

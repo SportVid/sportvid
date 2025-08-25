@@ -179,7 +179,7 @@ const headers = [
 ];
 
 const items = computed(() => {
-  const distancesByRefId = new Map();
+  const distancesByPlayerId = new Map();
 
   const allTimes = Object.keys(topViewStore.positionDataTopView)
     .map(Number)
@@ -213,7 +213,7 @@ const items = computed(() => {
     }
   }
   for (const player of allPlayersSet.values()) {
-    distancesByRefId.set(player.player_id, {
+    distancesByPlayerId.set(player.player_id, {
       ...player,
       distance: 0,
     });
@@ -244,19 +244,19 @@ const items = computed(() => {
         const dy = (currPlayer.pos_y - prevPlayer.pos_y) * playerStore.video.field_width;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (!distancesByRefId.has(currPlayer.player_id)) {
-          distancesByRefId.set(currPlayer.player_id, {
+        if (!distancesByPlayerId.has(currPlayer.player_id)) {
+          distancesByPlayerId.set(currPlayer.player_id, {
             player_id: currPlayer.player_id,
             team_id: currPlayer.team_id ?? "-",
             distance: 0,
           });
         }
 
-        distancesByRefId.get(currPlayer.player_id).distance += dist;
+        distancesByPlayerId.get(currPlayer.player_id).distance += dist;
       }
     }
   }
-  return Array.from(distancesByRefId.values())
+  return Array.from(distancesByPlayerId.values())
     .map((item) => ({
       ...item,
       distance: item.distance.toFixed(2),
