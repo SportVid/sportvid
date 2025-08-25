@@ -35,8 +35,7 @@
                 (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
               ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
               'px',
-            backgroundColor:
-              !position.team_id || position.team_id === 'None' ? 'grey' : position.team_id,
+            backgroundColor: !position.team_id ? 'grey' : position.team_id,
           }"
         />
 
@@ -142,6 +141,12 @@
             </v-list-item-title>
           </v-list-item>
 
+          <v-list-item class="menu-item" @click="showModalPositionDataTeamColors = true">
+            <v-list-item-title class="d-flex justify-space-between">
+              {{ $t("position_data.display_settings.team_colors") }}
+            </v-list-item-title>
+          </v-list-item>
+
           <v-menu location="end" open-on-hover>
             <template #activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
@@ -213,6 +218,10 @@
         v-if="showModalPositionDataSelect"
         v-model="showModalPositionDataSelect"
       />
+      <ModalPositionDataTeamColors
+        v-if="showModalPositionDataTeamColors"
+        v-model="showModalPositionDataTeamColors"
+      />
 
       <div class="time-code ml-2">
         {{ getTimecode(currentTime) }}
@@ -247,6 +256,7 @@ import { Delaunay } from "d3-delaunay";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
 import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
+import ModalPositionDataTeamColors from "@/components/position-data/ModalPositionDataTeamColors.vue";
 
 const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();
@@ -256,6 +266,7 @@ const calibrationAssetStore = useCalibrationAssetStore();
 
 const showModalPositionDataSelect = ref(false);
 const showModalPositionDataUpload = ref(false);
+const showModalPositionDataTeamColors = ref(false);
 
 const progress = ref(0);
 const currentTime = computed({
