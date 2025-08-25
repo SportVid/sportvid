@@ -185,13 +185,11 @@ const items = computed(() => {
     .map(Number)
     .sort((a, b) => a - b);
 
-  const currentTime = playerStore.currentTime;
-
   const timeRange = allTimes.filter(
     (t) =>
       t >= selectedStartFrame.value &&
       t <= selectedEndFrame.value &&
-      (!visualizationStore.showProgress || t <= currentTime)
+      (!visualizationStore.showProgress || t <= playerStore.currentTime)
   );
 
   const allPlayersSet = new Map();

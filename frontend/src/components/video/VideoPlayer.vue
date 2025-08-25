@@ -218,6 +218,7 @@ const targetTime = computed(() => playerStore.targetTime);
 const onProgressChange = (time) => {
   if (videoElement.value) {
     const targetTime = Math.round(time);
+    progress.value = targetTime;
     playerStore.setCurrentTime(targetTime);
     videoElement.value.currentTime = targetTime / 1000;
   }
@@ -284,11 +285,12 @@ watch(
     progress.value = newTime;
   }
 );
-watch(progress, (newProgress) => {
-  if (videoElement.value) {
-    playerStore.setCurrentTime(Math.round(newProgress));
+watch(
+  () => progress.value,
+  (newTime) => {
+    console.log("Progress changed video:", newTime);
   }
-});
+);
 
 watch(
   () => playerStore.volume,

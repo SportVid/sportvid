@@ -53,7 +53,8 @@ export const usePositionDataStore = defineStore("position_data", () => {
         })
         .filter((e) => e.results?.[0]?.data?.tracking_data_id === id);
 
-      topViewStore.positionDataTopView = _positionData[0]?.results[0]?.data?.pos_data;
+      topViewStore.positionDataTopView = _positionData;
+      // topViewStore.positionDataTopView = _positionData[0]?.results[0]?.data?.pos_data;
     }
   };
 

@@ -221,13 +221,15 @@
 
     <v-row ref="videoSlider">
       <v-slider
-        v-model="progress"
+        v-model="currentTime"
         @update:model-value="onProgressChange"
         hide-details
         color="primary"
         :disabled="playerStore.isSynced"
         :thumb-size="15"
-        :step="100 / (playerStore.videoFPS * playerStore.videoDuration)"
+        :step="1000 / playerStore.videoFPS"
+        min="0"
+        :max="playerStore.videoDuration"
       />
     </v-row>
   </v-container>
@@ -256,20 +258,33 @@ const showModalPositionDataSelect = ref(false);
 const showModalPositionDataUpload = ref(false);
 
 const progress = ref(0);
-const currentTime = computed(() => {
-  return playerStore.isSynced
-    ? playerStore.currentTime
-    : (progress.value / 100) * playerStore.videoDuration;
+const currentTime = computed({
+  get() {
+    return playerStore.isSynced ? playerStore.currentTime : progress.value;
+  },
+  set(val) {
+    if (!playerStore.isSynced) {
+      progress.value = Math.round(val);
+    }
+  },
 });
-const onProgressChange = (newIndex) => {
+const onProgressChange = (time) => {
   if (!playerStore.isSynced) {
-    progress.value = newIndex;
+    progress.value = Math.round(time);
   }
 };
 watch(
-  () => playerStore.currentTime,
+  () => playerStore.isSynced,
+  (isSynced) => {
+    if (!isSynced) {
+      progress.value = playerStore.currentTime;
+    }
+  }
+);
+watch(
+  () => progress.value,
   (newTime) => {
-    progress.value = (newTime / playerStore.videoDuration) * 100;
+    console.log("Progress changed:", newTime);
   }
 );
 
