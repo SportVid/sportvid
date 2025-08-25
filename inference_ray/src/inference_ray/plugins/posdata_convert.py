@@ -155,7 +155,16 @@ class PosDataConvert(
                     
                 elif parameters["format"] == "dfl":
                     from datetime import datetime
-                    # TODO: memory-efficient solution using lxml’s iterparse or etree’s iterparse -> https://lxml.de/3.2/parsing.html#iterparse-and-iterwalk
+                    # TODO: memory-efficient solution using etree iterparse -> https://lxml.de/3.2/parsing.html#iterparse-and-iterwalk
+                    # ----
+                    # for _, frame_set in etree.iterparse(t_data, tag="FrameSet"):
+                    #     frames = [frame for frame in frame_set.iterfind("Frame")]
+                    #     segment = frame_set.get("GameSection")
+                    #     X = np.array([float(frame.get("X")) for frame in frames]
+                    #     Y = np.array([float(frame.get("Y")) for frame in frames]
+                        
+                    #     frame_set.clear()
+                    # ----
                     df = pd.read_xml(
                         t_data,
                         stylesheet=StringIO(DFL_XSL),
@@ -225,7 +234,7 @@ class PosDataConvert(
                 grouped_dict = df.groupby(
                     'timestamp', group_keys=False
                 ).apply(
-                    lambda x: x.to_dict(orient='records'),
+                    lambda x: x.to_dict(orient='records'), 
                     include_groups=False
                 )
                 del df

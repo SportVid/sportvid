@@ -48,8 +48,11 @@ class FloodlightConvert(
     ) -> Dict[str, Data]:    
         # ----------------- IMPORTS
         import json
+        import os
         import numpy as np
         import pandas as pd
+        import tempfile
+        import zipfile
         
         from floodlight.io.kinexon import (
             get_meta_data, 
@@ -65,93 +68,34 @@ class FloodlightConvert(
         if "format" not in parameters:
             raise ValueError("'format' is required for plugin execution.")
 
-        with inputs["tracking_data"] as input_data:
-            with input_data.open_file() as t_data:
-                if parameters["format"] == "kinexon":
-                    # NOTE: returns List[XY]
-                        # XY:
-                            # xy: np.ndarray
-                            # ---
-                            # Full data array containing x- and y-coordinates, 
-                            # where each player's coordinates occupy two consecutive columns.
-                            #
-                            # framerate: int, optional
-                            # ---
-                            #
-                            # direction: {'lr', 'rl'}, optional
-                            # ---
-                            # Playing direction of players in data fragment, should be either
-                            # 'lr' (left-to-right) or 'rl' (right-to-left).
-                    pos_data = read_position_data_csv(t_data, parameters["delimiter"])
-                    # TODO: read_position_data_csv requires path to meta data file... 
-                    #   https://floodlight.readthedocs.io/en/latest/_modules/floodlight/io/kinexon.html#read_position_data_csv
-                    logging.error(type(pos_data))
-                    # meta data handling
-                    if inputs["meta_data"]:
-                        with inputs["meta_data"] as meta_data:
-                            with meta_data.open_file() as m_data:
-                                # NOTE: returns Tuple[Dict[str, Dict[str, List[str]]], int, int, int]
-                                pID_dict, no_frames, framerate, t_null = get_meta_data(m_data, parameters["delimiter"])
-                # --------------------------------       
-                elif parameters["format"] == "dfl":
-                    with inputs["meta_data"] as meta_data:
-                        with meta_data.open_file() as m_data:
-                            # --------------
-                            # NOTE returns: Tuple[Dict[str, Dict[str, XY]], Dict[str, Code], Dict[str, Code], Dict[str, Teamsheet], Pitch]
-                                # data_objects - Tuple of (nested) floodlight core objects with shape (xy_objects, possession_objects, ballstatus_objects, teamsheets, pitch)
-                                    # xy_objects is a nested dictionary containing XY objects for each team and segment of the form:
-                                    #   xy_objects[segment][team] = XY. For a typical league match with two halves and teams this dictionary looks like:
-                                    #   {'firstHalf': {'Home': XY, 'Away': XY}, 'secondHalf': {'Home': XY, 'Away': XY}}.
-                                        # XY: ...
-                                    # ---------
-                                    # possession_objects is a dictionary containing Code objects with possession information (home or away) 
-                                    #   for each segment of the form possession_objects[segment] = Code.
-                                        # Code:
-                                            # code: np.ndarray
-                                            # ---
-                                            # One-dimensional array with codes describing a sequence of play.
-                                            # name: str
-                                            # ---
-                                            # Name of encoded game state (e.g. 'possession').
-                                            # definitions: dict, optional
-                                            # ---
-                                            # Dictionary of the form {token: definition} where each code category is defined or explained.
-                                            # framerate: int, optional
-                                            # ---
-                                            # Temporal resolution of data in frames per second/Hertz.
-                                    # ---------
-                                    # ballstatus_objects is a dictionary containing Code objects with ballstatus information (dead or alive) 
-                                    #   for each segment of the form ballstatus_objects[segment] = Code.
-                                        # Code: ...
-                                     # ---------
-                                    # teamsheets is a dictionary containing Teamsheet objects for each team of the form teamsheets[team] = Teamsheet.
-                                        # Teamsheet:
-                                            # teamsheet: pd.DataFrame
-                                            # ---
-                                            # DataFrame containing rows of players and columns of respective properties.
-                                    # ---------
-                                    # pitch is a Pitch object corresponding to the data.
-                                        # Pitch:
-                                            # xlim: Tuple[Numeric, Numeric]
-                                            # ---
-                                            # Limits of pitch boundaries in longitudinal direction. This tuple has the form (x_min, x_max) and delimits 
-                                            # the length of the pitch (not of any actual data) within the coordinate system.
-                                            # ylim: Tuple[Numeric, Numeric]
-                                            # ---
-                                            # unit: {'m', 'cm', 'percent', 'normed'}
-                                            # ---
-                                            # boundaries: str one of ['fixed', 'flexible']
-                                            # ---
-                                            # length: Numeric, optional
-                                            # ---
-                                            # width: Numeric, optional
-                                            # ---
-                                            # sport: str, optional one of ["football", "handball"]     
-                            # --------------
-                            data_objects, possession_objects, ballstatus_objects, teamsheets, pitch = read_position_data_xml(t_data, m_data)
-                            logging.error(type(data_objects))
-                else:
-                    raise ValueError(f"provided format is not supported.")        
+        with tempfile.TemporaryDirectory() as t_temp_dir:
+            with inputs["tracking_data"] as input_data:
+                with input_data.open_file() as t_data:
+                    ex_t_data = t_data.extractall(path=t_temp_dir)
+                    ex_t_data = os.path.join(t_temp_dir, ex_t_data)
+                    logging.error(type(t_data))
+                    if parameters["format"] == "kinexon":
+                        pos_data = read_position_data_csv(t_data, parameters["delimiter"])
+                        # TODO: read_position_data_csv requires path to meta data file... 
+                        #   https://floodlight.readthedocs.io/en/latest/_modules/floodlight/io/kinexon.html#read_position_data_csv
+                        logging.error(type(pos_data))
+                        # meta data handling
+                        if inputs["meta_data"]:
+                            with inputs["meta_data"] as meta_data:
+                                with meta_data.open_file() as m_data:
+                                    # NOTE: returns Tuple[Dict[str, Dict[str, List[str]]], int, int, int]
+                                    pID_dict, no_frames, framerate, t_null = get_meta_data(m_data, parameters["delimiter"])
+                    # --------------------------------       
+                    elif parameters["format"] == "dfl":
+                        with tempfile.TemporaryDirectory() as m_temp_dir:
+                            with inputs["meta_data"] as meta_data:
+                                with meta_data.open_file() as m_data:
+                                    ex_m_data = m_data.extractall(path=m_temp_dir)
+                                    ex_m_data = os.path.join(m_temp_dir, ex_m_data)
+                                    data_objects, possession_objects, ballstatus_objects, teamsheets, pitch = read_position_data_xml(ex_t_data, ex_m_data)
+                                    logging.error(type(data_objects))
+                    else:
+                        raise ValueError(f"provided format is not supported.")        
         # ----------------- COMPUTE
         # TODO: KPI computation
         xy_pos = np.zeros(shape=(2,1), dtype=np.float32)
