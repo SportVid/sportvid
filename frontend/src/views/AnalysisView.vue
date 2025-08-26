@@ -126,6 +126,13 @@
         <span class="text-h6">{{ positionDataActionMessage }}</span>
       </div>
     </v-snackbar>
+
+    <v-snackbar v-model="showPluginRunActionSnackbar">
+      <div class="d-flex justify-center">
+        <snackbar-icon />
+        <span class="text-h6">{{ pluginRunActionMessage }}</span>
+      </div>
+    </v-snackbar>
   </v-main>
 </template>
 

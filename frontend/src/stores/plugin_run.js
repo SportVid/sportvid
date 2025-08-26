@@ -197,6 +197,8 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
       });
       if (res.data && res.data.status === "ok") {
         clearStore();
+        pluginRunDeleteSuccess.value = true;
+        console.log("All plugin runs deleted");
       }
     } catch (err) {
       console.error("Failed to delete all plugin runs:", err);
