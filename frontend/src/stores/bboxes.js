@@ -3,13 +3,11 @@ import { defineStore } from "pinia";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
-import { useTopViewStore } from "./top_view";
 
 export const useBboxesStore = defineStore("bboxes", () => {
   const playerStore = usePlayerStore();
   const pluginRunStore = usePluginRunStore();
   const pluginRunResultStore = usePluginRunResultStore();
-  const topViewStore = useTopViewStore();
 
   const bboxDataActive = ref({});
   const bboxDataInterpolated = ref({});

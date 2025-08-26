@@ -201,8 +201,9 @@ import { useTopViewStore } from "@/stores/top_view";
 const topViewStore = useTopViewStore();
 const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId) => {
   if (selectedMode.value === "bytetrack") {
-    calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
-    bboxesStore.loadBboxData(bytetrackPluginId);
+    // calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
+    // bboxesStore.loadBboxData(bytetrackPluginId);
+    topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
     console.log(
       "selected posdata plugin",
       topViewStore.positionDataTopView,

@@ -251,47 +251,47 @@ onMounted(async () => {
   }
 });
 
-watch(
-  () => [bboxesStore.bboxDataActive, calibrationAssetStore.calibrationMatrix, playerStore.videoFPS],
-  () => {
-    if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
-      const _parsedData = JSON.parse(bboxesStore.bboxDataActive);
+// watch(
+//   () => [bboxesStore.bboxDataActive, calibrationAssetStore.calibrationMatrix, playerStore.videoFPS],
+//   () => {
+//     if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
+//       const _parsedData = JSON.parse(bboxesStore.bboxDataActive);
 
-      const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
-        _parsedData,
-        playerStore.videoFPS,
-        30
-      );
-      bboxesStore.bboxDataInterpolated = _bboxDataInterpolated;
+//       const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
+//         _parsedData,
+//         playerStore.videoFPS,
+//         30
+//       );
+//       bboxesStore.bboxDataInterpolated = _bboxDataInterpolated;
 
-      if (calibrationAssetStore.calibrationMatrix) {
-        const _bboxDataTopView = ref({});
-        for (const [time, boxes] of Object.entries(_bboxDataInterpolated)) {
-          _bboxDataTopView.value[time] = boxes.map((b) => {
-            const { x, y } = calibrationAssetStore.applyHomography(
-              calibrationAssetStore.calibrationMatrix,
-              { x: b.top_x, y: b.top_y }
-            );
-            return { ...b, pos_x: x, pos_y: y };
-          });
-        }
-        const times = Object.keys(_bboxDataTopView.value)
-          .map(Number)
-          .sort((a, b) => a - b);
-        if (times.length > 0) {
-          const firstTimeKey = String(times[0]);
-          const arr = _bboxDataTopView.value[firstTimeKey];
-          if (Array.isArray(arr) && arr.length > 0) {
-            arr[0] = { ...arr[0], team_id: "red" };
-          }
-        }
-        topViewStore.positionDataTopView = _bboxDataTopView.value;
-        console.log("positionDataTopView", topViewStore.positionDataTopView);
-      }
-    }
-  },
-  { immediate: true }
-);
+//       if (calibrationAssetStore.calibrationMatrix) {
+//         const _bboxDataTopView = ref({});
+//         for (const [time, boxes] of Object.entries(_bboxDataInterpolated)) {
+//           _bboxDataTopView.value[time] = boxes.map((b) => {
+//             const { x, y } = calibrationAssetStore.applyHomography(
+//               calibrationAssetStore.calibrationMatrix,
+//               { x: b.top_x, y: b.top_y }
+//             );
+//             return { ...b, pos_x: x, pos_y: y };
+//           });
+//         }
+//         const times = Object.keys(_bboxDataTopView.value)
+//           .map(Number)
+//           .sort((a, b) => a - b);
+//         if (times.length > 0) {
+//           const firstTimeKey = String(times[0]);
+//           const arr = _bboxDataTopView.value[firstTimeKey];
+//           if (Array.isArray(arr) && arr.length > 0) {
+//             arr[0] = { ...arr[0], team_id: "red" };
+//           }
+//         }
+//         topViewStore.positionDataTopView = _bboxDataTopView.value;
+//         console.log("positionDataTopView", topViewStore.positionDataTopView);
+//       }
+//     }
+//   },
+//   { immediate: true }
+// );
 
 const shotsList = computed(() =>
   shotStore.shotsList.map((e) => ({ text: e.name, value: e.index }))
