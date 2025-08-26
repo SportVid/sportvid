@@ -236,14 +236,14 @@ class PosDataConvert(
                 # map player and team ids
                 if not is_numeric_dtype(df["team_id"].dtype):
                     unique_teams = df["team_id"].unique()
-                    for i, team_label in enumerate(unique_teams):
+                    for i, team_label in enumerate(unique_teams, start=1):
                         # df.loc[df["team_id"] == team_label, "team_id"] = col
                         df["team_id"] = df["team_id"].replace(team_label, i)
                         meta_dict["team_ids"].update({ i : team_label})
 
                 if not is_numeric_dtype(df["player_id"].dtype):
                     unique_players = df["player_id"].unique()
-                    for i, player_label in enumerate(unique_players):
+                    for i, player_label in enumerate(unique_players, start=1):
                         df["player_id"] = df["player_id"].replace(player_label, i)
                         meta_dict["player_ids"].update({ i : player_label})
                     
