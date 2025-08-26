@@ -654,8 +654,7 @@
         "success": "Position data successfully deleted"
       },
       "team_colors": {
-        "title": "Change team colors",
-        "unlabeled": "Unlabeled"
+        "title": "Change team colors"
       }
     },
     "bounding_box": {

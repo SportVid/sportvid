@@ -1,9 +1,9 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
-import { useBboxesStore } from "@/stores/bboxes";
+import { useTopViewStore } from "@/stores/top_view";
 
 export const useVisualizationStore = defineStore("visualization", () => {
-  const bboxesStore = useBboxesStore();
+  const topViewStore = useTopViewStore();
 
   const showAggregatedFull = ref(true);
   const showAggregatedFirst = ref(false);
@@ -11,9 +11,9 @@ export const useVisualizationStore = defineStore("visualization", () => {
   const showProgress = ref(false);
 
   const halftimesExist = computed(() => {
-    const allBboxes = Object.values(topViewStore.positionDataTopView).flat();
-    const gameSections = new Set(allBboxes.map((bbox) => bbox.game_section));
-    return gameSections.has("firstHalf") && gameSections.has("secondHalf");
+    const allPositions = Object.values(topViewStore.positionDataTopView).flat();
+    const gameSections = new Set(allPositions.map((p) => p[4]));
+    return gameSections.has(1) && gameSections.has(2);
   });
 
   function resetAndActivate(targetRef) {

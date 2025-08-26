@@ -39,16 +39,16 @@
               borderRadius: '50%',
               transform: 'translate(-50%, -50%)',
               top:
-                position.pos_y *
+                position[3] *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px',
               left:
-                position.pos_x *
+                position[2] *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
-              backgroundColor: !position.team_id ? 'grey' : position.team_id,
+              backgroundColor: position[1],
             }"
           />
         </template>
@@ -61,10 +61,19 @@
           v-for="playerId in uniquePlayerIds"
           :key="playerId"
           class="player-dot"
-          :class="{ selected: selectedPlayerIds.includes(playerId) }"
+          :style="{
+            backgroundColor: selectedPlayerIds.includes(playerId)
+              ? toRgba(playerColors[playerId], 1)
+              : toRgba(playerColors[playerId], 0.3),
+            color: selectedPlayerIds.includes(playerId) ? '#fff' : '#222',
+            borderColor: selectedPlayerIds.includes(playerId)
+              ? toRgba(playerColors[playerId], 1)
+              : toRgba(playerColors[playerId], 0.3),
+          }"
           @click="togglePlayerId(playerId)"
         >
           {{ playerId }}
+          <!-- :class="{ selected: selectedPlayerIds.includes(playerId) }" -->
         </div>
       </div>
     </v-row>
@@ -124,8 +133,18 @@
               </tab-window-icon>
             </v-list-item-title>
           </v-list-item>
+
+          <v-list-item class="menu-item" @click="showModalPositionDataTeamColors = true">
+            <v-list-item-title class="d-flex justify-space-between">
+              {{ $t("position_data.display_settings.team_colors") }}
+            </v-list-item-title>
+          </v-list-item>
         </v-list>
       </v-menu>
+      <ModalPositionDataTeamColors
+        v-if="showModalPositionDataTeamColors"
+        v-model="showModalPositionDataTeamColors"
+      />
     </v-row>
   </v-container>
 </template>
@@ -133,14 +152,16 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
-import { useBboxesStore } from "@/stores/bboxes";
 import { useVideoStore } from "@/stores/video";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
+import ModalPositionDataTeamColors from "@/components/position-data/ModalPositionDataTeamColors.vue";
 import h337 from "heatmap.js";
+import { toRgba } from "@/plugins/helpers";
 
 const topViewStore = useTopViewStore();
-const bboxesStore = useBboxesStore();
 const videoStore = useVideoStore();
+
+const showModalPositionDataTeamColors = ref(false);
 
 const topViewElement = ref(null);
 const updateTopViewSize = async () => {
@@ -236,8 +257,8 @@ watch(videoControl, (newVal) => {
 
 const selectedPlayerIds = ref([]);
 const uniquePlayerIds = computed(() => {
-  const all = bboxesStore.bboxDataActive || [];
-  return [...new Set(all.map((p) => p.player_id))].sort((a, b) => a - b);
+  const all = Object.values(topViewStore.positionDataTopView).flat();
+  return [...new Set(all.map((p) => p[0]))].sort((a, b) => a - b);
 });
 function togglePlayerId(playerId) {
   if (selectedPlayerIds.value.includes(playerId)) {
@@ -247,13 +268,22 @@ function togglePlayerId(playerId) {
   }
 }
 
+const playerColors = computed(() => {
+  const all = Object.values(topViewStore.positionDataTopView).flat();
+  const map = {};
+  all.forEach((p) => {
+    map[p[0]] = p[1];
+  });
+  return map;
+});
+
 const selectedPositions = computed(() => {
   if (selectedPlayerIds.value.length === 0) return [];
   const allPositions = [];
   Object.values(topViewStore.positionDataTopView).forEach((arr) => {
     if (Array.isArray(arr)) {
       arr.forEach((pos) => {
-        if (selectedPlayerIds.value.includes(pos.player_id)) {
+        if (selectedPlayerIds.value.includes(pos[0])) {
           allPositions.push(pos);
         }
       });
@@ -290,10 +320,10 @@ function renderHeatmap() {
 
   const points = selectedPositions.value.map((pos) => {
     const x =
-      pos.pos_x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+      pos[2] * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
       ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
     const y =
-      pos.pos_y * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+      pos[3] * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
       ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
     return { x: Math.round(x), y: Math.round(y), value: 1 };
   });
@@ -371,21 +401,24 @@ watch(
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #eee;
-  color: #222;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
   font-size: 1rem;
   cursor: pointer;
-  border: 2px solid #bbb;
+  border: 2px solid;
   transition: background 0.2s, border 0.2s;
   user-select: none;
 }
 .player-dot.selected {
-  background: rgb(var(--v-theme-primary));
-  color: #fff;
-  border: 2px solid rgb(var(--v-theme-primary));
+  border: 2px solid;
+}
+
+.team-row {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-bottom: 6px;
 }
 </style>

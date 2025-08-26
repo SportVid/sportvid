@@ -103,6 +103,18 @@
           </v-list>
         </v-menu>
       </template>
+
+      <template #item="{ item, columns }">
+        <tr
+          :style="{
+            backgroundColor: toRgba(item.team_id, 0.3),
+          }"
+        >
+          <td v-for="col in columns" :key="col.key">
+            {{ item[col.key] }}
+          </td>
+        </tr>
+      </template>
     </v-data-table>
   </v-card>
 </template>
@@ -110,14 +122,14 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useVisualizationStore } from "@/stores/visualization";
-import { useBboxesStore } from "@/stores/bboxes";
 import { usePlayerStore } from "@/stores/player";
-
+import { useTopViewStore } from "@/stores/top_view";
 import RunningDistanceTimeSelector from "../visualization/RunningDistanceTimeSelector.vue";
 import { useI18n } from "vue-i18n";
+import { toRgba } from "@/plugins/helpers";
 
-const bboxesStore = useBboxesStore();
 const playerStore = usePlayerStore();
+const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
 
 const { t } = useI18n();
@@ -141,13 +153,13 @@ watch(
 
 function findFirstFrameWithHalftime(halfId) {
   return allFrameKeys.value.find((frame) =>
-    topViewStore.positionDataTopView[frame]?.some((p) => p.game_section === halfId)
+    topViewStore.positionDataTopView[frame]?.some((p) => p[4] === halfId)
   );
 }
 function findLastFrameWithHalftime(halfId) {
   const reversed = [...allFrameKeys.value].reverse();
   return reversed.find((frame) =>
-    topViewStore.positionDataTopView[frame]?.some((p) => p.game_section === halfId)
+    topViewStore.positionDataTopView[frame]?.some((p) => p[4] === halfId)
   );
 }
 watch(
@@ -181,9 +193,7 @@ const headers = [
 const items = computed(() => {
   const distancesByPlayerId = new Map();
 
-  const allTimes = Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b);
+  const allTimes = Object.keys(topViewStore.positionDataTopView).map(Number);
 
   const timeRange = allTimes.filter(
     (t) =>
@@ -199,15 +209,15 @@ const items = computed(() => {
     if (!players) continue;
     for (const p of players) {
       if (
-        (visualizationStore.showAggregatedFirst && p.game_section !== "firstHalf") ||
-        (visualizationStore.showAggregatedSecond && p.game_section !== "secondHalf")
+        (visualizationStore.showAggregatedFirst && p[4] !== 1) ||
+        (visualizationStore.showAggregatedSecond && p[4] !== 2)
       ) {
         continue;
       }
-      if (!allPlayersSet.has(p.player_id)) {
-        allPlayersSet.set(p.player_id, {
-          player_id: p.player_id,
-          team_id: p.team_id ?? "-",
+      if (!allPlayersSet.has(p[0])) {
+        allPlayersSet.set(p[0], {
+          player_id: p[0],
+          team_id: p[1],
         });
       }
     }
@@ -230,29 +240,29 @@ const items = computed(() => {
       if (!playersPrev || !playersCurr) continue;
 
       for (const currPlayer of playersCurr) {
-        const prevPlayer = playersPrev.find((p) => p.player_id === currPlayer.player_id);
+        const prevPlayer = playersPrev.find((p) => p[0] === currPlayer[0]);
         if (!prevPlayer) continue;
 
         if (
-          (visualizationStore.showAggregatedFirst && currPlayer.game_section !== "firstHalf") ||
-          (visualizationStore.showAggregatedSecond && currPlayer.game_section !== "secondHalf")
+          (visualizationStore.showAggregatedFirst && currPlayer[4] !== 1) ||
+          (visualizationStore.showAggregatedSecond && currPlayer[4] !== 2)
         ) {
           continue;
         }
 
-        const dx = (currPlayer.pos_x - prevPlayer.pos_x) * playerStore.video.field_length;
-        const dy = (currPlayer.pos_y - prevPlayer.pos_y) * playerStore.video.field_width;
+        const dx = (currPlayer[2] - prevPlayer[2]) * playerStore.video.field_length;
+        const dy = (currPlayer[3] - prevPlayer[3]) * playerStore.video.field_width;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (!distancesByPlayerId.has(currPlayer.player_id)) {
-          distancesByPlayerId.set(currPlayer.player_id, {
-            player_id: currPlayer.player_id,
-            team_id: currPlayer.team_id ?? "-",
+        if (!distancesByPlayerId.has(currPlayer[0])) {
+          distancesByPlayerId.set(currPlayer[0], {
+            player_id: currPlayer[0],
+            team_id: currPlayer[1],
             distance: 0,
           });
         }
 
-        distancesByPlayerId.get(currPlayer.player_id).distance += dist;
+        distancesByPlayerId.get(currPlayer[0]).distance += dist;
       }
     }
   }

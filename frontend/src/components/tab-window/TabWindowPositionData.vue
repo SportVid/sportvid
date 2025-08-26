@@ -34,7 +34,7 @@
               position[2] * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
               ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
               'px',
-            backgroundColor: !position[1] ? 'grey' : position[1],
+            backgroundColor: position[1],
           }"
         />
 
@@ -365,41 +365,6 @@ onBeforeUnmount(() => {
     resizeObserver.unobserve(topViewElement.value);
   }
 });
-
-const didNormalizeTeamIds = ref(false);
-function normalizeTeamIds() {
-  if (didNormalizeTeamIds.value) return;
-  if (!topViewStore.positionDataTopView) return;
-
-  const mapping = {
-    0: "",
-    1: "red",
-    2: "blue",
-    3: "black",
-    4: "green",
-    5: "yellow",
-    6: "purple",
-    7: "orange",
-    8: "pink",
-    9: "brown",
-    10: "white",
-  };
-  const updatedPositionData = {};
-  for (const [time, entries] of Object.entries(topViewStore.positionDataTopView)) {
-    updatedPositionData[time] = entries.map((p) => {
-      p[1] = mapping[p[1]];
-      return p;
-    });
-  }
-  topViewStore.positionDataTopView = updatedPositionData;
-  didNormalizeTeamIds.value = true;
-}
-watch(
-  () => topViewStore.positionDataTopView,
-  () => {
-    normalizeTeamIds();
-  }
-);
 
 const computeConvexHull = (points) => {
   if (points.length < 3) return [];

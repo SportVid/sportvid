@@ -16,7 +16,7 @@
           <v-col cols="6" v-for="team in uniqueTeamColors" :key="team" class="py-2 mt-2">
             <v-card class="pa-2">
               <div class="mb-2 d-flex justify-center">
-                {{ team === "" ? $t("modal.position_data.team_colors.unlabeled") : team }}
+                {{ team }}
               </div>
               <div class="mb-2 d-flex justify-center">
                 <v-color-picker v-model="updatedTeamColors[team]" :modes="['rgba', 'hexa']" />
@@ -74,7 +74,7 @@ const uniqueTeamColors = computed(() => {
 const updatedTeamColors = ref({});
 onMounted(() => {
   uniqueTeamColors.value.forEach((team) => {
-    updatedTeamColors.value[team] = team === "" ? "#888888" : color(team).formatHex();
+    updatedTeamColors.value[team] = team;
   });
 });
 
