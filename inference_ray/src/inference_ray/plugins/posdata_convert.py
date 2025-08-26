@@ -189,22 +189,23 @@ class PosDataConvert(
                                 "playing_time_first_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["PlayingTimeFirstHalf"],
                                 "playing_time_second_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["PlayingTimeSecondHalf"]
                             })
-
-                    # origin (0,0)^T is at the kickoff, i.e. x values left of kickoff are negative & y values below kickoff are engative
-                    if parameters["origin"] == "kickoff":  
-                        MAX_X = PITCH_SIZE_X / 2.0
-                        MAX_Y = PITCH_SIZE_Y / 2.0
-                        df["pos_x"] = (df["pos_x"] + MAX_X) / PITCH_SIZE_X
-                        df["pos_y"] = 1.0 - ((df["pos_y"] + MAX_X) / PITCH_SIZE_Y)  # correct for inverted Y-axis
-                        
-                    # origin (0,0)^T is at the bottom left, i.e. all values on both axes are >= 0
-                    elif parameters["origin"] == "bottom_left":
-                        MAX_X = PITCH_SIZE_X
-                        MAX_Y = PITCH_SIZE_Y
-                        df["pos_x"] = df["pos_x"] / PITCH_SIZE_X  # normalize to a range of [0,1]
-                        df["pos_y"] = (MAX_Y - df["pos_y"]) / PITCH_SIZE_Y  # inverted Y-axis, images start at top left corner
                 else:
                     raise ValueError("'format' has to be either one of ['dfl', 'kinexon'], other formats are not supported yet for conversion.")
+            
+                # ---- Data/Coords normalization
+                # origin (0,0)^T is at the kickoff, i.e. x values left of kickoff are negative & y values below kickoff are engative
+                if parameters["origin"] == "kickoff":  
+                    MAX_X = PITCH_SIZE_X / 2.0
+                    MAX_Y = PITCH_SIZE_Y / 2.0
+                    df["pos_x"] = (df["pos_x"] + MAX_X) / PITCH_SIZE_X
+                    df["pos_y"] = 1.0 - ((df["pos_y"] + MAX_X) / PITCH_SIZE_Y)  # correct for inverted Y-axis
+                    
+                # origin (0,0)^T is at the bottom left, i.e. all values on both axes are >= 0
+                elif parameters["origin"] == "bottom_left":
+                    MAX_X = PITCH_SIZE_X
+                    MAX_Y = PITCH_SIZE_Y
+                    df["pos_x"] = df["pos_x"] / PITCH_SIZE_X  # normalize to a range of [0,1]
+                    df["pos_y"] = (MAX_Y - df["pos_y"]) / PITCH_SIZE_Y  # inverted Y-axis, images start at top left corner
             
                 # ---- FPS filtering
                 unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
@@ -216,17 +217,22 @@ class PosDataConvert(
                 # NOTE: checks if specified fps parameter is in an applicable range
                 freq = unique_timestamps[1] - unique_timestamps[0]
                 origin_fps = 1000/freq
+                actual_fps = origin_fps
                 if parameters["fps"] > 0:
                     if parameters["fps"] > origin_fps:
-                        raise ValueError("framerate needs to be lower than the original framerate.")
+                        raise ValueError("framerate needs to be set lower than the original framerate.")
                     else:
-                        step_size = np.int32(origin_fps/parameters["fps"])  # compute step size for filtering
+                        actual_fps = parameters["fps"]
+                        step_size = np.int32(origin_fps/actual_fps)  # compute step size for filtering
                         selected_timestamps = unique_timestamps[::step_size]
                         df = df[df[df.columns[0]].isin(selected_timestamps)]  # keeps all rows where 'timestamp' is in the selected list
-                else:
-                    raise ValueError("framerate needs to be larger than zero.")
-                df[df.columns[0]] = df[df.columns[0]] - unique_timestamps.min()  # reset timestamps to zero    
+                # else:
+                #    raise ValueError("framerate needs to be larger than zero.")
                 
+                meta_dict["fps"] = actual_fps
+                
+                df[df.columns[0]] = df[df.columns[0]] - unique_timestamps.min()  # reset timestamps to zero    
+            
                 # map player and team ids
                 if not is_numeric_dtype(df["team_id"].dtype):
                     unique_teams = df["team_id"].unique()
