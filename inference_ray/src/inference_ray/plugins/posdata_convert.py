@@ -191,7 +191,10 @@ class PosDataConvert(
                             })
                 else:
                     raise ValueError("'format' has to be either one of ['dfl', 'kinexon'], other formats are not supported yet for conversion.")
-            
+
+                # Remove empty columns
+                df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
+
                 # ---- Data/Coords normalization
                 # origin (0,0)^T is at the kickoff, i.e. x values left of kickoff are negative & y values below kickoff are engative
                 if parameters["origin"] == "kickoff":  
