@@ -233,13 +233,13 @@ class PosDataConvert(
                     for i, team_label in enumerate(unique_teams):
                         # df.loc[df["team_id"] == team_label, "team_id"] = col
                         df["team_id"] = df["team_id"].replace(team_label, i)
-                        meta_dict.update({ "team_ids" : { i : team_label}})
+                        meta_dict["team_ids"].update({ i : team_label})
 
                 if not is_numeric_dtype(df["player_id"].dtype):
                     unique_players = df["player_id"].unique()
                     for i, player_label in enumerate(unique_players):
                         df["player_id"] = df["player_id"].replace(player_label, i)
-                        meta_dict.update({ "player_ids" : { i : player_label}})
+                        meta_dict["player_ids"].update({ i : player_label})
                     
                 # TODO: do this while XML parsing?
                 if parameters["format"] == "dfl":

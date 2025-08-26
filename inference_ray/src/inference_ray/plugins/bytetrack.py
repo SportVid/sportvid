@@ -164,19 +164,24 @@ class ByteTrack(
                         h_norm = int(box[3]) / img_info["height"]
                         # bbox = BboxData(...)  # NOTE: old code used custom data type
                         
-                        bbox = {
-                            'x': x_norm,
-                            'y': y_norm,
-                            'w': w_norm,
-                            'h': h_norm,
-                            'top_x': x_norm + (w_norm / 2),
-                            'top_y': y_norm + h_norm,
-                            # 'image_id': frame_info["frame_id"],
-                            'player_id': id,
-                            'team_id': "",
-                            'game_section': "",
-                            'det_score': score
-                        }
+                        # bbox = {
+                        #     'x': x_norm,
+                        #     'y': y_norm,
+                        #     'w': w_norm,
+                        #     'h': h_norm,
+                        #     'top_x': x_norm + (w_norm / 2),
+                        #     'top_y': y_norm + h_norm,
+                        #     'player_id': id,
+                        #     'team_id': "",
+                        #     'game_section': "",
+                        #     'det_score': score
+                        # }
+                        
+                        # NOTE: now using a compressed version of results
+                        bbox = [
+                            id, 0, 0, x_norm + (w_norm / 2), y_norm + h_norm, 
+                            x_norm, y_norm, w_norm, h_norm, score
+                        ]
                         bboxes_dict[frame_time].append(bbox)
                     
                 with data_manager.create_data("BboxesData") as output_data:
