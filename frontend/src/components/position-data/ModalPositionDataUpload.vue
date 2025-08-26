@@ -81,7 +81,7 @@
             prepend-icon="mdi-menu"
           />
 
-          <v-text-field
+          <!-- <v-text-field
             v-model="positionData.fps"
             type="number"
             min="1"
@@ -89,7 +89,7 @@
             class="mt-2"
             :label="$t('modal.position_data.upload.fps')"
             prepend-icon="mdi-numeric"
-          />
+          /> -->
 
           <v-progress-linear
             v-if="isUploading"
@@ -146,7 +146,7 @@ const positionData = ref({
   meta_data: null,
   delimiter: null,
   origin: null,
-  fps: null,
+  // fps: null,
 });
 const delimiters = [
   { value: ",", title: t("modal.position_data.upload.delimiters.comma") },
@@ -208,16 +208,6 @@ const disabled = computed(() => {
 });
 
 const uploadPositionData = async () => {
-  // const params = {
-  //   title: positionData.value.title,
-  //   format: positionData.value.format,
-  //   file: positionData.value.file,
-  //   meta_data: positionData.value.meta_data,
-  //   delimiter: positionData.value.delimiter,
-  //   origin: positionData.value.origin,
-  //   fps: positionData.value.fps,
-  // };
-
   await positionDataStore.uploadPositionData(positionData.value);
   dialog.value = false;
   fileValid.value = false;

@@ -67,7 +67,7 @@ watch(
 const uniqueTeamColors = computed(() => {
   const set = new Set();
   Object.values(topViewStore.positionDataTopView).forEach((entries) => {
-    entries.forEach((p) => set.add(p.team_id));
+    entries.forEach((p) => set.add(p[1]));
   });
   return Array.from(set);
 });
@@ -85,10 +85,7 @@ function saveTeamColors() {
 
   for (const [time, entries] of Object.entries(topViewStore.positionDataTopView)) {
     updatedPositionData[time] = entries.map((p) => {
-      const key = p.team_id ?? "";
-      if (Object.prototype.hasOwnProperty.call(mapping, key) && mapping[key] != null) {
-        return { ...p, team_id: mapping[key] };
-      }
+      p[1] = mapping[p[1]];
       return p;
     });
   }

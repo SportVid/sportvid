@@ -157,11 +157,11 @@ export const useTopViewStore = defineStore(
       positionDataTopView,
       transformBBoxToPositionDataTopView,
     };
-  },
-  {
-    persist: {
-      pick: ["positionDataTopView"],
-      storage: sessionStorage,
-    },
   }
+  // {
+  //   persist: {
+  //     pick: ["positionDataTopView"],
+  //     storage: sessionStorage,
+  //   },
+  // }
 );

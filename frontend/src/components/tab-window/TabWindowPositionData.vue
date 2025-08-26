@@ -26,16 +26,15 @@
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             top:
-              position.pos_y *
+              position[3] *
                 (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
               ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
               'px',
             left:
-              position.pos_x *
-                (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+              position[2] * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
               ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
               'px',
-            backgroundColor: !position.team_id ? 'grey' : position.team_id,
+            backgroundColor: !position[1] ? 'grey' : position[1],
           }"
         />
 
@@ -367,6 +366,33 @@ onBeforeUnmount(() => {
   }
 });
 
+const didNormalizeTeamIds = ref(false);
+function normalizeTeamIds() {
+  if (didNormalizeTeamIds.value) return;
+  if (!topViewStore.positionDataTopView) return;
+
+  const mapping = {
+    0: "",
+    1: "red",
+    2: "blue",
+  };
+  const updatedPositionData = {};
+  for (const [time, entries] of Object.entries(topViewStore.positionDataTopView)) {
+    updatedPositionData[time] = entries.map((p) => {
+      p[1] = mapping[p[1]];
+      return p;
+    });
+  }
+  topViewStore.positionDataTopView = updatedPositionData;
+  didNormalizeTeamIds.value = true;
+}
+watch(
+  () => topViewStore.positionDataTopView,
+  () => {
+    normalizeTeamIds();
+  }
+);
+
 const computeConvexHull = (points) => {
   if (points.length < 3) return [];
   const sortedPoints = points.slice().sort((a, b) => a.left - b.left || a.top - b.top);
@@ -404,18 +430,18 @@ const convexHullPlayer = computed(() => {
   Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
     const teams = {};
     framePositions
-      .filter((position) => position.team_id === "red" || position.team_id === "blue")
+      // .filter((position) => position.team_id === "red" || position.team_id === "blue")
       .forEach((position) => {
         const top =
-          position.pos_y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+          position[3] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
           ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
         const left =
-          position.pos_x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+          position[2] * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
           ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
-        if (!teams[position.team_id]) {
-          teams[position.team_id] = [];
+        if (!teams[position[1]]) {
+          teams[position[1]] = [];
         }
-        teams[position.team_id].push({ left, top });
+        teams[position[1]].push({ left, top });
       });
     const hulls = {};
     Object.keys(teams).forEach((team) => {
@@ -457,15 +483,15 @@ const voronoiCells = computed(() => {
   const result = {};
   Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
     const allPlayers = framePositions
-      .filter((player) => player.team_id === "red" || player.team_id === "blue")
+      // .filter((player) => player.team_id === "red" || player.team_id === "blue")
       .map((player) => {
         const top =
-          player.pos_y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+          player[3] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
           ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
         const left =
-          player.pos_x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+          player[2] * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
           ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
-        return { left, top, team_id: player.team_id };
+        return { left, top, team_id: player[1] };
       });
     result[timeKey] = computeVoronoi(allPlayers);
   });
