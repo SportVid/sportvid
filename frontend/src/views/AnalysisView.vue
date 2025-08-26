@@ -562,6 +562,21 @@ watch(
   }
 );
 
+const showPluginRunActionSnackbar = ref(false);
+const pluginRunActionMessage = ref("");
+const resetPluginRunActionSnackbar = async () => {
+  showPluginRunActionSnackbar.value = false;
+  await nextTick();
+  showPluginRunActionSnackbar.value = true;
+};
+watch([() => pluginRunStore.pluginRunDeleteSuccess], ([del]) => {
+  if (del === true) {
+    pluginRunActionMessage.value = t("modal.history.delete.success");
+    resetPluginRunActionSnackbar();
+    positionDataStore.positionDataDeleteSuccess = false;
+  }
+});
+
 watch(
   () => calibrationAssetStore.isAnyReferenceMarkerActive,
   (active) => {

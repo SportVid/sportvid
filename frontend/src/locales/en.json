@@ -65,6 +65,7 @@
     "import": "Import",
     "run_batch_plugin": "Run Batch Plugin",
     "run_plugin": "Run Plugin",
+    "delete_plugin_runs": "Delete all plugin runs",
     "upload_video": "Upload new Video"
   },
   "field": {
@@ -554,7 +555,11 @@
       "plugin_name": "Plugin Name",
       "date": "Date",
       "progress": "Progress",
-      "status": "Status"
+      "status": "Status",
+      "delete": {
+        "success": "All plugin runs successfully deleted",
+        "confirm": "Delete all plugin runs? This cannot be undone."
+      }
     },
     "tutorial": {
       "title": "Tutorials",

@@ -375,6 +375,14 @@ function normalizeTeamIds() {
     0: "",
     1: "red",
     2: "blue",
+    3: "black",
+    4: "green",
+    5: "yellow",
+    6: "purple",
+    7: "orange",
+    8: "pink",
+    9: "brown",
+    10: "white",
   };
   const updatedPositionData = {};
   for (const [time, entries] of Object.entries(topViewStore.positionDataTopView)) {

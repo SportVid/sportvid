@@ -1,7 +1,8 @@
-import { reactive, computed } from "vue";
+import { ref, reactive, computed } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { defineStore } from "pinia";
+import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useAnnotationStore } from "@/stores/annotation";
@@ -12,6 +13,8 @@ import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_ann
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 
 export const usePluginRunStore = defineStore("pluginRun", () => {
+  const { t } = useI18n();
+
   const state = reactive({
     pluginRuns: {},
     pluginRunList: [],
@@ -185,6 +188,22 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     });
   };
 
+  const pluginRunDeleteSuccess = ref(false);
+  const deleteAll = async () => {
+    if (!confirm(t("modal.history.delete.confirm"))) return;
+    try {
+      const res = await axios.post(`${config.API_LOCATION}/plugin/run/delete`, {
+        plugin_list: ["all"],
+      });
+      if (res.data && res.data.status === "ok") {
+        clearStore();
+      }
+    } catch (err) {
+      console.error("Failed to delete all plugin runs:", err);
+    }
+    return false;
+  };
+
   return {
     state,
     all,
@@ -195,5 +214,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     clearStore,
     deleteItems,
     updateAll,
+    deleteAll,
+    pluginRunDeleteSuccess,
   };
 });

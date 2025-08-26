@@ -32,6 +32,12 @@
             </v-chip>
           </template>
         </v-data-table>
+
+        <v-row class="mt-6 mb-n2 justify-center">
+          <v-btn class="mt-n2" color="error" @click="pluginRunStore.deleteAll">
+            {{ $t("button.delete_plugin_runs") }}
+          </v-btn>
+        </v-row>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -40,6 +46,9 @@
 <script setup>
 import { ref, watch, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
+import { usePluginRunStore } from "@/stores/plugin_run";
+
+const pluginRunStore = usePluginRunStore();
 
 const props = defineProps({
   modelValue: {
@@ -57,6 +66,20 @@ const emit = defineEmits();
 const { t } = useI18n();
 
 const dialog = ref(props.modelValue);
+watch(
+  () => dialog.value,
+  (value) => {
+    emit("update:modelValue", value);
+  }
+);
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (value) {
+      dialog.value = true;
+    }
+  }
+);
 
 const headers = [
   { title: t("modal.history.plugin_name"), align: "start", key: "type", width: "40%" },
@@ -94,22 +117,6 @@ const formatLocalDate = (dateString) => {
 
   return `${isoDate} ${localTime}`;
 };
-
-watch(
-  () => dialog.value,
-  (value) => {
-    emit("update:modelValue", value);
-  }
-);
-
-watch(
-  () => props.modelValue,
-  (value) => {
-    if (value) {
-      dialog.value = true;
-    }
-  }
-);
 </script>
 
 <style scoped>

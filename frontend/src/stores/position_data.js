@@ -33,6 +33,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
       const res = await axios.get(`${config.API_LOCATION}/tracking_data/list`);
       if (res.data.status === "ok") {
         positionDataList.value = res.data.entries;
+        console.log("Loaded position data list:", positionDataList.value);
       }
     } catch (error) {
       console.error("Failed to list tracking data:", error);
@@ -43,6 +44,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
     const selectedPositionData = positionDataList.value.find((data) => data.id === id);
     if (selectedPositionData) {
       positionDataId.value = id;
+      console.log("pos-data id", positionDataId.value);
 
       const _positionData = pluginRunStore
         .forVideo(playerStore.videoId)
@@ -50,10 +52,11 @@ export const usePositionDataStore = defineStore("position_data", () => {
         .map((e) => {
           e.results = pluginRunResultStore.forPluginRun(e.id);
           return e;
-        })
-        .filter((e) => e.results?.[0]?.data?.tracking_data_id === id);
+        });
+      // .filter((e) => e.results?.[0]?.data?.tracking_data_id === id);
 
-      topViewStore.positionDataTopView = _positionData[0]?.results[0]?.data?.pos_data;
+      topViewStore.positionDataTopView = _positionData;
+      // topViewStore.positionDataTopView = _positionData[0]?.results[0]?.data?.pos_data;
     }
   };
 
@@ -70,7 +73,6 @@ export const usePositionDataStore = defineStore("position_data", () => {
       formData.append("delimiter", params.delimiter);
       formData.append("origin", params.origin);
       // formData.append("fps", params.fps);
-      // formData.append("fps", 10);
 
       const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
