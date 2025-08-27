@@ -39,7 +39,7 @@
             <div>
               <!-- <div><strong>player_id:</strong> {{ position[0] }}</div>
             <div><strong>team_id:</strong> {{ position[1] }}</div> -->
-              <div v-for="(value, index) in position" :key="key">
+              <div v-for="(value, index) in position" :key="index">
                 <strong>{{ labels[index] }}:</strong> {{ value }}
               </div>
             </div>
@@ -388,6 +388,7 @@ const editDialog = ref(false);
 const editBBox = ref(null);
 function openEditBBox(bbox) {
   editBBox.value = bbox;
+  console.log("edit bbox", editBBox.value);
   editDialog.value = true;
 }
 function updateBBox({ player_id, team_id, updateSamePlayerId, updateSameTeamId }) {

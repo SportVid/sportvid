@@ -12,10 +12,19 @@
       </v-toolbar>
 
       <v-card-text class="pt-4">
+        <div class="mb-4 d-flex justify-center" style="gap: 12px">
+          <v-chip color="#666666">
+            {{ $t("modal.bounding_box.edit.current_player_id") }}: {{ bbox[0] }}
+          </v-chip>
+          <v-chip color="#666666">
+            {{ $t("modal.bounding_box.edit.current_team_id") }}: {{ bbox[1] }}
+          </v-chip>
+        </div>
+
         <v-text-field
           v-model="localPlayerId"
-          label="Player-ID"
-          prepend-icon="mdi-pencil"
+          :label="$t('modal.bounding_box.edit.new_player_id')"
+          prepend-icon="mdi-account"
           variant="underlined"
           type="number"
           step="1"
@@ -23,7 +32,7 @@
 
         <v-text-field
           v-model="localTeamId"
-          label="Team-ID"
+          :label="$t('modal.bounding_box.edit.new_team_id')"
           prepend-icon="mdi-account-group"
           variant="underlined"
         />
@@ -42,6 +51,10 @@
 
         <v-btn @click="update" :disabled="!localPlayerId || !localTeamId" class="mt-4">
           {{ $t("button.update") }}
+        </v-btn>
+
+        <v-btn @click="delete" :disabled="!localPlayerId || !localTeamId" class="mt-4 ml-4">
+          {{ $t("button.delete") }}
         </v-btn>
       </v-card-text>
     </v-card>

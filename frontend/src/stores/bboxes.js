@@ -16,6 +16,8 @@ export const useBboxesStore = defineStore("bboxes", () => {
 
   const bboxPluginRunId = ref(0);
 
+  const isLoading = ref(false);
+
   const loadBboxData = (pluginRunId) => {
     let hasValidData = false;
     bboxPluginRunId.value = pluginRunId;
@@ -99,16 +101,74 @@ export const useBboxesStore = defineStore("bboxes", () => {
     return bboxDatainterpolated;
   }
 
-  const positionDataUploadSuccess = ref(false);
+  const updateBBoxData = async ({
+    bbox_id,
+    player_id,
+    team_id,
+    update_all_player_id = false,
+    update_all_team_id = false,
+    bytetrack_run_id,
+  }) => {
+    if (isLoading.value) return;
+    isLoading.value = true;
+
+    const params = {
+      bbox_id,
+      player_id,
+      new_player_id: player_id,
+      new_team_id: team_id,
+      update_all_player_id,
+      update_all_team_id,
+      bytetrack_run_id,
+    };
+
+    try {
+      const res = await axios.post(`${config.API_LOCATION}/position_data/bboxes/edit`, params);
+      if (res.data.status === "ok") {
+        bboxDataUpdateSuccess.value = true;
+        loadBboxData(bytetrack_run_id);
+      }
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const deleteBBoxData = async ({
+    bbox_id,
+    player_id,
+    delete_all_player_id = false,
+    bytetrack_run_id,
+  }) => {
+    if (isLoading.value) return;
+    isLoading.value = true;
+
+    const params = { bbox_id, player_id, delete_all_player_id, bytetrack_run_id };
+
+    try {
+      const res = await axios.post(`${config.API_LOCATION}/position_data/bboxes/delete`, params);
+      if (res.data.status === "ok") {
+        bboxDataDeleteSuccess.value = true;
+        loadBboxData(bytetrack_run_id);
+      }
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const bboxDataUpdateSuccess = ref(false);
+  const bboxDataDeleteSuccess = ref(false);
 
   return {
     loadBboxData,
+    updateBBoxData,
+    deleteBBoxData,
     interpolateBboxData,
     bboxDataActive,
     bboxDataLoaded,
     bboxDataInterpolated,
     bboxPluginRunId,
     bboxDataTopView,
-    positionDataUploadSuccess,
+    bboxDataUpdateSuccess,
+    bboxDataDeleteSuccess,
   };
 });

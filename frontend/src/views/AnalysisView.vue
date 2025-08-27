@@ -133,6 +133,13 @@
         <span class="text-h6">{{ pluginRunActionMessage }}</span>
       </div>
     </v-snackbar>
+
+    <v-snackbar v-model="showBboxDataActionSnackbar">
+      <div class="d-flex justify-center">
+        <snackbar-icon />
+        <span class="text-h6">{{ bboxDataActionMessage }}</span>
+      </div>
+    </v-snackbar>
   </v-main>
 </template>
 
@@ -544,7 +551,6 @@ const resetPositionDataActionSnackbar = async () => {
   showPositionDataActionSnackbar.value = false;
   await nextTick();
   showPositionDataActionSnackbar.value = true;
-  // bboxesStore.positionDataUploadSuccess = false;
 };
 watch(
   [
@@ -583,6 +589,28 @@ watch([() => pluginRunStore.pluginRunDeleteSuccess], ([del]) => {
     positionDataStore.positionDataDeleteSuccess = false;
   }
 });
+
+const showBboxDataActionSnackbar = ref(false);
+const bboxDataActionMessage = ref("");
+const resetBboxDataActionSnackbar = async () => {
+  showBboxDataActionSnackbar.value = false;
+  await nextTick();
+  showBboxDataActionSnackbar.value = true;
+};
+watch(
+  [() => bboxesStore.bboxDataUpdateSuccess, () => bboxesStore.bboxDataDeleteSuccess],
+  ([update, del]) => {
+    if (update === true) {
+      bboxDataActionMessage.value = t("modal.bounding_box.edit.success");
+      resetBboxDataActionSnackbar();
+      bboxesStore.bboxDataUpdateSuccess = false;
+    } else if (del === true) {
+      bboxDataActionMessage.value = t("modal.bounding_box.delete.success");
+      resetBboxDataActionSnackbar();
+      bboxesStore.bboxDataDeleteSuccess = false;
+    }
+  }
+);
 
 watch(
   () => calibrationAssetStore.isAnyReferenceMarkerActive,

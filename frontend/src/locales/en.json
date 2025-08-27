@@ -660,8 +660,16 @@
     "bounding_box": {
       "edit": {
         "title": "Edit Bounding Box",
-        "same_player_id": "Update all Bounding Boxes with the same Player-ID",
-        "same_team_id": "Update all Bounding Boxes with the same Team-ID"
+        "current_player_id": "Current Player-ID",
+        "current_team_id": "Current Team-ID",
+        "new_player_id": "New Player-ID",
+        "new_team_id": "New Team-ID",
+        "same_player_id": "Apply to all Bounding Boxes with the same Player-ID",
+        "same_team_id": "Apply to all Bounding Boxes with the same Team-ID",
+        "success": "Bounding Box successfully updated"
+      },
+      "delete": {
+        "success": "Bounding Box successfully deleted"
       }
     }
   }
