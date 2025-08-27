@@ -63,12 +63,12 @@
           class="player-dot"
           :style="{
             backgroundColor: selectedPlayerIds.includes(playerId)
-              ? toRgba(playerColors[playerId], 1)
-              : toRgba(playerColors[playerId], 0.3),
+              ? toRgb(playerColors[playerId], 0)
+              : toRgb(playerColors[playerId], 0.7),
             color: selectedPlayerIds.includes(playerId) ? '#fff' : '#222',
             borderColor: selectedPlayerIds.includes(playerId)
-              ? toRgba(playerColors[playerId], 1)
-              : toRgba(playerColors[playerId], 0.3),
+              ? toRgb(playerColors[playerId], 0)
+              : toRgb(playerColors[playerId], 0.7),
           }"
           @click="togglePlayerId(playerId)"
         >
@@ -156,7 +156,7 @@ import { useVideoStore } from "@/stores/video";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import ModalPositionDataTeamColors from "@/components/position-data/ModalPositionDataTeamColors.vue";
 import h337 from "heatmap.js";
-import { toRgba } from "@/plugins/helpers";
+import { toRgb } from "@/plugins/helpers";
 
 const topViewStore = useTopViewStore();
 const videoStore = useVideoStore();

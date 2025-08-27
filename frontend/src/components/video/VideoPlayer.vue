@@ -15,42 +15,37 @@
             maxHeight: maxVideoHeight * 100 + 'vh',
           }"
         />
-        <!-- <div
-        v-for="(position, index) in bboxesStore.bboxData.filter((p) => p.time === playerStore.currentTime)"
-        v-show="playerStore.showBoundingBox"
-        :key="index"
-        class="bounding-box-position"
-        :style="{
-          top: position.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
-          left: position.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
-          width: position.w * videoStore.videoSize.width + 'px',
-          height: position.h * videoStore.videoSize.height + 'px',
-          border: `2px solid red`,
-        }"
-      /> -->
         <div
           v-for="position in bboxesStore.bboxDataInterpolated[playerStore.currentTime]"
           v-show="playerStore.showBoundingBox"
-          :key="position.id"
+          :key="position"
           :style="{
             position: 'absolute',
-            top: position.y * videoStore.videoSize.height + 'px',
-            left: position.x * videoStore.videoSize.width + 'px',
-            width: position.w * videoStore.videoSize.width + 'px',
-            height: position.h * videoStore.videoSize.height + 'px',
-            border: `2px solid red`,
+            top: position[6] * videoStore.videoSize.height + 'px',
+            left: position[5] * videoStore.videoSize.width + 'px',
+            width: position[7] * videoStore.videoSize.width + 'px',
+            height: position[8] * videoStore.videoSize.height + 'px',
+            border: `2px solid ${position[1]}`,
           }"
           @click="openEditBBox(position)"
         >
-          <v-tooltip activator="parent" location="top" class="bounding-box-tooltip">
-            <!-- <div><strong>player_id:</strong> {{ position.player_id }}</div>
-            <div><strong>team_id:</strong> red</div> -->
-            <div v-for="(value, key) in position" :key="key">
-              <strong>{{ key }}:</strong> {{ value }}
+          <v-tooltip
+            activator="parent"
+            location="top"
+            class="bounding-box-tooltip"
+            :style="{ '--tooltip-bg': toRgb(position[1], 0.7) }"
+            interactive
+          >
+            <div>
+              <!-- <div><strong>player_id:</strong> {{ position[0] }}</div>
+            <div><strong>team_id:</strong> {{ position[1] }}</div> -->
+              <div v-for="(value, index) in position" :key="key">
+                <strong>{{ labels[index] }}:</strong> {{ value }}
+              </div>
             </div>
           </v-tooltip>
-          <div class="bounding-box-ref-id">
-            {{ position.player_id }}
+          <div class="bounding-box-player-id" :style="{ color: position[1] }">
+            {{ position[0] }}
           </div>
         </div>
 
@@ -181,11 +176,25 @@ import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
 import ModalBBoxUpdate from "./ModalBboxUpdate.vue";
+import { toRgb } from "@/plugins/helpers";
 
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
+
+const labels = [
+  "player_id",
+  "team_id",
+  "game_section",
+  "pos_x",
+  "pos_y",
+  "x_norm",
+  "y_norm",
+  "w_norm",
+  "h_norm",
+  "det_score",
+];
 
 const videoContainer = ref(null);
 const videoElement = ref(null);
@@ -474,13 +483,13 @@ function updateBBoxBackend({ player_id, team_id, updateSamePlayerId, updateSameT
 }
 
 .bounding-box-tooltip ::v-deep .v-overlay__content {
-  background: rgb(var(--v-theme-primary));
+  background-color: var(--tooltip-bg);
   border-radius: 2px;
   font-size: 0.7rem;
   line-height: 1.2;
   overflow-wrap: anywhere;
   padding: 5px 10px;
-  color: #fff;
+  color: #222;
 }
 
 .menu-item {
@@ -495,12 +504,11 @@ function updateBBoxBackend({ player_id, team_id, updateSamePlayerId, updateSameT
   font-size: 12px;
 }
 
-.bounding-box-ref-id {
+.bounding-box-player-id {
   position: absolute;
   left: 50%;
   bottom: -20px;
   transform: translateX(-50%);
-  color: red;
   font-size: 0.8rem;
   pointer-events: none;
 }

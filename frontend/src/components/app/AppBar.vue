@@ -76,6 +76,7 @@
           activator="parent"
           location="bottom"
           class="tutorial-icon-tooltip"
+          interactive
         >
           <div style="max-width: 400px">
             <div class="text-yellow">

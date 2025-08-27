@@ -34,7 +34,7 @@
         </v-data-table>
 
         <v-row class="mt-6 mb-n2 justify-center">
-          <v-btn class="mt-n2" color="error" @click="pluginRunStore.deleteAll">
+          <v-btn class="mt-n2" variant="outlined" color="error" @click="pluginRunStore.deleteAll">
             {{ $t("button.delete_plugin_runs") }}
           </v-btn>
         </v-row>

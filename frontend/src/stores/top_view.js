@@ -101,16 +101,18 @@ export const useTopViewStore = defineStore(
         //   playerStore.videoFPS,
         //   30
         // );
-        // bboxesStore.bboxDataInterpolated = _bboxDataInterpolated;
+        bboxesStore.bboxDataInterpolated = _bboxDataInterpolated;
 
         if (calibrationAssetStore.calibrationMatrix) {
           for (const [time, boxes] of Object.entries(_bboxDataInterpolated)) {
             positionDataTopView.value[time] = boxes.map((b) => {
               const { x, y } = calibrationAssetStore.applyHomography(
                 calibrationAssetStore.calibrationMatrix,
-                { x: b.top_x, y: b.top_y }
+                { x: b[3], y: b[4] }
               );
-              return { ...b, pos_x: x, pos_y: y };
+              b[3] = x;
+              b[4] = y;
+              return b;
             });
           }
 

@@ -19,7 +19,7 @@
                 {{ team }}
               </div>
               <div class="mb-2 d-flex justify-center">
-                <v-color-picker v-model="updatedTeamColors[team]" :modes="['rgba', 'hexa']" />
+                <v-color-picker v-model="updatedTeamColors[team]" :modes="['rgb', 'hex']" />
               </div>
             </v-card>
           </v-col>

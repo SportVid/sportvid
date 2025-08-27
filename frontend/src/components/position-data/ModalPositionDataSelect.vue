@@ -112,6 +112,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useBboxesStore } from "@/stores/bboxes";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
 import ModalPositionDataRename from "./ModalPositionDataRename.vue";
 
@@ -122,6 +123,7 @@ const bboxesStore = useBboxesStore();
 const pluginRunStore = usePluginRunStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const positionDataStore = usePositionDataStore();
+const topViewStore = useTopViewStore();
 
 const props = defineProps({
   modelValue: {
@@ -197,23 +199,12 @@ const isButtonDisabled = computed(() => {
   return true;
 });
 
-import { useTopViewStore } from "@/stores/top_view";
-const topViewStore = useTopViewStore();
 const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId) => {
   if (selectedMode.value === "bytetrack") {
-    // calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
-    // bboxesStore.loadBboxData(bytetrackPluginId);
     topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
-    console.log(
-      "selected posdata plugin",
-      topViewStore.positionDataTopView,
-      bboxesStore.bboxDataActive
-    );
+    console.log("selected posdata plugin", topViewStore.positionDataTopView);
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
-    // bboxesStore.bboxDataTopView = processCsvPositions(selectedPositionData.value);
-    // calibrationAssetStore.marker = [];
-    // calibrationAssetStore.calibrationAssetId = null;
     console.log("selected posdata upload", topViewStore.positionDataTopView);
   }
   dialog.value = false;

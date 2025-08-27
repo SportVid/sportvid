@@ -1,28 +1,25 @@
-export function toRgba(color, alpha = 1) {
+export function toRgb(color, fade = 0) {
   let c = color.startsWith("#") ? color.slice(1) : color;
 
-  if (c.length === 3 || c.length === 4) {
+  if (c.length === 3) {
     c = c
       .split("")
       .map((ch) => ch + ch)
       .join("");
   }
 
-  const hasAlpha = c.length === 8;
+  const num = parseInt(c, 16);
 
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  let a = alpha;
+  let r = (num >> 16) & 0xff;
+  let g = (num >> 8) & 0xff;
+  let b = num & 0xff;
 
-  if (hasAlpha) {
-    const aHex = parseInt(c.substring(6, 8), 16);
-    a = (aHex / 255) * alpha;
-  }
+  r = Math.round(r + (255 - r) * fade);
+  g = Math.round(g + (255 - g) * fade);
+  b = Math.round(b + (255 - b) * fade);
 
-  return `rgba(${r},${g},${b},${a})`;
+  return `rgb(${r}, ${g}, ${b})`;
 }
-
 // export function keyInObj(key, obj) {
 //   if (typeof obj !== 'object') return false;
 //   return Object.prototype.hasOwnProperty.call(obj, key);

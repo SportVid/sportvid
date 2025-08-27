@@ -26,12 +26,12 @@
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             top:
-              position[3] *
+              position[4] *
                 (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
               ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
               'px',
             left:
-              position[2] * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+              position[3] * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
               ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
               'px',
             backgroundColor: position[1],

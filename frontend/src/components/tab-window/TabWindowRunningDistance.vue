@@ -107,7 +107,7 @@
       <template #item="{ item, columns }">
         <tr
           :style="{
-            backgroundColor: toRgba(item.team_id, 0.3),
+            backgroundColor: toRgb(item.team_id, 0.7),
           }"
         >
           <td v-for="col in columns" :key="col.key">
@@ -126,7 +126,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "@/stores/top_view";
 import RunningDistanceTimeSelector from "../visualization/RunningDistanceTimeSelector.vue";
 import { useI18n } from "vue-i18n";
-import { toRgba } from "@/plugins/helpers";
+import { toRgb } from "@/plugins/helpers";
 
 const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();

@@ -629,7 +629,8 @@ watch(
   () => topViewStore.positionDataTopView,
   () => {
     normalizeTeamIds();
-  }
+  },
+  { deep: true }
 );
 
 watch(
