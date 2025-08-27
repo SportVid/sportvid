@@ -393,30 +393,30 @@ function openEditBBox(bbox) {
 function updateBBox({ player_id, team_id, updateSamePlayerId, updateSameTeamId }) {
   if (!editBBox.value) return;
 
-  let allBboxes = null;
-  if (updateSamePlayerId || updateSameTeamId) {
-    allBboxes = [];
-    Object.values(bboxesStore.bboxDataInterpolated).forEach((arr) => {
-      if (Array.isArray(arr)) allBboxes.push(...arr);
-    });
-  }
+  const allBboxes =
+    updateSamePlayerId || updateSameTeamId
+      ? Object.values(bboxesStore.bboxDataInterpolated).flat()
+      : [];
 
-  if (updateSamePlayerId && allBboxes) {
-    const oldPlayerId = String(editBBox.value.player_id);
+  const oldPlayerId = String(editBBox.value[0]);
+  const oldTeamId = String(editBBox.value[1]);
+
+  if (updateSamePlayerId) {
     allBboxes.forEach((bbox) => {
-      if (String(bbox.player_id) === oldPlayerId) bbox.player_id = player_id;
+      if (String(bbox[0]) === oldPlayerId) {
+        bbox[0] = player_id;
+        bbox[1] = team_id;
+      }
+    });
+  } else if (updateSameTeamId) {
+    allBboxes.forEach((bbox) => {
+      if (String(bbox[1]) === oldTeamId) {
+        bbox[1] = team_id;
+      }
     });
   } else {
-    editBBox.value.player_id = player_id;
-  }
-
-  if (updateSameTeamId && allBboxes) {
-    const oldTeamId = String(editBBox.value.team_id);
-    allBboxes.forEach((bbox) => {
-      if (String(bbox.team_id) === oldTeamId) bbox.team_id = team_id;
-    });
-  } else {
-    editBBox.value.team_id = team_id;
+    editBBox.value[0] = player_id;
+    editBBox.value[1] = team_id;
   }
 }
 function updateBBoxBackend({ player_id, team_id, updateSamePlayerId, updateSameTeamId }) {

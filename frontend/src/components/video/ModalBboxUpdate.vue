@@ -14,7 +14,7 @@
       <v-card-text class="pt-4">
         <v-text-field
           v-model="localPlayerId"
-          label="player_id"
+          label="Player-ID"
           prepend-icon="mdi-pencil"
           variant="underlined"
           type="number"
@@ -23,7 +23,7 @@
 
         <v-text-field
           v-model="localTeamId"
-          label="team_id"
+          label="Team-ID"
           prepend-icon="mdi-account-group"
           variant="underlined"
         />
@@ -71,8 +71,8 @@ watch(
   () => [props.bbox, dialog.value],
   ([bbox, open]) => {
     if (open && bbox) {
-      localPlayerId.value = bbox.player_id ?? "";
-      localTeamId.value = bbox.team_id ?? "";
+      localPlayerId.value = bbox[0];
+      localTeamId.value = bbox[1];
     }
   },
   { immediate: true }
