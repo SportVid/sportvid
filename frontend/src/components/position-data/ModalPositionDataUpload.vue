@@ -81,6 +81,17 @@
             prepend-icon="mdi-menu"
           />
 
+          <v-text-field
+            v-if="positionData.format === 'kinexon'"
+            v-model="positionData.team_id_ball"
+            variant="underlined"
+            :label="$t('modal.position_data.upload.team_id_ball')"
+            clearable
+            clear-icon="mdi-close-circle-outline"
+            prepend-icon="mdi-pencil"
+            class="mt-4"
+          />
+
           <!-- <v-text-field
             v-model="positionData.fps"
             type="number"
@@ -146,6 +157,7 @@ const positionData = ref({
   meta_data: null,
   delimiter: null,
   origin: null,
+  team_id_ball: null,
   // fps: null,
 });
 const delimiters = [

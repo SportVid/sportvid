@@ -632,9 +632,9 @@ function normalizeTeamIds() {
 
   const colorMapping = {
     0: "#808080", // grey
-    1: "#FF0000", // red
-    2: "#0000FF", // blue
-    3: "#000000", // black
+    1: "#000000", // black
+    2: "#FF0000", // red
+    3: "#0000FF", // blue
     4: "#008000", // green
     5: "#FFFF00", // yellow
     6: "#800080", // purple

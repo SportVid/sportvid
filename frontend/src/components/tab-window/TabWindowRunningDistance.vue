@@ -208,6 +208,7 @@ const items = computed(() => {
     const players = topViewStore.positionDataTopView[frame];
     if (!players) continue;
     for (const p of players) {
+      if (p[1] === "#000000") continue;
       if (
         (visualizationStore.showAggregatedFirst && p[4] !== 1) ||
         (visualizationStore.showAggregatedSecond && p[4] !== 2)
@@ -240,6 +241,8 @@ const items = computed(() => {
       if (!playersPrev || !playersCurr) continue;
 
       for (const currPlayer of playersCurr) {
+        if (currPlayer[1] === "#000000") continue;
+
         const prevPlayer = playersPrev.find((p) => p[0] === currPlayer[0]);
         if (!prevPlayer) continue;
 
