@@ -660,8 +660,8 @@
     "bounding_box": {
       "edit": {
         "title": "Edit Bounding Box",
-        "same_player_id": "Update all Bounding Boxes with the same player_id",
-        "same_team_id": "Update all Bounding Boxes with the same team_id"
+        "same_player_id": "Update all Bounding Boxes with the same Player-ID",
+        "same_team_id": "Update all Bounding Boxes with the same Team-ID"
       }
     }
   }
