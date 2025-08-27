@@ -45,9 +45,9 @@ DFL_XSL = """
             <timestamp><xsl:value-of select="@T"/></timestamp>
             <player_id><xsl:value-of select="../@PersonId"/></player_id>
             <team_id><xsl:value-of select="../@TeamId"/></team_id>
+            <game_section><xsl:value-of select="../@GameSection"/></game_section>
             <pos_x><xsl:value-of select="@X"/></pos_x>
             <pos_y><xsl:value-of select="@Y"/></pos_y>
-            <game_section><xsl:value-of select="../@GameSection"/></game_section>
         </record>
     </xsl:template>
 </xsl:stylesheet>
@@ -148,6 +148,13 @@ class PosDataConvert(
                         "x in m": "pos_x", 
                         "y in m": "pos_y"
                     })
+                    
+                    # rearrange indices
+                    cols = list(df.columns)
+                    pos_x, pos_y, gs = cols.index('pos_x'), cols.index('pos_y'), cols.index('game_section')
+                    cols[pos_x], cols[pos_y], cols[gs] = cols[gs], cols[pos_x], cols[pos_y]
+                    df = df[cols]
+                    
                     df["pos_x"] = df["pos_x"].apply(lambda x: round(x, ndigits=2))
                     df["pos_y"] = df["pos_y"].apply(lambda x: round(x, ndigits=2))
                     
