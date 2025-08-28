@@ -26,25 +26,38 @@ class BoundingBoxesChange(View):
         try:
             bbox_id = data.get("bbox_id")
             bytetrack_result_id = data.get("bytetrack_run_id")
-            current_player_id = None
-            if "player_id" in data: current_player_id = int(data.get("player_id"))
-        
+            
+            current_player_id = None; current_team_id = None 
             new_player_id = None; new_team_id = None
+            update_all_player_id = False; update_all_team_id = False
+            
+            if "player_id" in data: current_player_id = int(data.get("player_id"))
+            if "team_id" in data: current_team_id = int(data.get("team_id"))
             if "new_player_id" in data: new_player_id = int(data.get("new_player_id"))
             if "new_team_id" in data: new_team_id = data.get("new_team_id")
-            
-            if bbox_id is None or ( 
-                current_player_id is None) or (
-                    new_player_id is None and new_team_id is None):
-                return JsonResponse({"status": "error", "type": "missing_args"})
- 
-            update_all_player_id = False; update_all_team_id = False
             if "update_all_player_id" in data:
-                if data.get("update_all_player_id") in ['true', 'True']:
+                if data.get("update_all_player_id") in ['true', 'True', True]:
                     update_all_player_id = True
             if "update_all_team_id" in data:
-                if data.get("update_all_team_id") in ['true', 'True']:
+                if data.get("update_all_team_id") in ['true', 'True', True]:
                     update_all_team_id = True   
+  
+            # possible update ops.
+            CH = None
+            if not update_all_player_id and bbox_id: 
+                CH='SINGLE_PLAYER_ID'
+                if new_team_id and not update_all_team_id:
+                    CH='SINGLE_PLAYERTEAM_ID'
+            if update_all_player_id and current_player_id and new_player_id:
+                CH='BULK_PLAYER_ID'
+                if new_team_id and update_all_team_id:
+                    CH='BULK_PLAYERTEAM_ID'
+            if (current_team_id is not None and new_team_id is not None) and (
+                update_all_team_id and not new_player_id): 
+                CH='BULK_TEAM'
+
+            if not CH: return JsonResponse({"status": "error", "type": "missing_args"})
+            else: logging.info(f'running {CH} update op. on bbox data...')
   
             # get the DB record and store the old data_id before changing anything.
             bytetrack_prr_db = PluginRunResult.objects.get(
@@ -61,40 +74,33 @@ class BoundingBoxesChange(View):
             # NOTE: look for a more efficient solution; right now recreates data entry by entry...
             with manager.load(old_data_id) as bboxes_data:
                 bbd = bboxes_data.to_dict()
-                bbd_data = bbd["bboxes"]
+                bbd_data = json.loads(bbd["bboxes"])
                 with manager.create_data("BboxesData") as altered_bbx:
-                    if update_all_player_id:
-                        # TODO adapt logic
-                        # --- bulk edit; iterate each entry O(n)
-                        for entry in bbd_data:
-                            logging.error(entry)
-                            # bbox = [
-                            #     id, 0, 0, x_norm + (w_norm / 2), y_norm + h_norm, 
-                            #     unique_bbox_id,
-                            #     x_norm, y_norm, w_norm, h_norm, score
-                            # ]
-                            
-                            # NOTE: old dict struct
-                            # if entry.get("player_id") == current_player_id:
-                            #     entry["player_id"] = new_player_id
-                            #     if update_all_team_id:
-                            #         entry["team_id"] = new_team_id
-
-                            bbox = BboxData(**entry)
-                            altered_bbx.bboxes.append(bbox)
-                    else:
-                        # --- single edit; O(n)
-                        for entry in bbd_data:
-                            
-                            # NOTE: old dict struct
-                            # if entry.get("id") == bbox_id:
-                            #     entry["player_id"] = new_player_id
-                            #     if new_team_id: entry["team_id"] = new_team_id
-                            
-                            bbox = BboxData(**entry)
-                            altered_bbx.bboxes.append(bbox)   
+                    if not update_all_player_id and bbox_id:
+                        # --- single edit (1 frame); O(n) at worse
+                        frame_id = bbox_id.split("-", 1)[0]  # only iterate through lists that are related to the frame
+                        for bbx in bbd_data[frame_id]:
+                            # mutate list
+                            if bbx[5] == bbox_id:
+                                bbx[0] = new_player_id
+                                if new_team_id and not update_all_team_id: bbx[1] = new_team_id
+                                break
+                    if update_all_player_id and current_player_id and new_player_id:
+                        # --- bulk edit (all frames); iterates each entry O(n)
+                        for frame, bboxes in bbd_data.items():
+                            for bbx in bboxes:
+                                if bbx[0] == current_player_id:
+                                    bbx[0] = new_player_id 
+                                    if new_team_id and update_all_team_id: bbx[1] = new_team_id
+                    # --- bulk team edit (all frames, no player_id changes)
+                    if (current_team_id is not None and new_team_id is not None) and (
+                        update_all_team_id and not new_player_id): # change team exclusively
+                        for _, bboxes in bbd_data.items():
+                            for bbx in bboxes:
+                                if bbx[1] == current_team_id:
+                                    bbx[1] = new_team_id
+                    altered_bbx.bboxes = json.dumps(bbd_data)
             logging.info(f"Successfully created new temporary data with id: {altered_bbx.id}")
-
             # perform the database switch inside a transaction
             with transaction.atomic():
                 # re-fetch the object inside the transaction to ensure it's not stale
@@ -130,20 +136,28 @@ class BoundingBoxesDelete(View):
         try:
             bbox_id = data.get("bbox_id")
             bytetrack_result_id = data.get("bytetrack_run_id")
-            player_id_to_delete = None
+            player_id_to_delete = None; team_id_to_delete = None
             if "player_id" in data: player_id_to_delete = int(data.get("player_id"))
-            if player_id_to_delete is None:
-                return JsonResponse({"status": "error", "type": "missing_args"})
- 
+            if "team_id" in data: team_id_to_delete = int(data.get("team_id"))
             delete_all_player_id = False
             if "delete_all_player_id" in data:
-                if data.get("delete_all_player_id") in ['true', 'True']:
+                if data.get("delete_all_player_id") in ['true', 'True', True]:
                     delete_all_player_id = True
-  
             delete_all_team_id = False
             if "delete_all_team_id" in data:
-                if data.get("delete_all_player_id") in ['true', 'True']:
+                if data.get("delete_all_player_id") in ['true', 'True', True]:
                     delete_all_team_id = True
+  
+            # possible update ops.
+            CH = None
+            if not delete_all_player_id and bbox_id:
+                CH='SINGLE_FRAME_DEL'
+            if delete_all_player_id and player_id_to_delete:
+                CH='ALL_PLAYER_DEL'
+            if delete_all_team_id and team_id_to_delete and not player_id_to_delete:
+                CH='COMPLETEL_TEAM_DEL'
+            if not CH: return JsonResponse({"status": "error", "type": "missing_args"})
+            else: logging.info(f'running {CH} delete op. on bbox data...')
   
             bytetrack_prr_db = PluginRunResult.objects.get(
                 plugin_run_id=bytetrack_result_id
@@ -157,25 +171,29 @@ class BoundingBoxesDelete(View):
             # NOTE: look for a more efficient solution;; right now recreates data entry by entry...
             with manager.load(old_data_id) as bboxes_data:
                 bbd = bboxes_data.to_dict()
-                bbd_data = bbd["bboxes"]
+                bbd_data = json.loads(bbd["bboxes"])
                 with manager.create_data("BboxesData") as altered_bbx:
-                    if delete_all_team_id: # TODO adapt logic
-                        pass
-                    if delete_all_player_id:
-                        # --- bulk delete; iterate each entry O(n)
-                        for entry in bbd_data:
-                            if entry.get("player_id") == player_id_to_delete:
-                                continue
-                            bbox = BboxData(**entry)
-                            altered_bbx.bboxes.append(bbox)
-                    else:
-                        # --- single delete; O(n)
-                        for entry in bbd_data:
-                            if entry.get("id") == bbox_id:
-                                continue
-                            bbox = BboxData(**entry)
-                            altered_bbx.bboxes.append(bbox)
-                            
+                    if not delete_all_player_id and bbox_id:
+                        # --- single delete (1 frame); O(n) at worse
+                        frame_id = bbox_id.split("-", 1)[0]  # only iterate through lists that are related to the frame
+                        for bbx_id, bbx in enumerate(bbd_data[frame_id]):
+                            # mutate list
+                            if bbx[5] == bbox_id:
+                                del bbd_data[frame_id][bbx_id]
+                                break
+                    if delete_all_player_id and player_id_to_delete:
+                        # --- bulk delete (all frames); iterates each entry O(n)
+                        for frame_id, bboxes in bbd_data.items():
+                            for bbx_id, bbx in enumerate(bboxes):
+                                if bbx[0] == player_id_to_delete:
+                                    del bbd_data[frame_id][bbx_id]
+                    # --- bulk team edit (all frames, no player_id changes)
+                    if delete_all_team_id and team_id_to_delete and not player_id_to_delete: # delete team exclusively
+                        for frame_id, bboxes in bbd_data.items():
+                            for bbx_id, bbx in enumerate(bboxes):
+                                if bbx[1] == team_id_to_delete:
+                                    del bbd_data[frame_id][bbx_id]
+                    altered_bbx.bboxes = json.dumps(bbd_data)      
             logging.info(f"Successfully created new temporary data with id: {altered_bbx.id}")
 
             with transaction.atomic():

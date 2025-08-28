@@ -26,8 +26,8 @@ default_config = {
 
 # args from tools/demo_track.py
 default_parameters = {
-    "fps": 2,
-    "track_thresh": 0.5,    # tracking confidence threshold
+    "fps": 30,
+    "track_thresh": 0.6,    # tracking confidence threshold
     "track_buffer": 30,     # the frames for keep lost tracks
     "match_thresh": 0.8,    # matching threshold for tracking
     "fp16": False,          # TODO True does not work
@@ -162,8 +162,9 @@ class ByteTrack(
                         y_norm = int(box[1]) / img_info["height"]
                         w_norm = int(box[2]) / img_info["width"]
                         h_norm = int(box[3]) / img_info["height"]
-                        # bbox = BboxData(...)  # NOTE: old code used custom data type
                         
+                        # NOTE: old code used a custom data type, we now serialize as JSON
+                        # bbox = BboxData(...) 
                         # bbox = {
                         #     'x': x_norm,
                         #     'y': y_norm,
@@ -176,12 +177,14 @@ class ByteTrack(
                         #     'game_section': "",
                         #     'det_score': score
                         # }
-                        unique_bbox_id = int(str(frame_info["frame_id"]) + str(frame_info["track_id"]))
+
                         # NOTE: now using a compressed version of results
                         bbox = [
-                            id, 0, 0, x_norm + (w_norm / 2), y_norm + h_norm, 
-                            unique_bbox_id,
-                            x_norm, y_norm, w_norm, h_norm, score
+                            id, 0, 0,
+                            x_norm + (w_norm / 2), y_norm + h_norm, 
+                            f'{i}-{id}',
+                            x_norm, y_norm, w_norm, h_norm, 
+                            score
                         ]
                         bboxes_dict[frame_time].append(bbox)
                     
