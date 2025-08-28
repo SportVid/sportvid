@@ -64,20 +64,33 @@ class BoundingBoxesChange(View):
                 bbd_data = bbd["bboxes"]
                 with manager.create_data("BboxesData") as altered_bbx:
                     if update_all_player_id:
-                        # --- bulk delete; iterate each entry O(n)
+                        # TODO adapt logic
+                        # --- bulk edit; iterate each entry O(n)
                         for entry in bbd_data:
-                            if entry.get("player_id") == current_player_id:
-                                entry["player_id"] = new_player_id
-                                if update_all_team_id:
-                                    entry["team_id"] = new_team_id
+                            logging.error(entry)
+                            # bbox = [
+                            #     id, 0, 0, x_norm + (w_norm / 2), y_norm + h_norm, 
+                            #     unique_bbox_id,
+                            #     x_norm, y_norm, w_norm, h_norm, score
+                            # ]
+                            
+                            # NOTE: old dict struct
+                            # if entry.get("player_id") == current_player_id:
+                            #     entry["player_id"] = new_player_id
+                            #     if update_all_team_id:
+                            #         entry["team_id"] = new_team_id
+
                             bbox = BboxData(**entry)
                             altered_bbx.bboxes.append(bbox)
                     else:
-                        # --- single delete; O(n)
+                        # --- single edit; O(n)
                         for entry in bbd_data:
-                            if entry.get("id") == bbox_id:
-                                entry["player_id"] = new_player_id
-                                if new_team_id: entry["team_id"] = new_team_id
+                            
+                            # NOTE: old dict struct
+                            # if entry.get("id") == bbox_id:
+                            #     entry["player_id"] = new_player_id
+                            #     if new_team_id: entry["team_id"] = new_team_id
+                            
                             bbox = BboxData(**entry)
                             altered_bbx.bboxes.append(bbox)   
             logging.info(f"Successfully created new temporary data with id: {altered_bbx.id}")
@@ -127,6 +140,11 @@ class BoundingBoxesDelete(View):
                 if data.get("delete_all_player_id") in ['true', 'True']:
                     delete_all_player_id = True
   
+            delete_all_team_id = False
+            if "delete_all_team_id" in data:
+                if data.get("delete_all_player_id") in ['true', 'True']:
+                    delete_all_team_id = True
+  
             bytetrack_prr_db = PluginRunResult.objects.get(
                 plugin_run_id=bytetrack_result_id
             )
@@ -141,6 +159,8 @@ class BoundingBoxesDelete(View):
                 bbd = bboxes_data.to_dict()
                 bbd_data = bbd["bboxes"]
                 with manager.create_data("BboxesData") as altered_bbx:
+                    if delete_all_team_id: # TODO adapt logic
+                        pass
                     if delete_all_player_id:
                         # --- bulk delete; iterate each entry O(n)
                         for entry in bbd_data:
@@ -149,12 +169,13 @@ class BoundingBoxesDelete(View):
                             bbox = BboxData(**entry)
                             altered_bbx.bboxes.append(bbox)
                     else:
-                        # --- single edit; O(n)
+                        # --- single delete; O(n)
                         for entry in bbd_data:
                             if entry.get("id") == bbox_id:
                                 continue
                             bbox = BboxData(**entry)
-                            altered_bbx.bboxes.append(bbox) 
+                            altered_bbx.bboxes.append(bbox)
+                            
             logging.info(f"Successfully created new temporary data with id: {altered_bbx.id}")
 
             with transaction.atomic():

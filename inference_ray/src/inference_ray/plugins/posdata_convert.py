@@ -162,6 +162,9 @@ class PosDataConvert(
                     PITCH_SIZE_X = parameters["field_length"]
                     PITCH_SIZE_Y = parameters["field_width"]
                     
+                    if not parameters["team_id_ball"]:
+                        raise ValueError("Please specify 'team_id_ball' for kinexon tracking data.")
+                    
                 elif parameters["format"] == "dfl":
                     from datetime import datetime
                     # TODO: memory-efficient solution using etree iterparse -> https://lxml.de/3.2/parsing.html#iterparse-and-iterwalk
@@ -222,12 +225,14 @@ class PosDataConvert(
                 
                 if "kickoff_time" in meta_dict:
                     meta_dict["kickoff_time"] = int(meta_dict["kickoff_time"] - unique_timestamps.min())
-                
-                # df[df.columns[0]] = df[df.columns[0]].apply(lambda x: x - unique_timestamps.min())
+
                 # NOTE: checks if specified fps parameter is in an applicable range
-                freq = unique_timestamps[1] - unique_timestamps[0]
-                origin_fps = 1000/freq
+                # freq = unique_timestamps[1] - unique_timestamps[0]
+                diffs = unique_timestamps[1:] - unique_timestamps[:-1]
+                freq = diffs.mean()
+                origin_fps = 1000. / freq
                 actual_fps = origin_fps
+                
                 if parameters["fps"] > 0:
                     if parameters["fps"] > origin_fps:
                         raise ValueError("framerate needs to be set lower than the original framerate.")
@@ -238,16 +243,27 @@ class PosDataConvert(
                         df = df[df[df.columns[0]].isin(selected_timestamps)]  # keeps all rows where 'timestamp' is in the selected list
                 # else:
                 #    raise ValueError("framerate needs to be larger than zero.")
-                
                 meta_dict["fps"] = actual_fps
                 
-                df[df.columns[0]] = df[df.columns[0]] - unique_timestamps.min()  # reset timestamps to zero    
-            
+                # reset timestamps to zero
+                # df[df.columns[0]] = df[df.columns[0]].apply(lambda x: x - unique_timestamps.min())
+                # df[df.columns[0]] = df[df.columns[0]] - unique_timestamps.min()     
+
                 # map player and team ids
-                if not is_numeric_dtype(df["team_id"].dtype):
-                    unique_teams = df["team_id"].unique()
-                    for i, team_label in enumerate(unique_teams, start=1):
-                        # df.loc[df["team_id"] == team_label, "team_id"] = col
+                # if not is_numeric_dtype(df["team_id"].dtype):
+                unique_teams = df["team_id"].unique()
+                
+                if parameters["format"] == "kinexon":
+                    ball_id = parameters["team_id_ball"]
+                elif parameters["format"] == "dfl":
+                    ball_id = 'BALL'
+                    
+                df["team_id"].replace(ball_id, 1)
+                meta_dict["team_ids"].update({ 1 : ball_id})
+
+                for i, team_label in enumerate(unique_teams, start=2):    
+                    # df.loc[df["team_id"] == team_label, "team_id"] = i
+                    if team_label != ball_id:
                         df["team_id"] = df["team_id"].replace(team_label, i)
                         meta_dict["team_ids"].update({ i : team_label})
 
@@ -270,6 +286,12 @@ class PosDataConvert(
                     lambda x: [list(row) for row in x.itertuples(index=False)],
                     include_groups=False
                 )
+                
+                # TODO: create a series starting with 0 that adds the frequency float (casted to int)
+                # problem is however, timestamps are repeated throughout the column such that i can not simply sum up (N=(N-1)+freq)
+                # solution requires a mask that is applied with the specific frequency
+                # Idea: do this after group aggregation, this removes duplicates and we can focus on setting the correct timestamps!
+                
                 del df
                 py_dict = grouped_dict.to_dict()
                 del grouped_dict

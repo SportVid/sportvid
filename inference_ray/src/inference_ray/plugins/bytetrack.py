@@ -176,10 +176,11 @@ class ByteTrack(
                         #     'game_section': "",
                         #     'det_score': score
                         # }
-                        
+                        unique_bbox_id = int(str(frame_info["frame_id"]) + str(frame_info["track_id"]))
                         # NOTE: now using a compressed version of results
                         bbox = [
                             id, 0, 0, x_norm + (w_norm / 2), y_norm + h_norm, 
+                            unique_bbox_id,
                             x_norm, y_norm, w_norm, h_norm, score
                         ]
                         bboxes_dict[frame_time].append(bbox)
