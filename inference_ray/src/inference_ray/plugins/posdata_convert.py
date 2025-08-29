@@ -220,13 +220,12 @@ class PosDataConvert(
                     df["pos_x"] = df["pos_x"] / PITCH_SIZE_X  # normalize to a range of [0,1]
                     df["pos_y"] = (MAX_Y - df["pos_y"]) / PITCH_SIZE_Y  # inverted Y-axis, images start at top left corner
             
-                # ---- FPS filtering
-                unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
-                
+
                 if "kickoff_time" in meta_dict:
                     meta_dict["kickoff_time"] = int(meta_dict["kickoff_time"] - unique_timestamps.min())
 
-                # NOTE: checks if specified fps parameter is in an applicable range
+                # ---- FPS filtering: checks if specified fps parameter is in an applicable range
+                unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
                 # freq = unique_timestamps[1] - unique_timestamps[0]
                 diffs = unique_timestamps[1:] - unique_timestamps[:-1]
                 freq = diffs.mean()

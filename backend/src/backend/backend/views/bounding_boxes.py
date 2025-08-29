@@ -155,7 +155,7 @@ class BoundingBoxesDelete(View):
             if delete_all_player_id and player_id_to_delete:
                 CH='ALL_PLAYER_DEL'
             if delete_all_team_id and team_id_to_delete and not player_id_to_delete:
-                CH='COMPLETEL_TEAM_DEL'
+                CH='COMPLETE_TEAM_DEL'
             if not CH: return JsonResponse({"status": "error", "type": "missing_args"})
             else: logging.info(f'running {CH} delete op. on bbox data...')
   
