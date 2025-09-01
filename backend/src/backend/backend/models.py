@@ -58,32 +58,6 @@ class TibavaUser(AbstractUser):
         return self.username
 
 
-class TrackingData(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.CASCADE
-    )
-    name = models.CharField(max_length=256)
-    file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
-    meta_file = models.UUIDField(blank=True, null=True)
-    ext = models.CharField(default="", max_length=256)
-    meta_ext = models.CharField(default="", max_length=256)
-    date = models.DateTimeField(auto_now_add=True)
-    file_type = models.CharField(default="", max_length=256)
-    
-    def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
-        return {
-            "name": self.name,
-            "file": self.file.hex,
-            "meta_file": self.meta_file.hex if self.meta_file else None,
-            "id": self.id.hex,
-            "ext": self.ext,
-            "meta_ext": self.meta_ext,
-            "date": self.date,
-            "file_type": self.file_type
-        }
-
-
 class Video(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(
@@ -140,6 +114,36 @@ class Video(models.Model):
                     video=new_video_db, include_annotations=include_annotations
                 )
         return new_video_db  # FIXME
+
+
+class TrackingData(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.CASCADE
+    )
+    video = models.ForeignKey(Video, blank=True, null=True, on_delete=models.CASCADE)
+    name = models.CharField(max_length=256)
+    file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
+    meta_file = models.UUIDField(blank=True, null=True)
+    ext = models.CharField(default="", max_length=256)
+    meta_ext = models.CharField(default="", max_length=256)
+    date = models.DateTimeField(auto_now_add=True)
+    file_type = models.CharField(default="", max_length=256)
+    
+    def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
+        result = {
+            "name": self.name,
+            "file": self.file.hex,
+            "meta_file": self.meta_file.hex if self.meta_file else None,
+            "id": self.id.hex,
+            "ext": self.ext,
+            "meta_ext": self.meta_ext,
+            "date": self.date,
+            "file_type": self.file_type
+        }
+        if include_refs_hashes:
+            result["video_id"] = self.video.id.hex
+        return result
 
 
 @receiver_with_multiple_senders(signal=post_delete, senders=[Video,TrackingData])

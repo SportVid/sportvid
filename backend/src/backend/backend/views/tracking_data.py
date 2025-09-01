@@ -48,6 +48,7 @@ class TrackingDataUpload(View):
             
             tracking_data_id_uuid = uuid.uuid4()
             tracking_data_id = tracking_data_id_uuid.hex
+            video_db = Video.objects.get(id=request.POST.get("video_id"))
             
             if "file" in request.FILES:
                 output_dir = media_dir_to_file(tracking_data_id)
@@ -73,7 +74,8 @@ class TrackingDataUpload(View):
                     "name": request.POST.get("title"),
                     "ext": td_ext,
                     "file_type": request.POST.get("format"),
-                    "owner": request.user
+                    "owner": request.user,
+                    "video": video_db
                 }
             
                 meta_ext = ""
@@ -119,8 +121,6 @@ class TrackingDataUpload(View):
                     analyser_params.append({"name": "fps", "value": request.POST.get("fps")})
                 if request.POST.get("delimiter"):
                     analyser_params.append({"name": "delimiter", "value": request.POST.get("delimiter")})
-                
-                video_db = Video.objects.get(id=request.POST.get("video_id"))
                 if request.POST.get("format") == "kinexon":
                     analyser_params.extend([
                         {"name": "field_length", "value": video_db.field_length},

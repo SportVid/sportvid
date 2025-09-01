@@ -123,6 +123,7 @@ class PosDataConvert(
         import json
         import numpy as np
         import pandas as pd
+        pd.set_option('future.no_silent_downcasting', True)
         
         from collections import defaultdict
         from datetime import timezone
@@ -149,7 +150,7 @@ class PosDataConvert(
                         "y in m": "pos_y"
                     })
                     
-                    # rearrange indices
+                    # rearrange indices to keep it consistent with dfl
                     cols = list(df.columns)
                     pos_x, pos_y, gs = cols.index('pos_x'), cols.index('pos_y'), cols.index('game_section')
                     cols[pos_x], cols[pos_y], cols[gs] = cols[gs], cols[pos_x], cols[pos_y]
@@ -181,7 +182,8 @@ class PosDataConvert(
                         t_data,
                         stylesheet=StringIO(DFL_XSL),
                         xpath='//record'
-                    )                 
+                    )
+                    # transform timestamps            
                     df[df.columns[0]] = df[df.columns[0]].apply(lambda x: int(datetime.fromisoformat(x).timestamp()*1000))
                     
                     with inputs["meta_data"] as meta_data:
@@ -220,7 +222,6 @@ class PosDataConvert(
                     df["pos_x"] = df["pos_x"] / PITCH_SIZE_X  # normalize to a range of [0,1]
                     df["pos_y"] = (MAX_Y - df["pos_y"]) / PITCH_SIZE_Y  # inverted Y-axis, images start at top left corner
             
-
                 if "kickoff_time" in meta_dict:
                     meta_dict["kickoff_time"] = int(meta_dict["kickoff_time"] - unique_timestamps.min())
 
@@ -229,20 +230,86 @@ class PosDataConvert(
                 # freq = unique_timestamps[1] - unique_timestamps[0]
                 diffs = unique_timestamps[1:] - unique_timestamps[:-1]
                 freq = diffs.mean()
-                origin_fps = 1000. / freq
+                origin_fps = int(np.rint(1000./freq))
                 actual_fps = origin_fps
                 
+                step_size = 0
                 if parameters["fps"] > 0:
                     if parameters["fps"] > origin_fps:
                         raise ValueError("framerate needs to be set lower than the original framerate.")
                     else:
                         actual_fps = parameters["fps"]
-                        step_size = np.int32(origin_fps/actual_fps)  # compute step size for filtering
+                        
+                        pos_downsample_fps = []
+                        for i in range(origin_fps-1,0,-1):
+                            if origin_fps % i == 0: pos_downsample_fps.append(i)
+                        pos_fps_npy = np.asarray(pos_downsample_fps)
+                        idx = (np.abs(pos_fps_npy - actual_fps)).argmin()
+                        actual_fps = pos_fps_npy[idx]
+                        meta_dict["fps"] = actual_fps
+                        
+                        step_size = np.int8(origin_fps/actual_fps)  # compute step size for filtering
+                        # ---- calc err. of linear interpolation
+                        dev = list()
+                        df_players = df.groupby(
+                            'player_id', group_keys=False
+                        ).apply(
+                            lambda x: x.to_numpy(), 
+                            include_groups=False
+                        )
+                        actualp, subsampled = None, None
+                        for player_id in df["player_id"].unique():
+                            actualp = np.array(df_players[player_id][:,3:], dtype=np.float32)  # [[x,y]]
+                            ap_idx = np.arange(actualp.shape[0])
+                            subs_idx = ap_idx[::step_size]
+                            N = actualp.shape[0]; M = actualp.shape[1]
+
+                            subsampled = actualp[::step_size]
+                            interp = np.zeros_like(actualp)
+                            # ---
+                            for i in range(M):  # loop over X,Y & interpolates each axis separately
+                                interp[:, i] = np.interp(
+                                    ap_idx,             # actual points indices
+                                    subs_idx,           # subsampled indices
+                                    subsampled[:, i]    # actual values
+                                )
+                            interp = np.round(interp, decimals=2)
+                            
+                            # --- custom implementation
+                            # diffs = subsampled[1:] - subsampled[:-1]
+                            # diffs = np.vstack([diffs, np.array([0.,0.])])
+                            # d_xy = diffs / step_size
+
+                            # interp = np.zeros_like(actualp)
+                            # interp[0::step_size] = subsampled  # place knowns (actual data)
+                            # for step in range(1, step_size):
+                            #     if interp[step-1::step_size].shape[0] != d_xy.shape[0]:
+                            #         d_xy = d_xy[:-1]
+                            #     interp_pts = interp[step-1::step_size] + d_xy  # missing 1 value; last point is missing, so pad it
+                            #     if interp[step::step_size].shape[0] != interp_pts.shape[0]: # remove last diff
+                            #         interp_pts = interp_pts[:-1]
+                            #     interp[step::step_size] = interp_pts
+                        
+                            # compute deviation
+                            err_dist = np.sqrt(np.sum((actualp - interp)**2, axis=1))  # euclidean distances
+                            is_interp = np.ones(N, dtype=bool)
+                            is_interp[subs_idx] = False  # mask to filter results
+                            mean_err = np.mean(err_dist[is_interp])  # mean (avg. err) over dist
+                            range_x = np.max(actualp[:, 0]) - np.min(actualp[:, 0])
+                            range_y = np.max(actualp[:, 1]) - np.min(actualp[:, 1])
+                            movement_scale = np.sqrt(range_x**2 + range_y**2)  # represents max possible dist, serves as a normalization factor
+                            if movement_scale > 0:
+                                dev.append((mean_err / movement_scale) * 100)
+                            else:
+                                dev.append(0.0)
+                        
+                        meta_dict["interp_err"] = np.array(dev).mean()
+                        del df_players
+                        del actualp
+                        del subsampled
+                        # ---- subsample orig. df
                         selected_timestamps = unique_timestamps[::step_size]
-                        df = df[df[df.columns[0]].isin(selected_timestamps)]  # keeps all rows where 'timestamp' is in the selected list
-                # else:
-                #    raise ValueError("framerate needs to be larger than zero.")
-                meta_dict["fps"] = actual_fps
+                        df = df[df[df.columns[0]].isin(selected_timestamps)]
                 
                 # reset timestamps to zero
                 # df[df.columns[0]] = df[df.columns[0]].apply(lambda x: x - unique_timestamps.min())
@@ -272,28 +339,37 @@ class PosDataConvert(
                         df["player_id"] = df["player_id"].replace(player_label, i)
                         meta_dict["player_ids"].update({ i : player_label})
                     
-                # TODO: do this while XML parsing?
+                # TODO: do this while XML parsing when implement etree iterparse
                 if parameters["format"] == "dfl":
                     df["game_section"] = df["game_section"].replace("firstHalf", 1)
                     df["game_section"] = df["game_section"].replace("secondHalf", 2)
                 
-                grouped_dict = df.groupby(
-                    'timestamp', group_keys=False
-                ).apply(
-                    # lambda x: x.to_dict(orient='records'),
-                    # lambda x: x.to_numpy().tolist(), # NOTE: numpy solution, faster but upcasts every value to float
-                    lambda x: [list(row) for row in x.itertuples(index=False)],
-                    include_groups=False
+                # grouped_data = df.groupby(
+                #     'timestamp', group_keys=False
+                # ).apply(
+                #     # lambda x: x.to_dict(orient='records'),
+                #     # NOTE: numpy solution, faster but upcasts every value to float...
+                #     # lambda x: x.to_numpy().tolist(),
+                #     lambda x: [list(row) for row in x.itertuples(index=False)],
+                #     include_groups=False
+                # )
+                # py_dict = grouped_data.to_dict()
+                # for i, k in enumerate(list(py_dict.keys())):  # reindex grouped data to correct for 
+                #     py_dict[corrected_series[i]] = py_dict.pop(k)
+                
+                grouped_data = {}
+                for timestamp, group in df.groupby('timestamp', group_keys=False):
+                    grouped_data[timestamp] = [list(row[1:]) for row in group.itertuples(index=False)]
+
+                freq = (1000. / actual_fps)
+                corrected_series = np.astype(
+                    np.rint(np.arange(0.0, len(grouped_data)*freq, step=freq)), 
+                    np.int64
                 )
-                
-                # TODO: create a series starting with 0 that adds the frequency float (casted to int)
-                # problem is however, timestamps are repeated throughout the column such that i can not simply sum up (N=(N-1)+freq)
-                # solution requires a mask that is applied with the specific frequency
-                # Idea: do this after group aggregation, this removes duplicates and we can focus on setting the correct timestamps!
-                
+                # Create final dictionary with corrected keys
+                py_dict = {corrected_series[i]: data for i, data in enumerate(grouped_data.values())}
+                del grouped_data
                 del df
-                py_dict = grouped_dict.to_dict()
-                del grouped_dict
                 # -----------------
         # ----------------- OUTPUT
         with data_manager.create_data("PositionData") as pos_data:
