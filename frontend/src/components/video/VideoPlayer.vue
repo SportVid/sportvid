@@ -21,10 +21,10 @@
           :key="position"
           :style="{
             position: 'absolute',
-            top: position[6] * videoStore.videoSize.height + 'px',
-            left: position[5] * videoStore.videoSize.width + 'px',
-            width: position[7] * videoStore.videoSize.width + 'px',
-            height: position[8] * videoStore.videoSize.height + 'px',
+            top: position[7] * videoStore.videoSize.height + 'px',
+            left: position[6] * videoStore.videoSize.width + 'px',
+            width: position[8] * videoStore.videoSize.width + 'px',
+            height: position[9] * videoStore.videoSize.height + 'px',
             border: `2px solid ${position[1]}`,
           }"
           @click="openEditBBox(position)"

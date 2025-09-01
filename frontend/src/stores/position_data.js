@@ -73,7 +73,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
       formData.append("delimiter", params.delimiter);
       formData.append("origin", params.origin);
       formData.append("team_id_ball", params.team_id_ball);
-      // formData.append("fps", params.fps);
+      formData.append("fps", params.fps);
 
       const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },

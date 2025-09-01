@@ -153,13 +153,13 @@ watch(
 
 function findFirstFrameWithHalftime(halfId) {
   return allFrameKeys.value.find((frame) =>
-    topViewStore.positionDataTopView[frame]?.some((p) => p[4] === halfId)
+    topViewStore.positionDataTopView[frame]?.some((p) => p[2] === halfId)
   );
 }
 function findLastFrameWithHalftime(halfId) {
   const reversed = [...allFrameKeys.value].reverse();
   return reversed.find((frame) =>
-    topViewStore.positionDataTopView[frame]?.some((p) => p[4] === halfId)
+    topViewStore.positionDataTopView[frame]?.some((p) => p[2] === halfId)
   );
 }
 watch(
@@ -173,11 +173,11 @@ watch(
       selectedStartFrame.value = allFrameKeys.value[0];
       selectedEndFrame.value = allFrameKeys.value[allFrameKeys.value.length - 1];
     } else if (first) {
-      selectedStartFrame.value = findFirstFrameWithHalftime("firstHalf");
-      selectedEndFrame.value = findLastFrameWithHalftime("firstHalf");
+      selectedStartFrame.value = findFirstFrameWithHalftime(1);
+      selectedEndFrame.value = findLastFrameWithHalftime(1);
     } else if (second) {
-      selectedStartFrame.value = findFirstFrameWithHalftime("secondHalf");
-      selectedEndFrame.value = findLastFrameWithHalftime("secondHalf");
+      selectedStartFrame.value = findFirstFrameWithHalftime(2);
+      selectedEndFrame.value = findLastFrameWithHalftime(2);
     }
   },
   { immediate: true }
@@ -210,8 +210,8 @@ const items = computed(() => {
     for (const p of players) {
       if (p[1] === "#000000") continue;
       if (
-        (visualizationStore.showAggregatedFirst && p[4] !== 1) ||
-        (visualizationStore.showAggregatedSecond && p[4] !== 2)
+        (visualizationStore.showAggregatedFirst && p[2] !== 1) ||
+        (visualizationStore.showAggregatedSecond && p[2] !== 2)
       ) {
         continue;
       }
@@ -247,14 +247,14 @@ const items = computed(() => {
         if (!prevPlayer) continue;
 
         if (
-          (visualizationStore.showAggregatedFirst && currPlayer[4] !== 1) ||
-          (visualizationStore.showAggregatedSecond && currPlayer[4] !== 2)
+          (visualizationStore.showAggregatedFirst && currPlayer[2] !== 1) ||
+          (visualizationStore.showAggregatedSecond && currPlayer[2] !== 2)
         ) {
           continue;
         }
 
-        const dx = (currPlayer[2] - prevPlayer[2]) * playerStore.video.field_length;
-        const dy = (currPlayer[3] - prevPlayer[3]) * playerStore.video.field_width;
+        const dx = (currPlayer[3] - prevPlayer[3]) * playerStore.video.field_length;
+        const dy = (currPlayer[4] - prevPlayer[4]) * playerStore.video.field_width;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (!distancesByPlayerId.has(currPlayer[0])) {

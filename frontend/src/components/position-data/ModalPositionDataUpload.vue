@@ -11,7 +11,7 @@
         </template>
       </v-toolbar>
 
-      <v-card-text class="pt-4">
+      <v-card-text class="pt-4" style="overflow-y: auto">
         <v-form>
           <v-text-field
             v-model="positionData.title"
@@ -92,15 +92,23 @@
             class="mt-4"
           />
 
-          <!-- <v-text-field
+          <v-text-field
             v-model="positionData.fps"
             type="number"
             min="1"
             variant="underlined"
             class="mt-2"
-            :label="$t('modal.position_data.upload.fps')"
+            :label="$t('modal.position_data.upload.fps.title')"
             prepend-icon="mdi-numeric"
-          /> -->
+          >
+            <template #append-inner>
+              <v-tooltip class="fps-tooltip" :text="$t('modal.position_data.upload.fps.tooltip')">
+                <template #activator="{ props }">
+                  <v-icon v-bind="props" color="primary">mdi-information-outline</v-icon>
+                </template>
+              </v-tooltip>
+            </template>
+          </v-text-field>
 
           <v-progress-linear
             v-if="isUploading"
@@ -158,7 +166,7 @@ const positionData = ref({
   delimiter: null,
   origin: null,
   team_id_ball: null,
-  // fps: null,
+  fps: null,
 });
 const delimiters = [
   { value: ",", title: t("modal.position_data.upload.delimiters.comma") },
@@ -220,6 +228,7 @@ const disabled = computed(() => {
 });
 
 const uploadPositionData = async () => {
+  console.log("params", positionData.value);
   await positionDataStore.uploadPositionData(positionData.value);
   dialog.value = false;
   fileValid.value = false;
@@ -250,5 +259,9 @@ watch(
 
 .terms-of-service-link:hover {
   text-decoration: underline;
+}
+
+.fps-tooltip ::v-deep .v-overlay__content {
+  background-color: rgb(var(--v-theme-primary));
 }
 </style>

@@ -26,12 +26,12 @@
               borderRadius: '50%',
               transform: 'translate(-50%, -50%)',
               top:
-                position[3] *
+                position[4] *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px',
               left:
-                position[2] *
+                position[3] *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
@@ -46,12 +46,12 @@
               position: 'absolute',
               transform: 'translate(-50%, -50%)',
               top:
-                position[3] *
+                position[4] *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px',
               left:
-                position[2] *
+                position[3] *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
@@ -546,10 +546,10 @@ const convexHullPlayer = computed(() => {
       .filter((position) => position[1] !== "#000000")
       .forEach((position) => {
         const top =
-          position[3] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+          position[4] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
           ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
         const left =
-          position[2] * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+          position[3] * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
           ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
         if (!teams[position[1]]) {
           teams[position[1]] = [];
@@ -599,10 +599,10 @@ const voronoiCells = computed(() => {
       .filter((player) => player[1] !== "#000000")
       .map((player) => {
         const top =
-          player[3] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+          player[4] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
           ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
         const left =
-          player[2] * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+          player[3] * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
           ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
         return { left, top, team_id: player[1] };
       });

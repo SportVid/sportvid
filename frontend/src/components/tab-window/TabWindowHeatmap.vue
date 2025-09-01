@@ -39,12 +39,12 @@
               borderRadius: '50%',
               transform: 'translate(-50%, -50%)',
               top:
-                position[3] *
+                position[4] *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px',
               left:
-                position[2] *
+                position[3] *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
@@ -320,10 +320,10 @@ function renderHeatmap() {
 
   const points = selectedPositions.value.map((pos) => {
     const x =
-      pos[2] * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+      pos[3] * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
       ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
     const y =
-      pos[3] * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+      pos[4] * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
       ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
     return { x: Math.round(x), y: Math.round(y), value: 1 };
   });

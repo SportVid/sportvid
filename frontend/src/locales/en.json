@@ -618,7 +618,10 @@
         "delimiter": "Select the delimiter used in the csv file",
         "origin": "Select the origin (0/0) of the coordinate system",
         "team_id_ball": "Enter the team id/ group name of the ball (optional)",
-        "fps": "Enter FPS of the position data (optional)",
+        "fps": {
+          "title": "Target FPS (downsampling to value between 1 & FPS of the dataset)",
+          "tooltip": "Higher FPS values produce more accurate results (identical positions are preserved perfectly), but calculations will take longer."
+        },
         "delimiters": {
           "comma": "Comma",
           "semicolon": "Semicolon",
@@ -661,12 +664,23 @@
     "bounding_box": {
       "edit": {
         "title": "Edit Bounding Box",
+        "modes": {
+          "bbox": "Single Box",
+          "info_bbox": "Apply to the single Bounding Box",
+          "all_player": "All Player Boxes",
+          "info_all_player": "Apply to all Bounding Boxes with the same Player-ID",
+          "all_team": "All Team Boxes",
+          "info_all_team": "Apply to all Bounding Boxes with the same Team-ID"
+        },
+        "rules": {
+          "min": "Minimum value is 1",
+          "max": "Maximum value is 999"
+        },
         "current_player_id": "Current Player-ID",
         "current_team_id": "Current Team-ID",
         "new_player_id": "New Player-ID",
         "new_team_id": "New Team-ID",
-        "same_player_id": "Apply to all Bounding Boxes with the same Player-ID",
-        "same_team_id": "Apply to all Bounding Boxes with the same Team-ID",
+        "new_team_id_picker": "Color picker",
         "success": "Bounding Box successfully updated"
       },
       "delete": {
