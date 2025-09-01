@@ -34,6 +34,7 @@ class PosDataConvertParser(Parser):
             "origin": {"parser": str, "required": False, "default": "kickoff"},
             "field_length": {"parser": float, "required": False, "default": 105.0},
             "field_width": {"parser": float, "required": False, "default": 68.0},
+            "team_id_ball": {"parser": str, "required": False, "default": "ball"}
         }
 
 
@@ -83,7 +84,8 @@ class PosDataConvert(Task):
                 "tracking_data_id": parameters.get("tracking_data_id"),
                 "origin": parameters.get("origin"),
                 "field_length": parameters.get("field_length"),
-                "field_width" : parameters.get("field_width")
+                "field_width" : parameters.get("field_width"),
+                "team_id_ball": parameters.get("team_id_ball")
             },
             inputs={**input_dict},
             outputs=["pos_data"],   # this only outputs the reference (id)
