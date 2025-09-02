@@ -83,6 +83,7 @@ class BoundingBoxesChange(View):
                             # mutate list
                             if bbx[5] == bbox_id:
                                 bbx[0] = new_player_id
+                                bbx[5] = f"{frame_id}-{new_player_id}"
                                 if new_team_id and not update_all_team_id: bbx[1] = new_team_id
                                 break
                     if update_all_player_id and current_player_id and new_player_id:
@@ -90,7 +91,9 @@ class BoundingBoxesChange(View):
                         for frame, bboxes in bbd_data.items():
                             for bbx in bboxes:
                                 if bbx[0] == current_player_id:
-                                    bbx[0] = new_player_id 
+                                    frame_id = bbx[5].split("-", 1)[0]
+                                    bbx[0] = new_player_id
+                                    bbx[5] = f"{frame_id}-{new_player_id}"
                                     if new_team_id and update_all_team_id: bbx[1] = new_team_id
                     # --- bulk team edit (all frames, no player_id changes)
                     if (current_team_id is not None and new_team_id is not None) and (
