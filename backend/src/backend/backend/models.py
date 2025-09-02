@@ -148,9 +148,16 @@ class TrackingData(models.Model):
 
 @receiver_with_multiple_senders(signal=post_delete, senders=[Video,TrackingData])
 def delete_file(sender, instance, **kwargs):
-    logger.info(f"Deleting file {instance.id.hex} of user {instance.owner.username}")
+    logger.info(f"Deleting file(s) of user {instance.owner.username}")
     path = media_path_to_file(instance.id.hex, instance.ext)
-    if os.path.exists(path): os.remove(path)
+    if os.path.exists(path): 
+        os.remove(path)
+        logger.info(f'Removed file with id: {instance.id.hex}')
+    if sender == TrackingData:
+        meta_path = media_path_to_file(instance.meta_file.hex, instance.meta_ext)
+        if os.path.exists(meta_path): 
+            os.remove(meta_path)
+            logger.info(f'Removed file with id: {instance.meta_file.hex}')
 
 
 class Plugin(models.Model):

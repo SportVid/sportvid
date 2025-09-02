@@ -1,4 +1,5 @@
 import logging
+import os
 
 from typing import Dict, List, Callable
 
@@ -62,6 +63,10 @@ class PosDataConvert(Task):
             plugin_run_db=plugin_run,
             manager=manager,
         )
+        
+        if parameters.get("format") not in ['dfl', 'kinexon']:
+            raise ValueError("'format' has to be either one of ['dfl', 'kinexon'], other formats are not supported yet for conversion.")
+        
         # obtain ref. object from DB to position data table
         tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
         
@@ -105,7 +110,21 @@ class PosDataConvert(Task):
         
         # --------> OUTPUT
         with transaction.atomic():
-            with result[1]["pos_data"] as pos_data:
+            with result[1]["pos_data"] as pos_data:       
+                td_id = parameters.get("tracking_data_id")
+                print(type(pos_data))
+                if pos_data.pos == {}: # no result, so clean up
+                    # manager.delete(tracking_data_db.pk)
+                    cache_path = os.path.join(settings.DATA_CACHE_ROOT, f"{tracking_data_db.pk}.json")
+                    if os.path.exists(cache_path): os.remove(cache_path)
+                    count, _ = TrackingData.objects.filter(
+                        id=parameters.get("tracking_data_id")
+                    ).delete()
+                    plugin_run.status = "ERROR"
+                    plugin_run.save()
+                    if count:
+                        logging.info(f"Successfully updated DB and deleted old data with id {parameters.get('tracking_data_id')}.")
+                    td_id = None
                 # saves analyser results to the database (PluginRunResult)
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
@@ -113,10 +132,11 @@ class PosDataConvert(Task):
                     name="pos_data",
                     type=PluginRunResult.TYPE_POS,
                 )
+                    
         # output results to the backend
         return {
             "plugin_run": plugin_run.id.hex,
             "plugin_run_results": [plugin_run_result_db.id.hex],
             "data": {"pos_data": pos_data.id},
-            "tracking_data_id": parameters.get("tracking_data_id")
+            "tracking_data_id": td_id
         }

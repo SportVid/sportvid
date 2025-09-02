@@ -149,9 +149,10 @@ class AnalyserPluginManager(Manager):
             route = app.get("deployed_app_config", {}).get("route_prefix", "")
             is_running = app.get("status", "DEPLOY_FAILED") == "RUNNING"
             if model_name in running_model_map:
-                logging.warning(
-                    f"The same plugin is running several times {model_name}"
-                )
+                pass
+                # logging.warning(
+                #     f"The same plugin is running several times {model_name}"
+                # )
             running_model_map[model_name] = {
                 "plugin": model_name,
                 "route": route,
@@ -160,7 +161,7 @@ class AnalyserPluginManager(Manager):
 
         for name, plugin_cls in self._plugins.items():
             if name not in running_model_map:
-                logging.warning(f"Plugin {name} is not running")
+                # logging.warning(f"Plugin {name} is not running")
                 continue
             running_model_map[name].update(
                 {
@@ -216,7 +217,7 @@ class AnalyserPluginManager(Manager):
 
         plugin_to_run = plugins[plugin]
 
-        print(f"{self.base_url}{plugin_to_run['route']}", flush=True)
+        # logging.info(f"{self.base_url}{plugin_to_run['route']}", flush=True)
         try:
             results = requests.post(
                 f"{self.base_url}{plugin_to_run['route']}",
