@@ -72,7 +72,6 @@ class AnalyserClient:
             # data = data_manager.load(data.id)
             """Lazy function (generator) to read a file piece by piece.
             Default chunk size: 1k"""
-            # TODO: manager.dump_to_stream expects a data_id (str)
             for x in self.manager.dump_to_stream(data.id):
                 yield analyser_pb2.UploadDataRequest(
                     id=data.id, data_encoded=x["data_encoded"]

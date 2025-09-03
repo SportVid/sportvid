@@ -151,7 +151,7 @@ class ByteTrack(
 
                 bboxes_dict = defaultdict(list)
                 for i, frame_info in enumerate(results):
-                    frame_time = int((i/args.fps)*1000)
+                    frame_time = round((i/args.fps)*1000.)
                     for id, score, box in zip(
                         frame_info["track_ids"],
                         frame_info["track_scores"],

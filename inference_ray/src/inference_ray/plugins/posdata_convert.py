@@ -154,15 +154,6 @@ class PosDataConvert(
         df = pd.DataFrame.from_records(data_records)
         del data_records
         
-        # Optimize dtypes
-        df = df.astype({
-            'player_id': 'category',
-            'team_id': 'category',
-            'game_section': 'int8',
-            'pos_x': 'float32',
-            'pos_y': 'float32'
-        })
-
         tree = etree.parse(m_data)
         root = tree.getroot()
 
@@ -215,7 +206,15 @@ class PosDataConvert(
                     logging.error(f"Failed to parse tracking data due to an exception: {e}", exc_info=True)
                 # -----------------
         def post_process_df(df):
-            # ----------------- POST PROCESS 
+            # ----------------- POST PROCESS
+            # optimize dtypes
+            df = df.astype({
+                'player_id': 'category',
+                'team_id': 'category',
+                'game_section': 'int8',
+                'pos_x': 'float32',
+                'pos_y': 'float32'
+            })
             df = df.loc[:, ~df.columns.str.contains('^Unnamed')]  # remove empty columns
             # ---- Data/Coords normalization
             # origin (0,0)^T is at the kickoff, i.e. x values left of kickoff are negative & y values below kickoff are negative
@@ -239,7 +238,7 @@ class PosDataConvert(
             actual_fps = origin_fps
             
             step_size = 0
-            if parameters["fps"] > 0:
+            if parameters["fps"] > 0 and (parameters["fps"] != origin_fps):
                 if parameters["fps"] > origin_fps:
                     raise ValueError("framerate needs to be set lower than the original framerate.")
                 else:
@@ -335,7 +334,7 @@ class PosDataConvert(
                 # df["team_id"] = df["team_id"].replace(team_label, i)
                 # df.loc[df["team_id"] == team_label, "team_id"] = i
                 self.meta_dict["team_ids"].update({ i : team_label})
-            if not is_numeric_dtype(df["player_id"].dtype):
+            if not is_numeric_dtype(df["player_id"].cat.categories.dtype):
                 unique_players = df["player_id"].unique()
                 for i, player_label in enumerate(unique_players, start=1):
                     df["player_id"] = df["player_id"].cat.rename_categories({player_label: i})

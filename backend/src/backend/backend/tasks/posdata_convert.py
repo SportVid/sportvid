@@ -112,7 +112,6 @@ class PosDataConvert(Task):
         with transaction.atomic():
             with result[1]["pos_data"] as pos_data:       
                 td_id = parameters.get("tracking_data_id")
-                print(type(pos_data))
                 if pos_data.pos == {}: # no result, so clean up
                     # manager.delete(tracking_data_db.pk)
                     cache_path = os.path.join(settings.DATA_CACHE_ROOT, f"{tracking_data_db.pk}.json")
@@ -131,8 +130,7 @@ class PosDataConvert(Task):
                     data_id=pos_data.id,
                     name="pos_data",
                     type=PluginRunResult.TYPE_POS,
-                )
-                    
+                )       
         # output results to the backend
         return {
             "plugin_run": plugin_run.id.hex,
