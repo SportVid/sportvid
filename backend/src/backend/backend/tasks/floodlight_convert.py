@@ -58,10 +58,24 @@ class FloodlightConvert(Task):
         )
         # obtain ref. object from DB to position data table
         tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
-        
-        # TODO: should we rather transfer binaries instead of using the FSHandler?
-        tracking_data_ = self.upload_td(client, tracking_data_db.file.hex, tracking_data_db.ext)  # uses the FSHandler, file is zipped before transfer
 
+        # TODO: should we rather transfer binaries instead of using the FSHandler?
+        # ---
+        # tdb_fp = media_path_to_file(tracking_data_db.file.hex, tracking_data_db.ext)
+        # NOTE: trying to use upload_data() from analyser client
+        # need to create data object in advance...
+        
+        # tracking_data_ = manager.create_data("TrackingData") # file is already uploaded as a media file
+        # with tracking_data_: # actually create the data
+            # import os
+            # TODO: how to create the file properly, write it as a binary?
+            # tracking_data_.load_file_as_bytes(tdb_fp, ext=tracking_data_db.ext)  
+        # logging.error(tracking_data_)
+        # data_id = client.upload_data(tracking_data_)
+        
+        tracking_data_ = self.upload_td(client, tracking_data_db.file.hex, tracking_data_db.ext)  # uses the FSHandler, file is zipped before transfer
+        # ---
+    
         input_dict = {"tracking_data": tracking_data_}
         if tracking_data_db.meta_ext != "":
             meta_data_ = self.upload_td(client, tracking_data_db.meta_file.hex, tracking_data_db.meta_ext)

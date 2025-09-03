@@ -26,12 +26,6 @@ class Task:
     def upload_td(self, client: TaskAnalyserClient, file_hex: str, file_ext: str) -> tuple[str, str]:
         td_file = media_path_to_file(file_hex, file_ext)
         return client.upload_file(td_file)
-    
-    def upload_td_from_stream(self, client: TaskAnalyserClient, tracking_data: TrackingData) -> str:
-        td_file = media_path_to_file(tracking_data.file.hex, tracking_data.ext)
-        td_file_data_id = client.upload_data(td_file)
-        
-        return td_file_data_id
 
     def run_analyser(
         self,

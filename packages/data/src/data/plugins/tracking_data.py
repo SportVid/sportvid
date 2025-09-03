@@ -1,4 +1,5 @@
 import logging
+import zipfile
 
 from ..manager import DataManager
 from ..data import Data
@@ -40,6 +41,7 @@ class TrackingData(Data):
         
     def open_file(self, mode="r"):
         assert self.check_fs(), "No fs registered"
+        # NOTE: creates a ZiPExtFile object returned by ZipFile.open()
         return self.fs.open_file(f"tracking_data.{self.ext}", mode)
 
     def load_file_from_stream(self, data_stream: Iterable) -> None:
