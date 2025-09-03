@@ -299,11 +299,11 @@ export const useCalibrationAssetStore = defineStore(
       calibrationAssetUpdateSuccess,
       calibrationAssetDeleteSuccess,
     };
-  },
-  {
-    persist: {
-      pick: ["marker", "videoMarker", "calibrationAssetId"],
-      storage: sessionStorage,
-    },
   }
+  // {
+  //   persist: {
+  //     pick: ["marker", "videoMarker", "calibrationAssetId"],
+  //     storage: sessionStorage,
+  //   },
+  // }
 );

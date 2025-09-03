@@ -147,10 +147,10 @@ export const useBboxesStore = defineStore("bboxes", () => {
       );
       console.log("res", res);
       if (res.data.status === "ok") {
-        bboxDataActive.value = res.data.entry.bboxes;
         topViewStore.transformBBoxToPositionDataTopView(
           calibrationAssetStore.calibrationAssetId,
           bboxPluginRunId.value
+          // res.data.entry.bboxes
         );
         // await loadBboxData(bboxPluginRunId.value);
         // bboxDataActive.value = res.data.entry.bboxes

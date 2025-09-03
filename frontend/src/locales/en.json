@@ -558,8 +558,13 @@
       "progress": "Progress",
       "status": "Status",
       "delete": {
+        "title": "Delete plugin runs",
+        "all": "Delete all plugin runs",
+        "plugin": "Delete plugin related plugin runs",
+        "video": "Delete video related plugin runs",
+        "selected": "Delete manual selected plugin runs",
         "success": "All plugin runs successfully deleted",
-        "confirm": "Delete all plugin runs? This cannot be undone."
+        "confirm": "Delete plugin runs? This cannot be undone."
       }
     },
     "tutorial": {

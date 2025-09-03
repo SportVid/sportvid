@@ -111,9 +111,13 @@ const videosProgress = computed(() => {
   const progress = {};
   videos.value.forEach((video) => {
     const runs = pluginRunStore.forVideo(video.id);
-    progress[video.id] =
-      (runs.filter((r) => r.status !== "RUNNING" && r.status !== "QUEUED").length / runs.length) *
-      100;
+    if (runs.length === 0) {
+      progress[video.id] = 0;
+    } else {
+      progress[video.id] =
+        (runs.filter((r) => r.status !== "RUNNING" && r.status !== "QUEUED").length / runs.length) *
+        100;
+    }
   });
   return progress;
 });

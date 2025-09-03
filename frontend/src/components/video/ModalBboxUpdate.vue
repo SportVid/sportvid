@@ -190,7 +190,7 @@
 
         <v-btn
           @click="updateBboxData"
-          :disabled="!bboxData.newPlayerId || !bboxData.newTeamId"
+          :disabled="bboxData.newPlayerId == null || bboxData.newTeamId == null"
           class="mt-4"
         >
           {{ $t("button.update") }}
@@ -198,7 +198,7 @@
 
         <v-btn
           @click="deleteBboxData"
-          :disabled="!bboxData.newPlayerId || !bboxData.newTeamId"
+          :disabled="bboxData.newPlayerId == null || bboxData.newTeamId == null"
           class="mt-4 ml-4"
         >
           {{ $t("button.delete") }}

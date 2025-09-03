@@ -189,19 +189,41 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
   };
 
   const pluginRunDeleteSuccess = ref(false);
-  const deleteAll = async () => {
-    if (!confirm(t("modal.history.delete.confirm"))) return;
+  const deletePlugins = async ({
+    pluginRuns,
+    all = false,
+    plugin = null,
+    videoId = null,
+    ids = [],
+  } = {}) => {
+    let pluginList = [];
+
+    if (all) {
+      pluginList = ["all"];
+    } else {
+      if (plugin) {
+        pluginList.push(...pluginRuns.filter((run) => run.type === plugin).map((run) => run.id));
+      }
+      if (videoId) {
+        pluginList.push(...pluginRuns.map((run) => run.id));
+      }
+      if (ids.length > 0) {
+        pluginList.push(...ids);
+      }
+      pluginList = [...new Set(pluginList)];
+    }
+
     try {
       const res = await axios.post(`${config.API_LOCATION}/plugin/run/delete`, {
-        plugin_list: ["all"],
+        plugin_list: pluginList,
       });
+
       if (res.data && res.data.status === "ok") {
         clearStore();
         pluginRunDeleteSuccess.value = true;
-        console.log("All plugin runs deleted");
       }
     } catch (err) {
-      console.error("Failed to delete all plugin runs:", err);
+      console.error("Failed to delete plugin runs:", err);
     }
     return false;
   };
@@ -216,7 +238,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     clearStore,
     deleteItems,
     updateAll,
-    deleteAll,
+    deletePlugins,
     pluginRunDeleteSuccess,
   };
 });

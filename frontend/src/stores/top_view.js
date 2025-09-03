@@ -89,9 +89,19 @@ export const useTopViewStore = defineStore(
 
     const bboxesStore = useBboxesStore();
     const calibrationAssetStore = useCalibrationAssetStore();
-    function transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId) {
+    function transformBBoxToPositionDataTopView(
+      calibrationAssetId,
+      bytetrackPluginId,
+      updatedBboxes = null
+    ) {
       calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
-      bboxesStore.loadBboxData(bytetrackPluginId);
+
+      if (updatedBboxes) {
+        bboxesStore.bboxDataActive = updatedBboxes;
+        bboxesStore.bboxDataLoaded = true;
+      } else {
+        bboxesStore.loadBboxData(bytetrackPluginId);
+      }
 
       if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
         // const _parsedData = JSON.parse(bboxesStore.bboxDataActive);
@@ -116,28 +126,6 @@ export const useTopViewStore = defineStore(
               return b;
             });
           }
-
-          // const _bboxDataTopView = ref({});
-          // for (const [time, boxes] of Object.entries(_bboxDataInterpolated)) {
-          //   _bboxDataTopView.value[time] = boxes.map((b) => {
-          //     const { x, y } = calibrationAssetStore.applyHomography(
-          //       calibrationAssetStore.calibrationMatrix,
-          //       { x: b.top_x, y: b.top_y }
-          //     );
-          //     return { ...b, pos_x: x, pos_y: y };
-          //   });
-          // }
-          // const times = Object.keys(_bboxDataTopView.value)
-          //   .map(Number)
-          //   .sort((a, b) => a - b);
-          // if (times.length > 0) {
-          //   const firstTimeKey = String(times[0]);
-          //   const arr = _bboxDataTopView.value[firstTimeKey];
-          //   if (Array.isArray(arr) && arr.length > 0) {
-          //     arr[0] = { ...arr[0], team_id: "red" };
-          //   }
-          // }
-          // positionDataTopView.value = _bboxDataTopView.value;
         }
       }
     }
