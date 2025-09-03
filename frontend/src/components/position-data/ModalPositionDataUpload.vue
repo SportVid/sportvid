@@ -48,7 +48,7 @@
 
           <v-file-input
             v-if="positionData.format === 'dfl'"
-            v-model="positionData.meta_data"
+            v-model="positionData.metaData"
             :rules="[validateFile]"
             :label="$t('modal.position_data.upload.meta_data')"
             prepend-icon="mdi-file-upload"
@@ -83,7 +83,7 @@
 
           <v-text-field
             v-if="positionData.format === 'kinexon'"
-            v-model="positionData.team_id_ball"
+            v-model="positionData.teamIdBall"
             variant="underlined"
             :label="$t('modal.position_data.upload.team_id_ball')"
             clearable
@@ -162,10 +162,10 @@ const positionData = ref({
   title: null,
   format: null,
   file: null,
-  meta_data: null,
+  metaData: null,
   delimiter: null,
   origin: null,
-  team_id_ball: null,
+  teamIdBall: null,
   fps: null,
 });
 const delimiters = [
@@ -213,7 +213,7 @@ const disabled = computed(() => {
   ) {
     return true;
   }
-  if (positionData.value.format === "dfl" && !positionData.value.meta_data) {
+  if (positionData.value.format === "dfl" && !positionData.value.metaData) {
     return true;
   }
   if (
@@ -228,7 +228,6 @@ const disabled = computed(() => {
 });
 
 const uploadPositionData = async () => {
-  console.log("params", positionData.value);
   await positionDataStore.uploadPositionData(positionData.value);
   dialog.value = false;
   fileValid.value = false;

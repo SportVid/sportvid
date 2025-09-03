@@ -48,7 +48,7 @@
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
-              backgroundColor: position[1],
+              backgroundColor: visualizationStore.getTeamColor(position[1]),
             }"
           />
         </template>
@@ -155,11 +155,13 @@ import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import ModalPositionDataTeamColors from "@/components/position-data/ModalPositionDataTeamColors.vue";
+import { useVisualizationStore } from "@/stores/visualization";
 import h337 from "heatmap.js";
 import { toRgb } from "@/plugins/helpers";
 
 const topViewStore = useTopViewStore();
 const videoStore = useVideoStore();
+const visualizationStore = useVisualizationStore();
 
 const showModalPositionDataTeamColors = ref(false);
 
@@ -272,7 +274,7 @@ const playerColors = computed(() => {
   const all = Object.values(topViewStore.positionDataTopView).flat();
   const map = {};
   all.forEach((p) => {
-    map[p[0]] = p[1];
+    map[p[0]] = visualizationStore.getTeamColor(p[1]);
   });
   return map;
 });

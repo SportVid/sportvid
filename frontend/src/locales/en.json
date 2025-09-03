@@ -138,7 +138,8 @@
         "upload": "Upload position data",
         "select": "Select position data"
       }
-    }
+    },
+    "fps_deviation": "Downsampling & Interpolation introduces a maximum frame-by-frame deviation of up to {interpErr}% compared to the original frame rate."
   },
   "heatmap": {
     "display_settings": {
@@ -673,9 +674,13 @@
           "info_all_team": "Apply to all Bounding Boxes with the same Team-ID"
         },
         "rules": {
-          "min": "Minimum value is 1",
-          "max": "Maximum value is 999"
+          "player_min": "Minimum value is 1",
+          "player_max": "Maximum value is 999",
+          "player_duplicate": "This Player-ID is already used in the current frame",
+          "team_min": "Minimum value is 2",
+          "team_max": "Maximum value is 10"
         },
+        "current_box_id": "Current Box-ID",
         "current_player_id": "Current Player-ID",
         "current_team_id": "Current Team-ID",
         "new_player_id": "New Player-ID",

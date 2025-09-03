@@ -85,6 +85,7 @@ export const useTopViewStore = defineStore(
     };
 
     const positionDataTopView = ref({});
+    const metaDataTopView = ref({});
 
     const bboxesStore = useBboxesStore();
     const calibrationAssetStore = useCalibrationAssetStore();
@@ -157,6 +158,7 @@ export const useTopViewStore = defineStore(
       showMovement,
       viewMovement,
       positionDataTopView,
+      metaDataTopView,
       transformBBoxToPositionDataTopView,
     };
   }

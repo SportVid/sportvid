@@ -107,7 +107,7 @@
       <template #item="{ item, columns }">
         <tr
           :style="{
-            backgroundColor: toRgb(item.team_id, 0.7),
+            backgroundColor: toRgb(visualizationStore.getTeamColor(item.team_id), 0.7),
           }"
         >
           <td v-for="col in columns" :key="col.key">
@@ -208,7 +208,7 @@ const items = computed(() => {
     const players = topViewStore.positionDataTopView[frame];
     if (!players) continue;
     for (const p of players) {
-      if (p[1] === "#000000") continue;
+      if (p[1] === 1) continue;
       if (
         (visualizationStore.showAggregatedFirst && p[2] !== 1) ||
         (visualizationStore.showAggregatedSecond && p[2] !== 2)
@@ -241,7 +241,7 @@ const items = computed(() => {
       if (!playersPrev || !playersCurr) continue;
 
       for (const currPlayer of playersCurr) {
-        if (currPlayer[1] === "#000000") continue;
+        if (currPlayer[1] === 1) continue;
 
         const prevPlayer = playersPrev.find((p) => p[0] === currPlayer[0]);
         if (!prevPlayer) continue;

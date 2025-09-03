@@ -54,7 +54,8 @@ export const usePositionDataStore = defineStore("position_data", () => {
         })
         .filter((e) => e.results?.[0]?.data?.tracking_data_id === id);
 
-      // topViewStore.positionDataTopView = _positionData;
+      topViewStore.metaDataTopView = _positionData[0]?.results[0]?.data?.meta_data;
+      console.log("metaDataTopView", topViewStore.metaDataTopView);
       topViewStore.positionDataTopView = _positionData[0]?.results[0]?.data?.pos_data;
     }
   };
@@ -68,10 +69,10 @@ export const usePositionDataStore = defineStore("position_data", () => {
       formData.append("title", params.title);
       formData.append("format", params.format);
       formData.append("file", params.file);
-      formData.append("meta_data", params.meta_data);
+      formData.append("meta_data", params.metaData);
       formData.append("delimiter", params.delimiter);
       formData.append("origin", params.origin);
-      formData.append("team_id_ball", params.team_id_ball);
+      formData.append("team_id_ball", params.teamIdBall);
       formData.append("fps", params.fps);
 
       const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {

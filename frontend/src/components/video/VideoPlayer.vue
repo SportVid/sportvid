@@ -25,7 +25,7 @@
             left: position[6] * videoStore.videoSize.width + 'px',
             width: position[8] * videoStore.videoSize.width + 'px',
             height: position[9] * videoStore.videoSize.height + 'px',
-            border: `2px solid ${position[1]}`,
+            border: `2px solid ${visualizationStore.getTeamColor(position[1])}`,
           }"
           @click="openEditBBox(position)"
         >
@@ -33,18 +33,25 @@
             activator="parent"
             location="top"
             class="bounding-box-tooltip"
-            :style="{ '--tooltip-bg': toRgb(position[1], 0.7) }"
+            :style="{ '--tooltip-bg': toRgb(visualizationStore.getTeamColor(position[1]), 0.7) }"
             interactive
           >
             <div>
-              <!-- <div><strong>player_id:</strong> {{ position[0] }}</div>
-            <div><strong>team_id:</strong> {{ position[1] }}</div> -->
-              <div v-for="(value, index) in position" :key="index">
-                <strong>{{ labels[index] }}:</strong> {{ value }}
+              <div>
+                <strong>Box-ID: {{ position[5] }}</strong>
               </div>
+              <v-divider class="my-1" />
+              <div>Player-ID: {{ position[0] }}</div>
+              <div>Team-ID: {{ position[1] }}</div>
+              <!-- <div v-for="(value, index) in position" :key="index">
+                <strong>{{ labels[index] }}:</strong> {{ value }}
+              </div> -->
             </div>
           </v-tooltip>
-          <div class="bounding-box-player-id" :style="{ color: position[1] }">
+          <div
+            class="bounding-box-player-id"
+            :style="{ color: visualizationStore.getTeamColor(position[1]) }"
+          >
             {{ position[0] }}
           </div>
         </div>
@@ -86,7 +93,7 @@
       </div>
     </v-row>
 
-    <ModalBBoxUpdate v-model="editDialog" :bbox="editBBox" @update="updateBBox" />
+    <ModalBBoxUpdate v-model="editDialog" :bbox="editBBox" />
 
     <v-row ref="videoControl" class="video-control mt-6">
       <v-btn @click="deltaSeek(-1)" size="small">
@@ -174,6 +181,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
+import { useVisualizationStore } from "@/stores/visualization";
 import { getTimecode } from "@/plugins/time";
 import ModalBBoxUpdate from "./ModalBboxUpdate.vue";
 import { toRgb } from "@/plugins/helpers";
@@ -182,6 +190,7 @@ const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
+const visualizationStore = useVisualizationStore();
 
 const labels = [
   "player_id",

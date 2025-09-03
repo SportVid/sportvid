@@ -17,7 +17,7 @@
 
         <template v-for="position in topViewStore.positionDataTopView[currentTime]" :key="position">
           <div
-            v-if="position[1] !== '#000000'"
+            v-if="position[1] !== 1"
             v-show="topViewStore.showItems"
             :style="{
               position: 'absolute',
@@ -35,7 +35,7 @@
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
-              backgroundColor: position[1],
+              backgroundColor: visualizationStore.getTeamColor(position[1]),
             }"
           />
 
@@ -192,8 +192,8 @@
             v-for="(hull, team) in convexHullPlayer[currentTime]"
             :key="team"
             :points="hull.map((p) => `${p.left},${p.top}`).join(' ')"
-            :stroke="team"
-            :fill="team"
+            :stroke="visualizationStore.getTeamColor(team)"
+            :fill="visualizationStore.getTeamColor(team)"
             fill-opacity="0.4"
           />
         </svg>
@@ -213,7 +213,7 @@
             :key="cell"
             :points="cell.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')"
             stroke="gray"
-            :fill="cell.team_id"
+            :fill="visualizationStore.getTeamColor(cell.team_id)"
             fill-opacity="0.4"
           />
         </svg>
@@ -365,6 +365,22 @@
       <div class="time-code ml-2">
         {{ getTimecode(currentTime) }}
       </div>
+
+      <v-tooltip
+        v-if="topViewStore.metaDataTopView.interp_err > 0"
+        class="fps-tooltip"
+        :text="
+          $t('position_data.fps_deviation', {
+            interpErr: topViewStore.metaDataTopView.interp_err.toFixed(1),
+          })
+        "
+      >
+        <template #activator="{ props }">
+          <v-icon v-bind="props" color="warning" size="small" class="ml-2 mt-1"
+            >mdi-information-outline</v-icon
+          >
+        </template>
+      </v-tooltip>
     </v-row>
 
     <v-row ref="videoSlider">
@@ -387,9 +403,8 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "@/stores/top_view";
-import { useBboxesStore } from "@/stores/bboxes";
 import { useVideoStore } from "@/stores/video";
-import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import { useVisualizationStore } from "@/stores/visualization";
 import { getTimecode } from "@/plugins/time";
 import { Delaunay } from "d3-delaunay";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
@@ -399,9 +414,8 @@ import ModalPositionDataTeamColors from "@/components/position-data/ModalPositio
 
 const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();
-const bboxesStore = useBboxesStore();
 const videoStore = useVideoStore();
-const calibrationAssetStore = useCalibrationAssetStore();
+const visualizationStore = useVisualizationStore();
 
 const showModalPositionDataSelect = ref(false);
 const showModalPositionDataUpload = ref(false);
@@ -543,7 +557,7 @@ const convexHullPlayer = computed(() => {
   Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
     const teams = {};
     framePositions
-      .filter((position) => position[1] !== "#000000")
+      .filter((position) => position[1] !== 1)
       .forEach((position) => {
         const top =
           position[4] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
@@ -596,7 +610,7 @@ const voronoiCells = computed(() => {
   const result = {};
   Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
     const allPlayers = framePositions
-      .filter((player) => player[1] !== "#000000")
+      .filter((player) => player[1] !== 1)
       .map((player) => {
         const top =
           player[4] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
@@ -664,5 +678,9 @@ watch(videoControl || videoSlider, (newVal) => {
 
 .menu-item .v-list-item-title {
   font-size: 12px;
+}
+
+.fps-tooltip ::v-deep .v-overlay__content {
+  background-color: rgb(var(--v-theme-primary));
 }
 </style>

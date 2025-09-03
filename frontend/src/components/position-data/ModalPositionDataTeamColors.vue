@@ -13,13 +13,13 @@
 
       <v-card-text style="overflow-y: auto">
         <v-row>
-          <v-col cols="6" v-for="team in uniqueTeamColors" :key="team" class="py-2 mt-2">
+          <v-col cols="6" v-for="(color, teamId) in teamColors" :key="team" class="py-2 mt-2">
             <v-card class="pa-2">
               <div class="mb-2 d-flex justify-center">
-                {{ team }}
+                {{ color }}
               </div>
               <div class="mb-2 d-flex justify-center">
-                <v-color-picker v-model="updatedTeamColors[team]" :modes="['rgb', 'hex']" />
+                <v-color-picker v-model="teamColors[teamId]" :modes="['rgb', 'hex']" />
               </div>
             </v-card>
           </v-col>
@@ -36,9 +36,10 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
-import { color, formatHex } from "d3";
+import { useVisualizationStore } from "@/stores/visualization";
 
 const topViewStore = useTopViewStore();
+const visualizationStore = useVisualizationStore();
 
 const props = defineProps({
   modelValue: {
@@ -64,39 +65,17 @@ watch(
   }
 );
 
-const uniqueTeamColors = computed(() => {
-  const set = new Set();
-  Object.values(topViewStore.positionDataTopView).forEach((entries) => {
-    entries.forEach((p) => {
-      if (p[1] !== "#000000") {
-        set.add(p[1]);
-      }
-    });
-  });
-  return Array.from(set);
-});
-const updatedTeamColors = ref({});
-onMounted(() => {
-  uniqueTeamColors.value.forEach((team) => {
-    updatedTeamColors.value[team] = team;
+const teamColors = ref({});
+Object.values(topViewStore.positionDataTopView).forEach((entries) => {
+  entries.forEach((p) => {
+    if (p[1] !== 1) teamColors.value[p[1]] = visualizationStore.getTeamColor(p[1]);
   });
 });
 
 function saveTeamColors() {
-  const mapping = updatedTeamColors.value;
-
-  const updatedPositionData = {};
-
-  for (const [time, entries] of Object.entries(topViewStore.positionDataTopView)) {
-    updatedPositionData[time] = entries.map((p) => {
-      if (p[1] !== "#000000") {
-        p[1] = mapping[p[1]];
-      }
-      return p;
-    });
+  for (const [teamId, newColor] of Object.entries(teamColors.value)) {
+    visualizationStore.setTeamColor(Number(teamId), newColor);
   }
-
-  topViewStore.positionDataTopView = updatedPositionData;
   dialog.value = false;
 }
 </script>

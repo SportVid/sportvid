@@ -44,7 +44,10 @@
 
                 <div class="mt-4 mb-4 d-flex justify-center" style="gap: 12px">
                   <v-chip v-if="mode.id === 'bbox'" color="#666666">
-                    {{ $t("modal.bounding_box.edit.current_player_id") }}: {{ bbox[0] }}
+                    {{ $t("modal.bounding_box.edit.current_box_id") }}: {{ bboxData.bboxId }}
+                  </v-chip>
+                  <v-chip v-if="mode.id === 'bbox'" color="#666666">
+                    {{ $t("modal.bounding_box.edit.current_player_id") }}: {{ bboxData.playerId }}
                   </v-chip>
 
                   <v-menu
@@ -60,7 +63,7 @@
                         style="border: 1px solid rgba(var(--v-theme-primary))"
                       >
                         {{ $t("modal.bounding_box.edit.current_player_id") }}:
-                        {{ currentPlayerId }}
+                        {{ bboxData.playerId }}
                       </v-chip>
                     </template>
 
@@ -68,13 +71,13 @@
                       <div
                         v-for="playerId in playerOptions"
                         :key="playerId"
-                        class="player-dot"
+                        class="dot"
                         :style="{
                           backgroundColor: toRgb(playerColors[playerId], 0.7),
                           color: '#222',
                           borderColor: toRgb(playerColors[playerId], 0.7),
                         }"
-                        @click="currentPlayerId = playerId"
+                        @click="bboxData.playerId = playerId"
                       >
                         {{ playerId }}
                       </div>
@@ -82,7 +85,8 @@
                   </v-menu>
 
                   <v-chip v-if="mode.id === 'bbox' || mode.id === 'allPlayer'" color="#666666">
-                    {{ $t("modal.bounding_box.edit.current_team_id") }}: {{ bbox[1] }}
+                    {{ $t("modal.bounding_box.edit.current_team_id") }}:
+                    {{ bboxData.teamId }}
                   </v-chip>
 
                   <v-menu v-if="mode.id === 'allTeam'" transition="scale-transition">
@@ -94,19 +98,19 @@
                         style="border: 1px solid rgba(var(--v-theme-primary))"
                       >
                         {{ $t("modal.bounding_box.edit.current_team_id") }}:
-                        {{ currentTeamId }}
+                        {{ bboxData.teamId }}
                       </v-chip>
                     </template>
                     <div class="player-team-selector mt-2 pa-1">
                       <div
                         v-for="teamId in teamOptions"
                         :key="teamId"
-                        class="team-dot"
+                        class="dot"
                         :style="{
-                          backgroundColor: toRgb(teamId, 0.7),
+                          backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.7),
                           color: '#222',
                         }"
-                        @click="currentTeamId = teamId"
+                        @click="bboxData.teamId = teamId"
                       >
                         {{ teamId }}
                       </div>
@@ -116,7 +120,7 @@
 
                 <template v-if="mode.id === 'bbox'">
                   <v-text-field
-                    v-model="newPlayerId"
+                    v-model="bboxData.newPlayerId"
                     :label="$t('modal.bounding_box.edit.new_player_id')"
                     prepend-icon="mdi-account"
                     variant="underlined"
@@ -124,43 +128,26 @@
                     step="1"
                     min="1"
                     max="999"
-                    :rules="[checkNumber]"
+                    :rules="[checkPlayerId]"
                   />
 
-                  <v-row>
-                    <v-col cols="5">
-                      <v-text-field
-                        v-model="newTeamId"
-                        :label="$t('modal.bounding_box.edit.new_team_id')"
-                        prepend-icon="mdi-account-group"
-                        variant="underlined"
-                        class="mt-3"
-                      />
-                    </v-col>
-
-                    <v-col cols="7" class="d-flex align-center">
-                      <v-expansion-panels>
-                        <v-expansion-panel variant="underlined" class="mb-1">
-                          <v-expansion-panel-title>
-                            {{ $t("modal.bounding_box.edit.new_team_id_picker") }}
-                          </v-expansion-panel-title>
-                          <v-expansion-panel-text>
-                            <v-color-picker
-                              v-model="newTeamId"
-                              mode="hex"
-                              hide-inputs
-                              width="250px"
-                            />
-                          </v-expansion-panel-text>
-                        </v-expansion-panel>
-                      </v-expansion-panels>
-                    </v-col>
-                  </v-row>
+                  <v-text-field
+                    v-model="bboxData.newTeamId"
+                    :label="$t('modal.bounding_box.edit.new_team_id')"
+                    prepend-icon="mdi-account-group"
+                    variant="underlined"
+                    class="mt-3"
+                    type="number"
+                    step="1"
+                    min="2"
+                    max="10"
+                    :rules="[checkTeamId]"
+                  />
                 </template>
 
                 <template v-if="mode.id === 'allPlayer'">
                   <v-text-field
-                    v-model="newPlayerId"
+                    v-model="bboxData.newPlayerId"
                     :label="$t('modal.bounding_box.edit.new_player_id')"
                     prepend-icon="mdi-account"
                     variant="underlined"
@@ -168,81 +155,55 @@
                     step="1"
                     min="1"
                     max="999"
-                    :rules="[checkNumber]"
+                    :rules="[checkPlayerId]"
                   />
 
-                  <v-row>
-                    <v-col cols="5">
-                      <v-text-field
-                        v-model="newTeamId"
-                        :label="$t('modal.bounding_box.edit.new_team_id')"
-                        prepend-icon="mdi-account-group"
-                        variant="underlined"
-                        class="mt-3"
-                      />
-                    </v-col>
-
-                    <v-col cols="7" class="d-flex align-center">
-                      <v-expansion-panels>
-                        <v-expansion-panel variant="underlined" class="mb-1">
-                          <v-expansion-panel-title>
-                            {{ $t("modal.bounding_box.edit.new_team_id_picker") }}
-                          </v-expansion-panel-title>
-                          <v-expansion-panel-text>
-                            <v-color-picker
-                              v-model="newTeamId"
-                              mode="hex"
-                              hide-inputs
-                              width="250px"
-                            />
-                          </v-expansion-panel-text>
-                        </v-expansion-panel>
-                      </v-expansion-panels>
-                    </v-col>
-                  </v-row>
+                  <v-text-field
+                    v-model="bboxData.newTeamId"
+                    :label="$t('modal.bounding_box.edit.new_team_id')"
+                    prepend-icon="mdi-account-group"
+                    variant="underlined"
+                    class="mt-3"
+                    type="number"
+                    step="1"
+                    min="2"
+                    max="10"
+                    :rules="[checkTeamId]"
+                  />
                 </template>
 
                 <template v-if="mode.id === 'allTeam'">
-                  <v-row>
-                    <v-col cols="5">
-                      <v-text-field
-                        v-model="newTeamId"
-                        :label="$t('modal.bounding_box.edit.new_team_id')"
-                        prepend-icon="mdi-account-group"
-                        variant="underlined"
-                        class="mt-3"
-                      />
-                    </v-col>
-
-                    <v-col cols="7" class="d-flex align-center">
-                      <v-expansion-panels>
-                        <v-expansion-panel variant="underlined" class="mb-1">
-                          <v-expansion-panel-title>
-                            {{ $t("modal.bounding_box.edit.new_team_id_picker") }}
-                          </v-expansion-panel-title>
-                          <v-expansion-panel-text>
-                            <v-color-picker
-                              v-model="newTeamId"
-                              mode="hex"
-                              hide-inputs
-                              width="250px"
-                            />
-                          </v-expansion-panel-text>
-                        </v-expansion-panel>
-                      </v-expansion-panels>
-                    </v-col>
-                  </v-row>
+                  <v-text-field
+                    v-model="bboxData.newTeamId"
+                    :label="$t('modal.bounding_box.edit.new_team_id')"
+                    prepend-icon="mdi-account-group"
+                    variant="underlined"
+                    class="mt-3"
+                    type="number"
+                    step="1"
+                    min="2"
+                    max="10"
+                    :rules="[checkTeamId]"
+                  />
                 </template>
               </v-tabs-window-item>
             </v-tabs-window>
           </v-col>
         </v-row>
 
-        <v-btn @click="update" :disabled="!newPlayerId || !newTeamId" class="mt-4">
+        <v-btn
+          @click="updateBboxData"
+          :disabled="!bboxData.newPlayerId || !bboxData.newTeamId"
+          class="mt-4"
+        >
           {{ $t("button.update") }}
         </v-btn>
 
-        <v-btn @click="delete" :disabled="!newPlayerId || !newTeamId" class="mt-4 ml-4">
+        <v-btn
+          @click="delete"
+          :disabled="!bboxData.newPlayerId || !bboxData.newTeamId"
+          class="mt-4 ml-4"
+        >
           {{ $t("button.delete") }}
         </v-btn>
       </v-card-text>
@@ -254,9 +215,15 @@
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useTopViewStore } from "@/stores/top_view";
+import { useBboxesStore } from "@/stores/bboxes";
+import { usePlayerStore } from "@/stores/player";
+import { useVisualizationStore } from "@/stores/visualization";
 import { toRgb } from "@/plugins/helpers";
 
 const topViewStore = useTopViewStore();
+const bboxesStore = useBboxesStore();
+const playerStore = usePlayerStore();
+const visualizationStore = useVisualizationStore();
 
 const { t } = useI18n();
 
@@ -285,33 +252,33 @@ watch(
   }
 );
 
-const currentPlayerId = ref(props.bbox?.[0] || "");
-const newPlayerId = ref("");
-const currentTeamId = ref(props.bbox?.[1] || "");
-const newTeamId = ref("");
-const updateSamePlayerId = ref(false);
-const updateSameTeamId = ref(false);
+const bboxData = ref({});
 watch(
   () => [props.bbox, dialog.value],
   ([bbox, open]) => {
     if (open && bbox) {
-      newPlayerId.value = bbox[0];
-      newTeamId.value = bbox[1];
+      bboxData.value.bytetrackRunId = bboxesStore.bboxPluginRunId;
+      bboxData.value.bboxId = bbox[5];
+      bboxData.value.playerId = bbox[0];
+      bboxData.value.teamId = bbox[1];
+      bboxData.value.newPlayerId = bbox[0];
+      bboxData.value.newTeamId = bbox[1];
+      bboxData.value.updateAllPlayerId = false;
+      bboxData.value.updateAllTeamId = false;
     }
   },
   { immediate: true }
 );
-async function update() {
-  emit("update", {
-    player_id: newPlayerId.value,
-    team_id: newTeamId.value,
-    updateSamePlayerId: updateSamePlayerId.value,
-    updateSameTeamId: updateSameTeamId.value,
-  });
-  dialog.value = false;
-}
 
-const selectedMode = ref("bytetrack");
+const updateBboxData = async () => {
+  if (selectedMode.value === "allPlayer") bboxData.value.updateAllPlayerId = true;
+  if (selectedMode.value === "allTeam") bboxData.value.updateAllTeamId = true;
+
+  await bboxesStore.updateBboxData(bboxData.value);
+  dialog.value = false;
+};
+
+const selectedMode = ref("bbox");
 const BboxUpdateModes = ref([
   { id: "bbox", name: t("modal.bounding_box.edit.modes.bbox") },
   { id: "allPlayer", name: t("modal.bounding_box.edit.modes.all_player") },
@@ -330,28 +297,45 @@ const playerColors = computed(() => {
   const all = Object.values(topViewStore.positionDataTopView).flat();
   const map = {};
   all.forEach((p) => {
-    map[p[0]] = p[1];
-  });
-  return map;
-});
-const teamColors = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
-  const map = {};
-  all.forEach((p) => {
-    map[p[1]] = p[1];
+    map[p[0]] = visualizationStore.getTeamColor(p[1]);
   });
   return map;
 });
 
-const checkNumber = (value) => {
+const teamColors = ref({});
+Object.values(topViewStore.positionDataTopView).forEach((entries) => {
+  entries.forEach((p) => {
+    if (p[1] !== 1) teamColors.value[p[1]] = visualizationStore.getTeamColor(p[1]);
+  });
+});
+
+const checkPlayerId = (value) => {
+  const playerIds = topViewStore.positionDataTopView[playerStore.currentTime].map((p) => p[0]);
+
   if (!value) {
     return t("field.required");
   }
   if (value < 1) {
-    return t("modal.bounding_box.edit.rules.min");
+    return t("modal.bounding_box.edit.rules.player_min");
   }
   if (value > 999) {
-    return t("modal.bounding_box.edit.rules.max");
+    return t("modal.bounding_box.edit.rules.player_max");
+  }
+  if (playerIds.includes(Number(value))) {
+    return t("modal.bounding_box.edit.rules.player_duplicate");
+  }
+  return true;
+};
+
+const checkTeamId = (value) => {
+  if (!value) {
+    return t("field.required");
+  }
+  if (value < 2) {
+    return t("modal.bounding_box.edit.rules.team_min");
+  }
+  if (value > 10) {
+    return t("modal.bounding_box.edit.rules.team_max");
   }
   return true;
 };
@@ -369,7 +353,7 @@ const checkNumber = (value) => {
   border: 1px solid #222;
 }
 
-.player-dot {
+.dot {
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -381,7 +365,7 @@ const checkNumber = (value) => {
   border: 1px solid transparent;
   transition: all 0.2s;
 }
-.player-dot:hover {
+.dot:hover {
   transform: scale(1.1);
 }
 
