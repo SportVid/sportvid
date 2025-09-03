@@ -50,7 +50,7 @@ class BoundingBoxesChange(View):
                     CH='SINGLE_PLAYERTEAM_ID'
             if update_all_player_id and current_player_id and new_player_id:
                 CH='BULK_PLAYER_ID'
-                if new_team_id and update_all_team_id:
+                if current_team_id and new_team_id:
                     CH='BULK_PLAYERTEAM_ID'
             if (current_team_id is not None and new_team_id is not None) and (
                 update_all_team_id and not new_player_id): 
@@ -94,7 +94,7 @@ class BoundingBoxesChange(View):
                                     frame_id = bbx[5].split("-", 1)[0]
                                     bbx[0] = new_player_id
                                     bbx[5] = f"{frame_id}-{new_player_id}"
-                                    if new_team_id and update_all_team_id: bbx[1] = new_team_id
+                                    if new_team_id: bbx[1] = new_team_id
                     # --- bulk team edit (all frames, no player_id changes)
                     if (current_team_id is not None and new_team_id is not None) and (
                         update_all_team_id and not new_player_id): # change team exclusively
@@ -134,7 +134,7 @@ class BoundingBoxesChange(View):
 
  
 class BoundingBoxesDelete(View):
-    @decode_and_authenticate(require_name=True)
+    @decode_and_authenticate(require_name=False)
     def post(self, request, data):
         try:
             bbox_id = data.get("bbox_id")
@@ -148,7 +148,7 @@ class BoundingBoxesDelete(View):
                     delete_all_player_id = True
             delete_all_team_id = False
             if "delete_all_team_id" in data:
-                if data.get("delete_all_player_id") in ['true', 'True', True]:
+                if data.get("delete_all_team_id") in ['true', 'True', True]:
                     delete_all_team_id = True
   
             # possible update ops.
