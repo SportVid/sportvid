@@ -103,16 +103,16 @@
                     </template>
                     <div class="player-team-selector mt-2 pa-1">
                       <div
-                        v-for="teamId in teamOptions"
-                        :key="teamId"
+                        v-for="teamId in teamOptions.filter((t) => !t.isNew)"
+                        :key="teamId.id"
                         class="dot"
                         :style="{
-                          backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.7),
+                          backgroundColor: toRgb(visualizationStore.getTeamColor(teamId.id), 0.7),
                           color: '#222',
                         }"
                         @click="bboxData.teamId = teamId"
                       >
-                        {{ teamId }}
+                        {{ teamId.id }}
                       </div>
                     </div>
                   </v-menu>
@@ -131,16 +131,15 @@
                     :rules="[checkPlayerId]"
                   />
 
-                  <v-text-field
+                  <v-select
                     v-model="bboxData.newTeamId"
+                    :items="teamOptions"
+                    item-title="label"
+                    item-value="id"
                     :label="$t('modal.bounding_box.edit.new_team_id')"
                     prepend-icon="mdi-account-group"
                     variant="underlined"
                     class="mt-3"
-                    type="number"
-                    step="1"
-                    min="2"
-                    max="10"
                     :rules="[checkTeamId]"
                   />
                 </template>
@@ -158,31 +157,29 @@
                     :rules="[checkPlayerId]"
                   />
 
-                  <v-text-field
+                  <v-select
                     v-model="bboxData.newTeamId"
+                    :items="teamOptions"
+                    item-title="label"
+                    item-value="id"
                     :label="$t('modal.bounding_box.edit.new_team_id')"
                     prepend-icon="mdi-account-group"
                     variant="underlined"
                     class="mt-3"
-                    type="number"
-                    step="1"
-                    min="2"
-                    max="10"
                     :rules="[checkTeamId]"
                   />
                 </template>
 
                 <template v-if="mode.id === 'allTeam'">
-                  <v-text-field
+                  <v-select
                     v-model="bboxData.newTeamId"
+                    :items="teamOptions"
+                    item-title="label"
+                    item-value="id"
                     :label="$t('modal.bounding_box.edit.new_team_id')"
                     prepend-icon="mdi-account-group"
                     variant="underlined"
                     class="mt-3"
-                    type="number"
-                    step="1"
-                    min="2"
-                    max="10"
                     :rules="[checkTeamId]"
                   />
                 </template>
@@ -200,7 +197,7 @@
         </v-btn>
 
         <v-btn
-          @click="delete"
+          @click="deleteBboxData"
           :disabled="!bboxData.newPlayerId || !bboxData.newTeamId"
           class="mt-4 ml-4"
         >
@@ -263,18 +260,26 @@ watch(
       bboxData.value.teamId = bbox[1];
       bboxData.value.newPlayerId = bbox[0];
       bboxData.value.newTeamId = bbox[1];
-      bboxData.value.updateAllPlayerId = false;
-      bboxData.value.updateAllTeamId = false;
+      bboxData.value.applyAllPlayerId = false;
+      bboxData.value.applyAllTeamId = false;
     }
   },
   { immediate: true }
 );
 
 const updateBboxData = async () => {
-  if (selectedMode.value === "allPlayer") bboxData.value.updateAllPlayerId = true;
-  if (selectedMode.value === "allTeam") bboxData.value.updateAllTeamId = true;
+  if (selectedMode.value === "allPlayer") bboxData.value.applyAllPlayerId = true;
+  if (selectedMode.value === "allTeam") bboxData.value.applyAllTeamId = true;
 
   await bboxesStore.updateBboxData(bboxData.value);
+  dialog.value = false;
+};
+
+const deleteBboxData = async () => {
+  if (selectedMode.value === "allPlayer") bboxData.value.applyAllPlayerId = true;
+  if (selectedMode.value === "allTeam") bboxData.value.applyAllTeamId = true;
+
+  await bboxesStore.deleteBboxData(bboxData.value);
   dialog.value = false;
 };
 
@@ -289,10 +294,6 @@ const playerOptions = computed(() => {
   const all = Object.values(topViewStore.positionDataTopView).flat();
   return [...new Set(all.map((p) => p[0]))].sort((a, b) => a - b);
 });
-const teamOptions = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
-  return [...new Set(all.map((p) => p[1]))].sort((a, b) => a - b);
-});
 const playerColors = computed(() => {
   const all = Object.values(topViewStore.positionDataTopView).flat();
   const map = {};
@@ -301,12 +302,30 @@ const playerColors = computed(() => {
   });
   return map;
 });
+// const teamOptions = computed(() => {
+//   const all = Object.values(topViewStore.positionDataTopView).flat();
+//   return [...new Set(all.map((p) => p[1]))].sort((a, b) => a - b);
+// });
+const teamOptions = computed(() => {
+  const all = Object.values(topViewStore.positionDataTopView).flat();
+  const existing = [...new Set(all.map((p) => p[1]))].sort((a, b) => a - b);
 
-const teamColors = ref({});
-Object.values(topViewStore.positionDataTopView).forEach((entries) => {
-  entries.forEach((p) => {
-    if (p[1] !== 1) teamColors.value[p[1]] = visualizationStore.getTeamColor(p[1]);
-  });
+  let nextId = 2;
+  while (existing.includes(nextId) && nextId <= 10) {
+    nextId++;
+  }
+
+  const options = existing.map((id) => ({
+    id,
+    label: String(id),
+    isNew: false,
+  }));
+
+  if (nextId <= 10) {
+    options.push({ id: nextId, label: `New (${nextId})`, isNew: true });
+  }
+
+  return options;
 });
 
 const checkPlayerId = (value) => {
@@ -321,7 +340,7 @@ const checkPlayerId = (value) => {
   if (value > 999) {
     return t("modal.bounding_box.edit.rules.player_max");
   }
-  if (playerIds.includes(Number(value))) {
+  if (playerIds.includes(Number(value)) && Number(value) !== bboxData.value.playerId) {
     return t("modal.bounding_box.edit.rules.player_duplicate");
   }
   return true;
@@ -330,12 +349,6 @@ const checkPlayerId = (value) => {
 const checkTeamId = (value) => {
   if (!value) {
     return t("field.required");
-  }
-  if (value < 2) {
-    return t("modal.bounding_box.edit.rules.team_min");
-  }
-  if (value > 10) {
-    return t("modal.bounding_box.edit.rules.team_max");
   }
   return true;
 };

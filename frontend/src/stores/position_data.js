@@ -6,12 +6,14 @@ import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useTopViewStore } from "./top_view";
+import { useBboxesStore } from "./bboxes";
 
 export const usePositionDataStore = defineStore("position_data", () => {
   const playerStore = usePlayerStore();
   const pluginRunStore = usePluginRunStore();
   const pluginRunResultStore = usePluginRunResultStore();
   const topViewStore = useTopViewStore();
+  const bboxesStore = useBboxesStore();
 
   const positionDataList = ref([]);
   const positionDataId = ref(null);
@@ -55,8 +57,9 @@ export const usePositionDataStore = defineStore("position_data", () => {
         .filter((e) => e.results?.[0]?.data?.tracking_data_id === id);
 
       topViewStore.metaDataTopView = _positionData[0]?.results[0]?.data?.meta_data;
-      console.log("metaDataTopView", topViewStore.metaDataTopView);
       topViewStore.positionDataTopView = _positionData[0]?.results[0]?.data?.pos_data;
+      bboxesStore.bboxDataActive = {};
+      bboxesStore.bboxDataInterpolated = {};
     }
   };
 

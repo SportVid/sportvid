@@ -38,14 +38,11 @@
           >
             <div>
               <div>
-                <strong>Box-ID: {{ position[5] }}</strong>
+                <strong>{{ $t("modal.bounding_box.tooltip.box_id") }}: {{ position[5] }}</strong>
               </div>
               <v-divider class="my-1" />
-              <div>Player-ID: {{ position[0] }}</div>
-              <div>Team-ID: {{ position[1] }}</div>
-              <!-- <div v-for="(value, index) in position" :key="index">
-                <strong>{{ labels[index] }}:</strong> {{ value }}
-              </div> -->
+              <div>{{ $t("modal.bounding_box.tooltip.player_id") }}: {{ position[0] }}</div>
+              <div>{{ $t("modal.bounding_box.tooltip.team_id") }}: {{ position[1] }}</div>
             </div>
           </v-tooltip>
           <div
@@ -397,76 +394,7 @@ const editDialog = ref(false);
 const editBBox = ref(null);
 function openEditBBox(bbox) {
   editBBox.value = bbox;
-  console.log("edit bbox", editBBox.value);
   editDialog.value = true;
-}
-function updateBBox({ player_id, team_id, updateSamePlayerId, updateSameTeamId }) {
-  if (!editBBox.value) return;
-
-  const allBboxes =
-    updateSamePlayerId || updateSameTeamId
-      ? Object.values(bboxesStore.bboxDataInterpolated).flat()
-      : [];
-
-  const oldPlayerId = String(editBBox.value[0]);
-  const oldTeamId = String(editBBox.value[1]);
-
-  if (updateSamePlayerId) {
-    allBboxes.forEach((bbox) => {
-      if (String(bbox[0]) === oldPlayerId) {
-        bbox[0] = player_id;
-        bbox[1] = team_id;
-      }
-    });
-  } else if (updateSameTeamId) {
-    allBboxes.forEach((bbox) => {
-      if (String(bbox[1]) === oldTeamId) {
-        bbox[1] = team_id;
-      }
-    });
-  } else {
-    editBBox.value[0] = player_id;
-    editBBox.value[1] = team_id;
-  }
-}
-function updateBBoxBackend({ player_id, team_id, updateSamePlayerId, updateSameTeamId }) {
-  if (!editBBox.value) return;
-
-  const bboxes = bboxesStore.bboxDataActive;
-
-  if (updateSamePlayerId) {
-    const oldPlayerId = String(editBBox.value.player_id);
-    bboxes.forEach((bbox) => {
-      if (String(bbox.player_id) === oldPlayerId) bbox.player_id = player_id;
-    });
-  } else {
-    const bbox = bboxes.find(
-      (b) =>
-        String(b.player_id) === String(editBBox.value.player_id) &&
-        String(b.image_id) === String(editBBox.value.image_id)
-    );
-    if (bbox) bbox.player_id = player_id;
-  }
-
-  if (updateSameTeamId) {
-    const oldTeamId = String(editBBox.value.team_id);
-    bboxes.forEach((bbox) => {
-      if (String(bbox.team_id) === oldTeamId) bbox.team_id = team_id;
-    });
-  } else {
-    const bbox = bboxes.find(
-      (b) =>
-        String(b.team_id) === String(editBBox.value.team_id) &&
-        String(b.image_id) === String(editBBox.value.image_id)
-    );
-    if (bbox) bbox.team_id = team_id;
-  }
-
-  // Nach Änderung: Interpolierte Daten neu berechnen
-  const _bboxDataInterpolated = bboxesStore.interpolateBboxData(bboxes, playerStore.videoFPS, 30);
-  bboxesStore.bboxDataInterpolated = groupDataByTime(_bboxDataInterpolated);
-
-  // Backend-Update -> siehe calibrationAssetStore.updateCalibrationAsset
 }
 </script>
 

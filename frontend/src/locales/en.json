@@ -659,10 +659,16 @@
         "success": "Position data successfully deleted"
       },
       "team_colors": {
-        "title": "Change team colors"
+        "title": "Change team colors",
+        "team_id": "Team-ID"
       }
     },
     "bounding_box": {
+      "tooltip": {
+        "box_id": "Box-ID",
+        "player_id": "Player-ID",
+        "team_id": "Team-ID"
+      },
       "edit": {
         "title": "Edit Bounding Box",
         "modes": {
@@ -676,9 +682,7 @@
         "rules": {
           "player_min": "Minimum value is 1",
           "player_max": "Maximum value is 999",
-          "player_duplicate": "This Player-ID is already used in the current frame",
-          "team_min": "Minimum value is 2",
-          "team_max": "Maximum value is 10"
+          "player_duplicate": "This Player-ID belongs to another player in the current frame"
         },
         "current_box_id": "Current Box-ID",
         "current_player_id": "Current Player-ID",
@@ -686,10 +690,12 @@
         "new_player_id": "New Player-ID",
         "new_team_id": "New Team-ID",
         "new_team_id_picker": "Color picker",
-        "success": "Bounding Box successfully updated"
+        "single_success": "Bounding Box successfully updated",
+        "all_success": "Bounding Boxes successfully updated"
       },
       "delete": {
-        "success": "Bounding Box successfully deleted"
+        "single_success": "Bounding Box successfully deleted",
+        "all_success": "Bounding Boxes successfully deleted"
       }
     }
   }

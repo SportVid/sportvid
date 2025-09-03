@@ -16,10 +16,10 @@
           <v-col cols="6" v-for="(color, teamId) in teamColors" :key="team" class="py-2 mt-2">
             <v-card class="pa-2">
               <div class="mb-2 d-flex justify-center">
-                {{ color }}
+                {{ $t("modal.position_data.team_colors.team_id") }}: {{ teamId }} ({{ color }})
               </div>
               <div class="mb-2 d-flex justify-center">
-                <v-color-picker v-model="teamColors[teamId]" :modes="['rgb', 'hex']" />
+                <v-color-picker v-model="teamColors[teamId]" :modes="['hex', 'rgb']" />
               </div>
             </v-card>
           </v-col>
@@ -34,7 +34,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, watch } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVisualizationStore } from "@/stores/visualization";
 

@@ -598,14 +598,27 @@ const resetBboxDataActionSnackbar = async () => {
   showBboxDataActionSnackbar.value = true;
 };
 watch(
-  [() => bboxesStore.bboxDataUpdateSuccess, () => bboxesStore.bboxDataDeleteSuccess],
-  ([update, del]) => {
-    if (update === true) {
-      bboxDataActionMessage.value = t("modal.bounding_box.edit.success");
+  [
+    () => bboxesStore.bboxDataSingleUpdateSuccess,
+    () => bboxesStore.bboxDataUpdateSuccess,
+    () => bboxesStore.bboxDataSingleDeleteSuccess,
+    () => bboxesStore.bboxDataDeleteSuccess,
+  ],
+  ([singleUpdate, updateAll, singleDelete, deleteAll]) => {
+    if (singleUpdate) {
+      bboxDataActionMessage.value = t("modal.bounding_box.edit.single_success");
+      resetBboxDataActionSnackbar();
+      bboxesStore.bboxDataSingleUpdateSuccess = false;
+    } else if (updateAll) {
+      bboxDataActionMessage.value = t("modal.bounding_box.edit.all_success");
       resetBboxDataActionSnackbar();
       bboxesStore.bboxDataUpdateSuccess = false;
-    } else if (del === true) {
-      bboxDataActionMessage.value = t("modal.bounding_box.delete.success");
+    } else if (singleDelete) {
+      bboxDataActionMessage.value = t("modal.bounding_box.delete.single_success");
+      resetBboxDataActionSnackbar();
+      bboxesStore.bboxDataSingleDeleteSuccess = false;
+    } else if (deleteAll) {
+      bboxDataActionMessage.value = t("modal.bounding_box.delete.all_success");
       resetBboxDataActionSnackbar();
       bboxesStore.bboxDataDeleteSuccess = false;
     }
@@ -624,42 +637,6 @@ watch(
   },
   { immediate: true }
 );
-
-// const didNormalizeTeamIds = ref(false);
-// function normalizeTeamIds() {
-//   if (didNormalizeTeamIds.value) return;
-//   if (!topViewStore.positionDataTopView) return;
-
-//   const colorMapping = {
-//     0: "#808080", // grey
-//     1: "#000000", // black
-//     2: "#FF0000", // red
-//     3: "#0000FF", // blue
-//     4: "#008000", // green
-//     5: "#FFFF00", // yellow
-//     6: "#800080", // purple
-//     7: "#FFA500", // orange
-//     8: "#FFC0CB", // pink
-//     9: "#A52A2A", // brown
-//     10: "#FFFFFF", // white
-//   };
-//   const updatedPositionData = {};
-//   for (const [time, entries] of Object.entries(topViewStore.positionDataTopView)) {
-//     updatedPositionData[time] = entries.map((p) => {
-//       p[1] = colorMapping[p[1]];
-//       return p;
-//     });
-//   }
-//   topViewStore.positionDataTopView = updatedPositionData;
-//   didNormalizeTeamIds.value = true;
-// }
-// watch(
-//   () => topViewStore.positionDataTopView,
-//   () => {
-//     normalizeTeamIds();
-//   },
-//   { deep: true }
-// );
 
 watch(
   () => [
@@ -681,6 +658,13 @@ watch(
     console.log("video", playerStore.video);
   },
   { immediate: true }
+);
+
+watch(
+  () => bboxesStore.bboxDataActive,
+  (newData) => {
+    console.log("bboxDataActive-watch", newData);
+  }
 );
 </script>
 
