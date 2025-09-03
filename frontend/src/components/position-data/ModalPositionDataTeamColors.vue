@@ -11,7 +11,7 @@
         </template>
       </v-toolbar>
 
-      <v-card-text>
+      <v-card-text style="overflow-y: auto">
         <v-row>
           <v-col cols="6" v-for="team in uniqueTeamColors" :key="team" class="py-2 mt-2">
             <v-card class="pa-2">
@@ -67,7 +67,11 @@ watch(
 const uniqueTeamColors = computed(() => {
   const set = new Set();
   Object.values(topViewStore.positionDataTopView).forEach((entries) => {
-    entries.forEach((p) => set.add(p[1]));
+    entries.forEach((p) => {
+      if (p[1] !== "#000000") {
+        set.add(p[1]);
+      }
+    });
   });
   return Array.from(set);
 });
@@ -85,7 +89,9 @@ function saveTeamColors() {
 
   for (const [time, entries] of Object.entries(topViewStore.positionDataTopView)) {
     updatedPositionData[time] = entries.map((p) => {
-      p[1] = mapping[p[1]];
+      if (p[1] !== "#000000") {
+        p[1] = mapping[p[1]];
+      }
       return p;
     });
   }

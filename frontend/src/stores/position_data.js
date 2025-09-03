@@ -33,7 +33,6 @@ export const usePositionDataStore = defineStore("position_data", () => {
       const res = await axios.get(`${config.API_LOCATION}/tracking_data/list`);
       if (res.data.status === "ok") {
         positionDataList.value = res.data.entries;
-        console.log("Loaded position data list:", positionDataList.value);
       }
     } catch (error) {
       console.error("Failed to list tracking data:", error);

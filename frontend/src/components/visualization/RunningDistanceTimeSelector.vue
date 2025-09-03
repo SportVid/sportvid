@@ -279,7 +279,6 @@ function onSelectionChange() {
 }
 
 onMounted(() => {
-  console.log("mounted vis-tab");
   scope = new paper.PaperScope();
   scope.setup(canvas.value);
 
@@ -301,7 +300,6 @@ onMounted(() => {
   draw();
 });
 onBeforeUnmount(() => {
-  console.log("unmounted vis-tab");
   if (scope) {
     scope.view.onFrame = null;
     scope.view.onResize = null;
