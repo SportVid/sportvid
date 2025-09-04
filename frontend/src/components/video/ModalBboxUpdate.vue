@@ -86,7 +86,7 @@
 
                   <v-chip v-if="mode.id === 'bbox' || mode.id === 'allPlayer'" color="#666666">
                     {{ $t("modal.bounding_box.edit.current_team_id") }}:
-                    {{ bboxData.teamId }}
+                    {{ bboxData.teamId?.id ?? bboxData.teamId }}
                   </v-chip>
 
                   <v-menu v-if="mode.id === 'allTeam'" transition="scale-transition">
@@ -98,7 +98,7 @@
                         style="border: 1px solid rgba(var(--v-theme-primary))"
                       >
                         {{ $t("modal.bounding_box.edit.current_team_id") }}:
-                        {{ bboxData.teamId }}
+                        {{ bboxData.teamId?.id ?? bboxData.teamId }}
                       </v-chip>
                     </template>
                     <div class="player-team-selector mt-2 pa-1">
