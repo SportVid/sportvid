@@ -19,7 +19,7 @@ class FloodlightData(Data):
  
     def load(self) -> None:
         super().load()
-        data = self.load_dict("pos_data.yml")
+        data = self.load_dict("fl_data.yml")
         
         self.tracking_data_id = data.get("tracking_data_id") # type: ignore
 
@@ -36,7 +36,7 @@ class FloodlightData(Data):
             },
         )
 
-        with self.fs.open_file("pos.npz", "w") as f:
+        with self.fs.open_file("xy_pos.npz", "w") as f:
             np.save(f, self.xy_pos)
 
     def to_dict(self) -> dict:

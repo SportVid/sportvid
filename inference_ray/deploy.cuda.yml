@@ -21,7 +21,7 @@ applications:
             uv:
               - numpy
               - pandas
-              - floodlight
+              - floodlight==1.0.0
 
   - name: posdata_convert
     route_prefix: /posdata_convert

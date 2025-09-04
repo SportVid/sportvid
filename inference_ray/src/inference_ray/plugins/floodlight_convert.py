@@ -63,41 +63,53 @@ class FloodlightConvert(
             # read_pitch_from_mat_info_xml, 
             read_position_data_xml
         )
-        # ----------------- DATA LOADING
         if "format" not in parameters:
             raise ValueError("'format' is required for plugin execution.")
-
-        with inputs["tracking_data"] as input_data: # TrackingData   
-            with input_data.open_file() as zip_data: # ZipExtFile
-                # import inspect
-                # logging.error(inspect.signature(read_position_data_csv))
-                # pos_data = read_position_data_csv(zip_data, parameters["delimiter"])
-                with tempfile.NamedTemporaryFile(mode='w+b', suffix='.csv', delete=False) as tmp_file:
-                    tmp_file.write(zip_data.read())
-                    tmp_file_path = tmp_file.name
-                    logging.error(tmp_file_path)
-                    # TODO: see what is wrong with that shitty lib...
-                    
-                    df = pd.read_csv(tmp_file_path, delimiter=parameters["delimiter"])
-                    logging.error(df)
-                    pos_data = read_position_data_csv(tmp_file_path)
         
-                    # d_o, p_o, bs_o, ts, pitch = read_position_data_xml(ex_t_data, ex_m_data)
-                    # meta data handling
-                    # if inputs["meta_data"]:
-                    #     with inputs["meta_data"] as meta_data:
-                    #         with meta_data.open_file() as m_data:
-                    #             # NOTE: returns Tuple[Dict[str, Dict[str, List[str]]], int, int, int]
-                    #             pID_dict, no_frames, framerate, t_null = get_meta_data(m_data, parameters["delimiter"])
-                    # --------------------------------       
-                    if parameters["format"] == "kinexon": pass
-                    elif parameters["format"] == "dfl": pass   
+        logging.error(inputs)
+        # ----------------- PARSING
+        with inputs["tracking_data"] as input_data: # TrackingData   
+            with input_data.open_file() as t_data: # ZipExtFile
+                if parameters["format"] == "kinexon":
+                    with tempfile.NamedTemporaryFile(mode='w+b', suffix='.csv') as tmp_data:
+                        tmp_data.write(t_data.read())
+                        # NOTE: returns: List[XY]
+                        pos = read_position_data_csv(tmp_data.name, delimiter=parameters["delimiter"])
+                        logging.error(type(pos))
+                        for p_ in pos: 
+                            logging.error(f'{type(p_)} - {p_.xy.shape} - {p_.framerate}')
+                            sampled_data = p_.xy
+                elif parameters["format"] == "dfl":
+                    with tempfile.NamedTemporaryFile(mode='w+b', suffix='.xml') as tmp_data:  
+                        tmp_data.write(t_data.read())
+                        with inputs["meta_data"] as meta_data:
+                            with meta_data.open_file() as m_data:
+                                with tempfile.NamedTemporaryFile(mode='w+b', suffix='.xml') as tmp_meta:
+                                    tmp_meta.write(m_data.read())
+                                    # NOTE: returns: Tuple[
+                                        # Dict[str, Dict[str, XY]],
+                                        # Dict[str, Code],
+                                        # Dict[str, Code],
+                                        # Dict[str, Teamsheet],
+                                        # Pitch
+                                    # ]
+                                    data, po, bs, ts, pitch = read_position_data_xml(tmp_data.name, tmp_meta.name)
+                                    logging.error(f'{type(data)} - {type(po)} - {type(bs)} - {type(ts)} - {type(pitch)}')
+                                    # pID_dict, no_frames, framerate, t_null = get_meta_data(m_data, parameters["delimiter"])
+                                    for key in data:
+                                        logging.error(key) # 'firstHalf', 'secondHalf'
+                                        for pos_data in data[key].items():
+                                            logging.error(type(pos_data))
+                                            logging.error(pos_data[0]) # 'Home', 'Away', 'Ball'
+                                            logging.error(f'{pos_data[1]} - {type(pos_data[1].xy.shape)}') # XY object, XY.xy -> np.NDarray
+                                    sampled_data = data['firstHalf']['Home'].xy
+                                    logging.error(sampled_data)
         # ----------------- COMPUTE
         # TODO: KPI computation
-        xy_pos = np.zeros(shape=(2,1), dtype=np.float32)
-        meta_data = {"some_data": 1337}
+        xy_pos = sampled_data
+        meta_data = {"some_meta_data": 1337}
         # ----------------- OUTPUT
-        # TODO: define correct output type
+        # TODO: specify output type based on what you need, see "packages/data/src/data/plugins/tracking_data.py"
         with data_manager.create_data("FloodlightData") as fl_data:
             fl_data.name = "fl_data"
             fl_data.tracking_data_id = parameters.get('tracking_data_id') 
