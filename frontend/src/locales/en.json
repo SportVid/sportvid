@@ -563,7 +563,10 @@
         "plugin": "Delete plugin related plugin runs",
         "video": "Delete video related plugin runs",
         "selected": "Delete manual selected plugin runs",
-        "success": "All plugin runs successfully deleted",
+        "success": {
+          "all": "All plugin runs successfully deleted",
+          "selected": "Selected plugin runs successfully deleted"
+        },
         "confirm": "Delete plugin runs? This cannot be undone."
       }
     },

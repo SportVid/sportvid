@@ -184,10 +184,8 @@ const pluginRuns = computed(() => {
     .forVideo(playerStore.videoId)
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .map((pluginRun) => {
-      const results = pluginRunResultStore.forPluginRun(pluginRun.id);
-
       return {
-        id: results?.[0]?.plugin_run_id,
+        id: pluginRun.id,
         type: pluginName(pluginRun.type),
         date: pluginRun.date
           .replace("T", " ")
