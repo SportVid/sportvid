@@ -53,43 +53,37 @@ const containerHeight = ref(null);
 
 const redraw = ref(false);
 
-const hiddenStartTime = ref(playerStore.selectedTimeRange.start);
-const hiddenEndTime = ref(playerStore.selectedTimeRange.end);
-const minTime = 1.0;
-
 const duration = computed(() => playerStore.videoDuration);
 const startTime = computed(() => playerStore.selectedTimeRange.start);
 const endTime = computed(() => playerStore.selectedTimeRange.end);
-
+const hiddenStartTime = ref(playerStore.selectedTimeRange.start);
+const hiddenEndTime = ref(playerStore.selectedTimeRange.end);
+const minTime = (1000 / playerStore.videoFPS) * 10;
 watch(
-  () => startTime.value,
+  () => startTime,
   (val) => {
     hiddenStartTime.value = val;
     draw();
   }
 );
-
 watch(
-  () => endTime.value,
+  () => endTime,
   (val) => {
     hiddenEndTime.value = val;
     draw();
   }
 );
-
 watch(duration, () => {
   hiddenStartTime.value = startTime.value;
   hiddenEndTime.value = endTime.value;
   draw();
 });
-
 watch(hiddenStartTime, () => {
   nextTick(() => {
     playerStore.setSelectedTimeRangeStart(hiddenStartTime.value);
     emit("update:startTime", hiddenStartTime.value);
   });
 });
-
 watch(hiddenEndTime, () => {
   nextTick(() => {
     playerStore.setSelectedTimeRangeEnd(hiddenEndTime.value);
@@ -210,7 +204,7 @@ function drawScale() {
     } else {
       text.justification = "center";
     }
-    text.content = getTimecode(time, 2);
+    text.content = getTimecode(time);
     return text;
   });
 

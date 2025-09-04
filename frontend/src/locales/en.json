@@ -65,6 +65,7 @@
     "import": "Import",
     "run_batch_plugin": "Run Batch Plugin",
     "run_plugin": "Run Plugin",
+    "delete_plugin_runs": "Delete all plugin runs",
     "upload_video": "Upload new Video"
   },
   "field": {
@@ -126,6 +127,7 @@
       "title": "Display Settings",
       "view_bounding_box": "View bounding-boxes",
       "video_sync": "Sychronise with video",
+      "team_colors": "Change team colors",
       "view_kpis": {
         "title": "View performance indicator",
         "space_control": "Space control",
@@ -136,7 +138,8 @@
         "upload": "Upload position data",
         "select": "Select position data"
       }
-    }
+    },
+    "fps_deviation": "Downsampling & Interpolation introduces a maximum frame-by-frame deviation of up to {interpErr}% compared to the original frame rate."
   },
   "heatmap": {
     "display_settings": {
@@ -178,8 +181,8 @@
     },
     "running_distance": {
       "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
-      "id": "ID",
-      "team": "Team",
+      "player_id": "Player-ID",
+      "team_id": "Team",
       "distance": "Distance [m]"
     }
   },
@@ -553,7 +556,16 @@
       "plugin_name": "Plugin Name",
       "date": "Date",
       "progress": "Progress",
-      "status": "Status"
+      "status": "Status",
+      "delete": {
+        "title": "Delete plugin runs",
+        "all": "Delete all plugin runs",
+        "plugin": "Delete plugin related plugin runs",
+        "video": "Delete video related plugin runs",
+        "selected": "Delete manual selected plugin runs",
+        "success": "All plugin runs successfully deleted",
+        "confirm": "Delete plugin runs? This cannot be undone."
+      }
     },
     "tutorial": {
       "title": "Tutorials",
@@ -610,13 +622,22 @@
         "file": "Select the position data file",
         "meta_data": "Select the meta data file",
         "delimiter": "Select the delimiter used in the csv file",
-        "fps": "Enter FPS of the position data (optional)",
+        "origin": "Select the origin (0/0) of the coordinate system",
+        "team_id_ball": "Enter the team id/ group name of the ball (optional)",
+        "fps": {
+          "title": "Target FPS (downsampling to value between 1 & FPS of the dataset)",
+          "tooltip": "Higher FPS values produce more accurate results (identical positions are preserved perfectly), but calculations will take longer."
+        },
         "delimiters": {
           "comma": "Comma",
           "semicolon": "Semicolon",
           "tab": "Tabulator",
           "space": "Space",
           "pipe": "Pipe"
+        },
+        "origins": {
+          "kickoff": "Kickoff",
+          "bottom_left": "Bottom-Left"
         },
         "validate": {
           "file_required": "Please select a file.",
@@ -641,13 +662,45 @@
       },
       "delete": {
         "success": "Position data successfully deleted"
+      },
+      "team_colors": {
+        "title": "Change team colors",
+        "team_id": "Team-ID"
       }
     },
     "bounding_box": {
+      "tooltip": {
+        "box_id": "Box-ID",
+        "player_id": "Player-ID",
+        "team_id": "Team-ID"
+      },
       "edit": {
         "title": "Edit Bounding Box",
-        "all_ref_id": "Update all Bounding Boxes with the same ref_id",
-        "all_team_id": "Update all Bounding Boxes with the same team_id"
+        "modes": {
+          "bbox": "Single Box",
+          "info_bbox": "Apply to the single Bounding Box",
+          "all_player": "All Player Boxes",
+          "info_all_player": "Apply to all Bounding Boxes with the same Player-ID",
+          "all_team": "All Team Boxes",
+          "info_all_team": "Apply to all Bounding Boxes with the same Team-ID"
+        },
+        "rules": {
+          "player_min": "Minimum value is 1",
+          "player_max": "Maximum value is 999",
+          "player_duplicate": "This Player-ID belongs to another player in the current frame"
+        },
+        "current_box_id": "Current Box-ID",
+        "current_player_id": "Current Player-ID",
+        "current_team_id": "Current Team-ID",
+        "new_player_id": "New Player-ID",
+        "new_team_id": "New Team-ID",
+        "new_team_id_picker": "Color picker",
+        "single_success": "Bounding Box successfully updated",
+        "all_success": "Bounding Boxes successfully updated"
+      },
+      "delete": {
+        "single_success": "Bounding Box successfully deleted",
+        "all_success": "Bounding Boxes successfully deleted"
       }
     }
   }

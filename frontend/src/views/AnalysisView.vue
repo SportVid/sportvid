@@ -126,11 +126,25 @@
         <span class="text-h6">{{ positionDataActionMessage }}</span>
       </div>
     </v-snackbar>
+
+    <v-snackbar v-model="showPluginRunActionSnackbar">
+      <div class="d-flex justify-center">
+        <snackbar-icon />
+        <span class="text-h6">{{ pluginRunActionMessage }}</span>
+      </div>
+    </v-snackbar>
+
+    <v-snackbar v-model="showBboxDataActionSnackbar">
+      <div class="d-flex justify-center">
+        <snackbar-icon />
+        <span class="text-h6">{{ bboxDataActionMessage }}</span>
+      </div>
+    </v-snackbar>
   </v-main>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, watchEffect, nextTick } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
@@ -251,33 +265,47 @@ onMounted(async () => {
   }
 });
 
-watchEffect(() => {
-  if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
-    const _parsedData = JSON.parse(bboxesStore.bboxDataActive);
+// watch(
+//   () => [bboxesStore.bboxDataActive, calibrationAssetStore.calibrationMatrix, playerStore.videoFPS],
+//   () => {
+//     if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
+//       const _parsedData = JSON.parse(bboxesStore.bboxDataActive);
 
-    const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
-      _parsedData,
-      playerStore.videoFPS,
-      30
-    );
-    // bboxesStore.bboxDataInterpolated = groupDataByTime(_bboxDataInterpolated);
+//       const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
+//         _parsedData,
+//         playerStore.videoFPS,
+//         30
+//       );
+//       bboxesStore.bboxDataInterpolated = _bboxDataInterpolated;
 
-    if (calibrationAssetStore.calibrationMatrix) {
-      const _bboxDataTopView = ref({});
-      for (const [time, boxes] of Object.entries(_bboxDataInterpolated)) {
-        _bboxDataTopView.value[time] = boxes.map((b) => {
-          const { x, y } = calibrationAssetStore.applyHomography(
-            calibrationAssetStore.calibrationMatrix,
-            { x: b.top_x, y: b.top_y }
-          );
-          return { ...b, pos_x: x, pos_y: y };
-        });
-      }
-      // topViewStore.positionDataTopView = _bboxDataTopView.value;
-      // console.log("positionDataTopView", topViewStore.positionDataTopView);
-    }
-  }
-});
+//       if (calibrationAssetStore.calibrationMatrix) {
+//         const _bboxDataTopView = ref({});
+//         for (const [time, boxes] of Object.entries(_bboxDataInterpolated)) {
+//           _bboxDataTopView.value[time] = boxes.map((b) => {
+//             const { x, y } = calibrationAssetStore.applyHomography(
+//               calibrationAssetStore.calibrationMatrix,
+//               { x: b.top_x, y: b.top_y }
+//             );
+//             return { ...b, pos_x: x, pos_y: y };
+//           });
+//         }
+//         const times = Object.keys(_bboxDataTopView.value)
+//           .map(Number)
+//           .sort((a, b) => a - b);
+//         if (times.length > 0) {
+//           const firstTimeKey = String(times[0]);
+//           const arr = _bboxDataTopView.value[firstTimeKey];
+//           if (Array.isArray(arr) && arr.length > 0) {
+//             arr[0] = { ...arr[0], team_id: "red" };
+//           }
+//         }
+//         topViewStore.positionDataTopView = _bboxDataTopView.value;
+//         console.log("positionDataTopView", topViewStore.positionDataTopView);
+//       }
+//     }
+//   },
+//   { immediate: true }
+// );
 
 const shotsList = computed(() =>
   shotStore.shotsList.map((e) => ({ text: e.name, value: e.index }))
@@ -523,7 +551,6 @@ const resetPositionDataActionSnackbar = async () => {
   showPositionDataActionSnackbar.value = false;
   await nextTick();
   showPositionDataActionSnackbar.value = true;
-  // bboxesStore.positionDataUploadSuccess = false;
 };
 watch(
   [
@@ -544,6 +571,56 @@ watch(
       positionDataActionMessage.value = t("modal.position_data.delete.success");
       resetPositionDataActionSnackbar();
       positionDataStore.positionDataDeleteSuccess = false;
+    }
+  }
+);
+
+const showPluginRunActionSnackbar = ref(false);
+const pluginRunActionMessage = ref("");
+const resetPluginRunActionSnackbar = async () => {
+  showPluginRunActionSnackbar.value = false;
+  await nextTick();
+  showPluginRunActionSnackbar.value = true;
+};
+watch([() => pluginRunStore.pluginRunDeleteSuccess], ([del]) => {
+  if (del === true) {
+    pluginRunActionMessage.value = t("modal.history.delete.success");
+    resetPluginRunActionSnackbar();
+    positionDataStore.positionDataDeleteSuccess = false;
+  }
+});
+
+const showBboxDataActionSnackbar = ref(false);
+const bboxDataActionMessage = ref("");
+const resetBboxDataActionSnackbar = async () => {
+  showBboxDataActionSnackbar.value = false;
+  await nextTick();
+  showBboxDataActionSnackbar.value = true;
+};
+watch(
+  [
+    () => bboxesStore.bboxDataSingleUpdateSuccess,
+    () => bboxesStore.bboxDataUpdateSuccess,
+    () => bboxesStore.bboxDataSingleDeleteSuccess,
+    () => bboxesStore.bboxDataDeleteSuccess,
+  ],
+  ([singleUpdate, updateAll, singleDelete, deleteAll]) => {
+    if (singleUpdate) {
+      bboxDataActionMessage.value = t("modal.bounding_box.edit.single_success");
+      resetBboxDataActionSnackbar();
+      bboxesStore.bboxDataSingleUpdateSuccess = false;
+    } else if (updateAll) {
+      bboxDataActionMessage.value = t("modal.bounding_box.edit.all_success");
+      resetBboxDataActionSnackbar();
+      bboxesStore.bboxDataUpdateSuccess = false;
+    } else if (singleDelete) {
+      bboxDataActionMessage.value = t("modal.bounding_box.delete.single_success");
+      resetBboxDataActionSnackbar();
+      bboxesStore.bboxDataSingleDeleteSuccess = false;
+    } else if (deleteAll) {
+      bboxDataActionMessage.value = t("modal.bounding_box.delete.all_success");
+      resetBboxDataActionSnackbar();
+      bboxesStore.bboxDataDeleteSuccess = false;
     }
   }
 );
@@ -581,6 +658,13 @@ watch(
     console.log("video", playerStore.video);
   },
   { immediate: true }
+);
+
+watch(
+  () => bboxesStore.bboxDataActive,
+  (newData) => {
+    console.log("bboxDataActive-watch", newData);
+  }
 );
 </script>
 

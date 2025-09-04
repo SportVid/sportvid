@@ -1,15 +1,19 @@
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 import { defineStore } from "pinia";
+import axios from "../plugins/axios";
+import config from "../../app.config";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
-import { useTopViewStore } from "./top_view";
+import { useTopViewStore } from "@/stores/top_view";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 
 export const useBboxesStore = defineStore("bboxes", () => {
   const playerStore = usePlayerStore();
   const pluginRunStore = usePluginRunStore();
   const pluginRunResultStore = usePluginRunResultStore();
   const topViewStore = useTopViewStore();
+  const calibrationAssetStore = useCalibrationAssetStore();
 
   const bboxDataActive = ref({});
   const bboxDataInterpolated = ref({});
@@ -18,7 +22,9 @@ export const useBboxesStore = defineStore("bboxes", () => {
 
   const bboxPluginRunId = ref(0);
 
-  const loadBboxData = (pluginRunId) => {
+  const isLoading = ref(false);
+
+  const loadBboxData = async (pluginRunId) => {
     let hasValidData = false;
     bboxPluginRunId.value = pluginRunId;
 
@@ -36,21 +42,8 @@ export const useBboxesStore = defineStore("bboxes", () => {
       }
 
       hasValidData = true;
+
       bboxDataActive.value = _bboxData[0]?.results[0]?.data?.bboxes;
-      topViewStore.positionDataTopView = {
-        0: [
-          { pos_x: 0.45285255859549833, pos_y: 1.0432065609928973, ref_id: 1, team_id: "None" },
-          { pos_x: 0.4095171526402028, pos_y: 1.0441847099654447, ref_id: 2, team_id: "None" },
-          { pos_x: 0.4008530607134673, pos_y: 1.0488220057471758, ref_id: 3, team_id: "None" },
-          { pos_x: 0.5380372403756356, pos_y: 0.6981593840609488, ref_id: 4, team_id: "None" },
-          { pos_x: 0.44680095813270015, pos_y: 0.6285184907187099, ref_id: 5, team_id: "None" },
-          { pos_x: 0.5581394042998931, pos_y: 0.613133534848689, ref_id: 6, team_id: "None" },
-          { pos_x: 0.5568072860251395, pos_y: 0.4688643697498366, ref_id: 7, team_id: "None" },
-          { pos_x: 0.3656300156149409, pos_y: 1.0543413650538709, ref_id: 8, team_id: "None" },
-          { pos_x: 0.4461924959356261, pos_y: 0.5045449659830928, ref_id: 9, team_id: "None" },
-          { pos_x: 0.5040426385038732, pos_y: 0.4739950972301284, ref_id: 10, team_id: "None" },
-        ],
-      };
     } finally {
       if (hasValidData) {
         bboxDataLoaded.value = true;
@@ -88,7 +81,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
         const nextBboxes = bboxMap.get(nextFrame);
 
         prevBboxes.forEach((prev, index) => {
-          const next = nextBboxes.find((b) => b.ref_id === prev.ref_id);
+          const next = nextBboxes.find((b) => b.player_id === prev.player_id);
 
           if (next) {
             const alpha = srcFrame - prevFrame;
@@ -100,7 +93,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
               team_id: prev.team_id,
               image_id: frame,
               time: frame / VideoFPS,
-              ref_id: prev.ref_id,
+              player_id: prev.player_id,
               det_score: prev.det_score + (next.det_score - prev.det_score) * alpha,
             });
           }
@@ -115,16 +108,126 @@ export const useBboxesStore = defineStore("bboxes", () => {
     return bboxDatainterpolated;
   }
 
-  const positionDataUploadSuccess = ref(false);
+  const updateBboxData = async (bboxData) => {
+    if (isLoading.value) return;
+    isLoading.value = true;
+    const params = ref({});
+
+    if (!bboxData.applyAllPlayerId && !bboxData.applyAllTeamId) {
+      params.value = {
+        bytetrack_run_id: bboxData.bytetrackRunId,
+        bbox_id: bboxData.bboxId,
+        player_id: bboxData.playerId,
+        new_player_id: bboxData.newPlayerId,
+        team_id: bboxData.teamId,
+        new_team_id: bboxData.newTeamId,
+      };
+    } else if (bboxData.applyAllPlayerId) {
+      params.value = {
+        bytetrack_run_id: bboxData.bytetrackRunId,
+        player_id: bboxData.playerId,
+        new_player_id: bboxData.newPlayerId,
+        team_id: bboxData.teamId,
+        new_team_id: bboxData.newTeamId,
+        update_all_player_id: bboxData.applyAllPlayerId,
+      };
+    } else if (bboxData.applyAllTeamId) {
+      params.value = {
+        bytetrack_run_id: bboxData.bytetrackRunId,
+        team_id: bboxData.teamId,
+        new_team_id: bboxData.newTeamId,
+        update_all_team_id: bboxData.applyAllTeamId,
+      };
+    }
+
+    try {
+      const res = await axios.post(
+        `${config.API_LOCATION}/position_data/bboxes/edit`,
+        params.value
+      );
+      console.log("res", res);
+      if (res.data.status === "ok") {
+        topViewStore.transformBBoxToPositionDataTopView(
+          calibrationAssetStore.calibrationAssetId,
+          bboxPluginRunId.value
+          // res.data.entry.bboxes
+        );
+        // await loadBboxData(bboxPluginRunId.value);
+        // bboxDataActive.value = res.data.entry.bboxes
+        console.log("bboxDataActive-after", bboxDataActive.value);
+
+        if (bboxData.applyAllPlayerId || bboxData.applyAllTeamId) {
+          bboxDataUpdateSuccess.value = true;
+        } else {
+          bboxDataSingleUpdateSuccess.value = true;
+        }
+      }
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const deleteBboxData = async (bboxData) => {
+    if (isLoading.value) return;
+    isLoading.value = true;
+    const params = ref({});
+
+    if (!bboxData.applyAllPlayerId && !bboxData.applyAllTeamId) {
+      params.value = {
+        bytetrack_run_id: bboxData.bytetrackRunId,
+        bbox_id: bboxData.bboxId,
+      };
+    } else if (bboxData.applyAllPlayerId) {
+      params.value = {
+        bytetrack_run_id: bboxData.bytetrackRunId,
+        player_id: bboxData.playerId,
+        delete_all_player_id: bboxData.applyAllPlayerId,
+      };
+    } else if (bboxData.applyAllTeamId) {
+      params.value = {
+        bytetrack_run_id: bboxData.bytetrackRunId,
+        team_id: bboxData.teamId,
+        delete_all_team_id: bboxData.applyAllTeamId,
+      };
+    }
+
+    try {
+      const res = await axios.post(
+        `${config.API_LOCATION}/position_data/bboxes/delete`,
+        params.value
+      );
+      console.log("res", res);
+      if (res.data.status === "ok") {
+        if (bboxData.applyAllPlayerId || bboxData.applyAllTeamId) {
+          bboxDataDeleteSuccess.value = true;
+        } else {
+          bboxDataSingleDeleteSuccess.value = true;
+        }
+        loadBboxData(bboxPluginRunId.value);
+      }
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  const bboxDataUpdateSuccess = ref(false);
+  const bboxDataSingleUpdateSuccess = ref(false);
+  const bboxDataDeleteSuccess = ref(false);
+  const bboxDataSingleDeleteSuccess = ref(false);
 
   return {
     loadBboxData,
+    updateBboxData,
+    deleteBboxData,
     interpolateBboxData,
     bboxDataActive,
     bboxDataLoaded,
     bboxDataInterpolated,
     bboxPluginRunId,
     bboxDataTopView,
-    positionDataUploadSuccess,
+    bboxDataUpdateSuccess,
+    bboxDataSingleUpdateSuccess,
+    bboxDataDeleteSuccess,
+    bboxDataSingleDeleteSuccess,
   };
 });

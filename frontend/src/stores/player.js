@@ -34,7 +34,7 @@ export const usePlayerStore = defineStore(
       changeVolume();
     };
     const volumeIcon = computed(() => {
-      if (volume.value > 66) return "mdi-volume-high";
+      if (volume.value > 67) return "mdi-volume-high";
       if (volume.value > 33) return "mdi-volume-medium";
       if (volume.value > 0) return "mdi-volume-low";
       return "mdi-volume-mute";

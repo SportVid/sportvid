@@ -112,6 +112,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useBboxesStore } from "@/stores/bboxes";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
 import ModalPositionDataRename from "./ModalPositionDataRename.vue";
 
@@ -122,6 +123,7 @@ const bboxesStore = useBboxesStore();
 const pluginRunStore = usePluginRunStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const positionDataStore = usePositionDataStore();
+const topViewStore = useTopViewStore();
 
 const props = defineProps({
   modelValue: {
@@ -197,85 +199,16 @@ const isButtonDisabled = computed(() => {
   return true;
 });
 
-import { useTopViewStore } from "@/stores/top_view";
-const topViewStore = useTopViewStore();
 const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId) => {
   if (selectedMode.value === "bytetrack") {
-    calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
-    bboxesStore.loadBboxData(bytetrackPluginId);
-    console.log(
-      "selected posdata plugin",
-      topViewStore.positionDataTopView,
-      bboxesStore.bboxDataActive
-    );
+    topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
+    console.log("selected posdata plugin", topViewStore.positionDataTopView);
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
-    // bboxesStore.bboxDataTopView = processCsvPositions(selectedPositionData.value);
-    // calibrationAssetStore.marker = [];
-    // calibrationAssetStore.calibrationAssetId = null;
     console.log("selected posdata upload", topViewStore.positionDataTopView);
   }
   dialog.value = false;
 };
 
 const showModalPositionDataRename = ref(false);
-
-// function processCsvPositions(csvText, fps = 30) {
-//   const lines = csvText
-//     .split("\n")
-//     .map((line) => line.trim())
-//     .filter((line) => line !== "");
-//   if (lines.length < 2) return [];
-
-//   const headers = lines
-//     .shift()
-//     .split(";")
-//     .map((h) => h.trim());
-//   const timeIdx = headers.indexOf("ts in ms");
-//   const xIdx = headers.indexOf("x in m");
-//   const yIdx = headers.indexOf("y in m");
-//   const groupIdx = headers.indexOf("group id");
-
-//   const items = lines.map((line) => {
-//     const parts = line.split(";").map((s) => s.trim());
-//     return {
-//       origTime: parts[timeIdx],
-//       x: parseFloat(parts[xIdx]),
-//       y: parseFloat(parts[yIdx]),
-//       groupId: parseInt(parts[groupIdx]),
-//     };
-//   });
-
-//   const uniqueTimes = Array.from(new Set(items.map((item) => item.origTime))).sort(
-//     (a, b) => parseInt(a) - parseInt(b)
-//   );
-
-//   const timeMapping = {};
-//   uniqueTimes.forEach((time, index) => {
-//     timeMapping[time] = playerStore.roundTimeToFPS(index / fps, fps);
-//   });
-
-//   const teamColorMapping = {
-//     1: "red",
-//     2: "blue",
-//     5: "black",
-//   };
-
-//   const enrichedItems = items.map((item) => ({
-//     ...item,
-//     newTime: timeMapping[item.origTime],
-//     new_x: (item.x + 99.94 / 2) / 99.94,
-//     new_y: (65.88 / 2 - item.y) / 65.88,
-//     team_id: teamColorMapping[item.groupId] || null,
-//   }));
-
-//   return enrichedItems.reduce((groupedData, item) => {
-//     const key = item.newTime;
-//     if (!groupedData[key]) {
-//       groupedData[key] = [];
-//     }
-//     groupedData[key].push(item);
-//     return groupedData;
-//   }, {});
-// }
 </script>

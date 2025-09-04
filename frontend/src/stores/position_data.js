@@ -6,12 +6,14 @@ import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useTopViewStore } from "./top_view";
+import { useBboxesStore } from "./bboxes";
 
 export const usePositionDataStore = defineStore("position_data", () => {
   const playerStore = usePlayerStore();
   const pluginRunStore = usePluginRunStore();
   const pluginRunResultStore = usePluginRunResultStore();
   const topViewStore = useTopViewStore();
+  const bboxesStore = useBboxesStore();
 
   const positionDataList = ref([]);
   const positionDataId = ref(null);
@@ -43,6 +45,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
     const selectedPositionData = positionDataList.value.find((data) => data.id === id);
     if (selectedPositionData) {
       positionDataId.value = id;
+      console.log("pos-data id", positionDataId.value);
 
       const _positionData = pluginRunStore
         .forVideo(playerStore.videoId)
@@ -53,7 +56,10 @@ export const usePositionDataStore = defineStore("position_data", () => {
         })
         .filter((e) => e.results?.[0]?.data?.tracking_data_id === id);
 
+      topViewStore.metaDataTopView = _positionData[0]?.results[0]?.data?.meta_data;
       topViewStore.positionDataTopView = _positionData[0]?.results[0]?.data?.pos_data;
+      bboxesStore.bboxDataActive = {};
+      bboxesStore.bboxDataInterpolated = {};
     }
   };
 
@@ -66,8 +72,10 @@ export const usePositionDataStore = defineStore("position_data", () => {
       formData.append("title", params.title);
       formData.append("format", params.format);
       formData.append("file", params.file);
-      formData.append("meta_data", params.meta_data);
+      formData.append("meta_data", params.metaData);
       formData.append("delimiter", params.delimiter);
+      formData.append("origin", params.origin);
+      formData.append("team_id_ball", params.teamIdBall);
       formData.append("fps", params.fps);
 
       const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {

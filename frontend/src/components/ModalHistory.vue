@@ -12,13 +12,127 @@
       </v-toolbar>
 
       <v-card-text class="mt-2 scrollable-content">
+        <v-expansion-panels>
+          <v-expansion-panel>
+            <v-expansion-panel-title color="error">{{
+              $t("modal.history.delete.title")
+            }}</v-expansion-panel-title>
+            <v-expansion-panel-text class="my-2">
+              <v-row>
+                <v-col cols="12" md="6">
+                  <v-sheet class="pa-2 sheet-color" elevation="2" rounded>
+                    <v-btn
+                      block
+                      color="error"
+                      @click="
+                        pluginRunStore.deletePlugins({ pluginRuns: props.pluginRuns, all: true })
+                      "
+                    >
+                      {{ $t("modal.history.delete.all") }}
+                    </v-btn>
+                  </v-sheet>
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-sheet class="pa-2 sheet-color" elevation="2" rounded>
+                    <v-btn
+                      block
+                      color="error"
+                      :disabled="!props.pluginRuns.length"
+                      @click="
+                        pluginRunStore.deletePlugins({
+                          pluginRuns: props.pluginRuns,
+                          videoId: playerStore.videoId,
+                        })
+                      "
+                    >
+                      {{ $t("modal.history.delete.video") }}
+                    </v-btn>
+                  </v-sheet>
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-sheet class="pa-2 sheet-color" elevation="2" rounded>
+                    <v-select
+                      v-model="selectedPlugin"
+                      :items="pluginTypes"
+                      label="Select plugin"
+                      item-title="type"
+                      item-value="id"
+                      variant="solo-filled"
+                      density="comfortable"
+                      :disabled="!props.pluginRuns.length"
+                    >
+                      <template v-slot:selection="{ item }">
+                        <v-chip :text="item.title" />
+                      </template>
+                    </v-select>
+                    <v-btn
+                      block
+                      color="error"
+                      class="mt-n2"
+                      :disabled="!props.pluginRuns.length"
+                      @click="
+                        pluginRunStore.deletePlugins({
+                          pluginRuns: props.pluginRuns,
+                          plugin: selectedPlugin,
+                        })
+                      "
+                    >
+                      {{ $t("modal.history.delete.plugin") }}
+                    </v-btn>
+                  </v-sheet>
+                </v-col>
+
+                <v-col cols="12" md="6">
+                  <v-sheet class="pa-2 sheet-color" elevation="2" rounded>
+                    <v-select
+                      v-model="selectedIds"
+                      :items="props.pluginRuns"
+                      label="Select individual plugin runs"
+                      item-title="type"
+                      item-value="id"
+                      multiple
+                      variant="solo-filled"
+                      density="comfortable"
+                      :disabled="!props.pluginRuns.length"
+                    >
+                      <template v-slot:selection="{ item, index }">
+                        <v-chip v-if="index < 2" :text="item.title"></v-chip>
+
+                        <span v-if="index === 2" class="text-grey text-caption align-self-center">
+                          (+{{ selectedIds.length - 2 }} others)
+                        </span>
+                      </template>
+                    </v-select>
+                    <v-btn
+                      class="mt-n2"
+                      block
+                      color="error"
+                      :disabled="!props.pluginRuns.length"
+                      @click="
+                        pluginRunStore.deletePlugins({
+                          pluginRuns: props.pluginRuns,
+                          ids: selectedIds,
+                        })
+                      "
+                    >
+                      {{ $t("modal.history.delete.selected") }}
+                    </v-btn>
+                  </v-sheet>
+                </v-col>
+              </v-row>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+
         <v-data-table
           color="primary"
           hide-default-footer
           :headers="headers"
           :items="props.pluginRuns"
           item-key="id"
-          class="elevation-1 mb-3"
+          class="elevation-2 mb-3 mt-4"
         >
           <template #item.date="{ item }">
             {{ formatLocalDate(item.date) }}
@@ -38,8 +152,13 @@
 </template>
 
 <script setup>
-import { ref, watch, watchEffect } from "vue";
+import { ref, computed, watch, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
+import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePlayerStore } from "@/stores/player";
+
+const pluginRunStore = usePluginRunStore();
+const playerStore = usePlayerStore();
 
 const props = defineProps({
   modelValue: {
@@ -57,6 +176,20 @@ const emit = defineEmits();
 const { t } = useI18n();
 
 const dialog = ref(props.modelValue);
+watch(
+  () => dialog.value,
+  (value) => {
+    emit("update:modelValue", value);
+  }
+);
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (value) {
+      dialog.value = true;
+    }
+  }
+);
 
 const headers = [
   { title: t("modal.history.plugin_name"), align: "start", key: "type", width: "40%" },
@@ -95,26 +228,18 @@ const formatLocalDate = (dateString) => {
   return `${isoDate} ${localTime}`;
 };
 
-watch(
-  () => dialog.value,
-  (value) => {
-    emit("update:modelValue", value);
-  }
-);
-
-watch(
-  () => props.modelValue,
-  (value) => {
-    if (value) {
-      dialog.value = true;
-    }
-  }
-);
+const selectedPlugin = ref(null);
+const selectedIds = ref([]);
+const pluginTypes = computed(() => [...new Set(props.pluginRuns.map((p) => p.type))]);
 </script>
 
 <style scoped>
 .scrollable-content {
   max-height: 500px;
   overflow-y: auto;
+}
+
+.sheet-color {
+  background-color: rgba(var(--v-theme-error), 0.3);
 }
 </style>

@@ -11,7 +11,7 @@
         </template>
       </v-toolbar>
 
-      <v-card-text class="pt-4">
+      <v-card-text class="pt-4" style="overflow-y: auto">
         <v-form>
           <v-text-field
             v-model="positionData.title"
@@ -48,7 +48,7 @@
 
           <v-file-input
             v-if="positionData.format === 'dfl'"
-            v-model="positionData.meta_data"
+            v-model="positionData.metaData"
             :rules="[validateFile]"
             :label="$t('modal.position_data.upload.meta_data')"
             prepend-icon="mdi-file-upload"
@@ -69,15 +69,46 @@
             prepend-icon="mdi-menu"
           />
 
+          <v-select
+            v-if="positionData.format === 'kinexon'"
+            v-model="positionData.origin"
+            :items="origins"
+            item-title="title"
+            item-value="value"
+            :label="$t('modal.position_data.upload.origin')"
+            variant="underlined"
+            class="mt-4"
+            prepend-icon="mdi-menu"
+          />
+
+          <v-text-field
+            v-if="positionData.format === 'kinexon'"
+            v-model="positionData.teamIdBall"
+            variant="underlined"
+            :label="$t('modal.position_data.upload.team_id_ball')"
+            clearable
+            clear-icon="mdi-close-circle-outline"
+            prepend-icon="mdi-pencil"
+            class="mt-4"
+          />
+
           <v-text-field
             v-model="positionData.fps"
             type="number"
             min="1"
             variant="underlined"
             class="mt-2"
-            :label="$t('modal.position_data.upload.fps')"
+            :label="$t('modal.position_data.upload.fps.title')"
             prepend-icon="mdi-numeric"
-          />
+          >
+            <template #append-inner>
+              <v-tooltip class="fps-tooltip" :text="$t('modal.position_data.upload.fps.tooltip')">
+                <template #activator="{ props }">
+                  <v-icon v-bind="props" color="primary">mdi-information-outline</v-icon>
+                </template>
+              </v-tooltip>
+            </template>
+          </v-text-field>
 
           <v-progress-linear
             v-if="isUploading"
@@ -131,8 +162,10 @@ const positionData = ref({
   title: null,
   format: null,
   file: null,
-  meta_data: null,
+  metaData: null,
   delimiter: null,
+  origin: null,
+  teamIdBall: null,
   fps: null,
 });
 const delimiters = [
@@ -141,6 +174,10 @@ const delimiters = [
   { value: "\t", title: t("modal.position_data.upload.delimiters.tab") },
   { value: " ", title: t("modal.position_data.upload.delimiters.space") },
   { value: "|", title: t("modal.position_data.upload.delimiters.pipe") },
+];
+const origins = [
+  { value: "kickoff", title: t("modal.position_data.upload.origins.kickoff") },
+  { value: "bottom-left", title: t("modal.position_data.upload.origins.bottom_left") },
 ];
 
 const checkbox = ref(false);
@@ -176,10 +213,14 @@ const disabled = computed(() => {
   ) {
     return true;
   }
-  if (positionData.value.format === "dfl" && !positionData.value.meta_data) {
+  if (positionData.value.format === "dfl" && !positionData.value.metaData) {
     return true;
   }
-  if (positionData.value.format === "kinexon" && !positionData.value.delimiter) {
+  if (
+    positionData.value.format === "kinexon" &&
+    !positionData.value.delimiter &&
+    !positionData.value.origin
+  ) {
     return true;
   }
 
@@ -187,16 +228,7 @@ const disabled = computed(() => {
 });
 
 const uploadPositionData = async () => {
-  const params = {
-    title: positionData.value.title,
-    format: positionData.value.format,
-    file: positionData.value.file,
-    meta_data: positionData.value.meta_data,
-    delimiter: positionData.value.delimiter,
-    fps: positionData.value.fps,
-  };
-
-  await positionDataStore.uploadPositionData(params);
+  await positionDataStore.uploadPositionData(positionData.value);
   dialog.value = false;
   fileValid.value = false;
 };
@@ -226,5 +258,9 @@ watch(
 
 .terms-of-service-link:hover {
   text-decoration: underline;
+}
+
+.fps-tooltip ::v-deep .v-overlay__content {
+  background-color: rgb(var(--v-theme-primary));
 }
 </style>

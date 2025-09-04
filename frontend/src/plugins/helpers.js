@@ -1,3 +1,25 @@
+export function toRgb(color, fade = 0) {
+  let c = color.startsWith("#") ? color.slice(1) : color;
+
+  if (c.length === 3) {
+    c = c
+      .split("")
+      .map((ch) => ch + ch)
+      .join("");
+  }
+
+  const num = parseInt(c, 16);
+
+  let r = (num >> 16) & 0xff;
+  let g = (num >> 8) & 0xff;
+  let b = num & 0xff;
+
+  r = Math.round(r + (255 - r) * fade);
+  g = Math.round(g + (255 - g) * fade);
+  b = Math.round(b + (255 - b) * fade);
+
+  return `rgb(${r}, ${g}, ${b})`;
+}
 // export function keyInObj(key, obj) {
 //   if (typeof obj !== 'object') return false;
 //   return Object.prototype.hasOwnProperty.call(obj, key);

@@ -135,7 +135,7 @@ export class TimeScale extends PIXI.Container {
       mainStroke.stroke({ color: 0x000000, pixelLine: true });
       this.pBars_graphics.addChild(mainStroke);
 
-      const timeCode = Time.getTimecode(time, 2);
+      const timeCode = Time.getTimecode(time, 3);
       const text = new PIXI.BitmapText({
         text: timeCode,
         style: { fontName: "Courier New", fontSize: 10 },

@@ -76,6 +76,7 @@
           activator="parent"
           location="bottom"
           class="tutorial-icon-tooltip"
+          interactive
         >
           <div style="max-width: 400px">
             <div class="text-yellow">
@@ -138,6 +139,7 @@ import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTutorialStore } from "@/stores/tutorial";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import ModalHistory from "@/components/ModalHistory.vue";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalShortcut from "@/components/ModalShortcut.vue";
@@ -155,6 +157,7 @@ const userStore = useUserStore();
 const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 const tutorialStore = useTutorialStore();
+const pluginRunResultStore = usePluginRunResultStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
 
@@ -180,16 +183,20 @@ const pluginRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
     .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .map((pluginRun, index) => ({
-      id: index,
-      type: pluginName(pluginRun.type),
-      date: pluginRun.date
-        .replace("T", " ")
-        .replace("Z", "")
-        .substring(0, pluginRun.date.length - 8),
-      progress: parseFloat(pluginRun.progress),
-      status: pluginRun.status,
-    }));
+    .map((pluginRun) => {
+      const results = pluginRunResultStore.forPluginRun(pluginRun.id);
+
+      return {
+        id: results?.[0]?.plugin_run_id,
+        type: pluginName(pluginRun.type),
+        date: pluginRun.date
+          .replace("T", " ")
+          .replace("Z", "")
+          .substring(0, pluginRun.date.length - 8),
+        progress: parseFloat(pluginRun.progress),
+        status: pluginRun.status,
+      };
+    });
 });
 const numRunningPlugins = computed(() => {
   return pluginRuns.value.filter((e) => e.status !== "DONE" && e.status !== "ERROR").length;

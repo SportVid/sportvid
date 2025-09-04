@@ -220,7 +220,7 @@ const exportPositionsLocal = async ({ parameters = [] }) => {
   const csvHeader = "frame,player,time,team_id,y,x,w,h,det_score\n";
   const csvRows = filteredPositions
     .map((player) => {
-      return `${player.image_id},${player.ref_id},${player.time},${player.team_id},${player.y},${player.x},${player.w},${player.h},${player.det_score}`;
+      return `${player.image_id},${player.player_id},${player.time},${player.team_id},${player.y},${player.x},${player.w},${player.h},${player.det_score},${player.game_section}`;
     })
     .join("\n");
 

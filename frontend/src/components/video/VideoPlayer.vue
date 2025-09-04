@@ -15,42 +15,41 @@
             maxHeight: maxVideoHeight * 100 + 'vh',
           }"
         />
-        <!-- <div
-        v-for="(position, index) in bboxesStore.bboxData.filter((p) => p.time === playerStore.currentTime)"
-        v-show="playerStore.showBoundingBox"
-        :key="index"
-        class="bounding-box-position"
-        :style="{
-          top: position.y * videoStore.videoSize.height + videoStore.videoSize.top + 'px',
-          left: position.x * videoStore.videoSize.width + videoStore.videoSize.left + 'px',
-          width: position.w * videoStore.videoSize.width + 'px',
-          height: position.h * videoStore.videoSize.height + 'px',
-          border: `2px solid red`,
-        }"
-      /> -->
         <div
           v-for="position in bboxesStore.bboxDataInterpolated[playerStore.currentTime]"
           v-show="playerStore.showBoundingBox"
-          :key="position.id"
+          :key="position"
           :style="{
             position: 'absolute',
-            top: position.y * videoStore.videoSize.height + 'px',
-            left: position.x * videoStore.videoSize.width + 'px',
-            width: position.w * videoStore.videoSize.width + 'px',
-            height: position.h * videoStore.videoSize.height + 'px',
-            border: `2px solid red`,
+            top: position[7] * videoStore.videoSize.height + 'px',
+            left: position[6] * videoStore.videoSize.width + 'px',
+            width: position[8] * videoStore.videoSize.width + 'px',
+            height: position[9] * videoStore.videoSize.height + 'px',
+            border: `2px solid ${visualizationStore.getTeamColor(position[1])}`,
           }"
           @click="openEditBBox(position)"
         >
-          <v-tooltip activator="parent" location="top" class="bounding-box-tooltip">
-            <!-- <div><strong>ref_id:</strong> {{ position.ref_id }}</div>
-            <div><strong>team_id:</strong> red</div> -->
-            <div v-for="(value, key) in position" :key="key">
-              <strong>{{ key }}:</strong> {{ value }}
+          <v-tooltip
+            activator="parent"
+            location="top"
+            class="bounding-box-tooltip"
+            :style="{ '--tooltip-bg': toRgb(visualizationStore.getTeamColor(position[1]), 0.7) }"
+            interactive
+          >
+            <div>
+              <div>
+                <strong>{{ $t("modal.bounding_box.tooltip.box_id") }}: {{ position[5] }}</strong>
+              </div>
+              <v-divider class="my-1" />
+              <div>{{ $t("modal.bounding_box.tooltip.player_id") }}: {{ position[0] }}</div>
+              <div>{{ $t("modal.bounding_box.tooltip.team_id") }}: {{ position[1] }}</div>
             </div>
           </v-tooltip>
-          <div class="bounding-box-ref-id">
-            {{ position.ref_id }}
+          <div
+            class="bounding-box-player-id"
+            :style="{ color: visualizationStore.getTeamColor(position[1]) }"
+          >
+            {{ position[0] }}
           </div>
         </div>
 
@@ -91,7 +90,7 @@
       </div>
     </v-row>
 
-    <ModalBBoxUpdate v-model="editDialog" :bbox="editBBox" @update="updateBBox" />
+    <ModalBBoxUpdate v-model="editDialog" :bbox="editBBox" />
 
     <v-row ref="videoControl" class="video-control mt-6">
       <v-btn @click="deltaSeek(-1)" size="small">
@@ -179,13 +178,29 @@ import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
+import { useVisualizationStore } from "@/stores/visualization";
 import { getTimecode } from "@/plugins/time";
 import ModalBBoxUpdate from "./ModalBboxUpdate.vue";
+import { toRgb } from "@/plugins/helpers";
 
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
+const visualizationStore = useVisualizationStore();
+
+const labels = [
+  "player_id",
+  "team_id",
+  "game_section",
+  "pos_x",
+  "pos_y",
+  "x_norm",
+  "y_norm",
+  "w_norm",
+  "h_norm",
+  "det_score",
+];
 
 const videoContainer = ref(null);
 const videoElement = ref(null);
@@ -218,6 +233,7 @@ const targetTime = computed(() => playerStore.targetTime);
 const onProgressChange = (time) => {
   if (videoElement.value) {
     const targetTime = Math.round(time);
+    progress.value = targetTime;
     playerStore.setCurrentTime(targetTime);
     videoElement.value.currentTime = targetTime / 1000;
   }
@@ -284,11 +300,6 @@ watch(
     progress.value = newTime;
   }
 );
-watch(progress, (newProgress) => {
-  if (videoElement.value) {
-    playerStore.setCurrentTime(Math.round(newProgress));
-  }
-});
 
 watch(
   () => playerStore.volume,
@@ -385,74 +396,6 @@ function openEditBBox(bbox) {
   editBBox.value = bbox;
   editDialog.value = true;
 }
-function updateBBox({ ref_id, team_id, updateAllRefId, updateAllTeamId }) {
-  if (!editBBox.value) return;
-
-  let allBboxes = null;
-  if (updateAllRefId || updateAllTeamId) {
-    allBboxes = [];
-    Object.values(bboxesStore.bboxDataInterpolated).forEach((arr) => {
-      if (Array.isArray(arr)) allBboxes.push(...arr);
-    });
-  }
-
-  if (updateAllRefId && allBboxes) {
-    const oldRefId = String(editBBox.value.ref_id);
-    allBboxes.forEach((bbox) => {
-      if (String(bbox.ref_id) === oldRefId) bbox.ref_id = ref_id;
-    });
-  } else {
-    editBBox.value.ref_id = ref_id;
-  }
-
-  if (updateAllTeamId && allBboxes) {
-    const oldTeamId = String(editBBox.value.team_id);
-    allBboxes.forEach((bbox) => {
-      if (String(bbox.team_id) === oldTeamId) bbox.team_id = team_id;
-    });
-  } else {
-    editBBox.value.team_id = team_id;
-  }
-}
-function updateBBoxBackend({ ref_id, team_id, updateAllRefId, updateAllTeamId }) {
-  if (!editBBox.value) return;
-
-  const bboxes = bboxesStore.bboxDataActive;
-
-  if (updateAllRefId) {
-    const oldRefId = String(editBBox.value.ref_id);
-    bboxes.forEach((bbox) => {
-      if (String(bbox.ref_id) === oldRefId) bbox.ref_id = ref_id;
-    });
-  } else {
-    const bbox = bboxes.find(
-      (b) =>
-        String(b.ref_id) === String(editBBox.value.ref_id) &&
-        String(b.image_id) === String(editBBox.value.image_id)
-    );
-    if (bbox) bbox.ref_id = ref_id;
-  }
-
-  if (updateAllTeamId) {
-    const oldTeamId = String(editBBox.value.team_id);
-    bboxes.forEach((bbox) => {
-      if (String(bbox.team_id) === oldTeamId) bbox.team_id = team_id;
-    });
-  } else {
-    const bbox = bboxes.find(
-      (b) =>
-        String(b.team_id) === String(editBBox.value.team_id) &&
-        String(b.image_id) === String(editBBox.value.image_id)
-    );
-    if (bbox) bbox.team_id = team_id;
-  }
-
-  // Nach Änderung: Interpolierte Daten neu berechnen
-  const _bboxDataInterpolated = bboxesStore.interpolateBboxData(bboxes, playerStore.videoFPS, 30);
-  bboxesStore.bboxDataInterpolated = groupDataByTime(_bboxDataInterpolated);
-
-  // Backend-Update -> siehe calibrationAssetStore.updateCalibrationAsset
-}
 </script>
 
 <style scoped>
@@ -478,13 +421,13 @@ function updateBBoxBackend({ ref_id, team_id, updateAllRefId, updateAllTeamId })
 }
 
 .bounding-box-tooltip ::v-deep .v-overlay__content {
-  background: rgb(var(--v-theme-primary));
+  background-color: var(--tooltip-bg);
   border-radius: 2px;
   font-size: 0.7rem;
   line-height: 1.2;
   overflow-wrap: anywhere;
   padding: 5px 10px;
-  color: #fff;
+  color: #222;
 }
 
 .menu-item {
@@ -499,12 +442,11 @@ function updateBBoxBackend({ ref_id, team_id, updateAllRefId, updateAllTeamId })
   font-size: 12px;
 }
 
-.bounding-box-ref-id {
+.bounding-box-player-id {
   position: absolute;
   left: 50%;
   bottom: -20px;
   transform: translateX(-50%);
-  color: red;
   font-size: 0.8rem;
   pointer-events: none;
 }

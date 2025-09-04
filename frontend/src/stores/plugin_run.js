@@ -1,7 +1,8 @@
-import { reactive, computed } from "vue";
+import { ref, reactive, computed } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { defineStore } from "pinia";
+import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useAnnotationStore } from "@/stores/annotation";
@@ -12,6 +13,8 @@ import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_ann
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 
 export const usePluginRunStore = defineStore("pluginRun", () => {
+  const { t } = useI18n();
+
   const state = reactive({
     pluginRuns: {},
     pluginRunList: [],
@@ -185,6 +188,46 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     });
   };
 
+  const pluginRunDeleteSuccess = ref(false);
+  const deletePlugins = async ({
+    pluginRuns,
+    all = false,
+    plugin = null,
+    videoId = null,
+    ids = [],
+  } = {}) => {
+    let pluginList = [];
+
+    if (all) {
+      pluginList = ["all"];
+    } else {
+      if (plugin) {
+        pluginList.push(...pluginRuns.filter((run) => run.type === plugin).map((run) => run.id));
+      }
+      if (videoId) {
+        pluginList.push(...pluginRuns.map((run) => run.id));
+      }
+      if (ids.length > 0) {
+        pluginList.push(...ids);
+      }
+      pluginList = [...new Set(pluginList)];
+    }
+
+    try {
+      const res = await axios.post(`${config.API_LOCATION}/plugin/run/delete`, {
+        plugin_list: pluginList,
+      });
+
+      if (res.data && res.data.status === "ok") {
+        clearStore();
+        pluginRunDeleteSuccess.value = true;
+      }
+    } catch (err) {
+      console.error("Failed to delete plugin runs:", err);
+    }
+    return false;
+  };
+
   return {
     state,
     all,
@@ -195,5 +238,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     clearStore,
     deleteItems,
     updateAll,
+    deletePlugins,
+    pluginRunDeleteSuccess,
   };
 });
