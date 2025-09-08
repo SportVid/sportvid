@@ -15,6 +15,46 @@
           }"
         />
 
+        <svg
+          v-if="topViewStore.showEffectivePlayingSpace"
+          :style="{
+            position: 'absolute',
+            top: '0px',
+            left: '0px',
+            width: topViewStore.topViewSize.width + 'px',
+            height: topViewStore.topViewSize.height + 'px',
+          }"
+        >
+          <polygon
+            v-for="(hull, team) in convexHullPlayer[currentTime]"
+            :key="team"
+            :points="hull.map((p) => `${p.left},${p.top}`).join(' ')"
+            :stroke="visualizationStore.getTeamColor(team)"
+            :fill="visualizationStore.getTeamColor(team)"
+            fill-opacity="0.4"
+          />
+        </svg>
+
+        <svg
+          v-if="topViewStore.showSpaceControl"
+          :style="{
+            position: 'absolute',
+            top: '0px',
+            left: '0px',
+            width: topViewStore.topViewSize.width + 'px',
+            height: topViewStore.topViewSize.height + 'px',
+          }"
+        >
+          <polygon
+            v-for="cell in voronoiCells[currentTime]"
+            :key="cell"
+            :points="cell.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')"
+            stroke="gray"
+            :fill="visualizationStore.getTeamColor(cell.team_id)"
+            fill-opacity="0.4"
+          />
+        </svg>
+
         <template v-for="position in topViewStore.positionDataTopView[currentTime]" :key="position">
           <div
             v-if="position[1] !== 1"
@@ -36,8 +76,24 @@
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
               backgroundColor: visualizationStore.getTeamColor(position[1]),
+              cursor:
+                topViewStore.showSpaceControl || topViewStore.showEffectivePlayingSpace
+                  ? 'pointer'
+                  : 'default',
             }"
-          />
+            @click="
+              (topViewStore.showSpaceControl || topViewStore.showEffectivePlayingSpace) &&
+                togglePlayersForKPIs(position[0])
+            "
+          >
+            <div
+              v-if="topViewStore.showPlayerId"
+              class="position-data-player-id"
+              :style="{ color: visualizationStore.getTeamColor(position[1]) }"
+            >
+              {{ position[0] }}
+            </div>
+          </div>
 
           <div
             v-else
@@ -177,46 +233,6 @@
             </svg>
           </div>
         </template>
-
-        <svg
-          v-if="topViewStore.showEffectivePlayingSpace"
-          :style="{
-            position: 'absolute',
-            top: '0px',
-            left: '0px',
-            width: topViewStore.topViewSize.width + 'px',
-            height: topViewStore.topViewSize.height + 'px',
-          }"
-        >
-          <polygon
-            v-for="(hull, team) in convexHullPlayer[currentTime]"
-            :key="team"
-            :points="hull.map((p) => `${p.left},${p.top}`).join(' ')"
-            :stroke="visualizationStore.getTeamColor(team)"
-            :fill="visualizationStore.getTeamColor(team)"
-            fill-opacity="0.4"
-          />
-        </svg>
-
-        <svg
-          v-if="topViewStore.showSpaceControl"
-          :style="{
-            position: 'absolute',
-            top: '0px',
-            left: '0px',
-            width: topViewStore.topViewSize.width + 'px',
-            height: topViewStore.topViewSize.height + 'px',
-          }"
-        >
-          <polygon
-            v-for="cell in voronoiCells[currentTime]"
-            :key="cell"
-            :points="cell.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')"
-            stroke="gray"
-            :fill="visualizationStore.getTeamColor(cell.team_id)"
-            fill-opacity="0.4"
-          />
-        </svg>
       </div>
     </v-row>
 
@@ -252,13 +268,36 @@
           </v-btn>
         </template>
         <v-list class="py-0" density="compact" width="225px">
-          <v-list-item class="menu-item" @click="playerStore.viewBoundingBox">
+          <v-list-item
+            class="menu-item"
+            @click="bboxesStore.viewBoundingBox"
+            :disabled="
+              !bboxesStore.bboxDataActive || Object.keys(bboxesStore.bboxDataActive).length === 0
+            "
+          >
             <v-list-item-title class="d-flex justify-space-between">
               {{ $t("position_data.display_settings.view_bounding_box") }}
               <tab-window-icon
                 :class="{
-                  'text-disabled': !playerStore.showBoundingBox,
-                  'text-red': playerStore.showBoundingBox,
+                  'text-disabled':
+                    !bboxesStore.showBoundingBox ||
+                    !bboxesStore.bboxDataActive ||
+                    Object.keys(bboxesStore.bboxDataActive).length === 0,
+                  'text-red': bboxesStore.showBoundingBox,
+                }"
+              >
+                mdi-check
+              </tab-window-icon>
+            </v-list-item-title>
+          </v-list-item>
+
+          <v-list-item class="menu-item" @click="topViewStore.viewPlayerId">
+            <v-list-item-title class="d-flex justify-space-between">
+              {{ $t("position_data.display_settings.view_player_id") }}
+              <tab-window-icon
+                :class="{
+                  'text-disabled': !topViewStore.showPlayerId,
+                  'text-red': topViewStore.showPlayerId,
                 }"
               >
                 mdi-check
@@ -405,6 +444,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
 import { useVisualizationStore } from "@/stores/visualization";
+import { useBboxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
 import { Delaunay } from "d3-delaunay";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
@@ -416,6 +456,7 @@ const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();
 const videoStore = useVideoStore();
 const visualizationStore = useVisualizationStore();
+const bboxesStore = useBboxesStore();
 
 const showModalPositionDataSelect = ref(false);
 const showModalPositionDataUpload = ref(false);
@@ -520,6 +561,28 @@ onBeforeUnmount(() => {
   }
 });
 
+const includedPlayers = ref(new Set());
+watch(
+  () => topViewStore.positionDataTopView,
+  (newVal) => {
+    const all = Object.values(newVal)
+      .flat()
+      .filter((p) => p[1] !== 1);
+
+    includedPlayers.value = new Set(all.map((p) => p[0]));
+  },
+  { immediate: true, deep: true }
+);
+const togglePlayersForKPIs = (playerId) => {
+  const newSet = new Set(includedPlayers.value);
+  if (newSet.has(playerId)) {
+    newSet.delete(playerId);
+  } else {
+    newSet.add(playerId);
+  }
+  includedPlayers.value = newSet;
+};
+
 const computeConvexHull = (points) => {
   if (points.length < 3) return [];
   const sortedPoints = points.slice().sort((a, b) => a.left - b.left || a.top - b.top);
@@ -557,7 +620,7 @@ const convexHullPlayer = computed(() => {
   Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
     const teams = {};
     framePositions
-      .filter((position) => position[1] !== 1)
+      .filter((position) => position[1] !== 1 && includedPlayers.value.has(position[0]))
       .forEach((position) => {
         const top =
           position[4] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
@@ -610,7 +673,7 @@ const voronoiCells = computed(() => {
   const result = {};
   Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
     const allPlayers = framePositions
-      .filter((player) => player[1] !== 1)
+      .filter((player) => player[1] !== 1 && includedPlayers.value.has(player[0]))
       .map((player) => {
         const top =
           player[4] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
@@ -682,5 +745,14 @@ watch(videoControl || videoSlider, (newVal) => {
 
 .fps-tooltip ::v-deep .v-overlay__content {
   background-color: rgb(var(--v-theme-primary));
+}
+
+.position-data-player-id {
+  position: absolute;
+  left: 50%;
+  bottom: -16px;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  pointer-events: none;
 }
 </style>

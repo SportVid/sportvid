@@ -17,7 +17,7 @@
         />
         <div
           v-for="position in bboxesStore.bboxDataInterpolated[playerStore.currentTime]"
-          v-show="playerStore.showBoundingBox"
+          v-show="bboxesStore.showBoundingBox"
           :key="position"
           :style="{
             position: 'absolute',

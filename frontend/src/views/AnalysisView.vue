@@ -235,9 +235,9 @@ watch(
     }
 
     if (newTabId === "position_data" || newTabId === "heatmap") {
-      playerStore.showBoundingBox = true;
+      bboxesStore.showBoundingBox = true;
     } else {
-      playerStore.showBoundingBox = false;
+      bboxesStore.showBoundingBox = false;
     }
 
     topViewStore.showItems = true;
@@ -666,6 +666,14 @@ watch(
   () => playerStore.video,
   () => {
     console.log("video", playerStore.video);
+  },
+  { immediate: true }
+);
+
+watch(
+  () => bboxesStore.bboxDataActive,
+  () => {
+    console.log("acive bbox", bboxesStore.bboxDataActive);
   },
   { immediate: true }
 );

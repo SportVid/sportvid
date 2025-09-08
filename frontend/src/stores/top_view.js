@@ -84,6 +84,11 @@ export const useTopViewStore = defineStore(
       showHeatmap.value = false;
     };
 
+    const showPlayerId = ref(false);
+    const viewPlayerId = () => {
+      showPlayerId.value = !showPlayerId.value;
+    };
+
     const positionDataTopView = ref({});
     const metaDataTopView = ref({});
 
@@ -149,6 +154,8 @@ export const useTopViewStore = defineStore(
       positionDataTopView,
       metaDataTopView,
       transformBBoxToPositionDataTopView,
+      showPlayerId,
+      viewPlayerId,
     };
   }
   // {

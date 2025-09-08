@@ -211,6 +211,11 @@ export const useBboxesStore = defineStore("bboxes", () => {
     }
   };
 
+  const showBoundingBox = ref(false);
+  const viewBoundingBox = () => {
+    showBoundingBox.value = !showBoundingBox.value;
+  };
+
   const bboxDataUpdateSuccess = ref(false);
   const bboxDataSingleUpdateSuccess = ref(false);
   const bboxDataDeleteSuccess = ref(false);
@@ -226,6 +231,8 @@ export const useBboxesStore = defineStore("bboxes", () => {
     bboxDataInterpolated,
     bboxPluginRunId,
     bboxDataTopView,
+    showBoundingBox,
+    viewBoundingBox,
     bboxDataUpdateSuccess,
     bboxDataSingleUpdateSuccess,
     bboxDataDeleteSuccess,

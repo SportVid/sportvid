@@ -381,17 +381,4 @@ const deleteBboxData = async () => {
 .dot:hover {
   transform: scale(1.1);
 }
-
-.team-dot {
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 4px;
-}
-.team-dot:hover {
-  transform: scale(1.1);
-}
 </style>
