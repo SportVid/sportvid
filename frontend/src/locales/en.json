@@ -140,7 +140,7 @@
         "select": "Select position data"
       }
     },
-    "fps_deviation": "Downsampling & Interpolation introduces a maximum frame-by-frame deviation of up to {interpErr}% compared to the original frame rate."
+    "fps_deviation": "Downsampling & interpolation introduces a maximum frame-by-frame deviation of up to {interpErr}% compared to the original frame rate."
   },
   "heatmap": {
     "display_settings": {
