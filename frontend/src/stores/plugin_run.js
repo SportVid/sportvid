@@ -2,7 +2,6 @@ import { ref, reactive, computed } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { defineStore } from "pinia";
-import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useAnnotationStore } from "@/stores/annotation";
@@ -13,8 +12,6 @@ import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_ann
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 
 export const usePluginRunStore = defineStore("pluginRun", () => {
-  const { t } = useI18n();
-
   const state = reactive({
     pluginRuns: {},
     pluginRunList: [],
@@ -220,7 +217,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
       });
 
       if (res.data && res.data.status === "ok") {
-        clearStore();
+        deleteItems(pluginList);
         if (all) {
           pluginRunDeleteAllSuccess.value = true;
         } else {

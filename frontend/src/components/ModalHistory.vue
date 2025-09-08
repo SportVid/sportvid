@@ -175,6 +175,17 @@ const emit = defineEmits();
 
 const { t } = useI18n();
 
+const pluginTypes = computed(() => [...new Set(props.pluginRuns.map((p) => p.type))]);
+const selectedPlugin = ref(null);
+const selectedIds = ref([]);
+watch(
+  () => props.pluginRuns,
+  () => {
+    selectedPlugin.value = null;
+    selectedIds.value = [];
+  }
+);
+
 const dialog = ref(props.modelValue);
 watch(
   () => dialog.value,
@@ -227,10 +238,6 @@ const formatLocalDate = (dateString) => {
 
   return `${isoDate} ${localTime}`;
 };
-
-const selectedPlugin = ref(null);
-const selectedIds = ref([]);
-const pluginTypes = computed(() => [...new Set(props.pluginRuns.map((p) => p.type))]);
 </script>
 
 <style scoped>
