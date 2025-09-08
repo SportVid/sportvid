@@ -132,11 +132,6 @@ export const usePlayerStore = defineStore(
       }
     };
 
-    const showBoundingBox = ref(false);
-    const viewBoundingBox = () => {
-      showBoundingBox.value = !showBoundingBox.value;
-    };
-
     return {
       videoElement,
       video,
@@ -170,8 +165,6 @@ export const usePlayerStore = defineStore(
       volumeIcon,
       changeVolume,
       toggleMute,
-      showBoundingBox,
-      viewBoundingBox,
     };
   },
   {

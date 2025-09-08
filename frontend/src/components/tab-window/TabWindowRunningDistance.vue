@@ -20,6 +20,26 @@
       v-model:end="selectedEndFrame"
     />
 
+    <div class="player-selector mt-2">
+      <div
+        v-for="playerId in playerOptions"
+        :key="playerId"
+        class="player-dot"
+        :style="{
+          backgroundColor: selectedPlayerIds.has(playerId)
+            ? toRgb(playerColors[playerId], 0)
+            : toRgb(playerColors[playerId], 0.7),
+          color: selectedPlayerIds.has(playerId) ? '#fff' : '#222',
+          borderColor: selectedPlayerIds.has(playerId)
+            ? toRgb(playerColors[playerId], 0)
+            : toRgb(playerColors[playerId], 0.7),
+        }"
+        @click="togglePlayerId(playerId)"
+      >
+        {{ playerId }}
+      </div>
+    </div>
+
     <v-data-table
       color="primary"
       :items-per-page="-1"
@@ -190,6 +210,37 @@ const headers = [
   { title: "", key: "settings", sortable: false, align: "end", width: "1px" },
 ];
 
+const playerOptions = ref(new Set());
+const selectedPlayerIds = ref(new Set());
+const playerColors = ref({});
+watch(
+  () => topViewStore.positionDataTopView,
+  (newVal) => {
+    const all = Object.values(newVal)
+      .flat()
+      .filter((p) => p[1] !== 1);
+
+    selectedPlayerIds.value = new Set(all.map((p) => p[0]).sort((a, b) => a - b));
+    playerOptions.value = Array.from(selectedPlayerIds.value);
+
+    const map = {};
+    all.forEach((p) => {
+      map[p[0]] = visualizationStore.getTeamColor(p[1]);
+    });
+    playerColors.value = map;
+  },
+  { immediate: true, deep: true }
+);
+const togglePlayerId = (playerId) => {
+  const newSet = new Set(selectedPlayerIds.value);
+  if (newSet.has(playerId)) {
+    newSet.delete(playerId);
+  } else {
+    newSet.add(playerId);
+  }
+  selectedPlayerIds.value = newSet;
+};
+
 const items = computed(() => {
   const distancesByPlayerId = new Map();
 
@@ -274,6 +325,7 @@ const items = computed(() => {
       ...item,
       distance: item.distance.toFixed(2),
     }))
+    .filter((p) => selectedPlayerIds.value.has(p.player_id))
     .sort((a, b) => a.player_id - b.player_id);
 });
 
@@ -293,5 +345,30 @@ const hasPositionData = computed(() => {
 
 .menu-item .v-list-item-title {
   font-size: 12px;
+}
+
+.player-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+  margin: 12px 0 8px 0;
+}
+.player-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  border: 2px solid;
+  transition: background 0.2s, border 0.2s;
+  user-select: none;
+}
+.player-dot.selected {
+  border: 2px solid;
 }
 </style>

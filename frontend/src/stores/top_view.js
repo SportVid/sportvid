@@ -84,6 +84,11 @@ export const useTopViewStore = defineStore(
       showHeatmap.value = false;
     };
 
+    const showPlayerId = ref(false);
+    const viewPlayerId = () => {
+      showPlayerId.value = !showPlayerId.value;
+    };
+
     const positionDataTopView = ref({});
     const metaDataTopView = ref({});
 
@@ -96,7 +101,7 @@ export const useTopViewStore = defineStore(
     ) {
       calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
 
-      if (updatedBboxes) {
+      if (updatedBboxes !== null) {
         bboxesStore.bboxDataActive = updatedBboxes;
         bboxesStore.bboxDataLoaded = true;
       } else {
@@ -105,6 +110,7 @@ export const useTopViewStore = defineStore(
 
       if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
         // const _parsedData = JSON.parse(bboxesStore.bboxDataActive);
+
         const _bboxDataInterpolated = JSON.parse(bboxesStore.bboxDataActive);
 
         // const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
@@ -148,6 +154,8 @@ export const useTopViewStore = defineStore(
       positionDataTopView,
       metaDataTopView,
       transformBBoxToPositionDataTopView,
+      showPlayerId,
+      viewPlayerId,
     };
   }
   // {

@@ -51,8 +51,8 @@ export const usePositionDataStore = defineStore("position_data", () => {
         .forVideo(playerStore.videoId)
         .filter((e) => e.type === "posdata_convert" && e.status === "DONE")
         .map((e) => {
-          e.results = pluginRunResultStore.forPluginRun(e.id);
-          return e;
+          const results = pluginRunResultStore.forPluginRun(e.id);
+          return { ...e, results: JSON.parse(JSON.stringify(results)) };
         })
         .filter((e) => e.results?.[0]?.data?.tracking_data_id === id);
 

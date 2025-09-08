@@ -188,7 +188,8 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     });
   };
 
-  const pluginRunDeleteSuccess = ref(false);
+  const pluginRunDeleteAllSuccess = ref(false);
+  const pluginRunDeleteSelectedSuccess = ref(false);
   const deletePlugins = async ({
     pluginRuns,
     all = false,
@@ -220,7 +221,11 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
 
       if (res.data && res.data.status === "ok") {
         clearStore();
-        pluginRunDeleteSuccess.value = true;
+        if (all) {
+          pluginRunDeleteAllSuccess.value = true;
+        } else {
+          pluginRunDeleteSelectedSuccess.value = true;
+        }
       }
     } catch (err) {
       console.error("Failed to delete plugin runs:", err);
@@ -239,6 +244,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     deleteItems,
     updateAll,
     deletePlugins,
-    pluginRunDeleteSuccess,
+    pluginRunDeleteAllSuccess,
+    pluginRunDeleteSelectedSuccess,
   };
 });
