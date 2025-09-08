@@ -11,17 +11,17 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AddField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='max_file_size',
             field=models.BigIntegerField(default=10737418240),
         ),
         migrations.AlterField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='allowance',
             field=models.IntegerField(default=40),
         ),
         migrations.AlterField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='max_video_size',
             field=models.BigIntegerField(default=5368709120),
         ),

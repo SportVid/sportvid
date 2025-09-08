@@ -1,19 +1,19 @@
-version: "3.4"
+version: "0.1"
 
 networks:
-  tibava:
-    name: tibava_network
+  sportvid_dev:
+    name: sportvid_dev_network
 
 services:
-    tibavafrontend:
-        image: tibavafrontend
+    sportvidfrontend:
+        image: sportvidfrontend
         networks:
-          - tibava
+          - sportvid_dev_network
         build:
           context: .
           dockerfile: ./Dockerfile
         ports:
-          - 8080:8080
+          - ${FRONTEND_PORT}:${FRONTEND_PORT}
         volumes:
           - type: bind
             source: ./media

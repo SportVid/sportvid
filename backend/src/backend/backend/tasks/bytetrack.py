@@ -5,7 +5,7 @@ from backend.models import (
     PluginRun,
     PluginRunResult,
     Video,
-    TibavaUser,
+    SportVidUser,
 )
 from backend.plugin_manager import PluginManager
 

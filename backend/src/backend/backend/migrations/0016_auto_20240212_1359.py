@@ -11,12 +11,12 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AlterField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='allowance',
             field=models.IntegerField(default=10),
         ),
         migrations.AlterField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='max_video_size',
             field=models.BigIntegerField(default=524288000),
         ),

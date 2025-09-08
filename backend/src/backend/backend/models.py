@@ -13,7 +13,7 @@ from backend.utils.color import rgb_to_hex, random_rgb
 
 from data import DataManager
 from backend.utils import media_path_to_file
-from .managers import TibavaUserManager
+from .managers import SportVidUserManager
 
 
 logger = logging.getLogger(__name__)
@@ -39,11 +39,11 @@ def receiver_with_multiple_senders(signal, senders, **kwargs):
     return decorator
 
 
-class TibavaUser(AbstractUser):
+class SportVidUser(AbstractUser):
     allowance = models.IntegerField(default=40) # 10
     max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # 5GB, 500MB: 500*1024*1024
     max_file_size = models.BigIntegerField(default=10 * 1024 * 1024 * 1024)  # 1GB
-    objects = TibavaUserManager()
+    objects = SportVidUserManager()
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {

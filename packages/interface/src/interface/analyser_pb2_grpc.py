@@ -35,47 +35,47 @@ class AnalyserStub(object):
             channel: A grpc.Channel.
         """
         self.list_plugins = channel.unary_unary(
-                '/tibava.analyser.Analyser/list_plugins',
+                '/sportvid.analyser.Analyser/list_plugins',
                 request_serializer=analyser__pb2.ListPluginsRequest.SerializeToString,
                 response_deserializer=analyser__pb2.ListPluginsReply.FromString,
                 _registered_method=True)
         self.upload_data = channel.stream_unary(
-                '/tibava.analyser.Analyser/upload_data',
+                '/sportvid.analyser.Analyser/upload_data',
                 request_serializer=analyser__pb2.UploadDataRequest.SerializeToString,
                 response_deserializer=analyser__pb2.UploadDataResponse.FromString,
                 _registered_method=True)
         self.upload_file = channel.stream_unary(
-                '/tibava.analyser.Analyser/upload_file',
+                '/sportvid.analyser.Analyser/upload_file',
                 request_serializer=analyser__pb2.UploadFileRequest.SerializeToString,
                 response_deserializer=analyser__pb2.UploadFileResponse.FromString,
                 _registered_method=True)
         self.download_data = channel.unary_stream(
-                '/tibava.analyser.Analyser/download_data',
+                '/sportvid.analyser.Analyser/download_data',
                 request_serializer=analyser__pb2.DownloadDataRequest.SerializeToString,
                 response_deserializer=analyser__pb2.DownloadDataResponse.FromString,
                 _registered_method=True)
         self.check_data = channel.unary_unary(
-                '/tibava.analyser.Analyser/check_data',
+                '/sportvid.analyser.Analyser/check_data',
                 request_serializer=analyser__pb2.CheckDataRequest.SerializeToString,
                 response_deserializer=analyser__pb2.CheckDataResponse.FromString,
                 _registered_method=True)
         self.run_plugin = channel.unary_unary(
-                '/tibava.analyser.Analyser/run_plugin',
+                '/sportvid.analyser.Analyser/run_plugin',
                 request_serializer=analyser__pb2.RunPluginRequest.SerializeToString,
                 response_deserializer=analyser__pb2.RunPluginResponse.FromString,
                 _registered_method=True)
         self.get_plugin_status = channel.unary_unary(
-                '/tibava.analyser.Analyser/get_plugin_status',
+                '/sportvid.analyser.Analyser/get_plugin_status',
                 request_serializer=analyser__pb2.GetPluginStatusRequest.SerializeToString,
                 response_deserializer=analyser__pb2.GetPluginStatusResponse.FromString,
                 _registered_method=True)
         self.run_pipeline = channel.unary_unary(
-                '/tibava.analyser.Analyser/run_pipeline',
+                '/sportvid.analyser.Analyser/run_pipeline',
                 request_serializer=analyser__pb2.RunPipelineRequest.SerializeToString,
                 response_deserializer=analyser__pb2.RunPipelineResponse.FromString,
                 _registered_method=True)
         self.get_pipeline_status = channel.unary_unary(
-                '/tibava.analyser.Analyser/get_pipeline_status',
+                '/sportvid.analyser.Analyser/get_pipeline_status',
                 request_serializer=analyser__pb2.GetPieplineStatusRequest.SerializeToString,
                 response_deserializer=analyser__pb2.GetPieplineStatusResponse.FromString,
                 _registered_method=True)
@@ -188,9 +188,9 @@ def add_AnalyserServicer_to_server(servicer, server):
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'tibava.analyser.Analyser', rpc_method_handlers)
+            'sportvid.analyser.Analyser', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('tibava.analyser.Analyser', rpc_method_handlers)
+    server.add_registered_method_handlers('sportvid.analyser.Analyser', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -211,7 +211,7 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/list_plugins',
+            '/sportvid.analyser.Analyser/list_plugins',
             analyser__pb2.ListPluginsRequest.SerializeToString,
             analyser__pb2.ListPluginsReply.FromString,
             options,
@@ -238,7 +238,7 @@ class Analyser(object):
         return grpc.experimental.stream_unary(
             request_iterator,
             target,
-            '/tibava.analyser.Analyser/upload_data',
+            '/sportvid.analyser.Analyser/upload_data',
             analyser__pb2.UploadDataRequest.SerializeToString,
             analyser__pb2.UploadDataResponse.FromString,
             options,
@@ -265,7 +265,7 @@ class Analyser(object):
         return grpc.experimental.stream_unary(
             request_iterator,
             target,
-            '/tibava.analyser.Analyser/upload_file',
+            '/sportvid.analyser.Analyser/upload_file',
             analyser__pb2.UploadFileRequest.SerializeToString,
             analyser__pb2.UploadFileResponse.FromString,
             options,
@@ -292,7 +292,7 @@ class Analyser(object):
         return grpc.experimental.unary_stream(
             request,
             target,
-            '/tibava.analyser.Analyser/download_data',
+            '/sportvid.analyser.Analyser/download_data',
             analyser__pb2.DownloadDataRequest.SerializeToString,
             analyser__pb2.DownloadDataResponse.FromString,
             options,
@@ -319,7 +319,7 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/check_data',
+            '/sportvid.analyser.Analyser/check_data',
             analyser__pb2.CheckDataRequest.SerializeToString,
             analyser__pb2.CheckDataResponse.FromString,
             options,
@@ -346,7 +346,7 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/run_plugin',
+            '/sportvid.analyser.Analyser/run_plugin',
             analyser__pb2.RunPluginRequest.SerializeToString,
             analyser__pb2.RunPluginResponse.FromString,
             options,
@@ -373,7 +373,7 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/get_plugin_status',
+            '/sportvid.analyser.Analyser/get_plugin_status',
             analyser__pb2.GetPluginStatusRequest.SerializeToString,
             analyser__pb2.GetPluginStatusResponse.FromString,
             options,
@@ -400,7 +400,7 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/run_pipeline',
+            '/sportvid.analyser.Analyser/run_pipeline',
             analyser__pb2.RunPipelineRequest.SerializeToString,
             analyser__pb2.RunPipelineResponse.FromString,
             options,
@@ -427,7 +427,7 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/get_pipeline_status',
+            '/sportvid.analyser.Analyser/get_pipeline_status',
             analyser__pb2.GetPieplineStatusRequest.SerializeToString,
             analyser__pb2.GetPieplineStatusResponse.FromString,
             options,

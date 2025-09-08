@@ -12,7 +12,6 @@ import cv2
 from celery import shared_task
 
 from backend.models import PluginRun, Video, PluginRunResult
-from django.conf import settings
 from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_file
 from ..utils.analyser_client import TaskAnalyserClient
@@ -41,7 +40,7 @@ class Thumbnail(Task):
             "fps": 5,
             "max_resolution": 128,
             "output_path": "/predictions/",
-            "base_url": "/tibava/thumbnails/",
+            "base_url": "/sportvid/thumbnails/",
             "analyser_host": settings.GRPC_HOST,
             "analyser_port": settings.GRPC_PORT,
         }

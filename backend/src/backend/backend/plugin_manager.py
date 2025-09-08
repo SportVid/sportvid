@@ -6,12 +6,10 @@ import json
 from typing import List
 
 from celery import shared_task
-from backend.models import PluginRun, Video, TibavaUser, PluginRunResult
+from backend.models import PluginRun, Video, SportVidUser, PluginRunResult
 from data import DataManager
 
 from django.conf import settings
-
-# class PluginRunResults(datacla):
 
 
 logger = logging.getLogger(__name__)
@@ -47,7 +45,7 @@ class PluginManager:
         self,
         plugin: str,
         video: Video,
-        user: TibavaUser,
+        user: SportVidUser,
         parameters: List = None,
         run_async: bool = True,
         dry_run: bool = False,
@@ -138,10 +136,7 @@ def generate_plugin_run_result_cache(
 ) -> None:
     for plugin_run_result_id in plugin_run_result:
         x = PluginRunResult.objects.get(id=plugin_run_result_id)
-        # print("B", flush=True)
         cache_path = os.path.join(settings.DATA_CACHE_ROOT, f"{x.id}.json")
-        # print("C", flush=True)
-        # print(cache_path, flush=True)
         cached = False
         try:
             if os.path.exists(cache_path):
@@ -166,7 +161,7 @@ def generate_plugin_run_result_cache(
             except Exception:
                 logger.exception("Cache couldn't write")
 
-# NOTE: async call of run_plugin fails!
+
 @shared_task(bind=True)
 def run_plugin(self, args):
     plugin = args.get("plugin")
@@ -178,7 +173,7 @@ def run_plugin(self, args):
     kwargs = args.get("kwargs")
 
     video_db = Video.objects.get(id=video)
-    user_db = TibavaUser.objects.get(id=user)
+    user_db = SportVidUser.objects.get(id=user)
     plugin_run_db = None
     if not dry_run:
         plugin_run_db = PluginRun.objects.get(id=plugin_run)

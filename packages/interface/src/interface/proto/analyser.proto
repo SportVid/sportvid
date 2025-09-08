@@ -3,7 +3,7 @@ option java_multiple_files = true;
 
 // python -m grpc_tools.protoc -I=proto --python_out=. --grpc_python_out=. proto/analyser.proto
 
-package tibava.analyser;
+package sportvid.analyser;
 
 service Analyser {
   rpc list_plugins(ListPluginsRequest) returns (ListPluginsReply);

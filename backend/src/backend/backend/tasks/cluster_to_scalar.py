@@ -7,7 +7,7 @@ from backend.models import (
     PluginRun,
     PluginRunResult,
     Video,
-    TibavaUser,
+    SportVidUser,
     Timeline,
 )
 
@@ -46,7 +46,7 @@ class ClusterToScalar(Task):
         self,
         parameters: Dict,
         video: Video = None,
-        user: TibavaUser = None,
+        user: SportVidUser = None,
         plugin_run: PluginRun = None,
         dry_run: bool = False,
         **kwargs,

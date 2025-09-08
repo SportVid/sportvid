@@ -1,7 +1,7 @@
 proxy_location: EveryNode
 http_options:
   host: 0.0.0.0
-  port: 8000
+  port: 8001  # TODO: using ${BACKEND_CONFIG} fails to create inference server...
 
 applications:
   - name: floodlight_convert
@@ -16,7 +16,7 @@ applications:
         autoscaling_config:
           min_replicas: 0
         ray_actor_options:
-          num_cpus: 1
+          num_cpus: 2
           runtime_env:
             uv:
               - numpy
@@ -35,7 +35,7 @@ applications:
         autoscaling_config:
           min_replicas: 0
         ray_actor_options:
-          num_cpus: 1
+          num_cpus: 2
           runtime_env:
             uv:
               - numpy
@@ -54,7 +54,7 @@ applications:
         autoscaling_config:
           min_replicas: 0
         ray_actor_options:
-          num_gpus: 0.2
+          num_gpus: 0.25
           runtime_env:
             uv:
               - git+https://github.com/Alexk1704/ByteTrack.git
@@ -687,29 +687,30 @@ applications:
               - scipy==1.12.0
               - scikit-learn==1.4.0
 
-  - name: ocr_video_detector_onnx
-    route_prefix: /ocr_video_detector_onnx
-    import_path: inference_ray.main:app_builder
-    runtime_env:
-      uv:
-        - "--extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/"
-        - scikit-learn
-        - opencv-python-headless
-        - onnxruntime-gpu==1.20.0
-        - onnx
-        - torch
-        - torchvision
-        - pytorch_lightning
-        - timm
-        - nltk
-    args:
-      model: ocr_video_detector_onnx
-      data_path: /data
-      params: 
-        model_path: /models/ocr/yolov7_text_det_dyn_input.onnx
-    deployments:
-      - name: Deployment
-        autoscaling_config:
-          min_replicas: 1
-        ray_actor_options:
-          num_gpus: 0.2
+  # TODO: requested version was not found on the provide index:
+  # - name: ocr_video_detector_onnx
+  #   route_prefix: /ocr_video_detector_onnx
+  #   import_path: inference_ray.main:app_builder
+  #   runtime_env:
+  #     uv:
+  #       - "--extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/"
+  #       - scikit-learn
+  #       - opencv-python-headless
+  #       - onnxruntime-gpu==1.20.0
+  #       - onnx
+  #       - torch
+  #       - torchvision
+  #       - pytorch_lightning
+  #       - timm
+  #       - nltk
+  #   args:
+  #     model: ocr_video_detector_onnx
+  #     data_path: /data
+  #     params: 
+  #       model_path: /models/ocr/yolov7_text_det_dyn_input.onnx
+  #   deployments:
+  #     - name: Deployment
+  #       autoscaling_config:
+  #         min_replicas: 1
+  #       ray_actor_options:
+  #         num_gpus: 0.2

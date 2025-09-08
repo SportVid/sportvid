@@ -20,14 +20,16 @@ https://sportvid.github.io/
 
 2. Download and extract models:
     ```sh
-    mkdir data/cache
-    mkdir data/analyser
-    mkdir data/media
-    mkdir data/tmp
-    mkdir data/predictions
-    mkdir data/backend_cache
-    wget https://tib.eu/cloud/s/kAe3TXPfsBpwtwk/download/models.tar.gz
-    tar -xf models.tar.gz --directory data/
+    sudo mkdir /mnt/data/dev/data/cache
+    sudo mkdir /mnt/data/dev/data/analyser
+    sudo mkdir /mnt/data/dev/data/media
+    sudo mkdir /mnt/data/dev/data/tmp
+    sudo mkdir /mnt/data/dev/data/predictions
+    sudo mkdir /mnt/data/dev/data/backend_cache
+    cd /mnt/data/dev/data/
+    wget https://next.hessenbox.de/public.php/dav/files/JDnBxSKynARpwWm/?accept=zip -O models.tar.gz
+    sudo tar -xf models.tar.gz --directory .
+    rm -rf models.tar.gz
     ```
 
 3. Build and start the container:
@@ -38,8 +40,7 @@ https://sportvid.github.io/
 
 4. Apply database migrations and build frontend packages:
     ```sh
-    sudo docker compose exec backend uv run python3 backend/src/backend/manage.py migrate auth
-    sudo docker compose exec backend uv run python3 backend/src/backend/manage.py migrate
+    docker compose exec backend python3 backend/src/backend/manage.py migrate
     sudo docker compose exec frontend npm install
     sudo docker compose exec frontend npm run build
     ```

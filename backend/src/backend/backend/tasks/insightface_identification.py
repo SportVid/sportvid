@@ -3,7 +3,7 @@ import imageio.v3 as iio
 import logging
 
 from data import DataManager
-from backend.models import PluginRun, PluginRunResult, Video, Timeline, TibavaUser
+from backend.models import PluginRun, PluginRunResult, Video, Timeline, SportVidUser
 from backend.plugin_manager import PluginManager
 
 from ..utils.analyser_client import TaskAnalyserClient
@@ -41,7 +41,7 @@ class InsightfaceIdentification(Task):
         self,
         parameters: Dict,
         video: Video = None,
-        user: TibavaUser = None,
+        user: SportVidUser = None,
         plugin_run: PluginRun = None,
         dry_run: bool = False,
         **kwargs

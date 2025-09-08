@@ -5,11 +5,11 @@ data:
       params:
         db: 1
         host: valkey
-        port: 6380
+        port: ${VALKEY_PORT}
         tag: analyser
 inference:
   type: ray
   params: 
     host: inference_ray
-    port: 8000
-    status_port: 52365
+    port: ${BACKEND_PORT}
+    status_port: ${INFERENCE_RAY_STATUS_PORT}

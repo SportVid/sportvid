@@ -7,7 +7,7 @@ from backend.models import (
     PluginRunResult,
     Video,
     Timeline,
-    TibavaUser,
+    SportVidUser,
     Annotation,
     AnnotationCategory,
     PluginRun,
@@ -49,7 +49,7 @@ class OCRTask(Task):
         self,
         parameters: Dict,
         video: Video = None,
-        user: TibavaUser = None,
+        user: SportVidUser = None,
         plugin_run: PluginRun = None,
         **kwargs
     ):

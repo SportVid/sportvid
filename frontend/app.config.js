@@ -1,4 +1,6 @@
 module.exports = {
-  API_LOCATION: "http://localhost:8000", // Port: 8000 or 8010?
-  THUMBNAIL_LOCATION: "http://localhost/thumbnails",
+  // API_LOCATION: "https://dev.sportvid.dshs-koeln.de/api",
+  API_LOCATION: "/api",
+  // THUMBNAIL_LOCATION: "https://dev.sportvid.dshs-koeln.de/thumbnails",
+  THUMBNAIL_LOCATION: "/thumbnails"
 };

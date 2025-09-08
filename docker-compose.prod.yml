@@ -1,20 +1,26 @@
+networks:
+  sportvid_prod_network:
+    driver: bridge
+
 services:
   inference_ray:
     build: .
-
     environment:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
-
+      - NVIDIA_VISIBLE_DEVICES=all
     volumes:
       - type: bind
-        source: ./data/analyser
+        source: ${DATA_PATH}/inference_ray_venv
+        target: /app/.venv
+      - type: bind
+        source: ${DATA_PATH}/analyser
         target: /data/
       - type: bind
-        source: ./data/media/
+        source: ${DATA_PATH}/media/
         target: /media/
       - type: bind
-        source: ./data/models/
+        source: ${DATA_PATH}/models/
         target: /models/
       - type: bind
         source: ./inference_ray
@@ -34,15 +40,24 @@ services:
       - type: bind
         source: ./.python-version
         target: /app/.python-version
-
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     working_dir: /app/
-
-    command: uv run --package inference_ray serve run /app/inference_ray/deploy.yml
+    command: uv run --package inference_ray serve run /app/inference_ray/deploy.cuda.yml
+    networks:
+      - sportvid_prod_network
 
   analyser:
     build: .
-
     volumes:
+      - type: bind
+        source: ${DATA_PATH}/analyser_venv
+        target: /app/.venv
       - type: bind
         source: ./inference_ray
         target: /app/inference_ray
@@ -53,13 +68,13 @@ services:
         source: ./packages
         target: /app/packages
       - type: bind
-        source: ./data/analyser
+        source: ${DATA_PATH}/analyser
         target: /data/
       - type: bind
-        source: ./data/media/
+        source: ${DATA_PATH}/media/
         target: /media/
       - type: bind
-        source: ./data/cache/
+        source: ${DATA_PATH}/cache/
         target: /cache/
       - type: bind
         source: ./pyproject.toml
@@ -67,37 +82,42 @@ services:
       - type: bind
         source: ./.python-version
         target: /app/.python-version
-
     working_dir: /app/
-
     command: uv run --package analyser analyser/src/analyser/server.py -v -c analyser/config.yml
+    networks:
+      - sportvid_prod_network
 
   postgres:
     image: postgres:14.17
     volumes:
-      - ./data/db/:/var/lib/postgresql/data
+      - ${DATA_PATH}/db/:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=tibava
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    ports:
-      # TODO: do not expose port for production!
-      - "127.0.0.1:5432:5432"
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    networks:
+      - sportvid_prod_network
 
   memcached:
     image: memcached:1.6.10-buster
     command: -I 32m
+    networks:
+      - sportvid_prod_network
 
   valkey:
     image: valkey/valkey:8.1.1-alpine
-    command: /usr/local/bin/valkey-server --port 6380 --bind 0.0.0.0
+    command: /usr/local/bin/valkey-server --port ${VALKEY_PORT} --bind 0.0.0.0
     ports:
-      - "127.0.0.1:6380:6380"
+      - "127.0.0.1:${VALKEY_PORT}:${VALKEY_PORT}"
+    networks:
+      - sportvid_prod_network
 
   celery:
     build: .
-
     volumes:
+      - type: bind
+        source: ${DATA_PATH}/celery_venv
+        target: /app/.venv
       - type: bind
         source: ./inference_ray
         target: /app/inference_ray
@@ -111,43 +131,61 @@ services:
         source: ./backend/
         target: /app/backend
       - type: bind
-        source: ./data/media/
+        source: ${DATA_PATH}/media/
         target: /media
       - type: bind
-        source: ./data/predictions
+        source: ${DATA_PATH}/predictions
         target: /predictions
       - type: bind
-        source: ./data/backend_cache
+        source: ${DATA_PATH}/backend_cache
         target: /cache
-      - type: bind
-        source: ./data/tmp
-        target: /tmp
+      # - type: bind
+      #   source: ${DATA_PATH}/tmp
+      #   target: /tmp
       - type: bind
         source: ./pyproject.toml
         target: /app/pyproject.toml
       - type: bind
         source: ./.python-version
         target: /app/.python-version
-
+    tmpfs:
+     - /tmp
+     - /var/tmp
     depends_on:
       - postgres
-
     working_dir: /app/backend/src/backend/
-    environment:
-      - TIBAVA_BACKEND_CONFIG=/app/backend/config.json
+    # environment:
       # - GRPC_ENABLE_FORK_SUPPORT=1
       # - GRPC_POLL_STRATEGY=poll
       # - GRPC_VERBOSITY=debug
       # - GRPC_TRACE=all
-    command: uv run --package backend celery -A tibava worker -l INFO
+    env_file:
+     - /opt/deploy/.env.dev
+    command:
+      - "uv"
+      - "run"
+      - "--package"
+      - "backend"
+      - "celery"
+      - "-A"
+      - "sportvid"
+      - "worker"
+      - "--loglevel"
+      - "INFO"
+    networks:
+      - sportvid_prod_network
 
   backend:
-    build: .
+    build:
+      context: .
+      args:
+        backend_port: ${BACKEND_PORT}
     ports:
-      - 8000:8000
-      - 8010:8000
-
+      - ${BACKEND_PORT}:${BACKEND_PORT}
     volumes:
+      - type: bind
+        source: ${DATA_PATH}/backend_venv
+        target: /app/.venv
       - type: bind
         source: ./inference_ray
         target: /app/inference_ray
@@ -161,39 +199,63 @@ services:
         source: ./backend/
         target: /app/backend
       - type: bind
-        source: ./data/media/
+        source: ${DATA_PATH}/media/
         target: /media
       - type: bind
-        source: ./data/predictions
+        source: ${DATA_PATH}/predictions
         target: /predictions
       - type: bind
-        source: ./data/backend_cache
+        source: ${DATA_PATH}/backend_cache
         target: /cache
-      - type: bind
-        source: ./data/tmp
-        target: /tmp
+      # - type: bind
+      #   source: ${DATA_PATH}/tmp
+      #   target: /tmp
       - type: bind
         source: ./pyproject.toml
         target: /app/pyproject.toml
       - type: bind
         source: ./.python-version
         target: /app/.python-version
-
+    tmpfs:
+     - /tmp
+     - /var/tmp
     working_dir: /app/
     environment:
-      - TIBAVA_BACKEND_CONFIG=/app/backend/config.json
-    command: uv run --package backend python3 backend/src/backend/manage.py runserver 0.0.0.0:8000
-
+      - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
+    # env_file:
+    #  - /opt/deploy/.env.dev
+    command: 
+      - "uv"
+      - "run"
+      - "--package"
+      - "backend"
+      - "gunicorn"
+      - "--bind"
+      - "0.0.0.0:${BACKEND_PORT}"
+      - "--env"
+      - "SCRIPT_NAME=/api"
+      - "sportvid.wsgi"
+      - "--capture-output"
+      - "--log-level"
+      - "${LOG_LEVEL}"
+      - "--workers=${GUNICORN_WORKERS}"
     depends_on:
       - postgres
       - memcached
       - celery
+    networks:
+      - sportvid_prod_network
+    # restart:
+    #   - unless-stopped  # NOTE: auto-restart container?
+    # user:
+    #  - "1000:1000"  # NOTE: use a non-root user
 
   frontend:
     image: frontend
     ports:
-      - 8080:8080
-      - 80:80
+      - ${FRONTEND_PORT}:80
+      # - ${FRONTEND_PORT}:${FRONTEND_PORT}
+      # - 80:80  # NOTE: server-sided NGINX? or run two processes on the same port?
     build:
       context: ./frontend
     volumes:
@@ -201,9 +263,14 @@ services:
         source: ./frontend/
         target: /app/frontend
       - type: bind
-        source: ./data/predictions/
+        source: ${DATA_PATH}/predictions/
         target: /thumbnails
       - type: bind
-        source: ./data/media/
+        source: ${DATA_PATH}/media/
         target: /media
+      - type: bind
+        source: /etc/cert/
+        target: /etc/cert
     working_dir: /app/frontend
+    networks:
+      - sportvid_prod_network
