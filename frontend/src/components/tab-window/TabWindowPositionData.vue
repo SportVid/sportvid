@@ -26,7 +26,7 @@
           }"
         >
           <polygon
-            v-for="(hull, team) in convexHullPlayer[currentTime]"
+            v-for="(hull, team) in convexHullPlayer[currentFrameKey]"
             :key="team"
             :points="hull.map((p) => `${p.left},${p.top}`).join(' ')"
             :stroke="visualizationStore.getTeamColor(team)"
@@ -46,7 +46,7 @@
           }"
         >
           <polygon
-            v-for="cell in voronoiCells[currentTime]"
+            v-for="cell in voronoiCells[currentFrameKey]"
             :key="cell"
             :points="cell.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')"
             stroke="gray"
@@ -55,7 +55,10 @@
           />
         </svg>
 
-        <template v-for="position in topViewStore.positionDataTopView[currentTime]" :key="position">
+        <template
+          v-for="position in topViewStore.positionDataTopView[currentFrameKey]"
+          :key="position"
+        >
           <div
             v-if="position[1] !== 1"
             v-show="topViewStore.showItems"
@@ -713,6 +716,16 @@ watch(videoControl || videoSlider, (newVal) => {
   if (newVal) {
     nextTick(() => updateMaxHeight());
   }
+});
+
+const currentFrameKey = computed(() => {
+  return Object.keys(topViewStore.positionDataTopView)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .reduce(
+      (prev, key) => (key <= playerStore.currentTime ? key : prev),
+      Object.keys(topViewStore.positionDataTopView)[0]
+    );
 });
 </script>
 

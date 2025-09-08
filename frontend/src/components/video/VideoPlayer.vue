@@ -16,7 +16,7 @@
           }"
         />
         <div
-          v-for="position in bboxesStore.bboxDataInterpolated[playerStore.currentTime]"
+          v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
           v-show="bboxesStore.showBoundingBox"
           :key="position"
           :style="{
@@ -217,9 +217,22 @@ const throttledUpdateTime = throttle((currentTime) => {
     playerStore.setCurrentTime(Math.round(currentTime * 1000));
   });
 }, 1 / playerStore.videoFPS);
+// const onTimeUpdate = (event) => {
+//   throttledUpdateTime(event.target.currentTime);
+//   playerStore.setEnded(event.target.ended);
+// };
 const onTimeUpdate = (event) => {
-  throttledUpdateTime(event.target.currentTime);
-  playerStore.setEnded(event.target.ended);
+  const videoTimeMs = Math.round(event.target.currentTime * 1000);
+  const frameKeys = [];
+  for (let t = 0; t <= playerStore.videoDuration * 1000; t += 1000 / playerStore.videoFPS) {
+    frameKeys.push(Math.round(t));
+  }
+  const closestFrame = frameKeys.reduce(
+    (prev, curr) => (Math.abs(curr - videoTimeMs) < Math.abs(prev - videoTimeMs) ? curr : prev),
+    frameKeys[0]
+  );
+
+  playerStore.setCurrentTime(closestFrame);
 };
 const deltaSeek = (delta) => {
   if (videoElement.value) {
@@ -396,6 +409,16 @@ function openEditBBox(bbox) {
   editBBox.value = bbox;
   editDialog.value = true;
 }
+
+const currentFrameKey = computed(() => {
+  return Object.keys(bboxesStore.bboxDataInterpolated)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .reduce(
+      (prev, key) => (key <= playerStore.currentTime ? key : prev),
+      Object.keys(bboxesStore.bboxDataInterpolated)[0]
+    );
+});
 </script>
 
 <style scoped>
