@@ -669,13 +669,6 @@ watch(
   },
   { immediate: true }
 );
-
-watch(
-  () => bboxesStore.bboxDataActive,
-  (newData) => {
-    console.log("bboxDataActive-watch", newData);
-  }
-);
 </script>
 
 <style scoped>

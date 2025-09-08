@@ -267,22 +267,6 @@ watch(
   { immediate: true }
 );
 
-const updateBboxData = async () => {
-  if (selectedMode.value === "allPlayer") bboxData.value.applyAllPlayerId = true;
-  if (selectedMode.value === "allTeam") bboxData.value.applyAllTeamId = true;
-
-  await bboxesStore.updateBboxData(bboxData.value);
-  dialog.value = false;
-};
-
-const deleteBboxData = async () => {
-  if (selectedMode.value === "allPlayer") bboxData.value.applyAllPlayerId = true;
-  if (selectedMode.value === "allTeam") bboxData.value.applyAllTeamId = true;
-
-  await bboxesStore.deleteBboxData(bboxData.value);
-  dialog.value = false;
-};
-
 const selectedMode = ref("bbox");
 const BboxUpdateModes = ref([
   { id: "bbox", name: t("modal.bounding_box.edit.modes.bbox") },
@@ -347,10 +331,26 @@ const checkPlayerId = (value) => {
 };
 
 const checkTeamId = (value) => {
-  if (!value) {
+  if (value === null || value === undefined || value === "") {
     return t("field.required");
   }
   return true;
+};
+
+const updateBboxData = async () => {
+  if (selectedMode.value === "allPlayer") bboxData.value.applyAllPlayerId = true;
+  if (selectedMode.value === "allTeam") bboxData.value.applyAllTeamId = true;
+
+  await bboxesStore.updateBboxData(bboxData.value);
+  dialog.value = false;
+};
+
+const deleteBboxData = async () => {
+  if (selectedMode.value === "allPlayer") bboxData.value.applyAllPlayerId = true;
+  if (selectedMode.value === "allTeam") bboxData.value.applyAllTeamId = true;
+
+  await bboxesStore.deleteBboxData(bboxData.value);
+  dialog.value = false;
 };
 </script>
 

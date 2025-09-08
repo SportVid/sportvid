@@ -96,7 +96,7 @@ export const useTopViewStore = defineStore(
     ) {
       calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
 
-      if (updatedBboxes) {
+      if (updatedBboxes !== null) {
         bboxesStore.bboxDataActive = updatedBboxes;
         bboxesStore.bboxDataLoaded = true;
       } else {
@@ -105,6 +105,7 @@ export const useTopViewStore = defineStore(
 
       if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
         // const _parsedData = JSON.parse(bboxesStore.bboxDataActive);
+
         const _bboxDataInterpolated = JSON.parse(bboxesStore.bboxDataActive);
 
         // const _bboxDataInterpolated = bboxesStore.interpolateBboxData(

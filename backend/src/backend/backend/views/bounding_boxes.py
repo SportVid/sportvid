@@ -34,7 +34,7 @@ class BoundingBoxesChange(View):
             if "player_id" in data: current_player_id = int(data.get("player_id"))
             if "team_id" in data: current_team_id = int(data.get("team_id"))
             if "new_player_id" in data: new_player_id = int(data.get("new_player_id"))
-            if "new_team_id" in data: new_team_id = data.get("new_team_id")
+            if "new_team_id" in data: new_team_id = int(data.get("new_team_id"))
             if "update_all_player_id" in data:
                 if data.get("update_all_player_id") in ['true', 'True', True]:
                     update_all_player_id = True
@@ -78,23 +78,23 @@ class BoundingBoxesChange(View):
                 with manager.create_data("BboxesData") as altered_bbx:
                     if not update_all_player_id and bbox_id:
                         # --- single edit (1 frame); O(n) at worse
-                        frame_id = bbox_id.split("-", 1)[0]  # only iterate through lists that are related to the frame
+                        frame_id = str(bbox_id.split("-", 1)[0])  # only iterate through lists that are related to the frame
                         for bbx in bbd_data[frame_id]:
                             # mutate list
                             if bbx[5] == bbox_id:
                                 bbx[0] = new_player_id
                                 bbx[5] = f"{frame_id}-{new_player_id}"
-                                if new_team_id and not update_all_team_id: bbx[1] = new_team_id
+                                bbx[1] = new_team_id
                                 break
                     if update_all_player_id and current_player_id and new_player_id:
                         # --- bulk edit (all frames); iterates each entry O(n)
-                        for frame, bboxes in bbd_data.items():
+                        for _, bboxes in bbd_data.items():
                             for bbx in bboxes:
                                 if bbx[0] == current_player_id:
                                     frame_id = bbx[5].split("-", 1)[0]
                                     bbx[0] = new_player_id
                                     bbx[5] = f"{frame_id}-{new_player_id}"
-                                    if new_team_id: bbx[1] = new_team_id
+                                    bbx[1] = new_team_id
                     # --- bulk team edit (all frames, no player_id changes)
                     if (current_team_id is not None and new_team_id is not None) and (
                         update_all_team_id and not new_player_id): # change team exclusively
@@ -178,7 +178,7 @@ class BoundingBoxesDelete(View):
                 with manager.create_data("BboxesData") as altered_bbx:
                     if not delete_all_player_id and bbox_id:
                         # --- single delete (1 frame); O(n) at worse
-                        frame_id = bbox_id.split("-", 1)[0]  # only iterate through lists that are related to the frame
+                        frame_id = str(bbox_id.split("-", 1)[0])  # only iterate through lists that are related to the frame
                         for bbx_id, bbx in enumerate(bbd_data[frame_id]):
                             # mutate list
                             if bbx[5] == bbox_id:
