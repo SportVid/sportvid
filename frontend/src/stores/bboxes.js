@@ -1,4 +1,4 @@
-import { nextTick, ref } from "vue";
+import { ref } from "vue";
 import { defineStore } from "pinia";
 import axios from "../plugins/axios";
 import config from "../../app.config";

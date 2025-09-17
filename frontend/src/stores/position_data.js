@@ -7,6 +7,7 @@ import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useTopViewStore } from "./top_view";
 import { useBboxesStore } from "./bboxes";
+import { useVisualizationStore } from "@/stores/visualization";
 
 export const usePositionDataStore = defineStore("position_data", () => {
   const playerStore = usePlayerStore();
@@ -14,6 +15,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
   const pluginRunResultStore = usePluginRunResultStore();
   const topViewStore = useTopViewStore();
   const bboxesStore = useBboxesStore();
+  const visualizationStore = useVisualizationStore();
 
   const positionDataList = ref([]);
   const positionDataId = ref(null);
@@ -132,6 +134,86 @@ export const usePositionDataStore = defineStore("position_data", () => {
     }
   };
 
+  function calculateRunningDistances(selectedPlayerIds, startFrame, endFrame) {
+    const distancesByPlayerId = new Map();
+
+    const allTimes = Object.keys(topViewStore.positionDataTopView).map(Number);
+
+    const timeRange = allTimes.filter(
+      (t) =>
+        t >= startFrame &&
+        t <= endFrame &&
+        (!visualizationStore.showProgress || t <= playerStore.currentTime)
+    );
+
+    const allPlayersSet = new Map();
+
+    for (const frame of allTimes) {
+      const players = topViewStore.positionDataTopView[frame];
+      if (!players) continue;
+      for (const p of players) {
+        if (p[1] === 1) continue; // Ball raus
+        if (
+          (visualizationStore.showAggregatedFirst && p[2] !== 1) ||
+          (visualizationStore.showAggregatedSecond && p[2] !== 2)
+        ) {
+          continue;
+        }
+        if (!allPlayersSet.has(p[0])) {
+          allPlayersSet.set(p[0], { player_id: p[0], team_id: p[1] });
+        }
+      }
+    }
+
+    for (const player of allPlayersSet.values()) {
+      distancesByPlayerId.set(player.player_id, { ...player, distance: 0 });
+    }
+
+    if (timeRange.length > 1) {
+      for (let i = 1; i < timeRange.length; i++) {
+        const tPrev = timeRange[i - 1];
+        const tCurr = timeRange[i];
+
+        const playersPrev = topViewStore.positionDataTopView[tPrev];
+        const playersCurr = topViewStore.positionDataTopView[tCurr];
+        if (!playersPrev || !playersCurr) continue;
+
+        for (const currPlayer of playersCurr) {
+          if (currPlayer[1] === 1) continue;
+
+          const prevPlayer = playersPrev.find((p) => p[0] === currPlayer[0]);
+          if (!prevPlayer) continue;
+
+          if (
+            (visualizationStore.showAggregatedFirst && currPlayer[2] !== 1) ||
+            (visualizationStore.showAggregatedSecond && currPlayer[2] !== 2)
+          ) {
+            continue;
+          }
+
+          const dx = (currPlayer[3] - prevPlayer[3]) * playerStore.video.field_length;
+          const dy = (currPlayer[4] - prevPlayer[4]) * playerStore.video.field_width;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          if (!distancesByPlayerId.has(currPlayer[0])) {
+            distancesByPlayerId.set(currPlayer[0], {
+              player_id: currPlayer[0],
+              team_id: currPlayer[1],
+              distance: 0,
+            });
+          }
+
+          distancesByPlayerId.get(currPlayer[0]).distance += dist;
+        }
+      }
+    }
+
+    return Array.from(distancesByPlayerId.values())
+      .map((item) => ({ ...item, distance: Number(item.distance.toFixed(2)) }))
+      .filter((p) => selectedPlayerIds.has(p.player_id))
+      .sort((a, b) => a.player_id - b.player_id);
+  }
+
   return {
     positionDataList,
     positionDataId,
@@ -146,5 +228,6 @@ export const usePositionDataStore = defineStore("position_data", () => {
     isUploading,
     progress,
     provider,
+    calculateRunningDistances,
   };
 });
