@@ -18,7 +18,7 @@
 
       <v-select
         v-model="parameter.value"
-        :items="shot_timelines"
+        :items="shotTimelines"
         :label="parameter.text"
         :hint="parameter.hint"
         item-title="name"
@@ -31,7 +31,7 @@
 
       <v-select
         v-model="parameter.value"
-        :items="calibration_assets"
+        :items="calibrationAssets"
         :label="parameter.text"
         :hint="parameter.hint"
         item-title="name"
@@ -44,7 +44,7 @@
 
       <v-select
         v-model="parameter.value"
-        :items="position_data_teams"
+        :items="positionDataTeams"
         :label="parameter.text"
         :hint="parameter.hint"
         item-title="name"
@@ -53,6 +53,121 @@
         :key="parameter.name"
         persistent-hint
         variant="underlined"
+        multiple
+      >
+        <template v-slot:prepend-item v-if="positionDataTeams?.length > 0">
+          <v-checkbox
+            class="ml-4 my-n2 text-body-2"
+            v-model="isPositionDataTeamSelectAll"
+            @click="togglePositionDataTeamSelectAll(parameter)"
+            hide-details
+            ripple
+          >
+            <template v-slot:label>
+              <span class="text-body-1">{{ $t("modal.export.position_data.teams.all") }}</span>
+            </template>
+          </v-checkbox>
+          <v-divider />
+        </template>
+
+        <template v-slot:selection="{ item, index }">
+          <v-chip v-if="index < 4" :text="item.title" />
+          <v-chip v-if="index === 4" class="text-grey text-caption">
+            (+{{ parameter.value.length - 4 }} others)
+          </v-chip>
+        </template>
+      </v-select>
+
+      <v-select
+        v-model="parameter.value"
+        :items="exportStore.selectablePositionDataAttributes"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_position_data_attribute'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+        multiple
+        class="mt-6"
+        :menu-props="{ location: 'bottom', maxHeight: 250 }"
+      >
+        <template
+          v-slot:prepend-item
+          v-if="exportStore.selectablePositionDataAttributes?.length > 0"
+        >
+          <v-checkbox
+            class="ml-4 my-n2 text-body-2"
+            v-model="isPositionDataAttributeSelectAll"
+            @click="togglePositionDataAttributeSelectAll(parameter)"
+            hide-details
+            ripple
+          >
+            <template v-slot:label>
+              <span class="text-body-1">{{ $t("modal.export.position_data.attributes.all") }}</span>
+            </template>
+          </v-checkbox>
+          <v-divider />
+        </template>
+
+        <template v-slot:selection="{ item, index }">
+          <v-chip v-if="index < 2" :text="item.title" />
+          <v-chip v-if="index === 2" class="text-grey text-caption">
+            (+{{ parameter.value.length - 2 }} others)
+          </v-chip>
+        </template>
+      </v-select>
+
+      <v-select
+        v-model="parameter.value"
+        :items="runningDistanceTeams"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_running_distance_team'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+        multiple
+      >
+        <template v-slot:prepend-item v-if="runningDistanceTeams?.length > 0">
+          <v-checkbox
+            class="ml-4 my-n2 text-body-2"
+            v-model="isRunningDistanceTeamSelectAll"
+            @click="toggleRunningDistanceTeamSelectAll(parameter)"
+            hide-details
+            ripple
+          >
+            <template v-slot:label>
+              <span class="text-body-1">{{ $t("modal.export.running_distance.teams.all") }}</span>
+            </template>
+          </v-checkbox>
+          <v-divider />
+        </template>
+
+        <template v-slot:selection="{ item, index }">
+          <v-chip v-if="index < 4" :text="item.title" />
+          <v-chip v-if="index === 4" class="text-grey text-caption">
+            (+{{ parameter.value.length - 4 }} others)
+          </v-chip>
+        </template>
+      </v-select>
+
+      <v-autocomplete
+        v-model="parameter.value"
+        v-if="parameter.field == 'select_running_distance_frame'"
+        type="number"
+        :min="parameter.min"
+        :max="parameter.max"
+        :items="parameter.items"
+        :label="parameter.text"
+        hide-details
+        class="mt-8"
+        persistent-hint
+        variant="underlined"
+        :menu-props="{ location: 'bottom', maxHeight: 160 }"
       />
 
       <v-select
@@ -181,21 +296,26 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useTimelineStore } from "../stores/timeline";
-import { usePluginRunResultStore } from "../stores/plugin_run_result";
-import { useBboxesStore } from "../stores/bboxes";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import { useTopViewStore } from "@/stores/top_view";
+import { useExportStore } from "@/stores/export";
+import { usePlayerStore } from "@/stores/player";
+
+const timelineStore = useTimelineStore();
+const calibrationAssetStore = useCalibrationAssetStore();
+const topViewStore = useTopViewStore();
+const exportStore = useExportStore();
+const playerStore = usePlayerStore();
+
+const { t } = useI18n();
 
 const props = defineProps({
   parameters: Array,
   videoIds: Array,
 });
-
-const timelineStore = useTimelineStore();
-const pluginRunResultStore = usePluginRunResultStore();
-const bboxesStore = useBboxesStore();
-const calibrationAssetStore = useCalibrationAssetStore();
 
 const groupTimelines = (timelines) => {
   let timelinesGroups = {};
@@ -219,7 +339,7 @@ const groupTimelines = (timelines) => {
   );
 };
 
-const shot_timelines = computed(() => {
+const shotTimelines = computed(() => {
   let timelines = timelineStore.all.filter(
     (timeline) => timeline.type == "ANNOTATION" && props.videoIds.indexOf(timeline.video_id) >= 0
   );
@@ -239,25 +359,96 @@ const scalar_timelines = computed(() => {
   return timelines;
 });
 
-const position_data_teams = computed(() => {
-  // const teams = new Set(bboxesStore.positionsNested.flat().map((player) => player.team_id));
-  const teams = new Set(bboxesStore.positionsFlat.map((player) => player.team_id));
-  return [
-    { name: "Both Teams", id: "both" },
-    ...[...teams].map((team_id) => ({
-      name: `Team ${team_id.charAt(0).toUpperCase() + team_id.slice(1)}`,
-      id: team_id,
-    })),
-  ];
+const positionDataTeams = computed(() => {
+  const teams = new Set(
+    Object.values(topViewStore.positionDataTopView)
+      .flat()
+      .map((pos) => pos[1])
+  );
+
+  if (teams.size === 0) {
+    return;
+  }
+
+  const sortedTeams = [...teams].sort((a, b) => {
+    if (a === 1) return -1;
+    if (b === 1) return 1;
+    return a - b;
+  });
+
+  const teamItems = sortedTeams.map((team_id) => {
+    if (team_id === 1) {
+      return { name: t("modal.export.position_data.teams.ball"), id: team_id };
+    } else {
+      return { name: t("modal.export.position_data.teams.team", { id: team_id }), id: team_id };
+    }
+  });
+
+  return teamItems;
 });
 
-const calibration_assets = computed(() => {
+const isPositionDataTeamSelectAll = ref(false);
+const togglePositionDataTeamSelectAll = (parameter) => {
+  if (!isPositionDataTeamSelectAll.value) {
+    parameter.value = positionDataTeams.value.map((team) => team.id);
+  } else {
+    parameter.value = [];
+  }
+
+  isPositionDataTeamSelectAll.value = !isPositionDataTeamSelectAll.value;
+};
+
+const isPositionDataAttributeSelectAll = ref(false);
+const togglePositionDataAttributeSelectAll = (parameter) => {
+  if (!isPositionDataAttributeSelectAll.value) {
+    parameter.value = exportStore.selectablePositionDataAttributes.map((team) => team.id);
+  } else {
+    parameter.value = [];
+  }
+
+  isPositionDataAttributeSelectAll.value = !isPositionDataAttributeSelectAll.value;
+};
+
+const runningDistanceTeams = computed(() => {
+  const teams = new Set(
+    Object.values(topViewStore.positionDataTopView)
+      .flat()
+      .map((pos) => pos[1])
+      .filter((id) => id !== 1)
+  );
+
+  if (teams.size === 0) {
+    return [];
+  }
+
+  const sortedTeams = [...teams].sort((a, b) => a - b);
+
+  return sortedTeams.map((team_id) => ({
+    name: t("modal.export.running_distance.teams.team", { id: team_id }),
+    id: team_id,
+  }));
+});
+
+const isRunningDistanceTeamSelectAll = ref(false);
+const toggleRunningDistanceTeamSelectAll = (parameter) => {
+  if (!isRunningDistanceTeamSelectAll.value) {
+    parameter.value = runningDistanceTeams.value.map((team) => team.id);
+  } else {
+    parameter.value = [];
+  }
+
+  isRunningDistanceTeamSelectAll.value = !isRunningDistanceTeamSelectAll.value;
+};
+
+const calibrationAssets = computed(() => {
   return Object.values(calibrationAssetStore.calibrationAssetsList);
 });
 
 onMounted(() => {
   calibrationAssetStore.loadCalibrationAssetsList();
 });
+
+const allFrameKeys = computed(() => Object.keys(topViewStore.positionDataTopView).map(Number));
 </script>
 
 <style scoped>

@@ -62,11 +62,8 @@
                       variant="solo-filled"
                       density="comfortable"
                       :disabled="!props.pluginRuns.length"
-                    >
-                      <template v-slot:selection="{ item }">
-                        <v-chip :text="item.title" />
-                      </template>
-                    </v-select>
+                      chips
+                    />
                     <v-btn
                       block
                       color="error"

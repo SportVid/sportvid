@@ -157,7 +157,7 @@ export const useVideoStore = defineStore("video", () => {
     }
   };
 
-  const rename = async ({ videoId, name }) => {
+  const renameVideo = async ({ videoId, name }) => {
     if (isLoading.value) return;
     isLoading.value = true;
 
@@ -192,54 +192,6 @@ export const useVideoStore = defineStore("video", () => {
     }
   };
 
-  const exportVideo = async ({ format, parameters = [], videoId = null }) => {
-    if (isLoading.value) return;
-    isLoading.value = true;
-
-    const formData = new FormData();
-    formData.append("format", format);
-    let jsonParameters = [];
-    parameters.forEach((p) => {
-      if ("file" in p) {
-        formData.append(`file_${p.name}`, p.file);
-      } else {
-        jsonParameters.push(p);
-      }
-    });
-    formData.append("parameters", JSON.stringify(jsonParameters));
-
-    let video_id = videoId || usePlayerStore().videoId;
-    formData.append("video_id", video_id);
-
-    try {
-      const res = await axios.post(`${config.API_LOCATION}/video/export`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      if (res.data.status === "ok") {
-        handleExportFile(res.data, video_id);
-      }
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const handleExportFile = (data, videoId) => {
-    if (data.extension === "zip") {
-      const filecontent = Buffer.from(data.file, "base64");
-      let blob = new Blob([filecontent], { type: "application/zip" });
-      let link = document.createElement("a");
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `timelines.${data.extension}`;
-      link.click();
-    } else if (data.extension === "csv" || data.extension === "eaf") {
-      let blob = new Blob([data.file], { type: `text/${data.extension}` });
-      let link = document.createElement("a");
-      link.href = window.URL.createObjectURL(blob);
-      link.download = `${videoId}.${data.extension}`;
-      link.click();
-    }
-  };
-
   const videoSize = ref({ width: 0, height: 0, top: 0, left: 0 });
 
   const setVideoSize = (size) => {
@@ -265,9 +217,8 @@ export const useVideoStore = defineStore("video", () => {
     replaceStore,
     fetch,
     fetchAll,
-    rename,
+    renameVideo,
     deleteVideo,
-    exportVideo,
     videoSize,
     setVideoSize,
     uploadSuccess,

@@ -647,36 +647,6 @@ watch(
   },
   { immediate: true }
 );
-
-watch(
-  () => [
-    calibrationAssetStore.marker,
-    calibrationAssetStore.calibrationMatrix,
-    bboxesStore.bboxPluginRunId,
-  ],
-  ([newmarker, newMatrix, newBytetrack]) => {
-    console.log("Selected Calibration Asset:", newmarker);
-    console.log("Selected Calibration Matrix:", newMatrix);
-    console.log("Selected Bytetrack Plugin:", newBytetrack);
-  },
-  { deep: true }
-);
-
-watch(
-  () => playerStore.video,
-  () => {
-    console.log("video", playerStore.video);
-  },
-  { immediate: true }
-);
-
-watch(
-  () => bboxesStore.bboxDataActive,
-  () => {
-    console.log("acive bbox", bboxesStore.bboxDataActive);
-  },
-  { immediate: true }
-);
 </script>
 
 <style scoped>
