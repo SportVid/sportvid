@@ -1,12 +1,17 @@
 import { defineStore } from "pinia";
-import { nextTick, ref } from "vue";
+import { nextTick, ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import { usePlayerStore } from "@/stores/player";
 
 export const useTopViewStore = defineStore(
   "top_view",
   () => {
+    const bboxesStore = useBboxesStore();
+    const calibrationAssetStore = useCalibrationAssetStore();
+    const playerStore = usePlayerStore();
+
     const { t } = useI18n();
 
     const showItems = ref(false);
@@ -92,8 +97,6 @@ export const useTopViewStore = defineStore(
     const positionDataTopView = ref({});
     const metaDataTopView = ref({});
 
-    const bboxesStore = useBboxesStore();
-    const calibrationAssetStore = useCalibrationAssetStore();
     function transformBBoxToPositionDataTopView(
       calibrationAssetId,
       bytetrackPluginId,
@@ -136,6 +139,18 @@ export const useTopViewStore = defineStore(
       }
     }
 
+    const currentTimeOffset = ref(0);
+    const currentFrameKey = computed(() => {
+      return Object.keys(positionDataTopView.value)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .reduce(
+          (prev, key) =>
+            key <= Number(playerStore.currentTime) + Number(currentTimeOffset.value) ? key : prev,
+          Object.keys(positionDataTopView.value)[0]
+        );
+    });
+
     return {
       topViewSize,
       setTopViewSize,
@@ -156,6 +171,8 @@ export const useTopViewStore = defineStore(
       transformBBoxToPositionDataTopView,
       showPlayerId,
       viewPlayerId,
+      currentFrameKey,
+      currentTimeOffset,
     };
   }
   // {

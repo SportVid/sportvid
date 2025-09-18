@@ -26,7 +26,7 @@
           }"
         >
           <polygon
-            v-for="(hull, team) in convexHullPlayer[currentFrameKey]"
+            v-for="(hull, team) in convexHullPlayer[topViewStore.currentFrameKey]"
             :key="team"
             :points="hull.map((p) => `${p.left},${p.top}`).join(' ')"
             :stroke="visualizationStore.getTeamColor(team)"
@@ -46,7 +46,7 @@
           }"
         >
           <polygon
-            v-for="cell in voronoiCells[currentFrameKey]"
+            v-for="cell in voronoiCells[topViewStore.currentFrameKey]"
             :key="cell"
             :points="cell.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')"
             stroke="gray"
@@ -56,7 +56,7 @@
         </svg>
 
         <template
-          v-for="position in topViewStore.positionDataTopView[currentFrameKey]"
+          v-for="position in topViewStore.positionDataTopView[topViewStore.currentFrameKey]"
           :key="position"
         >
           <div
@@ -328,6 +328,12 @@
             </v-list-item-title>
           </v-list-item>
 
+          <v-list-item class="menu-item" @click="showModalPositionDataOffset = true">
+            <v-list-item-title class="d-flex justify-space-between">
+              {{ $t("position_data.display_settings.offset") }}
+            </v-list-item-title>
+          </v-list-item>
+
           <v-menu location="end" open-on-hover>
             <template #activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
@@ -403,6 +409,10 @@
         v-if="showModalPositionDataTeamColors"
         v-model="showModalPositionDataTeamColors"
       />
+      <ModalPositionDataOffset
+        v-if="showModalPositionDataOffset"
+        v-model="showModalPositionDataOffset"
+      />
 
       <div class="time-code ml-2">
         {{ getTimecode(currentTime) }}
@@ -454,6 +464,7 @@ import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
 import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
 import ModalPositionDataTeamColors from "@/components/position-data/ModalPositionDataTeamColors.vue";
+import ModalPositionDataOffset from "@/components/position-data/ModalPositionDataOffset.vue";
 
 const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();
@@ -464,6 +475,7 @@ const bboxesStore = useBboxesStore();
 const showModalPositionDataSelect = ref(false);
 const showModalPositionDataUpload = ref(false);
 const showModalPositionDataTeamColors = ref(false);
+const showModalPositionDataOffset = ref(false);
 
 const progress = ref(0);
 const currentTime = computed({
@@ -691,8 +703,6 @@ const voronoiCells = computed(() => {
   return result;
 });
 
-console.log("KPIs", convexHullPlayer.value, voronoiCells.value);
-
 const maxVideoHeight = ref(0);
 const videoSlider = ref(null);
 const videoControl = ref(null);
@@ -716,16 +726,6 @@ watch(videoControl || videoSlider, (newVal) => {
   if (newVal) {
     nextTick(() => updateMaxHeight());
   }
-});
-
-const currentFrameKey = computed(() => {
-  return Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .reduce(
-      (prev, key) => (key <= playerStore.currentTime ? key : prev),
-      Object.keys(topViewStore.positionDataTopView)[0]
-    );
 });
 </script>
 

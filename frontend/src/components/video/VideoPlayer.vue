@@ -208,19 +208,6 @@ onMounted(() => {
   if (videoElement.value) playerStore.videoElement = videoElement.value;
 });
 
-let animationFrameId = null;
-const throttledUpdateTime = throttle((currentTime) => {
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-  }
-  animationFrameId = requestAnimationFrame(() => {
-    playerStore.setCurrentTime(Math.round(currentTime * 1000));
-  });
-}, 1 / playerStore.videoFPS);
-// const onTimeUpdate = (event) => {
-//   throttledUpdateTime(event.target.currentTime);
-//   playerStore.setEnded(event.target.ended);
-// };
 const onTimeUpdate = (event) => {
   const videoTimeMs = Math.round(event.target.currentTime * 1000);
   const frameKeys = [];

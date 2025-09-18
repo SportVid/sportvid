@@ -129,6 +129,7 @@
       "view_player_id": "View player ids",
       "video_sync": "Sychronise with video",
       "team_colors": "Change team colors",
+      "offset": "Set offset",
       "view_kpis": {
         "title": "View performance indicator",
         "space_control": "Space control",
@@ -704,6 +705,10 @@
       "team_colors": {
         "title": "Change team colors",
         "team_id": "Team-ID"
+      },
+      "offset": {
+        "title": "Set offset",
+        "label": "Offset value (ms)"
       }
     },
     "bounding_box": {
