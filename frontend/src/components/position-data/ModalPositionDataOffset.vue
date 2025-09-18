@@ -3,7 +3,7 @@
     <v-card>
       <v-toolbar color="primary">
         <v-toolbar-title class="text-h6">
-          {{ $t("modal.position_data.rename.title") }}
+          {{ $t("modal.position_data.offset.title") }}
         </v-toolbar-title>
         <template #append>
           <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
@@ -12,14 +12,15 @@
 
       <v-card-text class="d-flex align-center">
         <v-text-field
-          v-model="name"
-          :label="$t('modal.position_data.rename.name')"
-          prepend-icon="mdi-pencil"
+          v-model="offset"
+          :label="$t('modal.position_data.offset.label')"
+          type="number"
+          prepend-icon="mdi-timer"
           variant="underlined"
           class="mr-6"
         />
 
-        <v-btn @click="renamePositionData(props.positionDataId, name)" :disabled="!name">
+        <v-btn @click="applyOffset" :disabled="isNaN(offset)">
           {{ $t("button.update") }}
         </v-btn>
       </v-card-text>
@@ -28,41 +29,18 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
-import { usePositionDataStore } from "@/stores/position_data";
+import { ref, watch } from "vue";
+import { useTopViewStore } from "@/stores/top_view";
 
-const positionDataStore = usePositionDataStore();
+const topViewStore = useTopViewStore();
 
 const props = defineProps({
   modelValue: {
     type: Boolean,
     default: false,
   },
-  positionDataId: {
-    type: Number,
-    required: true,
-  },
 });
-
 const emit = defineEmits(["update:modelValue"]);
-
-const nameProxy = ref(null);
-const name = computed({
-  get() {
-    const name = positionDataStore.positionDataList.find(
-      (data) => data.id === props.positionDataId
-    )?.name;
-    return nameProxy.value === null ? name : nameProxy.value;
-  },
-  set(val) {
-    nameProxy.value = val;
-  },
-});
-
-const renamePositionData = (positionDataId, name) => {
-  positionDataStore.renamePositionData(positionDataId, name);
-  dialog.value = false;
-};
 
 const dialog = ref(props.modelValue);
 watch(
@@ -79,4 +57,10 @@ watch(
     }
   }
 );
+
+const offset = ref(topViewStore.currentTimeOffset);
+const applyOffset = () => {
+  topViewStore.currentTimeOffset = offset.value;
+  dialog.value = false;
+};
 </script>
