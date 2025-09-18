@@ -32,7 +32,7 @@
         />
 
         <v-btn
-          v-for="m in filteredReferenceMarker"
+          v-for="m in calibrationAssetStore.filteredReferenceMarker"
           v-show="topViewStore.showItems"
           :key="m.id"
           :disabled="calibrationAssetStore.isAddingReferenceMarker"
@@ -41,6 +41,7 @@
           variant="plain"
           density="compact"
           @click="(event) => calibrationAssetStore.toggleReferenceMarker(event, m.id)"
+          @contextmenu.prevent="openDeleteModal(m)"
           :style="{
             position: 'absolute',
             transform: 'translate(-50%, -50%)',
@@ -56,9 +57,14 @@
               'px',
           }"
         />
+        <ModalReferenceMarkerDelete
+          v-if="showModalReferenceMarkerDelete"
+          v-model="showModalReferenceMarkerDelete"
+          :marker="selectedReferenceMarker"
+        />
 
         <v-btn
-          v-for="m in filteredReferenceMarker"
+          v-for="m in calibrationAssetStore.filteredReferenceMarker"
           v-show="showDeleteButton"
           :key="'delete-' + m.id"
           color="red"
@@ -208,11 +214,38 @@
             </v-list-item-title>
           </v-list-item>
 
-          <v-list-item class="menu-item" @click="addReferenceMarker">
-            <v-list-item-title>
-              {{ $t("calibration_asset.marker.add_ref_marker") }}
-            </v-list-item-title>
-          </v-list-item>
+          <v-menu location="end" open-on-hover>
+            <template #activator="{ props }">
+              <v-list-item v-bind="props" class="menu-item">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("calibration_asset.marker.add_ref_marker.title") }}
+                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+            <v-list class="py-0" density="compact" width="220px">
+              <v-list-item class="menu-item" @click="addReferenceMarker">
+                <v-list-item-title>
+                  {{ $t("calibration_asset.marker.add_ref_marker.custom_marker") }}
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-divider />
+
+              <div style="max-height: 160px; overflow-y: auto">
+                <v-list-item
+                  v-for="m in calibrationAssetStore.markerTemplate.filter((m) => !m.set)"
+                  :key="m.id"
+                  class="menu-item"
+                  @click="addTemplateReferenceMarker(m)"
+                >
+                  <v-list-item-title>
+                    {{ m.name }}
+                  </v-list-item-title>
+                </v-list-item>
+              </div>
+            </v-list>
+          </v-menu>
 
           <v-list-item class="menu-item" @click="showDeleteButton = !showDeleteButton">
             <v-list-item-title>
@@ -235,6 +268,7 @@ import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCal
 import ModalCalibrationAssetSave from "@/components/calibration-asset/ModalCalibrationAssetSave.vue";
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
 import ModalCalibrationAssetUpdate from "@/components/calibration-asset/ModalCalibrationAssetUpdate.vue";
+import ModalReferenceMarkerDelete from "@/components/calibration-asset/ModalReferenceMarkerDelete.vue";
 
 const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();
@@ -326,18 +360,29 @@ const showModalCalibrationAssetSave = ref(false);
 const showModalCalibrationAssetSelect = ref(false);
 const showModalCalibrationAssetUpdate = ref(false);
 
-const filteredReferenceMarker = computed(() => calibrationAssetStore.filteredReferenceMarker);
+const showModalReferenceMarkerDelete = ref(false);
+const selectedReferenceMarker = ref(null);
+const openDeleteModal = (marker) => {
+  selectedReferenceMarker.value = marker;
+  showModalReferenceMarkerDelete.value = true;
+};
 
 const showDeleteButton = ref(false);
 const addReferenceMarker = () => {
   if (showDeleteButton.value) {
     showDeleteButton.value = false;
-    nextTick(() => {
-      calibrationAssetStore.addReferenceMarker();
-    });
-  } else {
-    calibrationAssetStore.addReferenceMarker();
   }
+  nextTick(() => {
+    calibrationAssetStore.addReferenceMarker();
+  });
+};
+const addTemplateReferenceMarker = (marker) => {
+  if (showDeleteButton.value) {
+    showDeleteButton.value = false;
+  }
+  nextTick(() => {
+    calibrationAssetStore.addTemplateReferenceMarker(marker);
+  });
 };
 
 const overlayMarker = ref(null);
