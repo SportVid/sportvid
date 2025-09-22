@@ -40,16 +40,16 @@ case $COMMAND in
         docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml exec backend bash
         ;;
     "migrate")
-	cd /git/sportvid || exit
+	    cd /git/sportvid || exit
         docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml exec backend python3 backend/src/backend/manage.py migrate
         ;;
     "frontend-install")
         cd /git/sportvid || exit
         docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml exec frontend npm install
-	;;
+	    ;;
     "frontend-build")
-	cd /git/sportvid || exit
-	docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml exec frontend npm run build
+	    cd /git/sportvid || exit
+	    docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml exec frontend npm run build
         ;;
     *)
         echo "Usage: $0 {prod|dev} {up|down|restart|logs|shell}"
