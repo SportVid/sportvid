@@ -62,11 +62,8 @@
                       variant="solo-filled"
                       density="comfortable"
                       :disabled="!props.pluginRuns.length"
-                    >
-                      <template v-slot:selection="{ item }">
-                        <v-chip :text="item.title" />
-                      </template>
-                    </v-select>
+                      chips
+                    />
                     <v-btn
                       block
                       color="error"
@@ -175,6 +172,17 @@ const emit = defineEmits();
 
 const { t } = useI18n();
 
+const pluginTypes = computed(() => [...new Set(props.pluginRuns.map((p) => p.type))]);
+const selectedPlugin = ref(null);
+const selectedIds = ref([]);
+watch(
+  () => props.pluginRuns,
+  () => {
+    selectedPlugin.value = null;
+    selectedIds.value = [];
+  }
+);
+
 const dialog = ref(props.modelValue);
 watch(
   () => dialog.value,
@@ -227,10 +235,6 @@ const formatLocalDate = (dateString) => {
 
   return `${isoDate} ${localTime}`;
 };
-
-const selectedPlugin = ref(null);
-const selectedIds = ref([]);
-const pluginTypes = computed(() => [...new Set(props.pluginRuns.map((p) => p.type))]);
 </script>
 
 <style scoped>

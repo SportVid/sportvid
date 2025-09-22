@@ -73,7 +73,6 @@
           @click="togglePlayerId(playerId)"
         >
           {{ playerId }}
-          <!-- :class="{ selected: selectedPlayerIds.includes(playerId) }" -->
         </div>
       </div>
     </v-row>

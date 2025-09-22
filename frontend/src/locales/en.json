@@ -126,8 +126,10 @@
     "display_settings": {
       "title": "Display Settings",
       "view_bounding_box": "View bounding-boxes",
+      "view_player_id": "View player ids",
       "video_sync": "Sychronise with video",
       "team_colors": "Change team colors",
+      "offset": "Set offset",
       "view_kpis": {
         "title": "View performance indicator",
         "space_control": "Space control",
@@ -139,7 +141,7 @@
         "select": "Select position data"
       }
     },
-    "fps_deviation": "Downsampling & Interpolation introduces a maximum frame-by-frame deviation of up to {interpErr}% compared to the original frame rate."
+    "fps_deviation": "Downsampling & interpolation introduces a maximum frame-by-frame deviation of up to {interpErr}% compared to the original frame rate."
   },
   "heatmap": {
     "display_settings": {
@@ -269,7 +271,35 @@
         "include_category": "Include category"
       },
       "position_data": {
-        "export_name": "Position Data"
+        "export_name": "Position Data",
+        "teams": {
+          "all": "Select all",
+          "ball": "Ball",
+          "team": "Team {id}"
+        },
+        "attributes": {
+          "all": "Select all",
+          "player_id": "Player-ID",
+          "team_id": "Team-ID",
+          "game_section": "Game section",
+          "x": "X coordinate",
+          "y": "Y coordinate",
+          "bbox_id": "Bounding-Box-ID",
+          "bbox_left": "Bounding-Box left",
+          "bbox_top": "Bounding-Box top",
+          "bbox_width": "Bounding-Box width",
+          "bbox_height": "Bounding-Box height",
+          "det_score": "Det-score"
+        },
+        "file_name": "position_data"
+      },
+      "running_distance": {
+        "export_name": "Running Distance",
+        "teams": {
+          "all": "Select all",
+          "team": "Team {id}"
+        },
+        "file_name": "running_distance"
       },
       "json": {
         "export_name": "JSON"
@@ -304,8 +334,14 @@
       "shot_timeline_hint": "Annotations are created based on shot boundaries of the selected timeline.",
       "scalar_timeline_name": "Select scalar timeline",
       "scalar_timeline_hint": "The scalar values of the selected timelines will be aggregated.",
-      "position_data_name": "Select team",
-      "position_data_hint": "Exporting the data for one of the teams or for both.",
+      "position_data_team_name": "Select groups",
+      "position_data_team_hint": "Exporting selected groups.",
+      "position_data_attribute_name": "Select attributes",
+      "position_data_attribute_hint": "Exporting selected attributes.",
+      "running_distance_team_name": "Select teams",
+      "running_distance_team_hint": "Exporting selected teams.",
+      "running_distance_start_frame_name": "Select start frame",
+      "running_distance_end_frame_name": "Select end frame",
       "fps": "Frames per Second (FPS)",
       "normalize": "Normalize Results?",
       "aggregation": {
@@ -563,7 +599,10 @@
         "plugin": "Delete plugin related plugin runs",
         "video": "Delete video related plugin runs",
         "selected": "Delete manual selected plugin runs",
-        "success": "All plugin runs successfully deleted",
+        "success": {
+          "all": "All plugin runs successfully deleted",
+          "selected": "Selected plugin runs successfully deleted"
+        },
         "confirm": "Delete plugin runs? This cannot be undone."
       }
     },
@@ -666,6 +705,10 @@
       "team_colors": {
         "title": "Change team colors",
         "team_id": "Team-ID"
+      },
+      "offset": {
+        "title": "Set offset",
+        "label": "Offset value (ms)"
       }
     },
     "bounding_box": {

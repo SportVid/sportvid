@@ -1,4 +1,4 @@
-import { nextTick, ref } from "vue";
+import { ref } from "vue";
 import { defineStore } from "pinia";
 import axios from "../plugins/axios";
 import config from "../../app.config";
@@ -119,7 +119,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
         bbox_id: bboxData.bboxId,
         player_id: bboxData.playerId,
         new_player_id: bboxData.newPlayerId,
-        team_id: bboxData.teamId,
+        team_id: bboxData.teamId?.id ?? bboxData.teamId,
         new_team_id: bboxData.newTeamId,
       };
     } else if (bboxData.applyAllPlayerId) {
@@ -127,14 +127,14 @@ export const useBboxesStore = defineStore("bboxes", () => {
         bytetrack_run_id: bboxData.bytetrackRunId,
         player_id: bboxData.playerId,
         new_player_id: bboxData.newPlayerId,
-        team_id: bboxData.teamId,
+        team_id: bboxData.teamId?.id ?? bboxData.teamId,
         new_team_id: bboxData.newTeamId,
         update_all_player_id: bboxData.applyAllPlayerId,
       };
     } else if (bboxData.applyAllTeamId) {
       params.value = {
         bytetrack_run_id: bboxData.bytetrackRunId,
-        team_id: bboxData.teamId,
+        team_id: bboxData.teamId?.id ?? bboxData.teamId,
         new_team_id: bboxData.newTeamId,
         update_all_team_id: bboxData.applyAllTeamId,
       };
@@ -149,12 +149,9 @@ export const useBboxesStore = defineStore("bboxes", () => {
       if (res.data.status === "ok") {
         topViewStore.transformBBoxToPositionDataTopView(
           calibrationAssetStore.calibrationAssetId,
-          bboxPluginRunId.value
-          // res.data.entry.bboxes
+          bboxPluginRunId.value,
+          res.data.entry.bboxes
         );
-        // await loadBboxData(bboxPluginRunId.value);
-        // bboxDataActive.value = res.data.entry.bboxes
-        console.log("bboxDataActive-after", bboxDataActive.value);
 
         if (bboxData.applyAllPlayerId || bboxData.applyAllTeamId) {
           bboxDataUpdateSuccess.value = true;
@@ -186,7 +183,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
     } else if (bboxData.applyAllTeamId) {
       params.value = {
         bytetrack_run_id: bboxData.bytetrackRunId,
-        team_id: bboxData.teamId,
+        team_id: bboxData.teamId?.id ?? bboxData.teamId,
         delete_all_team_id: bboxData.applyAllTeamId,
       };
     }
@@ -196,18 +193,27 @@ export const useBboxesStore = defineStore("bboxes", () => {
         `${config.API_LOCATION}/position_data/bboxes/delete`,
         params.value
       );
-      console.log("res", res);
       if (res.data.status === "ok") {
+        topViewStore.transformBBoxToPositionDataTopView(
+          calibrationAssetStore.calibrationAssetId,
+          bboxPluginRunId.value,
+          res.data.entry.bboxes
+        );
+
         if (bboxData.applyAllPlayerId || bboxData.applyAllTeamId) {
           bboxDataDeleteSuccess.value = true;
         } else {
           bboxDataSingleDeleteSuccess.value = true;
         }
-        loadBboxData(bboxPluginRunId.value);
       }
     } finally {
       isLoading.value = false;
     }
+  };
+
+  const showBoundingBox = ref(false);
+  const viewBoundingBox = () => {
+    showBoundingBox.value = !showBoundingBox.value;
   };
 
   const bboxDataUpdateSuccess = ref(false);
@@ -225,6 +231,8 @@ export const useBboxesStore = defineStore("bboxes", () => {
     bboxDataInterpolated,
     bboxPluginRunId,
     bboxDataTopView,
+    showBoundingBox,
+    viewBoundingBox,
     bboxDataUpdateSuccess,
     bboxDataSingleUpdateSuccess,
     bboxDataDeleteSuccess,

@@ -69,7 +69,7 @@ const submit = async () => {
   if (isSubmitting.value) return;
   isSubmitting.value = true;
 
-  await videoStore.rename({
+  await videoStore.renameVideo({
     videoId: props.video,
     name: name.value,
   });

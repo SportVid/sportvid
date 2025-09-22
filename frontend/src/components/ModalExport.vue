@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" width="710px">
+  <v-dialog v-model="dialog" width="750px">
     <v-card>
       <v-toolbar color="primary">
         <v-toolbar-title class="text-h6">
@@ -11,10 +11,10 @@
         </template>
       </v-toolbar>
 
-      <v-card-text style="overflow: hidden">
+      <v-card-text>
         <v-row>
-          <v-col cols="3" class="ml-n3 mr-9">
-            <v-tabs direction="vertical" slider-color="primary" v-model="tab" class="mr-n9">
+          <v-col cols="4" class="ml-n2 mr-2">
+            <v-tabs direction="vertical" slider-color="primary" v-model="tab">
               <v-tab
                 v-for="exportFormat in exportFormatsSorted"
                 :key="exportFormat.name"
@@ -28,28 +28,36 @@
 
           <v-divider vertical />
 
-          <v-col style="width: 490px">
+          <v-col cols="8">
             <v-tabs-window v-model="tab">
               <v-tabs-window-item
                 v-for="exportFormat in exportFormatsSorted"
                 :key="exportFormat.name"
                 :value="exportFormat.name"
               >
-                <v-card style="height: 275px" flat>
+                <v-card flat>
                   <v-card-title class="mb-0">{{ exportFormat.name }}</v-card-title>
 
-                  <v-card-text style="flex-grow: 1; overflow-y: auto">
+                  <v-card-text style="height: 275px; overflow-y: auto">
                     <Parameters
-                      :videoIds="[videoId]"
+                      :videoIds="[playerStore.videoId]"
                       :parameters="exportFormat.parameters"
-                      class="compact_parameters"
                     />
                   </v-card-text>
                 </v-card>
 
                 <v-row class="mt-n4 mb-1 mr-1">
                   <v-spacer />
-                  <v-btn @click="downloadExport(exportFormat.export, exportFormat.parameters)">
+                  <v-btn
+                    @click="
+                      downloadExport(
+                        exportFormat.format,
+                        exportFormat.parameters,
+                        playerStore.videoId
+                      )
+                    "
+                    :disabled="isExportDisabled(exportFormat)"
+                  >
                     {{ $t("button.export") }}
                   </v-btn>
                 </v-row>
@@ -65,12 +73,16 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { useVideoStore } from "@/stores/video";
+import { useExportStore } from "@/stores/export";
 import { usePlayerStore } from "@/stores/player";
+import { useTopViewStore } from "@/stores/top_view";
 import Parameters from "./Parameters.vue";
 
-import { useBboxesStore } from "@/stores/bboxes";
-const bboxesStore = useBboxesStore();
+const exportStore = useExportStore();
+const playerStore = usePlayerStore();
+const topViewStore = useTopViewStore();
+
+const { t } = useI18n();
 
 const props = defineProps({
   modelValue: {
@@ -81,19 +93,34 @@ const props = defineProps({
 
 const emit = defineEmits();
 
-const videoStore = useVideoStore();
-const playerStore = usePlayerStore();
-
 const dialog = ref(props.modelValue);
-const { t } = useI18n();
+watch(
+  () => dialog.value,
+  (value) => {
+    emit("update:modelValue", value);
+  }
+);
+
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (value) {
+      dialog.value = true;
+    }
+  }
+);
 
 const tab = ref(null);
+
+const allFrameKeys = Object.keys(topViewStore.positionDataTopView)
+  .map(Number)
+  .sort((a, b) => a - b);
 
 const exportFormats = ref([
   {
     name: t("modal.export.merged_csv.export_name"),
     icon: "mdi-file",
-    export: "merged_csv",
+    format: "merged_csv",
     parameters: [
       {
         field: "checkbox",
@@ -130,7 +157,7 @@ const exportFormats = ref([
   {
     name: t("modal.export.individual_csv.export_name"),
     icon: "mdi-file",
-    export: "individual_csv",
+    format: "individual_csv",
     parameters: [
       {
         field: "checkbox",
@@ -155,11 +182,12 @@ const exportFormats = ref([
   {
     name: t("modal.export.elan.export_name"),
     icon: "mdi-file",
-    export: "elan",
+    format: "elan",
     parameters: [
       {
         field: "select_timeline",
         name: "shot_timeline_id",
+        value: null,
         text: t("modal.plugin.shot_timeline_name"),
         hint: t("modal.plugin.shot_timeline_hint"),
       },
@@ -179,95 +207,99 @@ const exportFormats = ref([
   {
     name: t("modal.export.position_data.export_name"),
     icon: "mdi-file",
-    export: "positions_csv",
+    format: "positions_csv",
     parameters: [
       {
         field: "select_position_data_team",
         name: "position_data_team",
-        value: "both",
-        text: t("modal.plugin.position_data_name"),
-        hint: t("modal.plugin.position_data_hint"),
+        value: null,
+        text: t("modal.plugin.position_data_team_name"),
+        hint: t("modal.plugin.position_data_team_hint"),
+      },
+      {
+        field: "select_position_data_attribute",
+        name: "position_data_attribute",
+        value: null,
+        text: t("modal.plugin.position_data_attribute_name"),
+        hint: t("modal.plugin.position_data_attribute_hint"),
+      },
+    ],
+  },
+  {
+    name: t("modal.export.running_distance.export_name"),
+    icon: "mdi-file",
+    format: "running_distance_csv",
+    parameters: [
+      {
+        field: "select_running_distance_team",
+        name: "running_distance_team",
+        value: null,
+        text: t("modal.plugin.running_distance_team_name"),
+        hint: t("modal.plugin.running_distance_team_hint"),
+      },
+      {
+        field: "select_running_distance_frame",
+        name: "running_distance_start_frame",
+        value: allFrameKeys[0],
+        items: allFrameKeys.slice(0, -1),
+        text: t("modal.plugin.running_distance_start_frame_name"),
+      },
+      {
+        field: "select_running_distance_frame",
+        name: "running_distance_end_frame",
+        value: allFrameKeys[allFrameKeys.length - 1],
+        items: allFrameKeys.slice(1),
+        text: t("modal.plugin.running_distance_end_frame_name"),
       },
     ],
   },
 ]);
 
-const videoId = computed(() => playerStore.videoId);
-
 const exportFormatsSorted = computed(() =>
   exportFormats.value.slice().sort((a, b) => a.name.localeCompare(b.name))
 );
 
-const exportPositionsLocal = async ({ parameters = [] }) => {
-  const selectedTeam = parameters.find((p) => p.name === "position_data_team")?.value;
-
-  // const filteredPositions = bboxesStore.positionsNested.map((frame) =>
-  //   frame.filter((player) => selectedTeam === "both" || player.team_id === selectedTeam)
-  // );
-  // const csvHeader = "frame,player,time,team_id,bbox_top,bbox_left,bbox_width,bbox_height,det_score\n";
-  // const csvRows = filteredPositions
-  //   .map((frame, frameIndex) =>
-  //     frame
-  //       .map((player, playerIndex) => {
-  //         return `${frameIndex + 1},${playerIndex + 1},${player.time},${player.team_id},${player.bbox_top},${player.bbox_left},${player.bbox_width},${player.bbox_height},${player.det_score}`;
-  //       })
-  //       .join("\n")
-  //   )
-  //   .join("\n");
-  const filteredPositions = bboxesStore.positionsFlat.filter(
-    (player) => selectedTeam === "both" || player.team_id === selectedTeam
-  );
-  const csvHeader = "frame,player,time,team_id,y,x,w,h,det_score\n";
-  const csvRows = filteredPositions
-    .map((player) => {
-      return `${player.image_id},${player.player_id},${player.time},${player.team_id},${player.y},${player.x},${player.w},${player.h},${player.det_score},${player.game_section}`;
-    })
-    .join("\n");
-
-  const videoId = usePlayerStore().videoId;
-  const csvContent = csvHeader + csvRows;
-  const blob = new Blob([csvContent], { type: "text/csv" });
-  const link = document.createElement("a");
-  link.href = window.URL.createObjectURL(blob);
-  link.download = `${videoId}_positions_${selectedTeam}.csv`;
-  link.click();
-};
-
-const downloadExport = async (format, parameters) => {
+const downloadExport = async (format, parameters, videoId) => {
   const processedParams = parameters.map((e) => {
     if ("file" in e) {
       return { name: e.name, file: e.file };
     } else if (e.name === "shot_timeline_id" && e.value?.timeline_ids?.length) {
       return { name: e.name, value: e.value.timeline_ids[0] };
-    } else if (e.name === "position_data_team") {
-      return { name: e.name, value: e.value };
+    } else if (
+      e.name === "position_data_team" ||
+      e.name === "position_data_attribute" ||
+      e.name === "running_distance_team"
+    ) {
+      return { name: e.name, value: [...e.value] };
     } else {
       return { name: e.name, value: e.value ?? null };
     }
   });
-  if (format === "positions_csv") {
-    await exportPositionsLocal({ parameters: processedParams });
-  } else {
-    await videoStore.exportVideo({ format, parameters: processedParams });
-  }
+
+  await exportStore.exportData(format, processedParams, videoId);
   dialog.value = false;
 };
 
-watch(
-  () => dialog.value,
-  (value) => {
-    emit("update:modelValue", value);
-  }
-);
+const isExportDisabled = (exportFormat) => {
+  const selectParams = exportFormat.parameters.filter((p) => p.field.startsWith("select"));
+  if (!selectParams.length) return false;
 
-watch(
-  () => props.modelValue,
-  (value) => {
-    if (value) {
-      dialog.value = true;
+  const emptyRequired = selectParams.some((p) => {
+    if (p.name === "running_distance_start_frame" || p.name === "running_distance_end_frame") {
+      return false;
     }
-  }
-);
+    return !p.value || (Array.isArray(p.value) && p.value.length === 0);
+  });
+
+  const startParam = selectParams.find((p) => p.name === "running_distance_start_frame");
+  const endParam = selectParams.find((p) => p.name === "running_distance_end_frame");
+  const invalidFrames =
+    startParam && endParam && startParam.value != null && endParam.value != null
+      ? startParam.value >= endParam.value
+      : false;
+
+  return emptyRequired || invalidFrames;
+};
 </script>
 
 <style scoped>

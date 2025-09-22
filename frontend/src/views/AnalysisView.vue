@@ -235,9 +235,9 @@ watch(
     }
 
     if (newTabId === "position_data" || newTabId === "heatmap") {
-      playerStore.showBoundingBox = true;
+      bboxesStore.showBoundingBox = true;
     } else {
-      playerStore.showBoundingBox = false;
+      bboxesStore.showBoundingBox = false;
     }
 
     topViewStore.showItems = true;
@@ -582,13 +582,23 @@ const resetPluginRunActionSnackbar = async () => {
   await nextTick();
   showPluginRunActionSnackbar.value = true;
 };
-watch([() => pluginRunStore.pluginRunDeleteSuccess], ([del]) => {
-  if (del === true) {
-    pluginRunActionMessage.value = t("modal.history.delete.success");
-    resetPluginRunActionSnackbar();
-    positionDataStore.positionDataDeleteSuccess = false;
+watch(
+  [
+    () => pluginRunStore.pluginRunDeleteAllSuccess,
+    () => pluginRunStore.pluginRunDeleteSelectedSuccess,
+  ],
+  ([del_all, del_selected]) => {
+    if (del_all === true) {
+      pluginRunActionMessage.value = t("modal.history.delete.success.all");
+      resetPluginRunActionSnackbar();
+      positionDataStore.pluginRunDeleteAllSuccess = false;
+    } else if (del_selected === true) {
+      pluginRunActionMessage.value = t("modal.history.delete.success.selected");
+      resetPluginRunActionSnackbar();
+      positionDataStore.pluginRunDeleteSelectedSuccess = false;
+    }
   }
-});
+);
 
 const showBboxDataActionSnackbar = ref(false);
 const bboxDataActionMessage = ref("");
@@ -636,35 +646,6 @@ watch(
     }
   },
   { immediate: true }
-);
-
-watch(
-  () => [
-    calibrationAssetStore.marker,
-    calibrationAssetStore.calibrationMatrix,
-    bboxesStore.bboxPluginRunId,
-  ],
-  ([newmarker, newMatrix, newBytetrack]) => {
-    console.log("Selected Calibration Asset:", newmarker);
-    console.log("Selected Calibration Matrix:", newMatrix);
-    console.log("Selected Bytetrack Plugin:", newBytetrack);
-  },
-  { deep: true }
-);
-
-watch(
-  () => playerStore.video,
-  () => {
-    console.log("video", playerStore.video);
-  },
-  { immediate: true }
-);
-
-watch(
-  () => bboxesStore.bboxDataActive,
-  (newData) => {
-    console.log("bboxDataActive-watch", newData);
-  }
 );
 </script>
 

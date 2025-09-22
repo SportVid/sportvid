@@ -20,11 +20,31 @@
       v-model:end="selectedEndFrame"
     />
 
+    <div class="player-selector mt-2">
+      <div
+        v-for="playerId in playerOptions"
+        :key="playerId"
+        class="player-dot"
+        :style="{
+          backgroundColor: selectedPlayerIds.has(playerId)
+            ? toRgb(playerColors[playerId], 0)
+            : toRgb(playerColors[playerId], 0.7),
+          color: selectedPlayerIds.has(playerId) ? '#fff' : '#222',
+          borderColor: selectedPlayerIds.has(playerId)
+            ? toRgb(playerColors[playerId], 0)
+            : toRgb(playerColors[playerId], 0.7),
+        }"
+        @click="togglePlayerId(playerId)"
+      >
+        {{ playerId }}
+      </div>
+    </div>
+
     <v-data-table
       color="primary"
       :items-per-page="-1"
       :headers="headers"
-      :items="items"
+      :items="runningDistanceItems"
       class="elevation-2 my-2"
       hide-default-footer
     >
@@ -122,15 +142,15 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useVisualizationStore } from "@/stores/visualization";
-import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "@/stores/top_view";
+import { usePositionDataStore } from "@/stores/position_data";
 import RunningDistanceTimeSelector from "../visualization/RunningDistanceTimeSelector.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
 
-const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
+const positionDataStore = usePositionDataStore();
 
 const { t } = useI18n();
 
@@ -190,91 +210,43 @@ const headers = [
   { title: "", key: "settings", sortable: false, align: "end", width: "1px" },
 ];
 
-const items = computed(() => {
-  const distancesByPlayerId = new Map();
+const playerOptions = ref(new Set());
+const selectedPlayerIds = ref(new Set());
+const playerColors = ref({});
+watch(
+  () => topViewStore.positionDataTopView,
+  (newVal) => {
+    const all = Object.values(newVal)
+      .flat()
+      .filter((p) => p[1] !== 1);
 
-  const allTimes = Object.keys(topViewStore.positionDataTopView).map(Number);
+    selectedPlayerIds.value = new Set(all.map((p) => p[0]).sort((a, b) => a - b));
+    playerOptions.value = Array.from(selectedPlayerIds.value);
 
-  const timeRange = allTimes.filter(
-    (t) =>
-      t >= selectedStartFrame.value &&
-      t <= selectedEndFrame.value &&
-      (!visualizationStore.showProgress || t <= playerStore.currentTime)
-  );
-
-  const allPlayersSet = new Map();
-
-  for (const frame of allTimes) {
-    const players = topViewStore.positionDataTopView[frame];
-    if (!players) continue;
-    for (const p of players) {
-      if (p[1] === 1) continue;
-      if (
-        (visualizationStore.showAggregatedFirst && p[2] !== 1) ||
-        (visualizationStore.showAggregatedSecond && p[2] !== 2)
-      ) {
-        continue;
-      }
-      if (!allPlayersSet.has(p[0])) {
-        allPlayersSet.set(p[0], {
-          player_id: p[0],
-          team_id: p[1],
-        });
-      }
-    }
-  }
-  for (const player of allPlayersSet.values()) {
-    distancesByPlayerId.set(player.player_id, {
-      ...player,
-      distance: 0,
+    const map = {};
+    all.forEach((p) => {
+      map[p[0]] = visualizationStore.getTeamColor(p[1]);
     });
+    playerColors.value = map;
+  },
+  { immediate: true, deep: true }
+);
+const togglePlayerId = (playerId) => {
+  const newSet = new Set(selectedPlayerIds.value);
+  if (newSet.has(playerId)) {
+    newSet.delete(playerId);
+  } else {
+    newSet.add(playerId);
   }
+  selectedPlayerIds.value = newSet;
+};
 
-  if (timeRange.length > 1) {
-    for (let i = 1; i < timeRange.length; i++) {
-      const tPrev = timeRange[i - 1];
-      const tCurr = timeRange[i];
-
-      const playersPrev = topViewStore.positionDataTopView[tPrev];
-      const playersCurr = topViewStore.positionDataTopView[tCurr];
-
-      if (!playersPrev || !playersCurr) continue;
-
-      for (const currPlayer of playersCurr) {
-        if (currPlayer[1] === 1) continue;
-
-        const prevPlayer = playersPrev.find((p) => p[0] === currPlayer[0]);
-        if (!prevPlayer) continue;
-
-        if (
-          (visualizationStore.showAggregatedFirst && currPlayer[2] !== 1) ||
-          (visualizationStore.showAggregatedSecond && currPlayer[2] !== 2)
-        ) {
-          continue;
-        }
-
-        const dx = (currPlayer[3] - prevPlayer[3]) * playerStore.video.field_length;
-        const dy = (currPlayer[4] - prevPlayer[4]) * playerStore.video.field_width;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (!distancesByPlayerId.has(currPlayer[0])) {
-          distancesByPlayerId.set(currPlayer[0], {
-            player_id: currPlayer[0],
-            team_id: currPlayer[1],
-            distance: 0,
-          });
-        }
-
-        distancesByPlayerId.get(currPlayer[0]).distance += dist;
-      }
-    }
-  }
-  return Array.from(distancesByPlayerId.values())
-    .map((item) => ({
-      ...item,
-      distance: item.distance.toFixed(2),
-    }))
-    .sort((a, b) => a.player_id - b.player_id);
+const runningDistanceItems = computed(() => {
+  return positionDataStore.calculateRunningDistances(
+    selectedPlayerIds.value,
+    selectedStartFrame.value,
+    selectedEndFrame.value
+  );
 });
 
 const hasPositionData = computed(() => {
@@ -293,5 +265,30 @@ const hasPositionData = computed(() => {
 
 .menu-item .v-list-item-title {
   font-size: 12px;
+}
+
+.player-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+  margin: 12px 0 8px 0;
+}
+.player-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  border: 2px solid;
+  transition: background 0.2s, border 0.2s;
+  user-select: none;
+}
+.player-dot.selected {
+  border: 2px solid;
 }
 </style>
