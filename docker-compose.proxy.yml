@@ -1,0 +1,27 @@
+networks:
+  shared:
+    external: true
+
+volumes:
+  assets:
+    name: frontend-assets
+
+services:
+  proxy:
+    build: ./proxy
+    container_name: proxy
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      # - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - /mnt/data/prod/data/predictions/:/prod/thumbnails
+      - /mnt/data/prod/data/media/:/prod/media
+      - /mnt/data/dev/data/predictions/:/dev/thumbnails
+      - /mnt/data/dev/data/media/:/dev/media
+      # - /var/www/dev:/dev/dist
+      # - /var/www/prod:/prod/dist
+      - /etc/cert/:/etc/cert:ro
+      - assets:/var/www/html:ro  # mounts shared vol.
+    networks:
+      - shared

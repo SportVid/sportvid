@@ -6,13 +6,13 @@ https://sportvid.github.io/
 **Prepare for deployment:**
 ```sh
 cd sportvid
-sudo mkdir /mnt/data/dev/data/cache
-sudo mkdir /mnt/data/dev/data/analyser
-sudo mkdir /mnt/data/dev/data/media
-sudo mkdir /mnt/data/dev/data/tmp
-sudo mkdir /mnt/data/dev/data/predictions
-sudo mkdir /mnt/data/dev/data/backend_cache
-cd /mnt/data/dev/data/
+sudo mkdir -p /mnt/data/prod/data && cd /mnt/data/prod/data
+sudo mkdir cache
+sudo mkdir analyser
+sudo mkdir media
+sudo mkdir tmp
+sudo mkdir predictions
+sudo mkdir backend_cache
 wget https://next.hessenbox.de/public.php/dav/files/JDnBxSKynARpwWm/?accept=zip -O models.tar.gz
 sudo tar -xf models.tar.gz --directory .
 rm -rf models.tar.gz

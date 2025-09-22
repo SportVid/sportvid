@@ -18,7 +18,7 @@
       </div>
 
       <div class="text-center mt-2">
-        © !!!DEV!!! {{ $t("plattform.title") }} – {{ new Date().getFullYear() }}
+        © {{ $t("plattform.title") }} – {{ new Date().getFullYear() }}
       </div>
     </v-col>
   </v-footer>

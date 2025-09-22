@@ -6,53 +6,123 @@ COMMAND=$2
 case $ENVIRONMENT in
     "prod"|"production")
         ENV_FILE="/opt/deploy/.env.prod"
-        # COMPOSE_FILE="docker-compose.yml:docker-compose.prod.yml"
         BRANCH="deploy-prod"
         ;;
     "dev"|"development")
         ENV_FILE="/opt/deploy/.env.dev"
-        # COMPOSE_FILE="docker-compose.yml:docker-compose.dev.yml"
         BRANCH="deploy-dev"
         ;;
     *)
-        echo "Usage: $0 {prod|dev} {up|down|restart|logs|shell}"
+        echo "Usage: $0 {prod|dev} {build|up|down|restart|logs|shell|migrate|frontend-install|frontend-build}"
         exit 1
         ;;
 esac
 
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    SCRIPT_IS_SOURCED=false
+else
+    SCRIPT_IS_SOURCED=true
+fi
+
+safe_exit() {
+    local exit_code=${1:-1}
+    if [[ "$SCRIPT_IS_SOURCED" == "true" ]]; then
+        echo "Error occurred. Cannot exit when sourced. Returning instead."
+        return $exit_code
+    else
+        exit $exit_code
+    fi
+}
+
+do_init() {
+    local original_dir=$(pwd)
+    
+    echo "Building environment: $ENVIRONMENT on branch: $BRANCH"
+    
+    if ! cd /git/sportvid; then
+        echo "Failed to change directory to /git/sportvid"
+        safe_exit 1
+        return 1
+    fi
+    
+    if ! git checkout "$BRANCH"; then
+        echo "Failed to checkout branch: $BRANCH"
+        cd "$original_dir" || true
+        safe_exit 1
+        return 1
+    fi
+    
+    if ! git pull origin "$BRANCH"; then
+        echo "Failed to pull from origin: $BRANCH"
+        cd "$original_dir" || true
+        safe_exit 1
+        return 1
+    fi
+}
+
+exec_docker(){
+    do_init
+    if ! docker compose -p $ENVIRONMENT --env-file "$ENV_FILE" \
+        -f docker-compose.proxy.yml \
+        -f docker-compose."$ENVIRONMENT".yml \
+        $DOCKER_CMD; then
+        echo "Running cmd '$DOCKER_CMD' failed..."
+        cd "$original_dir" || true
+        safe_exit 1
+        return 1
+    fi
+    
+    cd "$original_dir" || true
+    echo "Done!"
+}
+
 case $COMMAND in
+    "build")
+        DOCKER_CMD="up --build"
+        echo "Building..."
+        exec_docker
+        ;;
     "up")
-        cd /git/sportvid || exit
-        git checkout $BRANCH && git pull origin $BRANCH
-        docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml up --build
-        # docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml up -d --build
+        DOCKER_CMD="up"
+        echo "Up..."
+        exec_docker
         ;;
     "down")
-        docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml down
+        DOCKER_CMD="up --build"
+        echo "Down..."
+        exec_docker
         ;;
     "restart")
-        docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml restart
+        DOCKER_CMD="restart"
+        echo "Restarting..."
+        exec_docker
         ;;
     "logs")
-        docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml logs -f
+        DOCKER_CMD="logs -f"
+        echo "Logs..."
+        exec_docker
         ;;
     "shell")
-        docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml exec backend bash
+        DOCKER_CMD="exec backend bash"
+        exec_docker
         ;;
     "migrate")
-	    cd /git/sportvid || exit
-        docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml exec backend python3 backend/src/backend/manage.py migrate
+        DOCKER_CMD="exec backend python3 backend/src/backend/manage.py migrate"
+	    echo "Migrating..."
+        exec_docker
         ;;
     "frontend-install")
-        cd /git/sportvid || exit
-        docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml exec frontend npm install
+        DOCKER_CMD="exec frontend npm install"
+        echo "Installing npm packages..."
+        exec_docker
 	    ;;
     "frontend-build")
-	    cd /git/sportvid || exit
-	    docker compose --env-file $ENV_FILE -f docker-compose.$ENVIRONMENT.yml exec frontend npm run build
+	    DOCKER_CMD="exec frontend npm run build"
+        echo "Building the frontend..."
+	    exec_docker
         ;;
     *)
-        echo "Usage: $0 {prod|dev} {up|down|restart|logs|shell}"
-        exit 1
+        echo "Unknown command: $COMMAND"
+        safe_exit 1
         ;;
 esac
