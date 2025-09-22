@@ -1,7 +1,12 @@
 <template>
   <v-container ref="videoContainer" class="d-flex flex-column">
     <v-row justify="center">
-      <div style="position: relative; display: inline-block">
+      <div
+        ref="videoDiv"
+        class="video-wrapper"
+        @mouseenter="hovering = true"
+        @mouseleave="hovering = false"
+      >
         <video
           class="video"
           ref="videoElement"
@@ -11,10 +16,44 @@
           @timeupdate="onTimeUpdate"
           @loadedmetadata="updateVideoSize"
           :src="playerStore.videoUrl"
-          :style="{
-            maxHeight: maxVideoHeight * 100 + 'vh',
-          }"
+          :style="
+            isVideoFullscreen
+              ? { width: '100%', height: '100%', objectFit: 'contain' }
+              : { maxHeight: maxVideoHeight * 100 + 'vh' }
+          "
         />
+
+        <v-icon
+          class="fullscreen-toggle"
+          @click="toggleVideoFullscreen"
+          :class="{ visible: hovering }"
+        >
+          {{ isVideoFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
+        </v-icon>
+
+        <!-- Fullscreen Controls -->
+        <div v-if="isVideoFullscreen" class="fullscreen-controls" :class="{ visible: hovering }">
+          <div class="controls-top">
+            <v-icon @click="togglePlaying" class="control-icon">
+              <template v-if="videoEnded">mdi-restart</template>
+              <template v-else-if="videoPlaying">mdi-pause</template>
+              <template v-else>mdi-play</template>
+            </v-icon>
+            <div class="time-code">{{ getTimecode(playerStore.currentTime) }}</div>
+          </div>
+
+          <v-slider
+            v-model="progress"
+            @update:model-value="onProgressChange"
+            hide-details
+            color="white"
+            :thumb-size="15"
+            :step="1000 / playerStore.videoFPS"
+            min="0"
+            :max="playerStore.videoDuration"
+          />
+        </div>
+
         <div
           v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
           v-show="bboxesStore.showBoundingBox"
@@ -101,9 +140,9 @@
         <v-icon>mdi-skip-previous</v-icon>
       </v-btn>
 
-      <v-btn @click="toggle" size="small">
-        <v-icon v-if="ended">mdi-restart</v-icon>
-        <v-icon v-else-if="playing">mdi-pause</v-icon>
+      <v-btn @click="togglePlaying" size="small">
+        <v-icon v-if="videoEnded">mdi-restart</v-icon>
+        <v-icon v-else-if="videoPlaying">mdi-pause</v-icon>
         <v-icon v-else>mdi-play</v-icon>
       </v-btn>
 
@@ -173,7 +212,6 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
-import { throttle } from "lodash";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
@@ -291,6 +329,7 @@ const onPause = () => {
 const onEnded = () => {
   stopUpdatingTime();
   playerStore.setPlaying(false);
+  playerStore.setEnded(true);
 };
 
 const progress = ref(0);
@@ -310,10 +349,10 @@ watch(
   }
 );
 
-const ended = computed(() => playerStore.ended);
-const playing = computed(() => playerStore.playing);
-const toggle = () => playerStore.togglePlaying();
-watch(playing, (isPlaying) => {
+const videoEnded = computed(() => playerStore.ended);
+const videoPlaying = computed(() => playerStore.playing);
+const togglePlaying = () => playerStore.togglePlaying();
+watch(videoPlaying, (isPlaying) => {
   if (videoElement.value) {
     isPlaying ? videoElement.value.play() : videoElement.value.pause();
   }
@@ -406,6 +445,28 @@ const currentFrameKey = computed(() => {
       Object.keys(bboxesStore.bboxDataInterpolated)[0]
     );
 });
+
+const hovering = ref(false);
+const videoDiv = ref(null);
+const isVideoFullscreen = ref(false);
+const toggleVideoFullscreen = () => {
+  const div = videoDiv.value;
+  if (!document.fullscreenElement) {
+    div.requestFullscreen?.();
+  } else {
+    document.exitFullscreen?.();
+  }
+};
+const onFullscreenChange = () => {
+  isVideoFullscreen.value = document.fullscreenElement === videoDiv.value;
+  updateVideoSize();
+};
+onMounted(() => {
+  document.addEventListener("fullscreenchange", onFullscreenChange);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener("fullscreenchange", onFullscreenChange);
+});
 </script>
 
 <style scoped>
@@ -459,5 +520,69 @@ const currentFrameKey = computed(() => {
   transform: translateX(-50%);
   font-size: 0.8rem;
   pointer-events: none;
+}
+
+.video-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.fullscreen-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: white;
+  font-size: 28px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 20;
+}
+
+.fullscreen-toggle.visible {
+  opacity: 0.8;
+}
+
+.fullscreen-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 20;
+}
+
+.fullscreen-controls.visible {
+  opacity: 1;
+}
+
+.fullscreen-controls .controls-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fullscreen-controls .control-icon {
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.fullscreen-controls .time-code {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.fullscreen-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 11;
 }
 </style>

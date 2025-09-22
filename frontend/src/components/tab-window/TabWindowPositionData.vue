@@ -3,17 +3,56 @@
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
-      <div style="position: relative; display: inline-block">
+      <div
+        ref="topViewDiv"
+        class="top-view-wrapper"
+        @mouseenter="hovering = true"
+        @mouseleave="hovering = false"
+      >
         <img
           ref="topViewElement"
           class="visualizer-image"
           :src="topViewStore.currentSport.pitchImage"
           @load="updateTopViewSize"
-          :style="{
-            maxHeight: maxVideoHeight * 100 + 'vh',
-            height: videoStore.videoSize.height + 'px',
-          }"
+          :style="
+            isTopViewFullscreen
+              ? { width: '100%', height: '100%', objectFit: 'contain' }
+              : {
+                  maxHeight: maxVideoHeight * 100 + 'vh',
+                  height: videoStore.videoSize.height + 'px',
+                }
+          "
         />
+
+        <v-icon
+          class="fullscreen-toggle"
+          @click="toggleTopViewFullscreen"
+          :class="{ visible: hovering }"
+        >
+          {{ isTopViewFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
+        </v-icon>
+
+        <div v-if="isTopViewFullscreen" class="fullscreen-controls" :class="{ visible: hovering }">
+          <div class="controls-top">
+            <v-icon @click="toggleTopView" class="control-icon">
+              <template v-if="ended">mdi-restart</template>
+              <template v-else-if="playing">mdi-pause</template>
+              <template v-else>mdi-play</template>
+            </v-icon>
+            <div class="time-code">{{ getTimecode(playerStore.currentTime) }}</div>
+          </div>
+
+          <v-slider
+            v-model="progress"
+            @update:model-value="onProgressChange"
+            hide-details
+            color="white"
+            :thumb-size="15"
+            :step="1000 / playerStore.videoFPS"
+            min="0"
+            :max="playerStore.videoDuration"
+          />
+        </div>
 
         <svg
           v-if="topViewStore.showEffectivePlayingSpace"
@@ -244,6 +283,12 @@
       class="video-control mt-6 mb-n2 justify-center"
       data-tour="position-data-edit-row"
     >
+      <v-btn :disabled="playerStore.isSynced" @click="toggleTopView" size="small">
+        <v-icon v-if="topViewEnded">mdi-restart</v-icon>
+        <v-icon v-else-if="topViewPlaying">mdi-pause</v-icon>
+        <v-icon v-else>mdi-play</v-icon>
+      </v-btn>
+
       <v-menu location="top">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
@@ -727,6 +772,65 @@ watch(videoControl || videoSlider, (newVal) => {
     nextTick(() => updateMaxHeight());
   }
 });
+
+const topViewEnded = ref(false);
+const topViewPlaying = ref(false);
+const toggleTopView = () => {
+  if (topViewEnded.value) {
+    progress.value = 0;
+    topViewEnded.value = false;
+    topViewPlaying.value = true;
+    startTimer();
+  } else if (topViewPlaying.value) {
+    topViewPlaying.value = false;
+    stopTimer();
+  } else {
+    topViewPlaying.value = true;
+    startTimer();
+  }
+};
+let topViewTimer = null;
+const startTimer = () => {
+  stopTimer();
+  topViewTimer = setInterval(() => {
+    progress.value += 1000 / playerStore.videoFPS;
+    if (progress.value >= playerStore.videoDuration) {
+      progress.value = playerStore.videoDuration;
+      topViewEnded.value = true;
+      topViewPlaying.value = false;
+      stopTimer();
+    }
+  }, 1000 / playerStore.videoFPS);
+};
+const stopTimer = () => {
+  if (topViewTimer) {
+    clearInterval(topViewTimer);
+    topViewTimer = null;
+  }
+};
+
+const hovering = ref(false);
+const topViewDiv = ref(null);
+const isTopViewFullscreen = ref(false);
+const toggleTopViewFullscreen = () => {
+  const div = topViewDiv.value;
+  if (!document.fullscreenElement) {
+    div.requestFullscreen?.();
+    playerStore.isSynced = false;
+  } else {
+    document.exitFullscreen?.();
+  }
+};
+const onFullscreenChange = () => {
+  isTopViewFullscreen.value = document.fullscreenElement === topViewDiv.value;
+  updateTopViewSize();
+};
+onMounted(() => {
+  document.addEventListener("fullscreenchange", onFullscreenChange);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener("fullscreenchange", onFullscreenChange);
+});
 </script>
 
 <style scoped>
@@ -767,5 +871,69 @@ watch(videoControl || videoSlider, (newVal) => {
   transform: translateX(-50%);
   font-size: 0.8rem;
   pointer-events: none;
+}
+
+.top-view-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.fullscreen-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: white;
+  font-size: 28px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 20;
+}
+
+.fullscreen-toggle.visible {
+  opacity: 0.8;
+}
+
+.fullscreen-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 20;
+}
+
+.fullscreen-controls.visible {
+  opacity: 1;
+}
+
+.fullscreen-controls .controls-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fullscreen-controls .control-icon {
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.fullscreen-controls .time-code {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.fullscreen-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 11;
 }
 </style>

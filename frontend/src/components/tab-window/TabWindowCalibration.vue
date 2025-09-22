@@ -2,7 +2,7 @@
   <CalibrationAssetMenu v-if="calibrationAssetStore.marker.length === 0" />
 
   <v-container v-else class="d-flex flex-column">
-    <v-row class="mt-1" justify="center">
+    <v-row ref="container" class="mt-1 fullscreen-container" justify="center">
       <div style="position: relative; display: inline-block">
         <img
           ref="topViewElement"
@@ -13,6 +13,14 @@
             maxHeight: maxVideoHeight * 100 + 'vh',
             height: videoStore.videoSize.height + 'px',
           }"
+        />
+
+        <v-btn
+          icon="mdi-fullscreen"
+          variant="tonal"
+          size="small"
+          class="fullscreen-btn"
+          @click="toggleFullscreen"
         />
 
         <div
@@ -414,6 +422,18 @@ watch(videoControl, (newVal) => {
     nextTick(() => updateMaxHeight());
   }
 });
+
+const container = ref(null);
+const toggleFullscreen = () => {
+  const el = container.value;
+  if (!el) return;
+
+  if (!document.fullscreenElement) {
+    el.requestFullscreen?.();
+  } else {
+    document.exitFullscreen?.();
+  }
+};
 </script>
 
 <style scoped>
@@ -444,5 +464,21 @@ watch(videoControl, (newVal) => {
 
 .menu-item .v-list-item-title {
   font-size: 12px;
+}
+
+.fullscreen-container {
+  position: relative;
+}
+
+.fullscreen-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.fullscreen-container:hover .fullscreen-btn {
+  opacity: 1;
 }
 </style>
