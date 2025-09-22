@@ -21,6 +21,7 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Top-left",
         id: "1",
+        set: true,
         active: false,
         compAreaCoordsRel: { x: 0, y: 0, z: 0 },
         videoCoordsRel: { x: null, y: null, z: null },
@@ -28,6 +29,7 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Top-right",
         id: "2",
+        set: true,
         active: false,
         compAreaCoordsRel: { x: 0, y: 1, z: 0 },
         videoCoordsRel: { x: null, y: null, z: null },
@@ -35,6 +37,7 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Kick-off",
         id: "3",
+        set: true,
         active: false,
         compAreaCoordsRel: { x: 0.5, y: 0.5, z: 0 },
         videoCoordsRel: { x: null, y: null, z: null },
@@ -42,6 +45,7 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Bottom-left",
         id: "4",
+        set: true,
         active: false,
         compAreaCoordsRel: { x: 1, y: 0, z: 0 },
         videoCoordsRel: { x: null, y: null, z: null },
@@ -49,8 +53,89 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Bottom-right",
         id: "5",
+        set: true,
         active: false,
         compAreaCoordsRel: { x: 1, y: 1, z: 0 },
+        videoCoordsRel: { x: null, y: null, z: null },
+      },
+      {
+        name: "Midline-top",
+        id: "6",
+        set: false,
+        active: false,
+        compAreaCoordsRel: { x: 0.5, y: 0, z: 0 },
+        videoCoordsRel: { x: null, y: null, z: null },
+      },
+      {
+        name: "Midline-bottom",
+        id: "7",
+        set: false,
+        active: false,
+        compAreaCoordsRel: { x: 0.5, y: 1, z: 0 },
+        videoCoordsRel: { x: null, y: null, z: null },
+      },
+      {
+        name: "Kick-off-circle-top",
+        id: "8",
+        set: false,
+        active: false,
+        compAreaCoordsRel: { x: 0.5, y: 0.36, z: 0 },
+        videoCoordsRel: { x: null, y: null, z: null },
+      },
+      {
+        name: "Kick-off-circle-bottom",
+        id: "9",
+        set: false,
+        active: false,
+        compAreaCoordsRel: { x: 0.5, y: 0.64, z: 0 },
+        videoCoordsRel: { x: null, y: null, z: null },
+      },
+      {
+        name: "Penalty-left",
+        id: "10",
+        set: false,
+        active: false,
+        compAreaCoordsRel: { x: 0.11, y: 0.5, z: 0 },
+        videoCoordsRel: { x: null, y: null, z: null },
+      },
+      {
+        name: "Penalty-right",
+        id: "11",
+        set: false,
+        active: false,
+        compAreaCoordsRel: { x: 0.89, y: 0.5, z: 0 },
+        videoCoordsRel: { x: null, y: null, z: null },
+      },
+      {
+        name: "Penalty-box-left-corner-top",
+        id: "12",
+        set: false,
+        active: false,
+        compAreaCoordsRel: { x: 0.165, y: 0.19, z: 0 },
+        videoCoordsRel: { x: null, y: null, z: null },
+      },
+      {
+        name: "Penalty-box-left-corner-bottom",
+        id: "13",
+        set: false,
+        active: false,
+        compAreaCoordsRel: { x: 0.165, y: 0.81, z: 0 },
+        videoCoordsRel: { x: null, y: null, z: null },
+      },
+      {
+        name: "Penalty-box-right-corner-top",
+        id: "14",
+        set: false,
+        active: false,
+        compAreaCoordsRel: { x: 0.835, y: 0.19, z: 0 },
+        videoCoordsRel: { x: null, y: null, z: null },
+      },
+      {
+        name: "Penalty-box-right-corner-bottom",
+        id: "15",
+        set: false,
+        active: false,
+        compAreaCoordsRel: { x: 0.835, y: 0.81, z: 0 },
         videoCoordsRel: { x: null, y: null, z: null },
       },
     ]);
@@ -63,7 +148,8 @@ export const useCalibrationAssetStore = defineStore(
 
     const filteredReferenceMarker = computed(() => {
       return marker.value.filter(
-        (marker) => marker.compAreaCoordsRel.x !== null && marker.compAreaCoordsRel.y !== null
+        (marker) =>
+          marker.compAreaCoordsRel.x !== null && marker.compAreaCoordsRel.y !== null && marker.set
       );
     });
 
@@ -87,6 +173,7 @@ export const useCalibrationAssetStore = defineStore(
         const newMarker = {
           name: `Custom-marker-${customMarkerCount + 1}`,
           id: marker.value.length + 1,
+          set: true,
           active: false,
           compAreaCoordsRel: { x: null, y: null, z: null },
           videoCoordsRel: { x: null, y: null, z: null },
@@ -94,6 +181,10 @@ export const useCalibrationAssetStore = defineStore(
 
         marker.value.push(newMarker);
       }
+    };
+    const addTemplateReferenceMarker = (m) => {
+      m.set = true;
+      marker.value.push(m);
     };
     const setReferenceMarker = (event) => {
       if (isAddingReferenceMarker.value) {
@@ -151,7 +242,7 @@ export const useCalibrationAssetStore = defineStore(
     const calibrationAssetUpdateSuccess = ref(false);
     const calibrationAssetDeleteSuccess = ref(false);
     const createCalibrationAsset = (template) => {
-      marker.value = JSON.parse(JSON.stringify(markerTemplate.value));
+      marker.value = JSON.parse(JSON.stringify(markerTemplate.value.filter((m) => m.set)));
       topViewStore.onSportChange(template);
       calibrationAssetId.value = null;
     };
@@ -275,10 +366,12 @@ export const useCalibrationAssetStore = defineStore(
       isAnyReferenceMarkerActive,
       isAddingReferenceMarker,
       addReferenceMarker,
+      addTemplateReferenceMarker,
       setReferenceMarker,
       deleteReferenceMarker,
       setVideoMarker,
       showVideoMarker,
+      previousShowVideoMarker,
       toggleVideoMarker,
       hoveredVideoMarker,
       calibrationAssetsList,
