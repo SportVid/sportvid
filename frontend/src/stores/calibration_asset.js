@@ -242,7 +242,7 @@ export const useCalibrationAssetStore = defineStore(
     const calibrationAssetUpdateSuccess = ref(false);
     const calibrationAssetDeleteSuccess = ref(false);
     const createCalibrationAsset = (template) => {
-      marker.value = JSON.parse(JSON.stringify(markerTemplate.value));
+      marker.value = JSON.parse(JSON.stringify(markerTemplate.value.filter((m) => m.set)));
       topViewStore.onSportChange(template);
       calibrationAssetId.value = null;
     };

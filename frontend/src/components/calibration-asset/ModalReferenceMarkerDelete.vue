@@ -1,7 +1,7 @@
 <template>
-  <div
+  <!-- <div
     v-if="dialog"
-    class="menu-item"
+    v-click-outside="() => (dialog = false)"
     :style="{
       position: 'absolute',
       transform: 'translateX(-50%)',
@@ -18,10 +18,9 @@
         'px',
     }"
   >
-    <v-list density="compact" class="pa-0 ma-0">
+    <v-list density="compact" class="pa-0 menu-item" style="border-radius: 10px">
       <v-list-item
-        class="py-2 justify-center"
-        style="height: 25px; background-color: primary; border-radius: 8px"
+        style="color: white; background-color: rgb(var(--v-theme-primary))"
         @click="deleteReferenceMarker(props.marker.id)"
       >
         <v-list-item-title class="text-center">{{
@@ -29,7 +28,32 @@
         }}</v-list-item-title>
       </v-list-item>
     </v-list>
-  </div>
+  </div> -->
+
+  <v-btn
+    v-if="dialog"
+    v-click-outside="() => (dialog = false)"
+    color="red"
+    icon="mdi-close"
+    variant="plain"
+    density="compact"
+    @click="deleteReferenceMarker(props.marker.id)"
+    class="delete-marker-position"
+    :style="{
+      position: 'absolute',
+      transform: 'translate(-50%, -50%)',
+      top:
+        props.marker.compAreaCoordsRel.y *
+          (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+        ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+        'px',
+      left:
+        props.marker.compAreaCoordsRel.x *
+          (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+        ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+        'px',
+    }"
+  />
 </template>
 
 <script setup>
@@ -79,5 +103,13 @@ const deleteReferenceMarker = (id) => {
 
 .menu-item .v-list-item-title {
   font-size: 10px;
+}
+
+.delete-marker-position .v-icon {
+  transform: scale(0.7);
+}
+
+.delete-marker-position:hover {
+  border: 1px red solid;
 }
 </style>

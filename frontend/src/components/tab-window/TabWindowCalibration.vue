@@ -223,7 +223,7 @@
                 </v-list-item-title>
               </v-list-item>
             </template>
-            <v-list class="py-0" density="compact" width="220px">
+            <v-list class="py-0" density="compact" width="225px">
               <v-list-item class="menu-item" @click="addReferenceMarker">
                 <v-list-item-title>
                   {{ $t("calibration_asset.marker.add_ref_marker.custom_marker") }}
