@@ -38,6 +38,7 @@ class CalibrationAssetsCreate(View):
                 for marker in data.get("marker_data"):
                     data_db.marker_data.create(
                         name=marker.get("name"),
+                        set=marker.get("set"),
                         active=marker.get("active"),
                         compAreaCoord_x=marker["compAreaCoordsRel"]["x"],
                         compAreaCoord_y=marker["compAreaCoordsRel"]["y"],
@@ -65,6 +66,7 @@ class CalibrationAssetsChange(View):
                 for marker in data.get("marker_data"):
                     calibration_assets.marker_data.create(
                         name=marker.get("name"),
+                        set=marker.get("set"),
                         active=marker.get("active"),
                         compAreaCoord_x=marker["compAreaCoordsRel"]["x"],
                         compAreaCoord_y=marker["compAreaCoordsRel"]["y"],

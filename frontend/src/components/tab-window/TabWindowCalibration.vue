@@ -2,26 +2,39 @@
   <CalibrationAssetMenu v-if="calibrationAssetStore.marker.length === 0" />
 
   <v-container v-else class="d-flex flex-column">
-    <v-row ref="container" class="mt-1 fullscreen-container" justify="center">
-      <div style="position: relative; display: inline-block">
+    <v-row ref="container" class="mt-1" justify="center">
+      <div
+        ref="topViewDiv"
+        class="top-view-wrapper"
+        @mouseenter="hovering = true"
+        @mouseleave="hovering = false"
+      >
         <img
           ref="topViewElement"
-          class="image"
+          class="visualizer-image"
           :src="topViewStore.currentSport.pitchImage"
           @load="updateTopViewSize"
-          :style="{
-            maxHeight: maxVideoHeight * 100 + 'vh',
-            height: videoStore.videoSize.height + 'px',
-          }"
+          :style="
+            isTopViewFullscreen
+              ? {
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                }
+              : {
+                  maxHeight: maxVideoHeight * 100 + 'vh',
+                  height: videoStore.videoSize.height + 'px',
+                }
+          "
         />
 
-        <v-btn
-          icon="mdi-fullscreen"
-          variant="tonal"
-          size="small"
-          class="fullscreen-btn"
-          @click="toggleFullscreen"
-        />
+        <v-icon
+          class="fullscreen-toggle"
+          @click="toggleTopViewFullscreen"
+          :class="{ visible: hovering }"
+        >
+          {{ isTopViewFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
+        </v-icon>
 
         <div
           v-if="calibrationAssetStore.isAddingReferenceMarker"
@@ -32,8 +45,8 @@
             background: 'rgba(255, 255, 255, 0.5)',
             border: '4px solid red',
             cursor: 'crosshair',
-            top: '0px',
-            left: '0px',
+            top: isTopViewFullscreen ? topViewStore.topViewSize.top + 'px' : '0px',
+            left: isTopViewFullscreen ? topViewStore.topViewSize.left + 'px' : '0px',
             width: topViewStore.topViewSize.width + 'px',
             height: topViewStore.topViewSize.height + 'px',
           }"
@@ -53,16 +66,26 @@
           :style="{
             position: 'absolute',
             transform: 'translate(-50%, -50%)',
-            top:
-              m.compAreaCoordsRel.y *
-                (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
-              'px',
-            left:
-              m.compAreaCoordsRel.x *
-                (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
-              'px',
+            top: isTopViewFullscreen
+              ? topViewStore.topViewSize.top +
+                m.compAreaCoordsRel.y *
+                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+                'px'
+              : m.compAreaCoordsRel.y *
+                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+                'px',
+            left: isTopViewFullscreen
+              ? topViewStore.topViewSize.left +
+                m.compAreaCoordsRel.x *
+                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+                'px'
+              : m.compAreaCoordsRel.x *
+                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+                'px',
           }"
         />
         <ModalReferenceMarkerDelete
@@ -84,16 +107,26 @@
           :style="{
             position: 'absolute',
             transform: 'translate(-50%, -50%)',
-            top:
-              m.compAreaCoordsRel.y *
-                (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
-              'px',
-            left:
-              m.compAreaCoordsRel.x *
-                (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-              ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
-              'px',
+            top: isTopViewFullscreen
+              ? topViewStore.topViewSize.top +
+                m.compAreaCoordsRel.y *
+                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+                'px'
+              : m.compAreaCoordsRel.y *
+                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+                'px',
+            left: isTopViewFullscreen
+              ? topViewStore.topViewSize.left +
+                m.compAreaCoordsRel.x *
+                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+                'px'
+              : m.compAreaCoordsRel.x *
+                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+                'px',
           }"
         />
 
@@ -108,8 +141,12 @@
             backgroundColor: 'blue',
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
-            top: point.y * topViewStore.topViewSize.height + 'px',
-            left: point.x * topViewStore.topViewSize.width + 'px',
+            top: isTopViewFullscreen
+              ? topViewStore.topViewSize.top + point.y * topViewStore.topViewSize.height + 'px'
+              : point.y * topViewStore.topViewSize.height + 'px',
+            left: isTopViewFullscreen
+              ? topViewStore.topViewSize.left + point.y * topViewStore.topViewSize.height + 'px'
+              : point.y * topViewStore.topViewSize.height + 'px',
             pointerEvents: 'none',
           }"
         />
@@ -267,10 +304,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
+import { usePlayerStore } from "@/stores/player";
 import CalibrationAssetMenu from "@/components/calibration-asset/CalibrationAssetMenu.vue";
 import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 import ModalCalibrationAssetSave from "@/components/calibration-asset/ModalCalibrationAssetSave.vue";
@@ -281,6 +319,7 @@ import ModalReferenceMarkerDelete from "@/components/calibration-asset/ModalRefe
 const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const videoStore = useVideoStore();
+const playerStore = usePlayerStore();
 
 const props = defineProps({
   showItems: {
@@ -423,23 +462,48 @@ watch(videoControl, (newVal) => {
   }
 });
 
-const container = ref(null);
-const toggleFullscreen = () => {
-  const el = container.value;
-  if (!el) return;
-
+const hovering = ref(false);
+const topViewDiv = ref(null);
+const isTopViewFullscreen = ref(false);
+const toggleTopViewFullscreen = () => {
+  const div = topViewDiv.value;
   if (!document.fullscreenElement) {
-    el.requestFullscreen?.();
+    div.requestFullscreen?.();
+    playerStore.isSynced = false;
   } else {
     document.exitFullscreen?.();
   }
 };
+
+const onFullscreenChange = async () => {
+  const isTopViewFullscreenPrev = isTopViewFullscreen.value;
+  isTopViewFullscreen.value = document.fullscreenElement === topViewDiv.value;
+
+  if (isTopViewFullscreenPrev === true || isTopViewFullscreen.value === true) {
+    await nextTick();
+    if (topViewElement.value) {
+      const rect = topViewElement.value.getBoundingClientRect();
+      topViewStore.setTopViewSize({
+        width: rect.width,
+        height: rect.height,
+        top: rect.top,
+        left: rect.left,
+      });
+    }
+  }
+};
+onMounted(() => {
+  document.addEventListener("fullscreenchange", onFullscreenChange);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener("fullscreenchange", onFullscreenChange);
+});
 </script>
 
 <style scoped>
-.image {
+.visualizer-image {
   max-width: 100%;
-  object-fit: cover;
+  max-height: 100%;
 }
 
 .delete-marker-position .v-icon {
@@ -466,19 +530,43 @@ const toggleFullscreen = () => {
   font-size: 12px;
 }
 
-.fullscreen-container {
+.top-view-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.fullscreen-btn {
+.fullscreen-toggle {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 2px;
+  right: 2px;
+  color: white;
+  font-size: 28px;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.3s;
+  z-index: 20;
 }
 
-.fullscreen-container:hover .fullscreen-btn {
+.fullscreen-toggle.visible {
+  opacity: 0.8;
+}
+
+.fullscreen-controls {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 20;
+}
+
+.fullscreen-controls.visible {
   opacity: 1;
 }
 </style>

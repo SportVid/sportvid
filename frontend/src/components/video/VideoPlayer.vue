@@ -8,7 +8,6 @@
         @mouseleave="hovering = false"
       >
         <video
-          class="video"
           ref="videoElement"
           @play="onPlay"
           @pause="onPause"
@@ -17,9 +16,13 @@
           @loadedmetadata="updateVideoSize"
           :src="playerStore.videoUrl"
           :style="
+            ((border = '1px solid red'),
             isVideoFullscreen
-              ? { width: '100%', height: '100%', objectFit: 'contain' }
-              : { maxHeight: maxVideoHeight * 100 + 'vh' }
+              ? { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }
+              : {
+                  maxHeight: maxVideoHeight * 100 + 'vh',
+                  maxWidth: '100%',
+                })
           "
         />
 
@@ -60,8 +63,12 @@
           :key="position"
           :style="{
             position: 'absolute',
-            top: position[7] * videoStore.videoSize.height + 'px',
-            left: position[6] * videoStore.videoSize.width + 'px',
+            top: isVideoFullscreen
+              ? videoStore.videoSize.top + position[7] * videoStore.videoSize.height + 'px'
+              : position[7] * videoStore.videoSize.height + 'px',
+            left: isVideoFullscreen
+              ? videoStore.videoSize.left + position[6] * videoStore.videoSize.width + 'px'
+              : position[6] * videoStore.videoSize.width + 'px',
             width: position[8] * videoStore.videoSize.width + 'px',
             height: position[9] * videoStore.videoSize.height + 'px',
             border: `2px solid ${visualizationStore.getTeamColor(position[1])}`,
@@ -103,8 +110,12 @@
             backgroundColor: 'red',
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
-            top: m.videoCoordsRel.y * videoStore.videoSize.height + 'px',
-            left: m.videoCoordsRel.x * videoStore.videoSize.width + 'px',
+            top: isVideoFullscreen
+              ? videoStore.videoSize.top + m.videoCoordsRel.y * videoStore.videoSize.height + 'px'
+              : m.videoCoordsRel.y * videoStore.videoSize.height + 'px',
+            left: isVideoFullscreen
+              ? videoStore.videoSize.left + m.videoCoordsRel.x * videoStore.videoSize.width + 'px'
+              : m.videoCoordsRel.x * videoStore.videoSize.width + 'px',
           }"
           @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
           @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
@@ -122,8 +133,12 @@
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             pointerEvents: 'none',
-            top: point.y * videoStore.videoSize.height + 'px',
-            left: point.x * videoStore.videoSize.width + 'px',
+            top: isVideoFullscreen
+              ? videoStore.videoSize.top + point.y * videoStore.videoSize.height + 'px'
+              : point.y * videoStore.videoSize.height + 'px',
+            left: isVideoFullscreen
+              ? videoStore.videoSize.left + point.x * videoStore.videoSize.width + 'px'
+              : point.x * videoStore.videoSize.width + 'px',
           }"
         />
       </div>
@@ -153,11 +168,6 @@
       <v-btn @click="deltaSeek(1)" size="small">
         <v-icon> mdi-skip-forward</v-icon>
       </v-btn>
-
-      <!-- <v-btn @click="toggleSyncTime()" size="small">
-        <v-icon v-if="syncTime"> mdi-link</v-icon>
-        <v-icon v-else> mdi-link-off</v-icon>
-      </v-btn> -->
 
       <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
         {{ getTimecode(playerStore.currentTime) }}
@@ -226,19 +236,6 @@ const videoStore = useVideoStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
 const visualizationStore = useVisualizationStore();
-
-const labels = [
-  "player_id",
-  "team_id",
-  "game_section",
-  "pos_x",
-  "pos_y",
-  "x_norm",
-  "y_norm",
-  "w_norm",
-  "h_norm",
-  "det_score",
-];
 
 const videoContainer = ref(null);
 const videoElement = ref(null);
@@ -458,8 +455,18 @@ const toggleVideoFullscreen = () => {
   }
 };
 const onFullscreenChange = () => {
+  const isVideoFullscreenPrev = isVideoFullscreen.value;
   isVideoFullscreen.value = document.fullscreenElement === videoDiv.value;
-  updateVideoSize();
+
+  if (isVideoFullscreenPrev === true || isVideoFullscreen.value === true) {
+    console.log(
+      "Fullscreen change:",
+      isVideoFullscreen.value,
+      document.fullscreenElement,
+      videoDiv.value
+    );
+    updateVideoSize();
+  }
 };
 onMounted(() => {
   document.addEventListener("fullscreenchange", onFullscreenChange);
@@ -470,10 +477,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.video {
-  object-fit: cover;
-  max-width: 100%;
-}
 .video-control {
   gap: 5px;
 }
@@ -524,13 +527,15 @@ onBeforeUnmount(() => {
 
 .video-wrapper {
   position: relative;
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .fullscreen-toggle {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 2px;
+  right: 2px;
   color: white;
   font-size: 28px;
   opacity: 0;
@@ -577,12 +582,5 @@ onBeforeUnmount(() => {
   color: white;
   font-size: 0.9rem;
   font-weight: 500;
-}
-
-.fullscreen-toggle {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 11;
 }
 </style>
