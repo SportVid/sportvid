@@ -1,7 +1,7 @@
 networks:
   shared:
     external: true
-  prod:
+  dev:
     driver: bridge
 
 secrets:
@@ -10,7 +10,7 @@ secrets:
 
 services:
   inference_ray:
-    container_name: inference_ray_prod
+    container_name: inference_ray_dev
     build:
       context: .
     environment:
@@ -19,7 +19,7 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - BACKEND_PORT=${BACKEND_PORT} # TODO: not working ???
     env_file:
-      - /opt/deploy/.env.prod
+      - /opt/deploy/.env.dev
     volumes:
       - ${DATA_PATH}/analyser:/data/
       - ${DATA_PATH}/media/:/media/
@@ -49,14 +49,14 @@ services:
       - "run"
       - "/app/inference_ray/deploy.cuda.yml"
     networks:
-      - prod
+      - dev
 
   analyser:
-    container_name: analyser_prod
+    container_name: analyser_dev
     build:
       context: .
     env_file:
-      - /opt/deploy/.env.prod
+      - /opt/deploy/.env.dev
     volumes:
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
@@ -69,30 +69,30 @@ services:
     working_dir: /app/
     command: uv run --package analyser analyser/src/analyser/server.py -v -c analyser/config.yml
     networks:
-      - prod
+      - dev
 
   memcached:
-    container_name: memcached_prod
+    container_name: memcached_dev
     image: memcached:1.6.10-buster
     command: -I 32m
     networks:
-      - prod
+      - dev
 
   valkey:
-    container_name: valkey_prod
+    container_name: valkey_dev
     image: valkey/valkey:8.1.1-alpine
     command: /usr/local/bin/valkey-server --port ${VALKEY_PORT} --bind 0.0.0.0
     ports:
       - "127.0.0.1:${VALKEY_PORT}:${VALKEY_PORT}"
     networks:
-      - prod
+      - dev
 
   celery:
-    container_name: celery_prod
+    container_name: celery_dev
     build:
       context: .
     env_file:
-      - /opt/deploy/.env.prod
+      - /opt/deploy/.env.dev
     volumes:
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
@@ -124,10 +124,10 @@ services:
       - "INFO"
     networks:
       - shared
-      - prod
+      - dev
 
   backend:
-    container_name: backend_prod
+    container_name: backend_dev
     build:
       context: .
       args:
@@ -139,7 +139,7 @@ services:
     environment:
       - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
     env_file:
-     - /opt/deploy/.env.prod
+     - /opt/deploy/.env.dev
     volumes:
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
@@ -175,10 +175,10 @@ services:
       - celery
     networks:
       - shared
-      - prod
+      - dev
 
   frontend:
-    container_name: frontend_prod
+    container_name: frontend_dev
     build:
       context: ./frontend
     volumes:
@@ -186,10 +186,10 @@ services:
       # - ${DATA_PATH}/predictions/:/thumbnails
       # - ${DATA_PATH}/media/:/media
       - assets:/assets
-    command: sh -c 'mkdir -p /assets/prod && cp -r dist/* /assets/prod/'
+    command: sh -c 'mkdir -p /assets/dev && cp -r dist/* /assets/dev/'
     networks:
       - shared
-      - prod
+      - dev
 
   postgres:
     container_name: postgres
