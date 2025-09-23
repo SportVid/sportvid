@@ -727,6 +727,7 @@ class PointCorrespondence(models.Model):
         related_name='marker_data'
     )
     name = models.CharField(max_length=1024)
+    set = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
     compAreaCoord_x = models.FloatField()
     compAreaCoord_y = models.FloatField()
@@ -739,6 +740,7 @@ class PointCorrespondence(models.Model):
         return {
             "id": self.id.hex,
             "name": self.name,
+            "set": self.set,
             "active": self.active,
             "compAreaCoordsRel": {
                 "x": self.compAreaCoord_x,

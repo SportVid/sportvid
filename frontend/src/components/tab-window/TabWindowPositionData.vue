@@ -3,24 +3,67 @@
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
-      <div style="position: relative; display: inline-block">
+      <div
+        ref="topViewDiv"
+        class="top-view-wrapper"
+        @mouseenter="hovering = true"
+        @mouseleave="hovering = false"
+      >
         <img
           ref="topViewElement"
           class="visualizer-image"
           :src="topViewStore.currentSport.pitchImage"
           @load="updateTopViewSize"
-          :style="{
-            maxHeight: maxVideoHeight * 100 + 'vh',
-            height: videoStore.videoSize.height + 'px',
-          }"
+          :style="
+            isTopViewFullscreen
+              ? {
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                }
+              : {
+                  maxHeight: maxVideoHeight * 100 + 'vh',
+                  height: videoStore.videoSize.height + 'px',
+                }
+          "
         />
+
+        <v-icon
+          class="fullscreen-toggle"
+          @click="toggleTopViewFullscreen"
+          :class="{ visible: hovering }"
+        >
+          {{ isTopViewFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
+        </v-icon>
+
+        <div v-if="isTopViewFullscreen" class="fullscreen-controls" :class="{ visible: hovering }">
+          <div class="controls-top">
+            <v-icon @click="toggleTopView" class="control-icon">
+              <template v-if="topViewEnded">mdi-restart</template>
+              <template v-else-if="topViewPlaying">mdi-pause</template>
+              <template v-else>mdi-play</template>
+            </v-icon>
+            <div class="time-code">{{ getTimecode(currentTime) }}</div>
+          </div>
+
+          <v-slider
+            v-model="currentTime"
+            @update:model-value="onProgressChange"
+            hide-details
+            color="white"
+            :thumb-size="15"
+            :step="1000 / playerStore.videoFPS"
+            min="0"
+            :max="playerStore.videoDuration"
+          />
+        </div>
 
         <svg
           v-if="topViewStore.showEffectivePlayingSpace"
           :style="{
             position: 'absolute',
-            top: '0px',
-            left: '0px',
+            top: isTopViewFullscreen ? topViewStore.topViewSize.top + 'px' : '0px',
+            left: isTopViewFullscreen ? topViewStore.topViewSize.left + 'px' : '0px',
             width: topViewStore.topViewSize.width + 'px',
             height: topViewStore.topViewSize.height + 'px',
           }"
@@ -39,8 +82,8 @@
           v-if="topViewStore.showSpaceControl"
           :style="{
             position: 'absolute',
-            top: '0px',
-            left: '0px',
+            top: isTopViewFullscreen ? topViewStore.topViewSize.top + 'px' : '0px',
+            left: isTopViewFullscreen ? topViewStore.topViewSize.left + 'px' : '0px',
             width: topViewStore.topViewSize.width + 'px',
             height: topViewStore.topViewSize.height + 'px',
           }"
@@ -68,16 +111,28 @@
               height: '12px',
               borderRadius: '50%',
               transform: 'translate(-50%, -50%)',
-              top:
-                position[4] *
-                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
-                'px',
-              left:
-                position[3] *
-                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
-                'px',
+              top: isTopViewFullscreen
+                ? topViewStore.topViewSize.top +
+                  position[4] *
+                    (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                  ((1 - topViewStore.currentSport.heightRel) / 2) *
+                    topViewStore.topViewSize.height +
+                  'px'
+                : position[4] *
+                    (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                  ((1 - topViewStore.currentSport.heightRel) / 2) *
+                    topViewStore.topViewSize.height +
+                  'px',
+              left: isTopViewFullscreen
+                ? topViewStore.topViewSize.left +
+                  position[3] *
+                    (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                  ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+                  'px'
+                : position[3] *
+                    (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                  ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+                  'px',
               backgroundColor: visualizationStore.getTeamColor(position[1]),
               cursor:
                 topViewStore.showSpaceControl || topViewStore.showEffectivePlayingSpace
@@ -244,6 +299,12 @@
       class="video-control mt-6 mb-n2 justify-center"
       data-tour="position-data-edit-row"
     >
+      <v-btn :disabled="playerStore.isSynced" @click="toggleTopView" size="small">
+        <v-icon v-if="topViewEnded">mdi-restart</v-icon>
+        <v-icon v-else-if="topViewPlaying">mdi-pause</v-icon>
+        <v-icon v-else>mdi-play</v-icon>
+      </v-btn>
+
       <v-menu location="top">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
@@ -478,6 +539,18 @@ const showModalPositionDataTeamColors = ref(false);
 const showModalPositionDataOffset = ref(false);
 
 const progress = ref(0);
+watch(
+  () => topViewStore.currentTime,
+  (newTime) => {
+    progress.value = newTime;
+  }
+);
+watch(
+  () => progress.value,
+  (newTime) => {
+    topViewStore.currentTime = Math.round(newTime);
+  }
+);
 const currentTime = computed({
   get() {
     return playerStore.isSynced ? playerStore.currentTime : progress.value;
@@ -485,12 +558,14 @@ const currentTime = computed({
   set(val) {
     if (!playerStore.isSynced) {
       progress.value = Math.round(val);
+      topViewStore.currentTime = Math.round(val);
     }
   },
 });
 const onProgressChange = (time) => {
   if (!playerStore.isSynced) {
     progress.value = Math.round(time);
+    topViewStore.currentTime = Math.round(time);
   }
 };
 watch(
@@ -504,9 +579,13 @@ watch(
 
 const topViewElement = ref(null);
 const updateTopViewSize = async () => {
+  // console.log("Waiting for next tick");
   await nextTick();
+  // console.log("Waiting for stable element");
   await waitForStableElement(topViewElement);
+  // console.log("update");
 
+  // console.log("Updating top view size", topViewStore.topViewSize);
   if (topViewElement.value) {
     const rect = topViewElement.value.getBoundingClientRect();
     topViewStore.setTopViewSize({
@@ -516,6 +595,7 @@ const updateTopViewSize = async () => {
       left: rect.left,
     });
   }
+  // console.log("new top view size", topViewStore.topViewSize);
 };
 function waitForStableElement(elRef) {
   return new Promise((resolve) => {
@@ -727,6 +807,84 @@ watch(videoControl || videoSlider, (newVal) => {
     nextTick(() => updateMaxHeight());
   }
 });
+
+const topViewEnded = ref(false);
+const topViewPlaying = ref(false);
+const toggleTopView = () => {
+  if (topViewEnded.value) {
+    progress.value = 0;
+    topViewEnded.value = false;
+    topViewPlaying.value = true;
+    startTimer();
+  } else if (topViewPlaying.value) {
+    topViewPlaying.value = false;
+    stopTimer();
+  } else {
+    topViewPlaying.value = true;
+    startTimer();
+  }
+};
+let topViewTimer = null;
+const startTimer = () => {
+  stopTimer();
+  const frameInterval = 1000 / playerStore.videoFPS;
+  const intervalMs = Math.max(1, Math.round(frameInterval));
+
+  topViewTimer = setInterval(() => {
+    const next = progress.value + frameInterval;
+    const closestFrame = Math.round(next / frameInterval) * frameInterval;
+    progress.value = Math.round(closestFrame);
+
+    if (progress.value >= playerStore.videoDuration) {
+      progress.value = playerStore.videoDuration;
+      topViewEnded.value = true;
+      topViewPlaying.value = false;
+      stopTimer();
+    }
+  }, intervalMs);
+};
+const stopTimer = () => {
+  if (topViewTimer) {
+    clearInterval(topViewTimer);
+    topViewTimer = null;
+  }
+};
+
+const hovering = ref(false);
+const topViewDiv = ref(null);
+const isTopViewFullscreen = ref(false);
+const toggleTopViewFullscreen = () => {
+  const div = topViewDiv.value;
+  if (!document.fullscreenElement) {
+    div.requestFullscreen?.();
+    playerStore.isSynced = false;
+  } else {
+    document.exitFullscreen?.();
+  }
+};
+const onFullscreenChange = async () => {
+  const isTopViewFullscreenPrev = isTopViewFullscreen.value;
+  isTopViewFullscreen.value = document.fullscreenElement === topViewDiv.value;
+
+  if (isTopViewFullscreenPrev === true || isTopViewFullscreen.value === true) {
+    await nextTick();
+    if (topViewElement.value) {
+      const rect = topViewElement.value.getBoundingClientRect();
+      topViewStore.setTopViewSize({
+        width: rect.width,
+        height: rect.height,
+        top: rect.top,
+        left: rect.left,
+      });
+    }
+  }
+};
+onMounted(() => {
+  document.addEventListener("fullscreenchange", onFullscreenChange);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener("fullscreenchange", onFullscreenChange);
+});
 </script>
 
 <style scoped>
@@ -767,5 +925,64 @@ watch(videoControl || videoSlider, (newVal) => {
   transform: translateX(-50%);
   font-size: 0.8rem;
   pointer-events: none;
+}
+
+.top-view-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fullscreen-toggle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  color: white;
+  font-size: 28px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 20;
+}
+
+.fullscreen-toggle.visible {
+  opacity: 0.8;
+}
+
+.fullscreen-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 20;
+}
+
+.fullscreen-controls.visible {
+  opacity: 1;
+}
+
+.fullscreen-controls .controls-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fullscreen-controls .control-icon {
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.fullscreen-controls .time-code {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 </style>

@@ -202,10 +202,8 @@ const isButtonDisabled = computed(() => {
 const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId) => {
   if (selectedMode.value === "bytetrack") {
     topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
-    console.log("selected posdata plugin", topViewStore.positionDataTopView);
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
-    console.log("selected posdata upload", topViewStore.positionDataTopView);
   }
   dialog.value = false;
 };

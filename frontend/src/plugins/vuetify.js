@@ -3,12 +3,11 @@ import { createVuetify } from "vuetify";
 import * as components from "vuetify/components";
 import { VIcon } from "vuetify/components";
 import * as directives from "vuetify/directives";
-import { VTreeview } from "vuetify/labs/VTreeview";
+import { VTreeview } from "vuetify/components";
 import "@mdi/font/css/materialdesignicons.css";
 import { createVueI18nAdapter } from "vuetify/locale/adapters/vue-i18n";
 import { useI18n } from "vue-i18n";
 import { i18n } from "./i18n";
-import App from "@/App.vue";
 
 export const vuetify = createVuetify({
   components: {
