@@ -117,8 +117,12 @@
     "marker": {
       "title": "Marker",
       "view_vid_marker": "View Video Marker",
-      "add_ref_marker": "Add Reference Marker",
-      "delete_ref_marker": "Delete Reference Marker"
+      "add_ref_marker": {
+        "title": "Add Reference Marker",
+        "custom_marker": "Custom Marker"
+      },
+      "delete_ref_marker": "Delete Reference Marker",
+      "delete_single_ref_marker": "Delete"
     }
   },
   "position_data": {

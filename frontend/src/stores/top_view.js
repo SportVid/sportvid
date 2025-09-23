@@ -139,14 +139,16 @@ export const useTopViewStore = defineStore(
       }
     }
 
+    const currentTime = ref(0);
     const currentTimeOffset = ref(0);
     const currentFrameKey = computed(() => {
+      const time = playerStore.isSynced ? playerStore.currentTime : currentTime.value;
+
       return Object.keys(positionDataTopView.value)
         .map(Number)
         .sort((a, b) => a - b)
         .reduce(
-          (prev, key) =>
-            key <= Number(playerStore.currentTime) + Number(currentTimeOffset.value) ? key : prev,
+          (prev, key) => (key <= Number(time) + Number(currentTimeOffset.value) ? key : prev),
           Object.keys(positionDataTopView.value)[0]
         );
     });
@@ -171,6 +173,7 @@ export const useTopViewStore = defineStore(
       transformBBoxToPositionDataTopView,
       showPlayerId,
       viewPlayerId,
+      currentTime,
       currentFrameKey,
       currentTimeOffset,
     };
