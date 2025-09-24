@@ -1,0 +1,21 @@
+networks:
+  shared:
+    external: true
+
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:14.17
+    volumes:
+      - /mnt/data/shared/db/:/var/lib/postgresql/data
+      - ./postgres:/docker-entrypoint-initdb.d  # init.sh is invoked automatically
+    env_file:
+      - /opt/deploy/.env.db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${PROD_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - shared
