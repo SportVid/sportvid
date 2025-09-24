@@ -17,10 +17,10 @@ class Deployment:
         data = await request.json()
         inputs = data.get("inputs")
         parameters = data.get("parameters")
-        logging.error("###############")
-        logging.error(inputs)
-        logging.error(parameters)
-        logging.error("###############")
+        # logging.error("_______________")
+        # logging.error(inputs)
+        # logging.error(parameters)
+        # logging.error("_______________")
 
         plugin_inputs = {}
         for name, id in inputs.items():
@@ -33,7 +33,7 @@ class Deployment:
 
 
 def app_builder(args) -> Application:
-    logging.warning(args)
+    # logging.warning(args)
     data_manager = DataManager(args.get("data_path"))
     manager = AnalyserPluginManager()
     plugin = manager.build_plugin(args.get("model"), args.get("params", {}))

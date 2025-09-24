@@ -8,6 +8,11 @@ secrets:
   django_settings:
     file: ${SPORTVID_BACKEND_CONFIG}
 
+volumes:
+  assets:
+    external: true
+    name: frontend-assets
+
 services:
   inference_ray:
     container_name: inference_ray_prod
@@ -83,7 +88,7 @@ services:
     image: valkey/valkey:8.1.1-alpine
     command: /usr/local/bin/valkey-server --port ${VALKEY_PORT} --bind 0.0.0.0
     ports:
-      - "127.0.0.1:${VALKEY_PORT}:${VALKEY_PORT}"
+      - ${VALKEY_PORT}:6379  # remap valkey port to the one specified by cfg
     networks:
       - prod
 
@@ -107,10 +112,10 @@ services:
       - /tmp
       - /var/tmp
     working_dir: /app/backend/src/backend/
-    depends_on:
-      - postgres
-    
-
+    # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
     command:
       - "uv"
       - "run"
@@ -170,9 +175,12 @@ services:
       - "${LOG_LEVEL}"
       - "--workers=${GUNICORN_WORKERS}"
     depends_on:
-      - postgres
-      - memcached
-      - celery
+      # postgres:
+      #   condition: service_healthy
+      memcached:
+        condition: service_started
+      celery:
+        condition: service_started
     networks:
       - shared
       - prod
@@ -190,15 +198,3 @@ services:
     networks:
       - shared
       - prod
-
-  postgres:
-    container_name: postgres
-    image: postgres:14.17
-    volumes:
-      - /mnt/data/shared/db/:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-    networks:
-      - shared

@@ -6,14 +6,21 @@ COMMAND=$2
 case $ENVIRONMENT in
     "prod"|"production")
         ENV_FILE="/opt/deploy/.env.prod"
+        DOCKER_FILE="-f docker-compose.$ENVIRONMENT.yml"
         BRANCH="deploy-prod"
         ;;
     "dev"|"development")
         ENV_FILE="/opt/deploy/.env.dev"
+        DOCKER_FILE="-f docker-compose.$ENVIRONMENT.yml"
         BRANCH="deploy-dev"
         ;;
+    "shared")
+        ENV_FILE="/opt/deploy/.env.db"
+        DOCKER_FILE="-f docker-compose.proxy.yml -f docker-compose.db.yml"
+        BRANCH="deploy-prod"
+        ;;
     *)
-        echo "Usage: $0 {prod|dev} {build|up|down|restart|logs|shell|migrate|frontend-install|frontend-build}"
+        echo "Usage: $0 {prod|dev|shared} {build|up|down|restart|logs|shell|migrate}"
         exit 1
         ;;
 esac
@@ -34,10 +41,11 @@ safe_exit() {
     fi
 }
 
-do_init() {
-    local original_dir=$(pwd)
-    
-    echo "Building environment: $ENVIRONMENT on branch: $BRANCH"
+prepare() {
+    local original_dir
+    original_dir=$(pwd)
+
+    echo "Executing environment '$ENVIRONMENT' on branch '$BRANCH'"
     
     if ! cd /git/sportvid; then
         echo "Failed to change directory to /git/sportvid"
@@ -61,10 +69,12 @@ do_init() {
 }
 
 exec_docker(){
-    do_init
-    if ! docker compose -p $ENVIRONMENT --env-file "$ENV_FILE" \
-        -f docker-compose.proxy.yml \
-        -f docker-compose."$ENVIRONMENT".yml \
+    local original_dir
+    original_dir=$(pwd)
+    prepare
+
+    if ! docker compose -p $ENVIRONMENT --env-file $ENV_FILE \
+        $DOCKER_FILE \
         $DOCKER_CMD; then
         echo "Running cmd '$DOCKER_CMD' failed..."
         cd "$original_dir" || true
@@ -77,19 +87,20 @@ exec_docker(){
 }
 
 case $COMMAND in
+
     "build")
-        DOCKER_CMD="up --build"
+        DOCKER_CMD="up --build -d"
         echo "Building..."
         exec_docker
         ;;
     "up")
-        DOCKER_CMD="up"
+        DOCKER_CMD="up -d"
         echo "Up..."
         exec_docker
         ;;
     "down")
-        DOCKER_CMD="up --build"
-        echo "Down..."
+        DOCKER_CMD="down"
+        echo "Shutting down..."
         exec_docker
         ;;
     "restart")
@@ -107,20 +118,27 @@ case $COMMAND in
         exec_docker
         ;;
     "migrate")
-        DOCKER_CMD="exec backend python3 backend/src/backend/manage.py migrate"
-	    echo "Migrating..."
-        exec_docker
+        if [[ "$ENVIRONMENT" == "shared" ]]; then
+            echo "Can not migrate shared environment, exiting..."
+            safe_exit 1
+            return 1
+        else
+            DOCKER_CMD="exec backend python3 backend/src/backend/manage.py migrate"
+	        echo "Migrating..."
+            exec_docker
+        fi
         ;;
-    "frontend-install")
-        DOCKER_CMD="exec frontend npm install"
-        echo "Installing npm packages..."
-        exec_docker
-	    ;;
-    "frontend-build")
-	    DOCKER_CMD="exec frontend npm run build"
-        echo "Building the frontend..."
-	    exec_docker
-        ;;
+    # NOTE: obsolete since frontend container executes 'npm run build' and copies the file into the shared volume.
+    # "frontend-install")
+    #     DOCKER_CMD="exec frontend npm install"
+    #     echo "Installing npm packages..."
+    #     exec_docker
+	#     ;;
+    # "frontend-build")
+	#     DOCKER_CMD="exec frontend npm run build"
+    #     echo "Building the frontend..."
+	#     exec_docker
+    #     ;;
     *)
         echo "Unknown command: $COMMAND"
         safe_exit 1
