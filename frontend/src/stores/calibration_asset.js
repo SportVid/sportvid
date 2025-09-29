@@ -3,14 +3,12 @@ import { ref, computed } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { inv } from "mathjs";
-import { useVideoStore } from "./video";
 import { useTopViewStore } from "./top_view";
 import { usePlayerStore } from "@/stores/player";
 
 export const useCalibrationAssetStore = defineStore(
   "calibration_asset",
   () => {
-    const videoStore = useVideoStore();
     const topViewStore = useTopViewStore();
     const playerStore = usePlayerStore();
 
@@ -221,17 +219,17 @@ export const useCalibrationAssetStore = defineStore(
         (marker) => marker.videoCoordsRel.x !== null && marker.videoCoordsRel.y !== null
       );
     });
-    const setVideoMarker = (event) => {
-      const activeMarker = marker.value.find((marker) => marker.active);
+    const setVideoMarker = ({ x, y }) => {
+      const activeMarker = marker.value.find((m) => m.active);
       if (!activeMarker) return;
 
       activeMarker.videoCoordsRel = {
-        x: (event.clientX - videoStore.videoSize.left) / videoStore.videoSize.width,
-        y: (event.clientY - videoStore.videoSize.top) / videoStore.videoSize.height,
+        x: x,
+        y: y,
       };
-
       activeMarker.active = false;
     };
+
     const toggleVideoMarker = () => {
       showVideoMarker.value = !showVideoMarker.value;
     };
