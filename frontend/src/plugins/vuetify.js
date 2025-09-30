@@ -32,7 +32,8 @@ export const vuetify = createVuetify({
     adapter: createVueI18nAdapter({ i18n, useI18n }),
   },
   aliases: {
-    snackbarIcon: VIcon,
+    snackbarIconSuccess: VIcon,
+    snackbarIconWarning: VIcon,
     tabWindowIcon: VIcon,
     appBarIcon: VIcon,
   },
@@ -43,10 +44,16 @@ export const vuetify = createVuetify({
       color: "primary",
       multiLine: true,
     },
-    snackbarIcon: {
+    snackbarIconSuccess: {
       color: "white",
       size: "large",
       icon: "mdi-check-circle",
+      class: "mt-1 mr-2",
+    },
+    snackbarIconWarning: {
+      color: "white",
+      size: "large",
+      icon: "mdi-alert-circle-outline",
       class: "mt-1 mr-2",
     },
     appBarIcon: {
