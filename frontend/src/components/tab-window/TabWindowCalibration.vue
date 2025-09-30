@@ -142,11 +142,21 @@
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             top: isTopViewFullscreen
-              ? topViewStore.topViewSize.top + point.y * topViewStore.topViewSize.height + 'px'
-              : point.y * topViewStore.topViewSize.height + 'px',
+              ? topViewStore.topViewSize.top +
+                point.y * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+                'px'
+              : point.y * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+                'px',
             left: isTopViewFullscreen
-              ? topViewStore.topViewSize.left + point.y * topViewStore.topViewSize.height + 'px'
-              : point.y * topViewStore.topViewSize.height + 'px',
+              ? topViewStore.topViewSize.left +
+                point.x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+                'px'
+              : point.x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+                'px',
             pointerEvents: 'none',
           }"
         />
