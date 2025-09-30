@@ -205,6 +205,10 @@ const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId)
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
   }
+  positionDataStore.selectedTimeRange.end = Object.keys(topViewStore.positionDataTopView)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .at(-1);
   dialog.value = false;
 };
 

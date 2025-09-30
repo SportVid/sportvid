@@ -214,6 +214,18 @@ export const usePositionDataStore = defineStore("position_data", () => {
       .sort((a, b) => a.player_id - b.player_id);
   }
 
+  const selectedTimeRange = ref({
+    start: 0,
+    end: 0,
+  });
+  const setSelectedTimeRangeStart = (time) => {
+    selectedTimeRange.value.start = time;
+  };
+
+  const setSelectedTimeRangeEnd = (time) => {
+    selectedTimeRange.value.end = time;
+  };
+
   return {
     positionDataList,
     positionDataId,
@@ -229,5 +241,8 @@ export const usePositionDataStore = defineStore("position_data", () => {
     progress,
     provider,
     calculateRunningDistances,
+    selectedTimeRange,
+    setSelectedTimeRangeStart,
+    setSelectedTimeRangeEnd,
   };
 });

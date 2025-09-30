@@ -90,7 +90,7 @@
                     :key="visualizationTab.id"
                     :value="visualizationTab.id"
                   >
-                    <!-- <TabWindowTimeline
+                    <TabWindowTimeline
                       v-if="visualizationTab.id === 'timeline'"
                       :key="tabStore.visualizationTabId"
                     />
@@ -101,8 +101,8 @@
                     <TabWindowRunningDistance
                       v-if="visualizationTab.id === 'running_distance'"
                       :key="tabStore.visualizationTabId"
-                    /> -->
-                    <component :is="getVisualizationTabComponent(visualizationTab.id)" />
+                    />
+                    <!-- <component :is="getVisualizationTabComponent(visualizationTab.id)" /> -->
                   </v-tabs-window-item>
                 </v-tabs-window>
               </v-col>
@@ -241,11 +241,16 @@ watch(
     }
 
     topViewStore.showItems = true;
-  }
+  },
+  { immediate: true }
 );
-onMounted(() => {
-  tabStore.visualizationTabId = tabStore.visualizationTabs.find((tab) => tab.id === "timeline")?.id;
-});
+watch(
+  () => tabStore.visualizationTabId,
+  (newTabId) => {
+    console.log("Switched to analysis tab:", newTabId);
+  },
+  { immediate: true }
+);
 
 const isLoading = ref(true);
 const fetchData = async ({ addResults = true }) => {

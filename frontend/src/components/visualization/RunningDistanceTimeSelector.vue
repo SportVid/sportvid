@@ -12,26 +12,18 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
 import paper from "paper";
 import { getTimecode } from "@/plugins/time";
 import { useTabStore } from "@/stores/tabs";
+import { usePositionDataStore } from "@/stores/position_data";
+import { useTopViewStore } from "@/stores/top_view";
 
 const tabStore = useTabStore();
+const positonDataStore = usePositionDataStore();
+const topViewStore = useTopViewStore();
 
 const props = defineProps({
-  duration: {
-    type: Number,
-    required: true,
-  },
-  start: {
-    type: Number,
-    default: 0,
-  },
-  end: {
-    type: Number,
-    default: 100,
-  },
   width: {
     type: String,
     default: "100%",
@@ -52,57 +44,57 @@ const container = ref(null);
 const canvas = ref(null);
 const canvasStyle = ref({ width: props.width, height: props.height });
 
-let scope, tool;
+let scope;
 let handleGroup, handleLeft, handleRight, handleBar;
 let selectionLayer, scaleLayer;
 
-const canvasWidth = ref(0);
-const canvasHeight = ref(0);
-const containerWidth = ref(0);
-const containerHeight = ref(0);
+const canvasWidth = ref(null);
+const canvasHeight = ref(null);
+const containerWidth = ref(null);
+const containerHeight = ref(null);
 
 const redraw = ref(false);
 
-const hiddenStart = ref(props.start);
-const hiddenEnd = ref(props.end);
+const duration = computed(() =>
+  Object.keys(topViewStore.positionDataTopView)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .at(-1)
+);
+const selectedStart = computed(() => positonDataStore.selectedTimeRange.start);
+const selectedEnd = computed(() => positonDataStore.selectedTimeRange.end);
+const hiddenStart = ref(positonDataStore.selectedTimeRange.start);
+const hiddenEnd = ref(positonDataStore.selectedTimeRange.end);
 const minFrameGap = 1;
-
-const duration = ref(props.duration);
-const selectedStart = ref(props.start);
-const selectedEnd = ref(props.end);
 watch(
-  () => props.start,
+  () => selectedStart,
   (val) => {
-    selectedStart.value = val;
     hiddenStart.value = val;
     draw();
   }
 );
 watch(
-  () => props.end,
+  () => selectedEnd,
   (val) => {
-    selectedEnd.value = val;
     hiddenEnd.value = val;
     draw();
   }
 );
-watch(
-  () => props.duration,
-  (val) => {
-    duration.value = val;
-    hiddenStart.value = props.start;
-    hiddenEnd.value = props.end;
-    draw();
-  }
-);
+watch(duration, () => {
+  hiddenStart.value = selectedStart.value;
+  hiddenEnd.value = selectedEnd.value;
+  draw();
+});
 watch(hiddenStart, () => {
   nextTick(() => {
+    positonDataStore.setSelectedTimeRangeStart(hiddenStart.value);
     emit("update:start", hiddenStart.value);
   });
 });
 
 watch(hiddenEnd, () => {
   nextTick(() => {
+    positonDataStore.setSelectedTimeRangeEnd(hiddenEnd.value);
     emit("update:end", hiddenEnd.value);
   });
 });
@@ -116,11 +108,11 @@ function linspace(startValue, numSteps, step) {
 }
 
 function frameToX(frame) {
-  return (canvasWidth.value / props.duration) * frame;
+  return (canvasWidth.value / duration.value) * frame;
 }
 
 function xToFrame(x) {
-  return (x / canvasWidth.value) * props.duration;
+  return (x / canvasWidth.value) * duration.value;
 }
 
 function onResize() {
@@ -129,6 +121,16 @@ function onResize() {
 
 function draw() {
   if (!canvas.value || !container.value) return;
+
+  console.log("[DRAW DEBUG run]", {
+    canvasWidth: canvas.value?.width,
+    containerWidth: container.value?.clientWidth,
+    duration: duration.value,
+    start: hiddenStart.value,
+    end: hiddenEnd.value,
+    scope: scope ? "ok" : "undefined",
+    projectChildren: scope?.project?._children?.length,
+  });
 
   canvas.value.height = props.height;
   const desiredWidth = container.value.clientWidth;
@@ -145,8 +147,6 @@ function draw() {
 
   if (isNaN(canvasWidth.value / duration.value)) return;
 
-  tool = new paper.Tool();
-
   drawScale();
   drawSelection();
   scope.view.draw();
@@ -157,7 +157,12 @@ function drawScale() {
   scope.activate();
   scaleLayer = new paper.Layer();
 
-  const interval = props.duration / 5;
+  console.log("[drawScale run]", {
+    width: canvasWidth.value,
+    duration: duration.value,
+  });
+
+  const interval = duration.value / 5;
   const frames = linspace(0, 5, interval);
 
   const mainStrokes = frames.map((frame) => {
@@ -199,6 +204,13 @@ function drawSelection() {
   if (selectionLayer) selectionLayer.removeChildren();
   scope.activate();
   selectionLayer = new paper.Layer();
+
+  console.log("[drawSelection run]", {
+    start: hiddenStart.value,
+    end: hiddenEnd.value,
+    frameToX_start: frameToX(hiddenStart.value),
+    frameToX_end: frameToX(hiddenEnd.value),
+  });
 
   const radius = new paper.Size(props.radius, props.radius);
 
@@ -278,7 +290,8 @@ function onSelectionChange() {
   seg[7].point.x = posEnd - props.radius;
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await nextTick();
   scope = new paper.PaperScope();
   scope.setup(canvas.value);
 
@@ -307,6 +320,12 @@ onBeforeUnmount(() => {
     scope.remove();
   }
 });
+watch(
+  () => tabStore.visualizationTabId,
+  (tabId) => {
+    if (tabId === "running_distance") draw();
+  }
+);
 
 onMounted(() => {
   window.addEventListener("resize", onResize);

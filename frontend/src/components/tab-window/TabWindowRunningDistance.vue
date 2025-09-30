@@ -1,5 +1,5 @@
 <template>
-  <v-row
+  <!-- <v-row
     v-if="!hasPositionData"
     class="text-h6 text-grey font-weight-light mx-16 px-10"
     style="
@@ -10,15 +10,10 @@
       height: 25vh;
     "
     v-html="$t('visualization.running_distance.not_selected')"
-  />
+  /> -->
 
-  <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
-    <RunningDistanceTimeSelector
-      class="ml-n1"
-      :duration="maxFrameIndex"
-      v-model:start="selectedStartFrame"
-      v-model:end="selectedEndFrame"
-    />
+  <v-card class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
+    <RunningDistanceTimeSelector class="ml-n1" />
 
     <div class="player-selector mt-2">
       <div

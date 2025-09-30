@@ -42,7 +42,7 @@ const container = ref(null);
 const canvas = ref(null);
 const canvasStyle = ref({ width: props.width, height: props.height });
 
-let scope, tool;
+let scope;
 let handleGroup, handleLeft, handleRight, handleBar;
 let selectionLayer, scaleLayer;
 
@@ -115,6 +115,16 @@ function onResize() {
 function draw() {
   if (!canvas.value || !container.value) return;
 
+  console.log("[DRAW DEBUG time]", {
+    canvasWidth: canvas.value?.width,
+    containerWidth: container.value?.clientWidth,
+    duration: duration.value,
+    start: hiddenStartTime.value,
+    end: hiddenEndTime.value,
+    scope: scope ? "ok" : "undefined",
+    projectChildren: scope?.project?._children?.length,
+  });
+
   canvas.value.height = props.height;
   const desiredWidth = container.value.clientWidth;
   canvas.value.width = desiredWidth;
@@ -129,8 +139,6 @@ function draw() {
   canvasHeight.value = scope.view.size.height;
 
   if (isNaN(canvasWidth.value / duration.value)) return;
-
-  tool = new paper.Tool();
 
   drawScale();
   drawSelection();
@@ -181,6 +189,11 @@ function drawScale() {
   scope.activate();
   scaleLayer = new paper.Layer();
 
+  console.log("[drawScale time]", {
+    width: canvasWidth.value,
+    duration: duration.value,
+  });
+
   // const timeline_options = [1, 2, 5, 10, 15, 20, 30, 60, 90, 150, 300, 600];
   const interval = duration.value / 5;
   // let best_option = timeline_options.reduce((prev, curr) =>
@@ -228,6 +241,13 @@ function drawSelection() {
   if (selectionLayer) selectionLayer.removeChildren();
   scope.activate();
   selectionLayer = new paper.Layer();
+
+  console.log("[drawSelection time]", {
+    start: hiddenStartTime.value,
+    end: hiddenEndTime.value,
+    timeToX_start: timeToX(hiddenStartTime.value),
+    timeToX_end: timeToX(hiddenEndTime.value),
+  });
 
   const radius = new paper.Size(props.radius, props.radius);
 
@@ -334,5 +354,18 @@ onBeforeUnmount(() => {
     scope.project.clear();
     scope.remove();
   }
+});
+watch(
+  () => tabStore.visualizationTabId,
+  (tabId) => {
+    if (tabId === "timeline") draw();
+  }
+);
+
+onMounted(() => {
+  window.addEventListener("resize", onResize);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", onResize);
 });
 </script>
