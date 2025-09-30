@@ -211,6 +211,9 @@ export const useCalibrationAssetStore = defineStore(
       marker.value = marker.value.filter((m) => m.id !== id);
     };
 
+    const timeChangeConflict = ref(false);
+    const videoMarkerTime = ref(null);
+
     const showVideoMarker = ref(false);
     const previousShowVideoMarker = ref(false);
     const hoveredVideoMarker = ref(null);
@@ -389,6 +392,8 @@ export const useCalibrationAssetStore = defineStore(
       calibrationAssetSaveSuccess,
       calibrationAssetUpdateSuccess,
       calibrationAssetDeleteSuccess,
+      timeChangeConflict,
+      videoMarkerTime,
     };
   }
   // {

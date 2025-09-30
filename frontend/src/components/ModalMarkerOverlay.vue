@@ -88,13 +88,21 @@ const videoOverlayElement = ref(null);
 
 const seekToCurrentTime = () => {
   if (videoOverlayElement.value) {
-    videoOverlayElement.value.currentTime = playerStore.currentTime;
+    videoOverlayElement.value.currentTime = playerStore.currentTime / 1000;
   }
 };
 
 const setVideoMarker = (event) => {
   const rect = videoOverlayElement.value?.getBoundingClientRect();
   if (!rect) return;
+
+  if (calibrationAssetStore.timeChangeConflict) {
+    calibrationAssetStore.marker.forEach((m) => {
+      m.videoCoordsRel = { x: null, y: null, z: null };
+    });
+    calibrationAssetStore.timeChangeConflict = false;
+  }
+
   const normX = (event.clientX - rect.left) / rect.width;
   const normY = (event.clientY - rect.top) / rect.height;
   calibrationAssetStore.setVideoMarker({ x: normX, y: normY });

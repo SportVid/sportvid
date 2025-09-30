@@ -115,28 +115,28 @@
 
     <v-snackbar v-model="showCalibrationAssetActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ calibrationAssetActionMessage }}</span>
       </div>
     </v-snackbar>
 
     <v-snackbar v-model="showPositionDataActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ positionDataActionMessage }}</span>
       </div>
     </v-snackbar>
 
     <v-snackbar v-model="showPluginRunActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ pluginRunActionMessage }}</span>
       </div>
     </v-snackbar>
 
     <v-snackbar v-model="showBboxDataActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ bboxDataActionMessage }}</span>
       </div>
     </v-snackbar>
@@ -517,7 +517,7 @@ const onAnnotateSegment = () => {
 
 const showCalibrationAssetActionSnackbar = ref(false);
 const calibrationAssetActionMessage = ref("");
-const resetcalibrationAssetActionSnackbar = async () => {
+const resetCalibrationAssetActionSnackbar = async () => {
   showCalibrationAssetActionSnackbar.value = false;
   await nextTick();
   showCalibrationAssetActionSnackbar.value = true;
@@ -531,15 +531,15 @@ watch(
   ([save, update, del]) => {
     if (save === true) {
       calibrationAssetActionMessage.value = t("modal.calibration_asset.save.success");
-      resetcalibrationAssetActionSnackbar();
+      resetCalibrationAssetActionSnackbar();
       calibrationAssetStore.calibrationAssetSaveSuccess = false;
     } else if (update === true) {
       calibrationAssetActionMessage.value = t("modal.calibration_asset.update.success");
-      resetcalibrationAssetActionSnackbar();
+      resetCalibrationAssetActionSnackbar();
       calibrationAssetStore.calibrationAssetUpdateSuccess = false;
     } else if (del === true) {
       calibrationAssetActionMessage.value = t("modal.calibration_asset.delete.success");
-      resetcalibrationAssetActionSnackbar();
+      resetCalibrationAssetActionSnackbar();
       calibrationAssetStore.calibrationAssetDeleteSuccess = false;
     }
   }

@@ -299,12 +299,40 @@
           </v-list-item>
         </v-list>
       </v-menu>
+
+      <v-tooltip
+        v-if="
+          calibrationAssetStore.timeChangeConflict &&
+          calibrationAssetStore.videoMarkerTime !== playerStore.currentTime
+        "
+        class="time-conflict-tooltip"
+        :text="
+          $t('calibration_asset.time-conflict', {
+            time: getTimecode(calibrationAssetStore.videoMarkerTime ?? 0),
+          })
+        "
+      >
+        <template #activator="{ props }">
+          <v-icon v-bind="props" color="warning" size="small" class="ml-2 mt-1"
+            >mdi-information-outline</v-icon
+          >
+        </template>
+      </v-tooltip>
     </v-row>
   </v-container>
+
+  <v-snackbar color="accent" timeout="3000" v-model="showVideoMarkerActionSnackbar">
+    <div class="d-flex justify-center">
+      <snackbar-icon-warning />
+      <span class="text-h6">{{ videoMarkerActionMessage }}</span>
+    </div>
+  </v-snackbar>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { useI18n } from "vue-i18n";
+import { getTimecode } from "@/plugins/time";
 import { useTopViewStore } from "@/stores/top_view";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
@@ -315,6 +343,8 @@ import ModalCalibrationAssetSave from "@/components/calibration-asset/ModalCalib
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
 import ModalCalibrationAssetUpdate from "@/components/calibration-asset/ModalCalibrationAssetUpdate.vue";
 import ModalReferenceMarkerDelete from "@/components/calibration-asset/ModalReferenceMarkerDelete.vue";
+
+const { t } = useI18n();
 
 const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();
@@ -498,6 +528,41 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
 });
+
+watch(
+  () => playerStore.currentTime,
+  (newTime, oldTime) => {
+    if (oldTime === undefined || newTime === oldTime || calibrationAssetStore.timeChangeConflict)
+      return;
+
+    const hasVideoCoords = calibrationAssetStore.marker.some((m) => {
+      const v = m.videoCoordsRel;
+      return v && (v.x !== null || v.y !== null);
+    });
+
+    if (hasVideoCoords) {
+      calibrationAssetStore.timeChangeConflict = true;
+      showVideoMarkerActionSnackbar.value = true;
+      calibrationAssetStore.videoMarkerTime = oldTime;
+    }
+  }
+);
+
+const showVideoMarkerActionSnackbar = ref(false);
+const videoMarkerActionMessage = ref("");
+const resetVideoMarkerActionSnackbar = async () => {
+  showVideoMarkerActionSnackbar.value = false;
+  await nextTick();
+  showVideoMarkerActionSnackbar.value = true;
+};
+watch([() => calibrationAssetStore.timeChangeConflict], ([warning]) => {
+  if (warning === true) {
+    videoMarkerActionMessage.value = t("modal.calibration_asset.video_marker.warning", {
+      time: getTimecode(calibrationAssetStore.videoMarkerTime ?? 0),
+    });
+    resetVideoMarkerActionSnackbar();
+  }
+});
 </script>
 
 <style scoped>
@@ -568,5 +633,9 @@ onBeforeUnmount(() => {
 
 .fullscreen-controls.visible {
   opacity: 1;
+}
+
+.time-conflict-tooltip ::v-deep .v-overlay__content {
+  background-color: rgb(var(--v-theme-accent));
 }
 </style>
