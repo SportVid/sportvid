@@ -63,20 +63,20 @@ watch(
   () => startTime,
   (val) => {
     hiddenStartTime.value = val;
-    draw();
+    nextTick(() => draw());
   }
 );
 watch(
   () => endTime,
   (val) => {
     hiddenEndTime.value = val;
-    draw();
+    nextTick(() => draw());
   }
 );
 watch(duration, () => {
   hiddenStartTime.value = startTime.value;
   hiddenEndTime.value = endTime.value;
-  draw();
+  nextTick(() => draw());
 });
 watch(hiddenStartTime, () => {
   nextTick(() => {
@@ -84,12 +84,16 @@ watch(hiddenStartTime, () => {
     emit("update:startTime", hiddenStartTime.value);
   });
 });
-watch(hiddenEndTime, () => {
-  nextTick(() => {
-    playerStore.setSelectedTimeRangeEnd(hiddenEndTime.value);
-    emit("update:endTime", hiddenEndTime.value);
-  });
-});
+watch(
+  () => hiddenEndTime,
+  () => {
+    console.log("hiddenEndTime changed", hiddenEndTime.value);
+    nextTick(() => {
+      playerStore.setSelectedTimeRangeEnd(hiddenEndTime.value);
+      emit("update:endTime", hiddenEndTime.value);
+    });
+  }
+);
 
 // Util Functions
 function linspace(startValue, numSteps, step) {
@@ -114,16 +118,6 @@ function onResize() {
 
 function draw() {
   if (!canvas.value || !container.value) return;
-
-  console.log("[DRAW DEBUG time]", {
-    canvasWidth: canvas.value?.width,
-    containerWidth: container.value?.clientWidth,
-    duration: duration.value,
-    start: hiddenStartTime.value,
-    end: hiddenEndTime.value,
-    scope: scope ? "ok" : "undefined",
-    projectChildren: scope?.project?._children?.length,
-  });
 
   canvas.value.height = props.height;
   const desiredWidth = container.value.clientWidth;
@@ -189,11 +183,6 @@ function drawScale() {
   scope.activate();
   scaleLayer = new paper.Layer();
 
-  console.log("[drawScale time]", {
-    width: canvasWidth.value,
-    duration: duration.value,
-  });
-
   // const timeline_options = [1, 2, 5, 10, 15, 20, 30, 60, 90, 150, 300, 600];
   const interval = duration.value / 5;
   // let best_option = timeline_options.reduce((prev, curr) =>
@@ -241,13 +230,6 @@ function drawSelection() {
   if (selectionLayer) selectionLayer.removeChildren();
   scope.activate();
   selectionLayer = new paper.Layer();
-
-  console.log("[drawSelection time]", {
-    start: hiddenStartTime.value,
-    end: hiddenEndTime.value,
-    timeToX_start: timeToX(hiddenStartTime.value),
-    timeToX_end: timeToX(hiddenEndTime.value),
-  });
 
   const radius = new paper.Size(props.radius, props.radius);
 
@@ -345,7 +327,7 @@ onMounted(() => {
     redraw.value = setTimeout(onResize, 100);
   };
 
-  draw();
+  nextTick(() => draw());
 });
 onBeforeUnmount(() => {
   if (scope) {
@@ -357,8 +339,8 @@ onBeforeUnmount(() => {
 });
 watch(
   () => tabStore.visualizationTabId,
-  (tabId) => {
-    if (tabId === "timeline") draw();
+  () => {
+    nextTick(() => draw());
   }
 );
 

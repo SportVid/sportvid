@@ -70,20 +70,20 @@ watch(
   () => selectedStart,
   (val) => {
     hiddenStart.value = val;
-    draw();
+    nextTick(() => draw());
   }
 );
 watch(
   () => selectedEnd,
   (val) => {
     hiddenEnd.value = val;
-    draw();
+    nextTick(() => draw());
   }
 );
 watch(duration, () => {
   hiddenStart.value = selectedStart.value;
   hiddenEnd.value = selectedEnd.value;
-  draw();
+  nextTick(() => draw());
 });
 watch(hiddenStart, () => {
   nextTick(() => {
@@ -122,16 +122,6 @@ function onResize() {
 function draw() {
   if (!canvas.value || !container.value) return;
 
-  console.log("[DRAW DEBUG run]", {
-    canvasWidth: canvas.value?.width,
-    containerWidth: container.value?.clientWidth,
-    duration: duration.value,
-    start: hiddenStart.value,
-    end: hiddenEnd.value,
-    scope: scope ? "ok" : "undefined",
-    projectChildren: scope?.project?._children?.length,
-  });
-
   canvas.value.height = props.height;
   const desiredWidth = container.value.clientWidth;
   canvas.value.width = desiredWidth;
@@ -156,11 +146,6 @@ function drawScale() {
   if (scaleLayer) scaleLayer.removeChildren();
   scope.activate();
   scaleLayer = new paper.Layer();
-
-  console.log("[drawScale run]", {
-    width: canvasWidth.value,
-    duration: duration.value,
-  });
 
   const interval = duration.value / 5;
   const frames = linspace(0, 5, interval);
@@ -204,13 +189,6 @@ function drawSelection() {
   if (selectionLayer) selectionLayer.removeChildren();
   scope.activate();
   selectionLayer = new paper.Layer();
-
-  console.log("[drawSelection run]", {
-    start: hiddenStart.value,
-    end: hiddenEnd.value,
-    frameToX_start: frameToX(hiddenStart.value),
-    frameToX_end: frameToX(hiddenEnd.value),
-  });
 
   const radius = new paper.Size(props.radius, props.radius);
 
@@ -290,8 +268,7 @@ function onSelectionChange() {
   seg[7].point.x = posEnd - props.radius;
 }
 
-onMounted(async () => {
-  await nextTick();
+onMounted(() => {
   scope = new paper.PaperScope();
   scope.setup(canvas.value);
 
@@ -310,7 +287,7 @@ onMounted(async () => {
     redraw.value = setTimeout(onResize, 100);
   };
 
-  draw();
+  nextTick(() => draw());
 });
 onBeforeUnmount(() => {
   if (scope) {
@@ -322,8 +299,8 @@ onBeforeUnmount(() => {
 });
 watch(
   () => tabStore.visualizationTabId,
-  (tabId) => {
-    if (tabId === "running_distance") draw();
+  () => {
+    nextTick(() => draw());
   }
 );
 
