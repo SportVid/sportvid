@@ -84,16 +84,12 @@ watch(hiddenStartTime, () => {
     emit("update:startTime", hiddenStartTime.value);
   });
 });
-watch(
-  () => hiddenEndTime,
-  () => {
-    console.log("hiddenEndTime changed", hiddenEndTime.value);
-    nextTick(() => {
-      playerStore.setSelectedTimeRangeEnd(hiddenEndTime.value);
-      emit("update:endTime", hiddenEndTime.value);
-    });
-  }
-);
+watch(hiddenEndTime, () => {
+  nextTick(() => {
+    playerStore.setSelectedTimeRangeEnd(hiddenEndTime.value);
+    emit("update:endTime", hiddenEndTime.value);
+  });
+});
 
 // Util Functions
 function linspace(startValue, numSteps, step) {
@@ -259,20 +255,24 @@ function drawSelection() {
   handleGroup = new paper.Group([path, handleLeft, handleRight]);
 
   handleLeft.onMouseDrag = (event) => {
-    const dt = xToTime(event.delta.x);
-    hiddenStartTime.value =
-      dt > 0
-        ? Math.min(hiddenStartTime.value + dt, hiddenEndTime.value - minTime)
-        : Math.max(hiddenStartTime.value + dt, 0);
+    let newStart = hiddenStartTime.value + xToTime(event.delta.x);
+
+    if (newStart < 0) newStart = 0;
+
+    if (newStart > hiddenEndTime.value - minTime) newStart = hiddenEndTime.value - minTime;
+
+    hiddenStartTime.value = newStart;
     onSelectionChange();
   };
 
   handleRight.onMouseDrag = (event) => {
-    const dt = xToTime(event.delta.x);
-    hiddenEndTime.value =
-      dt < 0
-        ? Math.max(hiddenEndTime.value + dt, hiddenStartTime.value + minTime)
-        : Math.min(hiddenEndTime.value + dt, duration.value);
+    let newEnd = hiddenEndTime.value + xToTime(event.delta.x);
+
+    if (newEnd > duration.value) newEnd = duration.value;
+
+    if (newEnd < hiddenStartTime.value + minTime) newEnd = hiddenStartTime.value + minTime;
+
+    hiddenEndTime.value = newEnd;
     onSelectionChange();
   };
 

@@ -232,13 +232,6 @@ watch(
   },
   { immediate: true }
 );
-watch(
-  () => tabStore.visualizationTabId,
-  (newTabId) => {
-    console.log("Switched to analysis tab:", newTabId);
-  },
-  { immediate: true }
-);
 
 const isLoading = ref(true);
 const fetchData = async ({ addResults = true }) => {
@@ -640,13 +633,6 @@ watch(
   },
   { immediate: true }
 );
-
-// watch(
-//   () => calibrationAssetStore.videoMarkerReprojection,
-//   (marker) => {
-//     console.log("videoMarkerReprojection changed", marker);
-//   }
-// );
 </script>
 
 <style scoped>

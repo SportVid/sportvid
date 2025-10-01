@@ -787,6 +787,8 @@ const drawGraphicTimeline = (timeline, width, height) => {
         colormapInverse: timeline.colormap_inverse,
       });
     }
+
+    console.log("timeline.plugin", timeline.plugin.data);
   }
 
   if (drawnTimeline) {

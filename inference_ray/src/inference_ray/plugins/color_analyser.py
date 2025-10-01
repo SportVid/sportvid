@@ -67,7 +67,7 @@ class ColorAnalyser(
                     labels = cls.fit_predict(image)
                     colors = cls.cluster_centers_.tolist()
                     kcolors.append(np.asarray([colors[x] for x in np.argsort(np.bincount(labels))]))
-                    time.append(i / parameters.get("fps"))
+                    time.append(i / parameters.get("fps") * 1000)
 
             kcolors = np.stack(kcolors, axis=0)
             logging.info("Video reading done")
@@ -75,7 +75,7 @@ class ColorAnalyser(
                 with output_data.create_data("RGBData") as color_data:
                     color_data.colors = np.asarray(colors) / 255
                     color_data.time = np.asarray(time)
-                    color_data.delta_time = 1 / parameters.get("fps")
+                    color_data.delta_time = 1000 / parameters.get("fps")
 
             self.update_callbacks(callbacks, progress=1.0)
             return {"colors": output_data}

@@ -184,7 +184,7 @@ class ClipImageEmbedding(
                             embedding=normalize(embedding),
                             time=frame.get("time"),
                             ref_id=frame.get("id"),
-                            delta_time=1 / parameters.get("fps"),
+                            delta_time=1000 / parameters.get("fps"),
                         )
                     )
 

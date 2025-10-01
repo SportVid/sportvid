@@ -55,7 +55,7 @@ class ThumbnailGenerator(
                     self.update_callbacks(callbacks, progress=i / num_frames)
 
                     output_data.save_image(
-                        frame.get("frame"), ext="jpg", time=frame.get("time"), delta_time=1 / parameters.get("fps")
+                        frame.get("frame"), ext="jpg", time=frame.get("time"), delta_time=1000 / parameters.get("fps")
                     )
 
                 self.update_callbacks(callbacks, progress=1.0)

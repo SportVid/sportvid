@@ -18,10 +18,12 @@ import { getTimecode } from "@/plugins/time";
 import { useTabStore } from "@/stores/tabs";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useTopViewStore } from "@/stores/top_view";
+import { usePlayerStore } from "@/stores/player";
 
 const tabStore = useTabStore();
 const positonDataStore = usePositionDataStore();
 const topViewStore = useTopViewStore();
+const playerStore = usePlayerStore();
 
 const props = defineProps({
   width: {
@@ -65,7 +67,7 @@ const selectedStart = computed(() => positonDataStore.selectedTimeRange.start);
 const selectedEnd = computed(() => positonDataStore.selectedTimeRange.end);
 const hiddenStart = ref(positonDataStore.selectedTimeRange.start);
 const hiddenEnd = ref(positonDataStore.selectedTimeRange.end);
-const minFrameGap = 1;
+const minFrameGap = (1000 / playerStore.videoFPS) * 10;
 watch(
   () => selectedStart,
   (val) => {
@@ -218,20 +220,24 @@ function drawSelection() {
   handleGroup = new paper.Group([path, handleLeft, handleRight]);
 
   handleLeft.onMouseDrag = (event) => {
-    const df = xToFrame(event.delta.x);
-    hiddenStart.value =
-      df > 0
-        ? Math.min(hiddenStart.value + df, hiddenEnd.value - minFrameGap)
-        : Math.max(hiddenStart.value + df, 0);
+    let newStart = hiddenStart.value + xToFrame(event.delta.x);
+
+    if (newStart < 0) newStart = 0;
+
+    if (newStart > hiddenEnd.value - minFrameGap) newStart = hiddenEnd.value - minFrameGap;
+
+    hiddenStart.value = newStart;
     onSelectionChange();
   };
 
   handleRight.onMouseDrag = (event) => {
-    const df = xToFrame(event.delta.x);
-    hiddenEnd.value =
-      df < 0
-        ? Math.max(hiddenEnd.value + df, hiddenStart.value + minFrameGap)
-        : Math.min(hiddenEnd.value + df, duration.value);
+    let newEnd = hiddenEnd.value + xToFrame(event.delta.x);
+
+    if (newEnd > duration.value) newEnd = duration.value;
+
+    if (newEnd < hiddenStart.value + minFrameGap) newEnd = hiddenStart.value + minFrameGap;
+
+    hiddenEnd.value = newEnd;
     onSelectionChange();
   };
 
