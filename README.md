@@ -1,18 +1,16 @@
 # SportVid
 
-## Visit project website
+## Project website
 https://sportvid.github.io/
 
 ## Development setup
-
 
 ### Requirements
 * [docker](https://docs.docker.com/get-docker/)
 * [docker-compose](https://docs.docker.com/compose/install/)
 
-
 ### Setup process
-1. Clone the TIB-AV-A repository including submodules:
+1. Clone the repository:
     ```sh
     git clone https://github.com/SportVid/sportvid.git
     cd sportvid
@@ -26,8 +24,9 @@ https://sportvid.github.io/
     mkdir data/tmp
     mkdir data/predictions
     mkdir data/backend_cache
-    wget https://tib.eu/cloud/s/kAe3TXPfsBpwtwk/download/models.tar.gz
-    tar -xf models.tar.gz --directory data/
+    wget https://next.hessenbox.de/public.php/dav/files/JDnBxSKynARpwWm/?accept=zip -O models.tar.gz
+    sudo tar -xf models.tar.gz --directory .
+    rm -rf models.tar.gz
     ```
 
 3. Build and start the container:
@@ -60,5 +59,4 @@ sudo docker compose exec frontend npm run build
 Alternatively, use `serve` to enable a hot reloaded instance on `http://localhost:8080/`:
 ```sh
 sudo docker compose exec frontend npm run serve
-
 ```
