@@ -730,7 +730,6 @@ const drawGraphicTimeline = (timeline, width, height) => {
     }
 
     if (timeline.visualization == "COLOR") {
-      console.log("timeline", timeline);
       drawnTimeline = new ColorTimeline({
         timelineId: timeline.id,
         width: width,
@@ -787,8 +786,6 @@ const drawGraphicTimeline = (timeline, width, height) => {
         colormapInverse: timeline.colormap_inverse,
       });
     }
-
-    console.log("timeline.plugin", timeline.plugin.data);
   }
 
   if (drawnTimeline) {
