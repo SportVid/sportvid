@@ -730,7 +730,6 @@ const drawGraphicTimeline = (timeline, width, height) => {
     }
 
     if (timeline.visualization == "COLOR") {
-      console.log("timeline", timeline);
       drawnTimeline = new ColorTimeline({
         timelineId: timeline.id,
         width: width,

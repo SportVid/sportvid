@@ -105,7 +105,7 @@ class InsightfaceGenderAgeCalculator(AnalyserPlugin):
                         ScalarData(
                             y=np.asarray(ages),
                             time=time,
-                            delta_time=1 / parameters.get("fps"),
+                            delta_time=1000 / parameters.get("fps"),
                             ref_id=ref_ids,
                         )
                     ],
@@ -116,7 +116,7 @@ class InsightfaceGenderAgeCalculator(AnalyserPlugin):
                         ScalarData(
                             y=np.asarray(gender),
                             time=time,
-                            delta_time=1 / parameters.get("fps"),
+                            delta_time=1000 / parameters.get("fps"),
                             ref_id=ref_ids,
                         )
                         for gender in zip(*genders)
@@ -176,7 +176,7 @@ class InsightfaceVideoGenderAgeCalculator(
     ) -> Dict[str, Data]:
         with inputs["video"] as video_data, inputs["bboxes"] as bboxes_data:
             bboxes = bboxes_data.bboxes
-            parameters["fps"] = 1 / bboxes[0].delta_time
+            parameters["fps"] = 1000 / bboxes[0].delta_time
             assert len(bboxes) > 0
 
             # decode video to extract bboxes for frames with detected faces

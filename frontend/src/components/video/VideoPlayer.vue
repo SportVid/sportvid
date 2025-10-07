@@ -459,12 +459,6 @@ const onFullscreenChange = () => {
   isVideoFullscreen.value = document.fullscreenElement === videoDiv.value;
 
   if (isVideoFullscreenPrev === true || isVideoFullscreen.value === true) {
-    console.log(
-      "Fullscreen change:",
-      isVideoFullscreen.value,
-      document.fullscreenElement,
-      videoDiv.value
-    );
     updateVideoSize();
   }
 };

@@ -90,18 +90,6 @@
                     :key="visualizationTab.id"
                     :value="visualizationTab.id"
                   >
-                    <!-- <TabWindowTimeline
-                      v-if="visualizationTab.id === 'timeline'"
-                      :key="tabStore.visualizationTabId"
-                    />
-                    <TabWindowEvents
-                      v-if="visualizationTab.id === 'events'"
-                      :key="tabStore.visualizationTabId"
-                    />
-                    <TabWindowRunningDistance
-                      v-if="visualizationTab.id === 'running_distance'"
-                      :key="tabStore.visualizationTabId"
-                    /> -->
                     <component :is="getVisualizationTabComponent(visualizationTab.id)" />
                   </v-tabs-window-item>
                 </v-tabs-window>
@@ -241,11 +229,9 @@ watch(
     }
 
     topViewStore.showItems = true;
-  }
+  },
+  { immediate: true }
 );
-onMounted(() => {
-  tabStore.visualizationTabId = tabStore.visualizationTabs.find((tab) => tab.id === "timeline")?.id;
-});
 
 const isLoading = ref(true);
 const fetchData = async ({ addResults = true }) => {

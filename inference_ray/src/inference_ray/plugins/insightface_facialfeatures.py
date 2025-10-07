@@ -138,7 +138,7 @@ class InsightfaceFeatureExtractor(AnalyserPlugin):
                         ref_id=face.get("face_id"),
                         embedding=self.get_feat(aimg).flatten(),
                         time=kps.time,
-                        delta_time=1 / parameters.get("fps", 1.0),
+                        delta_time=1000 / parameters.get("fps", 1.0),
                     )
                 )
 
@@ -185,7 +185,7 @@ class InsightfaceVideoFeatureExtractor(
     ) -> Dict[str, Data]:
         with inputs["video"] as video_data, inputs["kpss"] as kpss_data:
             kpss = kpss_data.kpss
-            parameters["fps"] = 1 / kpss[0].delta_time
+            parameters["fps"] = 1000 / kpss[0].delta_time
             assert len(kpss) > 0
 
             faceid_lut = {}

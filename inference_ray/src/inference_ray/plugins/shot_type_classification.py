@@ -91,14 +91,15 @@ class ShotTypeClassifier(
                     # result = self.server({"data": np.expand_dims(frame, 0)}, ["prob"])
                     # if result is not None:
                     predictions.append(np.squeeze(result).tolist())
-                    time.append(i / parameters.get("fps"))
+                    time.append(i / parameters.get("fps") * 1000)
+
                 # predictions = zip(*predictions)
                 index = ["p_ECU", "p_CU", "p_MS", "p_FS", "p_LS"]
                 for i, y in zip(index, zip(*predictions)):
                     with output_data.create_data("ScalarData", index=i) as scalar_data:
                         scalar_data.y = np.asarray(y)
                         scalar_data.time = time
-                        scalar_data.delta_time = 1 / parameters.get("fps")
+                        scalar_data.delta_time = 1000 / parameters.get("fps")
                 # probs = ListData(
                 #     data=[
                 #         ScalarData(y=np.asarray(y), time=time, delta_time=1 / parameters.get("fps"))

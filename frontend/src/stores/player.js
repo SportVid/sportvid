@@ -2,10 +2,13 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
+import { usePositionDataStore } from "@/stores/position_data";
 
 export const usePlayerStore = defineStore(
   "player",
   () => {
+    const positionDataStore = usePositionDataStore();
+
     const videoElement = ref(null);
 
     const video = ref(null);

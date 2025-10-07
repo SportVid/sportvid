@@ -290,7 +290,7 @@ class XClipVideoEmbedding(
                         ImageEmbedding(
                             embedding=image_features,
                             time=np.mean(frame.get("time")).item(),
-                            delta_time=parameters.get("batch_size") / parameters.get("fps"),
+                            delta_time=parameters.get("batch_size") / parameters.get("fps") * 1000,
                         )
                     )
 
@@ -298,7 +298,7 @@ class XClipVideoEmbedding(
                         VideoTemporalEmbedding(
                             embedding=video_features,
                             time=np.mean(frame.get("time")).item(),
-                            delta_time=parameters.get("batch_size") / parameters.get("fps"),
+                            delta_time=parameters.get("batch_size") / parameters.get("fps") * 1000,
                         )
                     )
 

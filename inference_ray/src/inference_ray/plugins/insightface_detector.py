@@ -256,7 +256,7 @@ class InsightfaceDetectorTorch(AnalyserPlugin):
                 "h": float(h / img.shape[0]),
                 "det_score": float(det_score),
                 "time": frame.get("time"),
-                "delta_time": 1 / fps,
+                "delta_time": 1000 / fps,
             }
             bbox_list.append(bbox)
 
@@ -265,7 +265,7 @@ class InsightfaceDetectorTorch(AnalyserPlugin):
                 "x": [x.item() / img.shape[1] for x in kpss[i, :, 0]],
                 "y": [y.item() / img.shape[0] for y in kpss[i, :, 1]],
                 "time": frame.get("time"),
-                "delta_time": 1 / fps,
+                "delta_time": 1000 / fps,
             }
             kps_list.append(kps)
 
@@ -326,7 +326,7 @@ class InsightfaceDetectorTorch(AnalyserPlugin):
                         face_image,
                         ext="jpg",
                         time=frame.get("time"),
-                        delta_time=1 / parameters.get("fps"),
+                        delta_time=1000 / parameters.get("fps"),
                         ref_id=face.id,
                     )
             self.update_callbacks(callbacks, progress=1.0)
