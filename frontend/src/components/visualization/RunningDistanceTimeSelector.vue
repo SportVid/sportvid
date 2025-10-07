@@ -161,7 +161,7 @@ function drawScale() {
     } else {
       text.justification = "center";
     }
-    text.content = getTimecode(Math.round(frame, 2), 2);
+    text.content = getTimecode(Math.round(frame, 3));
     return text;
   });
 

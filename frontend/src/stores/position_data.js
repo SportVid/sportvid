@@ -47,7 +47,6 @@ export const usePositionDataStore = defineStore("position_data", () => {
     const selectedPositionData = positionDataList.value.find((data) => data.id === id);
     if (selectedPositionData) {
       positionDataId.value = id;
-      console.log("pos-data id", positionDataId.value);
 
       const _positionData = pluginRunStore
         .forVideo(playerStore.videoId)
@@ -152,7 +151,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
       const players = topViewStore.positionDataTopView[frame];
       if (!players) continue;
       for (const p of players) {
-        if (p[1] === 1) continue; // Ball raus
+        if (p[1] === 1) continue;
         if (
           (visualizationStore.showAggregatedFirst && p[2] !== 1) ||
           (visualizationStore.showAggregatedSecond && p[2] !== 2)
@@ -209,7 +208,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
     }
 
     return Array.from(distancesByPlayerId.values())
-      .map((item) => ({ ...item, distance: Number(item.distance.toFixed(2)) }))
+      .map((item) => ({ ...item, distance: parseFloat(item.distance.toFixed(1)) }))
       .filter((p) => selectedPlayerIds.has(p.player_id))
       .sort((a, b) => a.player_id - b.player_id);
   }
