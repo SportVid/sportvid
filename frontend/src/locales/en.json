@@ -158,9 +158,9 @@
   "data": {
     "options": {
       "title": "Options",
-      "aggregated_full": "Aggregated full match",
-      "aggregated_first": "Aggregated first half",
-      "aggregated_second": "Aggregated second half",
+      "full_match": "Select full match",
+      "first_half": "Select first half",
+      "second_half": "Select second half",
       "progress": "Progress"
     }
   },

@@ -21,7 +21,7 @@ import { useTopViewStore } from "@/stores/top_view";
 import { usePlayerStore } from "@/stores/player";
 
 const tabStore = useTabStore();
-const positonDataStore = usePositionDataStore();
+const positionDataStore = usePositionDataStore();
 const topViewStore = useTopViewStore();
 const playerStore = usePlayerStore();
 
@@ -63,24 +63,19 @@ const duration = computed(() =>
     .sort((a, b) => a - b)
     .at(-1)
 );
-const selectedStart = computed(() => positonDataStore.selectedTimeRange.start);
-const selectedEnd = computed(() => positonDataStore.selectedTimeRange.end);
-const hiddenStart = ref(positonDataStore.selectedTimeRange.start);
-const hiddenEnd = ref(positonDataStore.selectedTimeRange.end);
+const selectedStart = computed(() => positionDataStore.selectedTimeRange.start);
+const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
+const hiddenStart = ref(positionDataStore.selectedTimeRange.start);
+const hiddenEnd = ref(positionDataStore.selectedTimeRange.end);
 const minFrameGap = (1000 / playerStore.videoFPS) * 10;
 watch(
-  () => selectedStart,
+  () => positionDataStore.selectedTimeRange,
   (val) => {
-    hiddenStart.value = val;
+    hiddenStart.value = val.start;
+    hiddenEnd.value = val.end;
     nextTick(() => draw());
-  }
-);
-watch(
-  () => selectedEnd,
-  (val) => {
-    hiddenEnd.value = val;
-    nextTick(() => draw());
-  }
+  },
+  { deep: true }
 );
 watch(duration, () => {
   hiddenStart.value = selectedStart.value;
@@ -89,14 +84,13 @@ watch(duration, () => {
 });
 watch(hiddenStart, () => {
   nextTick(() => {
-    positonDataStore.setSelectedTimeRangeStart(hiddenStart.value);
+    positionDataStore.setSelectedTimeRangeStart(hiddenStart.value);
     emit("update:start", hiddenStart.value);
   });
 });
-
 watch(hiddenEnd, () => {
   nextTick(() => {
-    positonDataStore.setSelectedTimeRangeEnd(hiddenEnd.value);
+    positionDataStore.setSelectedTimeRangeEnd(hiddenEnd.value);
     emit("update:end", hiddenEnd.value);
   });
 });

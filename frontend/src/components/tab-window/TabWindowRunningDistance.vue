@@ -1,5 +1,5 @@
 <template>
-  <!-- <v-row
+  <v-row
     v-if="!hasPositionData"
     class="text-h6 text-grey font-weight-light mx-16 px-10"
     style="
@@ -10,9 +10,9 @@
       height: 25vh;
     "
     v-html="$t('visualization.running_distance.not_selected')"
-  /> -->
+  />
 
-  <v-card class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
+  <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
     <RunningDistanceTimeSelector class="ml-n1" />
 
     <div class="player-selector mt-2">
@@ -52,56 +52,6 @@
           </template>
 
           <v-list class="py-0" density="compact" width="220">
-            <v-list-item class="menu-item" @click="visualizationStore.viewAggregatedFull">
-              <v-list-item-title class="d-flex justify-space-between">
-                {{ $t("data.options.aggregated_full") }}
-                <tab-window-icon
-                  :class="{
-                    'text-disabled': !visualizationStore.showAggregatedFull,
-                    'text-red': visualizationStore.showAggregatedFull,
-                  }"
-                >
-                  mdi-check
-                </tab-window-icon>
-              </v-list-item-title>
-            </v-list-item>
-
-            <v-list-item
-              class="menu-item"
-              @click="visualizationStore.viewAggregatedFirst"
-              :disabled="!visualizationStore.halftimesExist"
-            >
-              <v-list-item-title class="d-flex justify-space-between">
-                {{ $t("data.options.aggregated_first") }}
-                <tab-window-icon
-                  :class="{
-                    'text-disabled': !visualizationStore.showAggregatedFirst,
-                    'text-red': visualizationStore.showAggregatedFirst,
-                  }"
-                >
-                  mdi-check
-                </tab-window-icon>
-              </v-list-item-title>
-            </v-list-item>
-
-            <v-list-item
-              class="menu-item"
-              @click="visualizationStore.viewAggregatedSecond"
-              :disabled="!visualizationStore.halftimesExist"
-            >
-              <v-list-item-title class="d-flex justify-space-between">
-                {{ $t("data.options.aggregated_second") }}
-                <tab-window-icon
-                  :class="{
-                    'text-disabled': !visualizationStore.showAggregatedSecond,
-                    'text-red': visualizationStore.showAggregatedSecond,
-                  }"
-                >
-                  mdi-check
-                </tab-window-icon>
-              </v-list-item-title>
-            </v-list-item>
-
             <v-list-item class="menu-item" @click="visualizationStore.viewProgress">
               <v-list-item-title class="d-flex justify-space-between">
                 {{ $t("data.options.progress") }}
@@ -113,6 +63,46 @@
                 >
                   mdi-check
                 </tab-window-icon>
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-divider></v-divider>
+
+            <v-list-item
+              class="menu-item"
+              @click="
+                positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
+                positionDataStore.setSelectedTimeRangeEnd(allFrameKeys[allFrameKeys.length - 1]);
+              "
+            >
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("data.options.full_match") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item
+              class="menu-item"
+              @click="
+                positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(1));
+                positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(1));
+              "
+              :disabled="!visualizationStore.halftimesExist"
+            >
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("data.options.first_half") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item
+              class="menu-item"
+              @click="
+                positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(2));
+                positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(2));
+              "
+              :disabled="!visualizationStore.halftimesExist"
+            >
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("data.options.second_half") }}
               </v-list-item-title>
             </v-list-item>
           </v-list>
@@ -154,8 +144,8 @@ const allFrameKeys = computed(() =>
     .map(Number)
     .sort((a, b) => a - b)
 );
-const selectedStartFrame = ref(0);
-const selectedEndFrame = ref(0);
+const selectedStartFrame = computed(() => positionDataStore.selectedTimeRange.start);
+const selectedEndFrame = computed(() => positionDataStore.selectedTimeRange.end);
 const maxFrameIndex = ref(0);
 watch(
   () => allFrameKeys.value,
@@ -177,26 +167,6 @@ function findLastFrameWithHalftime(halfId) {
     topViewStore.positionDataTopView[frame]?.some((p) => p[2] === halfId)
   );
 }
-watch(
-  () => [
-    visualizationStore.showAggregatedFull,
-    visualizationStore.showAggregatedFirst,
-    visualizationStore.showAggregatedSecond,
-  ],
-  ([full, first, second]) => {
-    if (full) {
-      selectedStartFrame.value = allFrameKeys.value[0];
-      selectedEndFrame.value = allFrameKeys.value[allFrameKeys.value.length - 1];
-    } else if (first) {
-      selectedStartFrame.value = findFirstFrameWithHalftime(1);
-      selectedEndFrame.value = findLastFrameWithHalftime(1);
-    } else if (second) {
-      selectedStartFrame.value = findFirstFrameWithHalftime(2);
-      selectedEndFrame.value = findLastFrameWithHalftime(2);
-    }
-  },
-  { immediate: true }
-);
 
 const headers = [
   { title: t("visualization.running_distance.player_id"), key: "player_id" },
