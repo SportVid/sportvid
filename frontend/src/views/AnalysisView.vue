@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
@@ -633,6 +633,13 @@ watch(
   },
   { immediate: true }
 );
+
+onBeforeUnmount(() => {
+  calibrationAssetStore.marker = [];
+  calibrationAssetStore.videoMarker = [];
+  topViewStore.positionDataTopView = {};
+  bboxesStore.bboxDataInterpolated = {};
+});
 </script>
 
 <style scoped>
