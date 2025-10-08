@@ -221,20 +221,15 @@ const runningDistanceItems = computed(() => {
 });
 const runningDistanceTeamItems = computed(() => {
   const grouped = {};
+  playerOptions.value.forEach((p) => {
+    if (!grouped[p.teamId]) grouped[p.teamId] = [];
+  });
   runningDistanceItems.value.forEach((item) => {
     if (!grouped[item.team_id]) grouped[item.team_id] = [];
     grouped[item.team_id].push(item);
   });
   return grouped;
 });
-
-watch(
-  playerOptions,
-  (val) => {
-    console.log("Updated running distance data:", val);
-  },
-  { immediate: true }
-);
 
 const hasPositionData = computed(() => {
   return Object.keys(topViewStore.positionDataTopView).length > 0;
