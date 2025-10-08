@@ -542,7 +542,12 @@ onBeforeUnmount(() => {
 watch(
   () => playerStore.currentTime,
   (newTime, oldTime) => {
-    if (oldTime === undefined || newTime === oldTime || calibrationAssetStore.timeChangeConflict)
+    if (
+      oldTime === undefined ||
+      newTime === oldTime ||
+      calibrationAssetStore.timeChangeConflict ||
+      !calibrationAssetStore.isAssetEdited
+    )
       return;
 
     const hasVideoCoords = calibrationAssetStore.marker.some((m) => {

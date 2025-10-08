@@ -213,6 +213,7 @@ export const useCalibrationAssetStore = defineStore(
 
     const timeChangeConflict = ref(false);
     const videoMarkerTime = ref(null);
+    const isAssetEdited = ref(false);
 
     const showVideoMarker = ref(false);
     const previousShowVideoMarker = ref(false);
@@ -230,6 +231,7 @@ export const useCalibrationAssetStore = defineStore(
         x: x,
         y: y,
       };
+      isAssetEdited.value = true;
       activeMarker.active = false;
     };
 
@@ -284,6 +286,8 @@ export const useCalibrationAssetStore = defineStore(
         const res = await axios.post(`${config.API_LOCATION}/calibration_assets/create`, params);
         if (res.data.status === "ok") {
           calibrationAssetSaveSuccess.value = true;
+          isAssetEdited.value = false;
+          timeChangeConflict.value = false;
           loadCalibrationAssetsList();
         }
       } finally {
@@ -304,6 +308,8 @@ export const useCalibrationAssetStore = defineStore(
         const res = await axios.post(`${config.API_LOCATION}/calibration_assets/update`, params);
         if (res.data.status === "ok") {
           calibrationAssetUpdateSuccess.value = true;
+          isAssetEdited.value = false;
+          timeChangeConflict.value = false;
           loadCalibrationAssetsList();
         }
       } finally {
@@ -325,11 +331,18 @@ export const useCalibrationAssetStore = defineStore(
       }
     };
 
+    const identityMatrix = [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ];
     const calibrationMatrix = computed(() => {
       const asset = Object.values(calibrationAssetsList.value).find(
         (item) => item.id === calibrationAssetId.value
       );
-      return asset ? asset.homography_matrix : null;
+      const m = asset?.homography_matrix;
+      if (!m) return null;
+      return JSON.stringify(m) === JSON.stringify(identityMatrix) ? null : m;
     });
 
     const calibrationMatrixInv = computed(() => {
@@ -394,6 +407,7 @@ export const useCalibrationAssetStore = defineStore(
       calibrationAssetDeleteSuccess,
       timeChangeConflict,
       videoMarkerTime,
+      isAssetEdited,
     };
   }
   // {
