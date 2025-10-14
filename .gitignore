@@ -1,3 +1,8 @@
+# Project specific things
+README.md
+*.yml
+Dockerfile
+
 *Zone.Identifier
 *.tar.gz
 *.tar
