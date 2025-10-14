@@ -90,18 +90,6 @@
                     :key="visualizationTab.id"
                     :value="visualizationTab.id"
                   >
-                    <!-- <TabWindowTimeline
-                      v-if="visualizationTab.id === 'timeline'"
-                      :key="tabStore.visualizationTabId"
-                    />
-                    <TabWindowEvents
-                      v-if="visualizationTab.id === 'events'"
-                      :key="tabStore.visualizationTabId"
-                    />
-                    <TabWindowRunningDistance
-                      v-if="visualizationTab.id === 'running_distance'"
-                      :key="tabStore.visualizationTabId"
-                    /> -->
                     <component :is="getVisualizationTabComponent(visualizationTab.id)" />
                   </v-tabs-window-item>
                 </v-tabs-window>
@@ -115,28 +103,28 @@
 
     <v-snackbar v-model="showCalibrationAssetActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ calibrationAssetActionMessage }}</span>
       </div>
     </v-snackbar>
 
     <v-snackbar v-model="showPositionDataActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ positionDataActionMessage }}</span>
       </div>
     </v-snackbar>
 
     <v-snackbar v-model="showPluginRunActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ pluginRunActionMessage }}</span>
       </div>
     </v-snackbar>
 
     <v-snackbar v-model="showBboxDataActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ bboxDataActionMessage }}</span>
       </div>
     </v-snackbar>
@@ -144,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
@@ -241,11 +229,9 @@ watch(
     }
 
     topViewStore.showItems = true;
-  }
+  },
+  { immediate: true }
 );
-onMounted(() => {
-  tabStore.visualizationTabId = tabStore.visualizationTabs.find((tab) => tab.id === "timeline")?.id;
-});
 
 const isLoading = ref(true);
 const fetchData = async ({ addResults = true }) => {
@@ -517,7 +503,7 @@ const onAnnotateSegment = () => {
 
 const showCalibrationAssetActionSnackbar = ref(false);
 const calibrationAssetActionMessage = ref("");
-const resetcalibrationAssetActionSnackbar = async () => {
+const resetCalibrationAssetActionSnackbar = async () => {
   showCalibrationAssetActionSnackbar.value = false;
   await nextTick();
   showCalibrationAssetActionSnackbar.value = true;
@@ -531,15 +517,15 @@ watch(
   ([save, update, del]) => {
     if (save === true) {
       calibrationAssetActionMessage.value = t("modal.calibration_asset.save.success");
-      resetcalibrationAssetActionSnackbar();
+      resetCalibrationAssetActionSnackbar();
       calibrationAssetStore.calibrationAssetSaveSuccess = false;
     } else if (update === true) {
       calibrationAssetActionMessage.value = t("modal.calibration_asset.update.success");
-      resetcalibrationAssetActionSnackbar();
+      resetCalibrationAssetActionSnackbar();
       calibrationAssetStore.calibrationAssetUpdateSuccess = false;
     } else if (del === true) {
       calibrationAssetActionMessage.value = t("modal.calibration_asset.delete.success");
-      resetcalibrationAssetActionSnackbar();
+      resetCalibrationAssetActionSnackbar();
       calibrationAssetStore.calibrationAssetDeleteSuccess = false;
     }
   }
@@ -647,6 +633,13 @@ watch(
   },
   { immediate: true }
 );
+
+onBeforeUnmount(() => {
+  calibrationAssetStore.marker = [];
+  calibrationAssetStore.videoMarker = [];
+  topViewStore.positionDataTopView = {};
+  bboxesStore.bboxDataInterpolated = {};
+});
 </script>
 
 <style scoped>

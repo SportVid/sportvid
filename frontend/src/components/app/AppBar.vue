@@ -165,6 +165,10 @@ const languages = [
   { code: "en", label: "English", flag: require("@/assets/flags/en.svg") },
   { code: "de", label: "Deutsch", flag: require("@/assets/flags/de.svg") },
 ];
+if (!languages.find((l) => l.code === locale.value)) {
+  locale.value = "en";
+  current.value = "en";
+}
 const setLanguage = (code) => {
   locale.value = code;
   current.value = code;

@@ -399,7 +399,7 @@ class OCRTextDetectorONNX(AnalyserPlugin):
                 "h": float(h),
                 "det_score": float(det_score),
                 "time": frame.get("time"),
-                "delta_time": 1 / fps,
+                "delta_time": 1000 / fps,
             }
             bbox_list.append(bbox)
 
@@ -472,7 +472,7 @@ class OCRTextDetectorONNX(AnalyserPlugin):
                         text_image,
                         ext="jpg",
                         time=frame.get("time"),
-                        delta_time=1 / parameters.get("fps"),
+                        delta_time=1000 / parameters.get("fps"),
                         ref_id=text.id,
                     )
 
@@ -495,7 +495,7 @@ class OCRTextDetectorONNX(AnalyserPlugin):
                     # for i in range(len(frame_bboxes)):
                     #     strings_data.strings[fidx + i].text = labels[i]
                         
-                    # end_time = frame.get("time") + 1 / parameters.get("fps")
+                    # end_time = frame.get("time") + 1000 / parameters.get("fps")
 
                     # annotations_data.annotations.append(
                     #     Annotation(
@@ -532,7 +532,7 @@ class OCRTextDetectorONNX(AnalyserPlugin):
                         h=box["box"][5] - box["box"][1],
                         det_score=0.0,
                         time=frame.get("time"),
-                        delta_time=1 / parameters.get("fps"),
+                        delta_time=1000 / parameters.get("fps"),
                     )
                     # bboxes_data.bboxes.append(bbox)
                     
@@ -540,7 +540,7 @@ class OCRTextDetectorONNX(AnalyserPlugin):
                     text.text = box["text"]
                     strings_data.strings.append(text)
                     
-                    end_time = frame.get("time") + 1 / parameters.get("fps")
+                    end_time = frame.get("time") + 1000 / parameters.get("fps")
                     annotations_data.annotations.append(
                         Annotation(
                             start=frame.get("time"), end=end_time, labels=[box["text"]]

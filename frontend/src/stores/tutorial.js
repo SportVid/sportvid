@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTabStore } from "./tabs";
-import { useBboxesStore } from "@/stores/bboxes";
+import { useTopViewStore } from "@/stores/top_view";
 
 export const useTutorialStore = defineStore("tutorial", () => {
   const router = useRouter();
@@ -12,7 +12,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
 
   const calibrationAssetStore = useCalibrationAssetStore();
   const tabStore = useTabStore();
-  const bboxesStore = useBboxesStore();
+  const topViewStore = useTopViewStore();
 
   const currentTutorialId = ref(null);
   const currentStepId = ref(null);

@@ -3,14 +3,12 @@ import { ref, computed } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { inv } from "mathjs";
-import { useVideoStore } from "./video";
 import { useTopViewStore } from "./top_view";
 import { usePlayerStore } from "@/stores/player";
 
 export const useCalibrationAssetStore = defineStore(
   "calibration_asset",
   () => {
-    const videoStore = useVideoStore();
     const topViewStore = useTopViewStore();
     const playerStore = usePlayerStore();
 
@@ -213,6 +211,10 @@ export const useCalibrationAssetStore = defineStore(
       marker.value = marker.value.filter((m) => m.id !== id);
     };
 
+    const timeChangeConflict = ref(false);
+    const videoMarkerTime = ref(null);
+    const isAssetEdited = ref(false);
+
     const showVideoMarker = ref(false);
     const previousShowVideoMarker = ref(false);
     const hoveredVideoMarker = ref(null);
@@ -221,17 +223,18 @@ export const useCalibrationAssetStore = defineStore(
         (marker) => marker.videoCoordsRel.x !== null && marker.videoCoordsRel.y !== null
       );
     });
-    const setVideoMarker = (event) => {
-      const activeMarker = marker.value.find((marker) => marker.active);
+    const setVideoMarker = ({ x, y }) => {
+      const activeMarker = marker.value.find((m) => m.active);
       if (!activeMarker) return;
 
       activeMarker.videoCoordsRel = {
-        x: (event.clientX - videoStore.videoSize.left) / videoStore.videoSize.width,
-        y: (event.clientY - videoStore.videoSize.top) / videoStore.videoSize.height,
+        x: x,
+        y: y,
       };
-
+      isAssetEdited.value = true;
       activeMarker.active = false;
     };
+
     const toggleVideoMarker = () => {
       showVideoMarker.value = !showVideoMarker.value;
     };
@@ -283,6 +286,8 @@ export const useCalibrationAssetStore = defineStore(
         const res = await axios.post(`${config.API_LOCATION}/calibration_assets/create`, params);
         if (res.data.status === "ok") {
           calibrationAssetSaveSuccess.value = true;
+          isAssetEdited.value = false;
+          timeChangeConflict.value = false;
           loadCalibrationAssetsList();
         }
       } finally {
@@ -303,6 +308,8 @@ export const useCalibrationAssetStore = defineStore(
         const res = await axios.post(`${config.API_LOCATION}/calibration_assets/update`, params);
         if (res.data.status === "ok") {
           calibrationAssetUpdateSuccess.value = true;
+          isAssetEdited.value = false;
+          timeChangeConflict.value = false;
           loadCalibrationAssetsList();
         }
       } finally {
@@ -324,11 +331,18 @@ export const useCalibrationAssetStore = defineStore(
       }
     };
 
+    const identityMatrix = [
+      [1, 0, 0],
+      [0, 1, 0],
+      [0, 0, 1],
+    ];
     const calibrationMatrix = computed(() => {
       const asset = Object.values(calibrationAssetsList.value).find(
         (item) => item.id === calibrationAssetId.value
       );
-      return asset ? asset.homography_matrix : null;
+      const m = asset?.homography_matrix;
+      if (!m) return null;
+      return JSON.stringify(m) === JSON.stringify(identityMatrix) ? null : m;
     });
 
     const calibrationMatrixInv = computed(() => {
@@ -391,6 +405,9 @@ export const useCalibrationAssetStore = defineStore(
       calibrationAssetSaveSuccess,
       calibrationAssetUpdateSuccess,
       calibrationAssetDeleteSuccess,
+      timeChangeConflict,
+      videoMarkerTime,
+      isAssetEdited,
     };
   }
   // {

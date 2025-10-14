@@ -123,7 +123,8 @@
       },
       "delete_ref_marker": "Delete Reference Marker",
       "delete_single_ref_marker": "Delete"
-    }
+    },
+    "time-conflict": "Video markers were set at {time}. Adding a new marker on another timestamp will overwrite the existing ones."
   },
   "position_data": {
     "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
@@ -157,9 +158,9 @@
   "data": {
     "options": {
       "title": "Options",
-      "aggregated_full": "Aggregated full match",
-      "aggregated_first": "Aggregated first half",
-      "aggregated_second": "Aggregated second half",
+      "full_match": "Select full match",
+      "first_half": "Select first half",
+      "second_half": "Select second half",
       "progress": "Progress"
     }
   },
@@ -655,6 +656,9 @@
       },
       "delete": {
         "success": "Calibration Asset successfully deleted"
+      },
+      "video_marker": {
+        "warning": "Attention: Video markers were set at {time}. Adding a new marker will overwrite the existing ones."
       }
     },
     "position_data": {

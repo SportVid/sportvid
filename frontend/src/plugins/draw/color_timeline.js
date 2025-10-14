@@ -76,38 +76,22 @@ export class ColorTimeline extends Timeline {
       targetSize: targetSize,
     });
     const deltaTime = (this.pData.delta_time * this.pData.time.length) / times.length;
-    times.forEach((t, i) => {
+
+    const numBlocks = colors.length;
+    const blockWidth = this.pWidth / numBlocks;
+
+    for (let i = 0; i < numBlocks; i++) {
       const rgb = colors[i];
-      const r_col = Math.round(rgb[0] * 255);
-      const g_col = Math.round(rgb[1] * 255);
-      const b_col = Math.round(rgb[2] * 255);
-      const color = (r_col << 16) + (g_col << 8) + b_col;
-      // const color = i % 2 === 0 ? 0xff0000 : 0x0000ff;
+      const color =
+        (Math.round(rgb[0] * 255) << 16) |
+        (Math.round(rgb[1] * 255) << 8) |
+        Math.round(rgb[2] * 255);
 
-      const timesWidth =
-        ((times[times.length - 1] + this.deltaTime) * this.pWidth) /
-        (this.pEndTime - this.pStartTime);
-      const x = (t - this.pStartTime) * (this.pWidth / (this.pEndTime - this.pStartTime));
-      let width;
-      if (i < times.length - 1) {
-        const nextX =
-          (times[i + 1] - this.pStartTime) * (this.pWidth / (this.pEndTime - this.pStartTime));
-        width = nextX - x;
-      } else {
-        width = this.pWidth - x;
-      }
+      const x = i * blockWidth;
 
-      if (i === 0) {
-        const rect = new PIXI.Graphics().roundRect(x, 0, width, this.pHeight, 5).fill(color);
-        this.cRects.addChild(rect);
-      } else if (i === times.length - 1) {
-        const rect = new PIXI.Graphics().roundRect(x, 0, width, this.pHeight, 5).fill(color);
-        this.cRects.addChild(rect);
-      } else {
-        const rect = new PIXI.Graphics().roundRect(x, 0, width, this.pHeight, 5).fill(color);
-        this.cRects.addChild(rect);
-      }
-    });
+      const rect = new PIXI.Graphics().roundRect(x, 0, blockWidth, this.pHeight, 5).fill(color);
+      this.cRects.addChild(rect);
+    }
 
     // this.pRenderer.render({
     //   container: colorRects,
@@ -119,17 +103,13 @@ export class ColorTimeline extends Timeline {
 
   scaleContainer() {
     const targetSize = this.pOversampling * this.pResolution;
-
     const times = resampleApprox({
       data: this.pData.time,
       targetSize: targetSize,
     });
-
-    const deltaTime = (this.pData.delta_time * this.pData.time.length) / times.length;
-
     if (this.cRects) {
       const width =
-        this.timeToX(this.pData.time[this.pData.time.length - 1] + deltaTime / 2) -
+        this.timeToX(this.pData.time[this.pData.time.length - 1]) -
         this.timeToX(this.pData.time[0]);
       const x = this.timeToX(this.pData.time[0]);
       this.cRects.x = x;

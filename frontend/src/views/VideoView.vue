@@ -73,14 +73,14 @@
 
     <v-snackbar v-model="showLogoutSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ $t("user.logout.success") }}</span>
       </div>
     </v-snackbar>
 
     <v-snackbar v-model="showVideoActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ videoActionMessage }}</span>
       </div>
     </v-snackbar>
