@@ -177,11 +177,11 @@ export const useTopViewStore = defineStore(
       currentFrameKey,
       currentTimeOffset,
     };
+  },
+  {
+    persist: {
+      pick: ["positionDataTopView"],
+      storage: sessionStorage,
+    },
   }
-  // {
-  //   persist: {
-  //     pick: ["positionDataTopView"],
-  //     storage: sessionStorage,
-  //   },
-  // }
 );

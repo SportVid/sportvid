@@ -62,7 +62,7 @@
 
       <v-divider vertical inset class="mx-2" />
 
-      <v-btn @click="showModalTutorial = true" icon density="compact" class="mx-3">
+      <v-btn v-if="loggedIn" @click="showModalTutorial = true" icon density="compact" class="mx-3">
         <app-bar-icon>mdi-school</app-bar-icon>
         <v-badge
           v-if="tutorialStore.isTutorialRunning"
@@ -102,11 +102,21 @@
       <v-menu location="bottom center">
         <template #activator="{ props }">
           <v-avatar v-bind="props" size="20" class="ml-2 mr-1">
-            <v-img :src="languages.find((lang) => lang.code === locale)?.flag" contain />
+            <v-img
+              :src="
+                languageStore.languages.find((lang) => lang.code === languageStore.currentLanguage)
+                  ?.flag
+              "
+              contain
+            />
           </v-avatar>
         </template>
         <v-list density="compact" class="py-0 mt-2" width="100px">
-          <v-list-item v-for="lang in languages" :key="lang.code" @click="setLanguage(lang.code)">
+          <v-list-item
+            v-for="lang in languageStore.languages"
+            :key="lang.code"
+            @click="languageStore.setLanguage(lang.code)"
+          >
             <v-list-item-title class="text-center">{{ lang.label }}</v-list-item-title>
           </v-list-item>
         </v-list>
@@ -133,13 +143,12 @@
 import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { useLocale } from "vuetify";
 import { usePlayerStore } from "@/stores/player";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTutorialStore } from "@/stores/tutorial";
-import { usePluginRunResultStore } from "@/stores/plugin_run_result";
+import { useLanguageStore } from "@/stores/languages";
 import ModalHistory from "@/components/ModalHistory.vue";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalShortcut from "@/components/ModalShortcut.vue";
@@ -149,30 +158,16 @@ import ModalTutorial from "../ModalTutorial.vue";
 import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 
 const route = useRoute();
-const { t, locale } = useI18n();
-const { current } = useLocale();
+const { t } = useI18n();
 
 const playerStore = usePlayerStore();
 const userStore = useUserStore();
 const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 const tutorialStore = useTutorialStore();
-const pluginRunResultStore = usePluginRunResultStore();
+const languageStore = useLanguageStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
-
-const languages = [
-  { code: "en", label: "English", flag: require("@/assets/flags/en.svg") },
-  { code: "de", label: "Deutsch", flag: require("@/assets/flags/de.svg") },
-];
-if (!languages.find((l) => l.code === locale.value)) {
-  locale.value = "en";
-  current.value = "en";
-}
-const setLanguage = (code) => {
-  locale.value = code;
-  current.value = code;
-};
 
 const videoView = computed(() => route.name === "VideoView");
 const analysisView = computed(() => route.name === "AnalysisView");

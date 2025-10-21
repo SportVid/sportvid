@@ -336,15 +336,24 @@ export const useCalibrationAssetStore = defineStore(
       [0, 1, 0],
       [0, 0, 1],
     ];
+    const calibrationMatrixPersisted = ref([]);
     const calibrationMatrix = computed(() => {
+      if (
+        Array.isArray(calibrationMatrixPersisted.value) &&
+        calibrationMatrixPersisted.value.length > 0
+      ) {
+        console.log("persistet matrix", calibrationMatrixPersisted.value);
+        return calibrationMatrixPersisted.value;
+      }
       const asset = Object.values(calibrationAssetsList.value).find(
         (item) => item.id === calibrationAssetId.value
       );
       const m = asset?.homography_matrix;
+      calibrationMatrixPersisted.value =
+        JSON.stringify(m) === JSON.stringify(identityMatrix) ? null : m;
       if (!m) return null;
       return JSON.stringify(m) === JSON.stringify(identityMatrix) ? null : m;
     });
-
     const calibrationMatrixInv = computed(() => {
       if (!calibrationMatrix.value) return null;
       return inv(calibrationMatrix.value);
@@ -359,6 +368,7 @@ export const useCalibrationAssetStore = defineStore(
     }
     const videoMarker = ref([]);
     const topViewMarkerProjection = computed(() => {
+      console.log("calibrationMatrix", calibrationMatrix.value, "videoMarker", videoMarker.value);
       if (!calibrationMatrix.value) return [];
       return videoMarker.value.map((marker) => applyHomography(calibrationMatrix.value, marker));
     });
@@ -397,6 +407,7 @@ export const useCalibrationAssetStore = defineStore(
       updateCalibrationAsset,
       deleteCalibrationAsset,
       calibrationMatrix,
+      calibrationMatrixPersisted,
       calibrationMatrixInv,
       videoMarker,
       topViewMarkerProjection,
@@ -409,11 +420,11 @@ export const useCalibrationAssetStore = defineStore(
       videoMarkerTime,
       isAssetEdited,
     };
+  },
+  {
+    persist: {
+      pick: ["marker", "videoMarker", "calibrationMatrixPersisted"],
+      storage: sessionStorage,
+    },
   }
-  // {
-  //   persist: {
-  //     pick: ["marker", "videoMarker", "calibrationAssetId"],
-  //     storage: sessionStorage,
-  //   },
-  // }
 );
