@@ -637,6 +637,7 @@ watch(
 onBeforeUnmount(() => {
   calibrationAssetStore.marker = [];
   calibrationAssetStore.videoMarker = [];
+  calibrationAssetStore.calibrationMatrixPersisted = [];
   topViewStore.positionDataTopView = {};
   bboxesStore.bboxDataInterpolated = {};
 });

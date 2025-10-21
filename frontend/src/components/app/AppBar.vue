@@ -142,6 +142,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
@@ -157,6 +158,7 @@ import ModalTutorial from "../ModalTutorial.vue";
 import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 
 const route = useRoute();
+const { t } = useI18n();
 
 const playerStore = usePlayerStore();
 const userStore = useUserStore();
