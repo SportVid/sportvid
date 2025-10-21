@@ -62,7 +62,7 @@
 
       <v-divider vertical inset class="mx-2" />
 
-      <v-btn @click="showModalTutorial = true" icon density="compact" class="mx-3">
+      <v-btn v-if="loggedIn" @click="showModalTutorial = true" icon density="compact" class="mx-3">
         <app-bar-icon>mdi-school</app-bar-icon>
         <v-badge
           v-if="tutorialStore.isTutorialRunning"
