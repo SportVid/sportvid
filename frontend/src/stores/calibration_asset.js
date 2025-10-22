@@ -342,7 +342,6 @@ export const useCalibrationAssetStore = defineStore(
         Array.isArray(calibrationMatrixPersisted.value) &&
         calibrationMatrixPersisted.value.length > 0
       ) {
-        console.log("persistet matrix", calibrationMatrixPersisted.value);
         return calibrationMatrixPersisted.value;
       }
       const asset = Object.values(calibrationAssetsList.value).find(
