@@ -191,6 +191,9 @@
       "player_id": "Player-ID",
       "team_id": "Team",
       "distance": "Distance [m]"
+    },
+    "timeline": {
+      "not_available": "No timeline available.<br>Please run a plugin that creates a timeline."
     }
   },
   "timelines": {
