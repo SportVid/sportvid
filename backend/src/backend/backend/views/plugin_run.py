@@ -161,12 +161,11 @@ class PluginRunDelete(View):
                     {"status": "error", "type": "missing_values_plugin_list"}
                 )
 
-            # TODO: delete for prod
             if list(data.get("plugin_list"))[0] == 'all':
                 response, _ = PluginRun.objects.all().delete()
             else:
                 plugins_to_be_deleted = [
-                    PluginRun.objects.get(id=p) for p in list(data.get("plugin_list"))
+                    PluginRun.objects.get(id=p) for p in PluginRun.objects.filter(video__owner=request.user).values_list('id', flat=True)
                 ]
                 for p in plugins_to_be_deleted:
                     response = p.delete()

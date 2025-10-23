@@ -579,13 +579,9 @@ watch(
 
 const topViewElement = ref(null);
 const updateTopViewSize = async () => {
-  // console.log("Waiting for next tick");
   await nextTick();
-  // console.log("Waiting for stable element");
   await waitForStableElement(topViewElement);
-  // console.log("update");
 
-  // console.log("Updating top view size", topViewStore.topViewSize);
   if (topViewElement.value) {
     const rect = topViewElement.value.getBoundingClientRect();
     topViewStore.setTopViewSize({
@@ -595,7 +591,6 @@ const updateTopViewSize = async () => {
       left: rect.left,
     });
   }
-  // console.log("new top view size", topViewStore.topViewSize);
 };
 function waitForStableElement(elRef) {
   return new Promise((resolve) => {
