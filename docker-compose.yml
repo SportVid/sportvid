@@ -1,6 +1,8 @@
 services:
   inference_ray:
-    build: .
+    image: ghcr.io/astral-sh/uv:debian
+    # build:
+    #   context: .
 
     environment:
       - HF_HOME=/models
@@ -40,6 +42,7 @@ services:
     command: uv run --package inference_ray serve run /app/inference_ray/deploy.yml
 
   analyser:
+    # image: ghcr.io/astral-sh/uv:debian
     build: .
 
     volumes:

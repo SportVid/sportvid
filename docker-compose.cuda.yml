@@ -1,15 +1,15 @@
 services:
   inference_ray:
     image: ghcr.io/astral-sh/uv:debian
+    # build:
+    #   context: .
+    #   dockerfile: inference_ray/Dockerfile.cuda
 
     environment:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
 
     volumes:
-      - type: bind
-        source: ./data/inference_ray_venv
-        target: /app/.venv
       - type: bind
         source: ./data/analyser
         target: /data/
@@ -48,15 +48,13 @@ services:
 
     working_dir: /app/
 
-    command: uv run --package inference_ray serve run /app/inference_ray/deploy.yml
+    command: uv run --package inference_ray serve run /app/inference_ray/deploy.cuda.yml
 
   analyser:
-    image: ghcr.io/astral-sh/uv:debian
+    # image: ghcr.io/astral-sh/uv:debian
+    build: .
 
     volumes:
-      - type: bind
-        source: ./data/analyser_venv
-        target: /app/.venv
       - type: bind
         source: ./inference_ray
         target: /app/inference_ray
@@ -106,12 +104,10 @@ services:
       - "127.0.0.1:6380:6380"
 
   celery:
-    image: ghcr.io/astral-sh/uv:debian
+    # image: ghcr.io/astral-sh/uv:debian
+    build: .
 
     volumes:
-      - type: bind
-        source: ./data/celery_venv
-        target: /app/.venv
       - type: bind
         source: ./inference_ray
         target: /app/inference_ray
@@ -156,14 +152,14 @@ services:
     command: uv run --package backend celery -A tibava worker -l INFO
 
   backend:
-    image: ghcr.io/astral-sh/uv:debian
+    # image: ghcr.io/astral-sh/uv:debian
+    build: .
+
     ports:
       - 8000:8000
+      - 8010:8000
 
     volumes:
-      - type: bind
-        source: ./data/backend_venv
-        target: /app/.venv
       - type: bind
         source: ./inference_ray
         target: /app/inference_ray
