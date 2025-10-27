@@ -169,3 +169,8 @@ cython_debug/
 .idea/
 
 .DS_Store
+
+# Allow CI/CD workflow files to be tracked
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
