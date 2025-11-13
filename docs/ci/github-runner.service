@@ -1,0 +1,17 @@
+[Unit]
+Description=GitHub Actions Self-Hosted Runner
+After=network.target
+
+[Service]
+ExecStart=/home/hmoeller/actions-runner/run.sh
+WorkingDirectory=/home/hmoeller/actions-runner
+Restart=always
+RestartSec=5
+User=hmoeller
+Environment="DOTNET_CLI_TELEMETRY_OPTOUT=1"
+Environment="DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1"
+Environment="GITHUB_ACTIONS_RUNNER_HOOK_JOB_STARTED=/bin/true"
+Environment="GITHUB_ACTIONS_RUNNER_HOOK_JOB_COMPLETED=/bin/true"
+
+[Install]
+WantedBy=multi-user.target
