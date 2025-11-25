@@ -34,7 +34,6 @@
           {{ isVideoFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
         </v-icon>
 
-        <!-- Fullscreen Controls -->
         <div v-if="isVideoFullscreen" class="fullscreen-controls" :class="{ visible: hovering }">
           <div class="controls-top">
             <v-icon @click="togglePlaying" class="control-icon">
@@ -57,7 +56,7 @@
           />
         </div>
 
-        <div
+        <!-- <div
           v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
           v-show="bboxesStore.showBoundingBox"
           :key="position"
@@ -73,6 +72,37 @@
             height: position[9] * videoStore.videoSize.height + 'px',
             border: `2px solid ${visualizationStore.getTeamColor(position[1])}`,
           }"
+          @click="openEditBBox(position)"
+        >
+          <v-tooltip
+            activator="parent"
+            location="top"
+            class="bounding-box-tooltip"
+            :style="{ '--tooltip-bg': toRgb(visualizationStore.getTeamColor(position[1]), 0.7) }"
+            interactive
+          >
+            <div>
+              <div>
+                <strong>{{ $t("modal.bounding_box.tooltip.box_id") }}: {{ position[5] }}</strong>
+              </div>
+              <v-divider class="my-1" />
+              <div>{{ $t("modal.bounding_box.tooltip.player_id") }}: {{ position[0] }}</div>
+              <div>{{ $t("modal.bounding_box.tooltip.team_id") }}: {{ position[1] }}</div>
+            </div>
+          </v-tooltip>
+          <div
+            class="bounding-box-player-id"
+            :style="{ color: visualizationStore.getTeamColor(position[1]) }"
+          >
+            {{ position[0] }}
+          </div>
+        </div> -->
+
+        <div
+          v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
+          v-show="bboxesStore.showBoundingBox"
+          :key="position"
+          :style="getBboxToEllipse(position)"
           @click="openEditBBox(position)"
         >
           <v-tooltip
@@ -468,6 +498,38 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
 });
+
+const getBboxToEllipse = (position) => {
+  const x = position[6];
+  const y = position[7];
+  const w = position[8];
+  const h = position[9];
+
+  const vid = videoStore.videoSize;
+
+  // Ellipse size (relative → px)
+  const ellipseWidth = w * vid.width;
+  const ellipseHeight = ellipseWidth * 0.25;
+
+  // Position under player
+  const centerX = x + w / 2;
+  const bottomY = y + h;
+
+  const pxLeft = (isVideoFullscreen.value ? vid.left : 0) + centerX * vid.width - ellipseWidth / 2;
+  const pxTop = (isVideoFullscreen.value ? vid.top : 0) + bottomY * vid.height - ellipseHeight / 2;
+
+  return {
+    position: "absolute",
+    left: pxLeft + "px",
+    top: pxTop + "px",
+    width: ellipseWidth + "px",
+    height: ellipseHeight + "px",
+    background: `${visualizationStore.getTeamColor(position[1])}55`,
+    borderRadius: "50%",
+    border: `2px solid ${visualizationStore.getTeamColor(position[1])}80`,
+    zIndex: 10,
+  };
+};
 </script>
 
 <style scoped>
