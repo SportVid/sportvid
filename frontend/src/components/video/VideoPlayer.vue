@@ -72,39 +72,25 @@
             height: position[9] * videoStore.videoSize.height + 'px',
             border: `2px solid ${visualizationStore.getTeamColor(position[1])}`,
           }"
-          @click="openEditBBox(position)"
         >
-          <v-tooltip
-            activator="parent"
-            location="top"
-            class="bounding-box-tooltip"
-            :style="{ '--tooltip-bg': toRgb(visualizationStore.getTeamColor(position[1]), 0.7) }"
-            interactive
-          >
-            <div>
-              <div>
-                <strong>{{ $t("modal.bounding_box.tooltip.box_id") }}: {{ position[5] }}</strong>
-              </div>
-              <v-divider class="my-1" />
-              <div>{{ $t("modal.bounding_box.tooltip.player_id") }}: {{ position[0] }}</div>
-              <div>{{ $t("modal.bounding_box.tooltip.team_id") }}: {{ position[1] }}</div>
-            </div>
-          </v-tooltip>
-          <div
-            class="bounding-box-player-id"
-            :style="{ color: visualizationStore.getTeamColor(position[1]) }"
-          >
-            {{ position[0] }}
-          </div>
         </div> -->
 
         <div
           v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
           v-show="bboxesStore.showBoundingBox"
           :key="position"
-          :style="getBboxToEllipse(position)"
+          :style="getEllipseSvg(position).style"
           @click="openEditBBox(position)"
         >
+          <svg class="player-ellipse">
+            <path
+              :d="getEllipseSvg(position).arc"
+              :stroke="getEllipseSvg(position).color"
+              stroke-width="2"
+              fill="none"
+              stroke-linecap="round"
+            />
+          </svg>
           <v-tooltip
             activator="parent"
             location="top"
@@ -123,7 +109,9 @@
           </v-tooltip>
           <div
             class="bounding-box-player-id"
-            :style="{ color: visualizationStore.getTeamColor(position[1]) }"
+            :style="{
+              color: visualizationStore.getTeamColor(position[1]),
+            }"
           >
             {{ position[0] }}
           </div>
@@ -499,7 +487,7 @@ onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
 });
 
-const getBboxToEllipse = (position) => {
+const getEllipseSvg = (position) => {
   const x = position[6];
   const y = position[7];
   const w = position[8];
@@ -507,27 +495,50 @@ const getBboxToEllipse = (position) => {
 
   const vid = videoStore.videoSize;
 
-  // Ellipse size (relative → px)
+  const color = visualizationStore.getTeamColor(position[1]);
+
+  // via SoccerNet
   const ellipseWidth = w * vid.width;
-  const ellipseHeight = ellipseWidth * 0.25;
+  const ellipseHeight = ellipseWidth * 0.35;
 
-  // Position under player
-  const centerX = x + w / 2;
-  const bottomY = y + h;
+  const centerX = (x + w / 2) * vid.width + (isVideoFullscreen.value ? vid.left : 0);
+  const centerY =
+    (y + h) * vid.height +
+    (isVideoFullscreen.value ? vid.top : 0) -
+    ellipseHeight * (0.1 + (1 - (y + h)) * 1.5);
 
-  const pxLeft = (isVideoFullscreen.value ? vid.left : 0) + centerX * vid.width - ellipseWidth / 2;
-  const pxTop = (isVideoFullscreen.value ? vid.top : 0) + bottomY * vid.height - ellipseHeight / 2;
+  const left = centerX - ellipseWidth;
+  const top = centerY - ellipseHeight;
+
+  const rx = ellipseWidth;
+  const ry = ellipseHeight;
+
+  const startAngle = (-45 * Math.PI) / 180;
+  const endAngle = (235 * Math.PI) / 180;
+
+  const sx = rx + rx * Math.cos(startAngle);
+  const sy = ry + ry * Math.sin(startAngle);
+
+  const ex = rx + rx * Math.cos(endAngle);
+  const ey = ry + ry * Math.sin(endAngle);
+
+  const arcPath = `M ${sx},${sy} A ${rx} ${ry} 0 1 1 ${ex},${ey}`;
 
   return {
-    position: "absolute",
-    left: pxLeft + "px",
-    top: pxTop + "px",
-    width: ellipseWidth + "px",
-    height: ellipseHeight + "px",
-    background: `${visualizationStore.getTeamColor(position[1])}55`,
-    borderRadius: "50%",
-    border: `2px solid ${visualizationStore.getTeamColor(position[1])}80`,
-    zIndex: 10,
+    style: {
+      position: "absolute",
+      left: left + "px",
+      top: top + "px",
+      width: ellipseWidth * 2 + "px",
+      height: ellipseHeight * 2 + "px",
+      overflow: "visible",
+      zIndex: 12,
+      cursor: isVideoFullscreen.value ? "default" : "pointer",
+    },
+    arc: arcPath,
+    color,
+    centerX,
+    centerY,
   };
 };
 </script>
@@ -572,10 +583,19 @@ const getBboxToEllipse = (position) => {
   font-size: 12px;
 }
 
-.bounding-box-player-id {
+.bounding-box-player-id-old {
   position: absolute;
   left: 50%;
   bottom: -20px;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+.bounding-box-player-id {
+  position: absolute;
+  left: 50%;
+  bottom: -25px;
   transform: translateX(-50%);
   font-size: 0.8rem;
   pointer-events: none;
@@ -638,5 +658,10 @@ const getBboxToEllipse = (position) => {
   color: white;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+.player-ellipse {
+  width: 100%;
+  height: 100%;
 }
 </style>
