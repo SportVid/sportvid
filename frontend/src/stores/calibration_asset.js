@@ -14,179 +14,478 @@ export const useCalibrationAssetStore = defineStore(
 
     const isLoading = ref(false);
 
-    const marker = ref([]);
+    const calibrationAssetType = ref("marker");
+    const setCalibrationAssetType = (type) => {
+      calibrationAssetType.value = type;
+    };
+    const toggleCalibrationAssetType = () => {
+      calibrationAssetType.value = calibrationAssetType.value === "marker" ? "segment" : "marker";
+    };
+
+    const calibrationAssetObjects = ref([]);
     const markerTemplate = ref([
       {
-        name: "Top-left",
+        name: "Corner-top-left",
         id: "1",
         set: true,
         active: false,
-        compAreaCoordsRel: { x: 0, y: 0, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0, y: 0, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
-        name: "Top-right",
+        name: "Corner-top-right",
         id: "2",
         set: true,
         active: false,
-        compAreaCoordsRel: { x: 0, y: 1, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 1, y: 0, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
-        name: "Kick-off",
+        name: "Corner-bottom-left",
         id: "3",
         set: true,
         active: false,
-        compAreaCoordsRel: { x: 0.5, y: 0.5, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0, y: 1, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
-        name: "Bottom-left",
+        name: "Corner-bottom-right",
         id: "4",
         set: true,
         active: false,
-        compAreaCoordsRel: { x: 1, y: 0, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
-      },
-      {
-        name: "Bottom-right",
-        id: "5",
-        set: true,
-        active: false,
-        compAreaCoordsRel: { x: 1, y: 1, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 1, y: 1, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
         name: "Midline-top",
-        id: "6",
+        id: "5",
         set: false,
         active: false,
-        compAreaCoordsRel: { x: 0.5, y: 0, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0.5, y: 0, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
         name: "Midline-bottom",
-        id: "7",
+        id: "6",
         set: false,
         active: false,
-        compAreaCoordsRel: { x: 0.5, y: 1, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0.5, y: 1, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Kick-off",
+        id: "7",
+        set: true,
+        active: false,
+        compAreaCoordsRel: [{ x: 0.5, y: 0.5, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
         name: "Kick-off-circle-top",
         id: "8",
         set: false,
         active: false,
-        compAreaCoordsRel: { x: 0.5, y: 0.36, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0.5, y: 0.36, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
         name: "Kick-off-circle-bottom",
         id: "9",
         set: false,
         active: false,
-        compAreaCoordsRel: { x: 0.5, y: 0.64, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0.5, y: 0.64, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
         name: "Penalty-left",
         id: "10",
         set: false,
         active: false,
-        compAreaCoordsRel: { x: 0.11, y: 0.5, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0.11, y: 0.5, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
-        name: "Penalty-right",
+        name: "Penalty-area-left-corner-top",
         id: "11",
         set: false,
         active: false,
-        compAreaCoordsRel: { x: 0.89, y: 0.5, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0.165, y: 0.19, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
-        name: "Penalty-box-left-corner-top",
+        name: "Penalty-area-left-corner-bottom",
         id: "12",
         set: false,
         active: false,
-        compAreaCoordsRel: { x: 0.165, y: 0.19, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0.165, y: 0.81, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
-        name: "Penalty-box-left-corner-bottom",
+        name: "Penalty-right",
         id: "13",
         set: false,
         active: false,
-        compAreaCoordsRel: { x: 0.165, y: 0.81, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0.89, y: 0.5, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
-        name: "Penalty-box-right-corner-top",
+        name: "Penalty-area-right-corner-top",
         id: "14",
         set: false,
         active: false,
-        compAreaCoordsRel: { x: 0.835, y: 0.19, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0.835, y: 0.19, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
-        name: "Penalty-box-right-corner-bottom",
+        name: "Penalty-area-right-corner-bottom",
         id: "15",
         set: false,
         active: false,
-        compAreaCoordsRel: { x: 0.835, y: 0.81, z: 0 },
-        videoCoordsRel: { x: null, y: null, z: null },
+        compAreaCoordsRel: [{ x: 0.835, y: 0.81, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
       },
     ]);
+    const segmentTemplate = ref([
+      {
+        name: "Sideline-top",
+        id: "1",
+        set: true,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 1, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Sideline-bottom",
+        id: "2",
+        set: true,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 1, z: 0 },
+          { x: 1, y: 1, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Sideline-left",
+        id: "3",
+        set: true,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 1, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Sideline-right",
+        id: "4",
+        set: true,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 1, y: 0, z: 0 },
+          { x: 1, y: 1, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Midline",
+        id: "5",
+        set: true,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0.5, y: 0, z: 0 },
+          { x: 0.5, y: 1, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Kick-off-circle",
+        id: "6",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Penalty-area-left-top",
+        id: "7",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0.19, z: 0 },
+          { x: 0.165, y: 0.19, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Penalty-area-left-bottom",
+        id: "8",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Penalty-area-left-main",
+        id: "9",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Penalty-area-left-circle",
+        id: "10",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Penalty-area-right-top",
+        id: "11",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Penalty-area-right-bottom",
+        id: "12",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Penalty-area-right-main",
+        id: "13",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Penalty-area-right-circle",
+        id: "14",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Goal-area-left-top",
+        id: "15",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Goal-area-left-bottom",
+        id: "16",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Goal-area-left-main",
+        id: "17",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Goal-area-right-top",
+        id: "18",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Goal-area-right-bottom",
+        id: "19",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Goal-area-right-main",
+        id: "20",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+    ]);
+    const currentTemplate = computed(() => {
+      return calibrationAssetType.value === "marker" ? markerTemplate.value : segmentTemplate.value;
+    });
 
-    const allMarkerValid = computed(() =>
-      marker.value.every((m) => m.videoCoordsRel.x !== null && m.videoCoordsRel.y !== null)
+    const allAssetObjectsValid = computed(() =>
+      calibrationAssetObjects.value.every(
+        (m) => m.videoCoordsRel.x !== null && m.videoCoordsRel.y !== null
+      )
     );
 
     const isAddingReferenceMarker = ref(false);
 
     const filteredReferenceMarker = computed(() => {
-      return marker.value.filter(
-        (marker) =>
-          marker.compAreaCoordsRel.x !== null && marker.compAreaCoordsRel.y !== null && marker.set
+      return calibrationAssetObjects.value.filter(
+        (calibrationAssetObjects) =>
+          calibrationAssetObjects.compAreaCoordsRel.x !== null &&
+          calibrationAssetObjects.compAreaCoordsRel.y !== null &&
+          calibrationAssetObjects.set
       );
     });
 
-    const isAnyReferenceMarkerActive = computed(() => marker.value.some((marker) => marker.active));
+    const isAnyReferenceMarkerActive = computed(() =>
+      calibrationAssetObjects.value.some((object) => object.active)
+    );
 
     const toggleReferenceMarker = (event, id) => {
       event.stopPropagation();
 
-      marker.value = marker.value.map((marker) => ({
-        ...marker,
-        active: marker.id === id ? !marker.active : false,
+      calibrationAssetObjects.value = calibrationAssetObjects.value.map((object) => ({
+        ...object,
+        active: object.id === id ? !object.active : false,
       }));
     };
     const addReferenceMarker = () => {
       if (!isAddingReferenceMarker.value) {
         isAddingReferenceMarker.value = true;
 
-        const customMarkerCount = marker.value.filter((m) =>
+        const customMarkerCount = calibrationAssetObjects.value.filter((m) =>
           m.name.startsWith("Custom-marker")
         ).length;
         const newMarker = {
           name: `Custom-marker-${customMarkerCount + 1}`,
-          id: marker.value.length + 1,
+          id: calibrationAssetObjects.value.length + 1,
           set: true,
           active: false,
           compAreaCoordsRel: { x: null, y: null, z: null },
           videoCoordsRel: { x: null, y: null, z: null },
         };
 
-        marker.value.push(newMarker);
+        calibrationAssetObjects.value.push(newMarker);
       }
     };
     const addTemplateReferenceMarker = (m) => {
       m.set = true;
-      marker.value.push(m);
+      calibrationAssetObjects.value.push(m);
     };
     const setReferenceMarker = (event) => {
       if (isAddingReferenceMarker.value) {
-        const lastMarker = marker.value[marker.value.length - 1];
+        const lastMarker = calibrationAssetObjects.value[calibrationAssetObjects.value.length - 1];
         if (lastMarker) {
           lastMarker.compAreaCoordsRel = {
             x:
@@ -208,23 +507,23 @@ export const useCalibrationAssetStore = defineStore(
       }
     };
     const deleteReferenceMarker = (id) => {
-      marker.value = marker.value.filter((m) => m.id !== id);
+      calibrationAssetObjects.value = calibrationAssetObjects.value.filter((m) => m.id !== id);
     };
 
     const timeChangeConflict = ref(false);
     const videoMarkerTime = ref(null);
     const isAssetEdited = ref(false);
 
-    const showVideoMarker = ref(false);
-    const previousShowVideoMarker = ref(false);
+    const showVideoAsset = ref(false);
+    const previousShowVideoAsset = ref(false);
     const hoveredVideoMarker = ref(null);
     const filteredVideoMarker = computed(() => {
-      return marker.value.filter(
-        (marker) => marker.videoCoordsRel.x !== null && marker.videoCoordsRel.y !== null
+      return calibrationAssetObjects.value.filter(
+        (object) => object.videoCoordsRel.x !== null && object.videoCoordsRel.y !== null
       );
     });
     const setVideoMarker = ({ x, y }) => {
-      const activeMarker = marker.value.find((m) => m.active);
+      const activeMarker = calibrationAssetObjects.value.find((m) => m.active);
       if (!activeMarker) return;
 
       activeMarker.videoCoordsRel = {
@@ -235,8 +534,8 @@ export const useCalibrationAssetStore = defineStore(
       activeMarker.active = false;
     };
 
-    const toggleVideoMarker = () => {
-      showVideoMarker.value = !showVideoMarker.value;
+    const toggleVideoAsset = () => {
+      showVideoAsset.value = !showVideoAsset.value;
     };
 
     const calibrationAssetsList = ref({});
@@ -245,9 +544,12 @@ export const useCalibrationAssetStore = defineStore(
     const calibrationAssetUpdateSuccess = ref(false);
     const calibrationAssetDeleteSuccess = ref(false);
     const createCalibrationAsset = (template) => {
-      marker.value = JSON.parse(JSON.stringify(markerTemplate.value.filter((m) => m.set)));
+      calibrationAssetObjects.value = JSON.parse(
+        JSON.stringify(currentTemplate.value.filter((m) => m.set))
+      );
       topViewStore.onSportChange(template);
       calibrationAssetId.value = null;
+      videoMarker.value = [];
     };
     const loadCalibrationAssetsList = async () => {
       try {
@@ -267,8 +569,8 @@ export const useCalibrationAssetStore = defineStore(
     const loadCalibrationAsset = (id) => {
       const calibrationAsset = calibrationAssetsList.value.find((asset) => asset.id === id);
       if (calibrationAsset) {
-        marker.value = calibrationAsset.marker_data;
-        videoMarker.value = marker.value.map((m) => m.videoCoordsRel);
+        calibrationAssetObjects.value = calibrationAsset.marker_data;
+        videoMarker.value = calibrationAssetObjects.value.map((m) => m.videoCoordsRel);
         topViewStore.onSportChange(calibrationAsset.template);
         calibrationAssetId.value = id;
       }
@@ -279,7 +581,7 @@ export const useCalibrationAssetStore = defineStore(
       const params = {
         name: name,
         template: template,
-        marker_data: [...marker.value],
+        marker_data: [...calibrationAssetObjects.value],
         video_id: playerStore.videoId,
       };
       try {
@@ -301,7 +603,7 @@ export const useCalibrationAssetStore = defineStore(
         id: calibrationAssetId.value,
         name: name,
         template: template,
-        marker_data: [...marker.value],
+        marker_data: [...calibrationAssetObjects.value],
         video_id: playerStore.videoId,
       };
       try {
@@ -380,9 +682,11 @@ export const useCalibrationAssetStore = defineStore(
     });
 
     return {
-      marker,
+      calibrationAssetObjects,
+      currentTemplate,
       markerTemplate,
-      allMarkerValid,
+      segmentTemplate,
+      allAssetObjectsValid,
       filteredReferenceMarker,
       filteredVideoMarker,
       toggleReferenceMarker,
@@ -393,9 +697,9 @@ export const useCalibrationAssetStore = defineStore(
       setReferenceMarker,
       deleteReferenceMarker,
       setVideoMarker,
-      showVideoMarker,
-      previousShowVideoMarker,
-      toggleVideoMarker,
+      showVideoAsset,
+      previousShowVideoAsset,
+      toggleVideoAsset,
       hoveredVideoMarker,
       calibrationAssetsList,
       calibrationAssetId,
@@ -418,11 +722,14 @@ export const useCalibrationAssetStore = defineStore(
       timeChangeConflict,
       videoMarkerTime,
       isAssetEdited,
+      calibrationAssetType,
+      setCalibrationAssetType,
+      toggleCalibrationAssetType,
     };
   },
   {
     persist: {
-      pick: ["marker", "videoMarker", "calibrationMatrixPersisted"],
+      pick: ["calibrationAssetObjects", "videoMarker", "calibrationMatrixPersisted"],
       storage: sessionStorage,
     },
   }

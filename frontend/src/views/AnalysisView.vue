@@ -217,9 +217,9 @@ watch(
     await nextTick();
 
     if (newTabId === "calibration") {
-      calibrationAssetStore.showVideoMarker = true;
+      calibrationAssetStore.showVideoAsset = true;
     } else {
-      calibrationAssetStore.showVideoMarker = false;
+      calibrationAssetStore.showVideoAsset = false;
     }
 
     if (newTabId === "position_data" || newTabId === "heatmap") {
@@ -625,17 +625,17 @@ watch(
   () => calibrationAssetStore.isAnyReferenceMarkerActive,
   (active) => {
     if (active) {
-      calibrationAssetStore.previousShowVideoMarker = calibrationAssetStore.showVideoMarker;
-      calibrationAssetStore.showVideoMarker = true;
+      calibrationAssetStore.previousShowVideoAsset = calibrationAssetStore.showVideoAsset;
+      calibrationAssetStore.showVideoAsset = true;
     } else {
-      calibrationAssetStore.showVideoMarker = calibrationAssetStore.previousShowVideoMarker;
+      calibrationAssetStore.showVideoAsset = calibrationAssetStore.previousShowVideoAsset;
     }
   },
   { immediate: true }
 );
 
 onBeforeUnmount(() => {
-  calibrationAssetStore.marker = [];
+  calibrationAssetStore.calibrationAssetObjects = [];
   calibrationAssetStore.videoMarker = [];
   calibrationAssetStore.calibrationMatrixPersisted = [];
   topViewStore.positionDataTopView = {};

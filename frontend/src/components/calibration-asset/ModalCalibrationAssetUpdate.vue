@@ -30,7 +30,7 @@
 
         <v-btn
           @click="updateCalibrationAsset(name, template)"
-          :disabled="!name || !template || !calibrationAssetStore.allMarkerValid"
+          :disabled="!name || !template || !calibrationAssetStore.allAssetObjectsValid"
           size="small"
         >
           {{ $t("button.update") }}

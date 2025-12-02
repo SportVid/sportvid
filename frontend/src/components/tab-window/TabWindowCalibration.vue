@@ -1,5 +1,5 @@
 <template>
-  <CalibrationAssetMenu v-if="calibrationAssetStore.marker.length === 0" />
+  <CalibrationAssetMenu v-if="calibrationAssetStore.calibrationAssetObjects.length === 0" />
 
   <v-container v-else class="d-flex flex-column">
     <v-row ref="container" class="mt-1" justify="center">
@@ -132,7 +132,7 @@
 
         <div
           v-for="point in calibrationAssetStore.topViewMarkerProjection"
-          v-show="calibrationAssetStore.showVideoMarker"
+          v-show="calibrationAssetStore.showVideoAsset"
           :key="point"
           :style="{
             position: 'absolute',
@@ -249,17 +249,37 @@
       <v-menu location="top">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
-            {{ $t("calibration_asset.marker.title") }}
+            {{
+              calibrationAssetStore.calibrationAssetType === "marker"
+                ? $t("calibration_asset.marker.title")
+                : $t("calibration_asset.segments.title")
+            }}
           </v-btn>
         </template>
         <v-list class="py-0" density="compact" width="220px">
-          <v-list-item class="menu-item" @click="calibrationAssetStore.toggleVideoMarker">
+          <v-list-item class="menu-item" @click="calibrationAssetStore.toggleCalibrationAssetType">
             <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("calibration_asset.marker.view_vid_marker") }}
+              {{
+                calibrationAssetStore.calibrationAssetType === "marker"
+                  ? $t("calibration_asset.marker.switch_to_segments")
+                  : $t("calibration_asset.segments.switch_to_marker")
+              }}
+            </v-list-item-title>
+          </v-list-item>
+
+          <V-divider />
+
+          <v-list-item class="menu-item" @click="calibrationAssetStore.toggleVideoAsset">
+            <v-list-item-title class="d-flex justify-space-between">
+              {{
+                calibrationAssetStore.calibrationAssetType === "marker"
+                  ? $t("calibration_asset.marker.view_vid_marker")
+                  : $t("calibration_asset.segments.view_vid_segments")
+              }}
               <v-icon
                 :class="{
-                  'text-disabled': !calibrationAssetStore.showVideoMarker,
-                  'text-red': calibrationAssetStore.showVideoMarker,
+                  'text-disabled': !calibrationAssetStore.showVideoAsset,
+                  'text-red': calibrationAssetStore.showVideoAsset,
                 }"
                 class="mb-1"
                 size="small"
@@ -269,7 +289,11 @@
             </v-list-item-title>
           </v-list-item>
 
-          <v-menu location="end" open-on-hover>
+          <v-menu
+            v-if="calibrationAssetStore.calibrationAssetType === 'marker'"
+            location="end"
+            open-on-hover
+          >
             <template #activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
                 <v-list-item-title class="d-flex justify-space-between">
@@ -278,7 +302,7 @@
                 </v-list-item-title>
               </v-list-item>
             </template>
-            <v-list class="py-0" density="compact" width="225px">
+            <v-list class="py-0" density="compact" width="230px">
               <v-list-item class="menu-item" @click="addReferenceMarker">
                 <v-list-item-title>
                   {{ $t("calibration_asset.marker.add_ref_marker.custom_marker") }}
@@ -289,7 +313,36 @@
 
               <div style="max-height: 160px; overflow-y: auto">
                 <v-list-item
-                  v-for="m in calibrationAssetStore.markerTemplate.filter((m) => !m.set)"
+                  v-for="m in calibrationAssetStore.currentTemplate.filter((m) => !m.set)"
+                  :key="m.id"
+                  class="menu-item"
+                  @click="addTemplateReferenceMarker(m)"
+                >
+                  <v-list-item-title>
+                    {{ m.name }}
+                  </v-list-item-title>
+                </v-list-item>
+              </div>
+            </v-list>
+          </v-menu>
+
+          <v-menu
+            v-else-if="calibrationAssetStore.calibrationAssetType === 'segment'"
+            location="end"
+            open-on-hover
+          >
+            <template #activator="{ props }">
+              <v-list-item v-bind="props" class="menu-item">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("calibration_asset.segments.add_ref_segment.title") }}
+                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+            <v-list class="py-0" density="compact" width="225px">
+              <div style="max-height: 160px; overflow-y: auto">
+                <v-list-item
+                  v-for="m in calibrationAssetStore.currentTemplate.filter((m) => !m.set)"
                   :key="m.id"
                   class="menu-item"
                   @click="addTemplateReferenceMarker(m)"
@@ -304,7 +357,11 @@
 
           <v-list-item class="menu-item" @click="showDeleteButton = !showDeleteButton">
             <v-list-item-title>
-              {{ $t("calibration_asset.marker.delete_ref_marker") }}
+              {{
+                calibrationAssetStore.calibrationAssetType === "marker"
+                  ? $t("calibration_asset.marker.delete_ref_marker")
+                  : $t("calibration_asset.segments.delete_ref_segment")
+              }}
             </v-list-item-title>
           </v-list-item>
         </v-list>
@@ -550,7 +607,7 @@ watch(
     )
       return;
 
-    const hasVideoCoords = calibrationAssetStore.marker.some((m) => {
+    const hasVideoCoords = calibrationAssetStore.calibrationAssetObjects.some((m) => {
       const v = m.videoCoordsRel;
       return v && (v.x !== null || v.y !== null);
     });

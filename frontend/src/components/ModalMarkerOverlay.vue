@@ -20,7 +20,7 @@
 
       <div
         v-for="m in calibrationAssetStore.filteredVideoMarker"
-        v-show="calibrationAssetStore.showVideoMarker"
+        v-show="calibrationAssetStore.showVideoAsset"
         :key="m.id"
         :style="{
           position: 'absolute',
@@ -38,7 +38,7 @@
 
       <div
         v-for="point in calibrationAssetStore.videoMarkerReprojection"
-        v-show="calibrationAssetStore.showVideoMarker"
+        v-show="calibrationAssetStore.showVideoAsset"
         :key="point"
         :style="{
           position: 'absolute',
@@ -97,7 +97,7 @@ const setVideoMarker = (event) => {
   if (!rect) return;
 
   if (calibrationAssetStore.timeChangeConflict) {
-    calibrationAssetStore.marker.forEach((m) => {
+    calibrationAssetStore.calibrationAssetObjects.forEach((m) => {
       m.videoCoordsRel = { x: null, y: null, z: null };
     });
     calibrationAssetStore.timeChangeConflict = false;
