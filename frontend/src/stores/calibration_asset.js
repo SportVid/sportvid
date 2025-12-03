@@ -14,7 +14,7 @@ export const useCalibrationAssetStore = defineStore(
 
     const isLoading = ref(false);
 
-    const calibrationAssetType = ref("marker");
+    const calibrationAssetType = ref("segment");
     const setCalibrationAssetType = (type) => {
       calibrationAssetType.value = type;
     };
@@ -144,6 +144,38 @@ export const useCalibrationAssetStore = defineStore(
         compAreaCoordsRel: [{ x: 0.835, y: 0.81, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
       },
+      {
+        name: "Goal-area-left-corner-top",
+        id: "16",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [{ x: 0.055, y: 0.36, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Goal-area-left-corner-bottom",
+        id: "17",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [{ x: 0.055, y: 0.64, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Goal-area-right-corner-top",
+        id: "18",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [{ x: 0.945, y: 0.36, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Goal-area-right-corner-bottom",
+        id: "19",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [{ x: 0.945, y: 0.64, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
     ]);
     const segmentTemplate = ref([
       {
@@ -217,13 +249,33 @@ export const useCalibrationAssetStore = defineStore(
         ],
       },
       {
-        name: "Kick-off-circle",
+        name: "Kick-off-circle-left",
         id: "6",
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0.5, y: 0.36, z: 0 },
+          { x: 0.436, y: 0.402, z: 0 },
+          { x: 0.41, y: 0.5, z: 0 },
+          { x: 0.436, y: 0.598, z: 0 },
+          { x: 0.5, y: 0.64, z: 0 },
+        ],
+        videoCoordsRel: [
+          { x: null, y: null, z: null },
+          { x: null, y: null, z: null },
+        ],
+      },
+      {
+        name: "Kick-off-circle-right",
+        id: "7",
+        set: false,
+        active: false,
+        compAreaCoordsRel: [
+          { x: 0.5, y: 0.36, z: 0 },
+          { x: 0.564, y: 0.402, z: 0 },
+          { x: 0.59, y: 0.5, z: 0 },
+          { x: 0.564, y: 0.598, z: 0 },
+          { x: 0.5, y: 0.64, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -250,8 +302,8 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0.81, z: 0 },
+          { x: 0.165, y: 0.81, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -264,8 +316,8 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0.165, y: 0.19, z: 0 },
+          { x: 0.165, y: 0.81, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -278,8 +330,11 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0.165, y: 0.39, z: 0 },
+          { x: 0.19, y: 0.435, z: 0 },
+          { x: 0.2, y: 0.5, z: 0 },
+          { x: 0.19, y: 0.565, z: 0 },
+          { x: 0.165, y: 0.61, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -292,8 +347,8 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0.835, y: 0.19, z: 0 },
+          { x: 1, y: 0.19, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -306,8 +361,8 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0.835, y: 0.81, z: 0 },
+          { x: 1, y: 0.81, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -320,8 +375,8 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0.835, y: 0.19, z: 0 },
+          { x: 0.835, y: 0.81, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -334,8 +389,11 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0.835, y: 0.39, z: 0 },
+          { x: 0.81, y: 0.435, z: 0 },
+          { x: 0.8, y: 0.5, z: 0 },
+          { x: 0.81, y: 0.565, z: 0 },
+          { x: 0.835, y: 0.61, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -348,8 +406,8 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0.36, z: 0 },
+          { x: 0.055, y: 0.36, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -362,8 +420,8 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0, y: 0.64, z: 0 },
+          { x: 0.055, y: 0.64, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -376,8 +434,8 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0.055, y: 0.36, z: 0 },
+          { x: 0.055, y: 0.64, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -390,8 +448,8 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0.945, y: 0.36, z: 0 },
+          { x: 1, y: 0.36, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -404,8 +462,8 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0.945, y: 0.64, z: 0 },
+          { x: 1, y: 0.64, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -418,8 +476,8 @@ export const useCalibrationAssetStore = defineStore(
         set: false,
         active: false,
         compAreaCoordsRel: [
-          { x: 0, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 },
+          { x: 0.945, y: 0.36, z: 0 },
+          { x: 0.945, y: 0.64, z: 0 },
         ],
         videoCoordsRel: [
           { x: null, y: null, z: null },
@@ -439,12 +497,10 @@ export const useCalibrationAssetStore = defineStore(
 
     const isAddingReferenceMarker = ref(false);
 
-    const filteredReferenceMarker = computed(() => {
+    const filteredReferenceObjects = computed(() => {
       return calibrationAssetObjects.value.filter(
-        (calibrationAssetObjects) =>
-          calibrationAssetObjects.compAreaCoordsRel.x !== null &&
-          calibrationAssetObjects.compAreaCoordsRel.y !== null &&
-          calibrationAssetObjects.set
+        (object) =>
+          object.compAreaCoordsRel.every((p) => p.x !== null && p.y !== null) && object.set
       );
     });
 
@@ -472,8 +528,8 @@ export const useCalibrationAssetStore = defineStore(
           id: calibrationAssetObjects.value.length + 1,
           set: true,
           active: false,
-          compAreaCoordsRel: { x: null, y: null, z: null },
-          videoCoordsRel: { x: null, y: null, z: null },
+          compAreaCoordsRel: [{ x: null, y: null, z: null }],
+          videoCoordsRel: [{ x: null, y: null, z: null }],
         };
 
         calibrationAssetObjects.value.push(newMarker);
@@ -687,7 +743,7 @@ export const useCalibrationAssetStore = defineStore(
       markerTemplate,
       segmentTemplate,
       allAssetObjectsValid,
-      filteredReferenceMarker,
+      filteredReferenceObjects,
       filteredVideoMarker,
       toggleReferenceMarker,
       isAnyReferenceMarkerActive,
