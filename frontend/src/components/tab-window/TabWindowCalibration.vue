@@ -37,9 +37,9 @@
         </v-icon>
 
         <div
-          v-if="calibrationAssetStore.isAddingReferenceMarker"
-          ref="overlayMarker"
-          @click="calibrationAssetStore.setReferenceMarker"
+          v-if="calibrationAssetStore.isAddingReferenceObject"
+          ref="overlayObject"
+          @click="calibrationAssetStore.setReferenceObject"
           :style="{
             position: 'absolute',
             background: 'rgba(255, 255, 255, 0.5)',
@@ -53,36 +53,36 @@
         />
 
         <!-- <v-btn
-          v-for="m in calibrationAssetStore.filteredReferenceObjects"
+          v-for="o in calibrationAssetStore.filteredReferenceObjects"
           v-show="topViewStore.showItems"
-          :key="m.id"
-          :disabled="calibrationAssetStore.isAddingReferenceMarker"
-          :color="m.active || calibrationAssetStore.hoveredVideoMarker === m.id ? 'red' : 'grey'"
+          :key="o.id"
+          :disabled="calibrationAssetStore.isAddingReferenceObject"
+          :color="o.active || calibrationAssetStore.hoveredVideoObject === o.id ? 'red' : 'grey'"
           icon="mdi-circle"
           variant="plain"
           density="compact"
-          @click="(event) => calibrationAssetStore.toggleReferenceMarker(event, m.id)"
-          @contextmenu.prevent="openDeleteModal(m)"
+          @click="(event) => calibrationAssetStore.toggleReferenceObject(event, o.id)"
+          @contextmenu.prevent="openDeleteModal(o)"
           :style="{
             position: 'absolute',
             transform: 'translate(-50%, -50%)',
             top: isTopViewFullscreen
               ? topViewStore.topViewSize.top +
-                m.compAreaCoordsRel.y *
+                o.compAreaCoordsRel.y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px'
-              : m.compAreaCoordsRel.y *
+              : o.compAreaCoordsRel.y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px',
             left: isTopViewFullscreen
               ? topViewStore.topViewSize.left +
-                m.compAreaCoordsRel.x *
+                o.compAreaCoordsRel.x *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px'
-              : m.compAreaCoordsRel.x *
+              : o.compAreaCoordsRel.x *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
@@ -93,74 +93,74 @@
           :height="topViewStore.topViewSize.height"
           style="position: absolute; top: 0; left: 0; pointer-events: none"
         >
-          <template v-for="m in calibrationAssetStore.filteredReferenceObjects">
-            <!-- Marker -->
+          <template v-for="o in calibrationAssetStore.filteredReferenceObjects">
             <circle
-              v-if="m.compAreaCoordsRel.length === 1"
-              :key="m.id"
+              v-if="o.compAreaCoordsRel.length === 1"
+              :key="o.id"
               :cx="
                 (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
-                m.compAreaCoordsRel[0].x *
+                o.compAreaCoordsRel[0].x *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width
               "
               :cy="
                 (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
-                m.compAreaCoordsRel[0].y *
+                o.compAreaCoordsRel[0].y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height
               "
-              :disabled="calibrationAssetStore.isAddingReferenceMarker"
-              :fill="m.active || calibrationAssetStore.hoveredVideoMarker === m.id ? 'red' : 'grey'"
+              :disabled="calibrationAssetStore.isAddingReferenceObject"
+              :fill="o.active || calibrationAssetStore.hoveredVideoObject === o.id ? 'red' : 'grey'"
               r="12"
               fill-opacity="0.8"
               style="cursor: pointer; pointer-events: all"
-              @click="calibrationAssetStore.toggleReferenceMarker(m.id)"
-              @contextmenu.prevent="openDeleteModal(m)"
+              @click="(event) => calibrationAssetStore.toggleReferenceObject(event, o.id)"
+              @contextmenu.prevent="openDeleteModal(o)"
+              class="object-hover-marker"
             />
 
-            <!-- Segments -->
             <line
-              v-if="m.compAreaCoordsRel.length === 2"
-              :key="m.id"
+              v-if="o.compAreaCoordsRel.length === 2"
+              :key="o.id"
               :x1="
                 (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
-                m.compAreaCoordsRel[0].x *
+                o.compAreaCoordsRel[0].x *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width
               "
               :y1="
                 (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
-                m.compAreaCoordsRel[0].y *
+                o.compAreaCoordsRel[0].y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height
               "
               :x2="
                 (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
-                m.compAreaCoordsRel[1].x *
+                o.compAreaCoordsRel[1].x *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width
               "
               :y2="
                 (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
-                m.compAreaCoordsRel[1].y *
+                o.compAreaCoordsRel[1].y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height
               "
-              :disabled="calibrationAssetStore.isAddingReferenceMarker"
+              :disabled="calibrationAssetStore.isAddingReferenceObject"
               :stroke="
-                m.active || calibrationAssetStore.hoveredVideoMarker === m.id ? 'red' : 'grey'
+                o.active || calibrationAssetStore.hoveredVideoObject === o.id ? 'red' : 'grey'
               "
               stroke-width="12"
               stroke-opacity="0.8"
               style="cursor: pointer; pointer-events: all"
-              @click="calibrationAssetStore.toggleReferenceMarker(m.id)"
-              @contextmenu.prevent="openDeleteModal(m)"
+              @click="(event) => calibrationAssetStore.toggleReferenceObject(event, o.id)"
+              @contextmenu.prevent="openDeleteModal(o)"
+              class="object-hover-segment"
             />
 
             <path
-              v-if="m.compAreaCoordsRel.length > 2"
-              :key="m.id"
+              v-if="o.compAreaCoordsRel.length > 2"
+              :key="o.id"
               :d="
                 (() => {
                   const toScreen = (p) => ({
@@ -177,7 +177,7 @@
                         topViewStore.topViewSize.height,
                   });
 
-                  const points = m.compAreaCoordsRel.map(toScreen);
+                  const points = o.compAreaCoordsRel.map(toScreen);
 
                   let d = `M ${points[0].x} ${points[0].y}`;
 
@@ -200,62 +200,118 @@
                 })()
               "
               :stroke="
-                m.active || calibrationAssetStore.hoveredVideoMarker === m.id ? 'red' : 'grey'
+                o.active || calibrationAssetStore.hoveredVideoObject === o.id ? 'red' : 'grey'
               "
               stroke-width="12"
               stroke-opacity="0.8"
               fill="none"
               style="cursor: pointer; pointer-events: all"
-              @click="calibrationAssetStore.toggleReferenceMarker(m.id)"
-              @contextmenu.prevent="openDeleteModal(m)"
+              @click="(event) => calibrationAssetStore.toggleReferenceObject(event, o.id)"
+              @contextmenu.prevent="openDeleteModal(o)"
+              class="object-hover-segment"
             />
           </template>
         </svg>
 
-        <ModalReferenceMarkerDelete
-          v-if="showModalReferenceMarkerDelete"
-          v-model="showModalReferenceMarkerDelete"
-          :marker="selectedReferenceMarker"
+        <ModalReferenceObjectDelete
+          v-if="showModalReferenceObjectDelete"
+          v-model="showModalReferenceObjectDelete"
+          :object="selectedReferenceObject"
         />
 
-        <v-btn
-          v-for="m in calibrationAssetStore.filteredReferenceObjects"
+        <!-- <v-btn
+          v-for="o in calibrationAssetStore.filteredReferenceObjects"
           v-show="showDeleteButton"
-          :key="'delete-' + m.id"
+          :key="'delete-' + o.id"
           color="red"
           icon="mdi-close"
           variant="plain"
           density="compact"
-          @click="calibrationAssetStore.deleteReferenceMarker(m.id)"
-          class="delete-marker-position"
+          @click="calibrationAssetStore.deleteReferenceObject(o.id)"
+          class="delete-object-position"
           :style="{
             position: 'absolute',
             transform: 'translate(-50%, -50%)',
             top: isTopViewFullscreen
               ? topViewStore.topViewSize.top +
-                m.compAreaCoordsRel.y *
+                getObjectCenter(o.compAreaCoordsRel).y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px'
-              : m.compAreaCoordsRel.y *
+              : getObjectCenter(o.compAreaCoordsRel).y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px',
             left: isTopViewFullscreen
               ? topViewStore.topViewSize.left +
-                m.compAreaCoordsRel.x *
+                getObjectCenter(o.compAreaCoordsRel).x *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px'
-              : m.compAreaCoordsRel.x *
+              : getObjectCenter(o.compAreaCoordsRel).x *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
           }"
-        />
+        /> -->
+        <svg
+          :width="topViewStore.topViewSize.width"
+          :height="topViewStore.topViewSize.height"
+          style="position: absolute; top: 0; left: 0; pointer-events: none"
+        >
+          <template v-for="o in calibrationAssetStore.filteredReferenceObjects">
+            <circle
+              v-if="o.compAreaCoordsRel.length === 1"
+              v-show="showDeleteButton"
+              :key="'delete-' + o.id"
+              :cx="
+                (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                o.compAreaCoordsRel[0].x *
+                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width
+              "
+              :cy="
+                (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                o.compAreaCoordsRel[0].y *
+                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height
+              "
+              r="12"
+              fill="none"
+              style="cursor: pointer; pointer-events: all"
+              @click="calibrationAssetStore.deleteReferenceObject(o.id)"
+              class="delete-object-position"
+            >
+              X
+            </circle>
+
+            <text
+              v-if="o.compAreaCoordsRel.length === 1"
+              v-show="showDeleteButton"
+              :x="
+                (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                o.compAreaCoordsRel[0].x *
+                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width
+              "
+              :y="
+                (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                o.compAreaCoordsRel[0].y *
+                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+                6
+              "
+              text-anchor="middle"
+              font-size="16"
+              fill="red"
+            >
+              ✕
+            </text>
+          </template>
+        </svg>
 
         <div
-          v-for="point in calibrationAssetStore.topViewMarkerProjection"
+          v-for="point in calibrationAssetStore.topViewObjectProjection"
           v-show="calibrationAssetStore.showVideoAsset"
           :key="point"
           :style="{
@@ -381,18 +437,6 @@
           </v-btn>
         </template>
         <v-list class="py-0" density="compact" width="220px">
-          <v-list-item class="menu-item" @click="calibrationAssetStore.toggleCalibrationAssetType">
-            <v-list-item-title class="d-flex justify-space-between">
-              {{
-                calibrationAssetStore.calibrationAssetType === "marker"
-                  ? $t("calibration_asset.marker.switch_to_segments")
-                  : $t("calibration_asset.segments.switch_to_marker")
-              }}
-            </v-list-item-title>
-          </v-list-item>
-
-          <V-divider />
-
           <v-list-item class="menu-item" @click="calibrationAssetStore.toggleVideoAsset">
             <v-list-item-title class="d-flex justify-space-between">
               {{
@@ -427,7 +471,7 @@
               </v-list-item>
             </template>
             <v-list class="py-0" density="compact" width="230px">
-              <v-list-item class="menu-item" @click="addReferenceMarker">
+              <v-list-item class="menu-item" @click="addReferenceObject">
                 <v-list-item-title>
                   {{ $t("calibration_asset.marker.add_ref_marker.custom_marker") }}
                 </v-list-item-title>
@@ -437,13 +481,13 @@
 
               <div style="max-height: 160px; overflow-y: auto">
                 <v-list-item
-                  v-for="m in calibrationAssetStore.currentTemplate.filter((m) => !m.set)"
-                  :key="m.id"
+                  v-for="o in calibrationAssetStore.currentTemplate.filter((o) => !o.set)"
+                  :key="o.id"
                   class="menu-item"
-                  @click="addTemplateReferenceMarker(m)"
+                  @click="addTemplateReferenceObject(o)"
                 >
                   <v-list-item-title>
-                    {{ m.name }}
+                    {{ o.name }}
                   </v-list-item-title>
                 </v-list-item>
               </div>
@@ -466,13 +510,13 @@
             <v-list class="py-0" density="compact" width="225px">
               <div style="max-height: 160px; overflow-y: auto">
                 <v-list-item
-                  v-for="m in calibrationAssetStore.currentTemplate.filter((m) => !m.set)"
-                  :key="m.id"
+                  v-for="o in calibrationAssetStore.currentTemplate.filter((o) => !o.set)"
+                  :key="o.id"
                   class="menu-item"
-                  @click="addTemplateReferenceMarker(m)"
+                  @click="addTemplateReferenceObject(o)"
                 >
                   <v-list-item-title>
-                    {{ m.name }}
+                    {{ o.name }}
                   </v-list-item-title>
                 </v-list-item>
               </div>
@@ -494,12 +538,12 @@
       <v-tooltip
         v-if="
           calibrationAssetStore.timeChangeConflict &&
-          calibrationAssetStore.videoMarkerTime !== playerStore.currentTime
+          calibrationAssetStore.videoObjectTime !== playerStore.currentTime
         "
         class="time-conflict-tooltip"
         :text="
           $t('calibration_asset.time-conflict', {
-            time: getTimecode(calibrationAssetStore.videoMarkerTime ?? 0),
+            time: getTimecode(calibrationAssetStore.videoObjectTime ?? 0),
           })
         "
       >
@@ -512,10 +556,10 @@
     </v-row>
   </v-container>
 
-  <v-snackbar color="accent" timeout="3000" v-model="showVideoMarkerActionSnackbar">
+  <v-snackbar color="accent" timeout="3000" v-model="showvideoObjectActionSnackbar">
     <div class="d-flex justify-center">
       <snackbar-icon-warning />
-      <span class="text-h6">{{ videoMarkerActionMessage }}</span>
+      <span class="text-h6">{{ videoObjectActionMessage }}</span>
     </div>
   </v-snackbar>
 </template>
@@ -529,11 +573,11 @@ import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import CalibrationAssetMenu from "@/components/calibration-asset/CalibrationAssetMenu.vue";
-import ModalCalibrationAssetCreate from "@/components/tab-window/ModalCalibrationAssetCreate.vue";
+import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 import ModalCalibrationAssetSave from "@/components/calibration-asset/ModalCalibrationAssetSave.vue";
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
 import ModalCalibrationAssetUpdate from "@/components/calibration-asset/ModalCalibrationAssetUpdate.vue";
-import ModalReferenceMarkerDelete from "@/components/calibration-asset/ModalReferenceMarkerDelete.vue";
+import ModalReferenceObjectDelete from "@/components/calibration-asset/ModalReferenceObjectDelete.vue";
 
 const { t } = useI18n();
 
@@ -628,41 +672,41 @@ const showModalCalibrationAssetSave = ref(false);
 const showModalCalibrationAssetSelect = ref(false);
 const showModalCalibrationAssetUpdate = ref(false);
 
-const showModalReferenceMarkerDelete = ref(false);
-const selectedReferenceMarker = ref(null);
-const openDeleteModal = (marker) => {
-  selectedReferenceMarker.value = marker;
-  showModalReferenceMarkerDelete.value = true;
+const showModalReferenceObjectDelete = ref(false);
+const selectedReferenceObject = ref(null);
+const openDeleteModal = (object) => {
+  selectedReferenceObject.value = object;
+  showModalReferenceObjectDelete.value = true;
 };
 
 const showDeleteButton = ref(false);
-const addReferenceMarker = () => {
+const addReferenceObject = () => {
   if (showDeleteButton.value) {
     showDeleteButton.value = false;
   }
   nextTick(() => {
-    calibrationAssetStore.addReferenceMarker();
+    calibrationAssetStore.addReferenceObject();
   });
 };
-const addTemplateReferenceMarker = (marker) => {
+const addTemplateReferenceObject = (object) => {
   if (showDeleteButton.value) {
     showDeleteButton.value = false;
   }
   nextTick(() => {
-    calibrationAssetStore.addTemplateReferenceMarker(marker);
+    calibrationAssetStore.addTemplateReferenceObject(object);
   });
 };
 
-const overlayMarker = ref(null);
-const handleClickOverlayMarker = (event) => {
-  if (!calibrationAssetStore.isAddingReferenceMarker || !overlayMarker.value) return;
-  if (!overlayMarker.value.contains(event.target)) return;
+const overlayObject = ref(null);
+const handleClickOverlayObject = (event) => {
+  if (!calibrationAssetStore.isAddingReferenceObject || !overlayObject.value) return;
+  if (!overlayObject.value.contains(event.target)) return;
 };
 onMounted(() => {
-  window.addEventListener("click", handleClickOverlayMarker);
+  window.addEventListener("click", handleClickOverlayObject);
 });
 onBeforeUnmount(() => {
-  window.removeEventListener("click", handleClickOverlayMarker);
+  window.removeEventListener("click", handleClickOverlayObject);
 });
 
 const maxVideoHeight = ref(0);
@@ -731,34 +775,56 @@ watch(
     )
       return;
 
-    const hasVideoCoords = calibrationAssetStore.calibrationAssetObjects.some((m) => {
-      const v = m.videoCoordsRel;
+    const hasVideoCoords = calibrationAssetStore.calibrationAssetObjects.some((o) => {
+      const v = o.videoCoordsRel;
       return v && (v.x !== null || v.y !== null);
     });
 
     if (hasVideoCoords) {
       calibrationAssetStore.timeChangeConflict = true;
-      showVideoMarkerActionSnackbar.value = true;
-      calibrationAssetStore.videoMarkerTime = oldTime;
+      showvideoObjectActionSnackbar.value = true;
+      calibrationAssetStore.videoObjectTime = oldTime;
     }
   }
 );
 
-const showVideoMarkerActionSnackbar = ref(false);
-const videoMarkerActionMessage = ref("");
-const resetVideoMarkerActionSnackbar = async () => {
-  showVideoMarkerActionSnackbar.value = false;
+const showvideoObjectActionSnackbar = ref(false);
+const videoObjectActionMessage = ref("");
+const resetVideoObjectActionSnackbar = async () => {
+  showvideoObjectActionSnackbar.value = false;
   await nextTick();
-  showVideoMarkerActionSnackbar.value = true;
+  showvideoObjectActionSnackbar.value = true;
 };
 watch([() => calibrationAssetStore.timeChangeConflict], ([warning]) => {
   if (warning === true) {
-    videoMarkerActionMessage.value = t("modal.calibration_asset.video_marker.warning", {
-      time: getTimecode(calibrationAssetStore.videoMarkerTime ?? 0),
+    videoObjectActionMessage.value = t("modal.calibration_asset.video_marker.warning", {
+      time: getTimecode(calibrationAssetStore.videoObjectTime ?? 0),
     });
-    resetVideoMarkerActionSnackbar();
+    resetVideoObjectActionSnackbar();
   }
 });
+
+const getObjectCenter = (object) => {
+  if (object.length === 1) {
+    return { x: object[0].x, y: object[0].y };
+  } else if (object.length === 2) {
+    return {
+      x: (object[0].x + object[1].x) / 2,
+      y: (object[0].y + object[1].y) / 2,
+    };
+  } else {
+    let sumX = 0;
+    let sumY = 0;
+    for (const point of object) {
+      sumX += point.x;
+      sumY += point.y;
+    }
+    return {
+      x: sumX / object.length,
+      y: sumY / object.length,
+    };
+  }
+};
 </script>
 
 <style scoped>
@@ -767,12 +833,9 @@ watch([() => calibrationAssetStore.timeChangeConflict], ([warning]) => {
   max-height: 100%;
 }
 
-.delete-marker-position .v-icon {
-  transform: scale(0.7);
-}
-
-.delete-marker-position:hover {
-  border: 1px red solid;
+.delete-object-position:hover {
+  stroke: red;
+  stroke-width: 2;
 }
 
 .video-control {
@@ -833,5 +896,15 @@ watch([() => calibrationAssetStore.timeChangeConflict], ([warning]) => {
 
 .time-conflict-tooltip ::v-deep .v-overlay__content {
   background-color: rgb(var(--v-theme-accent));
+}
+
+::v-deep(.object-hover-marker):hover {
+  fill: darkgray;
+  stroke-width: 13;
+}
+
+::v-deep(.object-hover-segment):hover {
+  stroke: darkgray;
+  stroke-width: 13;
 }
 </style>

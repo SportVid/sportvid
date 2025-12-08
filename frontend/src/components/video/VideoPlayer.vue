@@ -117,8 +117,8 @@
           </div>
         </div>
 
-        <div
-          v-for="m in calibrationAssetStore.filteredVideoMarker"
+        <!-- <div
+          v-for="m in calibrationAssetStore.filteredVideoObject"
           v-show="calibrationAssetStore.showVideoAsset"
           :key="m.id"
           :style="{
@@ -135,12 +135,76 @@
               ? videoStore.videoSize.left + m.videoCoordsRel.x * videoStore.videoSize.width + 'px'
               : m.videoCoordsRel.x * videoStore.videoSize.width + 'px',
           }"
-          @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
-          @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
-        />
+          @mouseenter="calibrationAssetStore.hoveredVideoObject = m.id"
+          @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+        /> -->
+        <svg
+          :width="videoStore.videoSize.width"
+          :height="videoStore.videoSize.height"
+          style="position: absolute; top: 0; left: 0; pointer-events: none"
+        >
+          <template v-for="m in calibrationAssetStore.filteredVideoObject">
+            <circle
+              v-if="m.videoCoordsRel.length === 1"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="m.id"
+              :cx="m.videoCoordsRel[0].x * videoStore.videoSize.width"
+              :cy="m.videoCoordsRel[0].y * videoStore.videoSize.height"
+              r="8"
+              fill="red"
+              fill-opacity="0.8"
+              style="cursor: pointer; pointer-events: all"
+              @mouseenter="calibrationAssetStore.hoveredVideoObject = m.id"
+              @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+            />
+
+            <line
+              v-if="m.videoCoordsRel.length === 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="m.id"
+              :x1="m.videoCoordsRel[0].x * videoStore.videoSize.width"
+              :y1="m.videoCoordsRel[0].y * videoStore.videoSize.height"
+              :x2="m.videoCoordsRel[1].x * videoStore.videoSize.width"
+              :y2="m.videoCoordsRel[1].y * videoStore.videoSize.height"
+              stroke-width="8"
+              stroke="red"
+              stroke-opacity="0.8"
+              fill="none"
+              style="cursor: pointer; pointer-events: all"
+              @mouseenter="calibrationAssetStore.hoveredVideoObject = m.id"
+              @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+            />
+
+            <path
+              v-if="m.videoCoordsRel.length > 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="m.id"
+              :d="
+                (() => {
+                  const points = m.videoCoordsRel.map((p) => ({
+                    x: p.x * videoStore.videoSize.width,
+                    y: p.y * videoStore.videoSize.height,
+                  }));
+                  let d = `M ${points[0].x} ${points[0].y}`;
+                  for (let i = 1; i < points.length; i++) {
+                    d += ` L ${points[i].x} ${points[i].y}`;
+                  }
+                  return d;
+                })()
+              "
+              stroke="red"
+              stroke-width="8"
+              stroke-opacity="0.8"
+              fill="none"
+              style="cursor: pointer; pointer-events: all"
+              @mouseenter="calibrationAssetStore.hoveredVideoObject = m.id"
+              @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+            />
+          </template>
+        </svg>
 
         <div
-          v-for="point in calibrationAssetStore.videoMarkerReprojection"
+          v-for="point in calibrationAssetStore.videoObjectReprojection"
           v-show="calibrationAssetStore.showVideoAsset"
           :key="point"
           :style="{
@@ -412,7 +476,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", updateVideoSize);
 });
 watch(
-  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  () => calibrationAssetStore.isAnyReferenceObjectActive,
   async (newVal) => {
     if (!newVal) {
       await nextTick();
@@ -541,6 +605,14 @@ const getEllipseSvg = (position) => {
     centerY,
   };
 };
+
+watch(
+  () => calibrationAssetStore.filteredVideoObject,
+  (nww) => {
+    console.log("videoobjects", nww);
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>

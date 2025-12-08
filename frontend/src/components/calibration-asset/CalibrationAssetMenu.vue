@@ -36,7 +36,7 @@
 
 <script setup>
 import { ref } from "vue";
-import ModalCalibrationAssetCreate from "@/components/tab-window/ModalCalibrationAssetCreate.vue";
+import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
 
 const showModalCalibrationAssetCreate = ref(false);

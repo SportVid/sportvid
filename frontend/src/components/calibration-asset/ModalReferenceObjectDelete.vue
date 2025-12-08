@@ -21,7 +21,7 @@
     <v-list density="compact" class="pa-0 menu-item" style="border-radius: 10px">
       <v-list-item
         style="color: white; background-color: rgb(var(--v-theme-primary))"
-        @click="deleteReferenceMarker(props.marker.id)"
+        @click="deleteReferenceObject(props.marker.id)"
       >
         <v-list-item-title class="text-center">{{
           $t("calibration_asset.marker.delete_single_ref_marker")
@@ -37,18 +37,18 @@
     icon="mdi-close"
     variant="plain"
     density="compact"
-    @click="deleteReferenceMarker(props.marker.id)"
-    class="delete-marker-position"
+    @click="deleteReferenceObject(props.object.id)"
+    class="delete-object-position"
     :style="{
       position: 'absolute',
       transform: 'translate(-50%, -50%)',
       top:
-        props.marker.compAreaCoordsRel.y *
+        props.object.compAreaCoordsRel[0].y *
           (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
         ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
         'px',
       left:
-        props.marker.compAreaCoordsRel.x *
+        props.object.compAreaCoordsRel[0].x *
           (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
         ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
         'px',
@@ -65,7 +65,7 @@ const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 
 const props = defineProps({
-  marker: { type: Object, required: true },
+  object: { type: Object, required: true },
   modelValue: {
     type: Boolean,
     default: false,
@@ -90,8 +90,8 @@ watch(
   }
 );
 
-const deleteReferenceMarker = (id) => {
-  calibrationAssetStore.deleteReferenceMarker(id);
+const deleteReferenceObject = (id) => {
+  calibrationAssetStore.deleteReferenceObject(id);
   dialog.value = false;
 };
 </script>
@@ -105,11 +105,11 @@ const deleteReferenceMarker = (id) => {
   font-size: 10px;
 }
 
-.delete-marker-position .v-icon {
+.delete-object-position .v-icon {
   transform: scale(0.7);
 }
 
-.delete-marker-position:hover {
+.delete-object-position:hover {
   border: 1px red solid;
 }
 </style>
