@@ -1,8 +1,7 @@
 <template>
   <div
-    ref="overlayReferenceMarker"
-    class="overlay-reference-marker"
-    @click="setVideoMarker"
+    class="overlay-reference-object"
+    @click="setVideoObject"
     @mousemove="onMouseMove"
     @mouseleave="hideZoom"
   >
@@ -18,8 +17,8 @@
         }"
       />
 
-      <div
-        v-for="m in calibrationAssetStore.filteredVideoMarker"
+      <!-- <div
+        v-for="m in calibrationAssetStore.filteredVideoObject"
         v-show="calibrationAssetStore.showVideoAsset"
         :key="m.id"
         :style="{
@@ -32,12 +31,72 @@
           top: m.videoCoordsRel.y * videoStore.videoSize.height + 'px',
           left: m.videoCoordsRel.x * videoStore.videoSize.width + 'px',
         }"
-        @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
-        @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
-      />
+        @mouseenter="calibrationAssetStore.hoveredVideoObject = m.id"
+        @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+      /> -->
+      <svg
+        :width="videoStore.videoSize.width"
+        :height="videoStore.videoSize.height"
+        style="position: absolute; top: 0; left: 0; pointer-events: none"
+      >
+        <template v-for="m in calibrationAssetStore.filteredVideoObject">
+          <circle
+            v-if="m.videoCoordsRel.length === 1"
+            :key="m.id"
+            :cx="m.videoCoordsRel[0].x * videoStore.videoSize.width"
+            :cy="m.videoCoordsRel[0].y * videoStore.videoSize.height"
+            r="10"
+            fill="red"
+            fill-opacity="8"
+          />
+
+          <line
+            v-if="m.videoCoordsRel.length === 2"
+            :key="m.id"
+            :x1="m.videoCoordsRel[0].x * videoStore.videoSize.width"
+            :y1="m.videoCoordsRel[0].y * videoStore.videoSize.height"
+            :x2="m.videoCoordsRel[1].x * videoStore.videoSize.width"
+            :y2="m.videoCoordsRel[1].y * videoStore.videoSize.height"
+            stroke-width="8"
+            stroke="red"
+            stroke-opacity="0.8"
+          />
+
+          <path
+            v-if="m.videoCoordsRel.length > 2"
+            :key="m.id"
+            :d="
+              (() => {
+                const points = m.videoCoordsRel.map((p) => ({
+                  x: p.x * videoStore.videoSize.width,
+                  y: p.y * videoStore.videoSize.height,
+                }));
+                let d = `M ${points[0].x} ${points[0].y}`;
+                for (let i = 1; i < points.length; i++) {
+                  d += ` L ${points[i].x} ${points[i].y}`;
+                }
+                return d;
+              })()
+            "
+            stroke="red"
+            stroke-width="8"
+            stroke-opacity="0.8"
+            fill="none"
+          />
+        </template>
+
+        <template v-for="(point, index) in currentSegmentPoints" :key="index">
+          <circle
+            :cx="point.x * videoStore.videoSize.width"
+            :cy="point.y * videoStore.videoSize.height"
+            r="8"
+            fill="red"
+          />
+        </template>
+      </svg>
 
       <div
-        v-for="point in calibrationAssetStore.videoMarkerReprojection"
+        v-for="point in calibrationAssetStore.videoObjectReprojection"
         v-show="calibrationAssetStore.showVideoAsset"
         :key="point"
         :style="{
@@ -53,6 +112,15 @@
         }"
       />
     </div>
+
+    <v-btn
+      v-if="calibrationAssetStore.calibrationAssetType === 'segment'"
+      @click="finishSegment"
+      :disabled="currentSegmentPoints.length < 2"
+      style="position: absolute; bottom: 25px; right: 25px"
+    >
+      {{ $t("button.save") }}
+    </v-btn>
 
     <canvas
       v-show="showZoom"
@@ -82,8 +150,6 @@ const calibrationAssetStore = useCalibrationAssetStore();
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 
-const overlayReferenceMarker = ref(null);
-
 const videoOverlayElement = ref(null);
 
 const seekToCurrentTime = () => {
@@ -92,21 +158,40 @@ const seekToCurrentTime = () => {
   }
 };
 
-const setVideoMarker = (event) => {
+const currentSegmentPoints = ref([]);
+const setVideoObject = (event) => {
   const rect = videoOverlayElement.value?.getBoundingClientRect();
   if (!rect) return;
 
   if (calibrationAssetStore.timeChangeConflict) {
     calibrationAssetStore.calibrationAssetObjects.forEach((m) => {
-      m.videoCoordsRel = { x: null, y: null, z: null };
+      m.videoCoordsRel = [{ x: null, y: null, z: null }];
     });
     calibrationAssetStore.timeChangeConflict = false;
   }
 
   const normX = (event.clientX - rect.left) / rect.width;
   const normY = (event.clientY - rect.top) / rect.height;
-  calibrationAssetStore.setVideoMarker({ x: normX, y: normY });
+
+  if (calibrationAssetStore.calibrationAssetType === "marker") {
+    calibrationAssetStore.setVideoObject([{ x: normX, y: normY }]);
+  } else if (calibrationAssetStore.calibrationAssetType === "segment") {
+    currentSegmentPoints.value.push({ x: normX, y: normY });
+  }
 };
+const finishSegment = () => {
+  if (currentSegmentPoints.value.length > 1) {
+    calibrationAssetStore.setVideoObject(currentSegmentPoints.value);
+    currentSegmentPoints.value = [];
+  }
+};
+watch(
+  () => currentSegmentPoints.value,
+  (nww) => {
+    console.log("segemtnpoints", nww);
+  },
+  { deep: true }
+);
 
 const updateVideoSize = () => {
   nextTick(() => {
@@ -123,7 +208,7 @@ const updateVideoSize = () => {
   });
 };
 watch(
-  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  () => calibrationAssetStore.isAnyReferenceObjectActive,
   (active) => {
     if (active) {
       updateVideoSize();
@@ -225,7 +310,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.overlay-reference-marker {
+.overlay-reference-object {
   position: fixed;
   top: 64px;
   left: 0;

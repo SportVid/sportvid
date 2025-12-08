@@ -495,7 +495,7 @@ export const useCalibrationAssetStore = defineStore(
       )
     );
 
-    const isAddingReferenceMarker = ref(false);
+    const isAddingReferenceObject = ref(false);
 
     const filteredReferenceObjects = computed(() => {
       return calibrationAssetObjects.value.filter(
@@ -504,11 +504,11 @@ export const useCalibrationAssetStore = defineStore(
       );
     });
 
-    const isAnyReferenceMarkerActive = computed(() =>
+    const isAnyReferenceObjectActive = computed(() =>
       calibrationAssetObjects.value.some((object) => object.active)
     );
 
-    const toggleReferenceMarker = (event, id) => {
+    const toggleReferenceObject = (event, id) => {
       event.stopPropagation();
 
       calibrationAssetObjects.value = calibrationAssetObjects.value.map((object) => ({
@@ -516,15 +516,15 @@ export const useCalibrationAssetStore = defineStore(
         active: object.id === id ? !object.active : false,
       }));
     };
-    const addReferenceMarker = () => {
-      if (!isAddingReferenceMarker.value) {
-        isAddingReferenceMarker.value = true;
+    const addReferenceObject = () => {
+      if (!isAddingReferenceObject.value) {
+        isAddingReferenceObject.value = true;
 
-        const customMarkerCount = calibrationAssetObjects.value.filter((m) =>
-          m.name.startsWith("Custom-marker")
+        const customObjectCount = calibrationAssetObjects.value.filter((m) =>
+          m.name.startsWith("Custom-object")
         ).length;
-        const newMarker = {
-          name: `Custom-marker-${customMarkerCount + 1}`,
+        const newObject = {
+          name: `Custom-object-${customObjectCount + 1}`,
           id: calibrationAssetObjects.value.length + 1,
           set: true,
           active: false,
@@ -532,62 +532,66 @@ export const useCalibrationAssetStore = defineStore(
           videoCoordsRel: [{ x: null, y: null, z: null }],
         };
 
-        calibrationAssetObjects.value.push(newMarker);
+        calibrationAssetObjects.value.push(newObject);
       }
     };
-    const addTemplateReferenceMarker = (m) => {
+    const addTemplateReferenceObject = (m) => {
       m.set = true;
       calibrationAssetObjects.value.push(m);
     };
-    const setReferenceMarker = (event) => {
-      if (isAddingReferenceMarker.value) {
-        const lastMarker = calibrationAssetObjects.value[calibrationAssetObjects.value.length - 1];
-        if (lastMarker) {
-          lastMarker.compAreaCoordsRel = {
-            x:
-              (event.clientX -
-                (topViewStore.topViewSize.left +
-                  ((1 - topViewStore.currentSport.widthRel) / 2) *
-                    topViewStore.topViewSize.width)) /
-              (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel),
-            y:
-              (event.clientY -
-                (topViewStore.topViewSize.top +
-                  ((1 - topViewStore.currentSport.heightRel) / 2) *
-                    topViewStore.topViewSize.height)) /
-              (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel),
-          };
+    const setReferenceObject = (event) => {
+      if (isAddingReferenceObject.value) {
+        const lastObject = calibrationAssetObjects.value[calibrationAssetObjects.value.length - 1];
+        if (lastObject) {
+          lastObject.compAreaCoordsRel = [
+            {
+              x:
+                (event.clientX -
+                  (topViewStore.topViewSize.left +
+                    ((1 - topViewStore.currentSport.widthRel) / 2) *
+                      topViewStore.topViewSize.width)) /
+                (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel),
+              y:
+                (event.clientY -
+                  (topViewStore.topViewSize.top +
+                    ((1 - topViewStore.currentSport.heightRel) / 2) *
+                      topViewStore.topViewSize.height)) /
+                (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel),
+            },
+          ];
         }
 
-        isAddingReferenceMarker.value = false;
+        isAddingReferenceObject.value = false;
       }
     };
-    const deleteReferenceMarker = (id) => {
+    const deleteReferenceObject = (id) => {
       calibrationAssetObjects.value = calibrationAssetObjects.value.filter((m) => m.id !== id);
     };
 
     const timeChangeConflict = ref(false);
-    const videoMarkerTime = ref(null);
+    const videoObjectTime = ref(null);
     const isAssetEdited = ref(false);
 
     const showVideoAsset = ref(false);
     const previousShowVideoAsset = ref(false);
-    const hoveredVideoMarker = ref(null);
-    const filteredVideoMarker = computed(() => {
-      return calibrationAssetObjects.value.filter(
-        (object) => object.videoCoordsRel.x !== null && object.videoCoordsRel.y !== null
+    const hoveredVideoObject = ref(null);
+    const filteredVideoObject = computed(() => {
+      return calibrationAssetObjects.value.filter((object) =>
+        object.videoCoordsRel.some((p) => p.x !== null && p.y !== null)
       );
     });
-    const setVideoMarker = ({ x, y }) => {
-      const activeMarker = calibrationAssetObjects.value.find((m) => m.active);
-      if (!activeMarker) return;
 
-      activeMarker.videoCoordsRel = {
-        x: x,
-        y: y,
-      };
+    const setVideoObject = (coords) => {
+      const activeObject = calibrationAssetObjects.value.find((m) => m.active);
+      if (!activeObject) return;
+
+      activeObject.videoCoordsRel = coords.map((p) => ({
+        x: p.x ?? null,
+        y: p.y ?? null,
+        z: p.z ?? null,
+      }));
       isAssetEdited.value = true;
-      activeMarker.active = false;
+      activeObject.active = false;
     };
 
     const toggleVideoAsset = () => {
@@ -599,13 +603,15 @@ export const useCalibrationAssetStore = defineStore(
     const calibrationAssetSaveSuccess = ref(false);
     const calibrationAssetUpdateSuccess = ref(false);
     const calibrationAssetDeleteSuccess = ref(false);
-    const createCalibrationAsset = (template) => {
+    const createCalibrationAsset = ({ template, objectType }) => {
+      calibrationAssetType.value = objectType;
       calibrationAssetObjects.value = JSON.parse(
         JSON.stringify(currentTemplate.value.filter((m) => m.set))
       );
       topViewStore.onSportChange(template);
+
       calibrationAssetId.value = null;
-      videoMarker.value = [];
+      videoObject.value = [];
     };
     const loadCalibrationAssetsList = async () => {
       try {
@@ -625,19 +631,22 @@ export const useCalibrationAssetStore = defineStore(
     const loadCalibrationAsset = (id) => {
       const calibrationAsset = calibrationAssetsList.value.find((asset) => asset.id === id);
       if (calibrationAsset) {
-        calibrationAssetObjects.value = calibrationAsset.marker_data;
-        videoMarker.value = calibrationAssetObjects.value.map((m) => m.videoCoordsRel);
+        calibrationAssetType.value = calibrationAsset.object_type;
+        calibrationAssetObjects.value = calibrationAsset.object_data;
+        videoObject.value = calibrationAssetObjects.value.map((m) => m.videoCoordsRel);
         topViewStore.onSportChange(calibrationAsset.template);
+
         calibrationAssetId.value = id;
       }
     };
-    const saveCalibrationAsset = async (name, template) => {
+    const saveCalibrationAsset = async (name, template, objectType) => {
       if (isLoading.value || !name || !template) return;
       isLoading.value = true;
       const params = {
         name: name,
         template: template,
-        marker_data: [...calibrationAssetObjects.value],
+        object_type: objectType,
+        object_data: [...calibrationAssetObjects.value],
         video_id: playerStore.videoId,
       };
       try {
@@ -652,14 +661,15 @@ export const useCalibrationAssetStore = defineStore(
         isLoading.value = false;
       }
     };
-    const updateCalibrationAsset = async (name, template) => {
+    const updateCalibrationAsset = async (name, template, objectType) => {
       if (isLoading.value || !name || !template) return;
       isLoading.value = true;
       const params = {
         id: calibrationAssetId.value,
         name: name,
         template: template,
-        marker_data: [...calibrationAssetObjects.value],
+        object_type: objectType,
+        object_data: [...calibrationAssetObjects.value],
         video_id: playerStore.videoId,
       };
       try {
@@ -723,16 +733,15 @@ export const useCalibrationAssetStore = defineStore(
 
       return { x: X / W, y: Y / W };
     }
-    const videoMarker = ref([]);
-    const topViewMarkerProjection = computed(() => {
-      console.log("calibrationMatrix", calibrationMatrix.value, "videoMarker", videoMarker.value);
+    const videoObject = ref([]);
+    const topViewObjectProjection = computed(() => {
       if (!calibrationMatrix.value) return [];
-      return videoMarker.value.map((marker) => applyHomography(calibrationMatrix.value, marker));
+      return videoObject.value.map((object) => applyHomography(calibrationMatrix.value, object));
     });
 
-    const videoMarkerReprojection = computed(() => {
+    const videoObjectReprojection = computed(() => {
       if (!calibrationMatrixInv.value) return [];
-      return topViewMarkerProjection.value.map((point) =>
+      return topViewObjectProjection.value.map((point) =>
         applyHomography(calibrationMatrixInv.value, point)
       );
     });
@@ -744,19 +753,19 @@ export const useCalibrationAssetStore = defineStore(
       segmentTemplate,
       allAssetObjectsValid,
       filteredReferenceObjects,
-      filteredVideoMarker,
-      toggleReferenceMarker,
-      isAnyReferenceMarkerActive,
-      isAddingReferenceMarker,
-      addReferenceMarker,
-      addTemplateReferenceMarker,
-      setReferenceMarker,
-      deleteReferenceMarker,
-      setVideoMarker,
+      filteredVideoObject,
+      toggleReferenceObject,
+      isAnyReferenceObjectActive,
+      isAddingReferenceObject,
+      addReferenceObject,
+      addTemplateReferenceObject,
+      setReferenceObject,
+      deleteReferenceObject,
+      setVideoObject,
       showVideoAsset,
       previousShowVideoAsset,
       toggleVideoAsset,
-      hoveredVideoMarker,
+      hoveredVideoObject,
       calibrationAssetsList,
       calibrationAssetId,
       createCalibrationAsset,
@@ -768,15 +777,15 @@ export const useCalibrationAssetStore = defineStore(
       calibrationMatrix,
       calibrationMatrixPersisted,
       calibrationMatrixInv,
-      videoMarker,
-      topViewMarkerProjection,
-      videoMarkerReprojection,
+      videoObject,
+      topViewObjectProjection,
+      videoObjectReprojection,
       applyHomography,
       calibrationAssetSaveSuccess,
       calibrationAssetUpdateSuccess,
       calibrationAssetDeleteSuccess,
       timeChangeConflict,
-      videoMarkerTime,
+      videoObjectTime,
       isAssetEdited,
       calibrationAssetType,
       setCalibrationAssetType,
@@ -785,7 +794,12 @@ export const useCalibrationAssetStore = defineStore(
   },
   {
     persist: {
-      pick: ["calibrationAssetObjects", "videoMarker", "calibrationMatrixPersisted"],
+      pick: [
+        "calibrationAssetType",
+        "calibrationAssetObjects",
+        "videoObject",
+        "calibrationMatrixPersisted",
+      ],
       storage: sessionStorage,
     },
   }

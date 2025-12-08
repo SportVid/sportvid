@@ -653,7 +653,8 @@
     "calibration_asset": {
       "create": {
         "title": "Create Calibration Asset",
-        "template": "Select sport"
+        "template": "Select sport",
+        "object_type": "Select object type"
       },
       "select": {
         "title": "Select Calibration Asset"

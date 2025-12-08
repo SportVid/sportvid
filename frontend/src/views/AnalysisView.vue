@@ -1,7 +1,7 @@
 <template>
   <v-main class="main" tabindex="0" ref="main">
     <v-container fluid>
-      <ModalMarkerOverlay v-if="calibrationAssetStore.isAnyReferenceMarkerActive" />
+      <ModalMarkerOverlay v-if="calibrationAssetStore.isAnyReferenceObjectActive" />
 
       <v-row class="ma-n2">
         <v-col cols="6">
@@ -622,7 +622,7 @@ watch(
 );
 
 watch(
-  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  () => calibrationAssetStore.isAnyReferenceObjectActive,
   (active) => {
     if (active) {
       calibrationAssetStore.previousShowVideoAsset = calibrationAssetStore.showVideoAsset;
@@ -636,7 +636,7 @@ watch(
 
 onBeforeUnmount(() => {
   calibrationAssetStore.calibrationAssetObjects = [];
-  calibrationAssetStore.videoMarker = [];
+  calibrationAssetStore.videoObject = [];
   calibrationAssetStore.calibrationMatrixPersisted = [];
   topViewStore.positionDataTopView = {};
   bboxesStore.bboxDataInterpolated = {};
