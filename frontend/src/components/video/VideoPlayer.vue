@@ -605,14 +605,6 @@ const getEllipseSvg = (position) => {
     centerY,
   };
 };
-
-watch(
-  () => calibrationAssetStore.filteredVideoObject,
-  (nww) => {
-    console.log("videoobjects", nww);
-  },
-  { deep: true }
-);
 </script>
 
 <style scoped>
