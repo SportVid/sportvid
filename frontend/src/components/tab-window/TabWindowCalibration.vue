@@ -52,42 +52,6 @@
           }"
         />
 
-        <!-- <v-btn
-          v-for="o in calibrationAssetStore.filteredReferenceObjects"
-          v-show="topViewStore.showItems"
-          :key="o.id"
-          :disabled="calibrationAssetStore.isAddingReferenceObject"
-          :color="o.active || calibrationAssetStore.hoveredVideoObject === o.id ? 'red' : 'grey'"
-          icon="mdi-circle"
-          variant="plain"
-          density="compact"
-          @click="(event) => calibrationAssetStore.toggleReferenceObject(event, o.id)"
-          @contextmenu.prevent="openDeleteModal(o)"
-          :style="{
-            position: 'absolute',
-            transform: 'translate(-50%, -50%)',
-            top: isTopViewFullscreen
-              ? topViewStore.topViewSize.top +
-                o.compAreaCoordsRel.y *
-                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
-                'px'
-              : o.compAreaCoordsRel.y *
-                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
-                'px',
-            left: isTopViewFullscreen
-              ? topViewStore.topViewSize.left +
-                o.compAreaCoordsRel.x *
-                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
-                'px'
-              : o.compAreaCoordsRel.x *
-                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
-                'px',
-          }"
-        /> -->
         <svg
           :width="topViewStore.topViewSize.width"
           :height="topViewStore.topViewSize.height"
@@ -195,7 +159,6 @@
                     d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
                   }
 
-                  // d += ' Z';
                   return d;
                 })()
               "
@@ -219,41 +182,6 @@
           :object="selectedReferenceObject"
         />
 
-        <!-- <v-btn
-          v-for="o in calibrationAssetStore.filteredReferenceObjects"
-          v-show="showDeleteButton"
-          :key="'delete-' + o.id"
-          color="red"
-          icon="mdi-close"
-          variant="plain"
-          density="compact"
-          @click="calibrationAssetStore.deleteReferenceObject(o.id)"
-          class="delete-object-position"
-          :style="{
-            position: 'absolute',
-            transform: 'translate(-50%, -50%)',
-            top: isTopViewFullscreen
-              ? topViewStore.topViewSize.top +
-                getObjectCenter(o.compAreaCoordsRel).y *
-                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
-                'px'
-              : getObjectCenter(o.compAreaCoordsRel).y *
-                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
-                'px',
-            left: isTopViewFullscreen
-              ? topViewStore.topViewSize.left +
-                getObjectCenter(o.compAreaCoordsRel).x *
-                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
-                'px'
-              : getObjectCenter(o.compAreaCoordsRel).x *
-                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
-                'px',
-          }"
-        /> -->
         <svg
           :width="topViewStore.topViewSize.width"
           :height="topViewStore.topViewSize.height"
@@ -280,11 +208,8 @@
               fill="none"
               style="cursor: pointer; pointer-events: all"
               @click="calibrationAssetStore.deleteReferenceObject(o.id)"
-              class="delete-object-position"
-            >
-              X
-            </circle>
-
+              class="delete-marker-position"
+            />
             <text
               v-if="o.compAreaCoordsRel.length === 1"
               v-show="showDeleteButton"
@@ -297,6 +222,146 @@
               :y="
                 (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
                 o.compAreaCoordsRel[0].y *
+                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
+                6
+              "
+              text-anchor="middle"
+              font-size="16"
+              fill="red"
+            >
+              ✕
+            </text>
+
+            <line
+              v-if="o.compAreaCoordsRel.length === 2"
+              v-show="showDeleteButton"
+              :key="'delete-' + o.id"
+              :x1="
+                (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                o.compAreaCoordsRel[0].x *
+                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width
+              "
+              :y1="
+                (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                o.compAreaCoordsRel[0].y *
+                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height
+              "
+              :x2="
+                (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                o.compAreaCoordsRel[1].x *
+                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width
+              "
+              :y2="
+                (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                o.compAreaCoordsRel[1].y *
+                  (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height
+              "
+              stroke-width="12"
+              fill="none"
+              style="cursor: pointer; pointer-events: all"
+              @click="calibrationAssetStore.deleteReferenceObject(o.id)"
+              class="delete-segment-position"
+            />
+            <text
+              v-if="o.compAreaCoordsRel.length === 2"
+              v-show="showDeleteButton"
+              :x="
+                ((isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                  o.compAreaCoordsRel[0].x *
+                    (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                  ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+                  ((isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                    o.compAreaCoordsRel[1].x *
+                      (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                    ((1 - topViewStore.currentSport.widthRel) / 2) *
+                      topViewStore.topViewSize.width)) /
+                2
+              "
+              :y="
+                ((isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                  o.compAreaCoordsRel[0].y *
+                    (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                  ((1 - topViewStore.currentSport.heightRel) / 2) *
+                    topViewStore.topViewSize.height +
+                  ((isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                    o.compAreaCoordsRel[1].y *
+                      (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                    ((1 - topViewStore.currentSport.heightRel) / 2) *
+                      topViewStore.topViewSize.height)) /
+                  2 +
+                5
+              "
+              text-anchor="middle"
+              font-size="16"
+              fill="red"
+            >
+              ✕
+            </text>
+
+            <path
+              v-if="o.compAreaCoordsRel.length > 2"
+              v-show="showDeleteButton"
+              :key="'delete-' + o.id"
+              :d="
+                (() => {
+                  const toScreen = (p) => ({
+                    x:
+                      (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                      p.x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                      ((1 - topViewStore.currentSport.widthRel) / 2) *
+                        topViewStore.topViewSize.width,
+                    y:
+                      (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                      p.y *
+                        (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                      ((1 - topViewStore.currentSport.heightRel) / 2) *
+                        topViewStore.topViewSize.height,
+                  });
+
+                  const points = o.compAreaCoordsRel.map(toScreen);
+
+                  let d = `M ${points[0].x} ${points[0].y}`;
+
+                  for (let i = 0; i < points.length - 1; i++) {
+                    const p0 = points[i === 0 ? 0 : i - 1];
+                    const p1 = points[i];
+                    const p2 = points[i + 1];
+                    const p3 = points[i + 2 < points.length ? i + 2 : points.length - 1];
+
+                    const c1x = p1.x + (p2.x - p0.x) / 6;
+                    const c1y = p1.y + (p2.y - p0.y) / 6;
+                    const c2x = p2.x - (p3.x - p1.x) / 6;
+                    const c2y = p2.y - (p3.y - p1.y) / 6;
+
+                    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+                  }
+
+                  return d;
+                })()
+              "
+              stroke-width="12"
+              fill="none"
+              style="cursor: pointer; pointer-events: all"
+              @click="calibrationAssetStore.deleteReferenceObject(o.id)"
+              class="delete-segment-position"
+            />
+            <text
+              v-if="o.compAreaCoordsRel.length > 2"
+              v-show="showDeleteButton"
+              :x="
+                (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                o.compAreaCoordsRel[2].x *
+                  (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width
+              "
+              :y="
+                (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                o.compAreaCoordsRel[2].y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 6
@@ -833,9 +898,14 @@ const getObjectCenter = (object) => {
   max-height: 100%;
 }
 
-.delete-object-position:hover {
+.delete-marker-position:hover {
+  fill: red;
+  fill-opacity: 0.2;
+}
+
+.delete-segment-position:hover {
   stroke: red;
-  stroke-width: 2;
+  stroke-opacity: 0.2;
 }
 
 .video-control {
