@@ -153,7 +153,7 @@
               r="8"
               fill="red"
               fill-opacity="0.8"
-              style="cursor: pointer; pointer-events: all"
+              style="pointer-events: all"
               @mouseenter="calibrationAssetStore.hoveredVideoObject = m.id"
               @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
             />
@@ -170,7 +170,7 @@
               stroke="red"
               stroke-opacity="0.8"
               fill="none"
-              style="cursor: pointer; pointer-events: all"
+              style="pointer-events: all"
               @mouseenter="calibrationAssetStore.hoveredVideoObject = m.id"
               @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
             />
@@ -196,7 +196,7 @@
               stroke-width="8"
               stroke-opacity="0.8"
               fill="none"
-              style="cursor: pointer; pointer-events: all"
+              style="pointer-events: all"
               @mouseenter="calibrationAssetStore.hoveredVideoObject = m.id"
               @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
             />
