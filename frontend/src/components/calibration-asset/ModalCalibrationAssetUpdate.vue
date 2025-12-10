@@ -18,6 +18,7 @@
           prepend-icon="mdi-pencil"
           variant="underlined"
           class="mr-6"
+          style="width: 260px"
         />
 
         <v-select
@@ -26,11 +27,14 @@
           :label="$t('modal.calibration_asset.save.template')"
           variant="underlined"
           class="mr-6"
+          style="width: 260px"
         />
 
         <v-btn
-          @click="updateCalibrationAsset(name, template)"
-          :disabled="!name || !template || !calibrationAssetStore.allAssetObjectsValid"
+          @click="updateCalibrationAsset(name, template, objectType)"
+          :disabled="
+            !name || !template || !objectType || !calibrationAssetStore.allAssetObjectsValid
+          "
           size="small"
         >
           {{ $t("button.update") }}
@@ -71,9 +75,10 @@ const name = computed({
   },
 });
 const template = ref(topViewStore.currentSport.title);
+const objectType = ref(calibrationAssetStore.calibrationAssetType);
 
-const updateCalibrationAsset = (name, template) => {
-  calibrationAssetStore.updateCalibrationAsset(name, template);
+const updateCalibrationAsset = (name, template, objectType) => {
+  calibrationAssetStore.updateCalibrationAsset(name, template, objectType);
   dialog.value = false;
 };
 

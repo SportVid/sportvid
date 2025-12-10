@@ -14,12 +14,9 @@ export const useCalibrationAssetStore = defineStore(
 
     const isLoading = ref(false);
 
-    const calibrationAssetType = ref("segment");
+    const calibrationAssetType = ref("marker");
     const setCalibrationAssetType = (type) => {
       calibrationAssetType.value = type;
-    };
-    const toggleCalibrationAssetType = () => {
-      calibrationAssetType.value = calibrationAssetType.value === "marker" ? "segment" : "marker";
     };
 
     const calibrationAssetObjects = ref([]);
@@ -622,7 +619,6 @@ export const useCalibrationAssetStore = defineStore(
         const res = await axios.get(`${config.API_LOCATION}/calibration_assets/list`, { params });
         if (res.data.status === "ok") {
           calibrationAssetsList.value = res.data.entries;
-          // return res.data.entries;
         }
       } catch (error) {
         console.error("Failed to list calibration assets:", error);
@@ -736,13 +732,14 @@ export const useCalibrationAssetStore = defineStore(
     const videoObject = ref([]);
     const topViewObjectProjection = computed(() => {
       if (!calibrationMatrix.value) return [];
-      return videoObject.value.map((object) => applyHomography(calibrationMatrix.value, object));
+      return videoObject.value.map((pointList) =>
+        pointList.map((p) => applyHomography(calibrationMatrix.value, p))
+      );
     });
-
     const videoObjectReprojection = computed(() => {
       if (!calibrationMatrixInv.value) return [];
-      return topViewObjectProjection.value.map((point) =>
-        applyHomography(calibrationMatrixInv.value, point)
+      return topViewObjectProjection.value.map((pointList) =>
+        pointList.map((p) => applyHomography(calibrationMatrixInv.value, p))
       );
     });
 
@@ -789,7 +786,6 @@ export const useCalibrationAssetStore = defineStore(
       isAssetEdited,
       calibrationAssetType,
       setCalibrationAssetType,
-      toggleCalibrationAssetType,
     };
   },
   {

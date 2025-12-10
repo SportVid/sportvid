@@ -45,9 +45,9 @@
             :key="m.id"
             :cx="m.videoCoordsRel[0].x * videoStore.videoSize.width"
             :cy="m.videoCoordsRel[0].y * videoStore.videoSize.height"
-            r="10"
+            r="8"
             fill="red"
-            fill-opacity="8"
+            fill-opacity="0.8"
           />
 
           <line
@@ -94,23 +94,6 @@
           />
         </template>
       </svg>
-
-      <div
-        v-for="point in calibrationAssetStore.videoObjectReprojection"
-        v-show="calibrationAssetStore.showVideoAsset"
-        :key="point"
-        :style="{
-          position: 'absolute',
-          width: '5px',
-          height: '5px',
-          backgroundColor: 'blue',
-          borderRadius: '50%',
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-          top: point.y * videoStore.videoSize.height + 'px',
-          left: point.x * videoStore.videoSize.width + 'px',
-        }"
-      />
     </div>
 
     <v-btn
