@@ -175,7 +175,6 @@
             />
           </template>
         </svg>
-
         <ModalReferenceObjectDelete
           v-if="showModalReferenceObjectDelete"
           v-model="showModalReferenceObjectDelete"
@@ -375,7 +374,7 @@
           </template>
         </svg>
 
-        <div
+        <!-- <div
           v-for="point in calibrationAssetStore.topViewObjectProjection"
           v-show="calibrationAssetStore.showVideoAsset"
           :key="point"
@@ -404,7 +403,109 @@
                 'px',
             pointerEvents: 'none',
           }"
-        />
+        /> -->
+        <svg
+          :width="topViewStore.topViewSize.width"
+          :height="topViewStore.topViewSize.height"
+          style="position: absolute; top: 0; left: 0; pointer-events: none"
+        >
+          <template v-for="o in calibrationAssetStore.topViewObjectProjection">
+            <circle
+              v-if="o.length === 1"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :cx="
+                (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                o[0].x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width
+              "
+              :cy="
+                (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                o[0].y * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height
+              "
+              fill="blue"
+              r="5"
+              style="pointer-events: none"
+            />
+
+            <line
+              v-if="o.length === 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :x1="
+                (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                o[0].x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width
+              "
+              :y1="
+                (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                o[0].y * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height
+              "
+              :x2="
+                (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                o[1].x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width
+              "
+              :y2="
+                (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                o[1].y * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height
+              "
+              stroke="blue"
+              stroke-width="5"
+              style="pointer-events: none"
+            />
+
+            <path
+              v-if="o.length > 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :d="
+                (() => {
+                  const toScreen = (p) => ({
+                    x:
+                      (isTopViewFullscreen ? topViewStore.topViewSize.left : 0) +
+                      p.x * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
+                      ((1 - topViewStore.currentSport.widthRel) / 2) *
+                        topViewStore.topViewSize.width,
+                    y:
+                      (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
+                      p.y *
+                        (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
+                      ((1 - topViewStore.currentSport.heightRel) / 2) *
+                        topViewStore.topViewSize.height,
+                  });
+
+                  const points = o.map(toScreen);
+
+                  let d = `M ${points[0].x} ${points[0].y}`;
+
+                  for (let i = 0; i < points.length - 1; i++) {
+                    const p0 = points[i === 0 ? 0 : i - 1];
+                    const p1 = points[i];
+                    const p2 = points[i + 1];
+                    const p3 = points[i + 2 < points.length ? i + 2 : points.length - 1];
+
+                    const c1x = p1.x + (p2.x - p0.x) / 6;
+                    const c1y = p1.y + (p2.y - p0.y) / 6;
+                    const c2x = p2.x - (p3.x - p1.x) / 6;
+                    const c2y = p2.y - (p3.y - p1.y) / 6;
+
+                    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+                  }
+
+                  return d;
+                })()
+              "
+              stroke="blue"
+              stroke-width="5"
+              fill="none"
+              style="pointer-events: none"
+            />
+          </template>
+        </svg>
       </div>
     </v-row>
 
@@ -868,28 +969,6 @@ watch([() => calibrationAssetStore.timeChangeConflict], ([warning]) => {
     resetVideoObjectActionSnackbar();
   }
 });
-
-const getObjectCenter = (object) => {
-  if (object.length === 1) {
-    return { x: object[0].x, y: object[0].y };
-  } else if (object.length === 2) {
-    return {
-      x: (object[0].x + object[1].x) / 2,
-      y: (object[0].y + object[1].y) / 2,
-    };
-  } else {
-    let sumX = 0;
-    let sumY = 0;
-    for (const point of object) {
-      sumX += point.x;
-      sumY += point.y;
-    }
-    return {
-      x: sumX / object.length,
-      y: sumY / object.length,
-    };
-  }
-};
 </script>
 
 <style scoped>
