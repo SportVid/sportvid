@@ -17,7 +17,7 @@ case $ENVIRONMENT in
     "shared")
         ENV_FILE="/opt/deploy/.env.db"
         DOCKER_FILE="-f docker-compose.proxy.yml -f docker-compose.db.yml"
-        BRANCH="deploy-prod"
+        BRANCH="deploy-dev" # TODO: change to deploy-prod later on?!
         ;;
     *)
         echo "Usage: $0 {prod|dev|shared} {build|up|down|restart|logs|shell|migrate}"
