@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 ExecStart=/opt/gh-runner/actions-runner/run.sh
-WorkingDirectory=/home/hmoeller/actions-runner
+WorkingDirectory=/opt/gh-runner/actions-runner
 Restart=always
 RestartSec=5
 User=github-runner
