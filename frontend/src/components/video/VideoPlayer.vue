@@ -117,10 +117,10 @@
           </div>
         </div>
 
-        <div
-          v-for="m in calibrationAssetStore.filteredVideoMarker"
-          v-show="calibrationAssetStore.showVideoMarker"
-          :key="m.id"
+        <!-- <div
+          v-for="o in calibrationAssetStore.filteredVideoObject"
+          v-show="calibrationAssetStore.showVideoAsset"
+          :key="o.id"
           :style="{
             position: 'absolute',
             width: '12px',
@@ -129,36 +129,163 @@
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             top: isVideoFullscreen
-              ? videoStore.videoSize.top + m.videoCoordsRel.y * videoStore.videoSize.height + 'px'
-              : m.videoCoordsRel.y * videoStore.videoSize.height + 'px',
+              ? videoStore.videoSize.top + o.videoCoordsRel.y * videoStore.videoSize.height + 'px'
+              : o.videoCoordsRel.y * videoStore.videoSize.height + 'px',
             left: isVideoFullscreen
-              ? videoStore.videoSize.left + m.videoCoordsRel.x * videoStore.videoSize.width + 'px'
-              : m.videoCoordsRel.x * videoStore.videoSize.width + 'px',
+              ? videoStore.videoSize.left + o.videoCoordsRel.x * videoStore.videoSize.width + 'px'
+              : o.videoCoordsRel.x * videoStore.videoSize.width + 'px',
           }"
-          @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
-          @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
-        />
+          @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+          @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+        /> -->
+        <svg
+          :width="videoStore.videoSize.width"
+          :height="videoStore.videoSize.height"
+          style="position: absolute; top: 0; left: 0; pointer-events: none"
+        >
+          <template v-for="o in calibrationAssetStore.filteredVideoObject">
+            <circle
+              v-if="o.videoCoordsRel.length === 1"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :cx="o.videoCoordsRel[0].x * videoStore.videoSize.width"
+              :cy="o.videoCoordsRel[0].y * videoStore.videoSize.height"
+              r="8"
+              fill="red"
+              fill-opacity="0.8"
+              style="pointer-events: all"
+              @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+              @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+            />
 
-        <div
-          v-for="point in calibrationAssetStore.videoMarkerReprojection"
-          v-show="calibrationAssetStore.showVideoMarker"
-          :key="point"
-          :style="{
-            position: 'absolute',
-            width: '5px',
-            height: '5px',
-            backgroundColor: 'blue',
-            borderRadius: '50%',
-            transform: 'translate(-50%, -50%)',
-            pointerEvents: 'none',
-            top: isVideoFullscreen
-              ? videoStore.videoSize.top + point.y * videoStore.videoSize.height + 'px'
-              : point.y * videoStore.videoSize.height + 'px',
-            left: isVideoFullscreen
-              ? videoStore.videoSize.left + point.x * videoStore.videoSize.width + 'px'
-              : point.x * videoStore.videoSize.width + 'px',
-          }"
-        />
+            <line
+              v-if="o.videoCoordsRel.length === 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :x1="o.videoCoordsRel[0].x * videoStore.videoSize.width"
+              :y1="o.videoCoordsRel[0].y * videoStore.videoSize.height"
+              :x2="o.videoCoordsRel[1].x * videoStore.videoSize.width"
+              :y2="o.videoCoordsRel[1].y * videoStore.videoSize.height"
+              stroke-width="8"
+              stroke="red"
+              stroke-opacity="0.8"
+              fill="none"
+              style="pointer-events: all"
+              @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+              @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+            />
+
+            <path
+              v-if="o.videoCoordsRel.length > 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :d="
+                (() => {
+                  const points = o.videoCoordsRel.map((p) => ({
+                    x: p.x * videoStore.videoSize.width,
+                    y: p.y * videoStore.videoSize.height,
+                  }));
+                  let d = `M ${points[0].x} ${points[0].y}`;
+                  for (let i = 1; i < points.length; i++) {
+                    d += ` L ${points[i].x} ${points[i].y}`;
+                  }
+                  return d;
+                })()
+              "
+              stroke="red"
+              stroke-width="8"
+              stroke-opacity="0.8"
+              fill="none"
+              style="pointer-events: all"
+              @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+              @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+            />
+          </template>
+        </svg>
+
+        <svg
+          :width="videoStore.videoSize.width"
+          :height="videoStore.videoSize.height"
+          style="position: absolute; top: 0; left: 0; pointer-events: none"
+        >
+          <template v-for="o in calibrationAssetStore.videoObjectReprojection">
+            <circle
+              v-if="o.length === 1"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :cx="
+                (isVideoFullscreen ? videoStore.videoSize.left : 0) +
+                o[0].x * videoStore.videoSize.width +
+                'px'
+              "
+              :cy="
+                (isVideoFullscreen ? videoStore.videoSize.top : 0) +
+                o[0].y * videoStore.videoSize.height +
+                'px'
+              "
+              r="3"
+              fill="blue"
+              style="pointer-events: none"
+            />
+
+            <line
+              v-if="o.length === 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :x1="
+                (isVideoFullscreen ? videoStore.videoSize.left : 0) +
+                o[0].x * videoStore.videoSize.width +
+                'px'
+              "
+              :y1="
+                (isVideoFullscreen ? videoStore.videoSize.top : 0) +
+                o[0].y * videoStore.videoSize.height +
+                'px'
+              "
+              :x2="
+                (isVideoFullscreen ? videoStore.videoSize.left : 0) +
+                o[1].x * videoStore.videoSize.width +
+                'px'
+              "
+              :y2="
+                (isVideoFullscreen ? videoStore.videoSize.top : 0) +
+                o[1].y * videoStore.videoSize.height +
+                'px'
+              "
+              stroke-width="3"
+              stroke="blue"
+              fill="none"
+              style="pointer-events: none"
+            />
+
+            <path
+              v-if="o.length > 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :d="
+                (() => {
+                  const points = o.map((p) => ({
+                    x:
+                      (isVideoFullscreen ? videoStore.videoSize.left : 0) +
+                      p.x * videoStore.videoSize.width,
+                    y:
+                      (isVideoFullscreen ? videoStore.videoSize.top : 0) +
+                      p.y * videoStore.videoSize.height,
+                  }));
+                  let d = `M ${points[0].x} ${points[0].y}`;
+                  for (let i = 1; i < points.length; i++) {
+                    d += ` L ${points[i].x} ${points[i].y}`;
+                  }
+                  return d;
+                })()
+              "
+              stroke="blue"
+              stroke-width="3"
+              fill="none"
+              style="pointer-events: none"
+            />
+          </template>
+        </svg>
       </div>
     </v-row>
 
@@ -412,7 +539,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", updateVideoSize);
 });
 watch(
-  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  () => calibrationAssetStore.isAnyReferenceObjectActive,
   async (newVal) => {
     if (!newVal) {
       await nextTick();

@@ -116,6 +116,7 @@
     "update": "Update Calibration Asset",
     "marker": {
       "title": "Marker",
+      "switch_to_segments": "Switch to Segments",
       "view_vid_marker": "View Video Marker",
       "add_ref_marker": {
         "title": "Add Reference Marker",
@@ -123,6 +124,16 @@
       },
       "delete_ref_marker": "Delete Reference Marker",
       "delete_single_ref_marker": "Delete"
+    },
+    "segments": {
+      "title": "Segments",
+      "switch_to_marker": "Switch to Marker",
+      "view_vid_segments": "View Video Segments",
+      "add_ref_segment": {
+        "title": "Add Reference Segment"
+      },
+      "delete_ref_segment": "Delete Reference Segment",
+      "delete_single_ref_segment": "Delete"
     },
     "time-conflict": "Video markers were set at {time}. Adding a new marker on another timestamp will overwrite the existing ones."
   },
@@ -642,7 +653,8 @@
     "calibration_asset": {
       "create": {
         "title": "Create Calibration Asset",
-        "template": "Select sport"
+        "template": "Select sport",
+        "object_type": "Select object type"
       },
       "select": {
         "title": "Select Calibration Asset"
