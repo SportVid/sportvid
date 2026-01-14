@@ -19,6 +19,8 @@ from backend.utils import (
 )
 from backend.models import Video
 
+from utils.video_convert import convert_to_hls
+
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +56,7 @@ class VideoUpload(View):
 
             if "file" in request.FILES:
                 output_dir = media_dir_to_file(video_id)
-
+                # 
                 download_result = download_file(
                     output_dir=output_dir,
                     output_name=video_id,
@@ -66,6 +68,12 @@ class VideoUpload(View):
                 if download_result["status"] != "ok":
                     logger.error("VideoUpload::failed")
                     return JsonResponse(download_result, status=500)
+                # ------------>
+                
+                ext = "".join(path.suffixes)
+                out_path = path # NOTE: ? maybe need sub-dir for segmented video paths
+
+
 
                 path = Path(request.FILES["file"].name)
                 ext = "".join(path.suffixes)
