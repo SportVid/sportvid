@@ -16,6 +16,7 @@
     "d3-delaunay": "^6.0.4",
     "google-palette": "^1.1.1",
     "heatmap.js": "^2.0.5",
+    "hls.js": "^1.6.15",
     "lodash": "^4.17.21",
     "mathjs": "^14.4.0",
     "paper": "^0.12.18",
