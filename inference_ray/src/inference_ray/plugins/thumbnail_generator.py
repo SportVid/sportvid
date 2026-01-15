@@ -1,3 +1,5 @@
+import logging
+
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 
 from utils import VideoDecoder
@@ -42,6 +44,7 @@ class ThumbnailGenerator(
         callbacks: Callable = None,
     ) -> Dict[str, Data]:
         with inputs["video"] as input_data, data_manager.create_data("ImagesData") as output_data:
+            logging.error(type(input_data))
             with input_data.open_video() as f_video:
                 video_decoder = VideoDecoder(
                     path=f_video,

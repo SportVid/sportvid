@@ -1,3 +1,5 @@
+import logging
+
 import imageio.v3 as iio
 import av
 import numpy as np
@@ -50,6 +52,7 @@ class VideoDecoder:
                 Defaults to None.
             fps (int, optional): Frames per second. Defaults to None.
         """
+        logging.error(f'---VD --- {path}')
         self._path = path
         self._max_dimension = max_dimension
         self._fps = fps

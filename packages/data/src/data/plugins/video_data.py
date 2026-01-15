@@ -43,8 +43,13 @@ class VideoData(Data):
     def __call__(self, fps: float= None, **kwargs) -> "VideoIterator":
         return VideoIterator(self, fps=fps)
 
+    # def unpack_tar():
+        # TODO: or read the video file from tar? I think unwrapping it would be rather bad?!
+
+
     def open_video(self, mode="r"):
         assert self.check_fs(), "No fs register"
+        logging.error(f'{self.ext}')
         return self.fs.open_file(f"video.{self.ext}", mode)
 
     def load_file_from_stream(self, data_stream: Iterable) -> None:
@@ -72,6 +77,7 @@ class VideoIterator():
 
     def __enter__(self):
         self.video_file = self.data.open_video("r")
+        logging.error(f'--- VI --- {self.video_file} {type(self.video_file)})')
         
         self.video_decoder = VideoDecoder(self.video_file, fps=self.fps, extension=f".{self.data.ext}")
         return self.video_decoder
