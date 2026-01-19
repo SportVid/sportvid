@@ -78,6 +78,7 @@ class VideoUpload(View):
                 file_in = file_path
 
                 # ------------> convert to HLS
+                # TODO: only convert if not done already
                 file_out = f'{output_dir}{video_id}/{video_id}.m3u8'
                 os.makedirs(f'{output_dir}{video_id}', exist_ok=True)
                 logger.error(f'{ext}')

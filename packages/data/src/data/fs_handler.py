@@ -1,7 +1,9 @@
-import zipfile
+import zipfile, tarfile
 import logging
 import yaml
 import os
+import io
+
 from dataclasses import dataclass, field, fields, asdict
 from typing import Callable, Optional, Dict
 
@@ -12,17 +14,75 @@ class FSHandler:
     pass
 
 
+class ArchiveFileWrapper:
+    """Wrapper to handle both regular files and nested tar archives"""
+    
+    def __init__(self, file_data, filename):
+        """
+        Docstring for __init__
+        
+        :param self: Wrapper object
+        :param file_data: bytes object
+        :param filename: ...
+        """
+        
+        self.filename = filename
+        self.tar_obj = None
+        
+        # Create BytesIO from the data
+        self.file_obj = io.BytesIO(file_data)
+        
+        # Use tarfile's built-in check
+        try:
+            if tarfile.is_tarfile(self.file_obj):
+                self.file_obj.seek(0)
+                self.tar_obj = tarfile.open(fileobj=self.file_obj, mode='r:*')
+            else:
+                self.file_obj.seek(0)
+        except Exception:
+            self.file_obj.seek(0)
+    
+    def is_archive(self):
+        return self.tar_obj is not None
+    
+    def list_files(self):
+        """List files in the tar archive"""
+        if self.tar_obj:
+            return self.tar_obj.getnames()
+        return []
+    
+    def open_nested(self, member_name, mode='r'):
+        """Open a file from within the tar archive"""
+        if self.tar_obj:
+            return self.tar_obj.extractfile(member_name)
+        return None
+    
+    def read(self, *args, **kwargs):
+        """Direct read if not an archive"""
+        return self.file_obj.read(*args, **kwargs)
+    
+    def tell(self):
+        """Tell support"""
+        return self.file_obj.tell()
+    
+    def close(self):
+        if self.tar_obj:
+            self.tar_obj.close()
+        if self.file_obj:
+            self.file_obj.close()
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, *args):
+        self.close()
+
+
 class ZipFSHandler(FSHandler):
     def __init__(self, path: str, mode: str = "r") -> None:
         if mode is None:
             mode = "w"
         assert mode == "w" or mode == "r", "No valid mode for ZipData"
-        # if os.path.exists(path):
-        #     if mode != "r":
-        #         raise FileExistsError()
-        # else:
-        #     if mode == "r":
-        #         raise FileNotFoundError()
 
         self.path = path
         self.zipfile = None
@@ -39,12 +99,6 @@ class ZipFSHandler(FSHandler):
             raise Exception()
         yield from self.zipfile.namelist()
 
-    # def mkdir(self, path) -> None:
-    #     if self.zipfile is None:
-    #         raise Exception()
-    #     logging.debug(f"mkdir {self.path}")
-    #     self.zipfile.mkdir(path)
-
     def close(self, data) -> None:
         logging.debug(f"close {self.path}")
         if self.zipfile is None:
@@ -57,15 +111,6 @@ class ZipFSHandler(FSHandler):
 
         data.save()
 
-        # data_split = split_data_in_paths(data)
-        # logging.debug(data_split)
-
-        # dump_meta = data._meta_data()
-        # with self.open_file("meta.yml", mode="w") as f:
-        #     f.write(yaml.dump(data_split[]).encode())
-
-        # logging.debug(data._data())
-
         self.zipfile.close()
         self.zipfile = None
 
@@ -77,8 +122,17 @@ class ZipFSHandler(FSHandler):
 
         if mode == "w" and self.mode == "r":
             raise ValueError
+        
+        if "w" in mode or "a" in mode:
+            return self.zipfile.open(filename, mode=mode, force_zip64=True)
+        
+        # return self.zipfile.open(filename, mode=mode, force_zip64=True)
+        # NOTE: uses context manager to ensure handle is closed immediately
+        with self.zipfile.open(filename, mode=mode, force_zip64=True) as zip_file_obj:
+            file_data = zip_file_obj.read()
 
-        return self.zipfile.open(filename, mode=mode, force_zip64=True)
+        # Return wrapper that manages handles lazily
+        return ArchiveFileWrapper(file_data, filename)
 
 
 class LocalFSHandler(FSHandler):
@@ -88,8 +142,6 @@ class LocalFSHandler(FSHandler):
 
     def open(self, data) -> None:
         logging.debug(f"open {self.path}")
-        # if self.fs.mode != "r":
-        #     self.fs.mkdir(self.path)
         if self.fs.mode == "r":
             data.load()
 
@@ -103,12 +155,6 @@ class LocalFSHandler(FSHandler):
         for x in self.fs.list_files():
             if x.startswith(self.path):
                 yield x[len(self.path) + 1 :]
-
-    # def mkdir(self, path) -> None:
-    #     if self.fs is None:
-    #         raise Exception()
-    #     logging.debug(f"mkdir {self.path}")
-    #     self.zipfile.mkdir(path)
 
     def close(self, data) -> None:
         logging.debug(f"close {self.path}")
