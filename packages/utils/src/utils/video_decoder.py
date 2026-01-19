@@ -59,24 +59,7 @@ def parse_meta_av(video_object):
         return {}
 
 
-def parse_meta_imageio(path, **kwargs):
-    try:
-        # TODO
-        meta = iio.immeta(path, plugin="FFMPEG", **kwargs)
-        return {
-            "fps": meta.average_rate,
-            "width": meta.width,
-            "height": meta.height,
-            "size": (meta.width, meta.height),
-            "duration": float(meta.duration * meta.time_base) * 1000.,  # ms
-        }
-
-    except:
-        return None
-
-
 class VideoDecoder:
-    # TODO: videos with sample aspect ratio (SAR) not equal to 1:1 are loaded with wrong shape
     def __init__(self, video_object, max_dimension=None, fps=None, ref_id=None, **kwargs):
         """Provides an iterator over the frames of a video.
 
@@ -183,8 +166,6 @@ class VideoDecoder:
                     "ref_id": self._ref_id,
                     "delta_time": float(i / fps)
                 }
-
-
 
     def __len__(self):
         return (self.duration() / 1000) * self.fps()
