@@ -1,9 +1,22 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
-FROM ubuntu:22.04
+# FROM ubuntu:22.04
+FROM python:3.10-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update --fix-missing -y && apt install python3-pip npm git libsndfile1-dev python3-numba python3-opencv python3-psycopg2 python3-numpy ffmpeg  libmariadbclient-dev-compat imagemagick python3-sklearn -y
-RUN apt install wget
+
+RUN apt-get update && apt-get install -y \
+    wget \
+    npm \
+    git \
+    libsndfile1-dev \
+    libmariadbclient-dev-compat \
+    imagemagick \
+    python3-pip \
+    python3-numba \
+    python3-opencv \
+    python3-psycopg2 \
+    python3-numpy \
+    python3-sklearn
 
 EXPOSE 8000
 

@@ -186,9 +186,9 @@ message RunPipelineResponse {
   bool success = 2;
 }
 
-message GetPieplineStatusRequest { string id = 1; }
+message GetPipelineStatusRequest { string id = 1; }
 
-message GetPieplineStatusResponse {
+message GetPipelineStatusResponse {
 
   enum Status {
     UNKNOWN = 0;

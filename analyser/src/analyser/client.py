@@ -89,7 +89,9 @@ class AnalyserClient:
         filename = os.path.basename(path)
         
         mimetype = mimetypes.guess_type(path)
-        if re.match(r"video/*", mimetype[0]):
+        logging.error(mimetype)
+        
+        if re.match(r"video/*", mimetype[0]) or re.match(r'application/x-tar', mimetype[0]):
             data_type = analyser_pb2.VIDEO_DATA
         if re.match(r"audio/*", mimetype[0]):
             data_type = analyser_pb2.AUDIO_DATA

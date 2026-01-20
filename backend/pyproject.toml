@@ -8,6 +8,7 @@ dependencies = [
     "imageio[ffmpeg,pyav]>=2.37.0",
     "interface",
     "data",
+    "utils",
     "analyser",
     "grpcio>=1.70.0",
     "protobuf>=5.29.3",
@@ -33,4 +34,5 @@ package = true
 [tool.uv.sources]
 interface = { workspace = true }
 data = { workspace = true }
+utils = { workspace = true }
 analyser = { workspace = true }
