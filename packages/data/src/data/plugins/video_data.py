@@ -47,6 +47,7 @@ class VideoData(Data):
         assert self.check_fs(), "No fs register"
         return self.fs.open_file(f"video.{self.ext}", mode)
 
+
     def load_file_from_stream(self, data_stream: Iterable) -> None:
 
         assert self.check_fs(), "No fs register"
@@ -72,7 +73,6 @@ class VideoIterator():
 
     def __enter__(self):
         self.video_file = self.data.open_video("r")
-        
         self.video_decoder = VideoDecoder(self.video_file, fps=self.fps, extension=f".{self.data.ext}")
         return self.video_decoder
     

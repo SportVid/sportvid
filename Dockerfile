@@ -1,6 +1,10 @@
 # Install uv
 FROM ghcr.io/astral-sh/uv:debian
 
+RUN apt-get update && apt-get install -y \
+    wget \
+    ffmpeg
+
 # Change the working directory to the `app` directory
 WORKDIR /app
 
