@@ -94,7 +94,8 @@ class VideoUpload(View):
 
                 logger.error(f'{hls_dir}')
                 logger.error(f'{archive_path}')
-                
+                # TODO: Adjust logic to keep HLS as a dir.
+                # Requires adaptaion to inference server transfer & DB schema.
                 def create_tar_archive(archive_path, hls_dir):
                     with tarfile.open(archive_path, 'w:gz') as tar:
                         tar.add(hls_dir,
@@ -114,8 +115,9 @@ class VideoUpload(View):
                 # ------------> remove temporary data
                 if remove_file(file_path):
                     logger.debug(f'{file_path} removed successfully!')
-                if remove_dir(hls_dir):
-                    logger.debug(f'{hls_dir} removed successfully!')
+                
+                # if remove_dir(hls_dir):
+                #    logger.debug(f'{hls_dir} removed successfully!')
 
                 field_length = parse_number(request.POST.get("fieldLength"))
                 if not field_length: field_length = 105.
