@@ -114,8 +114,8 @@ class VideoUpload(View):
                 # ------------> remove temporary data
                 if remove_file(file_path):
                     logger.debug(f'{file_path} removed successfully!')
-                if remove_dir(hls_dir):
-                    logger.debug(f'{hls_dir} removed successfully!')
+                # if remove_dir(hls_dir):
+                #     logger.debug(f'{hls_dir} removed successfully!')
 
                 field_length = parse_number(request.POST.get("fieldLength"))
                 if not field_length: field_length = 105.
