@@ -36,7 +36,8 @@
     "vuetify": "^3.8.1"
   },
   "devDependencies": {
-    "@vue/cli-service": "~5.0.0"
+    "@vue/cli-service": "~5.0.0",
+    "baseline-browser-mapping": "^2.9.17"
   },
   "browserslist": [
     "> 1%",

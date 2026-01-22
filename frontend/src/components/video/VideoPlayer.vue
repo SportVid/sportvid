@@ -14,7 +14,6 @@
           @ended="onEnded"
           @timeupdate="onTimeUpdate"
           @loadedmetadata="updateVideoSize"
-          :src="playerStore.videoUrl"
           :style="
             isVideoFullscreen
               ? { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }
@@ -669,32 +668,69 @@ const getEllipseSvg = (position) => {
   };
 };
 
+function tarGzUrlToHlsUrl(tarUrl) {
+  // if (!tarUrl.endsWith(".tar.gz")) {
+  //   console.warn("URL ist keine .tar.gz:", tarUrl);
+  //   return tarUrl;
+  // }
+
+  const url = new URL(tarUrl);
+
+  // Dateiname extrahieren
+  const parts = url.pathname.split("/");
+  const fileName = parts.pop(); // <hash>.tar.gz
+  const id = fileName.replace(/\.tar\.gz$/, "");
+
+  // Neuer Pfad
+  parts.push(id, `${id}.m3u8`);
+  url.pathname = parts.join("/");
+
+  return url.toString();
+}
 // !!! Wichtig: :src="playerStore.videoUrl" aus <video> entfernen !!!
-// let hls = null;
-// onMounted(() => {
-//   if (!videoElement.value) return;
+let hls = null;
+watch(
+  () => playerStore.videoUrl,
+  (url) => {
+    if (!url || !videoElement.value) return;
 
-//   const video = videoElement.value;
-//   const src = playerStore.videoUrl; // MUSS .m3u8 sein
+    const video = videoElement.value;
+    const hlsUrl = tarGzUrlToHlsUrl(url);
+    console.log("hls url", hlsUrl);
 
-//   if (Hls.isSupported()) {
-//     hls = new Hls({
-//       maxBufferLength: 30,
-//       maxMaxBufferLength: 60,
-//     });
-//     hls.loadSource(src);
-//     hls.attachMedia(video);
-//   } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-//     // Safari / iOS
-//     video.src = src;
-//   }
-// });
-// onBeforeUnmount(() => {
-//   if (hls) {
-//     hls.destroy();
-//     hls = null;
-//   }
-// });
+    if (!hlsUrl) return;
+
+    // Cleanup bei Video-Wechsel
+    if (hls) {
+      hls.destroy();
+      hls = null;
+    }
+
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+      });
+
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        updateVideoSize();
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Safari
+      video.src = hlsUrl;
+    }
+  },
+  { immediate: true }
+);
+onBeforeUnmount(() => {
+  if (hls) {
+    hls.destroy();
+    hls = null;
+  }
+});
 </script>
 
 <style scoped>
@@ -715,7 +751,7 @@ const getEllipseSvg = (position) => {
   background-color: #f0f0f0;
 }
 
-.bounding-box-tooltip ::v-deep .v-overlay__content {
+.bounding-box-tooltip ::v-deep(.v-overlay__content) {
   background-color: var(--tooltip-bg);
   border-radius: 2px;
   font-size: 0.7rem;
