@@ -102,7 +102,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
               if (tabStore.analysisTabId !== "calibration") {
                 tabStore.analysisTabId = "calibration";
               }
-              const showMenu = calibrationAssetStore.marker.length === 0;
+              const showMenu = calibrationAssetStore.calibrationAssetObjects.length === 0;
               if (!showMenu) {
                 tour.value.next();
               } else {

@@ -47,7 +47,7 @@ class CalibrationStaticDlt(Task):
         # get point correspondences from database and pass them as plugin parameters
         data_db = CalibrationAssets.objects.get(id=parameters.get("calibration_id"))
 
-        point_correspondences = data_db.marker_data.all()
+        point_correspondences = data_db.object_data.all()
         # logging.error(point_correspondences)
         
         # convert point correspondences
@@ -55,12 +55,12 @@ class CalibrationStaticDlt(Task):
         for point in point_correspondences:
             point_correspondences_dict.append({
                 "dst": {
-                    "x": point.compAreaCoord_x,
-                    "y": point.compAreaCoord_y
+                    "x": point.comp_area_coords_rel[0]["x"],
+                    "y": point.comp_area_coords_rel[0]["y"]
                 },
                 "src": {
-                    "x": point.videoCoord_x,
-                    "y": point.videoCoord_y
+                    "x": point.video_coords_rel[0]["x"],
+                    "y": point.video_coords_rel[0]["y"]
                 }
             })
         if len(point_correspondences_dict) == 0:
