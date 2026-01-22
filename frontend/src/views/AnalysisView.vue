@@ -1,7 +1,7 @@
 <template>
   <v-main class="main" tabindex="0" ref="main">
     <v-container fluid>
-      <ModalMarkerOverlay v-if="calibrationAssetStore.isAnyReferenceMarkerActive" />
+      <ModalObjectOverlay v-if="calibrationAssetStore.isAnyReferenceObjectActive" />
 
       <v-row class="ma-n2">
         <v-col cols="6">
@@ -158,7 +158,7 @@ import TabWindowHeatmap from "@/components/tab-window/TabWindowHeatmap.vue";
 import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
 import TabWindowEvents from "@/components/tab-window/TabWindowEvents.vue";
 import TabWindowRunningDistance from "@/components/tab-window/TabWindowRunningDistance.vue";
-import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
+import ModalObjectOverlay from "@/components/ModalObjectOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
@@ -217,9 +217,9 @@ watch(
     await nextTick();
 
     if (newTabId === "calibration") {
-      calibrationAssetStore.showVideoMarker = true;
+      calibrationAssetStore.showVideoAsset = true;
     } else {
-      calibrationAssetStore.showVideoMarker = false;
+      calibrationAssetStore.showVideoAsset = false;
     }
 
     if (newTabId === "position_data" || newTabId === "heatmap") {
@@ -622,21 +622,21 @@ watch(
 );
 
 watch(
-  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  () => calibrationAssetStore.isAnyReferenceObjectActive,
   (active) => {
     if (active) {
-      calibrationAssetStore.previousShowVideoMarker = calibrationAssetStore.showVideoMarker;
-      calibrationAssetStore.showVideoMarker = true;
+      calibrationAssetStore.previousShowVideoAsset = calibrationAssetStore.showVideoAsset;
+      calibrationAssetStore.showVideoAsset = true;
     } else {
-      calibrationAssetStore.showVideoMarker = calibrationAssetStore.previousShowVideoMarker;
+      calibrationAssetStore.showVideoAsset = calibrationAssetStore.previousShowVideoAsset;
     }
   },
   { immediate: true }
 );
 
 onBeforeUnmount(() => {
-  calibrationAssetStore.marker = [];
-  calibrationAssetStore.videoMarker = [];
+  calibrationAssetStore.calibrationAssetObjects = [];
+  calibrationAssetStore.videoObject = [];
   calibrationAssetStore.calibrationMatrixPersisted = [];
   topViewStore.positionDataTopView = {};
   bboxesStore.bboxDataInterpolated = {};

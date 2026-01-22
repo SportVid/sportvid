@@ -180,7 +180,7 @@ export const useTopViewStore = defineStore(
   },
   {
     persist: {
-      pick: ["positionDataTopView"],
+      pick: ["currentSport", "positionDataTopView"],
       storage: sessionStorage,
     },
   }

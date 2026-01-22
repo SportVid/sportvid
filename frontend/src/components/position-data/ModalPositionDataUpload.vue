@@ -260,7 +260,7 @@ watch(
   text-decoration: underline;
 }
 
-.fps-tooltip ::v-deep .v-overlay__content {
+.fps-tooltip ::v-deep(.v-overlay__content) {
   background-color: rgb(var(--v-theme-primary));
 }
 </style>

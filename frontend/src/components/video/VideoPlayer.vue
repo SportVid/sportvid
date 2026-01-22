@@ -14,15 +14,13 @@
           @ended="onEnded"
           @timeupdate="onTimeUpdate"
           @loadedmetadata="updateVideoSize"
-          :src="playerStore.videoUrl"
           :style="
-            ((border = '1px solid red'),
             isVideoFullscreen
               ? { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }
               : {
                   maxHeight: maxVideoHeight * 100 + 'vh',
                   maxWidth: '100%',
-                })
+                }
           "
         />
 
@@ -34,7 +32,6 @@
           {{ isVideoFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
         </v-icon>
 
-        <!-- Fullscreen Controls -->
         <div v-if="isVideoFullscreen" class="fullscreen-controls" :class="{ visible: hovering }">
           <div class="controls-top">
             <v-icon @click="togglePlaying" class="control-icon">
@@ -57,7 +54,7 @@
           />
         </div>
 
-        <div
+        <!-- <div
           v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
           v-show="bboxesStore.showBoundingBox"
           :key="position"
@@ -73,8 +70,25 @@
             height: position[9] * videoStore.videoSize.height + 'px',
             border: `2px solid ${visualizationStore.getTeamColor(position[1])}`,
           }"
+        >
+        </div> -->
+
+        <div
+          v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
+          v-show="bboxesStore.showBoundingBox"
+          :key="position"
+          :style="getEllipseSvg(position).style"
           @click="openEditBBox(position)"
         >
+          <svg class="player-ellipse">
+            <path
+              :d="getEllipseSvg(position).arc"
+              :stroke="getEllipseSvg(position).color"
+              stroke-width="2"
+              fill="none"
+              stroke-linecap="round"
+            />
+          </svg>
           <v-tooltip
             activator="parent"
             location="top"
@@ -93,16 +107,18 @@
           </v-tooltip>
           <div
             class="bounding-box-player-id"
-            :style="{ color: visualizationStore.getTeamColor(position[1]) }"
+            :style="{
+              color: visualizationStore.getTeamColor(position[1]),
+            }"
           >
             {{ position[0] }}
           </div>
         </div>
 
-        <div
-          v-for="m in calibrationAssetStore.filteredVideoMarker"
-          v-show="calibrationAssetStore.showVideoMarker"
-          :key="m.id"
+        <!-- <div
+          v-for="o in calibrationAssetStore.filteredVideoObject"
+          v-show="calibrationAssetStore.showVideoAsset"
+          :key="o.id"
           :style="{
             position: 'absolute',
             width: '12px',
@@ -111,36 +127,163 @@
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             top: isVideoFullscreen
-              ? videoStore.videoSize.top + m.videoCoordsRel.y * videoStore.videoSize.height + 'px'
-              : m.videoCoordsRel.y * videoStore.videoSize.height + 'px',
+              ? videoStore.videoSize.top + o.videoCoordsRel.y * videoStore.videoSize.height + 'px'
+              : o.videoCoordsRel.y * videoStore.videoSize.height + 'px',
             left: isVideoFullscreen
-              ? videoStore.videoSize.left + m.videoCoordsRel.x * videoStore.videoSize.width + 'px'
-              : m.videoCoordsRel.x * videoStore.videoSize.width + 'px',
+              ? videoStore.videoSize.left + o.videoCoordsRel.x * videoStore.videoSize.width + 'px'
+              : o.videoCoordsRel.x * videoStore.videoSize.width + 'px',
           }"
-          @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
-          @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
-        />
+          @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+          @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+        /> -->
+        <svg
+          :width="videoStore.videoSize.width"
+          :height="videoStore.videoSize.height"
+          style="position: absolute; top: 0; left: 0; pointer-events: none"
+        >
+          <template v-for="o in calibrationAssetStore.filteredVideoObject">
+            <circle
+              v-if="o.videoCoordsRel.length === 1"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :cx="o.videoCoordsRel[0].x * videoStore.videoSize.width"
+              :cy="o.videoCoordsRel[0].y * videoStore.videoSize.height"
+              r="8"
+              fill="red"
+              fill-opacity="0.8"
+              style="pointer-events: all"
+              @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+              @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+            />
 
-        <div
-          v-for="point in calibrationAssetStore.videoMarkerReprojection"
-          v-show="calibrationAssetStore.showVideoMarker"
-          :key="point"
-          :style="{
-            position: 'absolute',
-            width: '5px',
-            height: '5px',
-            backgroundColor: 'blue',
-            borderRadius: '50%',
-            transform: 'translate(-50%, -50%)',
-            pointerEvents: 'none',
-            top: isVideoFullscreen
-              ? videoStore.videoSize.top + point.y * videoStore.videoSize.height + 'px'
-              : point.y * videoStore.videoSize.height + 'px',
-            left: isVideoFullscreen
-              ? videoStore.videoSize.left + point.x * videoStore.videoSize.width + 'px'
-              : point.x * videoStore.videoSize.width + 'px',
-          }"
-        />
+            <line
+              v-if="o.videoCoordsRel.length === 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :x1="o.videoCoordsRel[0].x * videoStore.videoSize.width"
+              :y1="o.videoCoordsRel[0].y * videoStore.videoSize.height"
+              :x2="o.videoCoordsRel[1].x * videoStore.videoSize.width"
+              :y2="o.videoCoordsRel[1].y * videoStore.videoSize.height"
+              stroke-width="8"
+              stroke="red"
+              stroke-opacity="0.8"
+              fill="none"
+              style="pointer-events: all"
+              @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+              @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+            />
+
+            <path
+              v-if="o.videoCoordsRel.length > 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :d="
+                (() => {
+                  const points = o.videoCoordsRel.map((p) => ({
+                    x: p.x * videoStore.videoSize.width,
+                    y: p.y * videoStore.videoSize.height,
+                  }));
+                  let d = `M ${points[0].x} ${points[0].y}`;
+                  for (let i = 1; i < points.length; i++) {
+                    d += ` L ${points[i].x} ${points[i].y}`;
+                  }
+                  return d;
+                })()
+              "
+              stroke="red"
+              stroke-width="8"
+              stroke-opacity="0.8"
+              fill="none"
+              style="pointer-events: all"
+              @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+              @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+            />
+          </template>
+        </svg>
+
+        <svg
+          :width="videoStore.videoSize.width"
+          :height="videoStore.videoSize.height"
+          style="position: absolute; top: 0; left: 0; pointer-events: none"
+        >
+          <template v-for="o in calibrationAssetStore.videoObjectReprojection">
+            <circle
+              v-if="o.length === 1"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :cx="
+                (isVideoFullscreen ? videoStore.videoSize.left : 0) +
+                o[0].x * videoStore.videoSize.width +
+                'px'
+              "
+              :cy="
+                (isVideoFullscreen ? videoStore.videoSize.top : 0) +
+                o[0].y * videoStore.videoSize.height +
+                'px'
+              "
+              r="3"
+              fill="blue"
+              style="pointer-events: none"
+            />
+
+            <line
+              v-if="o.length === 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :x1="
+                (isVideoFullscreen ? videoStore.videoSize.left : 0) +
+                o[0].x * videoStore.videoSize.width +
+                'px'
+              "
+              :y1="
+                (isVideoFullscreen ? videoStore.videoSize.top : 0) +
+                o[0].y * videoStore.videoSize.height +
+                'px'
+              "
+              :x2="
+                (isVideoFullscreen ? videoStore.videoSize.left : 0) +
+                o[1].x * videoStore.videoSize.width +
+                'px'
+              "
+              :y2="
+                (isVideoFullscreen ? videoStore.videoSize.top : 0) +
+                o[1].y * videoStore.videoSize.height +
+                'px'
+              "
+              stroke-width="3"
+              stroke="blue"
+              fill="none"
+              style="pointer-events: none"
+            />
+
+            <path
+              v-if="o.length > 2"
+              v-show="calibrationAssetStore.showVideoAsset"
+              :key="o.id"
+              :d="
+                (() => {
+                  const points = o.map((p) => ({
+                    x:
+                      (isVideoFullscreen ? videoStore.videoSize.left : 0) +
+                      p.x * videoStore.videoSize.width,
+                    y:
+                      (isVideoFullscreen ? videoStore.videoSize.top : 0) +
+                      p.y * videoStore.videoSize.height,
+                  }));
+                  let d = `M ${points[0].x} ${points[0].y}`;
+                  for (let i = 1; i < points.length; i++) {
+                    d += ` L ${points[i].x} ${points[i].y}`;
+                  }
+                  return d;
+                })()
+              "
+              stroke="blue"
+              stroke-width="3"
+              fill="none"
+              style="pointer-events: none"
+            />
+          </template>
+        </svg>
       </div>
     </v-row>
 
@@ -230,6 +373,7 @@ import { useVisualizationStore } from "@/stores/visualization";
 import { getTimecode } from "@/plugins/time";
 import ModalBBoxUpdate from "./ModalBboxUpdate.vue";
 import { toRgb } from "@/plugins/helpers";
+import Hls from "hls.js";
 
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
@@ -394,7 +538,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", updateVideoSize);
 });
 watch(
-  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  () => calibrationAssetStore.isAnyReferenceObjectActive,
   async (newVal) => {
     if (!newVal) {
       await nextTick();
@@ -468,6 +612,125 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
 });
+
+const getEllipseSvg = (position) => {
+  const x = position[6];
+  const y = position[7];
+  const w = position[8];
+  const h = position[9];
+
+  const vid = videoStore.videoSize;
+
+  const color = visualizationStore.getTeamColor(position[1]);
+
+  // via SoccerNet
+  const ellipseWidth = w * vid.width;
+  const ellipseHeight = ellipseWidth * 0.35;
+
+  const centerX = (x + w / 2) * vid.width + (isVideoFullscreen.value ? vid.left : 0);
+  const centerY =
+    (y + h) * vid.height +
+    (isVideoFullscreen.value ? vid.top : 0) -
+    ellipseHeight * (0.1 + (1 - (y + h)) * 1.5);
+
+  const left = centerX - ellipseWidth;
+  const top = centerY - ellipseHeight;
+
+  const rx = ellipseWidth;
+  const ry = ellipseHeight;
+
+  const startAngle = (-45 * Math.PI) / 180;
+  const endAngle = (235 * Math.PI) / 180;
+
+  const sx = rx + rx * Math.cos(startAngle);
+  const sy = ry + ry * Math.sin(startAngle);
+
+  const ex = rx + rx * Math.cos(endAngle);
+  const ey = ry + ry * Math.sin(endAngle);
+
+  const arcPath = `M ${sx},${sy} A ${rx} ${ry} 0 1 1 ${ex},${ey}`;
+
+  return {
+    style: {
+      position: "absolute",
+      left: left + "px",
+      top: top + "px",
+      width: ellipseWidth * 2 + "px",
+      height: ellipseHeight * 2 + "px",
+      overflow: "visible",
+      zIndex: 12,
+      cursor: isVideoFullscreen.value ? "default" : "pointer",
+    },
+    arc: arcPath,
+    color,
+    centerX,
+    centerY,
+  };
+};
+
+function tarGzUrlToHlsUrl(tarUrl) {
+  // if (!tarUrl.endsWith(".tar.gz")) {
+  //   console.warn("URL ist keine .tar.gz:", tarUrl);
+  //   return tarUrl;
+  // }
+
+  const url = new URL(tarUrl);
+
+  // Dateiname extrahieren
+  const parts = url.pathname.split("/");
+  const fileName = parts.pop(); // <hash>.tar.gz
+  const id = fileName.replace(/\.tar\.gz$/, "");
+
+  // Neuer Pfad
+  parts.push(id, `${id}.m3u8`);
+  url.pathname = parts.join("/");
+
+  return url.toString();
+}
+// !!! Wichtig: :src="playerStore.videoUrl" aus <video> entfernen !!!
+let hls = null;
+watch(
+  () => playerStore.videoUrl,
+  (url) => {
+    if (!url || !videoElement.value) return;
+
+    const video = videoElement.value;
+    const hlsUrl = tarGzUrlToHlsUrl(url);
+    console.log("hls url", hlsUrl);
+
+    if (!hlsUrl) return;
+
+    // Cleanup bei Video-Wechsel
+    if (hls) {
+      hls.destroy();
+      hls = null;
+    }
+
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+      });
+
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        updateVideoSize();
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Safari
+      video.src = hlsUrl;
+    }
+  },
+  { immediate: true }
+);
+onBeforeUnmount(() => {
+  if (hls) {
+    hls.destroy();
+    hls = null;
+  }
+});
 </script>
 
 <style scoped>
@@ -488,7 +751,7 @@ onBeforeUnmount(() => {
   background-color: #f0f0f0;
 }
 
-.bounding-box-tooltip ::v-deep .v-overlay__content {
+.bounding-box-tooltip ::v-deep(.v-overlay__content) {
   background-color: var(--tooltip-bg);
   border-radius: 2px;
   font-size: 0.7rem;
@@ -510,10 +773,19 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
-.bounding-box-player-id {
+.bounding-box-player-id-old {
   position: absolute;
   left: 50%;
   bottom: -20px;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+.bounding-box-player-id {
+  position: absolute;
+  left: 50%;
+  bottom: -25px;
   transform: translateX(-50%);
   font-size: 0.8rem;
   pointer-events: none;
@@ -576,5 +848,10 @@ onBeforeUnmount(() => {
   color: white;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+.player-ellipse {
+  width: 100%;
+  height: 100%;
 }
 </style>

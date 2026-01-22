@@ -706,6 +706,7 @@ class CalibrationAssets(models.Model):
     # store 3x3 matrix as JSON array of arrays, default to identity matrix
     homography_matrix = models.JSONField(default=default_homography_matrix)
     template = models.CharField(max_length=1024, null=True) # TODO: enum
+    object_type = models.CharField(max_length=1024, null=True)
 
     def to_dict(self, include_refs_hashes=True, include_refs=True, **kwargs):
         result = {
@@ -713,9 +714,10 @@ class CalibrationAssets(models.Model):
             "name": self.name,
             "homography_matrix": self.homography_matrix,
             "template": self.template,
+            "object_type": self.object_type
         }
         if include_refs:
-            result["marker_data"] = [x.to_dict() for x in self.marker_data.all()]
+            result["object_data"] = [x.to_dict() for x in self.object_data.all()]
         return result
 
 
@@ -724,17 +726,19 @@ class PointCorrespondence(models.Model):
     calibration_asset = models.ForeignKey(
         CalibrationAssets, 
         on_delete=models.CASCADE,
-        related_name='marker_data'
+        related_name='object_data'
     )
     name = models.CharField(max_length=1024)
     set = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
-    compAreaCoord_x = models.FloatField()
-    compAreaCoord_y = models.FloatField()
-    compAreaCoord_z = models.FloatField(default=0.0)
-    videoCoord_x = models.FloatField()
-    videoCoord_y = models.FloatField()
-    videoCoord_z = models.FloatField(default=0.0)
+    comp_area_coords_rel = models.JSONField(default=list)
+    video_coords_rel = models.JSONField(default=list)
+    # compAreaCoord_x = models.FloatField()
+    # compAreaCoord_y = models.FloatField()
+    # compAreaCoord_z = models.FloatField(default=0.0)
+    # videoCoord_x = models.FloatField()
+    # videoCoord_y = models.FloatField()
+    # videoCoord_z = models.FloatField(default=0.0)
 
     def to_dict(self):
         return {
@@ -742,14 +746,16 @@ class PointCorrespondence(models.Model):
             "name": self.name,
             "set": self.set,
             "active": self.active,
-            "compAreaCoordsRel": {
-                "x": self.compAreaCoord_x,
-                "y": self.compAreaCoord_y,
-                "z": self.compAreaCoord_z
-            },
-            "videoCoordsRel": {
-                "x": self.videoCoord_x,
-                "y": self.videoCoord_y,
-                "z": self.videoCoord_z
-            }
+            "compAreaCoordsRel": self.comp_area_coords_rel,
+            "videoCoordsRel": self.video_coords_rel
+            # "compAreaCoordsRel": {
+            #     "x": self.compAreaCoord_x,
+            #     "y": self.compAreaCoord_y,
+            #     "z": self.compAreaCoord_z
+            # },
+            # "videoCoordsRel": {
+            #     "x": self.videoCoord_x,
+            #     "y": self.videoCoord_y,
+            #     "z": self.videoCoord_z
+            # }
         }
