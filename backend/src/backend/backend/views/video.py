@@ -1,8 +1,9 @@
+import os
 import imageio
 import json
 import uuid
 import logging
-import logging
+import tarfile
 
 from pathlib import Path
 from urllib.parse import urlparse
@@ -16,8 +17,12 @@ from backend.utils import (
     download_file,
     media_url_to_file,
     media_dir_to_file,
+    media_path_to_file
 )
 from backend.models import Video
+
+from utils.video_converter import convert_to_hls
+from utils.helper import remove_file, remove_dir
 
 
 logger = logging.getLogger(__name__)
@@ -54,7 +59,6 @@ class VideoUpload(View):
 
             if "file" in request.FILES:
                 output_dir = media_dir_to_file(video_id)
-
                 download_result = download_file(
                     output_dir=output_dir,
                     output_name=video_id,
@@ -69,11 +73,51 @@ class VideoUpload(View):
 
                 path = Path(request.FILES["file"].name)
                 ext = "".join(path.suffixes)
+                
+                file_path = media_path_to_file(video_id, ext)
+                file_in = file_path
 
+                # ------------> convert to HLS
+                # TODO: only convert if not done already
+                file_out = f'{output_dir}{video_id}/{video_id}.m3u8'
+                os.makedirs(f'{output_dir}{video_id}', exist_ok=True)
+                logger.error(f'{ext}')
+                logger.error(f'{file_in}')
+                logger.error(f'{file_out}')
+                
+                convert_to_hls(file_in, ext.split(sep='.')[-1], file_out)
+                
+                # ------------> archive here
+                ext = '.tar.gz'
+                archive_path = Path(f'{output_dir}{video_id}{ext}')
+                hls_dir = Path(f'{output_dir}{video_id}/')
+
+                logger.error(f'{hls_dir}')
+                logger.error(f'{archive_path}')
+                # TODO: Adjust logic to keep HLS as a dir.
+                # Requires adaptaion to inference server transfer & DB schema.
+                def create_tar_archive(archive_path, hls_dir):
+                    with tarfile.open(archive_path, 'w:gz') as tar:
+                        tar.add(hls_dir,
+                                arcname=".", #arcname=hls_dir.name,
+                                recursive=True)
+                    return archive_path.absolute()
+                
+                archive_path = create_tar_archive(archive_path, hls_dir)
+                logger.error(archive_path)
+                
+                # ------------> get meta data 
                 reader = imageio.get_reader(download_result["path"])
                 fps = reader.get_meta_data()["fps"]
                 duration = reader.get_meta_data()["duration"]*1000.
                 size = reader.get_meta_data()["size"]
+                
+                # ------------> remove temporary data
+                if remove_file(file_path):
+                    logger.debug(f'{file_path} removed successfully!')
+                
+                # if remove_dir(hls_dir):
+                #    logger.debug(f'{hls_dir} removed successfully!')
 
                 field_length = parse_number(request.POST.get("fieldLength"))
                 if not field_length: field_length = 105.

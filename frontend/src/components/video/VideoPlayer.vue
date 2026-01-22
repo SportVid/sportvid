@@ -16,13 +16,12 @@
           @loadedmetadata="updateVideoSize"
           :src="playerStore.videoUrl"
           :style="
-            ((border = '1px solid red'),
             isVideoFullscreen
               ? { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }
               : {
                   maxHeight: maxVideoHeight * 100 + 'vh',
                   maxWidth: '100%',
-                })
+                }
           "
         />
 
@@ -375,6 +374,7 @@ import { useVisualizationStore } from "@/stores/visualization";
 import { getTimecode } from "@/plugins/time";
 import ModalBBoxUpdate from "./ModalBboxUpdate.vue";
 import { toRgb } from "@/plugins/helpers";
+import Hls from "hls.js";
 
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
@@ -668,6 +668,33 @@ const getEllipseSvg = (position) => {
     centerY,
   };
 };
+
+// !!! Wichtig: :src="playerStore.videoUrl" aus <video> entfernen !!!
+// let hls = null;
+// onMounted(() => {
+//   if (!videoElement.value) return;
+
+//   const video = videoElement.value;
+//   const src = playerStore.videoUrl; // MUSS .m3u8 sein
+
+//   if (Hls.isSupported()) {
+//     hls = new Hls({
+//       maxBufferLength: 30,
+//       maxMaxBufferLength: 60,
+//     });
+//     hls.loadSource(src);
+//     hls.attachMedia(video);
+//   } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+//     // Safari / iOS
+//     video.src = src;
+//   }
+// });
+// onBeforeUnmount(() => {
+//   if (hls) {
+//     hls.destroy();
+//     hls = null;
+//   }
+// });
 </script>
 
 <style scoped>
