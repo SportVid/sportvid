@@ -1043,7 +1043,7 @@ watch([() => calibrationAssetStore.timeChangeConflict], ([warning]) => {
   opacity: 1;
 }
 
-.time-conflict-tooltip ::v-deep .v-overlay__content {
+.time-conflict-tooltip ::v-deep(.v-overlay__content) {
   background-color: rgb(var(--v-theme-accent));
 }
 
