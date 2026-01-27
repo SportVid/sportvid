@@ -39,7 +39,8 @@ class UserGet(View):
                         "username": user.get_username(),
                         "email": user.email,
                         "date": user.date_joined,
-                        "allowance": user.allowance,
+                        "video_allowance": user.video_allowance,
+                        "file_allowance": user.file_allowance,
                         "max_video_size": user.max_video_size,
                         "max_file_size": user.max_file_size
                     },
@@ -87,7 +88,8 @@ def login(request):
                     "username": user.get_username(),
                     "email": user.email,
                     "date": user.date_joined,
-                    "allowance": user.allowance,
+                    "video_allowance": user.video_allowance,
+                    "file_allowance": user.file_allowance,
                     "max_video_size": user.max_video_size,
                     "max_file_size": user.max_file_size
                 },

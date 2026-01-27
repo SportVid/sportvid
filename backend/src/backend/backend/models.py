@@ -40,16 +40,18 @@ def receiver_with_multiple_senders(signal, senders, **kwargs):
 
 
 class TibavaUser(AbstractUser):
-    allowance = models.IntegerField(default=40) # 10
+    video_allowance = models.IntegerField(default=40) # 10
+    file_allowance = models.IntegerField(default=40) # 10
     max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # 5GB, 500MB: 500*1024*1024
-    max_file_size = models.BigIntegerField(default=10 * 1024 * 1024 * 1024)  # 1GB
+    max_file_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # 5GB
     objects = TibavaUserManager()
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {
             "id": self.id,
             "username": self.username,
-            "allowance": self.allowance,
+            "video_allowance": self.video_allowance,
+            "file_allowance": self.file_allowance,
             "max_video_size": self.max_video_size,
             "max_file_size": self.max_file_size
         }

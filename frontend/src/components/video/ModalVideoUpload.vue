@@ -19,7 +19,7 @@
                 {{
                   $t("modal.video.upload.videos_uploaded", {
                     numVideos: numVideos,
-                    allowance: allowance,
+                    videoAllowance: videoAllowance,
                   })
                 }}
               </span>
@@ -188,6 +188,10 @@ import { useVideoUploadStore } from "@/stores/video_upload";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
 
+const videoUploadStore = useVideoUploadStore();
+const userStore = useUserStore();
+const videoStore = useVideoStore();
+
 const props = defineProps({
   modelValue: {
     type: Boolean,
@@ -197,10 +201,6 @@ const props = defineProps({
 const emit = defineEmits();
 
 const { t } = useI18n();
-
-const videoUploadStore = useVideoUploadStore();
-const userStore = useUserStore();
-const videoStore = useVideoStore();
 
 const video = ref({
   title: null,
@@ -227,9 +227,6 @@ watch(
   },
   { immediate: true }
 );
-
-const checkbox = ref(false);
-const fileValid = ref(false);
 
 const dialog = ref(props.modelValue);
 watch(
@@ -267,7 +264,7 @@ const ageGroups = ref([
   "U17 Juniorinnen",
 ]);
 
-const canUpload = computed(() => userStore.allowance > videoStore.all.length);
+const canUpload = computed(() => userStore.videoAllowance > videoStore.all.length);
 const disabled = computed(() => {
   const v = video.value;
   return (
@@ -284,22 +281,21 @@ const disabled = computed(() => {
 });
 const isUploading = computed(() => videoUploadStore.isUploading);
 const uploadingProgress = computed(() => videoUploadStore.progress);
-const allowance = computed(() => userStore.allowance);
-const numVideos = computed(() => videoStore.all.length);
 
+const checkbox = ref(false);
+const fileValid = ref(false);
+const videoAllowance = computed(() => userStore.videoAllowance);
+const numVideos = computed(() => videoStore.all.length);
 const maxSizeInWords = computed(() => {
-  let size = userStore.maxVideoSize;
+  let maxSize = userStore.maxVideoSize;
   let extensionId = 0;
   const extensions = [" B", " kB", " MB", " GB"];
-  while (size > 1024) {
-    size = (size / 1024).toFixed(2);
+  while (maxSize > 1024) {
+    maxSize = (maxSize / 1024).toFixed(2);
     extensionId++;
   }
-  return size + extensions[extensionId];
+  return maxSize + extensions[extensionId];
 });
-
-const maxSize = computed(() => userStore.maxVideoSize);
-
 const validateFile = (file) => {
   if (Array.isArray(file)) {
     file = file[0];
@@ -309,7 +305,7 @@ const validateFile = (file) => {
     fileValid.value = false;
     return t("modal.video.upload.validate.file_required", { maxSize: maxSizeInWords.value });
   }
-  if (file.size > maxSize.value) {
+  if (file.size > userStore.maxVideoSize) {
     fileValid.value = false;
     return t("modal.video.upload.validate.file_exceeds", { maxSize: maxSizeInWords.value });
   }

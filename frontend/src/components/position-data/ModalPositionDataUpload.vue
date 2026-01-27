@@ -12,7 +12,18 @@
       </v-toolbar>
 
       <v-card-text class="pt-4" style="overflow-y: auto">
-        <v-form>
+        <v-form v-if="canUpload">
+          <div class="text-center">
+            <span class="span-border">
+              {{
+                $t("modal.position_data.upload.files_uploaded", {
+                  numFiles: numFiles,
+                  fileAllowance: fileAllowance,
+                })
+              }}
+            </span>
+          </div>
+
           <v-text-field
             v-model="positionData.title"
             :counter="120"
@@ -42,7 +53,9 @@
             :label="$t('modal.position_data.upload.file')"
             prepend-icon="mdi-file-upload"
             class="mt-2"
+            density="comfortable"
             show-size
+            :hint="$t('modal.position_data.upload.hint', { maxSize: maxSizeInWords })"
             persistent-hint
           />
 
@@ -53,7 +66,9 @@
             :label="$t('modal.position_data.upload.meta_data')"
             prepend-icon="mdi-file-upload"
             class="mt-5"
+            density="comfortable"
             show-size
+            :hint="$t('modal.position_data.upload.hint', { maxSize: maxSizeInWords })"
             persistent-hint
           />
 
@@ -137,6 +152,12 @@
             {{ $t("button.upload") }}
           </v-btn>
         </v-form>
+
+        <div v-else class="text-center my-4">
+          <span class="text-error">
+            {{ $t("modal.position_data.upload.upload_denied") }}
+          </span>
+        </div>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -146,8 +167,13 @@
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePositionDataStore } from "@/stores/position_data";
+import { useUserStore } from "@/stores/user";
+import { useFileStore } from "@/stores/files";
 
 const positionDataStore = usePositionDataStore();
+const userStore = useUserStore();
+const fileStore = useFileStore();
+
 const { t } = useI18n();
 
 const props = defineProps({
@@ -182,6 +208,16 @@ const origins = [
 
 const checkbox = ref(false);
 const fileValid = ref(false);
+const maxSizeInWords = computed(() => {
+  let maxSize = userStore.maxFileSize;
+  let extensionId = 0;
+  const extensions = [" B", " kB", " MB", " GB"];
+  while (maxSize > 1024) {
+    maxSize = (maxSize / 1024).toFixed(2);
+    extensionId++;
+  }
+  return maxSize + extensions[extensionId];
+});
 const validateFile = (file) => {
   if (Array.isArray(file)) {
     file = file[0];
@@ -189,7 +225,13 @@ const validateFile = (file) => {
 
   if (!file || !file.name) {
     fileValid.value = false;
-    return t("modal.position_data.upload.validate.file_required");
+    return t("modal.position_data.upload.validate.file_required", {
+      maxSize: maxSizeInWords.value,
+    });
+  }
+  if (file.size > userStore.maxFileSize) {
+    fileValid.value = false;
+    return t("modal.position_data.upload.validate.file_exceeds", { maxSize: maxSizeInWords.value });
   }
   if (!(file.name.endsWith(".csv") || file.name.endsWith(".xml"))) {
     fileValid.value = false;
@@ -200,9 +242,13 @@ const validateFile = (file) => {
   return true;
 };
 
+const fileAllowance = computed(() => userStore.fileAllowance);
+const numFiles = computed(() => fileStore.all.length);
+
 const isUploading = computed(() => positionDataStore.isUploading);
 const uploadingProgress = computed(() => positionDataStore.progress);
 
+const canUpload = computed(() => userStore.fileAllowance > fileStore.all.length);
 const disabled = computed(() => {
   if (
     !checkbox.value ||
@@ -218,8 +264,7 @@ const disabled = computed(() => {
   }
   if (
     positionData.value.format === "kinexon" &&
-    !positionData.value.delimiter &&
-    !positionData.value.origin
+    (!positionData.value.delimiter || !positionData.value.origin || !positionData.value.fps)
   ) {
     return true;
   }
@@ -248,6 +293,13 @@ watch(
     }
   }
 );
+watch(
+  () => positionData.value,
+  (value) => {
+    console.log("FPS set to:", value);
+  },
+  { immediate: true, deep: true }
+);
 </script>
 
 <style scoped>
@@ -262,5 +314,12 @@ watch(
 
 .fps-tooltip ::v-deep(.v-overlay__content) {
   background-color: rgb(var(--v-theme-primary));
+}
+
+.span-border {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
 }
 </style>

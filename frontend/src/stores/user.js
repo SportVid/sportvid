@@ -3,21 +3,6 @@ import { defineStore } from "pinia";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === name + "=") {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
-
 export const useUserStore = defineStore(
   "user",
   () => {
@@ -26,10 +11,26 @@ export const useUserStore = defineStore(
     const date = ref(null);
     const email = ref(null);
     const isLoading = ref(false);
-    const allowance = ref(null);
+    const videoAllowance = ref(null);
+    const fileAllowance = ref(null);
     const maxVideoSize = ref(null);
+    const maxFileSize = ref(null);
     const csrfToken = ref(null);
 
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === name + "=") {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
     async function getCSRFToken() {
       if (isLoading.value) return;
 
@@ -61,15 +62,19 @@ export const useUserStore = defineStore(
           username.value = res.data.data.username || null;
           email.value = res.data.data.email || null;
           date.value = res.data.data.date || null;
-          allowance.value = res.data.data.allowance || 0;
+          videoAllowance.value = res.data.data.video_allowance || 0;
+          fileAllowance.value = res.data.data.file_allowance || 0;
           maxVideoSize.value = res.data.data.max_video_size || 0;
+          maxFileSize.value = res.data.data.max_file_size || 0;
           loggedIn.value = true;
         } else {
           username.value = null;
           email.value = null;
           loggedIn.value = false;
-          allowance.value = 0;
+          videoAllowance.value = 0;
+          fileAllowance.value = 0;
           maxVideoSize.value = 0;
+          maxFileSize.value = 0;
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -89,8 +94,10 @@ export const useUserStore = defineStore(
           username.value = res.data.data.username || null;
           email.value = res.data.data.email || null;
           date.value = res.data.data.date || null;
-          allowance.value = res.data.data.allowance || 0;
+          videoAllowance.value = res.data.data.video_allowance || 0;
+          fileAllowance.value = res.data.data.file_allowance || 0;
           maxVideoSize.value = res.data.data.max_video_size || 0;
+          maxFileSize.value = res.data.data.max_file_size || 0;
           loggedIn.value = true;
           return res.data;
         }
@@ -112,8 +119,10 @@ export const useUserStore = defineStore(
           username.value = null;
           email.value = null;
           date.value = null;
-          allowance.value = 0;
+          videoAllowance.value = 0;
+          fileAllowance.value = 0;
           maxVideoSize.value = 0;
+          maxFileSize.value = 0;
           loggedIn.value = false;
           return true;
         }
@@ -144,8 +153,10 @@ export const useUserStore = defineStore(
       date,
       email,
       isLoading,
-      allowance,
+      videoAllowance,
+      fileAllowance,
       maxVideoSize,
+      maxFileSize,
       csrfToken,
       getCSRFToken,
       getUserData,
