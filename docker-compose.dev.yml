@@ -88,7 +88,7 @@ services:
     image: valkey/valkey:8.1.1-alpine
     command: /usr/local/bin/valkey-server --port ${VALKEY_PORT} --bind 0.0.0.0
     ports:
-      - ${VALKEY_PORT}:6379  # remap valkey port to the one specified by cfg
+      - ${VALKEY_PORT}:6379 # remap valkey port to the one specified by cfg
     networks:
       - dev
 
@@ -144,7 +144,7 @@ services:
     environment:
       - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
     env_file:
-     - /opt/deploy/.env.dev
+      - /opt/deploy/.env.dev
     volumes:
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
@@ -173,6 +173,8 @@ services:
       - "--capture-output"
       - "--log-level"
       - "${LOG_LEVEL}"
+      - "--timeout"
+      - "300"
       - "--workers=${GUNICORN_WORKERS}"
     depends_on:
       # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
