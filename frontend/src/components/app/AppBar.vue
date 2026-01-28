@@ -15,7 +15,7 @@
         </span>
       </v-btn>
 
-      <v-btn v-if="(analysisView || termsOfServiceView || guidelinesView) && loggedIn" to="/">
+      <v-btn v-if="!videoView && loggedIn" to="/">
         <app-bar-icon>mdi-movie</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.video_view") }}</span>
       </v-btn>
