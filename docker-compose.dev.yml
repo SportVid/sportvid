@@ -171,8 +171,11 @@ services:
       - "SCRIPT_NAME=/api"
       - "sportvid.wsgi"
       - "--capture-output"
+      - "--print-config"
       - "--log-level"
       - "${LOG_LEVEL}"
+      - "--timeout"
+      - "300"
       - "--workers=${GUNICORN_WORKERS}"
     depends_on:
       # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
