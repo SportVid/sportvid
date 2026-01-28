@@ -243,7 +243,7 @@ const showModalTutorial = ref(false);
 </script>
 
 <style scoped>
-.tutorial-icon-tooltip ::v-deep .v-overlay__content {
+.tutorial-icon-tooltip ::v-deep(.v-overlay__content) {
   background: rgb(var(--v-theme-primary));
   border-radius: 2px;
   font-size: 0.7rem;

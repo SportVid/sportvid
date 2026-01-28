@@ -1,3 +1,5 @@
+import logging
+
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 
 from utils import VideoDecoder
@@ -42,21 +44,41 @@ class ThumbnailGenerator(
         callbacks: Callable = None,
     ) -> Dict[str, Data]:
         with inputs["video"] as input_data, data_manager.create_data("ImagesData") as output_data:
-            with input_data.open_video() as f_video:
+            f_video = input_data.open_video()
+            try:
                 video_decoder = VideoDecoder(
-                    path=f_video,
+                    video_object=f_video,
                     fps=parameters.get("fps"),
                     max_dimension=parameters.get("max_dimension"),
                     extension=f".{input_data.ext}",
                 )
-
                 num_frames = (video_decoder.duration() / 1000.) * video_decoder.fps()
                 for i, frame in enumerate(video_decoder):
                     self.update_callbacks(callbacks, progress=i / num_frames)
-
                     output_data.save_image(
                         frame.get("frame"), ext="jpg", time=frame.get("time"), delta_time=1000 / parameters.get("fps")
                     )
-
                 self.update_callbacks(callbacks, progress=1.0)
-                return {"images": output_data}
+            finally:
+                if hasattr(f_video, 'close'):
+                    f_video.close()
+
+            # with input_data.open_video() as f_video:
+            #     video_decoder = VideoDecoder(
+            #         video_object=f_video,
+            #         fps=parameters.get("fps"),
+            #         max_dimension=parameters.get("max_dimension"),
+            #         extension=f".{input_data.ext}",
+            #     )
+
+            #     num_frames = (video_decoder.duration() / 1000.) * video_decoder.fps()
+            #     for i, frame in enumerate(video_decoder):
+            #         self.update_callbacks(callbacks, progress=i / num_frames)
+
+            #         output_data.save_image(
+            #             frame.get("frame"), ext="jpg", time=frame.get("time"), delta_time=1000 / parameters.get("fps")
+            #         )
+
+            #     self.update_callbacks(callbacks, progress=1.0)
+            
+            return {"images": output_data}
