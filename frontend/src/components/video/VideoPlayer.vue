@@ -669,11 +669,6 @@ const getEllipseSvg = (position) => {
 };
 
 function tarGzUrlToHlsUrl(tarUrl) {
-  // if (!tarUrl.endsWith(".tar.gz")) {
-  //   console.warn("URL ist keine .tar.gz:", tarUrl);
-  //   return tarUrl;
-  // }
-
   const url = new URL(tarUrl);
 
   // Dateiname extrahieren
@@ -687,7 +682,6 @@ function tarGzUrlToHlsUrl(tarUrl) {
 
   return url.toString();
 }
-// !!! Wichtig: :src="playerStore.videoUrl" aus <video> entfernen !!!
 let hls = null;
 watch(
   () => playerStore.videoUrl,
@@ -700,16 +694,13 @@ watch(
 
     if (!hlsUrl) return;
 
-    // Cleanup bei Video-Wechsel
-    if (hls) {
-      hls.destroy();
-      hls = null;
-    }
-
     if (Hls.isSupported()) {
       hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
+        backBufferLength: 30,
+        maxBufferLength: 5,
+        maxMaxBufferLength: 60,
       });
 
       hls.loadSource(hlsUrl);
