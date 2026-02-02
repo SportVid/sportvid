@@ -68,6 +68,20 @@ class Video(models.Model):
     name = models.CharField(max_length=256)
     file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
     ext = models.CharField(max_length=256)
+    # status field for processing/done/error
+    STATUS_PROCESSING = "P"
+    STATUS_DONE = "D"
+    STATUS_ERROR = "E"
+    STATUS = {
+        STATUS_PROCESSING: "PROCESSING",
+        STATUS_DONE: "DONE",
+        STATUS_ERROR: "ERROR",
+    }
+    status = models.CharField(
+        max_length=2,
+        choices=[(k, v) for k, v in STATUS.items()],
+        default=STATUS_DONE,
+    )
     date = models.DateTimeField(auto_now_add=True)
     # some extracted meta information
     fps = models.FloatField(blank=True, null=True)
@@ -101,6 +115,8 @@ class Video(models.Model):
             "current_position": self.current_position,
             "total_number_of_teams": self.total_number_of_teams,
             "age_group": self.age_group,
+            "status": self.status,
+            "processing": True if self.status == self.STATUS_PROCESSING else False,
         }
 
     def clone(self, owner=None, include_timelines=True, include_annotations=True):
