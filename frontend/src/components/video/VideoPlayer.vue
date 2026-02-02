@@ -294,7 +294,7 @@
         <v-icon>mdi-skip-backward</v-icon>
       </v-btn>
 
-      <v-btn @click="deltaSeek(-(1 / playerStore.videoFPS))" size="small">
+      <v-btn @click="stepBackwardFrame" size="small">
         <v-icon>mdi-skip-previous</v-icon>
       </v-btn>
 
@@ -304,7 +304,7 @@
         <v-icon v-else>mdi-play</v-icon>
       </v-btn>
 
-      <v-btn @click="deltaSeek(1 / playerStore.videoFPS)" size="small">
+      <v-btn @click="stepForwardFrame" size="small">
         <v-icon> mdi-skip-next</v-icon>
       </v-btn>
 
@@ -387,18 +387,15 @@ onMounted(() => {
   if (videoElement.value) playerStore.videoElement = videoElement.value;
 });
 
+const lastReportedFrame = ref(null);
 const onTimeUpdate = (event) => {
   const videoTimeMs = Math.round(event.target.currentTime * 1000);
-  const frameKeys = [];
-  for (let t = 0; t <= playerStore.videoDuration * 1000; t += 1000 / playerStore.videoFPS) {
-    frameKeys.push(Math.round(t));
+  const frameMs = Math.round(1000 / (playerStore.videoFPS || 30));
+  const closestFrame = Math.round(videoTimeMs / frameMs) * frameMs;
+  if (lastReportedFrame.value !== closestFrame) {
+    lastReportedFrame.value = closestFrame;
+    playerStore.setCurrentTime(closestFrame);
   }
-  const closestFrame = frameKeys.reduce(
-    (prev, curr) => (Math.abs(curr - videoTimeMs) < Math.abs(prev - videoTimeMs) ? curr : prev),
-    frameKeys[0]
-  );
-
-  playerStore.setCurrentTime(closestFrame);
 };
 const deltaSeek = (delta) => {
   if (videoElement.value) {
@@ -407,6 +404,31 @@ const deltaSeek = (delta) => {
     videoElement.value.currentTime = newTime;
   }
 };
+
+function goToFrameMs(frameMs) {
+  if (!videoElement.value) return;
+  const timeSec = frameMs / 1000;
+  videoElement.value.currentTime = timeSec;
+  lastReportedFrame.value = frameMs;
+  playerStore.setCurrentTime(frameMs);
+}
+
+function goToFrameIndex(frameIndex) {
+  const frameMs = Math.round((frameIndex * 1000) / (playerStore.videoFPS || 30));
+  goToFrameMs(frameMs);
+}
+
+function stepForwardFrame() {
+  const frameMsLen = Math.round(1000 / (playerStore.videoFPS || 30));
+  const current = Math.round(playerStore.currentTime / frameMsLen) * frameMsLen;
+  goToFrameMs(current + frameMsLen);
+}
+
+function stepBackwardFrame() {
+  const frameMsLen = Math.round(1000 / (playerStore.videoFPS || 30));
+  const current = Math.round(playerStore.currentTime / frameMsLen) * frameMsLen;
+  goToFrameMs(Math.max(0, current - frameMsLen));
+}
 
 const targetTime = computed(() => playerStore.targetTime);
 const onProgressChange = (time) => {
@@ -424,16 +446,22 @@ watch(targetTime, (newTargetTime) => {
 });
 
 let updateTimer = null;
+const MIN_INTERVAL_MS = 16;
 const startUpdatingTime = () => {
   if (updateTimer) clearInterval(updateTimer);
 
-  const interval = 1 / (playerStore.videoFPS * 1000);
+  const frameMs = Math.max(Math.round(1000 / (playerStore.videoFPS || 30)), MIN_INTERVAL_MS);
 
   updateTimer = setInterval(() => {
     if (videoElement.value) {
-      playerStore.setCurrentTime(Math.round(videoElement.value.currentTime * 1000));
+      const videoTimeMs = Math.round(videoElement.value.currentTime * 1000);
+      const roundedFrame = Math.round(videoTimeMs / frameMs) * frameMs;
+      if (lastReportedFrame.value !== roundedFrame) {
+        lastReportedFrame.value = roundedFrame;
+        playerStore.setCurrentTime(roundedFrame);
+      }
     }
-  }, interval);
+  }, frameMs);
 };
 const stopUpdatingTime = () => {
   if (updateTimer) {
@@ -668,6 +696,28 @@ const getEllipseSvg = (position) => {
   };
 };
 
+// function tarGzUrlToMp4Url(tarUrl) {
+//   const url = new URL(tarUrl);
+
+//   const parts = url.pathname.split("/");
+//   const fileName = parts.pop();
+//   const mp4Name = fileName.replace(/\.tar\.gz$/, ".mp4");
+
+//   parts.push(mp4Name);
+//   url.pathname = parts.join("/");
+
+//   return url.toString();
+// }
+// watch(
+//   () => playerStore.videoUrl,
+//   (url) => {
+//     if (!url || !videoElement.value) return;
+//     const video = videoElement.value;
+
+//     video.src = tarGzUrlToMp4Url(url);
+//   }
+// );
+
 function tarGzUrlToHlsUrl(tarUrl) {
   const url = new URL(tarUrl);
 
@@ -676,12 +726,13 @@ function tarGzUrlToHlsUrl(tarUrl) {
   const fileName = parts.pop(); // <hash>.tar.gz
   const id = fileName.replace(/\.tar\.gz$/, "");
 
-  // Neuer Pfad
+  // Neuer Pfad: nested id/<id>.m3u8 (HLS index)
   parts.push(id, `${id}.m3u8`);
   url.pathname = parts.join("/");
 
   return url.toString();
 }
+
 let hls = null;
 watch(
   () => playerStore.videoUrl,
@@ -694,12 +745,25 @@ watch(
 
     if (!hlsUrl) return;
 
+    // Destroy previous HLS instance (avoid leaks / multiple instances)
+    if (hls) {
+      try {
+        hls.destroy();
+      } catch (e) {
+        console.error("Failed to destroy existing hls instance", e);
+      }
+      hls = null;
+      try {
+        video.src = "";
+      } catch (e) {}
+    }
+
     if (Hls.isSupported()) {
       hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
         backBufferLength: 30,
-        maxBufferLength: 5,
+        maxBufferLength: 30,
         maxMaxBufferLength: 60,
       });
 

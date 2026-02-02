@@ -4,40 +4,67 @@
       <v-row>
         <v-col>
           <v-container class="d-flex flex-wrap justify-center video-gallery pa-0" fluid>
-            <v-card elevation="2" v-for="item in videos" :loading="item.loading" :key="item.id">
+            <v-card
+              elevation="2"
+              v-for="item in videos"
+              :loading="item.loading"
+              :key="item.id"
+              :class="item.processing ? 'processing-card' : ''"
+              width="370"
+            >
               <v-card-title class="video-overview-title mt-2 mb-2">
                 {{ item.name }}
               </v-card-title>
-              <v-card-text>
-                <div>{{ $t("video_view.video_id") }} {{ item.id }}</div>
-                <div>{{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}</div>
-                <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
-                <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
+              <div v-if="item.processing">
+                <v-card-text class="d-flex flex-column align-center justify-center">
+                  <i class="mdi mdi-loading mdi-spin" style="font-size: 40px" />
+                  <div class="mt-4">
+                    {{ $t("video_view.video_processing") }}
+                  </div>
+                </v-card-text>
+              </div>
+              <div v-else>
+                <v-card-text>
+                  <div>{{ $t("video_view.video_id") }} {{ item.id }}</div>
+                  <div>{{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}</div>
+                  <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
+                  <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
 
-                <v-card-actions class="actions mt-n6 mb-n8">
-                  <v-btn size="small" variant="outlined" class="ml-n2" @click="showVideo(item.id)">
-                    <v-icon class="mr-1">
-                      {{ "mdi-movie-search-outline" }}
-                    </v-icon>
-                    {{ $t("button.analyse") }}
-                  </v-btn>
+                  <v-card-actions class="actions mt-n6 mb-n8">
+                    <v-btn
+                      size="small"
+                      variant="outlined"
+                      class="ml-n2"
+                      @click="showVideo(item.id)"
+                    >
+                      <v-icon class="mr-1">
+                        {{ "mdi-movie-search-outline" }}
+                      </v-icon>
+                      {{ $t("button.analyse") }}
+                    </v-btn>
 
-                  <ModalVideoRename :video="item.id" />
+                    <ModalVideoRename :video="item.id" />
 
-                  <v-btn size="small" color="red" variant="outlined" @click="deleteVideo(item.id)">
-                    <v-icon class="mr-1">
-                      {{ "mdi-trash-can-outline" }}
-                    </v-icon>
-                    {{ $t("button.delete") }}
-                  </v-btn>
-                  <v-checkbox
-                    v-model="videoStore.selectedVideos[item.id]"
-                    color="primary"
-                    class="pt-5 ml-n1"
-                  />
-                </v-card-actions>
-              </v-card-text>
-              <v-progress-linear v-model="videosProgress[item.id]" />
+                    <v-btn
+                      size="small"
+                      color="red"
+                      variant="outlined"
+                      @click="deleteVideo(item.id)"
+                    >
+                      <v-icon class="mr-1">
+                        {{ "mdi-trash-can-outline" }}
+                      </v-icon>
+                      {{ $t("button.delete") }}
+                    </v-btn>
+                    <v-checkbox
+                      v-model="videoStore.selectedVideos[item.id]"
+                      color="primary"
+                      class="pt-5 ml-n1"
+                    />
+                  </v-card-actions>
+                </v-card-text>
+                <v-progress-linear v-model="videosProgress[item.id]" />
+              </div>
             </v-card>
           </v-container>
         </v-col>
@@ -88,7 +115,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, watch, nextTick, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
@@ -140,6 +167,29 @@ const fetchData = async (fetchTimelines = false) => {
     await timelineStore.fetchAll({ addResultsType: true });
   }
 };
+
+const processingPollTimer = ref(null);
+const hasProcessingVideos = computed(() => {
+  return videos.value.some((v) => v.processing === true);
+});
+watch(
+  hasProcessingVideos,
+  (newVal) => {
+    if (newVal) {
+      if (processingPollTimer.value) clearInterval(processingPollTimer.value);
+      processingPollTimer.value = setInterval(() => fetchData(), 2000);
+    } else if (processingPollTimer.value) {
+      clearInterval(processingPollTimer.value);
+      processingPollTimer.value = null;
+    }
+  },
+  { immediate: true }
+);
+onUnmounted(() => {
+  if (processingPollTimer.value) clearInterval(processingPollTimer.value);
+  if (fetchPluginTimer.value) clearInterval(fetchPluginTimer.value);
+});
+
 onMounted(() => {
   fetchData();
 });
@@ -228,5 +278,9 @@ watch(
   border-style: outset;
   border-color: black;
   max-width: 800px;
+}
+
+.processing-card {
+  opacity: 0.6;
 }
 </style>

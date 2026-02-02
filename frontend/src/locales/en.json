@@ -83,6 +83,7 @@
     "video_upload_menu": "Upload new Video"
   },
   "video_view": {
+    "video_processing": "Video is being processed",
     "video_id": "Video ID:",
     "length": "Length:",
     "uploaded": "Uploaded:",

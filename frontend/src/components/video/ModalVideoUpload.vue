@@ -318,13 +318,13 @@ const validateFile = (file) => {
   return true;
 };
 
-const uploadVideo = async () => {
+const uploadVideo = () => {
   const params = {
     video: video.value,
     analyser: selectedAnalysers.value,
   };
 
-  await videoUploadStore.upload(params);
+  videoUploadStore.upload(params);
   dialog.value = false;
   fileValid.value = false;
 };
