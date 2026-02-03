@@ -105,6 +105,13 @@
       </div>
     </v-snackbar>
 
+    <v-snackbar v-model="showAccountDeletedSnackbar">
+      <div class="d-flex justify-center">
+        <snackbar-icon-success />
+        <span class="text-h6">{{ $t("modal.delete_account.success") }}</span>
+      </div>
+    </v-snackbar>
+
     <v-snackbar v-model="showVideoActionSnackbar">
       <div class="d-flex justify-center">
         <snackbar-icon-success />
@@ -223,7 +230,26 @@ watch(
   () => userStore.loggedIn,
   (newValue, oldValue) => {
     if (oldValue === true && newValue === false) {
-      showLogoutSnackbar.value = true;
+      // If the account was deleted, show account-deleted snackbar instead of logout
+      if (!userStore.accountDeleted) {
+        showLogoutSnackbar.value = true;
+      }
+    }
+  }
+);
+
+const showAccountDeletedSnackbar = ref(false);
+const resetAccountDeletedSnackbar = async () => {
+  showAccountDeletedSnackbar.value = false;
+  await nextTick();
+  showAccountDeletedSnackbar.value = true;
+};
+watch(
+  () => userStore.accountDeleted,
+  (val) => {
+    if (val) {
+      resetAccountDeletedSnackbar();
+      userStore.accountDeleted = false;
     }
   }
 );

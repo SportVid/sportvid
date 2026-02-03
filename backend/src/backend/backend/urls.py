@@ -15,6 +15,10 @@ urlpatterns = [
         views.register, name="register"),
     path("user/get",
         views.UserGet.as_view(), name="user_get"),
+    path("user/update",
+        views.user_update, name="user_update"),
+    path("user/user_delete",
+        views.user_delete, name="user_delete"),
     # ---------- VIDEO
     path("video/upload",
         views.VideoUpload.as_view(), name="video_upload"),

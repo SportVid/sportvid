@@ -135,16 +135,69 @@ export const useUserStore = defineStore(
       if (isLoading.value) return;
 
       isLoading.value = true;
+      let res = null;
 
       try {
-        const res = await axios.post(`${config.API_LOCATION}/user/register`, { params });
+        res = await axios.post(`${config.API_LOCATION}/user/register`, { params });
+        return res.data || { status: "error", message: "Invalid message." };
+      } finally {
+        isLoading.value = false;
+        try {
+          if (res && res.data && res.data.status === "ok") {
+            await getUserData();
+          }
+        } catch (err) {
+          console.error("Failed to fetch user data after registration:", err);
+        }
+      }
+    }
+
+    const accountDeleted = ref(false);
+
+    async function updateUser(params) {
+      if (isLoading.value) return;
+
+      isLoading.value = true;
+
+      try {
+        const res = await axios.post(`${config.API_LOCATION}/user/update`, { params });
         if (res.data.status === "ok") {
+          // Refresh stored user data
           await getUserData();
         }
         return res.data || { status: "error", message: "Invalid message." };
       } finally {
         isLoading.value = false;
       }
+    }
+
+    async function deleteUser(params) {
+      if (isLoading.value) return;
+
+      isLoading.value = true;
+
+      try {
+        const res = await axios.post(`${config.API_LOCATION}/user/user_delete`, { params });
+        if (res.data.status === "ok") {
+          username.value = null;
+          email.value = null;
+          date.value = null;
+          videoAllowance.value = 0;
+          fileAllowance.value = 0;
+          maxVideoSize.value = 0;
+          maxFileSize.value = 0;
+          accountDeleted.value = true;
+          loggedIn.value = false;
+        }
+        return res.data || { status: "error", message: "Invalid message." };
+      } finally {
+        isLoading.value = false;
+      }
+    }
+
+    const showModalSettings = ref(false);
+    function openSettings() {
+      showModalSettings.value = true;
     }
 
     return {
@@ -163,6 +216,11 @@ export const useUserStore = defineStore(
       login,
       logout,
       register,
+      updateUser,
+      deleteUser,
+      showModalSettings,
+      openSettings,
+      accountDeleted,
     };
   },
   {
