@@ -11,9 +11,10 @@
     "format_title": "Video File Support",
     "format_text": "Please note that SportVid currently only supports the analysis of <b>mp4</b> video files to avoid long processing times due to transcoding videos on our server."
   },
-  "terms_of_service": {
-    "title": "Terms of Service",
-    "text": "By using SportVid, you agree to the following terms and conditions: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Consent to the use of uploaded and submitted videos and data for scientific research purposes.</li><li>Consent to allow other users to search for videos.</li><li>...</li></ol>",
+  "terms_of_use": {
+    "title": "Terms of Use",
+    "text": "<strong>1. Introduction</strong><br>These Terms of Use ('Terms') govern access to and use of the video analysis portal ('Portal') of SportVid. By using the Portal, you agree to the following Terms of Use.<br><br><strong>2. Rights to Upload</strong><br>2.1. By uploading content ('Content') to the Portal, you grant SportVid the non-exclusive right to store, process, analyze, and use the Content in order to provide the Portal's services.<br>2.2. You confirm that you have the necessary rights to upload the Content, including copyrights, trademark rights, and other rights required for the use of the Content.<br><br><strong>3. Processing and Analysis</strong><br>3.1. SportVid processes and analyzes the Content to provide the Portal's services, including the analysis of usage data and the optimization of the Content.<br>3.2. By using the Portal, you agree that SportVid may process and analyze the Content to provide the Portal's services.<br><br><strong>4. Data Protection</strong><br>4.1. SportVid treats your personal data confidentially and in accordance with data protection regulations.<br>4.2. By using the Portal, you agree that SportVid may process your personal data to provide the Portal's services.<br><br><strong>5. Liability</strong><br>5.1. SportVid is not liable for damages resulting from the use of the Portal, including the infringement of third-party rights.<br>5.2. By using the Portal, you agree that SportVid cannot be held liable for damages resulting from the use of the Portal.<br><br><strong>6. Changes</strong><br>6.1. SportVid may change these Terms of Use at any time.<br>6.2. By continuing to use the Portal after changes to the Terms of Use, you agree to the modified Terms of Use.<br><br><strong>7. Final Provisions</strong><br>7.1. These Terms of Use govern the entire contractual relationship between you and SportVid.<br>7.2. By using the Portal, you agree to these Terms of Use and confirm that you accept the following terms.",
+    "last_updated": "<em>Last updated: February 4, 2026</em>",
     "confirmation": "Do you agree with the {title}?"
   },
   "guidelines": {
@@ -67,7 +68,8 @@
     "run_plugin": "Run Plugin",
     "delete_plugin_runs": "Delete all plugin runs",
     "upload_video": "Upload new Video",
-    "settings": "Settings"
+    "settings": "Settings",
+    "continue": "Continue"
   },
   "field": {
     "required": "This field is required."

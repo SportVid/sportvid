@@ -11,7 +11,7 @@
     "format_title": "Unterstützte Videoformate",
     "format_text": "Bitte beachten Sie, dass SportVid derzeit nur die Analyse von MP4-Videodateien unterstützt, um lange Verarbeitungszeiten durch serverseitiges Transkodieren zu vermeiden."
   },
-  "terms_of_service": {
+  "terms_of_use": {
     "title": "Nutzungsbedingungen",
     "text": "Durch die Nutzung von SportVid erklären Sie sich mit den folgenden Bedingungen einverstanden: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Zustimmung zur Verwendung hochgeladener und eingereichter Videos und Daten zu wissenschaftlichen Forschungszwecken.</li><li>Zustimmung, dass andere Benutzer nach Videos suchen dürfen.</li><li>...</li></ol>",
     "confirmation": "Stimmen Sie den {title} zu?"

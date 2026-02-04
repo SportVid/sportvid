@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import VideoView from "@/views/VideoView.vue";
 import AnalysisView from "@/views/AnalysisView.vue";
-import TermsOfServiceView from "@/views/TermsOfServiceView.vue";
+import TermsOfUseView from "@/views/TermsOfUseView.vue";
 import GuidelinesView from "@/views/GuidelinesView.vue";
 
 const routes = [
@@ -16,9 +16,9 @@ const routes = [
     component: AnalysisView,
   },
   {
-    path: "/terms-of-service",
-    name: "TermsOfServiceView",
-    component: TermsOfServiceView,
+    path: "/terms-of-use",
+    name: "termsOfUseView",
+    component: TermsOfUseView,
   },
   {
     path: "/guidelines",

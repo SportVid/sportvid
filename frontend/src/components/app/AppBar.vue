@@ -8,7 +8,7 @@
     </template>
 
     <template #append>
-      <v-btn v-if="(termsOfServiceView || guidelinesView) && !loggedIn" to="/">
+      <v-btn v-if="(termsOfUseView || guidelinesView) && !loggedIn" to="/">
         <app-bar-icon>mdi-home</app-bar-icon>
         <span class="text-primary">
           {{ $t("app_bar.home") }}
@@ -171,7 +171,7 @@ const loggedIn = computed(() => userStore.loggedIn);
 
 const videoView = computed(() => route.name === "VideoView");
 const analysisView = computed(() => route.name === "AnalysisView");
-const termsOfServiceView = computed(() => route.name === "TermsOfServiceView");
+const termsOfUseView = computed(() => route.name === "TermsOfUseView");
 const guidelinesView = computed(() => route.name === "GuidelinesView");
 
 const showModalPlugin = ref(false);

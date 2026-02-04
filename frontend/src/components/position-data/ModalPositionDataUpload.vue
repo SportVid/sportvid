@@ -134,14 +134,14 @@
 
           <v-checkbox v-model="checkbox" required class="ml-n2">
             <template #label>
-              <i18n-t keypath="terms_of_service.confirmation" tag="span">
+              <i18n-t keypath="terms_of_use.confirmation" tag="span">
                 <template #title>
                   <router-link
-                    to="/terms-of-service"
+                    to="/terms-of-use"
                     target="_blank"
-                    class="text-primary terms-of-service-link"
+                    class="text-primary terms-of-use-link"
                   >
-                    {{ $t("terms_of_service.title") }}
+                    {{ $t("terms_of_use.title") }}
                   </router-link>
                 </template>
               </i18n-t>
@@ -303,12 +303,12 @@ watch(
 </script>
 
 <style scoped>
-.terms-of-service-link {
+.terms-of-use-link {
   font-weight: bold;
   text-decoration: none;
 }
 
-.terms-of-service-link:hover {
+.terms-of-use-link:hover {
   text-decoration: underline;
 }
 
