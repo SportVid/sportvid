@@ -7,7 +7,7 @@
     "demo_title": "Video Demonstration",
     "demo_text": "We are currently preparing a video that demonstrates the features of SportVid and explains how to use it to simplify the onboarding process. It is expected to be available by 2027 at the latest.",
     "login_title": "Need an account?",
-    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an E-Mail to {'xyz@123.de'} with a short explanation of your intended usecase.",
+    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an email to {'xyz@123.de'} with a short explanation of your intended usecase.",
     "format_title": "Video File Support",
     "format_text": "Please note that SportVid currently only supports the analysis of <b>mp4</b> video files to avoid long processing times due to transcoding videos on our server."
   },
@@ -23,7 +23,7 @@
   "user": {
     "name": "Username",
     "password": "Password",
-    "email": "E-Mail",
+    "email": "Email address",
     "login": {
       "title": "Login",
       "text": "Don't have an account?",
@@ -250,7 +250,7 @@
       "security": "Security",
       "username": "Username",
       "joined": "Joined",
-      "email": "E-Mail",
+      "email": "Email address",
       "password": "Password",
       "password_current": "Current Password",
       "password_new": "New Password",
@@ -264,11 +264,9 @@
       "delete_account": "Delete Account",
       "success": "Password successfully changed",
       "settings_success": "Account successfully updated",
-      "email_success": "E-mail successfully updated",
       "password_both_required": "Both current and new password must be provided",
       "invalid_current_password": "Invalid current password",
       "password_min": "New password must be at least {min} characters",
-      "password_changed": "Password successfully changed",
       "password_invalid": "Password does not meet the requirements",
       "no_changes": "No changes to save",
       "update_failed": "Update failed"

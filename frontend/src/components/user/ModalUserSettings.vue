@@ -132,7 +132,7 @@
       <v-snackbar v-model="showSettingsSnackbar">
         <div class="d-flex justify-center">
           <snackbar-icon-success />
-          <div class="text-h6">{{ $t("modal.settings.settings_success") }}</div>
+          <span class="text-h6">{{ $t("modal.settings.settings_success") }}</span>
         </div>
       </v-snackbar>
     </v-card>
@@ -142,18 +142,15 @@
 <script setup>
 import { ref, watch, computed } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { useUserStore } from "@/stores/user";
 import { useLanguageStore } from "@/stores/languages";
 import ModalUserDelete from "@/components/user/ModalUserDelete.vue";
-import { useI18n } from "vue-i18n";
 
 const userStore = useUserStore();
 const languageStore = useLanguageStore();
 const router = useRouter();
-const showModalDelete = ref(false);
 const { t } = useI18n();
-
-const showSettingsSnackbar = ref(false);
 
 const props = defineProps({
   modelValue: {
@@ -162,7 +159,6 @@ const props = defineProps({
   },
 });
 const emit = defineEmits();
-
 const dialog = ref(props.modelValue);
 watch(
   () => dialog.value,
@@ -180,8 +176,24 @@ watch(
 );
 
 const usernameLocal = ref(userStore.username);
+watch(
+  () => userStore.username,
+  (val) => {
+    if (dialog.value) usernameLocal.value = val;
+  }
+);
+
 const emailLocal = ref(userStore.email);
 const hasEmailChanged = () => emailLocal.value !== userStore.email;
+watch(
+  () => userStore.email,
+  (val) => {
+    if (dialog.value) {
+      emailLocal.value = val;
+    }
+  }
+);
+
 const formatDate = (s) => {
   if (!s) return "";
   try {
@@ -191,41 +203,10 @@ const formatDate = (s) => {
   }
 };
 const joinedLocal = ref(formatDate(userStore.date));
-
-watch(
-  () => userStore.email,
-  (val) => {
-    if (dialog.value) {
-      emailLocal.value = val;
-    }
-  }
-);
-watch(
-  () => userStore.username,
-  (val) => {
-    if (dialog.value) usernameLocal.value = val;
-  }
-);
 watch(
   () => userStore.date,
   (val) => {
     if (dialog.value) joinedLocal.value = formatDate(val);
-  }
-);
-
-const currentPassword = ref(null);
-const newPassword = ref(null);
-
-watch(
-  () => props.modelValue,
-  (value) => {
-    if (value) {
-      dialog.value = true;
-      selectedLanguage.value = languageStore.currentLanguage;
-      emailLocal.value = userStore.email;
-      usernameLocal.value = userStore.username;
-      joinedLocal.value = formatDate(userStore.date);
-    }
   }
 );
 
@@ -240,11 +221,8 @@ watch(
   }
 );
 
-const handleDeleted = () => {
-  dialog.value = false;
-  router.push({ name: "VideoView" });
-};
-
+const currentPassword = ref(null);
+const newPassword = ref(null);
 const checkLength = (value) => {
   if (!value) {
     return t("field.required");
@@ -257,30 +235,26 @@ const checkLength = (value) => {
   }
   return true;
 };
-
 const checkPwdLength = (value) => {
   if (!value) return true;
   return checkLength(value);
 };
 
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (value) {
+      dialog.value = true;
+      selectedLanguage.value = languageStore.currentLanguage;
+      emailLocal.value = userStore.email;
+      usernameLocal.value = userStore.username;
+      joinedLocal.value = formatDate(userStore.date);
+    }
+  }
+);
+
 const passwordError = ref(null);
 const generalServerError = ref(null);
-
-watch(emailLocal, () => {
-  showSettingsSnackbar.value = false;
-  passwordError.value = null;
-  generalServerError.value = null;
-});
-watch(currentPassword, () => {
-  showSettingsSnackbar.value = false;
-  passwordError.value = null;
-  generalServerError.value = null;
-});
-watch(newPassword, () => {
-  showSettingsSnackbar.value = false;
-  passwordError.value = null;
-  generalServerError.value = null;
-});
 
 const canSave = computed(() => {
   const emailChanged = hasEmailChanged();
@@ -303,14 +277,10 @@ const canSave = computed(() => {
 
   return true;
 });
-
 const saveSettings = async () => {
   showSettingsSnackbar.value = false;
   passwordError.value = null;
   generalServerError.value = null;
-
-  const languageChanged = selectedLanguage.value !== languageStore.currentLanguage;
-  languageStore.setLanguage(selectedLanguage.value);
 
   const params = {};
   if (hasEmailChanged()) {
@@ -335,7 +305,8 @@ const saveSettings = async () => {
   }
 
   if (Object.keys(params).length === 0) {
-    if (languageChanged) {
+    if (hasLanguageChanged()) {
+      languageStore.setLanguage(selectedLanguage.value);
       showSettingsSnackbar.value = true;
       return;
     }
@@ -345,9 +316,7 @@ const saveSettings = async () => {
 
   try {
     const res = await userStore.updateUser(params);
-    console.debug("user.updateUser response:", res);
     if (res && res.status === "ok") {
-      // Always show the standard account-updated snackbar
       showSettingsSnackbar.value = true;
 
       currentPassword.value = null;
@@ -387,6 +356,14 @@ const saveSettings = async () => {
     generalServerError.value = t("modal.settings.update_failed");
   }
 };
+
+const showModalDelete = ref(false);
+const handleDeleted = () => {
+  dialog.value = false;
+  router.push({ name: "VideoView" });
+};
+
+const showSettingsSnackbar = ref(false);
 </script>
 
 <style scoped>
