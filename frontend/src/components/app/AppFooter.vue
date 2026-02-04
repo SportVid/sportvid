@@ -11,8 +11,8 @@
         <v-divider vertical :thickness="2" inset></v-divider>
 
         <div class="link-wrapper">
-          <router-link to="/terms-of-service" class="router-link">
-            {{ $t("terms_of_service.title") }}
+          <router-link to="/terms-of-use" class="router-link">
+            {{ $t("terms_of_use.title") }}
           </router-link>
         </div>
       </div>

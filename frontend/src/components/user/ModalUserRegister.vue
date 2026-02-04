@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" width="450px">
+  <v-dialog v-model="dialog" :width="dialogWidth">
     <v-card class="register">
       <v-toolbar color="primary" dark class="pl-6 pr-1 text-h6">
         {{ $t("user.register.title") }}
@@ -7,8 +7,18 @@
         <v-btn icon="mdi-close" @click="dialog = false" variant="plain" color="grey" />
       </v-toolbar>
 
-      <v-card-text class="mt-n2">
-        <form @keyup.enter="register">
+      <v-card-text class="scrollable-content">
+        <div v-if="showTerms" class="mb-n4">
+          <h2 class="mb-2">{{ $t("terms_of_use.title") }}</h2>
+          <div v-html="t('terms_of_use.text')" />
+          <v-checkbox
+            v-model="termsConfirmed"
+            :label="t('terms_of_use.confirmation', { title: t('terms_of_use.title') })"
+            class="mt-4"
+          />
+        </div>
+
+        <form v-else @keyup.enter="register" class="mt-n2">
           <v-text-field
             v-model="user.name"
             :placeholder="$t('user.name')"
@@ -51,8 +61,26 @@
         </p>
       </v-card-text>
 
-      <v-card-actions class="px-6 mt-n4">
+      <v-card-actions>
         <v-btn
+          v-if="showTerms"
+          :disabled="!termsConfirmed"
+          :class="{
+            'text-white': !termsConfirmed || termsConfirmed,
+            'bg-grey': !termsConfirmed,
+            'bg-primary': termsConfirmed,
+          }"
+          @click="showTerms = false"
+          rounded
+          variant="tonal"
+          style="width: 450px; display: block; margin: 0 auto"
+          class="mt-2"
+        >
+          {{ t("button.continue") }}
+        </v-btn>
+
+        <v-btn
+          v-else
           @click="register"
           :disabled="disabled"
           :class="{
@@ -60,6 +88,7 @@
             'bg-grey': disabled,
             'bg-primary': !disabled,
           }"
+          class="px-6 mt-n4"
           block
           rounded
           depressed
@@ -95,6 +124,8 @@ const emit = defineEmits();
 
 const { t } = useI18n();
 const userStore = useUserStore();
+
+const dialogWidth = computed(() => (showTerms.value ? 750 : 450));
 
 const user = ref({
   name: "",
@@ -138,6 +169,9 @@ const disabled = computed(() => {
   return total !== 3;
 });
 
+const showTerms = ref(true);
+const termsConfirmed = ref(false);
+
 watch(
   () => dialog.value,
   (newValue) => {
@@ -153,3 +187,10 @@ watch(
   }
 );
 </script>
+
+<style scoped>
+.scrollable-content {
+  max-height: 500px;
+  overflow-y: auto;
+}
+</style>
