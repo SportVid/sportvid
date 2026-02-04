@@ -148,7 +148,7 @@
               :key="o.id"
               :cx="o.videoCoordsRel[0].x * videoStore.videoSize.width"
               :cy="o.videoCoordsRel[0].y * videoStore.videoSize.height"
-              r="8"
+              r="6"
               fill="red"
               fill-opacity="0.8"
               style="pointer-events: all"
@@ -164,7 +164,7 @@
               :y1="o.videoCoordsRel[0].y * videoStore.videoSize.height"
               :x2="o.videoCoordsRel[1].x * videoStore.videoSize.width"
               :y2="o.videoCoordsRel[1].y * videoStore.videoSize.height"
-              stroke-width="8"
+              stroke-width="4"
               stroke="red"
               stroke-opacity="0.8"
               fill="none"
@@ -191,7 +191,7 @@
                 })()
               "
               stroke="red"
-              stroke-width="8"
+              stroke-width="4"
               stroke-opacity="0.8"
               fill="none"
               style="pointer-events: all"
@@ -718,6 +718,7 @@ const getEllipseSvg = (position) => {
 //   }
 // );
 
+let hls = null;
 function tarGzUrlToHlsUrl(tarUrl) {
   const url = new URL(tarUrl);
 
@@ -732,8 +733,6 @@ function tarGzUrlToHlsUrl(tarUrl) {
 
   return url.toString();
 }
-
-let hls = null;
 watch(
   () => playerStore.videoUrl,
   (url) => {
@@ -741,11 +740,9 @@ watch(
 
     const video = videoElement.value;
     const hlsUrl = tarGzUrlToHlsUrl(url);
-    console.log("hls url", hlsUrl);
 
     if (!hlsUrl) return;
 
-    // Destroy previous HLS instance (avoid leaks / multiple instances)
     if (hls) {
       try {
         hls.destroy();
@@ -774,7 +771,6 @@ watch(
         updateVideoSize();
       });
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      // Safari
       video.src = hlsUrl;
     }
   },

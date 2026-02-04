@@ -9,7 +9,6 @@
       <video
         class="video-overlay"
         ref="videoOverlayElement"
-        :src="playerStore.videoUrl"
         @loadedmetadata="seekToCurrentTime"
         :style="{
           width: videoStore.videoSize.width + 'px',
@@ -128,6 +127,7 @@ import { ref, nextTick, watch, onBeforeUnmount } from "vue";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
+import Hls from "hls.js";
 
 const calibrationAssetStore = useCalibrationAssetStore();
 const playerStore = usePlayerStore();
@@ -290,6 +290,59 @@ const hideZoom = () => {
 onBeforeUnmount(() => {
   hideZoom();
 });
+
+let hlsOverlay = null;
+function tarGzUrlToHlsUrl(tarUrl) {
+  const url = new URL(tarUrl);
+
+  // Dateiname extrahieren
+  const parts = url.pathname.split("/");
+  const fileName = parts.pop(); // <hash>.tar.gz
+  const id = fileName.replace(/\.tar\.gz$/, "");
+
+  // Neuer Pfad: nested id/<id>.m3u8 (HLS index)
+  parts.push(id, `${id}.m3u8`);
+  url.pathname = parts.join("/");
+
+  return url.toString();
+}
+watch(
+  () => playerStore.videoUrl,
+  async (url) => {
+    await nextTick();
+    if (!url || !videoOverlayElement.value) return;
+
+    const video = videoOverlayElement.value;
+    const hlsUrl = tarGzUrlToHlsUrl(url);
+
+    if (!hlsUrl) return;
+
+    if (hlsOverlay) {
+      try {
+        hlsOverlay.destroy();
+      } catch (e) {
+        console.error("Failed to destroy existing hls instance", e);
+      }
+      hlsOverlay = null;
+      try {
+        video.src = "";
+      } catch (e) {}
+    }
+
+    if (Hls.isSupported()) {
+      hlsOverlay = new Hls();
+      hlsOverlay.loadSource(hlsUrl);
+      hlsOverlay.attachMedia(video);
+
+      hlsOverlay.on(Hls.Events.MANIFEST_PARSED, () => {
+        updateVideoSize();
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = hlsUrl;
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
