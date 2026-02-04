@@ -30,6 +30,8 @@
       v-model="showModalLogin"
       @open-modal-user-register="handleOpenRegister"
     />
+
+    <ModalUserSettings v-model="userStore.showModalSettings" />
   </div>
 </template>
 
@@ -39,6 +41,7 @@ import { useUserStore } from "@/stores/user";
 import ModalUserLogin from "@/components/user/ModalUserLogin.vue";
 import ModalUserRegister from "@/components/user/ModalUserRegister.vue";
 import ModalUserAccount from "@/components/user/ModalUserAccount.vue";
+import ModalUserSettings from "@/components/user/ModalUserSettings.vue";
 
 const userStore = useUserStore();
 

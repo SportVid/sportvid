@@ -7,7 +7,7 @@
     "demo_title": "Video Demonstration",
     "demo_text": "We are currently preparing a video that demonstrates the features of SportVid and explains how to use it to simplify the onboarding process. It is expected to be available by 2027 at the latest.",
     "login_title": "Need an account?",
-    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an E-Mail to {'xyz@123.de'} with a short explanation of your intended usecase.",
+    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an email to {'xyz@123.de'} with a short explanation of your intended usecase.",
     "format_title": "Video File Support",
     "format_text": "Please note that SportVid currently only supports the analysis of <b>mp4</b> video files to avoid long processing times due to transcoding videos on our server."
   },
@@ -23,8 +23,7 @@
   "user": {
     "name": "Username",
     "password": "Password",
-    "email": "E-Mail",
-    "joined": "Joined {n_days} days ago",
+    "email": "Email address",
     "login": {
       "title": "Login",
       "text": "Don't have an account?",
@@ -44,7 +43,8 @@
         "min": "Min. 5 characters.",
         "max": "Max. 50 characters."
       }
-    }
+    },
+    "delete": {}
   },
   "button": {
     "to_timeline": "To Timeline",
@@ -66,7 +66,8 @@
     "run_batch_plugin": "Run Batch Plugin",
     "run_plugin": "Run Plugin",
     "delete_plugin_runs": "Delete all plugin runs",
-    "upload_video": "Upload new Video"
+    "upload_video": "Upload new Video",
+    "settings": "Settings"
   },
   "field": {
     "required": "This field is required."
@@ -241,6 +242,38 @@
   "modal": {
     "error": {
       "title": "Error"
+    },
+    "settings": {
+      "title": "Account Settings",
+      "information": "Information",
+      "language": "Language",
+      "security": "Security",
+      "username": "Username",
+      "joined": "Joined",
+      "email": "Email address",
+      "password": "Password",
+      "password_current": "Current Password",
+      "password_new": "New Password",
+      "rules": {
+        "min": "Min. 5 characters.",
+        "uppercase": "At least one uppercase letter.",
+        "lowercase": "At least one lowercase letter.",
+        "number": "At least one number.",
+        "special": "At least one special character."
+      },
+      "delete_account": "Delete Account",
+      "success": "Password successfully changed",
+      "settings_success": "Account successfully updated",
+      "password_both_required": "Both current and new password must be provided",
+      "invalid_current_password": "Invalid current password",
+      "password_min": "New password must be at least {min} characters",
+      "password_invalid": "Password does not meet the requirements",
+      "no_changes": "No changes to save",
+      "update_failed": "Update failed"
+    },
+    "delete_account": {
+      "title": "Delete Account",
+      "success": "Account successfully deleted"
     },
     "video": {
       "rename": {

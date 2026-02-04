@@ -201,6 +201,19 @@
         "success": "Video erfolgreich gelöscht"
       }
     },
+    "delete_account": {
+      "success": "Account erfolgreich gelöscht"
+    },
+    "settings": {
+      "settings_success": "Konto erfolgreich aktualisiert",
+      "email_success": "E-Mail erfolgreich aktualisiert",
+      "password_changed": "Passwort erfolgreich geändert",
+      "invalid_current_password": "Ungültiges aktuelles Passwort",
+      "password_both_required": "Aktuelles und neues Passwort müssen beide ausgefüllt sein",
+      "password_min": "Neues Passwort muss mindestens {min} Zeichen lang sein",
+      "no_changes": "Keine Änderungen zum Speichern",
+      "update_failed": "Aktualisierung fehlgeschlagen"
+    },
     "export": {
       "title": "Ergebnisse exportieren",
       "merged_csv": {
