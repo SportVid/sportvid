@@ -76,7 +76,7 @@ const { t } = useI18n();
 const confirmDelete = async () => {
   if (userStore.isLoading) return;
   try {
-    const res = await userStore.deleteUser({ password: password.value });
+    const res = await userStore.deleteUser({ password: password.value, update_type: "user" });
     if (res && res.status === "ok") {
       dialog.value = false;
       emit("deleted");
@@ -92,9 +92,5 @@ const confirmDelete = async () => {
   } catch (err) {
     error.value = t("modal.delete_account.error");
   }
-};
-
-const cancel = () => {
-  dialog.value = false;
 };
 </script>

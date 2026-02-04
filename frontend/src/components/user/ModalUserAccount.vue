@@ -16,15 +16,25 @@
       <v-avatar size="large" :style="{ backgroundColor: '#457B9D80' }">
         <span class="text-white text-h5">{{ initials }}</span>
       </v-avatar>
-      <v-btn color="primary" variant="tonal" block class="mt-6" @click="userStore.openSettings()">{{
-        t("button.settings")
-      }}</v-btn>
+      <v-btn color="primary" variant="tonal" block class="mt-6" @click="userStore.openSettings()">
+        {{ t("button.settings") }}
+      </v-btn>
+      <v-btn
+        v-if="userStore.role === 'admin'"
+        color="primary"
+        variant="tonal"
+        block
+        class="mt-4"
+        to="/admin"
+      >
+        {{ t("button.admin_panel") }}
+      </v-btn>
     </v-card-text>
   </v-card>
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useUserStore } from "@/stores/user";

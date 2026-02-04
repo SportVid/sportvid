@@ -117,7 +117,6 @@
 
         <v-data-table
           color="primary"
-          :items-per-page="-1"
           :headers="headers"
           :items="teamPlayers"
           class="elevation-2"

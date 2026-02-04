@@ -40,6 +40,7 @@ def receiver_with_multiple_senders(signal, senders, **kwargs):
 
 
 class TibavaUser(AbstractUser):
+    role=models.CharField(max_length=256, default="user")
     video_allowance = models.IntegerField(default=40) # 10
     file_allowance = models.IntegerField(default=40) # 10
     max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # 5GB, 500MB: 500*1024*1024
@@ -50,10 +51,13 @@ class TibavaUser(AbstractUser):
         return {
             "id": self.id,
             "username": self.username,
+            "email": self.email,
+            "role": self.role,
             "video_allowance": self.video_allowance,
             "file_allowance": self.file_allowance,
             "max_video_size": self.max_video_size,
-            "max_file_size": self.max_file_size
+            "max_file_size": self.max_file_size,
+            "date_joined": self.date_joined
         }
 
     def __str__(self):

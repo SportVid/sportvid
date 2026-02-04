@@ -7,10 +7,12 @@ export const useUserStore = defineStore(
   "user",
   () => {
     const loggedIn = ref(false);
+    const userId = ref(null);
     const username = ref(null);
-    const date = ref(null);
+    const dateJoined = ref(null);
     const email = ref(null);
     const isLoading = ref(false);
+    const role = ref(null);
     const videoAllowance = ref(null);
     const fileAllowance = ref(null);
     const maxVideoSize = ref(null);
@@ -59,22 +61,26 @@ export const useUserStore = defineStore(
       try {
         const res = await axios.post(`${config.API_LOCATION}/user/get`);
         if (res.data.status === "ok") {
+          userId.value = res.data.data.id || null;
           username.value = res.data.data.username || null;
           email.value = res.data.data.email || null;
-          date.value = res.data.data.date || null;
+          role.value = res.data.data.role || null;
           videoAllowance.value = res.data.data.video_allowance || 0;
           fileAllowance.value = res.data.data.file_allowance || 0;
           maxVideoSize.value = res.data.data.max_video_size || 0;
           maxFileSize.value = res.data.data.max_file_size || 0;
+          dateJoined.value = res.data.data.date_joined || null;
           loggedIn.value = true;
         } else {
+          userId.value = null;
           username.value = null;
           email.value = null;
-          loggedIn.value = false;
+          role.value = null;
           videoAllowance.value = 0;
           fileAllowance.value = 0;
           maxVideoSize.value = 0;
           maxFileSize.value = 0;
+          dateJoined.value = null;
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -91,13 +97,15 @@ export const useUserStore = defineStore(
       try {
         const res = await axios.post(`${config.API_LOCATION}/user/login`, { params });
         if (res.data.status === "ok") {
+          userId.value = res.data.data.id || null;
           username.value = res.data.data.username || null;
           email.value = res.data.data.email || null;
-          date.value = res.data.data.date || null;
+          role.value = res.data.data.role || null;
           videoAllowance.value = res.data.data.video_allowance || 0;
           fileAllowance.value = res.data.data.file_allowance || 0;
           maxVideoSize.value = res.data.data.max_video_size || 0;
           maxFileSize.value = res.data.data.max_file_size || 0;
+          dateJoined.value = res.data.data.date_joined || null;
           loggedIn.value = true;
           return res.data;
         }
@@ -116,13 +124,15 @@ export const useUserStore = defineStore(
       try {
         const res = await axios.post(`${config.API_LOCATION}/user/logout`, { params });
         if (res.data.status === "ok") {
+          userId.value = null;
           username.value = null;
           email.value = null;
-          date.value = null;
+          role.value = null;
           videoAllowance.value = 0;
           fileAllowance.value = 0;
           maxVideoSize.value = 0;
           maxFileSize.value = 0;
+          dateJoined.value = null;
           loggedIn.value = false;
           return true;
         }
@@ -162,7 +172,6 @@ export const useUserStore = defineStore(
       try {
         const res = await axios.post(`${config.API_LOCATION}/user/update`, { params });
         if (res.data.status === "ok") {
-          // Refresh stored user data
           await getUserData();
         }
         return res.data || { status: "error", message: "Invalid message." };
@@ -177,15 +186,17 @@ export const useUserStore = defineStore(
       isLoading.value = true;
 
       try {
-        const res = await axios.post(`${config.API_LOCATION}/user/user_delete`, { params });
+        const res = await axios.post(`${config.API_LOCATION}/user/delete`, { params });
         if (res.data.status === "ok") {
+          userId.value = null;
           username.value = null;
           email.value = null;
-          date.value = null;
+          role.value = null;
           videoAllowance.value = 0;
           fileAllowance.value = 0;
           maxVideoSize.value = 0;
           maxFileSize.value = 0;
+          dateJoined.value = null;
           accountDeleted.value = true;
           loggedIn.value = false;
         }
@@ -202,9 +213,11 @@ export const useUserStore = defineStore(
 
     return {
       loggedIn,
+      userId,
       username,
-      date,
+      dateJoined,
       email,
+      role,
       isLoading,
       videoAllowance,
       fileAllowance,
