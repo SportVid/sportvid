@@ -106,7 +106,7 @@
                   </v-card-title>
                   <v-card-text>
                     <v-list dense>
-                      <v-subheader>Clusters</v-subheader>
+                      <div>Clusters</div>
                       <v-list-item-group v-model="toMergeCluster" color="primary">
                         <v-list-item v-for="cluster in mergableClusters" :key="cluster.id">
                           <v-list-item-content>

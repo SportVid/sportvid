@@ -14,7 +14,7 @@
       <v-card-text class="scrollable-content">
         <v-row>
           <v-col cols="12">
-            <v-subheader class="text-h6">{{ $t("modal.settings.information") }}</v-subheader>
+            <div class="text-h6">{{ $t("modal.settings.information") }}</div>
           </v-col>
 
           <v-col cols="12" md="12" class="mt-n4">
@@ -60,7 +60,7 @@
 
         <v-row class="mt-2">
           <v-col cols="12">
-            <v-subheader class="text-h6">{{ $t("modal.settings.language") }}</v-subheader>
+            <div class="text-h6">{{ $t("modal.settings.language") }}</div>
           </v-col>
           <v-col cols="12" md="6" class="mt-n4">
             <v-select
@@ -78,7 +78,7 @@
 
         <v-row class="mt-2">
           <v-col cols="12">
-            <v-subheader class="text-h6">{{ $t("modal.settings.security") }}</v-subheader>
+            <div class="text-h6">{{ $t("modal.settings.security") }}</div>
           </v-col>
           <v-col cols="12" md="12" class="mt-n4">
             <div class="text-subtitle-1 text-medium-emphasis mb-2">
@@ -202,9 +202,9 @@ const formatDate = (s) => {
     return s;
   }
 };
-const joinedLocal = ref(formatDate(userStore.date));
+const joinedLocal = ref(formatDate(userStore.dateJoined));
 watch(
-  () => userStore.date,
+  () => userStore.dateJoined,
   (val) => {
     if (dialog.value) joinedLocal.value = formatDate(val);
   }
@@ -248,7 +248,7 @@ watch(
       selectedLanguage.value = languageStore.currentLanguage;
       emailLocal.value = userStore.email;
       usernameLocal.value = userStore.username;
-      joinedLocal.value = formatDate(userStore.date);
+      joinedLocal.value = formatDate(userStore.dateJoined);
     }
   }
 );
@@ -313,6 +313,8 @@ const saveSettings = async () => {
     generalServerError.value = t("modal.settings.no_changes");
     return;
   }
+
+  params.update_type = "user";
 
   try {
     const res = await userStore.updateUser(params);

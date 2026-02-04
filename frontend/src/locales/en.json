@@ -69,7 +69,8 @@
     "delete_plugin_runs": "Delete all plugin runs",
     "upload_video": "Upload new Video",
     "settings": "Settings",
-    "continue": "Continue"
+    "continue": "Continue",
+    "admin_panel": "Admin Panel"
   },
   "field": {
     "required": "This field is required."
@@ -244,6 +245,25 @@
   "modal": {
     "error": {
       "title": "Error"
+    },
+    "admin": {
+      "delete_account": {
+        "title": "Delete Account",
+        "confirmation": "Are you sure you want to delete the account of user '{username}'?<br>This action cannot be undone."
+      },
+      "update_account": {
+        "title": "Edit Account",
+        "email": "Email address",
+        "role": "Role",
+        "video_allowance": "Video Allowance",
+        "file_allowance": "File Allowance",
+        "max_video_size": "Max. Video Size",
+        "max_file_size": "Max. File Size",
+        "roles": {
+          "user": "User",
+          "admin": "Admin"
+        }
+      }
     },
     "settings": {
       "title": "Account Settings",
@@ -808,6 +828,28 @@
         "single_success": "Bounding Box successfully deleted",
         "all_success": "Bounding Boxes successfully deleted"
       }
+    }
+  },
+  "admin_panel": {
+    "title": "Admin Panel",
+    "search": "Search",
+    "role": {
+      "label": "Role",
+      "all": "All",
+      "admin": "Admin",
+      "user": "User"
+    },
+    "user": {
+      "id": "ID",
+      "username": "Username",
+      "email": "Email",
+      "role": "Role",
+      "video_allowance": "Video Allowance",
+      "file_allowance": "File Allowance",
+      "max_video_size": "Max. Video Size",
+      "max_file_size": "Max. File Size",
+      "date_joined": "Joined",
+      "actions": "Actions"
     }
   }
 }

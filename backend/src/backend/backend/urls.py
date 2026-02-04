@@ -17,8 +17,11 @@ urlpatterns = [
         views.UserGet.as_view(), name="user_get"),
     path("user/update",
         views.user_update, name="user_update"),
-    path("user/user_delete",
+    path("user/delete",
         views.user_delete, name="user_delete"),
+    # ---------- ADMIN
+    path("user/admin/user/list",
+        views.user_list, name="admin_user_list"),
     # ---------- VIDEO
     path("video/upload",
         views.VideoUpload.as_view(), name="video_upload"),
