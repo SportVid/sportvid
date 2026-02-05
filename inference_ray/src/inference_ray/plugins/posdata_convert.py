@@ -433,4 +433,3 @@ class PosDataConvert(
             self.update_callbacks(callbacks, progress=1.0)
         
         return {"pos_data": pos_data}
-        

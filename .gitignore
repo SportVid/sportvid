@@ -165,4 +165,13 @@ cython_debug/
 
 .DS_Store
 
+<<<<<<< HEAD
 .claude/
+=======
+# Claude
+CLAUDE.md
+.claude/
+
+# Editor
+.vscode/
+>>>>>>> 7a69921 (fix ArchiveFileWrapper bug, create KPI computation in plugin)
