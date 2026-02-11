@@ -22,8 +22,14 @@ if (messages.en) {
   messages.en.$vuetify = {
     ...vuetifyEn,
     dataIterator: {
+      ...vuetifyEn.dataIterator,
       rowsPerPageText: "Items per page:",
       pageText: "{0}-{1} of {2}",
+    },
+    dataTable: {
+      ...vuetifyEn.dataTable,
+      loadingText: "...",
+      itemsPerPageText: "...",
     },
   };
 }
@@ -31,8 +37,14 @@ if (messages.de) {
   messages.de.$vuetify = {
     ...vuetifyDe,
     dataIterator: {
+      ...vuetifyDe.dataIterator,
       rowsPerPageText: "Elemente pro Seite:",
       pageText: "{0}-{1} von {2}",
+    },
+    dataTable: {
+      ...vuetifyDe.dataTable,
+      loadingText: "...",
+      itemsPerPageText: "...",
     },
   };
 }

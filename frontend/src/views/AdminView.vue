@@ -44,8 +44,8 @@
             density="comfortable"
             class="elevation-2"
           >
-            <template #item.dateJoined="{ item }">
-              {{ item.dateJoined.split("T")[0] }}
+            <template #item.date_joined="{ value }">
+              {{ value.split("T")[0] }}
             </template>
             <template #item.actions="{ item }">
               <v-btn
@@ -70,8 +70,8 @@
           </v-data-table>
         </v-card-text>
       </v-card>
-      <ModalAdminUserDelete v-model="showModalDelete" :user="editingUser" />
-      <ModalAdminUserUpdate v-model="showModalUpdate" :user="editingUser" @save="saveUser" />
+      <ModalAdminUserDelete v-if="editingUser" v-model="showModalDelete" :user="editingUser" />
+      <ModalAdminUserUpdate v-if="editingUser" v-model="showModalUpdate" :user="editingUser" />
     </v-container>
   </v-main>
 </template>
@@ -118,16 +118,22 @@ const filteredUsers = computed(() => {
 });
 
 const headers = [
-  { text: t("admin_panel.user.id"), value: "id" },
-  { text: t("admin_panel.user.username"), value: "username" },
-  { text: t("admin_panel.user.email"), value: "email" },
-  { text: t("admin_panel.user.role"), value: "role" },
-  { text: t("admin_panel.user.video_allowance"), value: "video_allowance" },
-  { text: t("admin_panel.user.file_allowance"), value: "file_allowance" },
-  { text: t("admin_panel.user.max_video_size"), value: "max_video_size" },
-  { text: t("admin_panel.user.max_file_size"), value: "max_file_size" },
-  { text: t("admin_panel.user.date_joined"), value: "date_joined" },
-  { text: t("admin_panel.user.actions"), value: "actions", sortable: false, width: "10%" },
+  { title: t("admin_panel.user.id"), value: "id", sortable: true },
+  { title: t("admin_panel.user.username"), value: "username", sortable: true },
+  { title: t("admin_panel.user.email"), value: "email", sortable: true },
+  { title: t("admin_panel.user.role"), value: "role", sortable: true },
+  { title: t("admin_panel.user.video_allowance"), value: "video_allowance", sortable: true },
+  { title: t("admin_panel.user.file_allowance"), value: "file_allowance", sortable: true },
+  { title: t("admin_panel.user.max_video_size"), value: "max_video_size", sortable: true },
+  { title: t("admin_panel.user.max_file_size"), value: "max_file_size", sortable: true },
+  { title: t("admin_panel.user.date_joined"), value: "date_joined", sortable: true },
+  {
+    title: t("admin_panel.user.actions"),
+    value: "actions",
+    sortable: false,
+    width: "8%",
+    align: "center",
+  },
 ];
 
 const editingUser = ref(null);
