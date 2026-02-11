@@ -41,16 +41,9 @@
 
           <v-col cols="12" md="12" class="mt-n8">
             <div class="text-subtitle-1 text-medium-emphasis">
-              {{ $t("modal.admin.update_account.video_allowance") }}
+              {{ $t("modal.admin.update_account.max_storage_size") }}
             </div>
-            <v-text-field v-model="videoAllowanceLocal" density="compact" variant="outlined" />
-          </v-col>
-
-          <v-col cols="12" md="12" class="mt-n8">
-            <div class="text-subtitle-1 text-medium-emphasis">
-              {{ $t("modal.admin.update_account.file_allowance") }}
-            </div>
-            <v-text-field v-model="fileAllowanceLocal" density="compact" variant="outlined" />
+            <v-text-field v-model="maxStorageSizeLocal" density="compact" variant="outlined" />
           </v-col>
 
           <v-col cols="12" md="12" class="mt-n8">
@@ -122,8 +115,7 @@ watch(
 
 const emailLocal = ref("");
 const roleLocal = ref("");
-const videoAllowanceLocal = ref(0);
-const fileAllowanceLocal = ref(0);
+const maxStorageSizeLocal = ref(0);
 const maxVideoSizeLocal = ref(0);
 const maxFileSizeLocal = ref(0);
 watch(
@@ -132,8 +124,7 @@ watch(
     if (newUser) {
       emailLocal.value = newUser.email || "";
       roleLocal.value = newUser.role || "user";
-      videoAllowanceLocal.value = newUser.video_allowance || 0;
-      fileAllowanceLocal.value = newUser.file_allowance || 0;
+      maxStorageSizeLocal.value = newUser.max_storage_size || 0;
       maxVideoSizeLocal.value = newUser.max_video_size || 0;
       maxFileSizeLocal.value = newUser.max_file_size || 0;
     }
@@ -163,8 +154,7 @@ const canSave = computed(() => {
   return (
     emailLocal.value !== props.user.email ||
     roleLocal.value !== props.user.role ||
-    videoAllowanceLocal.value !== props.user.video_allowance ||
-    fileAllowanceLocal.value !== props.user.file_allowance ||
+    maxStorageSizeLocal.value !== props.user.max_storage_size ||
     maxVideoSizeLocal.value !== props.user.max_video_size ||
     maxFileSizeLocal.value !== props.user.max_file_size
   );
@@ -177,8 +167,7 @@ const saveSettings = async () => {
     id: props.user.id,
     email: emailLocal.value,
     role: roleLocal.value,
-    video_allowance: videoAllowanceLocal.value,
-    file_allowance: fileAllowanceLocal.value,
+    max_storage_size: maxStorageSizeLocal.value,
     max_video_size: maxVideoSizeLocal.value,
     max_file_size: maxFileSizeLocal.value,
     update_type: "admin",

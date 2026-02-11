@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { defineStore } from "pinia";
 import axios from "../plugins/axios";
 import config from "../../app.config";
@@ -13,8 +13,12 @@ export const useUserStore = defineStore(
     const email = ref(null);
     const isLoading = ref(false);
     const role = ref(null);
-    const videoAllowance = ref(null);
-    const fileAllowance = ref(null);
+    const usedStorageSize = ref(null);
+    const maxStorageSize = ref(null);
+    const remainingStorageSize = computed(() => {
+      if (usedStorageSize.value === null || maxStorageSize.value === null) return null;
+      return Math.max(0, maxStorageSize.value - usedStorageSize.value);
+    });
     const maxVideoSize = ref(null);
     const maxFileSize = ref(null);
     const csrfToken = ref(null);
@@ -65,8 +69,8 @@ export const useUserStore = defineStore(
           username.value = res.data.data.username || null;
           email.value = res.data.data.email || null;
           role.value = res.data.data.role || null;
-          videoAllowance.value = res.data.data.video_allowance || 0;
-          fileAllowance.value = res.data.data.file_allowance || 0;
+          usedStorageSize.value = res.data.data.used_storage_size || 0;
+          maxStorageSize.value = res.data.data.max_storage_size || 0;
           maxVideoSize.value = res.data.data.max_video_size || 0;
           maxFileSize.value = res.data.data.max_file_size || 0;
           dateJoined.value = res.data.data.date_joined || null;
@@ -76,8 +80,8 @@ export const useUserStore = defineStore(
           username.value = null;
           email.value = null;
           role.value = null;
-          videoAllowance.value = 0;
-          fileAllowance.value = 0;
+          usedStorageSize.value = 0;
+          maxStorageSize.value = 0;
           maxVideoSize.value = 0;
           maxFileSize.value = 0;
           dateJoined.value = null;
@@ -101,8 +105,8 @@ export const useUserStore = defineStore(
           username.value = res.data.data.username || null;
           email.value = res.data.data.email || null;
           role.value = res.data.data.role || null;
-          videoAllowance.value = res.data.data.video_allowance || 0;
-          fileAllowance.value = res.data.data.file_allowance || 0;
+          usedStorageSize.value = res.data.data.used_storage_size || 0;
+          maxStorageSize.value = res.data.data.max_storage_size || 0;
           maxVideoSize.value = res.data.data.max_video_size || 0;
           maxFileSize.value = res.data.data.max_file_size || 0;
           dateJoined.value = res.data.data.date_joined || null;
@@ -128,8 +132,8 @@ export const useUserStore = defineStore(
           username.value = null;
           email.value = null;
           role.value = null;
-          videoAllowance.value = 0;
-          fileAllowance.value = 0;
+          usedStorageSize.value = 0;
+          maxStorageSize.value = 0;
           maxVideoSize.value = 0;
           maxFileSize.value = 0;
           dateJoined.value = null;
@@ -192,8 +196,8 @@ export const useUserStore = defineStore(
           username.value = null;
           email.value = null;
           role.value = null;
-          videoAllowance.value = 0;
-          fileAllowance.value = 0;
+          usedStorageSize.value = 0;
+          maxStorageSize.value = 0;
           maxVideoSize.value = 0;
           maxFileSize.value = 0;
           dateJoined.value = null;
@@ -219,8 +223,9 @@ export const useUserStore = defineStore(
       email,
       role,
       isLoading,
-      videoAllowance,
-      fileAllowance,
+      usedStorageSize,
+      maxStorageSize,
+      remainingStorageSize,
       maxVideoSize,
       maxFileSize,
       csrfToken,

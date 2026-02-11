@@ -71,6 +71,7 @@ class TrackingDataUpload(View):
                 db_params = {
                     "id": tracking_data_id_uuid,
                     "file": tracking_data_id_uuid,
+                    "file_size": request.FILES["file"].size,
                     "name": request.POST.get("title"),
                     "ext": td_ext,
                     "file_type": request.POST.get("format"),
@@ -100,7 +101,7 @@ class TrackingDataUpload(View):
                     meta_path = Path(request.FILES["meta_data"].name)
                     meta_ext = meta_ext.join(meta_path.suffixes)
                     
-                    db_params.update({"meta_file": meta_data_id_uuid, "meta_ext": meta_ext})
+                    db_params.update({"meta_file": meta_data_id_uuid, "meta_ext": meta_ext, "meta_file_size": request.FILES["meta_data"].size})
                 else:
                     if request.POST.get("format") == 'dfl':  # meta_data file is mandatory for DFL data
                         logger.error("TrackingDataUpload::failed")
@@ -145,6 +146,12 @@ class TrackingDataUpload(View):
                 if meta_ext != "":  # optional handling of meta data
                     meta_data_id_hex = tracking_data_db.meta_file.hex
                     json_entries[0].update({"meta_url": media_url_to_file(meta_data_id_hex, meta_ext)})
+
+                if "file" in request.FILES:
+                    request.user.used_storage_size += request.FILES["file"].size
+                if "meta_data" in request.FILES:
+                    request.user.used_storage_size += request.FILES["meta_data"].size
+                request.user.save()
                 
                 return JsonResponse(
                     {
@@ -256,13 +263,25 @@ class TrackingDataDelete(View):
             
             # TODO: delete for prod
             if data.get("id") == 'all': 
-                count, _ = TrackingData.objects.all().delete()
+                all_tdata = TrackingData.objects.all()
+                total_size = sum(
+                    t.file_size + (t.meta_file_size if t.meta_file else 0) for t in all_tdata
+                )
+                count, _ = all_tdata.delete()
+                if count:
+                    request.user.used_storage_size = max(0, request.user.used_storage_size - total_size)
+                    request.user.save()
+                    return JsonResponse({"status": "ok"})
             else:
+                tdata = TrackingData.objects.filter(id=data.get("id"), owner=request.user).first()
+                file_size = tdata.file_size + (tdata.meta_file_size if tdata.meta_file else 0)
                 count, _ = TrackingData.objects.filter(
                     id=data.get("id"), owner=request.user
                 ).delete()
-            if count:
-                return JsonResponse({"status": "ok"})
+                if count:
+                    request.user.used_storage_size = max(0, request.user.used_storage_size - file_size)
+                    request.user.save()
+                    return JsonResponse({"status": "ok"})
             return JsonResponse({"status": "error"}, status=500)
         except Exception:
             logger.exception("Failed to delete tracking data")

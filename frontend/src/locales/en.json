@@ -255,8 +255,7 @@
         "title": "Edit Account",
         "email": "Email address",
         "role": "Role",
-        "video_allowance": "Video Allowance",
-        "file_allowance": "File Allowance",
+        "max_storage_size": "Max. Storage Size",
         "max_video_size": "Max. Video Size",
         "max_file_size": "Max. File Size",
         "roles": {
@@ -305,8 +304,7 @@
       },
       "upload": {
         "title": "Upload new Video",
-        "videos_uploaded": "Videos uploaded: {numVideos} out of {videoAllowance}",
-        "upload_denied": "You have uploaded the maximum amount of videos that you are allowed to. If you require more, please contact abc@xyz.de.",
+        "upload_denied": "You have reached the maximum storage available for uploading videos and files. If you require more, please contact abc@xyz.de.",
         "validate": {
           "file_required": "Please select a file with a maximum file size of {maxSize}",
           "file_exceeds": "File exceeds your maximum file size of {maxSize}",
@@ -758,8 +756,7 @@
           "kickoff": "Kickoff",
           "bottom_left": "Bottom-Left"
         },
-        "files_uploaded": "Files uploaded: {numFiles} out of {fileAllowance}",
-        "upload_denied": "You have uploaded the maximum amount of files that you are allowed to. If you require more, please contact abc@xyz.de.",
+        "upload_denied": "You have reached the maximum storage available for uploading videos and files. If you require more, please contact abc@xyz.de.",
         "validate": {
           "file_required": "Please select a file with a maximum file size of {maxSize}",
           "file_exceeds": "File exceeds your maximum file size of {maxSize}",
@@ -844,8 +841,8 @@
       "username": "Username",
       "email": "Email",
       "role": "Role",
-      "video_allowance": "Video Allowance",
-      "file_allowance": "File Allowance",
+      "used_storage_size": "Used Storage Size",
+      "max_storage_size": "Max. Storage Size",
       "max_video_size": "Max. Video Size",
       "max_file_size": "Max. File Size",
       "date_joined": "Joined",

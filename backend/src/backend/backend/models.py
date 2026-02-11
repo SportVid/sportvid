@@ -41,10 +41,10 @@ def receiver_with_multiple_senders(signal, senders, **kwargs):
 
 class TibavaUser(AbstractUser):
     role=models.CharField(max_length=256, default="user")
-    video_allowance = models.IntegerField(default=40) # 10
-    file_allowance = models.IntegerField(default=40) # 10
-    max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # 5GB, 500MB: 500*1024*1024
-    max_file_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # 5GB
+    max_storage_size = models.BigIntegerField(default=100 * 1024 * 1024 * 1024) # GB
+    used_storage_size = models.BigIntegerField(default=0)
+    max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB, 500MB: 500*1024*1024
+    max_file_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB
     objects = TibavaUserManager()
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
@@ -53,8 +53,8 @@ class TibavaUser(AbstractUser):
             "username": self.username,
             "email": self.email,
             "role": self.role,
-            "video_allowance": self.video_allowance,
-            "file_allowance": self.file_allowance,
+            "max_storage_size": self.max_storage_size,
+            "used_storage_size": self.used_storage_size,
             "max_video_size": self.max_video_size,
             "max_file_size": self.max_file_size,
             "date_joined": self.date_joined
@@ -71,6 +71,7 @@ class Video(models.Model):
     )
     name = models.CharField(max_length=256)
     file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
+    file_size = models.BigIntegerField(default=0)
     ext = models.CharField(max_length=256)
     # status field for processing/done/error
     STATUS_PROCESSING = "P"
@@ -146,7 +147,9 @@ class TrackingData(models.Model):
     video = models.ForeignKey(Video, blank=True, null=True, on_delete=models.CASCADE)
     name = models.CharField(max_length=256)
     file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
+    file_size = models.BigIntegerField(default=0)
     meta_file = models.UUIDField(blank=True, null=True)
+    meta_file_size = models.BigIntegerField(default=0)
     ext = models.CharField(default="", max_length=256)
     meta_ext = models.CharField(default="", max_length=256)
     date = models.DateTimeField(auto_now_add=True)

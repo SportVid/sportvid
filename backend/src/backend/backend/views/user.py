@@ -53,8 +53,8 @@ class UserGet(View):
                         "username": user.get_username(),
                         "email": user.email,
                         "role": user.role,
-                        "video_allowance": user.video_allowance,
-                        "file_allowance": user.file_allowance,
+                        "max_storage_size": user.max_storage_size,
+                        "used_storage_size": user.used_storage_size,
                         "max_video_size": user.max_video_size,
                         "max_file_size": user.max_file_size,
                         "date_joined": user.date_joined
@@ -104,8 +104,8 @@ def login(request):
                     "username": user.get_username(),
                     "email": user.email,
                     "role": user.role,
-                    "video_allowance": user.video_allowance,
-                    "file_allowance": user.file_allowance,
+                    "max_storage_size": user.max_storage_size,
+                    "used_storage_size": user.used_storage_size,
                     "max_video_size": user.max_video_size,
                     "max_file_size": user.max_file_size,
                     "date_joined": user.date_joined
@@ -227,7 +227,7 @@ def user_update(request):
                 except TibavaUser.DoesNotExist:
                     return JsonResponse({"status": "error", "message": "User not found"})
 
-                fields_to_update = ["email", "role", "video_allowance", "file_allowance", "max_video_size", "max_file_size"]
+                fields_to_update = ["email", "role", "max_storage_size", "max_video_size", "max_file_size"]
                 updated = False
 
                 for field in fields_to_update:
@@ -243,8 +243,8 @@ def user_update(request):
                     "username": user.username,
                     "email": user.email,
                     "role": user.role,
-                    "video_allowance": user.video_allowance,
-                    "file_allowance": user.file_allowance,
+                    "max_storage_size": user.max_storage_size,
+                    "used_storage_size": user.used_storage_size,
                     "max_video_size": user.max_video_size,
                     "max_file_size": user.max_file_size,
                 }

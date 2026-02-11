@@ -13,15 +13,12 @@
 
       <v-card-text class="pt-4" style="overflow-y: auto">
         <v-form v-if="canUpload">
-          <div class="text-center">
-            <span class="span-border">
-              {{
-                $t("modal.position_data.upload.files_uploaded", {
-                  numFiles: numFiles,
-                  fileAllowance: fileAllowance,
-                })
-              }}
-            </span>
+          <div class="text-center d-flex justify-center">
+            <div class="storage-bar-container">
+              <div class="storage-bar-fill" :style="{ width: progressPercentage + '%' }">
+                {{ sizeInWords(usedStorageSize) }} / {{ sizeInWords(maxStorageSize) }}
+              </div>
+            </div>
           </div>
 
           <v-text-field
@@ -55,7 +52,9 @@
             class="mt-2"
             density="comfortable"
             show-size
-            :hint="$t('modal.position_data.upload.hint', { maxSize: maxSizeInWords })"
+            :hint="
+              $t('modal.position_data.upload.hint', { maxSize: sizeInWords(userStore.maxFileSize) })
+            "
             persistent-hint
           />
 
@@ -68,7 +67,9 @@
             class="mt-5"
             density="comfortable"
             show-size
-            :hint="$t('modal.position_data.upload.hint', { maxSize: maxSizeInWords })"
+            :hint="
+              $t('modal.position_data.upload.hint', { maxSize: sizeInWords(userStore.maxFileSize) })
+            "
             persistent-hint
           />
 
@@ -208,16 +209,22 @@ const origins = [
 
 const checkbox = ref(false);
 const fileValid = ref(false);
-const maxSizeInWords = computed(() => {
-  let maxSize = userStore.maxFileSize;
-  let extensionId = 0;
-  const extensions = [" B", " kB", " MB", " GB"];
-  while (maxSize > 1024) {
-    maxSize = (maxSize / 1024).toFixed(2);
-    extensionId++;
+
+const sizeInWords = (size) => {
+  if (size === null || size === undefined) return "0 B";
+
+  const units = ["B", "kB", "MB", "GB", "TB"];
+  let i = 0;
+  let s = size;
+
+  while (s >= 1024 && i < units.length - 1) {
+    s = s / 1024;
+    i++;
   }
-  return maxSize + extensions[extensionId];
-});
+
+  return Math.round(s * 100) / 100 + units[i];
+};
+
 const validateFile = (file) => {
   if (Array.isArray(file)) {
     file = file[0];
@@ -226,12 +233,14 @@ const validateFile = (file) => {
   if (!file || !file.name) {
     fileValid.value = false;
     return t("modal.position_data.upload.validate.file_required", {
-      maxSize: maxSizeInWords.value,
+      maxSize: sizeInWords(userStore.maxFileSize),
     });
   }
   if (file.size > userStore.maxFileSize) {
     fileValid.value = false;
-    return t("modal.position_data.upload.validate.file_exceeds", { maxSize: maxSizeInWords.value });
+    return t("modal.position_data.upload.validate.file_exceeds", {
+      maxSize: sizeInWords(userStore.maxFileSize),
+    });
   }
   if (!(file.name.endsWith(".csv") || file.name.endsWith(".xml"))) {
     fileValid.value = false;
@@ -242,13 +251,16 @@ const validateFile = (file) => {
   return true;
 };
 
-const fileAllowance = computed(() => userStore.fileAllowance);
-const numFiles = computed(() => fileStore.all.length);
+const usedStorageSize = computed(() => userStore.usedStorageSize);
+const maxStorageSize = computed(() => userStore.maxStorageSize);
+const remainingStorageSize = computed(() => userStore.remainingStorageSize);
 
 const isUploading = computed(() => positionDataStore.isUploading);
 const uploadingProgress = computed(() => positionDataStore.progress);
 
-const canUpload = computed(() => userStore.fileAllowance > fileStore.all.length);
+const canUpload = computed(() => {
+  return remainingStorageSize.value > 0;
+});
 const disabled = computed(() => {
   if (
     !checkbox.value ||
@@ -300,6 +312,11 @@ watch(
   },
   { immediate: true, deep: true }
 );
+
+const progressPercentage = computed(() => {
+  if (!maxStorageSize.value) return 0;
+  return Math.min(100, Math.max(0, (remainingStorageSize.value / maxStorageSize.value) * 100));
+});
 </script>
 
 <style scoped>
@@ -321,5 +338,26 @@ watch(
   padding: 10px;
   margin-bottom: 10px;
   border-radius: 4px;
+}
+
+.storage-bar-container {
+  width: 80%;
+  background-color: #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 40px;
+}
+
+.storage-bar-fill {
+  background-color: rgba(var(--v-theme-primary));
+  color: white;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  transition: width 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
 }
 </style>

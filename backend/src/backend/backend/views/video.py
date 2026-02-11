@@ -88,6 +88,7 @@ class VideoUpload(View):
                     name=request.POST.get("title"),
                     id=video_id_uuid,
                     file=video_id_uuid,
+                    file_size=request.FILES["file"].size,
                     ext=ext,
                     owner=request.user,
                     field_length=field_length,
@@ -108,6 +109,9 @@ class VideoUpload(View):
 
                 # pass original ext (e.g., .mp4) to the task
                 convert_video.apply_async((video_db.id.hex, ext, analyers))
+
+                request.user.used_storage_size += request.FILES["file"].size
+                request.user.save()
 
                 video_id_hex = video_db.id.hex if not video_db.file.hex else video_db.id.hex
                 return JsonResponse(
@@ -224,11 +228,19 @@ class VideoDelete(View):
                 data = json.loads(body)
             except Exception as e:
                 return JsonResponse({"status": "error"}, status=500)
-            count, _ = Video.objects.filter(
-                id=data.get("id"), owner=request.user
-            ).delete()
+            
+            video = Video.objects.filter(id=data.get("id"), owner=request.user).first()
+            if not video:
+                return JsonResponse({"status": "error"}, status=500)
+            
+            file_size = video.file_size
+            count, _ = Video.objects.filter(id=video.id, owner=request.user).delete()
+
             if count:
+                request.user.used_storage_size = max(0, request.user.used_storage_size - file_size)
+                request.user.save()
                 return JsonResponse({"status": "ok"})
+
             return JsonResponse({"status": "error"}, status=500)
         except Exception:
             logger.exception("Failed to delete video")
