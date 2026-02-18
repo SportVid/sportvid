@@ -45,7 +45,11 @@
         <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
       </v-btn>
 
-      <v-btn v-if="videoView && loggedIn" @click="showModalVideoUpload = true">
+      <v-btn
+        v-if="videoView && loggedIn"
+        @click="showModalVideoUpload = true"
+        :disabled="videoUploadStore.isUploading"
+      >
         <app-bar-icon>mdi-plus</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.video_upload_menu") }}</span>
       </v-btn>
@@ -149,6 +153,7 @@ import { useVideoStore } from "@/stores/video";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useLanguageStore } from "@/stores/languages";
+import { useVideoUploadStore } from "@/stores/video_upload";
 import ModalHistory from "@/components/ModalHistory.vue";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalShortcut from "@/components/ModalShortcut.vue";
@@ -166,6 +171,7 @@ const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 const tutorialStore = useTutorialStore();
 const languageStore = useLanguageStore();
+const videoUploadStore = useVideoUploadStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
 
