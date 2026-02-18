@@ -682,7 +682,12 @@
     "tutorial": {
       "title": "Tutorials",
       "show_steps": "Show Steps",
+      "show_missing_requirements": "Show missing requirements",
       "step": "Step",
+      "missing_requirements": {
+        "title": "Missing requirements",
+        "video_uploaded": "You need to upload a video first."
+      },
       "position_data_generation": {
         "name": "Position Data Generation",
         "description": "Calibrate camera, run homography, track players"
