@@ -12,7 +12,7 @@
         <img
           ref="topViewElement"
           class="visualizer-image"
-          :src="topViewStore.currentSport.pitchImage"
+          :src="topViewStore.currentSport.areaImage"
           @load="updateTopViewSize"
           :style="
             isTopViewFullscreen

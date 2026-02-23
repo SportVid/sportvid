@@ -23,46 +23,113 @@ export const useTopViewStore = defineStore(
 
     const currentSport = ref({
       title: t("sports.soccer"),
-      pitchImage: require("../assets/top-view/pitch_soccer.png"),
+      areaImage: require("../assets/top-view/pitch_soccer.png"),
+      areaImages: {
+        full: require("../assets/top-view/pitch_soccer.png"),
+        half: require("../assets/top-view/pitch_soccer.png"),
+        penToPen: require("../assets/top-view/pitch_soccer.png"),
+        doublePen: require("../assets/top-view/pitch_soccer.png"),
+      },
+      templateCrops: {
+        full: { x: [0, 1], y: [0, 1] },
+        half: { x: [0, 0.5], y: [0, 1] },
+        penToPen: { x: [0.16, 0.84], y: [0, 1] },
+        doublePen: { x: [0, 0.32], y: [0.18, 0.82] },
+      },
       widthRel: 2698 / 2910,
       heightRel: 1794 / 2010,
     });
     const sports = ref([
       {
         title: t("sports.soccer"),
-        pitchImage: require("../assets/top-view/pitch_soccer.png"),
+        areaImage: require("../assets/top-view/pitch_soccer.png"),
+        areaImages: {
+          full: require("../assets/top-view/pitch_soccer.png"),
+          half: require("../assets/top-view/pitch_soccer.png"),
+          penToPen: require("../assets/top-view/pitch_soccer.png"),
+          doublePen: require("../assets/top-view/pitch_soccer.png"),
+        },
+        templateCrops: {
+          full: { x: [0, 1], y: [0, 1] },
+          half: { x: [0, 0.5], y: [0, 1] },
+          penToPen: { x: [0.16, 0.84], y: [0, 1] },
+          doublePen: { x: [0, 0.32], y: [0.18, 0.82] },
+        },
         widthRel: 2698 / 2910,
         heightRel: 1794 / 2010,
       },
       {
         title: t("sports.handball"),
-        pitchImage: require("../assets/top-view/pitch_handball.png"),
+        areaImages: {
+          full: require("../assets/top-view/pitch_handball.png"),
+          half: require("../assets/top-view/pitch_handball.png"),
+        },
+        templateCrops: {
+          full: { x: [0, 1], y: [0, 1] },
+          half: { x: [0, 0.5], y: [0, 1] },
+        },
         widthRel: 2428 / 2622,
         heightRel: 1216 / 1410,
       },
       {
         title: t("sports.basketball"),
-        pitchImage: require("../assets/top-view/court_basketball.png"),
+        areaImages: {
+          full: require("../assets/top-view/court_basketball.png"),
+          half: require("../assets/top-view/court_basketball.png"),
+        },
+        templateCrops: {
+          full: { x: [0, 1], y: [0, 1] },
+          half: { x: [0, 0.5], y: [0, 1] },
+        },
         widthRel: 2278 / 2460,
         heightRel: 1322 / 1504,
       },
       {
         title: t("sports.climbing"),
-        pitchImage: require("../assets/top-view/area_climbing.png"),
+        areaImages: { full: require("../assets/top-view/area_climbing.png") },
+        templateCrops: {
+          full: { x: [0, 1], y: [0, 1] },
+        },
         widthRel: 1492 / 2800,
         heightRel: 1866 / 1984,
       },
     ]);
-    const onSportChange = (title) => {
+    const onSportChange = (title, areaSize = null) => {
       showItems.value = false;
-      const sport = sports.value.find((sport) => sport.title === title);
+      const sport = sports.value.find((s) => s.title === title);
+      if (!sport) return;
       currentSport.value.title = sport.title;
-      currentSport.value.pitchImage = sport.pitchImage;
       currentSport.value.widthRel = sport.widthRel;
       currentSport.value.heightRel = sport.heightRel;
+
+      currentSport.value.areaImages = sport.areaImages || { full: sport.areaImages?.full };
+      const tpl = areaSize && currentSport.value.areaImages[areaSize] ? areaSize : "full";
+      currentSport.value.template = tpl;
+      currentSport.value.areaImage =
+        currentSport.value.areaImages[tpl] || Object.values(currentSport.value.areaImages)[0];
+
+      currentSport.value.fieldLength = null;
+      currentSport.value.fieldWidth = null;
       nextTick(() => {
         showItems.value = true;
       });
+    };
+
+    const setTemplateSelection = (template, fieldLength = null, fieldWidth = null) => {
+      currentSport.value.template = template || "full";
+      currentSport.value.fieldLength = fieldLength;
+      currentSport.value.fieldWidth = fieldWidth;
+
+      // compute approximate widthRel/heightRel adjustments if user provided sizes
+      if (fieldWidth && fieldLength) {
+        // store ratio of length/width as proxy to adjust display aspect
+        currentSport.value.widthRel = fieldWidth / Math.max(fieldWidth, fieldLength);
+        currentSport.value.heightRel = fieldLength / Math.max(fieldWidth, fieldLength);
+      }
+      // set the selected area image when template changes (if available)
+      if (currentSport.value.areaImages && currentSport.value.areaImages[template]) {
+        currentSport.value.areaImage = currentSport.value.areaImages[template];
+      }
     };
 
     const showSpaceControl = ref(false);
@@ -171,6 +238,7 @@ export const useTopViewStore = defineStore(
       positionDataTopView,
       metaDataTopView,
       transformBBoxToPositionDataTopView,
+      setTemplateSelection,
       showPlayerId,
       viewPlayerId,
       currentTime,

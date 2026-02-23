@@ -628,12 +628,12 @@ export const useCalibrationAssetStore = defineStore(
     const calibrationAssetSaveSuccess = ref(false);
     const calibrationAssetUpdateSuccess = ref(false);
     const calibrationAssetDeleteSuccess = ref(false);
-    const createCalibrationAsset = ({ template, objectType }) => {
+    const createCalibrationAsset = ({ sport, areaSize, objectType }) => {
       calibrationAssetType.value = objectType;
       calibrationAssetObjects.value = JSON.parse(
         JSON.stringify(currentTemplate.value.filter((m) => m.set))
       );
-      topViewStore.onSportChange(template);
+      topViewStore.onSportChange(sport, areaSize);
 
       calibrationAssetId.value = null;
       videoObject.value = [];

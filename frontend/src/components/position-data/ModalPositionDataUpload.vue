@@ -44,6 +44,90 @@
             prepend-icon="mdi-menu"
           />
 
+          <v-select
+            v-model="positionData.sport"
+            :items="sports"
+            item-title="title"
+            item-value="value"
+            label="{{ $t('modal.position_data.upload.select.sport') }}"
+            prepend-icon="mdi-basketball"
+          />
+
+          <v-select
+            v-if="positionData.sport"
+            v-model="positionData.template"
+            :items="availableTemplates"
+            item-title="title"
+            item-value="value"
+            label="{{ $t('modal.position_data.upload.select.template') }}"
+            prepend-icon="mdi-view-grid"
+          />
+
+          <v-row class="mt-2" v-if="positionData.sport">
+            <v-col cols="6">
+              <v-text-field
+                v-model.number="positionData.fieldLength"
+                type="number"
+                label="{{ $t('modal.position_data.upload.field_length') }}"
+                hint="meters"
+                persistent-hint
+              />
+            </v-col>
+            <v-col cols="6">
+              <v-text-field
+                v-model.number="positionData.fieldWidth"
+                type="number"
+                label="{{ $t('modal.position_data.upload.field_width') }}"
+                hint="meters"
+                persistent-hint
+              />
+            </v-col>
+          </v-row>
+
+          <div class="d-flex justify-center mt-2" v-if="positionData.sport">
+            <div style="width: 320px; height: 180px; border: 1px solid #ccc">
+              <svg :width="320" :height="180" viewBox="0 0 320 180">
+                <rect x="0" y="0" width="320" height="180" fill="#2a7f2a" />
+                <!-- crop area -->
+                <rect
+                  :x="cropX * 320"
+                  y="0"
+                  :width="cropWidth * 320"
+                  height="180"
+                  fill="none"
+                  stroke="white"
+                  stroke-width="2"
+                />
+                <!-- side lines -->
+                <line
+                  :x1="cropX * 320"
+                  y1="10"
+                  :x2="(cropX + cropWidth) * 320"
+                  y2="10"
+                  stroke="white"
+                  stroke-width="2"
+                />
+                <line
+                  :x1="cropX * 320"
+                  y1="170"
+                  :x2="(cropX + cropWidth) * 320"
+                  y2="170"
+                  stroke="white"
+                  stroke-width="2"
+                />
+                <!-- mid line -->
+                <line
+                  :x1="(cropX + cropWidth / 2) * 320"
+                  y1="0"
+                  :x2="(cropX + cropWidth / 2) * 320"
+                  y2="180"
+                  stroke="white"
+                  stroke-width="1"
+                />
+              </svg>
+            </div>
+          </div>
+
           <v-file-input
             v-model="positionData.file"
             :rules="[validateFile]"
