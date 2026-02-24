@@ -20,8 +20,8 @@ from django.db import transaction
 from django.conf import settings
 
 
-@PluginManager.export_parser("floodlight_convert")
-class FloodlightConvertParser(Parser):
+@PluginManager.export_parser("kpi_computation")
+class KpiComputationParser(Parser):
     def __init__(self):
         self.valid_parameter = {
             "tracking_data_id": {"parser": str, "required": True},
@@ -30,8 +30,8 @@ class FloodlightConvertParser(Parser):
         }
 
 
-@PluginManager.export_plugin("floodlight_convert")
-class FloodlightConvert(Task):
+@PluginManager.export_plugin("kpi_computation")
+class KpiComputation(Task):
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",
@@ -66,7 +66,7 @@ class FloodlightConvert(Task):
         # --------> RUN
         result = self.run_analyser(
             client,
-            "floodlight_convert",
+            "kpi_computation",
             parameters={
                 "format": parameters.get("format"),
                 "delimiter": parameters.get("delimiter"),

@@ -95,3 +95,5 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_ANALYSER']._serialized_start=2850
   _globals['_ANALYSER']._serialized_end=3699
 # @@protoc_insertion_point(module_scope)
+# Manually added pending proto recompilation:
+KPI_DATA = 22

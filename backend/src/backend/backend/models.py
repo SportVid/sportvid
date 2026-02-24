@@ -258,6 +258,7 @@ class PluginRunResult(models.Model):
     TYPE_BBOXES = "B"
     TYPE_POS = "P"
     TYPE_FL = "FL"
+    TYPE_KPI = "KI"
     TYPE = {
         TYPE_VIDEO: "VIDEO",
         TYPE_IMAGES: "IMAGES",
@@ -270,7 +271,8 @@ class PluginRunResult(models.Model):
         TYPE_IMAGE_EMBEDDINGS: "IMAGE_EMBEDDINGS",
         TYPE_BBOXES: "BBOXES",
         TYPE_POS: "POS",
-        TYPE_FL: "FL"
+        TYPE_FL: "FL",
+        TYPE_KPI: "KPI",
     }
     type = models.CharField(
         max_length=2,
