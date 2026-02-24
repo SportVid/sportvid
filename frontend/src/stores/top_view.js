@@ -21,115 +21,142 @@ export const useTopViewStore = defineStore(
       topViewSize.value = size;
     };
 
+    const currentAreaSize = ref("full");
+
     const currentSport = ref({
       title: t("sports.soccer"),
-      areaImage: require("../assets/top-view/pitch_soccer.png"),
-      areaImages: {
-        full: require("../assets/top-view/pitch_soccer.png"),
-        half: require("../assets/top-view/pitch_soccer.png"),
-        penToPen: require("../assets/top-view/pitch_soccer.png"),
-        doublePen: require("../assets/top-view/pitch_soccer.png"),
+      areaImage: require("../assets/top-view/pitch_soccer_full.png"),
+      areas: {
+        full: {
+          image: require("../assets/top-view/pitch_soccer_full.png"),
+          templateCrop: { x: [0, 1], y: [0, 1] },
+          widthRel: 2100 / 2260,
+          heightRel: 1360 / 1519,
+        },
+        half: {
+          image: require("../assets/top-view/pitch_soccer_half.png"),
+          templateCrop: { x: [0, 0.5], y: [0, 1] },
+          widthRel: 1050 / 1210,
+          heightRel: 1360 / 1519,
+        },
+        penToPen: {
+          image: require("../assets/top-view/pitch_soccer_pen_to_pen.png"),
+          templateCrop: { x: [0.16, 0.84], y: [0, 1] },
+          widthRel: 1440 / 1350,
+          heightRel: 1360 / 1270,
+        },
+        doublePen: {
+          image: require("../assets/top-view/pitch_soccer_double_pen.png"),
+          templateCrop: { x: [0, 0.32], y: [0.18, 0.82] },
+          widthRel: 660 / 820,
+          heightRel: 806 / 966,
+        },
       },
-      templateCrops: {
-        full: { x: [0, 1], y: [0, 1] },
-        half: { x: [0, 0.5], y: [0, 1] },
-        penToPen: { x: [0.16, 0.84], y: [0, 1] },
-        doublePen: { x: [0, 0.32], y: [0.18, 0.82] },
-      },
-      widthRel: 2698 / 2910,
-      heightRel: 1794 / 2010,
+      widthRel: 2100 / 2260,
+      heightRel: 1360 / 1519,
     });
     const sports = ref([
       {
         title: t("sports.soccer"),
-        areaImage: require("../assets/top-view/pitch_soccer.png"),
-        areaImages: {
-          full: require("../assets/top-view/pitch_soccer.png"),
-          half: require("../assets/top-view/pitch_soccer.png"),
-          penToPen: require("../assets/top-view/pitch_soccer.png"),
-          doublePen: require("../assets/top-view/pitch_soccer.png"),
+        areaImage: require("../assets/top-view/pitch_soccer_full.png"),
+        areas: {
+          full: {
+            image: require("../assets/top-view/pitch_soccer_full.png"),
+            templateCrop: { x: [0, 1], y: [0, 1] },
+            widthRel: 2100 / 2260,
+            heightRel: 1360 / 1519,
+          },
+          half: {
+            image: require("../assets/top-view/pitch_soccer_half.png"),
+            templateCrop: { x: [0, 0.5], y: [0, 1] },
+            widthRel: 1050 / 1210,
+            heightRel: 1360 / 1519,
+          },
+          penToPen: {
+            image: require("../assets/top-view/pitch_soccer_pen_to_pen.png"),
+            templateCrop: { x: [0.1575, 0.8425], y: [0, 1] },
+            widthRel: 1440 / 1600,
+            heightRel: 1360 / 1519,
+          },
+          doublePen: {
+            image: require("../assets/top-view/pitch_soccer_double_pen.png"),
+            templateCrop: { x: [0, 0.315], y: [0.2025, 0.7975] },
+            widthRel: 660 / 820,
+            heightRel: 806 / 966,
+          },
         },
-        templateCrops: {
-          full: { x: [0, 1], y: [0, 1] },
-          half: { x: [0, 0.5], y: [0, 1] },
-          penToPen: { x: [0.16, 0.84], y: [0, 1] },
-          doublePen: { x: [0, 0.32], y: [0.18, 0.82] },
-        },
-        widthRel: 2698 / 2910,
-        heightRel: 1794 / 2010,
       },
       {
         title: t("sports.handball"),
-        areaImages: {
-          full: require("../assets/top-view/pitch_handball.png"),
-          half: require("../assets/top-view/pitch_handball.png"),
+        areaImage: require("../assets/top-view/pitch_handball_full.png"),
+        areas: {
+          full: {
+            image: require("../assets/top-view/pitch_handball_full.png"),
+            templateCrop: { x: [0, 1], y: [0, 1] },
+            widthRel: 2428 / 2622,
+            heightRel: 1216 / 1410,
+          },
+          half: {
+            image: require("../assets/top-view/pitch_handball_full.png"),
+            templateCrop: { x: [0, 0.5], y: [0, 1] },
+            widthRel: 2428 / 2622,
+            heightRel: 1216 / 1410,
+          },
         },
-        templateCrops: {
-          full: { x: [0, 1], y: [0, 1] },
-          half: { x: [0, 0.5], y: [0, 1] },
-        },
-        widthRel: 2428 / 2622,
-        heightRel: 1216 / 1410,
       },
       {
         title: t("sports.basketball"),
-        areaImages: {
-          full: require("../assets/top-view/court_basketball.png"),
-          half: require("../assets/top-view/court_basketball.png"),
+        areaImage: require("../assets/top-view/court_basketball_full.png"),
+        areas: {
+          full: {
+            image: require("../assets/top-view/court_basketball_full.png"),
+            templateCrop: { x: [0, 1], y: [0, 1] },
+            widthRel: 2278 / 2460,
+            heightRel: 1322 / 1504,
+          },
+          half: {
+            image: require("../assets/top-view/court_basketball_full.png"),
+            templateCrop: { x: [0, 0.5], y: [0, 1] },
+            widthRel: 2278 / 2460,
+            heightRel: 1322 / 1504,
+          },
         },
-        templateCrops: {
-          full: { x: [0, 1], y: [0, 1] },
-          half: { x: [0, 0.5], y: [0, 1] },
-        },
-        widthRel: 2278 / 2460,
-        heightRel: 1322 / 1504,
       },
       {
         title: t("sports.climbing"),
-        areaImages: { full: require("../assets/top-view/area_climbing.png") },
-        templateCrops: {
-          full: { x: [0, 1], y: [0, 1] },
+        areaImage: require("../assets/top-view/area_climbing.png"),
+        areas: {
+          full: {
+            image: require("../assets/top-view/area_climbing.png"),
+            templateCrop: { x: [0, 1], y: [0, 1] },
+            widthRel: 1492 / 2800,
+            heightRel: 1866 / 1984,
+          },
         },
-        widthRel: 1492 / 2800,
-        heightRel: 1866 / 1984,
       },
     ]);
-    const onSportChange = (title, areaSize = null) => {
+    const onSportChange = (title, areaSize = "full") => {
       showItems.value = false;
       const sport = sports.value.find((s) => s.title === title);
       if (!sport) return;
       currentSport.value.title = sport.title;
-      currentSport.value.widthRel = sport.widthRel;
-      currentSport.value.heightRel = sport.heightRel;
-
-      currentSport.value.areaImages = sport.areaImages || { full: sport.areaImages?.full };
-      const tpl = areaSize && currentSport.value.areaImages[areaSize] ? areaSize : "full";
-      currentSport.value.template = tpl;
+      currentSport.value.areas = sport.areas;
       currentSport.value.areaImage =
-        currentSport.value.areaImages[tpl] || Object.values(currentSport.value.areaImages)[0];
+        currentSport.value.areas[areaSize]?.image || sport.areas.full.image;
+      currentAreaSize.value = areaSize;
 
-      currentSport.value.fieldLength = null;
-      currentSport.value.fieldWidth = null;
+      // Set widthRel and heightRel based on selected area size
+      if (sport.areas && sport.areas[areaSize]) {
+        currentSport.value.widthRel = sport.areas[areaSize].widthRel;
+        currentSport.value.heightRel = sport.areas[areaSize].heightRel;
+      } else {
+        currentSport.value.widthRel = sport.widthRel;
+        currentSport.value.heightRel = sport.heightRel;
+      }
+
       nextTick(() => {
         showItems.value = true;
       });
-    };
-
-    const setTemplateSelection = (template, fieldLength = null, fieldWidth = null) => {
-      currentSport.value.template = template || "full";
-      currentSport.value.fieldLength = fieldLength;
-      currentSport.value.fieldWidth = fieldWidth;
-
-      // compute approximate widthRel/heightRel adjustments if user provided sizes
-      if (fieldWidth && fieldLength) {
-        // store ratio of length/width as proxy to adjust display aspect
-        currentSport.value.widthRel = fieldWidth / Math.max(fieldWidth, fieldLength);
-        currentSport.value.heightRel = fieldLength / Math.max(fieldWidth, fieldLength);
-      }
-      // set the selected area image when template changes (if available)
-      if (currentSport.value.areaImages && currentSport.value.areaImages[template]) {
-        currentSport.value.areaImage = currentSport.value.areaImages[template];
-      }
     };
 
     const showSpaceControl = ref(false);
@@ -226,6 +253,7 @@ export const useTopViewStore = defineStore(
       currentSport,
       sports,
       onSportChange,
+      currentAreaSize,
       showItems,
       showSpaceControl,
       viewSpaceControl,
@@ -238,7 +266,6 @@ export const useTopViewStore = defineStore(
       positionDataTopView,
       metaDataTopView,
       transformBBoxToPositionDataTopView,
-      setTemplateSelection,
       showPlayerId,
       viewPlayerId,
       currentTime,

@@ -12,7 +12,7 @@
         <img
           ref="topViewElement"
           class="visualizer-image"
-          :src="topViewStore.currentSport.pitchImage"
+          :src="topViewStore.currentSport.areaImage"
           @load="updateTopViewSize"
           :style="
             isTopViewFullscreen
@@ -151,17 +151,29 @@
             {{ topViewStore.currentSport.title }}
           </v-btn>
         </template>
-        <v-list class="py-0" density="compact">
-          <v-list-item
-            v-for="item in topViewStore.sports"
-            :key="item"
-            class="menu-item"
-            v-on:click="topViewStore.onSportChange(item.title)"
-          >
-            <v-list-item-title class="my-0">
-              {{ item.title }}
-            </v-list-item-title>
-          </v-list-item>
+        <v-list class="py-0" density="compact" width="115px">
+          <v-menu location="end" open-on-hover v-for="sport in topViewStore.sports" :key="sport">
+            <template #activator="{ props }">
+              <v-list-item v-bind="props" class="menu-item">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ sport.title }}
+                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+            <v-list class="py-0" density="compact">
+              <v-list-item
+                v-for="(areaData, areaSize) in sport.areas"
+                :key="areaSize"
+                class="menu-item"
+                @click="topViewStore.onSportChange(sport.title, areaSize)"
+              >
+                <v-list-item-title class="my-0">
+                  {{ areaSize }}
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </v-list>
       </v-menu>
 

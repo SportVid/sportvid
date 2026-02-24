@@ -12,7 +12,7 @@
         <img
           ref="topViewElement"
           class="visualizer-image"
-          :src="topViewStore.currentSport.pitchImage"
+          :src="topViewStore.currentSport.areaImage"
           @load="updateTopViewSize"
           :style="
             isTopViewFullscreen
@@ -99,11 +99,11 @@
         </svg>
 
         <template
-          v-for="position in topViewStore.positionDataTopView[topViewStore.currentFrameKey]"
-          :key="position"
+          v-for="item in positionDataTransformed[topViewStore.currentFrameKey]"
+          :key="item.original"
         >
           <div
-            v-if="position[1] !== 1"
+            v-if="item.original[1] !== 1"
             v-show="topViewStore.showItems"
             :style="{
               position: 'absolute',
@@ -113,27 +113,27 @@
               transform: 'translate(-50%, -50%)',
               top: isTopViewFullscreen
                 ? topViewStore.topViewSize.top +
-                  position[4] *
+                  item.transformed.y *
                     (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                   ((1 - topViewStore.currentSport.heightRel) / 2) *
                     topViewStore.topViewSize.height +
                   'px'
-                : position[4] *
+                : item.transformed.y *
                     (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                   ((1 - topViewStore.currentSport.heightRel) / 2) *
                     topViewStore.topViewSize.height +
                   'px',
               left: isTopViewFullscreen
                 ? topViewStore.topViewSize.left +
-                  position[3] *
+                  item.transformed.x *
                     (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                   ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                   'px'
-                : position[3] *
+                : item.transformed.x *
                     (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                   ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                   'px',
-              backgroundColor: visualizationStore.getTeamColor(position[1]),
+              backgroundColor: visualizationStore.getTeamColor(item.original[1]),
               cursor:
                 topViewStore.showSpaceControl || topViewStore.showEffectivePlayingSpace
                   ? 'pointer'
@@ -141,15 +141,15 @@
             }"
             @click="
               (topViewStore.showSpaceControl || topViewStore.showEffectivePlayingSpace) &&
-                togglePlayersForKPIs(position[0])
+                togglePlayersForKPIs(item.original[0])
             "
           >
             <div
               v-if="topViewStore.showPlayerId"
               class="position-data-player-id"
-              :style="{ color: visualizationStore.getTeamColor(position[1]) }"
+              :style="{ color: visualizationStore.getTeamColor(item.original[1]) }"
             >
-              {{ position[0] }}
+              {{ item.original[0] }}
             </div>
           </div>
 
@@ -160,12 +160,12 @@
               position: 'absolute',
               transform: 'translate(-50%, -50%)',
               top:
-                position[4] *
+                item.transformed.y *
                   (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                 ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
                 'px',
               left:
-                position[3] *
+                item.transformed.x *
                   (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                 ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                 'px',
@@ -311,17 +311,29 @@
             {{ topViewStore.currentSport.title }}
           </v-btn>
         </template>
-        <v-list class="py-0" density="compact">
-          <v-list-item
-            v-for="item in topViewStore.sports"
-            :key="item"
-            class="menu-item"
-            v-on:click="topViewStore.onSportChange(item.title)"
-          >
-            <v-list-item-title class="my-0">
-              {{ item.title }}
-            </v-list-item-title>
-          </v-list-item>
+        <v-list class="py-0" density="compact" width="115px">
+          <v-menu location="end" open-on-hover v-for="sport in topViewStore.sports" :key="sport">
+            <template #activator="{ props }">
+              <v-list-item v-bind="props" class="menu-item">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ sport.title }}
+                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+            <v-list class="py-0" density="compact">
+              <v-list-item
+                v-for="(areaData, areaSize) in sport.areas"
+                :key="areaSize"
+                class="menu-item"
+                @click="topViewStore.onSportChange(sport.title, areaSize)"
+              >
+                <v-list-item-title class="my-0">
+                  {{ areaSize }}
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </v-list>
       </v-menu>
 
@@ -673,6 +685,18 @@ const togglePlayersForKPIs = (playerId) => {
   includedPlayers.value = newSet;
 };
 
+const transformCoordinateToCrop = (x, y, cropPct) => {
+  if (!cropPct) return { x, y };
+
+  const xRange = cropPct.x;
+  const yRange = cropPct.y;
+
+  const xCrop = (x - xRange[0]) / (xRange[1] - xRange[0]);
+  const yCrop = (y - yRange[0]) / (yRange[1] - yRange[0]);
+
+  return { x: xCrop, y: yCrop };
+};
+
 const computeConvexHull = (points) => {
   if (points.length < 3) return [];
   const sortedPoints = points.slice().sort((a, b) => a.left - b.left || a.top - b.top);
@@ -706,17 +730,22 @@ const convexHullPlayer = computed(() => {
   if (!topViewStore.topViewSize || !topViewStore.positionDataTopView) {
     return {};
   }
+
+  const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop;
+
   const result = {};
   Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
     const teams = {};
     framePositions
       .filter((position) => position[1] !== 1 && includedPlayers.value.has(position[0]))
       .forEach((position) => {
+        const transformed = transformCoordinateToCrop(position[3], position[4], cropPct);
+
         const top =
-          position[4] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+          transformed.y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
           ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
         const left =
-          position[3] * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+          transformed.x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
           ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
         if (!teams[position[1]]) {
           teams[position[1]] = [];
@@ -760,20 +789,49 @@ const voronoiCells = computed(() => {
   if (!topViewStore.topViewSize || !topViewStore.positionDataTopView) {
     return {};
   }
+
+  const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
+    x: [0, 1],
+    y: [0, 1],
+  };
+
   const result = {};
   Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
     const allPlayers = framePositions
       .filter((player) => player[1] !== 1 && includedPlayers.value.has(player[0]))
       .map((player) => {
+        const transformed = transformCoordinateToCrop(player[3], player[4], cropPct);
+
         const top =
-          player[4] * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+          transformed.y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
           ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
         const left =
-          player[3] * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+          transformed.x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
           ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
         return { left, top, team_id: player[1] };
       });
     result[timeKey] = computeVoronoi(allPlayers);
+  });
+  return result;
+});
+
+const positionDataTransformed = computed(() => {
+  if (!topViewStore.positionDataTopView) return {};
+
+  const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
+    x: [0, 1],
+    y: [0, 1],
+  };
+
+  const result = {};
+  Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
+    result[timeKey] = framePositions.map((position) => {
+      const transformed = transformCoordinateToCrop(position[3], position[4], cropPct);
+      return {
+        original: position,
+        transformed: transformed,
+      };
+    });
   });
   return result;
 });
@@ -927,6 +985,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .fullscreen-toggle {

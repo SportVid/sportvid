@@ -713,7 +713,6 @@
       "create": {
         "title": "Create Calibration Asset",
         "sport": "Select sport",
-        "area_size": "Select area size",
         "object_type": "Select object type"
       },
       "select": {
@@ -778,6 +777,8 @@
         },
         "asset": "Select Calibration Asset",
         "bytetrack": "Select Bytetrack Plugin",
+        "sport": "Select sport",
+        "area_size": "Select area size",
         "uploaded_position_data": "Select uploaded position data"
       },
       "rename": {
