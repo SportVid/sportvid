@@ -728,17 +728,17 @@ class CalibrationAssets(models.Model):
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.CASCADE
     )
     name = models.CharField(max_length=1024)
+    sport = models.CharField(max_length=1024, null=True)
     # store 3x3 matrix as JSON array of arrays, default to identity matrix
     homography_matrix = models.JSONField(default=default_homography_matrix)
-    template = models.CharField(max_length=1024, null=True) # TODO: enum
     object_type = models.CharField(max_length=1024, null=True)
 
     def to_dict(self, include_refs_hashes=True, include_refs=True, **kwargs):
         result = {
             "id": self.id.hex,
             "name": self.name,
+            "sport": self.sport,
             "homography_matrix": self.homography_matrix,
-            "template": self.template,
             "object_type": self.object_type
         }
         if include_refs:
@@ -758,12 +758,6 @@ class PointCorrespondence(models.Model):
     active = models.BooleanField(default=False)
     comp_area_coords_rel = models.JSONField(default=list)
     video_coords_rel = models.JSONField(default=list)
-    # compAreaCoord_x = models.FloatField()
-    # compAreaCoord_y = models.FloatField()
-    # compAreaCoord_z = models.FloatField(default=0.0)
-    # videoCoord_x = models.FloatField()
-    # videoCoord_y = models.FloatField()
-    # videoCoord_z = models.FloatField(default=0.0)
 
     def to_dict(self):
         return {
@@ -773,14 +767,4 @@ class PointCorrespondence(models.Model):
             "active": self.active,
             "compAreaCoordsRel": self.comp_area_coords_rel,
             "videoCoordsRel": self.video_coords_rel
-            # "compAreaCoordsRel": {
-            #     "x": self.compAreaCoord_x,
-            #     "y": self.compAreaCoord_y,
-            #     "z": self.compAreaCoord_z
-            # },
-            # "videoCoordsRel": {
-            #     "x": self.videoCoord_x,
-            #     "y": self.videoCoord_y,
-            #     "z": self.videoCoord_z
-            # }
         }

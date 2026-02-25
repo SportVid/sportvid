@@ -107,10 +107,39 @@
     }
   },
   "sports": {
-    "soccer": "Soccer",
-    "handball": "Handball",
-    "basketball": "Basketball",
-    "climbing": "Climbing"
+    "soccer": {
+      "title": "Soccer",
+      "areas": {
+        "full": "Full Pitch",
+        "half_left": "Left Half",
+        "half_right": "Right Half",
+        "box_to_box": "Box to Box",
+        "double_box_left": "Double Box Left",
+        "double_box_right": "Double Box Right"
+      }
+    },
+    "handball": {
+      "title": "Handball",
+      "areas": {
+        "full": "Full Court",
+        "half_left": "Left Half",
+        "half_right": "Right Half"
+      }
+    },
+    "basketball": {
+      "title": "Basketball",
+      "areas": {
+        "full": "Full Court",
+        "half_left": "Left Half",
+        "half_right": "Right Half"
+      }
+    },
+    "climbing": {
+      "title": "Climbing",
+      "areas": {
+        "full": "Full Area"
+      }
+    }
   },
   "calibration_asset": {
     "not_selected": "No calibration asset selected.<br>Please create a new calibration asset or choose an existing one.",
@@ -712,7 +741,7 @@
     "calibration_asset": {
       "create": {
         "title": "Create Calibration Asset",
-        "template": "Select sport",
+        "sport": "Select sport",
         "object_type": "Select object type"
       },
       "select": {
@@ -777,6 +806,8 @@
         },
         "asset": "Select Calibration Asset",
         "bytetrack": "Select Bytetrack Plugin",
+        "sport": "Select sport",
+        "area_size": "Select area size",
         "uploaded_position_data": "Select uploaded position data"
       },
       "rename": {

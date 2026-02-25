@@ -169,11 +169,9 @@ import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useUserStore } from "@/stores/user";
-import { useFileStore } from "@/stores/files";
 
 const positionDataStore = usePositionDataStore();
 const userStore = useUserStore();
-const fileStore = useFileStore();
 
 const { t } = useI18n();
 
