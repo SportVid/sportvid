@@ -1028,6 +1028,37 @@ const plugins = ref([
         ],
         optional_parameters: [],
       },
+      {
+        name: t("modal.plugin.kpi_computation.plugin_name"),
+        description: t("modal.plugin.kpi_computation.plugin_description"),
+        icon: "mdi-chart-line",
+        plugin: "kpi_computation",
+        id: 703,
+        parameters: [
+          {
+            field: "select_tracking_data",
+            name: "tracking_data_id",
+            value: "",
+            text: t("modal.plugin.kpi_computation.tracking_data_id"),
+            hint: t("modal.plugin.kpi_computation.tracking_data_id_hint"),
+          },
+          {
+            field: "select_options",
+            name: "format",
+            value: "kinexon",
+            items: ["kinexon", "dfl"],
+            text: t("modal.plugin.kpi_computation.format"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "text_field",
+            name: "delimiter",
+            value: ";",
+            text: t("modal.plugin.kpi_computation.delimiter"),
+          },
+        ],
+      },
     ],
   },
   // TODO: add extra view for all calibration plugins

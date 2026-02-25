@@ -67,6 +67,19 @@
 
       <v-select
         v-model="parameter.value"
+        :items="trackingDatasets"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_tracking_data'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+      />
+
+      <v-select
+        v-model="parameter.value"
         :items="positionDataTeams"
         :label="parameter.text"
         :hint="parameter.hint"
@@ -374,13 +387,13 @@ import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
 import { useExportStore } from "@/stores/export";
-import { usePlayerStore } from "@/stores/player";
+import { usePositionDataStore } from "@/stores/position_data";
 
 const timelineStore = useTimelineStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const topViewStore = useTopViewStore();
 const exportStore = useExportStore();
-const playerStore = usePlayerStore();
+const positionDataStore = usePositionDataStore();
 
 const { t } = useI18n();
 
@@ -533,11 +546,14 @@ const calibrationAssets = computed(() => {
   return Object.values(calibrationAssetStore.calibrationAssetsList);
 });
 
-onMounted(() => {
-  calibrationAssetStore.loadCalibrationAssetsList();
+const trackingDatasets = computed(() => {
+  return Object.values(positionDataStore.positionDataList);
 });
 
-const allFrameKeys = computed(() => Object.keys(topViewStore.positionDataTopView).map(Number));
+onMounted(() => {
+  calibrationAssetStore.loadCalibrationAssetsList();
+  positionDataStore.loadPositionDataList();
+});
 </script>
 
 <style scoped>

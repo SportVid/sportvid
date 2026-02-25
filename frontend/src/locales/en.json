@@ -100,7 +100,7 @@
       "timeline": "Timeline",
       "events": "Events",
       "heatmap": "Heatmap",
-      "running_distance": "Running Distance"
+      "kpi": "KPIs"
     }
   },
   "sports": {
@@ -238,9 +238,8 @@
         "running_distance_cumulative": "Running distance (cumulative)",
         "running_distance_interval": "Running distance (per {frames} frames)",
         "interval_frames": "Interval (frames)",
-        "velocity_max": "Maximum Velocity",
-        "velocity_mean": "Mean Velocity",
-        "metabolic_work": "Metabolic work"
+        "velocity": "Velocity [m⋅s<sup>-1</sup>]",
+        "metabolic_power": "Metabolic Power [W⋅kg<sup>-1</sup>]"
       },
       "zone_selection": {
         "title": "Zone",
@@ -498,7 +497,6 @@
         "min": "Minimum",
         "prod": "Product"
       },
-
       "bytetrack": {
         "plugin_name": "ByteTrack",
         "plugin_description": "This plugin performs multi-object tracking (MOT). It uses the 'bytetrack_x_mot17' model from https://github.com/ifzhang/ByteTrack.",
@@ -510,6 +508,14 @@
         "timeline_name": "Calibration Static DLT",
         "calibration_id": "Select Calibration Asset",
         "calibration_id_hint": "Select a calibration asset to use for the calibration."
+      },
+      "kpi_computation": {
+        "plugin_name": "KPI Computation",
+        "plugin_description": "This plugin computes a selected key performance indicator (KPI) based on the position data. The following KPIs are currently available: <br><br> <em>Distance Covered, Velocity & Metabolic Power</em>",
+        "tracking_data_id": "Select Position Data",
+        "tracking_data_id_hint": "Select a position dataset to use for the computation.",
+        "format": "Select the data provider",
+        "delimiter": "Delimiter"
       },
       "audio_waveform": {
         "plugin_name": "Audio Waveform",

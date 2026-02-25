@@ -225,6 +225,7 @@
           color="primary"
           :headers="playerHeaders"
           :items="teamPlayers"
+          #
           :items-per-page="-1"
           class="elevation-2"
           hide-default-footer
@@ -288,16 +289,11 @@
           hide-default-footer
           density="compact"
         >
-          <template #item="{ item, columns }">
-            <tr
-              :style="{
-                backgroundColor: toRgb(visualizationStore.getTeamColor(item.team_id), 0.6),
-              }"
-            >
-              <td v-for="col in columns" :key="col.key">
-                {{ item[col.key] }}
-              </td>
-            </tr>
+          <template #header.velocity="{ column }">
+            <span v-html="column.title"></span>
+          </template>
+          <template #header.metabolic_power="{ column }">
+            <span v-html="column.title"></span>
           </template>
         </v-data-table>
       </v-card>
@@ -358,13 +354,16 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, toRaw } from "vue";
+import { ref, computed, watch, toRaw, watchEffect } from "vue";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
+import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePlayerStore } from "@/stores/player";
 import RunningDistanceTimeSelector from "../kpi/RunningDistanceTimeSelector.vue";
 import KpiChart from "../kpi/KpiChart.vue";
 import ZoneSelectorPicker from "../kpi/ZoneSelectorPicker.vue";
@@ -375,6 +374,8 @@ import { debounce } from "lodash";
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
 const positionDataStore = usePositionDataStore();
+const pluginRunResultStore = usePluginRunResultStore();
+const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
 const posdataWorkerStore = usePosdataWorkerStore();
 const videoStore = useVideoStore();
@@ -390,7 +391,12 @@ const TRANS_BOUNDS = [0, 0.1575, 0.33, 0.67, 0.8425, 1];
 const initialZones = [];
 for (let r = 0; r < 5; r++) {
   for (let c = 0; c < 5; c++) {
-    initialZones.push({ x0: TRANS_BOUNDS[c], y0: LONG_BOUNDS[r], x1: TRANS_BOUNDS[c + 1], y1: LONG_BOUNDS[r + 1] });
+    initialZones.push({
+      x0: TRANS_BOUNDS[c],
+      y0: LONG_BOUNDS[r],
+      x1: TRANS_BOUNDS[c + 1],
+      y1: LONG_BOUNDS[r + 1],
+    });
   }
 }
 const selectedZones = ref(initialZones);
@@ -491,6 +497,8 @@ const teamHeaders = [
   { title: t("visualization.running_distance.team_view.total_distance"), key: "total_distance" },
   { title: t("visualization.running_distance.team_view.avg_distance"), key: "avg_distance" },
   { title: t("visualization.running_distance.team_view.player_count"), key: "player_count" },
+  { title: t("visualization.running_distance.velocity"), key: "velocity" },
+  { title: t("visualization.running_distance.metabolic_power"), key: "metabolic_power" },
 ];
 
 const playerOptions = ref([]);
@@ -588,7 +596,13 @@ const triggerDistanceCalc = debounce(async () => {
 }, 150);
 
 watch(
-  [selectedPlayerIds, selectedStartFrame, selectedEndFrame, () => topViewStore.positionDataTopView, selectedZones],
+  [
+    selectedPlayerIds,
+    selectedStartFrame,
+    selectedEndFrame,
+    () => topViewStore.positionDataTopView,
+    selectedZones,
+  ],
   () => triggerDistanceCalc(),
   { immediate: true }
 );
@@ -664,6 +678,20 @@ const findLastFrameWithHalftime = (half) => {
   }
   return last ?? 0;
 };
+
+const plugins = computed(() =>
+  pluginRunStore
+    .forVideo(playerStore.videoId)
+    .filter((e) => e.type === "kpi_computation" && e.status === "DONE")
+    .map((e) => {
+      e.results = pluginRunResultStore.forPluginRun(e.id);
+      return e;
+    })
+);
+watchEffect(() => {
+  if (!plugins.value.length) return;
+  console.log("KPIs:", plugins.value[0]?.results[0]?.data?.kpis);
+});
 </script>
 
 <style scoped>
