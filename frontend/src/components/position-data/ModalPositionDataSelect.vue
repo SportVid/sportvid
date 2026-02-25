@@ -55,6 +55,8 @@
                   <v-select
                     v-model="areaSize"
                     :items="areaOptions"
+                    item-title="title"
+                    item-value="value"
                     :label="$t('modal.position_data.select.area_size')"
                     variant="underlined"
                     class="mt-2 mx-4"
@@ -118,6 +120,8 @@
                   <v-select
                     v-model="areaSize"
                     :items="areaOptions"
+                    item-title="title"
+                    item-value="value"
                     :label="$t('modal.position_data.select.area_size')"
                     variant="underlined"
                     class="mt-2 mx-4"
@@ -281,11 +285,14 @@ const areaOptions = computed(() => {
   if (!sport.value) return [];
   const s = topViewStore.sports.find((x) => x.title === sport.value);
   if (!s || !s.areas) return [];
-  return Object.keys(s.areas);
+  return Object.keys(s.areas).map((areaKey) => ({
+    title: s.areas[areaKey].title || areaKey,
+    value: areaKey,
+  }));
 });
 
 watch(sport, () => {
-  areaSize.value = areaOptions.value.length > 0 ? areaOptions.value[0] : null;
+  areaSize.value = areaOptions.value.length > 0 ? areaOptions.value[0].value : null;
 });
 
 const currentSportObj = computed(

@@ -3,122 +3,106 @@
 
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
-      <div
-        ref="topViewDiv"
-        class="top-view-wrapper"
-        @mouseenter="hovering = true"
-        @mouseleave="hovering = false"
-      >
-        <img
-          ref="topViewElement"
-          class="visualizer-image"
-          :src="topViewStore.currentSport.areaImage"
-          @load="updateTopViewSize"
-          :style="
-            isTopViewFullscreen
-              ? {
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: 'contain',
-                }
-              : {
-                  maxHeight: maxVideoHeight * 100 + 'vh',
-                  height: videoStore.videoSize.height + 'px',
-                }
-          "
-        />
+      <div ref="topViewFullscreenRoot" class="top-view-fullscreen-root">
+        <div class="top-view-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
+          <img
+            ref="topViewElement"
+            class="visualizer-image"
+            :src="topViewStore.currentSport.areaImage"
+            @load="updateTopViewSize"
+            :style="
+              isTopViewFullscreen
+                ? {
+                    maxHeight: 100 + 'vh',
+                  }
+                : {
+                    maxHeight: maxVideoHeight * 100 + 'vh',
+                    height: videoStore.videoSize.height + 'px',
+                  }
+            "
+          />
 
-        <v-icon
-          class="fullscreen-toggle"
-          @click="toggleTopViewFullscreen"
-          :class="{ visible: hovering }"
-        >
-          {{ isTopViewFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
-        </v-icon>
+          <v-icon
+            class="fullscreen-toggle"
+            @click="toggleTopViewFullscreen"
+            :class="{ visible: hovering }"
+          >
+            {{ isTopViewFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
+          </v-icon>
 
-        <div
-          v-if="isTopViewFullscreen"
-          class="fullscreen-controls"
-          :class="{ visible: hovering }"
-          :style="{
-            top:
-              topViewStore.topViewSize.top +
-              topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
-              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height -
-              20 +
-              'px',
-          }"
-        >
-          <div class="player-selector">
-            <div
-              v-for="playerId in uniquePlayerIds"
-              :key="playerId"
-              class="player-dot"
-              :style="{
-                backgroundColor: selectedPlayerIds.includes(playerId)
-                  ? toRgb(playerColors[playerId], 0)
-                  : toRgb(playerColors[playerId], 0.7),
-                color: selectedPlayerIds.includes(playerId) ? '#fff' : '#222',
-                borderColor: selectedPlayerIds.includes(playerId)
-                  ? toRgb(playerColors[playerId], 0)
-                  : toRgb(playerColors[playerId], 0.7),
-              }"
-              @click="togglePlayerId(playerId)"
-            >
-              {{ playerId }}
+          <div
+            v-if="isTopViewFullscreen"
+            class="fullscreen-controls"
+            :class="{ visible: hovering }"
+            :style="{
+              top:
+                topViewStore.topViewSize.top +
+                topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height -
+                20 +
+                'px',
+            }"
+          >
+            <div class="player-selector">
+              <div
+                v-for="playerId in uniquePlayerIds"
+                :key="playerId"
+                class="player-dot"
+                :style="{
+                  backgroundColor: selectedPlayerIds.includes(playerId)
+                    ? toRgb(playerColors[playerId], 0)
+                    : toRgb(playerColors[playerId], 0.7),
+                  color: selectedPlayerIds.includes(playerId) ? '#fff' : '#222',
+                  borderColor: selectedPlayerIds.includes(playerId)
+                    ? toRgb(playerColors[playerId], 0)
+                    : toRgb(playerColors[playerId], 0.7),
+                }"
+                @click="togglePlayerId(playerId)"
+              >
+                {{ playerId }}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div
-          v-if="topViewStore.showHeatmap"
-          ref="heatmapContainer"
-          :style="{
-            position: 'absolute',
-            top: isTopViewFullscreen ? topViewStore.topViewSize.top + 'px' : '0px',
-            left: isTopViewFullscreen ? topViewStore.topViewSize.left + 'px' : '0px',
-            width: topViewStore.topViewSize.width + 'px',
-            height: topViewStore.topViewSize.height + 'px',
-          }"
-        ></div>
-
-        <template v-if="topViewStore.showMovement">
           <div
-            v-for="position in selectedPositions"
-            v-show="topViewStore.showItems"
-            :key="position"
+            v-if="topViewStore.showHeatmap"
+            ref="heatmapContainer"
             :style="{
               position: 'absolute',
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              transform: 'translate(-50%, -50%)',
-              top: isTopViewFullscreen
-                ? topViewStore.topViewSize.top +
+              top: '0px',
+              left: '0px',
+              width: topViewStore.topViewSize.width + 'px',
+              height: topViewStore.topViewSize.height + 'px',
+            }"
+          ></div>
+
+          <template v-if="topViewStore.showMovement">
+            <div
+              v-for="position in selectedPositions"
+              v-show="topViewStore.showItems"
+              :key="position"
+              :style="{
+                position: 'absolute',
+                width: '12px',
+                height: '12px',
+                borderRadius: '50%',
+                transform: 'translate(-50%, -50%)',
+                top:
                   position[4] *
                     (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
                   ((1 - topViewStore.currentSport.heightRel) / 2) *
                     topViewStore.topViewSize.height +
-                  'px'
-                : position[4] *
-                    (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-                  ((1 - topViewStore.currentSport.heightRel) / 2) *
-                    topViewStore.topViewSize.height +
                   'px',
-              left: isTopViewFullscreen
-                ? topViewStore.topViewSize.left +
+                left:
                   position[3] *
                     (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
                   ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
-                  'px'
-                : position[3] *
-                    (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-                  ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
                   'px',
-              backgroundColor: visualizationStore.getTeamColor(position[1]),
-            }"
-          />
-        </template>
+                backgroundColor: visualizationStore.getTeamColor(position[1]),
+              }"
+            />
+          </template>
+        </div>
       </div>
     </v-row>
 
@@ -359,14 +343,33 @@ const playerColors = computed(() => {
   return map;
 });
 
+const transformCoordinateToCrop = (x, y, cropPct) => {
+  if (!cropPct) return { x, y };
+
+  const xRange = cropPct.x;
+  const yRange = cropPct.y;
+
+  const xCrop = (x - xRange[0]) / (xRange[1] - xRange[0]);
+  const yCrop = (y - yRange[0]) / (yRange[1] - yRange[0]);
+
+  return { x: xCrop, y: yCrop };
+};
+
 const selectedPositions = computed(() => {
   if (selectedPlayerIds.value.length === 0) return [];
+
+  const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
+    x: [0, 1],
+    y: [0, 1],
+  };
+
   const allPositions = [];
   Object.values(topViewStore.positionDataTopView).forEach((arr) => {
     if (Array.isArray(arr)) {
       arr.forEach((pos) => {
         if (selectedPlayerIds.value.includes(pos[0])) {
-          allPositions.push(pos);
+          const transformed = transformCoordinateToCrop(pos[3], pos[4], cropPct);
+          allPositions.push([pos[0], pos[1], pos[2], transformed.x, transformed.y]);
         }
       });
     }
@@ -430,6 +433,17 @@ watch(selectedPositions, () => {
   });
 });
 watch(
+  () => topViewStore.currentAreaSize,
+  () => {
+    if (topViewStore.showHeatmap) {
+      createHeatmap();
+      nextTick(() => {
+        renderHeatmap();
+      });
+    }
+  }
+);
+watch(
   () => topViewStore.showHeatmap,
   (val) => {
     if (val === true) {
@@ -445,33 +459,31 @@ watch(
 );
 
 const hovering = ref(false);
-const topViewDiv = ref(null);
 const isTopViewFullscreen = ref(false);
+const topViewFullscreenRoot = ref(null);
 const toggleTopViewFullscreen = () => {
-  const div = topViewDiv.value;
+  const root = topViewFullscreenRoot.value;
+
   if (!document.fullscreenElement) {
-    div.requestFullscreen?.();
+    root.requestFullscreen?.();
     playerStore.isSynced = false;
   } else {
     document.exitFullscreen?.();
   }
 };
-
 const onFullscreenChange = async () => {
-  const isTopViewFullscreenPrev = isTopViewFullscreen.value;
-  isTopViewFullscreen.value = document.fullscreenElement === topViewDiv.value;
+  isTopViewFullscreen.value = document.fullscreenElement === topViewFullscreenRoot.value;
 
-  if (isTopViewFullscreenPrev === true || isTopViewFullscreen.value === true) {
-    await nextTick();
-    if (topViewElement.value) {
-      const rect = topViewElement.value.getBoundingClientRect();
-      topViewStore.setTopViewSize({
-        width: rect.width,
-        height: rect.height,
-        top: rect.top,
-        left: rect.left,
-      });
-    }
+  await nextTick();
+
+  if (topViewElement.value) {
+    const rect = topViewElement.value.getBoundingClientRect();
+    topViewStore.setTopViewSize({
+      width: rect.width,
+      height: rect.height,
+      top: 0,
+      left: 0,
+    });
   }
 };
 onMounted(() => {
@@ -541,11 +553,17 @@ onBeforeUnmount(() => {
   margin-bottom: 6px;
 }
 
+.top-view-fullscreen-root {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
 .top-view-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
 }
 
 .fullscreen-toggle {
