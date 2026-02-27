@@ -92,6 +92,11 @@
         multiple
         class="mt-6"
         :menu-props="{ location: 'bottom', maxHeight: 250 }"
+        :item-props="positionDataAttributeItemProps"
+        @update:model-value="
+          (val) =>
+            enforceLockedAttributes(val, parameter, exportStore.selectablePositionDataAttributes)
+        "
       >
         <template
           v-slot:prepend-item
@@ -155,6 +160,54 @@
         </template>
       </v-select>
 
+      <v-select
+        v-model="parameter.value"
+        :items="exportStore.selectableRunningDistanceAttributes"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_running_distance_attribute'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+        multiple
+        class="mt-6"
+        :menu-props="{ location: 'bottom', maxHeight: 250 }"
+        :item-props="runningDistanceAttributeItemProps"
+        @update:model-value="
+          (val) =>
+            enforceLockedAttributes(val, parameter, exportStore.selectableRunningDistanceAttributes)
+        "
+      >
+        <template
+          v-slot:prepend-item
+          v-if="exportStore.selectableRunningDistanceAttributes?.length > 0"
+        >
+          <v-checkbox
+            class="ml-4 my-n2 text-body-2"
+            v-model="isRunningDistanceAttributeSelectAll"
+            @click="toggleRunningDistanceAttributeSelectAll(parameter)"
+            hide-details
+            ripple
+          >
+            <template v-slot:label>
+              <span class="text-body-1">{{
+                $t("modal.export.running_distance.attributes.all")
+              }}</span>
+            </template>
+          </v-checkbox>
+          <v-divider />
+        </template>
+
+        <template v-slot:selection="{ item, index }">
+          <v-chip v-if="index < 2" :text="item.title" />
+          <v-chip v-if="index === 2" class="text-grey text-caption">
+            (+{{ parameter.value.length - 2 }} others)
+          </v-chip>
+        </template>
+      </v-select>
+
       <v-autocomplete
         v-model="parameter.value"
         v-if="parameter.field == 'select_running_distance_frame'"
@@ -168,6 +221,11 @@
         persistent-hint
         variant="underlined"
         :menu-props="{ location: 'bottom', maxHeight: 160 }"
+        :style="{
+          display: 'inline-block',
+          width: '48%',
+          marginRight: parameter.name === 'running_distance_start_frame' ? '4%' : '0',
+        }"
       />
 
       <v-select
@@ -296,7 +354,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useTimelineStore } from "../stores/timeline";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
@@ -376,12 +434,10 @@ const positionDataTeams = computed(() => {
     return a - b;
   });
 
+  const meta = topViewStore.metaDataTopView;
   const teamItems = sortedTeams.map((team_id) => {
-    if (team_id === 1) {
-      return { name: t("modal.export.position_data.teams.ball"), id: team_id };
-    } else {
-      return { name: t("modal.export.position_data.teams.team", { id: team_id }), id: team_id };
-    }
+    const teamName = meta?.team_ids?.[team_id]?.name;
+    return { id: team_id, name: teamName };
   });
 
   return teamItems;
@@ -403,7 +459,10 @@ const togglePositionDataAttributeSelectAll = (parameter) => {
   if (!isPositionDataAttributeSelectAll.value) {
     parameter.value = exportStore.selectablePositionDataAttributes.map((team) => team.id);
   } else {
-    parameter.value = [];
+    const locked = exportStore.selectablePositionDataAttributes
+      .filter((a) => a.locked)
+      .map((a) => a.id);
+    parameter.value = locked;
   }
 
   isPositionDataAttributeSelectAll.value = !isPositionDataAttributeSelectAll.value;
@@ -423,10 +482,11 @@ const runningDistanceTeams = computed(() => {
 
   const sortedTeams = [...teams].sort((a, b) => a - b);
 
-  return sortedTeams.map((team_id) => ({
-    name: t("modal.export.running_distance.teams.team", { id: team_id }),
-    id: team_id,
-  }));
+  const meta = topViewStore.metaDataTopView;
+  return sortedTeams.map((team_id) => {
+    const teamName = meta?.team_ids?.[team_id]?.name;
+    return { id: team_id, name: teamName };
+  });
 });
 
 const isRunningDistanceTeamSelectAll = ref(false);
@@ -438,6 +498,36 @@ const toggleRunningDistanceTeamSelectAll = (parameter) => {
   }
 
   isRunningDistanceTeamSelectAll.value = !isRunningDistanceTeamSelectAll.value;
+};
+
+const isRunningDistanceAttributeSelectAll = ref(false);
+const toggleRunningDistanceAttributeSelectAll = (parameter) => {
+  if (!isRunningDistanceAttributeSelectAll.value) {
+    parameter.value = exportStore.selectableRunningDistanceAttributes.map((a) => a.id);
+  } else {
+    const locked = exportStore.selectableRunningDistanceAttributes
+      .filter((a) => a.locked)
+      .map((a) => a.id);
+    parameter.value = locked;
+  }
+
+  isRunningDistanceAttributeSelectAll.value = !isRunningDistanceAttributeSelectAll.value;
+};
+
+const positionDataAttributeItemProps = (item) => {
+  const attr = exportStore.selectablePositionDataAttributes.find((a) => a.id === item.id);
+  return attr?.locked ? { disabled: true } : {};
+};
+
+const runningDistanceAttributeItemProps = (item) => {
+  const attr = exportStore.selectableRunningDistanceAttributes.find((a) => a.id === item.id);
+  return attr?.locked ? { disabled: true } : {};
+};
+
+const enforceLockedAttributes = (newVal, parameter, allAttrs) => {
+  const lockedIds = allAttrs.filter((a) => a.locked).map((a) => a.id);
+  const merged = [...new Set([...newVal, ...lockedIds])];
+  parameter.value = merged;
 };
 
 const calibrationAssets = computed(() => {

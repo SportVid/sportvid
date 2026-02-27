@@ -375,14 +375,14 @@
       "position_data": {
         "export_name": "Position Data",
         "teams": {
-          "all": "Select all",
-          "ball": "Ball",
-          "team": "Team {id}"
+          "all": "Select all"
         },
         "attributes": {
           "all": "Select all",
           "player_id": "Player-ID",
+          "player_name": "Player name",
           "team_id": "Team-ID",
+          "team_name": "Team name",
           "game_section": "Game section",
           "x": "X coordinate",
           "y": "Y coordinate",
@@ -398,8 +398,15 @@
       "running_distance": {
         "export_name": "Running Distance",
         "teams": {
+          "all": "Select all"
+        },
+        "attributes": {
           "all": "Select all",
-          "team": "Team {id}"
+          "player_id": "Player-ID",
+          "player_name": "Player name",
+          "team_id": "Team-ID",
+          "team_name": "Team name",
+          "distance": "Distance"
         },
         "file_name": "running_distance"
       },
@@ -442,6 +449,8 @@
       "position_data_attribute_hint": "Exporting selected attributes.",
       "running_distance_team_name": "Select teams",
       "running_distance_team_hint": "Exporting selected teams.",
+      "running_distance_attribute_name": "Select attributes",
+      "running_distance_attribute_hint": "Exporting selected attributes.",
       "running_distance_start_frame_name": "Select start frame",
       "running_distance_end_frame_name": "Select end frame",
       "fps": "Frames per Second (FPS)",
@@ -819,8 +828,7 @@
         "success": "Position data successfully deleted"
       },
       "team_colors": {
-        "title": "Change team colors",
-        "team_id": "Team-ID"
+        "title": "Change team colors"
       },
       "offset": {
         "title": "Set offset",

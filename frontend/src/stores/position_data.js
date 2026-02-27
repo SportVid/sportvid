@@ -126,6 +126,14 @@ export const usePositionDataStore = defineStore("position_data", () => {
       if (res.data.status === "ok") {
         positionDataDeleteSuccess.value = true;
         await loadPositionDataList();
+        if (
+          positionDataId.value &&
+          !positionDataList.value.find((d) => d.id === positionDataId.value)
+        ) {
+          positionDataId.value = null;
+          topViewStore.positionDataTopView = {};
+          topViewStore.metaDataTopView = {};
+        }
       }
     } catch (error) {
       console.error("Failed to delete position data:", error);

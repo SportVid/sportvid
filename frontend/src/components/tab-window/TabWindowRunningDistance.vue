@@ -93,7 +93,7 @@
         outlined
         :style="{ backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.8) }"
       >
-        <v-card-title class="text-center mt-n1">Team {{ teamId }}</v-card-title>
+        <v-card-title class="text-center mt-n1">{{ getTeamName(teamId) }}</v-card-title>
 
         <div class="player-selector mb-3">
           <div
@@ -111,7 +111,7 @@
             }"
             @click="togglePlayerId(p.playerId)"
           >
-            {{ p.playerId }}
+            {{ getPlayerNumber(p.playerId) }}
           </div>
         </div>
 
@@ -130,7 +130,7 @@
               }"
             >
               <td v-for="col in columns" :key="col.key">
-                {{ item[col.key] }}
+                {{ col.key === "player_id" ? getPlayerNumber(item[col.key]) : item[col.key] }}
               </td>
             </tr>
           </template>
@@ -233,6 +233,18 @@ const runningDistanceTeamItems = computed(() => {
 const hasPositionData = computed(() => {
   return Object.keys(topViewStore.positionDataTopView).length > 0;
 });
+
+const getTeamName = (teamId) => {
+  const meta = topViewStore.metaDataTopView;
+  if (meta?.team_ids?.[teamId]?.name) return meta.team_ids[teamId].name;
+  return teamId;
+};
+
+const getPlayerNumber = (playerId) => {
+  const meta = topViewStore.metaDataTopView;
+  const num = meta?.player_ids?.[playerId]?.number;
+  return num != null ? num : playerId;
+};
 </script>
 
 <style scoped>

@@ -4,6 +4,16 @@
   <v-container v-else class="d-flex flex-column">
     <v-row class="mt-1" justify="center">
       <div ref="topViewFullscreenRoot" class="top-view-fullscreen-root">
+        <div v-if="matchupTeams.length > 1" class="matchup-overlay">
+          <template v-for="(team, index) in matchupTeams" :key="team.id">
+            <div class="matchup-team">
+              <span class="matchup-team-name">{{ team.name }}</span>
+              <span class="matchup-team-line mt-n1" :style="{ backgroundColor: team.color }" />
+            </div>
+            <span v-if="index < matchupTeams.length - 1" class="matchup-separator">:</span>
+          </template>
+        </div>
+
         <div class="top-view-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
           <img
             ref="topViewElement"
@@ -136,7 +146,7 @@
                 class="position-data-player-id"
                 :style="{ color: visualizationStore.getTeamColor(item.original[1]) }"
               >
-                {{ item.original[0] }}
+                {{ getPlayerNumber(item.original[0]) }}
               </div>
             </div>
 
@@ -828,6 +838,25 @@ const positionDataTransformed = computed(() => {
   return result;
 });
 
+const matchupTeams = computed(() => {
+  const meta = topViewStore.metaDataTopView;
+  if (!meta?.team_ids) return [];
+  return Object.entries(meta.team_ids)
+    .filter(([teamId]) => Number(teamId) !== 1)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([teamId, info]) => ({
+      id: Number(teamId),
+      name: info.name,
+      color: visualizationStore.getTeamColor(Number(teamId)),
+    }));
+});
+
+const getPlayerNumber = (playerId) => {
+  const meta = topViewStore.metaDataTopView;
+  const num = meta?.player_ids?.[playerId]?.number;
+  return num != null ? num : playerId;
+};
+
 const maxVideoHeight = ref(0);
 const videoSlider = ref(null);
 const videoControl = ref(null);
@@ -929,6 +958,21 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
 });
+
+watch(
+  () => topViewStore.positionDataTopView,
+  (newd) => {
+    console.log("Position data updated:", newd);
+  },
+  { immediate: true }
+);
+watch(
+  () => topViewStore.metaDataTopView,
+  (newd) => {
+    console.log("meta data updated:", newd);
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
@@ -983,6 +1027,51 @@ onBeforeUnmount(() => {
 .top-view-wrapper {
   position: relative;
   overflow: hidden;
+}
+
+.matchup-overlay {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+  pointer-events: none;
+  background: rgba(245, 245, 245, 0.88);
+  backdrop-filter: blur(4px);
+  border-radius: 6px;
+  padding: 5px 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.matchup-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.matchup-team-name {
+  color: black;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.matchup-team-line {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.matchup-separator {
+  color: black;
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .fullscreen-toggle {

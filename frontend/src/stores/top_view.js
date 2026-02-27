@@ -283,21 +283,64 @@ export const useTopViewStore = defineStore(
             });
           }
         }
+
+        const teamIdsMap = {};
+        const playerIdsMap = {};
+        for (const boxes of Object.values(_bboxDataInterpolated)) {
+          for (const b of boxes) {
+            const playerId = b[0];
+            const teamId = b[1];
+            if (!(teamId in teamIdsMap)) {
+              teamIdsMap[teamId] = { id: teamId, name: teamId };
+            }
+            if (!(playerId in playerIdsMap)) {
+              playerIdsMap[playerId] = {
+                id: playerId,
+                name: String(playerId),
+                number: playerId,
+              };
+            }
+          }
+        }
+        metaDataTopView.value = {
+          team_ids: teamIdsMap,
+          player_ids: playerIdsMap,
+        };
       }
     }
 
     const currentTime = ref(0);
     const currentTimeOffset = ref(0);
-    const currentFrameKey = computed(() => {
-      const time = playerStore.isSynced ? playerStore.currentTime : currentTime.value;
 
+    // Pre-sorted key list, recomputed only when positionDataTopView changes
+    const sortedFrameKeys = computed(() => {
       return Object.keys(positionDataTopView.value)
         .map(Number)
-        .sort((a, b) => a - b)
-        .reduce(
-          (prev, key) => (key <= Number(time) + Number(currentTimeOffset.value) ? key : prev),
-          Object.keys(positionDataTopView.value)[0]
-        );
+        .sort((a, b) => a - b);
+    });
+
+    const currentFrameKey = computed(() => {
+      const keys = sortedFrameKeys.value;
+      if (!keys.length) return undefined;
+
+      const target =
+        Number(playerStore.isSynced ? playerStore.currentTime : currentTime.value) +
+        Number(currentTimeOffset.value);
+
+      // Binary search for the largest key <= target
+      let lo = 0;
+      let hi = keys.length - 1;
+      if (target < keys[0]) return keys[0];
+      if (target >= keys[hi]) return keys[hi];
+      while (lo < hi) {
+        const mid = (lo + hi + 1) >>> 1;
+        if (keys[mid] <= target) {
+          lo = mid;
+        } else {
+          hi = mid - 1;
+        }
+      }
+      return keys[lo];
     });
 
     return {
@@ -328,7 +371,7 @@ export const useTopViewStore = defineStore(
   },
   {
     persist: {
-      pick: ["currentSport", "currentAreaSize", "positionDataTopView"],
+      pick: ["currentSport", "currentAreaSize", "positionDataTopView", "metaDataTopView"],
       storage: sessionStorage,
     },
   }

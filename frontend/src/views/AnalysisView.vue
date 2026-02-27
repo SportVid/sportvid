@@ -639,6 +639,8 @@ onBeforeUnmount(() => {
   calibrationAssetStore.videoObject = [];
   calibrationAssetStore.calibrationMatrixPersisted = [];
   topViewStore.positionDataTopView = {};
+  topViewStore.metaDataTopView = {};
+  topViewStore.positionDataId = {};
   bboxesStore.bboxDataInterpolated = {};
 });
 </script>

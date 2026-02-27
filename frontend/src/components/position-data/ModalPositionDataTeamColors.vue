@@ -13,10 +13,10 @@
 
       <v-card-text style="overflow-y: auto">
         <v-row>
-          <v-col cols="6" v-for="(color, teamId) in teamColors" :key="team" class="py-2 mt-2">
+          <v-col cols="6" v-for="(color, teamId) in teamColors" :key="teamId" class="py-2 mt-2">
             <v-card class="pa-2">
               <div class="mb-2 d-flex justify-center">
-                {{ $t("modal.position_data.team_colors.team_id") }}: {{ teamId }} ({{ color }})
+                {{ getTeamName(teamId) }}
               </div>
               <div class="mb-2 d-flex justify-center">
                 <v-color-picker v-model="teamColors[teamId]" :modes="['hex', 'rgb']" />
@@ -40,6 +40,11 @@ import { useVisualizationStore } from "@/stores/visualization";
 
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
+
+function getTeamName(teamId) {
+  const meta = topViewStore.metaDataTopView;
+  return meta?.team_ids?.[teamId]?.name;
+}
 
 const props = defineProps({
   modelValue: {

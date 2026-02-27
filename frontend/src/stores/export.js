@@ -52,11 +52,28 @@ export const useExportStore = defineStore("export", () => {
   };
 
   const allPositionDataAttributes = [
-    { id: 0, name: t("modal.export.position_data.attributes.player_id"), csv: "player_id" },
+    {
+      id: "player_number",
+      name: t("modal.export.position_data.attributes.player_id"),
+      csv: "player_id",
+      meta: true,
+    },
+    {
+      id: "player_name",
+      name: t("modal.export.position_data.attributes.player_name"),
+      csv: "player_name",
+      meta: true,
+    },
     { id: 1, name: t("modal.export.position_data.attributes.team_id"), csv: "team_id" },
+    {
+      id: "team_name",
+      name: t("modal.export.position_data.attributes.team_name"),
+      csv: "team_name",
+      meta: true,
+    },
     { id: 2, name: t("modal.export.position_data.attributes.game_section"), csv: "game_section" },
-    { id: 3, name: t("modal.export.position_data.attributes.x"), csv: "x" },
-    { id: 4, name: t("modal.export.position_data.attributes.y"), csv: "y" },
+    { id: 3, name: t("modal.export.position_data.attributes.x"), csv: "x", locked: true },
+    { id: 4, name: t("modal.export.position_data.attributes.y"), csv: "y", locked: true },
     { id: 5, name: t("modal.export.position_data.attributes.bbox_id"), csv: "bbox_id" },
     { id: 6, name: t("modal.export.position_data.attributes.bbox_left"), csv: "bbox_left" },
     { id: 7, name: t("modal.export.position_data.attributes.bbox_top"), csv: "bbox_top" },
@@ -71,24 +88,122 @@ export const useExportStore = defineStore("export", () => {
         .flatMap((pos) => pos.map((_, idx) => idx))
     );
 
-    return allPositionDataAttributes.filter((attr) => presentIndices.has(attr.id));
+    const meta = topViewStore.metaDataTopView;
+    const hasPlayerMeta = meta?.player_ids && Object.keys(meta.player_ids).length > 0;
+    const hasTeamMeta = meta?.team_ids && Object.keys(meta.team_ids).length > 0;
+
+    return allPositionDataAttributes.filter((attr) => {
+      if (attr.meta) {
+        if (attr.id === "player_number" || attr.id === "player_name") return hasPlayerMeta;
+        if (attr.id === "team_name") return hasTeamMeta;
+        return false;
+      }
+      return presentIndices.has(attr.id);
+    });
   });
+
+  const allRunningDistanceAttributes = [
+    {
+      id: "player_id",
+      name: t("modal.export.running_distance.attributes.player_id"),
+      csv: "player_id",
+    },
+    {
+      id: "player_name",
+      name: t("modal.export.running_distance.attributes.player_name"),
+      csv: "player_name",
+      meta: true,
+    },
+    { id: "team_id", name: t("modal.export.running_distance.attributes.team_id"), csv: "team_id" },
+    {
+      id: "team_name",
+      name: t("modal.export.running_distance.attributes.team_name"),
+      csv: "team_name",
+      meta: true,
+    },
+    {
+      id: "distance",
+      name: t("modal.export.running_distance.attributes.distance"),
+      csv: "distance",
+      locked: true,
+    },
+  ];
+
+  const selectableRunningDistanceAttributes = computed(() => {
+    const meta = topViewStore.metaDataTopView;
+    const hasPlayerMeta = meta?.player_ids && Object.keys(meta.player_ids).length > 0;
+    const hasTeamMeta = meta?.team_ids && Object.keys(meta.team_ids).length > 0;
+
+    return allRunningDistanceAttributes.filter((attr) => {
+      if (attr.meta) {
+        if (attr.id === "player_name") return hasPlayerMeta;
+        if (attr.id === "team_name") return hasTeamMeta;
+        return false;
+      }
+      return true;
+    });
+  });
+
+  const resolveAttrValue = (pos, attr) => {
+    const meta = topViewStore.metaDataTopView;
+    if (attr.meta) {
+      const playerId = pos[0];
+      const teamId = pos[1];
+      switch (attr.id) {
+        case "player_number": {
+          const num = meta?.player_ids?.[playerId]?.number;
+          return num != null ? num : playerId;
+        }
+        case "player_name": {
+          return meta?.player_ids?.[playerId]?.name || "";
+        }
+        case "team_name": {
+          return meta?.team_ids?.[teamId]?.name || "";
+        }
+        default:
+          return "";
+      }
+    }
+    if (attr.csv === "team_id") {
+      const teamId = pos[1];
+      return meta?.team_ids?.[teamId]?.id || teamId;
+    }
+    return pos[attr.id];
+  };
 
   const exportPositionData = async (parameters = [], videoId) => {
     const selectedTeam = parameters.find((p) => p.name === "position_data_team")?.value;
     const selectedAttributes = parameters.find((p) => p.name === "position_data_attribute")?.value;
 
-    const csvHeader = selectedAttributes.map((i) => allPositionDataAttributes[i].csv).join(",");
+    const attrDefs = selectedAttributes.map((attrId) =>
+      allPositionDataAttributes.find((a) => a.id === attrId)
+    );
+
+    const csvHeader = attrDefs.map((a) => a.csv).join(",");
     const csvRows = Object.entries(topViewStore.positionDataTopView)
       .map(([_, positions]) =>
         positions
           .filter((pos) => selectedTeam.includes(pos[1]) || pos[1] === selectedTeam)
-          .map((pos) => selectedAttributes.map((i) => pos[i]).join(","))
+          .map((pos) => {
+            return attrDefs
+              .map((attr) => {
+                const val = resolveAttrValue(pos, attr);
+                if (typeof val === "string" && (val.includes(",") || val.includes('"'))) {
+                  return `"${val.replace(/"/g, '""')}"`;
+                }
+                return val;
+              })
+              .join(",");
+          })
           .join("\n")
       )
       .join("\n");
 
-    const teamSuffix = Array.isArray(selectedTeam) ? selectedTeam.join("-") : selectedTeam;
+    const meta = topViewStore.metaDataTopView;
+    const teamNames = Array.isArray(selectedTeam)
+      ? selectedTeam.map((id) => meta?.team_ids?.[id]?.name || id).join("-")
+      : meta?.team_ids?.[selectedTeam]?.name || selectedTeam;
+    const teamSuffix = teamNames.replace(/[\s/\\]+/g, "_");
 
     const blob = new Blob([csvHeader + "\n" + csvRows], { type: "text/csv" });
     const link = document.createElement("a");
@@ -99,6 +214,8 @@ export const useExportStore = defineStore("export", () => {
 
   const exportRunningDistanceData = (parameters, videoId) => {
     const selectedTeam = parameters.find((p) => p.name === "running_distance_team")?.value || [];
+    const selectedAttributes =
+      parameters.find((p) => p.name === "running_distance_attribute")?.value || [];
     const startFrame =
       parameters.find((p) => p.name === "running_distance_start_frame")?.value ?? 0;
     const endFrame = parameters.find((p) => p.name === "running_distance_end_frame")?.value ?? 0;
@@ -112,12 +229,50 @@ export const useExportStore = defineStore("export", () => {
 
     const distances = positionDataStore.calculateRunningDistances(allPlayers, startFrame, endFrame);
 
-    const csvHeader = "player_id,team_id,distance";
+    const meta = topViewStore.metaDataTopView;
+    const attrDefs = selectedAttributes
+      .map((attrId) => allRunningDistanceAttributes.find((a) => a.id === attrId))
+      .filter(Boolean);
+
+    const csvHeader = attrDefs.map((a) => a.csv).join(",");
     const csvRows = distances
-      .map((p) => `${p.player_id},${p.team_id},${p.distance.toFixed(2)}`)
+      .map((p) => {
+        return attrDefs
+          .map((attr) => {
+            let val;
+            switch (attr.id) {
+              case "player_id":
+                val = meta?.player_ids?.[p.player_id]?.number ?? p.player_id;
+                break;
+              case "player_name":
+                val = meta?.player_ids?.[p.player_id]?.name || "";
+                break;
+              case "team_id":
+                val = meta?.team_ids?.[p.team_id]?.id || p.team_id;
+                break;
+              case "team_name":
+                val = meta?.team_ids?.[p.team_id]?.name || p.team_id;
+                break;
+              case "distance":
+                val = p.distance.toFixed(2);
+                break;
+              default:
+                val = "";
+            }
+            if (typeof val === "string" && (val.includes(",") || val.includes('"'))) {
+              return `"${val.replace(/"/g, '""')}"`;
+            }
+            return val;
+          })
+          .join(",");
+      })
       .join("\n");
 
-    const teamSuffix = Array.isArray(selectedTeam) ? selectedTeam.join("-") : selectedTeam;
+    const meta2 = topViewStore.metaDataTopView;
+    const teamNames = Array.isArray(selectedTeam)
+      ? selectedTeam.map((id) => meta2?.team_ids?.[id]?.name || id).join("-")
+      : meta2?.team_ids?.[selectedTeam]?.name || selectedTeam;
+    const teamSuffix = teamNames.replace(/[\s/\\]+/g, "_");
 
     const blob = new Blob([csvHeader + "\n" + csvRows], { type: "text/csv" });
     const link = document.createElement("a");
@@ -146,5 +301,6 @@ export const useExportStore = defineStore("export", () => {
   return {
     exportData,
     selectablePositionDataAttributes,
+    selectableRunningDistanceAttributes,
   };
 });

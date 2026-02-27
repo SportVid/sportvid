@@ -303,13 +303,6 @@ watch(
     }
   }
 );
-watch(
-  () => positionData.value,
-  (value) => {
-    console.log("FPS set to:", value);
-  },
-  { immediate: true, deep: true }
-);
 
 const progressPercentage = computed(() => {
   if (!maxStorageSize.value) return 0;

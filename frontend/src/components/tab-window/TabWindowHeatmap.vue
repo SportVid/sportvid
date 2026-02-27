@@ -59,7 +59,7 @@
                 }"
                 @click="togglePlayerId(playerId)"
               >
-                {{ playerId }}
+                {{ getPlayerNumber(playerId) }}
               </div>
             </div>
           </div>
@@ -123,7 +123,7 @@
           }"
           @click="togglePlayerId(playerId)"
         >
-          {{ playerId }}
+          {{ getPlayerNumber(playerId) }}
         </div>
       </div>
     </v-row>
@@ -342,6 +342,12 @@ const playerColors = computed(() => {
   });
   return map;
 });
+
+const getPlayerNumber = (playerId) => {
+  const meta = topViewStore.metaDataTopView;
+  const num = meta?.player_ids?.[playerId]?.number;
+  return num != null ? num : playerId;
+};
 
 const transformCoordinateToCrop = (x, y, cropPct) => {
   if (!cropPct) return { x, y };
