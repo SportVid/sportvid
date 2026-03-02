@@ -203,10 +203,26 @@
   "data": {
     "options": {
       "title": "Options",
-      "full_match": "Select full match",
-      "first_half": "Select first half",
-      "second_half": "Select second half",
-      "progress": "Progress"
+      "time_selection": {
+        "title": "Time selection",
+        "full_match": "Select full match",
+        "first_half": "Select first half",
+        "second_half": "Select second half"
+      },
+      "kpi_selection": {
+        "title": "KPI selection",
+        "running_distance": "Running distance",
+        "velocity_max": "Maximum Velocity",
+        "velocity_mean": "Mean Velocity",
+        "metabolic_power": "Metabolic power"
+      }
+    },
+    "view": {
+      "chart_placeholder": "Chart view coming soon."
+    },
+    "time_sync": {
+      "sync_start": "Synchronize start time with video time",
+      "sync_end": "Synchronize end time with video time"
     }
   },
   "visualization": {

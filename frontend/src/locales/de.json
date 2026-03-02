@@ -149,6 +149,27 @@
       }
     }
   },
+  "data": {
+    "options": {
+      "title": "Optionen",
+      "time_selection": {
+        "title": "Zeitauswahl",
+        "full_match": "Gesamtes Spiel auswählen",
+        "first_half": "Erste Halbzeit auswählen",
+        "second_half": "Zweite Halbzeit auswählen"
+      },
+      "kpi_selection": {
+        "title": "KPI-Auswahl",
+        "running_distance": "Laufdistanz",
+        "velocity_max": "Maximale Geschwindigkeit",
+        "velocity_mean": "Mittlere Geschwindigkeit",
+        "metabolic_power": "Metabolische Leistung"
+      },
+      "view": {
+        "chart_placeholder": "Diagrammansicht kommt bald."
+      }
+    }
+  },
   "timelines": {
     "title": "Zeitleisten"
   },

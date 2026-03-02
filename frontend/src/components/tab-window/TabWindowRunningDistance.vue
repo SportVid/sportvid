@@ -13,68 +13,153 @@
   />
 
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
-    <v-row>
-      <v-col cols="3" class="mt-3">
+    <v-row align="center">
+      <v-col cols="3" class="mt-3 d-flex align-center" style="gap: 8px">
         <v-menu location="bottom">
           <template #activator="{ props }">
-            <v-btn v-bind="props" style="height: 40px; width: 100%">
+            <v-btn v-bind="props" style="height: 40px; flex: 1">
               <v-icon left>mdi-cog</v-icon>
               {{ $t("modal.timeline.options") }}
             </v-btn>
           </template>
 
-          <v-list class="py-0" density="compact" width="250">
-            <v-list-item class="menu-item" @click="visualizationStore.viewProgress">
-              <v-list-item-title class="d-flex justify-space-between">
-                {{ $t("data.options.progress") }}
-                <tab-window-icon
-                  :class="{
-                    'text-disabled': !visualizationStore.showProgress,
-                    'text-red': visualizationStore.showProgress,
-                  }"
+          <v-list class="py-0" density="compact" width="150px">
+            <v-menu location="end" open-on-hover>
+              <template #activator="{ props }">
+                <v-list-item v-bind="props" class="menu-item">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("data.options.time_selection.title") }}
+                    <v-icon>mdi-chevron-right</v-icon>
+                  </v-list-item-title>
+                </v-list-item>
+              </template>
+
+              <v-list class="py-0" density="compact" width="150px">
+                <v-list-item
+                  class="menu-item"
+                  @click="
+                    positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
+                    positionDataStore.setSelectedTimeRangeEnd(
+                      allFrameKeys[allFrameKeys.length - 1]
+                    );
+                  "
                 >
-                  mdi-check
-                </tab-window-icon>
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("data.options.time_selection.full_match") }}
+                  </v-list-item-title>
+                </v-list-item>
+
+                <v-list-item
+                  class="menu-item"
+                  @click="
+                    positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(1));
+                    positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(1));
+                  "
+                  :disabled="!visualizationStore.halftimesExist"
+                >
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("data.options.time_selection.first_half") }}
+                  </v-list-item-title>
+                </v-list-item>
+
+                <v-list-item
+                  class="menu-item"
+                  @click="
+                    positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(2));
+                    positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(2));
+                  "
+                  :disabled="!visualizationStore.halftimesExist"
+                >
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("data.options.time_selection.second_half") }}
+                  </v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+
+            <v-menu location="end" open-on-hover>
+              <template #activator="{ props }">
+                <v-list-item v-bind="props" class="menu-item">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("data.options.kpi_selection.title") }}
+                    <v-icon>mdi-chevron-right</v-icon>
+                  </v-list-item-title>
+                </v-list-item>
+              </template>
+
+              <v-list class="py-0" density="compact" width="175px">
+                <v-list-item class="menu-item" @click="">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("data.options.kpi_selection.running_distance") }}
+                    <tab-window-icon> mdi-check </tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+
+                <v-list-item class="menu-item" @click="">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("data.options.kpi_selection.velocity_max") }}
+                    <tab-window-icon> mdi-check </tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+
+                <v-list-item class="menu-item" @click="">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("data.options.kpi_selection.velocity_mean") }}
+                    <tab-window-icon> mdi-check </tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+
+                <v-list-item class="menu-item" @click="">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("data.options.kpi_selection.metabolic_power") }}
+                    <tab-window-icon> mdi-check </tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </v-list>
+        </v-menu>
+
+        <v-btn-toggle
+          v-model="viewMode"
+          color="primary"
+          border
+          mandatory
+          elevation="2"
+          style="height: 40px"
+        >
+          <v-btn value="table">
+            <v-icon>mdi-table</v-icon>
+          </v-btn>
+
+          <v-btn value="chart">
+            <v-icon>mdi-chart-line</v-icon>
+          </v-btn>
+        </v-btn-toggle>
+
+        <v-menu location="bottom">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" style="height: 40px">
+              <v-icon left>mdi-link</v-icon>
+            </v-btn>
+          </template>
+
+          <v-list class="py-0" density="compact" width="250px">
+            <v-list-item
+              class="menu-item"
+              @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
+            >
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("data.time_sync.sync_start") }}
               </v-list-item-title>
             </v-list-item>
 
-            <v-divider></v-divider>
-
             <v-list-item
               class="menu-item"
-              @click="
-                positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
-                positionDataStore.setSelectedTimeRangeEnd(allFrameKeys[allFrameKeys.length - 1]);
-              "
+              @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
             >
               <v-list-item-title class="d-flex justify-space-between">
-                {{ $t("data.options.full_match") }}
-              </v-list-item-title>
-            </v-list-item>
-
-            <v-list-item
-              class="menu-item"
-              @click="
-                positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(1));
-                positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(1));
-              "
-              :disabled="!visualizationStore.halftimesExist"
-            >
-              <v-list-item-title class="d-flex justify-space-between">
-                {{ $t("data.options.first_half") }}
-              </v-list-item-title>
-            </v-list-item>
-
-            <v-list-item
-              class="menu-item"
-              @click="
-                positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(2));
-                positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(2));
-              "
-              :disabled="!visualizationStore.halftimesExist"
-            >
-              <v-list-item-title class="d-flex justify-space-between">
-                {{ $t("data.options.second_half") }}
+                {{ $t("data.time_sync.sync_end") }}
               </v-list-item-title>
             </v-list-item>
           </v-list>
@@ -85,7 +170,7 @@
       </v-col>
     </v-row>
 
-    <div class="team-tables d-flex flex-wrap justify-space-around">
+    <div v-if="viewMode === 'table'" class="team-tables d-flex flex-wrap justify-space-around">
       <v-card
         v-for="(teamPlayers, teamId) in runningDistanceTeamItems"
         :key="teamId"
@@ -137,6 +222,12 @@
         </v-data-table>
       </v-card>
     </div>
+
+    <div v-else class="d-flex align-center justify-center" style="min-height: 25vh">
+      <span class="text-h6 text-grey font-weight-light">
+        {{ $t("data.options.view.chart_placeholder") }}
+      </span>
+    </div>
   </v-card>
 </template>
 
@@ -145,15 +236,19 @@ import { ref, computed, watch } from "vue";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
-import RunningDistanceTimeSelector from "../visualization/RunningDistanceTimeSelector.vue";
+import { usePlayerStore } from "@/stores/player";
+import RunningDistanceTimeSelector from "../kpi/RunningDistanceTimeSelector.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
 
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
 const positionDataStore = usePositionDataStore();
+const playerStore = usePlayerStore();
 
 const { t } = useI18n();
+
+const viewMode = ref("table");
 
 const allFrameKeys = computed(() =>
   Object.keys(topViewStore.positionDataTopView)

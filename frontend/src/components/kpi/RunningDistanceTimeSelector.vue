@@ -48,7 +48,9 @@ const canvasStyle = ref({ width: props.width, height: props.height });
 
 let scope;
 let handleGroup, handleLeft, handleRight, handleBar;
-let selectionLayer, scaleLayer;
+let selectionLayer, scaleLayer, timeBarLayer;
+let timeBarLine;
+let animFrameId;
 
 const canvasWidth = ref(null);
 const canvasHeight = ref(null);
@@ -135,6 +137,7 @@ function draw() {
 
   drawScale();
   drawSelection();
+  drawTimeBar();
   scope.view.draw();
 }
 
@@ -179,6 +182,32 @@ function drawScale() {
     return new paper.Path(new paper.Point(x, 25), new paper.Point(x, 30));
   });
   new paper.Group(minorStrokes).strokeColor = "black";
+}
+
+function drawTimeBar() {
+  if (timeBarLayer) timeBarLayer.removeChildren();
+  scope.activate();
+  timeBarLayer = new paper.Layer();
+
+  const time = playerStore.currentTime;
+  if (time == null || !duration.value) return;
+
+  const x = frameToX(time);
+  timeBarLine = new paper.Path([new paper.Point(x, 0), new paper.Point(x, canvasHeight.value)]);
+  timeBarLine.strokeColor = "white";
+  timeBarLine.strokeWidth = 2;
+}
+
+function updateTimeBar() {
+  if (!timeBarLine || !canvasWidth.value || !duration.value) return;
+  const x = frameToX(playerStore.currentTime);
+  timeBarLine.segments[0].point.x = x;
+  timeBarLine.segments[1].point.x = x;
+}
+
+function animLoop() {
+  updateTimeBar();
+  animFrameId = requestAnimationFrame(animLoop);
 }
 
 function drawSelection() {
@@ -288,8 +317,11 @@ onMounted(() => {
   };
 
   nextTick(() => draw());
+
+  animFrameId = requestAnimationFrame(animLoop);
 });
 onBeforeUnmount(() => {
+  if (animFrameId) cancelAnimationFrame(animFrameId);
   if (scope) {
     scope.view.onFrame = null;
     scope.view.onResize = null;
