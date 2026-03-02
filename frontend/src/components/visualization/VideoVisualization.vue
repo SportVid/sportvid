@@ -29,7 +29,7 @@
 import * as d3 from "d3";
 import { useTimelineStore } from "@/stores/timeline";
 import { mapStores } from "pinia";
-import Plotly from "plotly.js";
+import Plotly from "plotly.js-dist-min";
 
 const width = 640;
 const height = 400;

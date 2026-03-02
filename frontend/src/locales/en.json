@@ -203,10 +203,38 @@
   "data": {
     "options": {
       "title": "Options",
-      "full_match": "Select full match",
-      "first_half": "Select first half",
-      "second_half": "Select second half",
-      "progress": "Progress"
+      "time_selection": {
+        "title": "Time selection",
+        "full_match": "Select full match",
+        "first_half": "Select first half",
+        "second_half": "Select second half"
+      },
+      "kpi_selection": {
+        "title": "KPI selection",
+        "running_distance": "Running distance",
+        "running_distance_cumulative": "Running distance (cumulative)",
+        "running_distance_interval": "Running distance (per {frames} frames)",
+        "interval_frames": "Interval (frames)",
+        "velocity_max": "Maximum Velocity",
+        "velocity_mean": "Mean Velocity",
+        "metabolic_work": "Metabolic work"
+      },
+      "team_view": {
+        "total_distance": "Total Distance",
+        "avg_distance": "Avg. Distance",
+        "player_count": "Players"
+      },
+      "player_view": {
+        "best": "Best",
+        "total": "Total"
+      }
+    },
+    "view": {
+      "chart_placeholder": "Chart view coming soon."
+    },
+    "time_sync": {
+      "sync_start": "Synchronize start time with video time",
+      "sync_end": "Synchronize end time with video time"
     }
   },
   "visualization": {

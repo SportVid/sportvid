@@ -7,8 +7,7 @@ import { mapStores } from "pinia";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useTimelineStore } from "@/stores/timeline";
 import { usePlayerStore } from "@/stores/player";
-import * as Plotly from "plotly.js";
-
+import * as Plotly from "plotly.js-dist-min";
 
 export default {
   data() {
@@ -16,7 +15,7 @@ export default {
       plotContainerId: "plotContainer-" + crypto.randomUUID(),
     };
   },
-  props: ['plotType', 'showLegend', 'timelineId', 'threshold'],
+  props: ["plotType", "showLegend", "timelineId", "threshold"],
   mounted() {
     this.renderPlot();
   },
@@ -26,14 +25,16 @@ export default {
         return;
       }
 
-      const shapes = [{
-        type: "line",
-        x0: xValue,
-        x1: xValue,
-        y1: this.minMaxY.max * 1.1,
-        y0: this.minMaxY.min,
-        line: { color: "rgb(175, 20, 20)", width: 2 },
-      }];
+      const shapes = [
+        {
+          type: "line",
+          x0: xValue,
+          x1: xValue,
+          y1: this.minMaxY.max * 1.1,
+          y0: this.minMaxY.min,
+          line: { color: "rgb(175, 20, 20)", width: 2 },
+        },
+      ];
 
       if (this.threshold != undefined) {
         shapes.push({
@@ -62,31 +63,36 @@ export default {
         { responsive: true }
       );
       // Add a vertical line shape at the x position of the mouse cursor
-      document
-        .getElementById(this.plotContainerId)
-        .on("plotly_click", (eventData) => {
-          const xCoordinate = eventData.points[0].x;
-          // notify parent Container of timechange for the video player, drawMarker will be called due to the time update
-          this.playerStore.setTargetTime(xCoordinate);
-        });
+      document.getElementById(this.plotContainerId).on("plotly_click", (eventData) => {
+        const xCoordinate = eventData.points[0].x;
+        // notify parent Container of timechange for the video player, drawMarker will be called due to the time update
+        this.playerStore.setTargetTime(xCoordinate);
+      });
       this.drawMarker(this.currentTime);
     },
   },
   computed: {
     plotData() {
       const timelines = this.timelineStore.all
-        .filter((timeline) => timeline.type === "PLUGIN_RESULT" && (this.timelineId === undefined || this.timelineId === timeline.id))
-        .map((timeline) => ({ timeline: timeline, result: this.pluginRunResultStore.get(timeline.plugin_run_result_id) }))
+        .filter(
+          (timeline) =>
+            timeline.type === "PLUGIN_RESULT" &&
+            (this.timelineId === undefined || this.timelineId === timeline.id)
+        )
+        .map((timeline) => ({
+          timeline: timeline,
+          result: this.pluginRunResultStore.get(timeline.plugin_run_result_id),
+        }))
         .filter((tr) => tr.result && tr.result.type == "SCALAR");
 
       return timelines.map((tr) => ({
-          x: tr.result.data.time,
-          y: tr.result.data.y,
-          type: "scatter",
-          name: tr.timeline.name,
-          visible: timelines.length <= 1 ? true : 'legendonly',
-          mode: this.lineMode,
-        }));
+        x: tr.result.data.time,
+        y: tr.result.data.y,
+        type: "scatter",
+        name: tr.timeline.name,
+        visible: timelines.length <= 1 ? true : "legendonly",
+        mode: this.lineMode,
+      }));
     },
     minMaxY() {
       // used to draw the time marker with the correct height
@@ -98,7 +104,7 @@ export default {
           max = Math.max(y, max);
           min = Math.min(y, min);
         }
-        maxX = Math.max(data.x[data.x.length-1], maxX);
+        maxX = Math.max(data.x[data.x.length - 1], maxX);
       }
       return { max: max, min: min, maxX: maxX };
     },
@@ -109,10 +115,10 @@ export default {
       return this.playerStore.currentTime;
     },
     lineMode() {
-      if (this.plotType === 'scatter') {
-        return 'markers';
+      if (this.plotType === "scatter") {
+        return "markers";
       } else {
-        return 'lines';
+        return "lines";
       }
     },
     ...mapStores(usePluginRunResultStore, useTimelineStore, usePlayerStore),
@@ -126,7 +132,7 @@ export default {
     },
     threshold() {
       this.drawMarker(this.currentTime);
-    }
+    },
   },
 };
 </script>

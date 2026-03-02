@@ -146,12 +146,7 @@ export const usePositionDataStore = defineStore("position_data", () => {
 
     const allTimes = Object.keys(topViewStore.positionDataTopView).map(Number);
 
-    const timeRange = allTimes.filter(
-      (t) =>
-        t >= startFrame &&
-        t <= endFrame &&
-        (!visualizationStore.showProgress || t <= playerStore.currentTime)
-    );
+    const timeRange = allTimes.filter((t) => t >= startFrame && t <= endFrame);
 
     const allPlayersSet = new Map();
 
@@ -225,12 +220,38 @@ export const usePositionDataStore = defineStore("position_data", () => {
     start: 0,
     end: 0,
   });
+  const minTimeGap = () => (1000 / playerStore.videoFPS) * 10;
+
   const setSelectedTimeRangeStart = (time) => {
-    selectedTimeRange.value.start = time;
+    const gap = minTimeGap();
+    const maxTime =
+      Object.keys(topViewStore.positionDataTopView)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .at(-1) ?? 0;
+
+    let start = Math.max(0, Math.min(time, maxTime - gap));
+    selectedTimeRange.value.start = start;
+
+    if (selectedTimeRange.value.end < start + gap) {
+      selectedTimeRange.value.end = Math.min(start + gap, maxTime);
+    }
   };
 
   const setSelectedTimeRangeEnd = (time) => {
-    selectedTimeRange.value.end = time;
+    const gap = minTimeGap();
+    const maxTime =
+      Object.keys(topViewStore.positionDataTopView)
+        .map(Number)
+        .sort((a, b) => a - b)
+        .at(-1) ?? 0;
+
+    let end = Math.min(maxTime, Math.max(time, gap));
+    selectedTimeRange.value.end = end;
+
+    if (selectedTimeRange.value.start > end - gap) {
+      selectedTimeRange.value.start = Math.max(end - gap, 0);
+    }
   };
 
   return {

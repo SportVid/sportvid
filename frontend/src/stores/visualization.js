@@ -1,17 +1,11 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
-import { view } from "paper/dist/paper-core";
 
 export const useVisualizationStore = defineStore(
   "visualization",
   () => {
     const topViewStore = useTopViewStore();
-
-    const showProgress = ref(false);
-    const viewProgress = () => {
-      showProgress.value = !showProgress.value;
-    };
 
     const halftimesExist = computed(() => {
       const allPositions = Object.values(topViewStore.positionDataTopView).flat();
@@ -61,8 +55,6 @@ export const useVisualizationStore = defineStore(
     }
 
     return {
-      showProgress,
-      viewProgress,
       halftimesExist,
       teamColorMapping,
       getTeamColor,
