@@ -76,7 +76,7 @@ class KpiComputation(
                     try:
                         # NOTE: knx reader returns lists for pos_data and teamsheets (different from DFL reader below, returning same-named variables as dicts)
                         pos_data = knx.read_position_data_csv(tmp_path, delimiter=parameters.get("delimiter", ";")) # pos_data is List[XY]
-                        teamsheets = knx.read_teamsheets_from_csv(tmp_path) # teamsheets is List[Teamsheet]
+                        teamsheets = knx.read_teamsheets_from_csv(tmp_path, delimiter=parameters.get("delimiter", ";")) # teamsheets is List[Teamsheet]
                     finally:
                         os.unlink(tmp_path)
 
@@ -245,8 +245,8 @@ class KpiComputation(
         meta = {
             "format": fmt,
             "kpi_names": ["distance_covered", "velocity", "metabolic_power"],
-            "player_ids": {str(k): v for k, v in player_id_map.items()},
-            "teams": {k: [int(x) for x in v] for k, v in team_players.items()},
+            "player_ids": {str(k): v for k, v in player_id_map.items()}, # TODO: number instead of xID
+        #    "teams": {k: [int(x) for x in v] for k, v in team_players.items()}, # TODO: number instead of xID
             "framerate": framerate,
             "tracking_data_id": parameters.get("tracking_data_id"),
         }
