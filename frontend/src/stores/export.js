@@ -53,10 +53,19 @@ export const useExportStore = defineStore("export", () => {
 
   const allPositionDataAttributes = [
     {
+      id: "timestamp_ms",
+      name: t("modal.export.position_data.attributes.timestamp_ms"),
+      csv: "timestamp_ms",
+      alwaysIncluded: true,
+      position: "first",
+    },
+    {
       id: "player_number",
       name: t("modal.export.position_data.attributes.player_id"),
       csv: "player_id",
       meta: true,
+      alwaysIncluded: true,
+      position: "first",
     },
     {
       id: "player_name",
@@ -72,8 +81,20 @@ export const useExportStore = defineStore("export", () => {
       meta: true,
     },
     { id: 2, name: t("modal.export.position_data.attributes.game_section"), csv: "game_section" },
-    { id: 3, name: t("modal.export.position_data.attributes.x"), csv: "x", locked: true },
-    { id: 4, name: t("modal.export.position_data.attributes.y"), csv: "y", locked: true },
+    {
+      id: 3,
+      name: t("modal.export.position_data.attributes.x"),
+      csv: "x",
+      alwaysIncluded: true,
+      position: "last",
+    },
+    {
+      id: 4,
+      name: t("modal.export.position_data.attributes.y"),
+      csv: "y",
+      alwaysIncluded: true,
+      position: "last",
+    },
     { id: 5, name: t("modal.export.position_data.attributes.bbox_id"), csv: "bbox_id" },
     { id: 6, name: t("modal.export.position_data.attributes.bbox_left"), csv: "bbox_left" },
     { id: 7, name: t("modal.export.position_data.attributes.bbox_top"), csv: "bbox_top" },
@@ -93,8 +114,9 @@ export const useExportStore = defineStore("export", () => {
     const hasTeamMeta = meta?.team_ids && Object.keys(meta.team_ids).length > 0;
 
     return allPositionDataAttributes.filter((attr) => {
+      if (attr.alwaysIncluded) return false;
       if (attr.meta) {
-        if (attr.id === "player_number" || attr.id === "player_name") return hasPlayerMeta;
+        if (attr.id === "player_name") return hasPlayerMeta;
         if (attr.id === "team_name") return hasTeamMeta;
         return false;
       }
@@ -107,6 +129,8 @@ export const useExportStore = defineStore("export", () => {
       id: "player_id",
       name: t("modal.export.running_distance.attributes.player_id"),
       csv: "player_id",
+      alwaysIncluded: true,
+      position: "first",
     },
     {
       id: "player_name",
@@ -125,7 +149,8 @@ export const useExportStore = defineStore("export", () => {
       id: "distance",
       name: t("modal.export.running_distance.attributes.distance"),
       csv: "distance",
-      locked: true,
+      alwaysIncluded: true,
+      position: "last",
     },
   ];
 
@@ -135,6 +160,7 @@ export const useExportStore = defineStore("export", () => {
     const hasTeamMeta = meta?.team_ids && Object.keys(meta.team_ids).length > 0;
 
     return allRunningDistanceAttributes.filter((attr) => {
+      if (attr.alwaysIncluded) return false;
       if (attr.meta) {
         if (attr.id === "player_name") return hasPlayerMeta;
         if (attr.id === "team_name") return hasTeamMeta;
@@ -144,7 +170,8 @@ export const useExportStore = defineStore("export", () => {
     });
   });
 
-  const resolveAttrValue = (pos, attr) => {
+  const resolveAttrValue = (pos, attr, frameKey) => {
+    if (attr.id === "timestamp_ms") return frameKey;
     const meta = topViewStore.metaDataTopView;
     if (attr.meta) {
       const playerId = pos[0];
@@ -173,21 +200,30 @@ export const useExportStore = defineStore("export", () => {
 
   const exportPositionData = async (parameters = [], videoId) => {
     const selectedTeam = parameters.find((p) => p.name === "position_data_team")?.value;
-    const selectedAttributes = parameters.find((p) => p.name === "position_data_attribute")?.value;
+    const selectedAttributes =
+      parameters.find((p) => p.name === "position_data_attribute")?.value || [];
 
-    const attrDefs = selectedAttributes.map((attrId) =>
-      allPositionDataAttributes.find((a) => a.id === attrId)
+    const alwaysFirstAttrs = allPositionDataAttributes.filter(
+      (a) => a.alwaysIncluded && a.position === "first"
     );
+    const alwaysLastAttrs = allPositionDataAttributes.filter(
+      (a) => a.alwaysIncluded && a.position === "last"
+    );
+    const selectedOptionalAttrs = selectedAttributes
+      .map((attrId) => allPositionDataAttributes.find((a) => a.id === attrId))
+      .filter(Boolean);
+
+    const attrDefs = [...alwaysFirstAttrs, ...selectedOptionalAttrs, ...alwaysLastAttrs];
 
     const csvHeader = attrDefs.map((a) => a.csv).join(",");
     const csvRows = Object.entries(topViewStore.positionDataTopView)
-      .map(([_, positions]) =>
+      .map(([frameKey, positions]) =>
         positions
           .filter((pos) => selectedTeam.includes(pos[1]) || pos[1] === selectedTeam)
           .map((pos) => {
             return attrDefs
               .map((attr) => {
-                const val = resolveAttrValue(pos, attr);
+                const val = resolveAttrValue(pos, attr, frameKey);
                 if (typeof val === "string" && (val.includes(",") || val.includes('"'))) {
                   return `"${val.replace(/"/g, '""')}"`;
                 }
@@ -230,9 +266,18 @@ export const useExportStore = defineStore("export", () => {
     const distances = positionDataStore.calculateRunningDistances(allPlayers, startFrame, endFrame);
 
     const meta = topViewStore.metaDataTopView;
-    const attrDefs = selectedAttributes
+
+    const alwaysFirstAttrs = allRunningDistanceAttributes.filter(
+      (a) => a.alwaysIncluded && a.position === "first"
+    );
+    const alwaysLastAttrs = allRunningDistanceAttributes.filter(
+      (a) => a.alwaysIncluded && a.position === "last"
+    );
+    const selectedOptionalAttrs = selectedAttributes
       .map((attrId) => allRunningDistanceAttributes.find((a) => a.id === attrId))
       .filter(Boolean);
+
+    const attrDefs = [...alwaysFirstAttrs, ...selectedOptionalAttrs, ...alwaysLastAttrs];
 
     const csvHeader = attrDefs.map((a) => a.csv).join(",");
     const csvRows = distances

@@ -38,7 +38,7 @@
                 <v-card flat>
                   <v-card-title class="mb-0">{{ exportFormat.name }}</v-card-title>
 
-                  <v-card-text style="height: 275px; overflow-y: auto">
+                  <v-card-text style="height: 290px; overflow-y: auto">
                     <Parameters
                       :videoIds="[playerStore.videoId]"
                       :parameters="exportFormat.parameters"
@@ -219,7 +219,7 @@ const exportFormats = ref([
       {
         field: "select_position_data_attribute",
         name: "position_data_attribute",
-        value: [3, 4],
+        value: [],
         text: t("modal.plugin.position_data_attribute_name"),
         hint: t("modal.plugin.position_data_attribute_hint"),
       },
@@ -240,7 +240,7 @@ const exportFormats = ref([
       {
         field: "select_running_distance_attribute",
         name: "running_distance_attribute",
-        value: ["distance"],
+        value: [],
         text: t("modal.plugin.running_distance_attribute_name"),
         hint: t("modal.plugin.running_distance_attribute_hint"),
       },
@@ -292,20 +292,12 @@ const isExportDisabled = (exportFormat) => {
   const selectParams = exportFormat.parameters.filter((p) => p.field.startsWith("select"));
   if (!selectParams.length) return false;
 
-  const lockedPositionDataIds = new Set([3, 4]);
-  const lockedRunningDistanceIds = new Set(["distance"]);
-
   const emptyRequired = selectParams.some((p) => {
     if (p.name === "running_distance_start_frame" || p.name === "running_distance_end_frame") {
       return false;
     }
-    if (p.name === "position_data_attribute") {
-      const nonLocked = (p.value || []).filter((id) => !lockedPositionDataIds.has(id));
-      return nonLocked.length === 0;
-    }
-    if (p.name === "running_distance_attribute") {
-      const nonLocked = (p.value || []).filter((id) => !lockedRunningDistanceIds.has(id));
-      return nonLocked.length === 0;
+    if (p.name === "position_data_attribute" || p.name === "running_distance_attribute") {
+      return false;
     }
     return !p.value || (Array.isArray(p.value) && p.value.length === 0);
   });

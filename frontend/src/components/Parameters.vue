@@ -92,11 +92,6 @@
         multiple
         class="mt-6"
         :menu-props="{ location: 'bottom', maxHeight: 250 }"
-        :item-props="positionDataAttributeItemProps"
-        @update:model-value="
-          (val) =>
-            enforceLockedAttributes(val, parameter, exportStore.selectablePositionDataAttributes)
-        "
       >
         <template
           v-slot:prepend-item
@@ -174,11 +169,6 @@
         multiple
         class="mt-6"
         :menu-props="{ location: 'bottom', maxHeight: 250 }"
-        :item-props="runningDistanceAttributeItemProps"
-        @update:model-value="
-          (val) =>
-            enforceLockedAttributes(val, parameter, exportStore.selectableRunningDistanceAttributes)
-        "
       >
         <template
           v-slot:prepend-item
@@ -457,12 +447,9 @@ const togglePositionDataTeamSelectAll = (parameter) => {
 const isPositionDataAttributeSelectAll = ref(false);
 const togglePositionDataAttributeSelectAll = (parameter) => {
   if (!isPositionDataAttributeSelectAll.value) {
-    parameter.value = exportStore.selectablePositionDataAttributes.map((team) => team.id);
+    parameter.value = exportStore.selectablePositionDataAttributes.map((a) => a.id);
   } else {
-    const locked = exportStore.selectablePositionDataAttributes
-      .filter((a) => a.locked)
-      .map((a) => a.id);
-    parameter.value = locked;
+    parameter.value = [];
   }
 
   isPositionDataAttributeSelectAll.value = !isPositionDataAttributeSelectAll.value;
@@ -505,29 +492,10 @@ const toggleRunningDistanceAttributeSelectAll = (parameter) => {
   if (!isRunningDistanceAttributeSelectAll.value) {
     parameter.value = exportStore.selectableRunningDistanceAttributes.map((a) => a.id);
   } else {
-    const locked = exportStore.selectableRunningDistanceAttributes
-      .filter((a) => a.locked)
-      .map((a) => a.id);
-    parameter.value = locked;
+    parameter.value = [];
   }
 
   isRunningDistanceAttributeSelectAll.value = !isRunningDistanceAttributeSelectAll.value;
-};
-
-const positionDataAttributeItemProps = (item) => {
-  const attr = exportStore.selectablePositionDataAttributes.find((a) => a.id === item.id);
-  return attr?.locked ? { disabled: true } : {};
-};
-
-const runningDistanceAttributeItemProps = (item) => {
-  const attr = exportStore.selectableRunningDistanceAttributes.find((a) => a.id === item.id);
-  return attr?.locked ? { disabled: true } : {};
-};
-
-const enforceLockedAttributes = (newVal, parameter, allAttrs) => {
-  const lockedIds = allAttrs.filter((a) => a.locked).map((a) => a.id);
-  const merged = [...new Set([...newVal, ...lockedIds])];
-  parameter.value = merged;
 };
 
 const calibrationAssets = computed(() => {
