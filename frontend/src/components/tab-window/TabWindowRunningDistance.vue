@@ -15,111 +15,6 @@
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
     <v-row align="center">
       <v-col cols="3" class="mt-3 d-flex align-center" style="gap: 8px">
-        <v-menu location="bottom">
-          <template #activator="{ props }">
-            <v-btn v-bind="props" style="height: 40px; flex: 1">
-              <v-icon left>mdi-cog</v-icon>
-              {{ $t("modal.timeline.options") }}
-            </v-btn>
-          </template>
-
-          <v-list class="py-0" density="compact" width="150px">
-            <v-menu location="end" open-on-hover>
-              <template #activator="{ props }">
-                <v-list-item v-bind="props" class="menu-item">
-                  <v-list-item-title class="d-flex justify-space-between">
-                    {{ $t("data.options.time_selection.title") }}
-                    <v-icon>mdi-chevron-right</v-icon>
-                  </v-list-item-title>
-                </v-list-item>
-              </template>
-
-              <v-list class="py-0" density="compact" width="150px">
-                <v-list-item
-                  class="menu-item"
-                  @click="
-                    positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
-                    positionDataStore.setSelectedTimeRangeEnd(
-                      allFrameKeys[allFrameKeys.length - 1]
-                    );
-                  "
-                >
-                  <v-list-item-title class="d-flex justify-space-between">
-                    {{ $t("data.options.time_selection.full_match") }}
-                  </v-list-item-title>
-                </v-list-item>
-
-                <v-list-item
-                  class="menu-item"
-                  @click="
-                    positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(1));
-                    positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(1));
-                  "
-                  :disabled="!visualizationStore.halftimesExist"
-                >
-                  <v-list-item-title class="d-flex justify-space-between">
-                    {{ $t("data.options.time_selection.first_half") }}
-                  </v-list-item-title>
-                </v-list-item>
-
-                <v-list-item
-                  class="menu-item"
-                  @click="
-                    positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(2));
-                    positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(2));
-                  "
-                  :disabled="!visualizationStore.halftimesExist"
-                >
-                  <v-list-item-title class="d-flex justify-space-between">
-                    {{ $t("data.options.time_selection.second_half") }}
-                  </v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-menu>
-
-            <v-menu location="end" open-on-hover>
-              <template #activator="{ props }">
-                <v-list-item v-bind="props" class="menu-item">
-                  <v-list-item-title class="d-flex justify-space-between">
-                    {{ $t("data.options.kpi_selection.title") }}
-                    <v-icon>mdi-chevron-right</v-icon>
-                  </v-list-item-title>
-                </v-list-item>
-              </template>
-
-              <v-list class="py-0" density="compact" width="175px">
-                <v-list-item class="menu-item" @click="">
-                  <v-list-item-title class="d-flex justify-space-between">
-                    {{ $t("data.options.kpi_selection.running_distance") }}
-                    <tab-window-icon> mdi-check </tab-window-icon>
-                  </v-list-item-title>
-                </v-list-item>
-
-                <v-list-item class="menu-item" @click="">
-                  <v-list-item-title class="d-flex justify-space-between">
-                    {{ $t("data.options.kpi_selection.velocity_max") }}
-                    <tab-window-icon> mdi-check </tab-window-icon>
-                  </v-list-item-title>
-                </v-list-item>
-
-                <v-list-item class="menu-item" @click="">
-                  <v-list-item-title class="d-flex justify-space-between">
-                    {{ $t("data.options.kpi_selection.velocity_mean") }}
-                    <tab-window-icon> mdi-check </tab-window-icon>
-                  </v-list-item-title>
-                </v-list-item>
-
-                <v-list-item class="menu-item" @click="">
-                  <v-list-item-title class="d-flex justify-space-between">
-                    {{ $t("data.options.kpi_selection.metabolic_power") }}
-                    <tab-window-icon> mdi-check </tab-window-icon>
-                  </v-list-item-title>
-                </v-list-item>
-              </v-list>
-            </v-menu>
-          </v-list>
-        </v-menu>
-
         <v-btn-toggle
           v-model="viewMode"
           color="primary"
@@ -127,6 +22,7 @@
           mandatory
           elevation="2"
           style="height: 40px"
+          class="ml-2"
         >
           <v-btn value="table">
             <v-icon>mdi-table</v-icon>
@@ -137,10 +33,66 @@
           </v-btn>
         </v-btn-toggle>
 
+        <v-btn-toggle
+          v-model="groupMode"
+          color="primary"
+          border
+          mandatory
+          elevation="2"
+          style="height: 40px"
+        >
+          <v-btn value="player">
+            <v-icon>mdi-account</v-icon>
+          </v-btn>
+
+          <v-btn value="team">
+            <v-icon>mdi-account-group</v-icon>
+          </v-btn>
+        </v-btn-toggle>
+
+        <v-menu location="bottom" :close-on-content-click="false">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" style="height: 40px"> KPI </v-btn>
+          </template>
+
+          <v-list class="py-0" density="compact" width="300px">
+            <template v-for="option in kpiOptions" :key="option.id">
+              <v-list-item class="menu-item" @click="toggleKpi(option)">
+                <v-list-item-title class="d-flex align-center" style="gap: 4px">
+                  <template v-if="option.id === 'running_distance_interval'">
+                    <i18n-t
+                      keypath="data.options.kpi_selection.running_distance_interval"
+                      tag="span"
+                      class="flex-grow-1"
+                    >
+                      <template #frames>
+                        <input
+                          v-model.number="windowFrames"
+                          type="number"
+                          min="1"
+                          class="inline-frame-input"
+                          :style="{ width: inputWidth }"
+                          @click.stop
+                          @keydown.stop
+                          @blur="onFrameInputBlur"
+                        />
+                      </template>
+                    </i18n-t>
+                  </template>
+                  <span v-else class="flex-grow-1">
+                    {{ $t(`data.options.kpi_selection.${option.id}`) }}
+                  </span>
+                  <v-icon v-if="isKpiSelected(option)" size="small">mdi-check</v-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+          </v-list>
+        </v-menu>
+
         <v-menu location="bottom">
           <template #activator="{ props }">
             <v-btn v-bind="props" style="height: 40px">
-              <v-icon left>mdi-link</v-icon>
+              <v-icon>mdi-timer-sync-outline</v-icon>
             </v-btn>
           </template>
 
@@ -149,7 +101,7 @@
               class="menu-item"
               @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
             >
-              <v-list-item-title class="d-flex justify-space-between">
+              <v-list-item-title>
                 {{ $t("data.time_sync.sync_start") }}
               </v-list-item-title>
             </v-list-item>
@@ -158,8 +110,48 @@
               class="menu-item"
               @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
             >
-              <v-list-item-title class="d-flex justify-space-between">
+              <v-list-item-title>
                 {{ $t("data.time_sync.sync_end") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-divider />
+
+            <v-list-item
+              class="menu-item"
+              @click="
+                positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
+                positionDataStore.setSelectedTimeRangeEnd(allFrameKeys[allFrameKeys.length - 1]);
+              "
+            >
+              <v-list-item-title>
+                {{ $t("data.options.time_selection.full_match") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item
+              class="menu-item"
+              @click="
+                positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(1));
+                positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(1));
+              "
+              :disabled="!visualizationStore.halftimesExist"
+            >
+              <v-list-item-title>
+                {{ $t("data.options.time_selection.first_half") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item
+              class="menu-item"
+              @click="
+                positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(2));
+                positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(2));
+              "
+              :disabled="!visualizationStore.halftimesExist"
+            >
+              <v-list-item-title>
+                {{ $t("data.options.time_selection.second_half") }}
               </v-list-item-title>
             </v-list-item>
           </v-list>
@@ -170,7 +162,10 @@
       </v-col>
     </v-row>
 
-    <div v-if="viewMode === 'table'" class="team-tables d-flex flex-wrap justify-space-around">
+    <div
+      v-if="viewMode === 'table' && groupMode === 'player'"
+      class="team-tables d-flex flex-wrap justify-space-around"
+    >
       <v-card
         v-for="(teamPlayers, teamId) in runningDistanceTeamItems"
         :key="teamId"
@@ -202,7 +197,7 @@
 
         <v-data-table
           color="primary"
-          :headers="headers"
+          :headers="playerHeaders"
           :items="teamPlayers"
           class="elevation-2"
           hide-default-footer
@@ -219,14 +214,116 @@
               </td>
             </tr>
           </template>
+
+          <template #body.append>
+            <tr
+              :style="{
+                fontWeight: 'bold',
+                backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
+              }"
+            >
+              <td>{{ $t("data.options.player_view.best") }}</td>
+              <td>{{ getTeamBest(teamPlayers) }}</td>
+            </tr>
+            <tr
+              :style="{
+                fontWeight: 'bold',
+                backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
+              }"
+            >
+              <td>{{ $t("data.options.player_view.total") }}</td>
+              <td>{{ getTeamTotal(teamPlayers) }}</td>
+            </tr>
+          </template>
         </v-data-table>
       </v-card>
     </div>
 
-    <div v-else class="d-flex align-center justify-center" style="min-height: 25vh">
-      <span class="text-h6 text-grey font-weight-light">
-        {{ $t("data.options.view.chart_placeholder") }}
-      </span>
+    <div
+      v-else-if="viewMode === 'table' && groupMode === 'team'"
+      class="team-tables d-flex flex-wrap justify-space-around"
+    >
+      <v-card
+        v-for="row in runningDistanceTeamAggregated"
+        :key="row.team_id"
+        class="team-card pa-4 ma-2"
+        outlined
+        :style="{ backgroundColor: toRgb(visualizationStore.getTeamColor(row.team_id), 0.8) }"
+      >
+        <v-card-title class="text-center mt-n1">{{ getTeamName(row.team_id) }}</v-card-title>
+
+        <v-data-table
+          color="primary"
+          :headers="teamHeaders"
+          :items="[row]"
+          class="elevation-2"
+          hide-default-footer
+          density="compact"
+        >
+          <template #item="{ item, columns }">
+            <tr
+              :style="{
+                backgroundColor: toRgb(visualizationStore.getTeamColor(item.team_id), 0.6),
+              }"
+            >
+              <td v-for="col in columns" :key="col.key">
+                {{ item[col.key] }}
+              </td>
+            </tr>
+          </template>
+        </v-data-table>
+      </v-card>
+    </div>
+
+    <div v-else-if="viewMode === 'chart'" class="px-2 mt-2">
+      <KpiChart
+        :selectedPlayerIds="selectedPlayerIds"
+        :selectedKpi="chartKpi"
+        :groupMode="groupMode"
+        :chartMode="chartMode"
+        :windowSize="chartWindowSize"
+        :windowFrames="windowFrames"
+        :playerOptions="playerOptions"
+        :playerColors="playerColors"
+      />
+
+      <div v-if="groupMode === 'player'" class="chart-legend mt-2">
+        <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
+          <div
+            class="team-dot"
+            :style="{
+              backgroundColor: isTeamFullySelected(teamId)
+                ? toRgb(visualizationStore.getTeamColor(teamId), 0)
+                : 'transparent',
+              color: isTeamFullySelected(teamId)
+                ? '#fff'
+                : toRgb(visualizationStore.getTeamColor(teamId), 0),
+              borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
+            }"
+            @click="toggleTeam(teamId)"
+          >
+            {{ getTeamName(teamId) }}
+          </div>
+          <span class="chart-legend-sep">|</span>
+          <div
+            v-for="p in players"
+            :key="p.playerId"
+            class="player-dot"
+            :style="{
+              backgroundColor: selectedPlayerIds.has(p.playerId)
+                ? toRgb(playerColors[p.playerId], 0)
+                : toRgb(playerColors[p.playerId], 0.6),
+              color: selectedPlayerIds.has(p.playerId) ? '#fff' : '#222',
+              borderColor: selectedPlayerIds.has(p.playerId)
+                ? toRgb(playerColors[p.playerId], 0)
+                : toRgb(playerColors[p.playerId], 0.6),
+            }"
+            @click="togglePlayerId(p.playerId)"
+          >
+            {{ getPlayerNumber(p.playerId) }}
+          </div>
+        </div>
+      </div>
     </div>
   </v-card>
 </template>
@@ -238,6 +335,7 @@ import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
 import { usePlayerStore } from "@/stores/player";
 import RunningDistanceTimeSelector from "../kpi/RunningDistanceTimeSelector.vue";
+import KpiChart from "../kpi/KpiChart.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
 
@@ -249,6 +347,81 @@ const playerStore = usePlayerStore();
 const { t } = useI18n();
 
 const viewMode = ref("table");
+const groupMode = ref("player");
+
+const kpiOptions = [
+  { id: "running_distance_cumulative", kpi: "running_distance", mode: "cumulative" },
+  { id: "running_distance_interval", kpi: "running_distance", mode: "windowed" },
+  { id: "velocity_max", kpi: "velocity_max", mode: "cumulative" },
+  { id: "velocity_mean", kpi: "velocity_mean", mode: "cumulative" },
+  { id: "metabolic_work", kpi: "metabolic_work", mode: "cumulative" },
+];
+
+// Chart mode: single selected option (includes mode + window info)
+const selectedKpiId = ref("running_distance_cumulative");
+// Table mode: set of KPI ids (independent selection)
+const selectedKpis = ref(new Set(["running_distance_cumulative"]));
+
+// User-configurable interval in frames (default: 10)
+const windowFrames = ref(10);
+
+const onFrameInputBlur = () => {
+  if (!windowFrames.value || windowFrames.value < 1 || isNaN(windowFrames.value)) {
+    windowFrames.value = 10;
+  }
+};
+
+const inputWidth = computed(() => {
+  const digits = String(windowFrames.value || "").length || 1;
+  return `${Math.max(2, digits + 1)}ch`;
+});
+
+const frameDurationMs = computed(() => {
+  const fps = playerStore.videoFPS || 25;
+  return 1000 / fps;
+});
+
+const chartWindowSize = computed(() => {
+  return Math.max(1, windowFrames.value) * frameDurationMs.value;
+});
+
+const windowTimeLabel = computed(() => {
+  const totalMs = chartWindowSize.value;
+  if (totalMs < 1000) return `${Math.round(totalMs)} ms`;
+  const totalSec = totalMs / 1000;
+  if (totalSec < 60) return `${totalSec.toFixed(1)}s`;
+  const min = Math.floor(totalSec / 60);
+  const sec = Math.round(totalSec % 60);
+  return sec > 0 ? `${min} min ${sec}s` : `${min} min`;
+});
+
+const selectedKpiOption = computed(
+  () => kpiOptions.find((o) => o.id === selectedKpiId.value) || kpiOptions[0]
+);
+const chartKpi = computed(() => selectedKpiOption.value.kpi);
+const chartMode = computed(() => selectedKpiOption.value.mode);
+
+const isKpiSelected = (option) => {
+  if (viewMode.value === "chart") {
+    return selectedKpiId.value === option.id;
+  }
+  return selectedKpis.value.has(option.id);
+};
+
+const toggleKpi = (option) => {
+  if (viewMode.value === "chart") {
+    selectedKpiId.value = option.id;
+  } else {
+    // Table: multi select by id, keep at least one
+    const newSet = new Set(selectedKpis.value);
+    if (newSet.has(option.id)) {
+      if (newSet.size > 1) newSet.delete(option.id);
+    } else {
+      newSet.add(option.id);
+    }
+    selectedKpis.value = newSet;
+  }
+};
 
 const allFrameKeys = computed(() =>
   Object.keys(topViewStore.positionDataTopView)
@@ -267,9 +440,15 @@ watch(
   }
 );
 
-const headers = [
+const playerHeaders = [
   { title: t("visualization.running_distance.player_id"), key: "player_id" },
   { title: t("visualization.running_distance.distance"), key: "distance" },
+];
+
+const teamHeaders = [
+  { title: t("data.options.team_view.total_distance"), key: "total_distance" },
+  { title: t("data.options.team_view.avg_distance"), key: "avg_distance" },
+  { title: t("data.options.team_view.player_count"), key: "player_count" },
 ];
 
 const playerOptions = ref([]);
@@ -306,6 +485,32 @@ const togglePlayerId = (playerId) => {
   selectedPlayerIds.value = newSet;
 };
 
+const teamGroups = computed(() => {
+  const groups = {};
+  for (const p of playerOptions.value) {
+    if (!groups[p.teamId]) groups[p.teamId] = [];
+    groups[p.teamId].push(p);
+  }
+  return groups;
+});
+
+const toggleTeam = (teamId) => {
+  const teamPlayerIds = (teamGroups.value[teamId] || []).map((p) => p.playerId);
+  const allSelected = teamPlayerIds.every((pid) => selectedPlayerIds.value.has(pid));
+  const newSet = new Set(selectedPlayerIds.value);
+  if (allSelected) {
+    teamPlayerIds.forEach((pid) => newSet.delete(pid));
+  } else {
+    teamPlayerIds.forEach((pid) => newSet.add(pid));
+  }
+  selectedPlayerIds.value = newSet;
+};
+
+const isTeamFullySelected = (teamId) => {
+  const teamPlayerIds = (teamGroups.value[teamId] || []).map((p) => p.playerId);
+  return teamPlayerIds.length > 0 && teamPlayerIds.every((pid) => selectedPlayerIds.value.has(pid));
+};
+
 const runningDistanceItems = computed(() => {
   return positionDataStore.calculateRunningDistances(
     selectedPlayerIds.value,
@@ -325,6 +530,21 @@ const runningDistanceTeamItems = computed(() => {
   return grouped;
 });
 
+const runningDistanceTeamAggregated = computed(() => {
+  const result = [];
+  for (const [teamId, players] of Object.entries(runningDistanceTeamItems.value)) {
+    const total = players.reduce((sum, p) => sum + p.distance, 0);
+    const count = players.length;
+    result.push({
+      team_id: teamId,
+      total_distance: parseFloat(total.toFixed(1)),
+      avg_distance: count > 0 ? parseFloat((total / count).toFixed(1)) : 0,
+      player_count: count,
+    });
+  }
+  return result;
+});
+
 const hasPositionData = computed(() => {
   return Object.keys(topViewStore.positionDataTopView).length > 0;
 });
@@ -339,6 +559,16 @@ const getPlayerNumber = (playerId) => {
   const meta = topViewStore.metaDataTopView;
   const num = meta?.player_ids?.[playerId]?.number;
   return num != null ? num : playerId;
+};
+
+const getTeamBest = (teamPlayers) => {
+  if (!teamPlayers || teamPlayers.length === 0) return 0;
+  return Math.max(...teamPlayers.map((p) => p.distance));
+};
+
+const getTeamTotal = (teamPlayers) => {
+  if (!teamPlayers || teamPlayers.length === 0) return 0;
+  return parseFloat(teamPlayers.reduce((sum, p) => sum + p.distance, 0).toFixed(1));
 };
 </script>
 
@@ -380,6 +610,26 @@ const getPlayerNumber = (playerId) => {
   border: 2px solid;
 }
 
+.inline-frame-input {
+  min-width: 2ch;
+  text-align: center;
+  border: none;
+  border-bottom: 1.5px solid rgba(var(--v-theme-primary));
+  outline: none;
+  font-size: 12px;
+  padding: 0 2px;
+  background: transparent;
+  -moz-appearance: textfield;
+}
+.inline-frame-input::-webkit-outer-spin-button,
+.inline-frame-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.inline-frame-input:focus {
+  border-bottom-color: #1976d2;
+}
+
 .team-tables {
   display: flex;
   flex-wrap: wrap;
@@ -390,5 +640,44 @@ const getPlayerNumber = (playerId) => {
 .team-card {
   flex: 1 1 300px;
   max-width: 45%;
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.chart-legend-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.team-dot {
+  height: 28px;
+  border-radius: 14px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.7rem;
+  cursor: pointer;
+  border: 2px solid;
+  transition: background 0.2s, border 0.2s, color 0.2s;
+  user-select: none;
+  white-space: nowrap;
+}
+.team-dot:hover {
+  opacity: 0.8;
+}
+
+.chart-legend-sep {
+  color: #ccc;
+  font-size: 18px;
+  margin: 0 2px;
+  user-select: none;
 }
 </style>

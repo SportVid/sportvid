@@ -161,9 +161,25 @@
       "kpi_selection": {
         "title": "KPI-Auswahl",
         "running_distance": "Laufdistanz",
+        "running_distance_cumulative": "Laufdistanz (kumulativ)",
+        "running_distance_interval": "Laufdistanz (pro {frames} Frames)",
+        "interval_frames": "Intervall (Frames)",
         "velocity_max": "Maximale Geschwindigkeit",
         "velocity_mean": "Mittlere Geschwindigkeit",
-        "metabolic_power": "Metabolische Leistung"
+        "metabolic_work": "Metabolische Leistung"
+      },
+      "chart_mode": {
+        "cumulative": "Kumulativ",
+        "windowed": "Pro Sekunde"
+      },
+      "team_view": {
+        "total_distance": "Gesamtdistanz",
+        "avg_distance": "Durchschn. Distanz",
+        "player_count": "Spieler"
+      },
+      "player_view": {
+        "best": "Bester Wert",
+        "total": "Gesamt"
       },
       "view": {
         "chart_placeholder": "Diagrammansicht kommt bald."

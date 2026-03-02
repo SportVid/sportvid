@@ -212,9 +212,21 @@
       "kpi_selection": {
         "title": "KPI selection",
         "running_distance": "Running distance",
+        "running_distance_cumulative": "Running distance (cumulative)",
+        "running_distance_interval": "Running distance (per {frames} frames)",
+        "interval_frames": "Interval (frames)",
         "velocity_max": "Maximum Velocity",
         "velocity_mean": "Mean Velocity",
-        "metabolic_power": "Metabolic power"
+        "metabolic_work": "Metabolic work"
+      },
+      "team_view": {
+        "total_distance": "Total Distance",
+        "avg_distance": "Avg. Distance",
+        "player_count": "Players"
+      },
+      "player_view": {
+        "best": "Best",
+        "total": "Total"
       }
     },
     "view": {
