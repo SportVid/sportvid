@@ -87,6 +87,17 @@
       "calibration": "Kalibrierung",
       "position_data": "Positionsdaten"
     },
+    "analysis_tabs": {
+      "calibration": "Kalibrierung",
+      "position_data": "Positionsdaten"
+    },
+    "visualization_tabs": {
+      "select": "Visualisierung auswählen",
+      "timeline": "Timeline",
+      "events": "Ereignisse",
+      "heatmap": "Heatmap",
+      "running_distance": "Laufdistanz"
+    },
     "sports": {
       "soccer": "Fußball",
       "handball": "Handball",

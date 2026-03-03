@@ -103,6 +103,7 @@
       "select": "Select Visualization",
       "timeline": "Timeline",
       "events": "Events",
+      "heatmap": "Heatmap",
       "running_distance": "Running Distance"
     }
   },

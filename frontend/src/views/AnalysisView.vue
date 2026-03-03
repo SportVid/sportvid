@@ -191,8 +191,6 @@ function getAnalysisTabComponent(tabId) {
     return TabWindowCalibration;
   } else if (tabId === "position_data") {
     return TabWindowPositionData;
-  } else if (tabId === "heatmap") {
-    return TabWindowHeatmap;
   } else {
     return null;
   }
@@ -202,6 +200,8 @@ function getVisualizationTabComponent(tabId) {
     return TabWindowTimeline;
   } else if (tabId === "events") {
     return TabWindowEvents;
+  } else if (tabId === "heatmap") {
+    return TabWindowHeatmap;
   } else if (tabId === "running_distance") {
     return TabWindowRunningDistance;
   } else {
@@ -222,7 +222,7 @@ watch(
       calibrationAssetStore.showVideoAsset = false;
     }
 
-    if (newTabId === "position_data" || newTabId === "heatmap") {
+    if (newTabId === "position_data") {
       bboxesStore.showBoundingBox = true;
     } else {
       bboxesStore.showBoundingBox = false;
