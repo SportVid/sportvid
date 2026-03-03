@@ -37,8 +37,8 @@
             :style="{
               top:
                 topViewStore.topViewSize.top +
-                topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
-                ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height -
+                topViewStore.topViewSize.height * currentArea.heightRel +
+                ((1 - currentArea.heightRel) / 2) * topViewStore.topViewSize.height -
                 20 +
                 'px',
             }"
@@ -88,15 +88,12 @@
                 borderRadius: '50%',
                 transform: 'translate(-50%, -50%)',
                 top:
-                  position[4] *
-                    (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-                  ((1 - topViewStore.currentSport.heightRel) / 2) *
-                    topViewStore.topViewSize.height +
+                  position[4] * (topViewStore.topViewSize.height * currentArea.heightRel) +
+                  ((1 - currentArea.heightRel) / 2) * topViewStore.topViewSize.height +
                   'px',
                 left:
-                  position[3] *
-                    (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-                  ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
+                  position[3] * (topViewStore.topViewSize.width * currentArea.widthRel) +
+                  ((1 - currentArea.widthRel) / 2) * topViewStore.topViewSize.width +
                   'px',
                 backgroundColor: visualizationStore.getTeamColor(position[1]),
               }"
@@ -106,24 +103,42 @@
       </div>
     </v-row>
 
-    <v-row ref="playerSelector" class="justify-center">
-      <div class="player-selector mt-2">
-        <div
-          v-for="playerId in uniquePlayerIds"
-          :key="playerId"
-          class="player-dot"
-          :style="{
-            backgroundColor: selectedPlayerIds.includes(playerId)
-              ? toRgb(playerColors[playerId], 0)
-              : toRgb(playerColors[playerId], 0.7),
-            color: selectedPlayerIds.includes(playerId) ? '#fff' : '#222',
-            borderColor: selectedPlayerIds.includes(playerId)
-              ? toRgb(playerColors[playerId], 0)
-              : toRgb(playerColors[playerId], 0.7),
-          }"
-          @click="togglePlayerId(playerId)"
-        >
-          {{ getPlayerNumber(playerId) }}
+    <v-row ref="playerSelector" class="justify-center mb-0">
+      <div class="chart-legend mt-2">
+        <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
+          <div
+            class="team-dot"
+            :style="{
+              backgroundColor: isTeamFullySelected(teamId)
+                ? toRgb(visualizationStore.getTeamColor(teamId), 0)
+                : 'transparent',
+              color: isTeamFullySelected(teamId)
+                ? '#fff'
+                : toRgb(visualizationStore.getTeamColor(teamId), 0),
+              borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
+            }"
+            @click="toggleTeam(teamId)"
+          >
+            {{ getTeamName(teamId) }}
+          </div>
+          <span class="chart-legend-sep">|</span>
+          <div
+            v-for="p in players"
+            :key="p.playerId"
+            class="player-dot"
+            :style="{
+              backgroundColor: selectedPlayerIds.includes(p.playerId)
+                ? toRgb(playerColors[p.playerId], 0)
+                : toRgb(playerColors[p.playerId], 0.6),
+              color: selectedPlayerIds.includes(p.playerId) ? '#fff' : '#222',
+              borderColor: selectedPlayerIds.includes(p.playerId)
+                ? toRgb(playerColors[p.playerId], 0)
+                : toRgb(playerColors[p.playerId], 0.6),
+            }"
+            @click="togglePlayerId(p.playerId)"
+          >
+            {{ getPlayerNumber(p.playerId) }}
+          </div>
         </div>
       </div>
     </v-row>
@@ -227,6 +242,10 @@ const videoStore = useVideoStore();
 const visualizationStore = useVisualizationStore();
 const playerStore = usePlayerStore();
 
+const currentArea = computed(
+  () => topViewStore.currentSport.areas?.[topViewStore.currentAreaSize] ?? {}
+);
+
 const showModalPositionDataTeamColors = ref(false);
 
 const topViewElement = ref(null);
@@ -295,6 +314,12 @@ onMounted(() => {
     resizeObserver.observe(topViewElement.value);
     updateTopViewSize();
   }
+  // Create heatmap initially if enabled
+  nextTick(() => {
+    if (topViewStore.showHeatmap && heatmapContainer.value) {
+      createHeatmap();
+    }
+  });
 });
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateTopViewSize);
@@ -349,6 +374,52 @@ const getPlayerNumber = (playerId) => {
   return num != null ? num : playerId;
 };
 
+const getTeamName = (teamId) => {
+  const meta = topViewStore.metaDataTopView;
+  if (meta?.team_ids?.[teamId]?.name) return meta.team_ids[teamId].name;
+  return teamId;
+};
+
+const playerOptions = computed(() => {
+  const all = Object.values(topViewStore.positionDataTopView)
+    .flat()
+    .filter((p) => p[1] !== 1);
+  return all
+    .map((p) => ({ playerId: p[0], teamId: p[1] }))
+    .filter((v, i, a) => a.findIndex((x) => x.playerId === v.playerId) === i)
+    .sort((a, b) => a.playerId - b.playerId);
+});
+
+const teamGroups = computed(() => {
+  const groups = {};
+  for (const p of playerOptions.value) {
+    if (!groups[p.teamId]) groups[p.teamId] = [];
+    groups[p.teamId].push(p);
+  }
+  return groups;
+});
+
+const toggleTeam = (teamId) => {
+  const teamPlayerIds = (teamGroups.value[teamId] || []).map((p) => p.playerId);
+  const allSelected = teamPlayerIds.every((pid) => selectedPlayerIds.value.includes(pid));
+  if (allSelected) {
+    selectedPlayerIds.value = selectedPlayerIds.value.filter((id) => !teamPlayerIds.includes(id));
+  } else {
+    const newIds = [...selectedPlayerIds.value];
+    teamPlayerIds.forEach((pid) => {
+      if (!newIds.includes(pid)) newIds.push(pid);
+    });
+    selectedPlayerIds.value = newIds;
+  }
+};
+
+const isTeamFullySelected = (teamId) => {
+  const teamPlayerIds = (teamGroups.value[teamId] || []).map((p) => p.playerId);
+  return (
+    teamPlayerIds.length > 0 && teamPlayerIds.every((pid) => selectedPlayerIds.value.includes(pid))
+  );
+};
+
 const transformCoordinateToCrop = (x, y, cropPct) => {
   if (!cropPct) return { x, y };
 
@@ -387,6 +458,8 @@ const heatmapContainer = ref(null);
 let heatmapInstance = null;
 function createHeatmap() {
   if (!heatmapContainer.value) return;
+  // Don't create canvas with 0 dimensions — heatmap.js will fail
+  if (heatmapContainer.value.offsetWidth === 0 || heatmapContainer.value.offsetHeight === 0) return;
 
   heatmapContainer.value.innerHTML = "";
 
@@ -404,18 +477,22 @@ function createHeatmap() {
       1.0: "red",
     },
   });
+
+  // h337.create() overrides container position to 'relative' — restore it
+  heatmapContainer.value.style.position = "absolute";
 }
 function renderHeatmap() {
   if (!heatmapInstance || !topViewStore.topViewSize.width || !topViewStore.topViewSize.height)
     return;
 
+  const area = currentArea.value;
   const points = selectedPositions.value.map((pos) => {
     const x =
-      pos[3] * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-      ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
+      pos[3] * (topViewStore.topViewSize.width * area.widthRel) +
+      ((1 - area.widthRel) / 2) * topViewStore.topViewSize.width;
     const y =
-      pos[4] * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-      ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
+      pos[4] * (topViewStore.topViewSize.height * area.heightRel) +
+      ((1 - area.heightRel) / 2) * topViewStore.topViewSize.height;
     return { x: Math.round(x), y: Math.round(y), value: 1 };
   });
 
@@ -424,27 +501,31 @@ function renderHeatmap() {
     data: points,
   });
 }
-watch(
-  () => topViewStore.topViewSize.height,
-  () => {
-    renderHeatmap();
-    updateTopViewSize();
-  }
-);
-watch(selectedPositions, () => {
-  createHeatmap();
+// Recreate canvas when container size changes (width or height)
+watch([() => topViewStore.topViewSize.width, () => topViewStore.topViewSize.height], () => {
   nextTick(() => {
-    renderHeatmap();
-    updateTopViewSize();
+    createHeatmap();
+    nextTick(() => {
+      renderHeatmap();
+    });
   });
+});
+// Player selection change → only re-render data, don't recreate canvas
+watch(selectedPositions, () => {
+  if (!heatmapInstance) {
+    createHeatmap();
+  }
+  renderHeatmap();
 });
 watch(
   () => topViewStore.currentAreaSize,
   () => {
     if (topViewStore.showHeatmap) {
-      createHeatmap();
       nextTick(() => {
-        renderHeatmap();
+        createHeatmap();
+        nextTick(() => {
+          renderHeatmap();
+        });
       });
     }
   }
@@ -457,7 +538,6 @@ watch(
         createHeatmap();
         nextTick(() => {
           renderHeatmap();
-          updateTopViewSize();
         });
       });
     }
@@ -527,13 +607,46 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
-.player-selector {
+.chart-legend {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
   justify-content: center;
-  margin: 12px 0 8px 0;
+  column-gap: 40px;
+  row-gap: 8px;
+  flex-wrap: wrap;
 }
+
+.chart-legend-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.team-dot {
+  height: 28px;
+  border-radius: 14px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.7rem;
+  cursor: pointer;
+  border: 2px solid;
+  transition: background 0.2s, border 0.2s, color 0.2s;
+  user-select: none;
+  white-space: nowrap;
+}
+.team-dot:hover {
+  opacity: 0.8;
+}
+
+.chart-legend-sep {
+  color: #ccc;
+  font-size: 18px;
+  margin: 0 2px;
+  user-select: none;
+}
+
 .player-dot {
   width: 28px;
   height: 28px;
@@ -547,16 +660,6 @@ onBeforeUnmount(() => {
   border: 2px solid;
   transition: background 0.2s, border 0.2s;
   user-select: none;
-}
-.player-dot.selected {
-  border: 2px solid;
-}
-
-.team-row {
-  display: flex;
-  justify-content: center;
-  gap: 5px;
-  margin-bottom: 6px;
 }
 
 .top-view-fullscreen-root {
