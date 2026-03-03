@@ -2,18 +2,8 @@
   <PositionDataMenu v-if="Object.keys(topViewStore.positionDataTopView).length === 0" />
 
   <v-container v-else class="d-flex flex-column">
-    <v-row class="mt-1" justify="center">
+    <v-row justify="center">
       <div ref="topViewFullscreenRoot" class="top-view-fullscreen-root">
-        <div v-if="matchupTeams.length > 1" class="matchup-overlay">
-          <template v-for="(team, index) in matchupTeams" :key="team.id">
-            <div class="matchup-team">
-              <span class="matchup-team-name">{{ team.name }}</span>
-              <span class="matchup-team-line mt-n1" :style="{ backgroundColor: team.color }" />
-            </div>
-            <span v-if="index < matchupTeams.length - 1" class="matchup-separator">:</span>
-          </template>
-        </div>
-
         <div class="top-view-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
           <img
             ref="topViewElement"

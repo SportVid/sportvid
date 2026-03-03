@@ -60,7 +60,8 @@
     "save": "Speichern",
     "run_batch_plugin": "Batch-Plugin ausführen",
     "run_plugin": "Plugin ausführen",
-    "upload_video": "Neues Video hochladen"
+    "upload_video": "Neues Video hochladen",
+    "exit": "Beenden"
   },
   "field": {
     "required": "Dieses Feld ist erforderlich."

@@ -29,18 +29,27 @@
         variant="underlined"
       />
 
-      <v-select
-        v-model="parameter.value"
-        :items="calibrationAssets"
-        :label="parameter.text"
-        :hint="parameter.hint"
-        item-title="name"
-        item-value="id"
-        v-if="parameter.field == 'select_calibration'"
-        :key="parameter.name"
-        persistent-hint
-        variant="underlined"
-      />
+      <div v-if="parameter.field == 'select_calibration'" :key="parameter.name">
+        <v-btn
+          variant="outlined"
+          prepend-icon="mdi-plus"
+          block
+          class="mb-6"
+          @click="emit('create-calibration')"
+        >
+          {{ $t("calibration_asset.create") }}
+        </v-btn>
+        <v-select
+          v-model="parameter.value"
+          :items="calibrationAssets"
+          :label="parameter.text"
+          :hint="parameter.hint"
+          item-title="name"
+          item-value="id"
+          persistent-hint
+          variant="underlined"
+        />
+      </div>
 
       <v-select
         v-model="parameter.value"
@@ -364,6 +373,8 @@ const props = defineProps({
   parameters: Array,
   videoIds: Array,
 });
+
+const emit = defineEmits(["create-calibration"]);
 
 const groupTimelines = (timelines) => {
   let timelinesGroups = {};

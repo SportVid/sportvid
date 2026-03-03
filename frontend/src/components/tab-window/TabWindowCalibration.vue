@@ -2,7 +2,7 @@
   <CalibrationAssetMenu v-if="calibrationAssetStore.calibrationAssetObjects.length === 0" />
 
   <v-container v-else class="d-flex flex-column">
-    <v-row ref="container" class="mt-1" justify="center">
+    <v-row ref="container" justify="center">
       <div ref="topViewFullscreenRoot" class="top-view-fullscreen-root">
         <div class="top-view-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
           <img
@@ -1020,6 +1020,7 @@ watch([() => calibrationAssetStore.timeChangeConflict], ([warning]) => {
 
 <style scoped>
 .visualizer-image {
+  display: block;
   max-width: 100%;
   max-height: 100%;
 }

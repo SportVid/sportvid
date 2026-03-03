@@ -70,7 +70,8 @@
     "upload_video": "Upload new Video",
     "settings": "Settings",
     "continue": "Continue",
-    "admin_panel": "Admin Panel"
+    "admin_panel": "Admin Panel",
+    "exit": "Exit"
   },
   "field": {
     "required": "This field is required."

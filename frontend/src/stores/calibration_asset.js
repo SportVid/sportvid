@@ -13,6 +13,7 @@ export const useCalibrationAssetStore = defineStore(
     const playerStore = usePlayerStore();
 
     const isLoading = ref(false);
+    const calibrationMode = ref(false);
 
     const calibrationAssetType = ref("marker");
     const setCalibrationAssetType = (type) => {
@@ -806,6 +807,7 @@ export const useCalibrationAssetStore = defineStore(
       topViewObjectProjection,
       videoObjectReprojection,
       applyHomography,
+      calibrationMode,
       calibrationAssetSaveSuccess,
       calibrationAssetUpdateSuccess,
       calibrationAssetDeleteSuccess,
@@ -819,6 +821,7 @@ export const useCalibrationAssetStore = defineStore(
   {
     persist: {
       pick: [
+        "calibrationMode",
         "calibrationAssetType",
         "calibrationAssetObjects",
         "videoObject",
