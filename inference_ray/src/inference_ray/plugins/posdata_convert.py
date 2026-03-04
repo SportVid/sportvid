@@ -274,7 +274,7 @@ class PosDataConvert(
             # ---- FPS filtering: checks if specified fps parameter is in an applicable range
             unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
             diffs = unique_timestamps[1:] - unique_timestamps[:-1]
-            freq = diffs.mean()
+            freq = np.median(diffs)
             origin_fps = int(np.rint(1000./freq))
             actual_fps = origin_fps
             

@@ -34,7 +34,8 @@ export const usePositionDataStore = defineStore("position_data", () => {
 
   const loadPositionDataList = async () => {
     try {
-      const res = await axios.get(`${config.API_LOCATION}/tracking_data/list`);
+      const params = { video_id: playerStore.videoId };
+      const res = await axios.get(`${config.API_LOCATION}/tracking_data/list`, { params });
       if (res.data.status === "ok") {
         positionDataList.value = res.data.entries;
       }

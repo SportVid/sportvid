@@ -172,7 +172,14 @@ class TrackingDataList(View):
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"}, status=500)
             entries = []
-            for tdata in TrackingData.objects.filter(owner=request.user):
+            if not request.user.is_authenticated:
+                return JsonResponse({"status": "error"}, status=500)
+            filters = {"owner": request.user}
+            video_id = request.GET.get("video_id")
+            if video_id:
+                filters["video_id"] = video_id
+            entries = []
+            for tdata in TrackingData.objects.filter(**filters):
                 entries.append(tdata.to_dict())
             return JsonResponse({"status": "ok", "entries": entries})
         except Exception as e:
