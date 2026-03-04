@@ -1,12 +1,23 @@
 <template>
-  <PositionDataMenu v-if="Object.keys(topViewStore.positionDataTopView).length === 0" />
+  <v-row
+    v-if="!hasPositionData"
+    class="text-h6 text-grey font-weight-light mx-16 px-10"
+    style="
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.5;
+      height: 25vh;
+    "
+    v-html="$t('visualization.heatmap.not_selected')"
+  />
 
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
     <v-row align="center">
-      <v-col cols="3" class="mt-3 d-flex align-center" style="gap: 8px">
+      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px">
         <v-menu location="bottom">
           <template #activator="{ props }">
-            <v-btn v-bind="props" style="height: 40px" class="ml-2">
+            <v-btn v-bind="props" style="height: 40px" class="ml-2 mt-n2" size="small">
               {{ topViewStore.currentSport.title }}
             </v-btn>
           </template>
@@ -43,18 +54,19 @@
           mandatory
           elevation="2"
           style="height: 40px"
+          class="mt-n2"
         >
-          <v-btn value="heatmap">
+          <v-btn value="heatmap" size="small">
             <v-icon>mdi-blur</v-icon>
           </v-btn>
-          <v-btn value="movement">
+          <v-btn value="movement" size="small">
             <v-icon>mdi-map-marker-path</v-icon>
           </v-btn>
         </v-btn-toggle>
 
         <v-menu location="bottom">
           <template #activator="{ props }">
-            <v-btn v-bind="props" style="height: 40px">
+            <v-btn v-bind="props" style="height: 40px" size="small" class="mt-n2">
               <v-icon>mdi-timer-sync-outline</v-icon>
             </v-btn>
           </template>
@@ -64,7 +76,7 @@
               @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
             >
               <v-list-item-title>
-                {{ $t("data.time_sync.sync_start") }}
+                {{ $t("visualization.time_selection.sync_start") }}
               </v-list-item-title>
             </v-list-item>
 
@@ -73,7 +85,7 @@
               @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
             >
               <v-list-item-title>
-                {{ $t("data.time_sync.sync_end") }}
+                {{ $t("visualization.time_selection.sync_end") }}
               </v-list-item-title>
             </v-list-item>
 
@@ -87,7 +99,7 @@
               "
             >
               <v-list-item-title>
-                {{ $t("data.options.time_selection.full_match") }}
+                {{ $t("visualization.time_selection.full_match") }}
               </v-list-item-title>
             </v-list-item>
 
@@ -97,7 +109,7 @@
               @click="selectHalftime(1)"
             >
               <v-list-item-title>
-                {{ $t("data.options.time_selection.first_half") }}
+                {{ $t("visualization.time_selection.first_half") }}
               </v-list-item-title>
             </v-list-item>
 
@@ -107,13 +119,13 @@
               @click="selectHalftime(2)"
             >
               <v-list-item-title>
-                {{ $t("data.options.time_selection.second_half") }}
+                {{ $t("visualization.time_selection.second_half") }}
               </v-list-item-title>
             </v-list-item>
           </v-list>
         </v-menu>
       </v-col>
-      <v-col cols="9" class="mt-2">
+      <v-col class="mt-2">
         <RunningDistanceTimeSelector class="ml-n1" />
       </v-col>
     </v-row>
@@ -215,7 +227,6 @@ import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
-import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import RunningDistanceTimeSelector from "@/components/kpi/RunningDistanceTimeSelector.vue";
 import h337 from "heatmap.js";
 import { toRgb } from "@/plugins/helpers";
@@ -475,6 +486,10 @@ watch(displayMode, (mode) => {
       nextTick(() => renderHeatmap());
     });
   }
+});
+
+const hasPositionData = computed(() => {
+  return Object.keys(topViewStore.positionDataTopView).length > 0;
 });
 </script>
 

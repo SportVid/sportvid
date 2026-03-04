@@ -13,8 +13,8 @@
   />
 
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
-    <v-row align="center">
-      <v-col cols="3" class="mt-3 d-flex align-center" style="gap: 8px">
+    <v-row align="center" class="flex-nowrap">
+      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px">
         <v-btn-toggle
           v-model="viewMode"
           color="primary"
@@ -22,14 +22,15 @@
           mandatory
           elevation="2"
           style="height: 40px"
-          class="ml-2"
+          class="ml-2 mt-n2"
+          density="compact"
         >
-          <v-btn value="table">
-            <v-icon>mdi-table</v-icon>
+          <v-btn value="table" size="small">
+            <v-icon size="small">mdi-table</v-icon>
           </v-btn>
 
-          <v-btn value="chart">
-            <v-icon>mdi-chart-line</v-icon>
+          <v-btn value="chart" size="small">
+            <v-icon size="small">mdi-chart-line</v-icon>
           </v-btn>
         </v-btn-toggle>
 
@@ -40,19 +41,21 @@
           mandatory
           elevation="2"
           style="height: 40px"
+          density="compact"
+          class="mt-n2"
         >
-          <v-btn value="player">
-            <v-icon>mdi-account</v-icon>
+          <v-btn value="player" size="small">
+            <v-icon size="small">mdi-account</v-icon>
           </v-btn>
 
-          <v-btn value="team">
-            <v-icon>mdi-account-group</v-icon>
+          <v-btn value="team" size="small">
+            <v-icon size="small">mdi-account-group</v-icon>
           </v-btn>
         </v-btn-toggle>
 
         <v-menu location="bottom" :close-on-content-click="false">
           <template #activator="{ props }">
-            <v-btn v-bind="props" style="height: 40px"> KPI </v-btn>
+            <v-btn v-bind="props" size="small" style="height: 40px" class="mt-n2"> KPI </v-btn>
           </template>
 
           <v-list class="py-0" density="compact" width="300px">
@@ -61,7 +64,7 @@
                 <v-list-item-title class="d-flex align-center" style="gap: 4px">
                   <template v-if="option.id === 'running_distance_interval'">
                     <i18n-t
-                      keypath="data.options.kpi_selection.running_distance_interval"
+                      keypath="visualization.running_distance.kpi_selection.running_distance_interval"
                       tag="span"
                       class="flex-grow-1"
                     >
@@ -80,7 +83,7 @@
                     </i18n-t>
                   </template>
                   <span v-else class="flex-grow-1">
-                    {{ $t(`data.options.kpi_selection.${option.id}`) }}
+                    {{ $t(`visualization.running_distance.kpi_selection.${option.id}`) }}
                   </span>
                   <v-icon v-if="isKpiSelected(option)" size="small">mdi-check</v-icon>
                 </v-list-item-title>
@@ -91,8 +94,8 @@
 
         <v-menu location="bottom">
           <template #activator="{ props }">
-            <v-btn v-bind="props" style="height: 40px">
-              <v-icon>mdi-timer-sync-outline</v-icon>
+            <v-btn v-bind="props" size="small" style="height: 40px" class="mt-n2">
+              <v-icon size="small">mdi-timer-sync-outline</v-icon>
             </v-btn>
           </template>
 
@@ -102,7 +105,7 @@
               @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
             >
               <v-list-item-title>
-                {{ $t("data.time_sync.sync_start") }}
+                {{ $t("visualization.time_selection.sync_start") }}
               </v-list-item-title>
             </v-list-item>
 
@@ -111,7 +114,7 @@
               @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
             >
               <v-list-item-title>
-                {{ $t("data.time_sync.sync_end") }}
+                {{ $t("visualization.time_selection.sync_end") }}
               </v-list-item-title>
             </v-list-item>
 
@@ -125,7 +128,7 @@
               "
             >
               <v-list-item-title>
-                {{ $t("data.options.time_selection.full_match") }}
+                {{ $t("visualization.time_selection.full_match") }}
               </v-list-item-title>
             </v-list-item>
 
@@ -138,7 +141,7 @@
               :disabled="!visualizationStore.halftimesExist"
             >
               <v-list-item-title>
-                {{ $t("data.options.time_selection.first_half") }}
+                {{ $t("visualization.time_selection.first_half") }}
               </v-list-item-title>
             </v-list-item>
 
@@ -151,13 +154,13 @@
               :disabled="!visualizationStore.halftimesExist"
             >
               <v-list-item-title>
-                {{ $t("data.options.time_selection.second_half") }}
+                {{ $t("visualization.time_selection.second_half") }}
               </v-list-item-title>
             </v-list-item>
           </v-list>
         </v-menu>
       </v-col>
-      <v-col cols="9" class="mt-2">
+      <v-col class="mt-2">
         <RunningDistanceTimeSelector class="ml-n1" />
       </v-col>
     </v-row>
@@ -199,6 +202,7 @@
           color="primary"
           :headers="playerHeaders"
           :items="teamPlayers"
+          :items-per-page="-1"
           class="elevation-2"
           hide-default-footer
           density="compact"
@@ -222,7 +226,7 @@
                 backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
               }"
             >
-              <td>{{ $t("data.options.player_view.best") }}</td>
+              <td>{{ $t("visualization.running_distance.player_view.best") }}</td>
               <td>{{ getTeamBest(teamPlayers) }}</td>
             </tr>
             <tr
@@ -231,7 +235,7 @@
                 backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
               }"
             >
-              <td>{{ $t("data.options.player_view.total") }}</td>
+              <td>{{ $t("visualization.running_distance.player_view.total") }}</td>
               <td>{{ getTeamTotal(teamPlayers) }}</td>
             </tr>
           </template>
@@ -256,6 +260,7 @@
           color="primary"
           :headers="teamHeaders"
           :items="[row]"
+          :items-per-page="-1"
           class="elevation-2"
           hide-default-footer
           density="compact"
@@ -441,14 +446,14 @@ watch(
 );
 
 const playerHeaders = [
-  { title: t("visualization.running_distance.player_id"), key: "player_id" },
-  { title: t("visualization.running_distance.distance"), key: "distance" },
+  { title: t("visualization.running_distance.player_view.player_id"), key: "player_id" },
+  { title: t("visualization.running_distance.player_view.distance"), key: "distance" },
 ];
 
 const teamHeaders = [
-  { title: t("data.options.team_view.total_distance"), key: "total_distance" },
-  { title: t("data.options.team_view.avg_distance"), key: "avg_distance" },
-  { title: t("data.options.team_view.player_count"), key: "player_count" },
+  { title: t("visualization.running_distance.team_view.total_distance"), key: "total_distance" },
+  { title: t("visualization.running_distance.team_view.avg_distance"), key: "avg_distance" },
+  { title: t("visualization.running_distance.team_view.player_count"), key: "player_count" },
 ];
 
 const playerOptions = ref([]);

@@ -42,10 +42,10 @@ const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
 
 const kpiLabel = computed(() => {
   const labels = {
-    running_distance: t("data.options.kpi_selection.running_distance"),
-    velocity_max: t("data.options.kpi_selection.velocity_max"),
-    velocity_mean: t("data.options.kpi_selection.velocity_mean"),
-    metabolic_work: t("data.options.kpi_selection.metabolic_work"),
+    running_distance: t("visualization.running_distance.kpi_selection.running_distance"),
+    velocity_max: t("visualization.running_distance.kpi_selection.velocity_max"),
+    velocity_mean: t("visualization.running_distance.kpi_selection.velocity_mean"),
+    metabolic_work: t("visualization.running_distance.kpi_selection.metabolic_work"),
   };
   return labels[props.selectedKpi] || props.selectedKpi;
 });

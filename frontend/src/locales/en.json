@@ -195,50 +195,6 @@
     },
     "fps_deviation": "Downsampling & interpolation introduces a maximum frame-by-frame deviation of up to {interpErr}% compared to the original frame rate."
   },
-  "heatmap": {
-    "display_settings": {
-      "title": "Display Settings",
-      "view_heatmap": "View heatmap",
-      "view_movement": "View movement"
-    }
-  },
-  "data": {
-    "options": {
-      "title": "Options",
-      "time_selection": {
-        "title": "Time selection",
-        "full_match": "Select full match",
-        "first_half": "Select first half",
-        "second_half": "Select second half"
-      },
-      "kpi_selection": {
-        "title": "KPI selection",
-        "running_distance": "Running distance",
-        "running_distance_cumulative": "Running distance (cumulative)",
-        "running_distance_interval": "Running distance (per {frames} frames)",
-        "interval_frames": "Interval (frames)",
-        "velocity_max": "Maximum Velocity",
-        "velocity_mean": "Mean Velocity",
-        "metabolic_work": "Metabolic work"
-      },
-      "team_view": {
-        "total_distance": "Total Distance",
-        "avg_distance": "Avg. Distance",
-        "player_count": "Players"
-      },
-      "player_view": {
-        "best": "Best",
-        "total": "Total"
-      }
-    },
-    "view": {
-      "chart_placeholder": "Chart view coming soon."
-    },
-    "time_sync": {
-      "sync_start": "Synchronize start time with video time",
-      "sync_end": "Synchronize end time with video time"
-    }
-  },
   "visualization": {
     "title": "Visualize",
     "start": "Apply",
@@ -261,11 +217,40 @@
         "ySelect": "Not selected"
       }
     },
+    "time_selection": {
+      "sync_start": "Synchronize start time with video time",
+      "sync_end": "Synchronize end time with video time",
+      "full_match": "Select full match",
+      "first_half": "Select first half",
+      "second_half": "Select second half"
+    },
     "running_distance": {
       "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
-      "player_id": "Player-ID",
-      "team_id": "Team",
-      "distance": "Distance [m]"
+      "kpi_selection": {
+        "title": "KPI selection",
+        "running_distance": "Running distance",
+        "running_distance_cumulative": "Running distance (cumulative)",
+        "running_distance_interval": "Running distance (per {frames} frames)",
+        "interval_frames": "Interval (frames)",
+        "velocity_max": "Maximum Velocity",
+        "velocity_mean": "Mean Velocity",
+        "metabolic_work": "Metabolic work"
+      },
+      "player_view": {
+        "player_id": "Player-ID",
+        "team_id": "Team",
+        "distance": "Distance [m]",
+        "best": "Best",
+        "total": "Total"
+      },
+      "team_view": {
+        "total_distance": "Total Distance",
+        "avg_distance": "Avg. Distance",
+        "player_count": "Players"
+      }
+    },
+    "heatmap": {
+      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually."
     },
     "timeline": {
       "not_available": "No timeline available.<br>Please run a plugin that creates a timeline."
