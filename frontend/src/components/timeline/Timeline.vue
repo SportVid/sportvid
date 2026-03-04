@@ -218,7 +218,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import * as PIXI from "pixi.js";
 import { Draggable } from "@he-tree/vue";
 import { useTimelineStore } from "@/stores/timeline";
@@ -933,6 +933,8 @@ watch(selectedTimelineSegments, (newSelection, oldSelection) => {
   addSegmentSelection(newSelection);
 });
 
+const isMounted = ref(true);
+
 const container = ref(null);
 onMounted(async () => {
   containerWidth.value = container.value?.$el.clientWidth;
@@ -948,7 +950,14 @@ onMounted(async () => {
     antialias: true,
   });
 
-  canvas.value.addEventListener("contextmenu", (e) => {
+  // Component was unmounted while PIXI was initializing
+  if (!isMounted.value) {
+    app.value.destroy(true);
+    app.value = null;
+    return;
+  }
+
+  canvas.value?.addEventListener("contextmenu", (e) => {
     e.preventDefault();
   });
 
@@ -1087,14 +1096,22 @@ onMounted(async () => {
   });
 });
 
+onBeforeUnmount(() => {
+  isMounted.value = false;
+  if (app.value) {
+    app.value.destroy(true);
+    app.value = null;
+  }
+});
+
 watch(currentTime, (newValue) => {
-  if (newValue) drawTimeBar();
+  if (newValue && app.value) drawTimeBar();
 });
 
 watch(
   playerStore.selectedTimeRange,
   (newValue) => {
-    if (newValue) draw();
+    if (newValue && app.value) draw();
   },
   { deep: true }
 );
