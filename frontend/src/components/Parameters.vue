@@ -30,15 +30,29 @@
       />
 
       <div v-if="parameter.field == 'select_calibration'" :key="parameter.name">
-        <v-btn
-          variant="outlined"
-          prepend-icon="mdi-plus"
-          block
-          class="mb-6"
-          @click="emit('create-calibration')"
-        >
-          {{ $t("calibration_asset.create") }}
-        </v-btn>
+        <div class="d-flex ga-2 mb-6">
+          <v-btn
+            variant="outlined"
+            prepend-icon="mdi-plus"
+            class="flex-grow-1"
+            @click="emit('create-calibration')"
+          >
+            {{ $t("calibration_asset.create") }}
+          </v-btn>
+          <v-btn
+            variant="outlined"
+            prepend-icon="mdi-pencil"
+            class="flex-grow-1"
+            @click="showModalCalibrationAssetSelectForEdit = true"
+          >
+            {{ $t("calibration_asset.select") }}
+          </v-btn>
+        </div>
+        <ModalCalibrationAssetSelect
+          v-if="showModalCalibrationAssetSelectForEdit"
+          v-model="showModalCalibrationAssetSelectForEdit"
+          @selected="onCalibrationAssetSelected"
+        />
         <v-select
           v-model="parameter.value"
           :items="calibrationAssets"
@@ -358,6 +372,7 @@ import { useI18n } from "vue-i18n";
 import { useTimelineStore } from "../stores/timeline";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
+import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
 import { useExportStore } from "@/stores/export";
 import { usePlayerStore } from "@/stores/player";
 
@@ -374,7 +389,12 @@ const props = defineProps({
   videoIds: Array,
 });
 
-const emit = defineEmits(["create-calibration"]);
+const emit = defineEmits(["create-calibration", "select-calibration"]);
+
+const showModalCalibrationAssetSelectForEdit = ref(false);
+const onCalibrationAssetSelected = () => {
+  emit("select-calibration");
+};
 
 const groupTimelines = (timelines) => {
   let timelinesGroups = {};

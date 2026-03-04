@@ -65,6 +65,7 @@
                   :parameters="selected.parameters"
                   :videoIds="videoIds"
                   @create-calibration="onCreateCalibration"
+                  @select-calibration="onSelectCalibration"
                 />
 
                 <v-expansion-panels
@@ -136,6 +137,11 @@ const showCalibrationCreate = ref(false);
 
 const onCreateCalibration = () => {
   showCalibrationCreate.value = true;
+};
+
+const onSelectCalibration = () => {
+  dialog.value = false;
+  calibrationAssetStore.calibrationMode = true;
 };
 
 watch(showCalibrationCreate, (newVal, oldVal) => {

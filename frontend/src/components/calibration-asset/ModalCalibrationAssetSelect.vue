@@ -50,13 +50,14 @@ const props = defineProps({
     default: false,
   },
 });
-const emit = defineEmits();
+const emit = defineEmits(["update:modelValue", "selected"]);
 
 const dialog = ref(props.modelValue);
 
 const loadCalibrationAsset = (id) => {
   calibrationAssetStore.loadCalibrationAsset(id);
   dialog.value = false;
+  emit("selected", id);
 };
 
 onMounted(() => {
