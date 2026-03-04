@@ -61,9 +61,8 @@ class PosDataConvert(
         import pandas as pd
         
         df = pd.read_csv(t_data, delimiter=parameters["delimiter"])
-         
-        df = df.drop(['formatted local time', 'mapped id'], axis=1)
-        df["game_section"] = 0
+        
+        # Rename relevant Kinexon columns to unified names
         df = df.rename(columns={
             "ts in ms": "timestamp", 
             "number": "player_id",
@@ -74,17 +73,15 @@ class PosDataConvert(
             "y in m": "pos_y"
         })
         
-        # rearrange indices to keep it consistent with dfl
-        cols = list(df.columns)
-        pos_x, pos_y, gs = cols.index('pos_x'), cols.index('pos_y'), cols.index('game_section')
-        cols[pos_x], cols[pos_y], cols[gs] = cols[gs], cols[pos_x], cols[pos_y]
-        df = df[cols]
+        df["game_section"] = 0
+        df["player_number"] = df["player_id"]  # For KNX, player_id IS the shirt number
+        
+        # Keep only relevant columns, drop everything else (speed, acceleration, etc.)
+        keep_cols = ['timestamp', 'player_id', 'player_name', 'team_id', 'team_name', 'game_section', 'pos_x', 'pos_y', 'player_number']
+        df = df[[c for c in keep_cols if c in df.columns]]
         
         df["pos_x"] = df["pos_x"].apply(lambda x: round(x, ndigits=2))
         df["pos_y"] = df["pos_y"].apply(lambda x: round(x, ndigits=2))
-        
-        # For KNX, player_id IS the shirt number
-        df["player_number"] = df["player_id"]
         
         return df, parameters["field_length"], parameters["field_width"]
         
