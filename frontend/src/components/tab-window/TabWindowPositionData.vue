@@ -828,19 +828,6 @@ const positionDataTransformed = computed(() => {
   return result;
 });
 
-const matchupTeams = computed(() => {
-  const meta = topViewStore.metaDataTopView;
-  if (!meta?.team_ids) return [];
-  return Object.entries(meta.team_ids)
-    .filter(([teamId]) => Number(teamId) !== 1)
-    .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([teamId, info]) => ({
-      id: Number(teamId),
-      name: info.name,
-      color: visualizationStore.getTeamColor(Number(teamId)),
-    }));
-});
-
 const getPlayerNumber = (playerId) => {
   const meta = topViewStore.metaDataTopView;
   const num = meta?.player_ids?.[playerId]?.number;

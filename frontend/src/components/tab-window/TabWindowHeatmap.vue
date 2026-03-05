@@ -1,6 +1,13 @@
 <template>
+  <v-row v-if="videoStore.isLoading" class="loading-card">
+    <div class="spinner">
+      <i class="mdi mdi-loading mdi-spin" />
+    </div>
+    <div class="loading-text">Loading...</div>
+  </v-row>
+
   <v-row
-    v-if="!hasPositionData"
+    v-else-if="!hasPositionData"
     class="text-h6 text-grey font-weight-light mx-16 px-10"
     style="
       align-items: center;
@@ -338,7 +345,7 @@ function togglePlayerId(playerId) {
   if (selectedPlayerIds.value.includes(playerId)) {
     selectedPlayerIds.value = selectedPlayerIds.value.filter((id) => id !== playerId);
   } else {
-    selectedPlayerIds.value.push(playerId);
+    selectedPlayerIds.value = [...selectedPlayerIds.value, playerId];
   }
 }
 
@@ -375,29 +382,23 @@ const getTeamName = (teamId) => {
   return teamId;
 };
 
-const transformCoordinateToCrop = (x, y, cropPct) => {
-  if (!cropPct) return { x, y };
-  const xCrop = (x - cropPct.x[0]) / (cropPct.x[1] - cropPct.x[0]);
-  const yCrop = (y - cropPct.y[0]) / (cropPct.y[1] - cropPct.y[0]);
-  return { x: xCrop, y: yCrop };
-};
-
 const selectedPositions = computed(() => {
   if (selectedPlayerIds.value.length === 0) return [];
-
-  const cropPct = currentArea.value.templateCrop || { x: [0, 1], y: [0, 1] };
+  const posData = topViewStore.positionDataTopView;
+  if (!posData || !Object.keys(posData).length) return [];
   const startFrame = positionDataStore.selectedTimeRange.start;
   const endFrame = positionDataStore.selectedTimeRange.end;
-
+  const cropPct = currentArea.value.templateCrop || { x: [0, 1], y: [0, 1] };
   const allPositions = [];
-  Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, arr]) => {
+  Object.entries(posData).forEach(([timeKey, arr]) => {
     const t = Number(timeKey);
     if (t < startFrame || t > endFrame) return;
     if (Array.isArray(arr)) {
       arr.forEach((pos) => {
         if (selectedPlayerIds.value.includes(pos[0])) {
-          const transformed = transformCoordinateToCrop(pos[3], pos[4], cropPct);
-          allPositions.push([pos[0], pos[1], pos[2], transformed.x, transformed.y]);
+          const xCrop = (pos[3] - cropPct.x[0]) / (cropPct.x[1] - cropPct.x[0]);
+          const yCrop = (pos[4] - cropPct.y[0]) / (cropPct.y[1] - cropPct.y[0]);
+          allPositions.push([pos[0], pos[1], pos[2], xCrop, yCrop]);
         }
       });
     }
@@ -570,5 +571,23 @@ const hasPositionData = computed(() => {
 .top-view-wrapper {
   position: relative;
   overflow: hidden;
+}
+
+.loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+.spinner {
+  font-size: 48px;
+  color: #ac1414;
+}
+
+.loading-text {
+  margin-top: 10px;
+  font-size: 18px;
 }
 </style>

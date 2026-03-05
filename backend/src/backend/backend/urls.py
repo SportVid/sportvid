@@ -46,6 +46,8 @@ urlpatterns = [
         views.TrackingDataRename.as_view(), name="tracking_data_rename"),
     path("tracking_data/delete",
         views.TrackingDataDelete.as_view(), name="tracking_data_delete"),
+    path("tracking_data/pos_data/chunk",
+        views.TrackingDataPosDataChunk.as_view(), name="tracking_data_pos_data_chunk"),
     # ---------- POSITION DATA / BBOXES
     path("position_data/bboxes/edit",
          views.BoundingBoxesChange.as_view(), name="position_data_bboxes_edit"),

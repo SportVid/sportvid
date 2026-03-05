@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { nextTick, ref, computed } from "vue";
+import { nextTick, ref, shallowRef, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
@@ -241,8 +241,8 @@ export const useTopViewStore = defineStore(
       showPlayerId.value = !showPlayerId.value;
     };
 
-    const positionDataTopView = ref({});
-    const metaDataTopView = ref({});
+    const positionDataTopView = shallowRef({});
+    const metaDataTopView = shallowRef({});
 
     function transformBBoxToPositionDataTopView(
       calibrationAssetId,
@@ -271,8 +271,9 @@ export const useTopViewStore = defineStore(
         bboxesStore.bboxDataInterpolated = _bboxDataInterpolated;
 
         if (calibrationAssetStore.calibrationMatrix) {
+          const newPosData = {};
           for (const [time, boxes] of Object.entries(_bboxDataInterpolated)) {
-            positionDataTopView.value[time] = boxes.map((b) => {
+            newPosData[time] = boxes.map((b) => {
               const { x, y } = calibrationAssetStore.applyHomography(
                 calibrationAssetStore.calibrationMatrix,
                 { x: b[3], y: b[4] }
@@ -282,6 +283,7 @@ export const useTopViewStore = defineStore(
               return b;
             });
           }
+          positionDataTopView.value = newPosData;
         }
 
         const teamIdsMap = {};
@@ -371,7 +373,7 @@ export const useTopViewStore = defineStore(
   },
   {
     persist: {
-      pick: ["currentSport", "currentAreaSize", "positionDataTopView", "metaDataTopView"],
+      pick: ["currentSport", "currentAreaSize"],
       storage: sessionStorage,
     },
   }

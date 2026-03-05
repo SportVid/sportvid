@@ -91,7 +91,10 @@
         </v-col>
       </v-row> -->
 
-      <v-row v-if="!calibrationAssetStore.calibrationMode" class="ma-n2">
+      <v-row
+        v-if="!calibrationAssetStore.calibrationMode && !positionDataStore.isRestoringPosData"
+        class="ma-n2"
+      >
         <v-col>
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2">
             <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.visualizationTabId">
@@ -269,6 +272,7 @@ const fetchData = async ({ addResults = true }) => {
 onMounted(async () => {
   try {
     await fetchData({ addResults: true });
+    positionDataStore.restoreFromIDB();
   } catch (error) {
   } finally {
     isLoading.value = false;
@@ -659,13 +663,11 @@ watch(
 );
 
 onBeforeUnmount(() => {
-  calibrationAssetStore.calibrationAssetObjects = [];
-  calibrationAssetStore.videoObject = [];
-  calibrationAssetStore.calibrationMatrixPersisted = [];
+  // Clear all position data and selection when leaving video
+  positionDataStore.positionDataId = null;
+  positionDataStore.selectedTimeRange = { start: 0, end: 0 };
   topViewStore.positionDataTopView = {};
   topViewStore.metaDataTopView = {};
-  topViewStore.positionDataId = {};
-  bboxesStore.bboxDataInterpolated = {};
 });
 </script>
 

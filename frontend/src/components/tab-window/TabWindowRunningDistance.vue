@@ -1,6 +1,13 @@
 <template>
+  <v-row v-if="videoStore.isLoading" class="loading-card">
+    <div class="spinner">
+      <i class="mdi mdi-loading mdi-spin" />
+    </div>
+    <div class="loading-text">Loading...</div>
+  </v-row>
+
   <v-row
-    v-if="!hasPositionData"
+    v-else-if="!hasPositionData"
     class="text-h6 text-grey font-weight-light mx-16 px-10"
     style="
       align-items: center;
@@ -334,20 +341,25 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, toRaw } from "vue";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
 import { usePlayerStore } from "@/stores/player";
+import { useVideoStore } from "@/stores/video";
+import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import RunningDistanceTimeSelector from "../kpi/RunningDistanceTimeSelector.vue";
 import KpiChart from "../kpi/KpiChart.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
+import { debounce } from "lodash";
 
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
 const positionDataStore = usePositionDataStore();
 const playerStore = usePlayerStore();
+const posdataWorkerStore = usePosdataWorkerStore();
+const videoStore = useVideoStore();
 
 const { t } = useI18n();
 
@@ -516,13 +528,43 @@ const isTeamFullySelected = (teamId) => {
   return teamPlayerIds.length > 0 && teamPlayerIds.every((pid) => selectedPlayerIds.value.has(pid));
 };
 
-const runningDistanceItems = computed(() => {
-  return positionDataStore.calculateRunningDistances(
-    selectedPlayerIds.value,
-    selectedStartFrame.value,
-    selectedEndFrame.value
-  );
-});
+const runningDistanceItems = ref([]);
+const isComputingDistance = ref(false);
+
+const triggerDistanceCalc = debounce(async () => {
+  const posData = toRaw(topViewStore.positionDataTopView);
+  if (!posData || !Object.keys(posData).length) {
+    runningDistanceItems.value = [];
+    return;
+  }
+  isComputingDistance.value = true;
+  try {
+    const result = await posdataWorkerStore.calcRunningDistances(
+      posData,
+      [...selectedPlayerIds.value],
+      selectedStartFrame.value,
+      selectedEndFrame.value,
+      playerStore.video?.field_length || 105,
+      playerStore.video?.field_width || 68
+    );
+    runningDistanceItems.value = result;
+  } catch (err) {
+    console.error("Worker distance calc failed, using fallback:", err);
+    runningDistanceItems.value = positionDataStore.calculateRunningDistances(
+      selectedPlayerIds.value,
+      selectedStartFrame.value,
+      selectedEndFrame.value
+    );
+  } finally {
+    isComputingDistance.value = false;
+  }
+}, 150);
+
+watch(
+  [selectedPlayerIds, selectedStartFrame, selectedEndFrame, () => topViewStore.positionDataTopView],
+  () => triggerDistanceCalc(),
+  { immediate: true }
+);
 const runningDistanceTeamItems = computed(() => {
   const grouped = {};
   playerOptions.value.forEach((p) => {
@@ -574,6 +616,28 @@ const getTeamBest = (teamPlayers) => {
 const getTeamTotal = (teamPlayers) => {
   if (!teamPlayers || teamPlayers.length === 0) return 0;
   return parseFloat(teamPlayers.reduce((sum, p) => sum + p.distance, 0).toFixed(1));
+};
+
+const findFirstFrameWithHalftime = (half) => {
+  let first = null;
+  for (const [timeKey, players] of Object.entries(topViewStore.positionDataTopView)) {
+    const t = Number(timeKey);
+    if (players.some((p) => p[2] === half)) {
+      if (first === null || t < first) first = t;
+    }
+  }
+  return first ?? 0;
+};
+
+const findLastFrameWithHalftime = (half) => {
+  let last = null;
+  for (const [timeKey, players] of Object.entries(topViewStore.positionDataTopView)) {
+    const t = Number(timeKey);
+    if (players.some((p) => p[2] === half)) {
+      if (last === null || t > last) last = t;
+    }
+  }
+  return last ?? 0;
 };
 </script>
 
@@ -684,5 +748,23 @@ const getTeamTotal = (teamPlayers) => {
   font-size: 18px;
   margin: 0 2px;
   user-select: none;
+}
+
+.loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+.spinner {
+  font-size: 48px;
+  color: #ac1414;
+}
+
+.loading-text {
+  margin-top: 10px;
+  font-size: 18px;
 }
 </style>
