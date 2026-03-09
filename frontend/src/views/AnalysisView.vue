@@ -272,7 +272,7 @@ const fetchData = async ({ addResults = true }) => {
 onMounted(async () => {
   try {
     await fetchData({ addResults: true });
-    positionDataStore.restoreFromIDB();
+    positionDataStore.restoreFromCache();
   } catch (error) {
   } finally {
     isLoading.value = false;
@@ -668,6 +668,7 @@ onBeforeUnmount(() => {
   positionDataStore.selectedTimeRange = { start: 0, end: 0 };
   topViewStore.positionDataTopView = {};
   topViewStore.metaDataTopView = {};
+  bboxesStore.bboxDataInterpolated = {};
 });
 </script>
 

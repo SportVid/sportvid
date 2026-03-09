@@ -576,14 +576,26 @@ function openEditBBox(bbox) {
   editDialog.value = true;
 }
 
-const currentFrameKey = computed(() => {
-  return Object.keys(bboxesStore.bboxDataInterpolated)
+const bboxSortedKeys = computed(() =>
+  Object.keys(bboxesStore.bboxDataInterpolated)
     .map(Number)
     .sort((a, b) => a - b)
-    .reduce(
-      (prev, key) => (key <= playerStore.currentTime ? key : prev),
-      Object.keys(bboxesStore.bboxDataInterpolated)[0]
-    );
+);
+const currentFrameKey = computed(() => {
+  const keys = bboxSortedKeys.value;
+  if (!keys.length) return undefined;
+  const target = playerStore.currentTime;
+  if (target < keys[0]) return keys[0];
+  if (target >= keys[keys.length - 1]) return keys[keys.length - 1];
+  // Binary search for largest key <= target
+  let lo = 0;
+  let hi = keys.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >>> 1;
+    if (keys[mid] <= target) lo = mid;
+    else hi = mid - 1;
+  }
+  return keys[lo];
 });
 
 const hovering = ref(false);

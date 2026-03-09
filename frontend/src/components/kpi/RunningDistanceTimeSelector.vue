@@ -59,12 +59,10 @@ const containerHeight = ref(null);
 
 const redraw = ref(false);
 
-const duration = computed(() =>
-  Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .at(-1)
-);
+const duration = computed(() => {
+  const keys = topViewStore.sortedFrameKeys;
+  return keys.length > 0 ? keys[keys.length - 1] : undefined;
+});
 const selectedStart = computed(() => positionDataStore.selectedTimeRange.start);
 const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
 const hiddenStart = ref(positionDataStore.selectedTimeRange.start);

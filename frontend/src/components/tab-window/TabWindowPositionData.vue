@@ -56,8 +56,9 @@
             />
           </div>
 
-          <svg
-            v-if="topViewStore.showEffectivePlayingSpace"
+          <canvas
+            ref="playerCanvas"
+            v-show="topViewStore.showItems"
             :style="{
               position: 'absolute',
               top: '0px',
@@ -65,39 +66,14 @@
               width: topViewStore.topViewSize.width + 'px',
               height: topViewStore.topViewSize.height + 'px',
             }"
-          >
-            <polygon
-              v-for="(hull, team) in convexHullPlayer[topViewStore.currentFrameKey]"
-              :key="team"
-              :points="hull.map((p) => `${p.left},${p.top}`).join(' ')"
-              :stroke="visualizationStore.getTeamColor(team)"
-              :fill="visualizationStore.getTeamColor(team)"
-              fill-opacity="0.4"
-            />
-          </svg>
+            @click="onCanvasClick"
+            @mousemove="onCanvasMouseMove"
+          />
 
-          <svg
-            v-if="topViewStore.showSpaceControl"
-            :style="{
-              position: 'absolute',
-              top: '0px',
-              left: '0px',
-              width: topViewStore.topViewSize.width + 'px',
-              height: topViewStore.topViewSize.height + 'px',
-            }"
-          >
-            <polygon
-              v-for="cell in voronoiCells[topViewStore.currentFrameKey]"
-              :key="cell"
-              :points="cell.polygon.map((p) => `${p[0]},${p[1]}`).join(' ')"
-              stroke="gray"
-              :fill="visualizationStore.getTeamColor(cell.team_id)"
-              fill-opacity="0.4"
-            />
-          </svg>
-
+          <!-- Old DOM rendering replaced by canvas above -->
           <template
-            v-for="item in positionDataTransformed[topViewStore.currentFrameKey]"
+            v-if="false"
+            v-for="item in positionDataForCurrentFrame"
             :key="item.original"
           >
             <div
@@ -518,6 +494,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { throttle } from "lodash";
 import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
@@ -566,12 +543,12 @@ const currentTime = computed({
     }
   },
 });
-const onProgressChange = (time) => {
+const onProgressChange = throttle((time) => {
   if (!playerStore.isSynced) {
     progress.value = Math.round(time);
     topViewStore.currentTime = Math.round(time);
   }
-};
+}, 16);
 watch(
   () => playerStore.isSynced,
   (isSynced) => {
@@ -659,13 +636,28 @@ const includedPlayers = ref(new Set());
 watch(
   () => topViewStore.positionDataTopView,
   (newVal) => {
-    const all = Object.values(newVal)
-      .flat()
-      .filter((p) => p[1] !== 1);
-
-    includedPlayers.value = new Set(all.map((p) => p[0]));
+    // Collect unique player IDs by sampling a few frames instead of iterating all
+    const keys = Object.keys(newVal);
+    const playerIds = new Set();
+    // Sample up to 10 evenly spaced frames to find all players
+    const step = Math.max(1, Math.floor(keys.length / 10));
+    for (let i = 0; i < keys.length; i += step) {
+      const players = newVal[keys[i]];
+      if (!players) continue;
+      for (const p of players) {
+        if (p[1] !== 1) playerIds.add(p[0]);
+      }
+    }
+    // Also check last frame
+    const lastFrame = newVal[keys[keys.length - 1]];
+    if (lastFrame) {
+      for (const p of lastFrame) {
+        if (p[1] !== 1) playerIds.add(p[0]);
+      }
+    }
+    includedPlayers.value = playerIds;
   },
-  { immediate: true, deep: true }
+  { immediate: true }
 );
 const togglePlayersForKPIs = (playerId) => {
   const newSet = new Set(includedPlayers.value);
@@ -718,40 +710,39 @@ const computeConvexHull = (points) => {
 
   return lower.concat(upper);
 };
-const convexHullPlayer = computed(() => {
+const convexHullForCurrentFrame = computed(() => {
   if (!topViewStore.topViewSize || !topViewStore.positionDataTopView) {
     return {};
   }
+  const frameKey = topViewStore.currentFrameKey;
+  const framePositions = topViewStore.positionDataTopView[frameKey];
+  if (!framePositions) return {};
 
   const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop;
 
-  const result = {};
-  Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
-    const teams = {};
-    framePositions
-      .filter((position) => position[1] !== 1 && includedPlayers.value.has(position[0]))
-      .forEach((position) => {
-        const transformed = transformCoordinateToCrop(position[3], position[4], cropPct);
+  const teams = {};
+  framePositions
+    .filter((position) => position[1] !== 1 && includedPlayers.value.has(position[0]))
+    .forEach((position) => {
+      const transformed = transformCoordinateToCrop(position[3], position[4], cropPct);
 
-        const top =
-          transformed.y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
-          ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
-        const left =
-          transformed.x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
-          ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
-        if (!teams[position[1]]) {
-          teams[position[1]] = [];
-        }
-        teams[position[1]].push({ left, top });
-      });
-    const hulls = {};
-    Object.keys(teams).forEach((team) => {
-      const points = teams[team];
-      hulls[team] = points.length >= 3 ? computeConvexHull(points) : points;
+      const top =
+        transformed.y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+        ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
+      const left =
+        transformed.x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+        ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
+      if (!teams[position[1]]) {
+        teams[position[1]] = [];
+      }
+      teams[position[1]].push({ left, top });
     });
-    result[timeKey] = hulls;
+  const hulls = {};
+  Object.keys(teams).forEach((team) => {
+    const points = teams[team];
+    hulls[team] = points.length >= 3 ? computeConvexHull(points) : points;
   });
-  return result;
+  return hulls;
 });
 
 const computeVoronoi = (players) => {
@@ -777,55 +768,54 @@ const computeVoronoi = (players) => {
     })
     .filter((cell) => cell !== null);
 };
-const voronoiCells = computed(() => {
+const voronoiForCurrentFrame = computed(() => {
   if (!topViewStore.topViewSize || !topViewStore.positionDataTopView) {
-    return {};
+    return [];
   }
+  const frameKey = topViewStore.currentFrameKey;
+  const framePositions = topViewStore.positionDataTopView[frameKey];
+  if (!framePositions) return [];
 
   const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
     x: [0, 1],
     y: [0, 1],
   };
 
-  const result = {};
-  Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
-    const allPlayers = framePositions
-      .filter((player) => player[1] !== 1 && includedPlayers.value.has(player[0]))
-      .map((player) => {
-        const transformed = transformCoordinateToCrop(player[3], player[4], cropPct);
+  const allPlayers = framePositions
+    .filter((player) => player[1] !== 1 && includedPlayers.value.has(player[0]))
+    .map((player) => {
+      const transformed = transformCoordinateToCrop(player[3], player[4], cropPct);
 
-        const top =
-          transformed.y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
-          ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
-        const left =
-          transformed.x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
-          ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
-        return { left, top, team_id: player[1] };
-      });
-    result[timeKey] = computeVoronoi(allPlayers);
-  });
-  return result;
+      const top =
+        transformed.y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+        ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
+      const left =
+        transformed.x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+        ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
+      return { left, top, team_id: player[1] };
+    });
+  return computeVoronoi(allPlayers);
 });
 
-const positionDataTransformed = computed(() => {
-  if (!topViewStore.positionDataTopView) return {};
+const positionDataForCurrentFrame = computed(() => {
+  if (!topViewStore.positionDataTopView) return [];
+
+  const frameKey = topViewStore.currentFrameKey;
+  const framePositions = topViewStore.positionDataTopView[frameKey];
+  if (!framePositions) return [];
 
   const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
     x: [0, 1],
     y: [0, 1],
   };
 
-  const result = {};
-  Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, framePositions]) => {
-    result[timeKey] = framePositions.map((position) => {
-      const transformed = transformCoordinateToCrop(position[3], position[4], cropPct);
-      return {
-        original: position,
-        transformed: transformed,
-      };
-    });
+  return framePositions.map((position) => {
+    const transformed = transformCoordinateToCrop(position[3], position[4], cropPct);
+    return {
+      original: position,
+      transformed: transformed,
+    };
   });
-  return result;
 });
 
 const getPlayerNumber = (playerId) => {
@@ -833,6 +823,201 @@ const getPlayerNumber = (playerId) => {
   const num = meta?.player_ids?.[playerId]?.number;
   return num != null ? num : playerId;
 };
+
+// ---------------------------------------------------------------------------
+// Canvas rendering – replaces DOM divs for player dots, ball, hull & voronoi
+// ---------------------------------------------------------------------------
+const playerCanvas = ref(null);
+let canvasDrawPending = false;
+
+function scheduleCanvasDraw() {
+  if (canvasDrawPending) return;
+  canvasDrawPending = true;
+  requestAnimationFrame(() => {
+    canvasDrawPending = false;
+    drawCanvas();
+  });
+}
+
+function drawCanvas() {
+  const canvas = playerCanvas.value;
+  if (!canvas) return;
+  const w = topViewStore.topViewSize.width;
+  const h = topViewStore.topViewSize.height;
+  if (!w || !h) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  const sport = topViewStore.currentSport;
+  const cropPct = sport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
+    x: [0, 1],
+    y: [0, 1],
+  };
+
+  // Pixel conversion helper
+  const toPixel = (x, y) => {
+    const cropped = transformCoordinateToCrop(x, y, cropPct);
+    return {
+      px: cropped.x * (w * sport.widthRel) + ((1 - sport.widthRel) / 2) * w,
+      py: cropped.y * (h * sport.heightRel) + ((1 - sport.heightRel) / 2) * h,
+    };
+  };
+
+  // Draw voronoi cells
+  if (topViewStore.showSpaceControl) {
+    const cells = voronoiForCurrentFrame.value;
+    for (const cell of cells) {
+      const poly = cell.polygon;
+      if (!poly || poly.length < 3) continue;
+      ctx.beginPath();
+      ctx.moveTo(poly[0][0], poly[0][1]);
+      for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
+      ctx.closePath();
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = visualizationStore.getTeamColor(cell.team_id);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = "gray";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  // Draw convex hulls
+  if (topViewStore.showEffectivePlayingSpace) {
+    const hulls = convexHullForCurrentFrame.value;
+    for (const [team, hull] of Object.entries(hulls)) {
+      if (!hull || hull.length < 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(hull[0].left, hull[0].top);
+      for (let i = 1; i < hull.length; i++) ctx.lineTo(hull[i].left, hull[i].top);
+      ctx.closePath();
+      const color = visualizationStore.getTeamColor(Number(team));
+      ctx.globalAlpha = 0.4;
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  // Draw players and ball
+  const frameKey = topViewStore.currentFrameKey;
+  const framePositions = topViewStore.positionDataTopView[frameKey];
+  if (!framePositions) return;
+
+  // Store positions for click hit-testing
+  _playerHitTargets.length = 0;
+
+  for (const pos of framePositions) {
+    const { px, py } = toPixel(pos[3], pos[4]);
+
+    if (pos[1] === 1) {
+      // Ball – small white circle with black outline
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 1;
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      // Player dot
+      ctx.beginPath();
+      ctx.arc(px, py, 6, 0, Math.PI * 2);
+      ctx.fillStyle = visualizationStore.getTeamColor(pos[1]);
+      ctx.fill();
+
+      // Store for hit testing (KPI toggle)
+      _playerHitTargets.push({ id: pos[0], x: px, y: py });
+
+      // Player ID label
+      if (topViewStore.showPlayerId) {
+        const num = getPlayerNumber(pos[0]);
+        ctx.fillStyle = visualizationStore.getTeamColor(pos[1]);
+        ctx.font = "bold 11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(String(num), px, py + 19);
+      }
+    }
+  }
+}
+
+const _playerHitTargets = [];
+
+function onCanvasClick(event) {
+  if (!topViewStore.showSpaceControl && !topViewStore.showEffectivePlayingSpace) return;
+  const canvas = playerCanvas.value;
+  if (!canvas) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / (window.devicePixelRatio || 1) / rect.width;
+  const scaleY = canvas.height / (window.devicePixelRatio || 1) / rect.height;
+  const cx = (event.clientX - rect.left) * scaleX;
+  const cy = (event.clientY - rect.top) * scaleY;
+
+  // Find closest player within 12px
+  let closest = null;
+  let minDist = 12;
+  for (const t of _playerHitTargets) {
+    const d = Math.sqrt((t.x - cx) ** 2 + (t.y - cy) ** 2);
+    if (d < minDist) {
+      minDist = d;
+      closest = t;
+    }
+  }
+  if (closest) togglePlayersForKPIs(closest.id);
+}
+
+function onCanvasMouseMove(event) {
+  const canvas = playerCanvas.value;
+  if (!canvas) return;
+
+  if (!topViewStore.showSpaceControl && !topViewStore.showEffectivePlayingSpace) {
+    canvas.style.cursor = "default";
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / (window.devicePixelRatio || 1) / rect.width;
+  const scaleY = canvas.height / (window.devicePixelRatio || 1) / rect.height;
+  const cx = (event.clientX - rect.left) * scaleX;
+  const cy = (event.clientY - rect.top) * scaleY;
+
+  let hit = false;
+  for (const t of _playerHitTargets) {
+    const d = Math.sqrt((t.x - cx) ** 2 + (t.y - cy) ** 2);
+    if (d < 12) {
+      hit = true;
+      break;
+    }
+  }
+  canvas.style.cursor = hit ? "pointer" : "default";
+}
+
+// Redraw when frame or relevant state changes
+watch(
+  [
+    () => topViewStore.currentFrameKey,
+    () => topViewStore.showPlayerId,
+    () => topViewStore.showSpaceControl,
+    () => topViewStore.showEffectivePlayingSpace,
+    () => topViewStore.showItems,
+    () => topViewStore.topViewSize.width,
+    () => topViewStore.topViewSize.height,
+    () => topViewStore.currentAreaSize,
+    includedPlayers,
+  ],
+  () => scheduleCanvasDraw()
+);
+onMounted(() => nextTick(() => scheduleCanvasDraw()));
 
 const maxVideoHeight = ref(0);
 const videoSlider = ref(null);
@@ -876,28 +1061,42 @@ const toggleTopView = () => {
   }
 };
 let topViewTimer = null;
+let lastTimestamp = null;
 const startTimer = () => {
   stopTimer();
   const frameInterval = 1000 / playerStore.videoFPS;
-  const intervalMs = Math.max(1, Math.round(frameInterval));
+  lastTimestamp = null;
 
-  topViewTimer = setInterval(() => {
-    const next = progress.value + frameInterval;
-    const closestFrame = Math.round(next / frameInterval) * frameInterval;
-    progress.value = Math.round(closestFrame);
-
-    if (progress.value >= playerStore.videoDuration) {
-      progress.value = playerStore.videoDuration;
-      topViewEnded.value = true;
-      topViewPlaying.value = false;
-      stopTimer();
+  const tick = (timestamp) => {
+    if (!lastTimestamp) {
+      lastTimestamp = timestamp;
+      topViewTimer = requestAnimationFrame(tick);
+      return;
     }
-  }, intervalMs);
+    const elapsed = timestamp - lastTimestamp;
+    if (elapsed >= frameInterval) {
+      lastTimestamp = timestamp;
+      const next = progress.value + frameInterval;
+      const closestFrame = Math.round(next / frameInterval) * frameInterval;
+      progress.value = Math.round(closestFrame);
+
+      if (progress.value >= playerStore.videoDuration) {
+        progress.value = playerStore.videoDuration;
+        topViewEnded.value = true;
+        topViewPlaying.value = false;
+        stopTimer();
+        return;
+      }
+    }
+    topViewTimer = requestAnimationFrame(tick);
+  };
+  topViewTimer = requestAnimationFrame(tick);
 };
 const stopTimer = () => {
   if (topViewTimer) {
-    clearInterval(topViewTimer);
+    cancelAnimationFrame(topViewTimer);
     topViewTimer = null;
+    lastTimestamp = null;
   }
 };
 
@@ -936,20 +1135,6 @@ onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
 });
 
-watch(
-  () => topViewStore.positionDataTopView,
-  (newd) => {
-    console.log("Position data updated:", newd);
-  },
-  { immediate: true }
-);
-watch(
-  () => topViewStore.metaDataTopView,
-  (newd) => {
-    console.log("meta data updated:", newd);
-  },
-  { immediate: true }
-);
 </script>
 
 <style scoped>

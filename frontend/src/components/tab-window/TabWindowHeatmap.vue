@@ -288,11 +288,7 @@ onBeforeUnmount(() => {
   }
 });
 
-const allFrameKeys = computed(() =>
-  Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b)
-);
+const allFrameKeys = computed(() => topViewStore.sortedFrameKeys);
 
 const selectHalftime = (half) => {
   const entries = Object.entries(topViewStore.positionDataTopView);
@@ -314,21 +310,37 @@ const selectHalftime = (half) => {
 const selectedPlayerIds = ref([]);
 
 const playerOptions = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView)
-    .flat()
-    .filter((p) => p[1] !== 1);
-  return all
-    .map((p) => ({ playerId: p[0], teamId: p[1] }))
-    .filter((v, i, a) => a.findIndex((x) => x.playerId === v.playerId) === i)
-    .sort((a, b) => a.playerId - b.playerId);
+  // Sample a few frames to find all players (avoids iterating all ~135k frames)
+  const keys = Object.keys(topViewStore.positionDataTopView);
+  if (!keys.length) return [];
+  const seen = new Map();
+  const step = Math.max(1, Math.floor(keys.length / 10));
+  for (let i = 0; i < keys.length; i += step) {
+    const players = topViewStore.positionDataTopView[keys[i]];
+    if (!players) continue;
+    for (const p of players) {
+      if (p[1] !== 1 && !seen.has(p[0])) {
+        seen.set(p[0], { playerId: p[0], teamId: p[1] });
+      }
+    }
+  }
+  // Also check last frame
+  const last = topViewStore.positionDataTopView[keys[keys.length - 1]];
+  if (last) {
+    for (const p of last) {
+      if (p[1] !== 1 && !seen.has(p[0])) {
+        seen.set(p[0], { playerId: p[0], teamId: p[1] });
+      }
+    }
+  }
+  return Array.from(seen.values()).sort((a, b) => a.playerId - b.playerId);
 });
 
 const playerColors = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
   const map = {};
-  all.forEach((p) => {
-    map[p[0]] = visualizationStore.getTeamColor(p[1]);
-  });
+  for (const p of playerOptions.value) {
+    map[p.playerId] = visualizationStore.getTeamColor(p.teamId);
+  }
   return map;
 });
 
@@ -489,9 +501,7 @@ watch(displayMode, (mode) => {
   }
 });
 
-const hasPositionData = computed(() => {
-  return Object.keys(topViewStore.positionDataTopView).length > 0;
-});
+const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
 </script>
 
 <style scoped>

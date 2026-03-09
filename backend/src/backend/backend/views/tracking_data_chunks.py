@@ -11,6 +11,10 @@ from data import DataManager
 
 logger = logging.getLogger(__name__)
 
+# Module-level in-memory cache: result.id -> parsed data dict
+# Avoids re-reading the JSON file on every chunk request.
+_result_data_cache = {}
+
 
 class TrackingDataPosDataChunk(View):
     """
@@ -106,26 +110,38 @@ class TrackingDataPosDataChunk(View):
 
     @staticmethod
     def _load_result_data(result, data_manager):
-        """Load result data from backend_cache or DataManager."""
+        """Load result data, with an in-memory cache keyed by result.id."""
+        result_id = str(result.id)
+
+        if result_id in _result_data_cache:
+            return _result_data_cache[result_id]
+
+        data = None
+
+        # Try file cache first
         cache_path = os.path.join(
             settings.DATA_CACHE_ROOT, f"{result.id}.json"
         )
-
-        # Try cache first
         try:
             if os.path.exists(cache_path):
                 with open(cache_path, "r") as f:
                     cached = json.load(f)
-                return cached.get("data", {})
+                data = cached.get("data", {})
         except Exception:
             pass
 
         # Fall back to DataManager
-        try:
-            data_obj = data_manager.load(result.data_id)
-            if data_obj is None:
+        if data is None:
+            try:
+                data_obj = data_manager.load(result.data_id)
+                if data_obj is None:
+                    return None
+                with data_obj:
+                    data = data_obj.to_dict()
+            except Exception:
                 return None
-            with data_obj:
-                return data_obj.to_dict()
-        except Exception:
-            return None
+
+        if data is not None:
+            _result_data_cache[result_id] = data
+
+        return data

@@ -1,8 +1,14 @@
 import { defineStore } from "pinia";
-import { ref, toRaw } from "vue";
+import { ref } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
-import { savePosData, loadPosData } from "@/services/posdata-idb";
+
+/**
+ * Module-level in-memory cache: trackingDataId -> { posData, metaData }
+ * Lives for the browser session (cleared on page reload).
+ * Replaces IndexedDB to avoid the structuredClone overhead on write/read.
+ */
+const _posDataCache = new Map();
 
 export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
   let worker = null;
@@ -44,6 +50,20 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
   }
 
   /**
+   * Return cached { posData, metaData } for a trackingDataId, or null.
+   */
+  function getCached(trackingDataId) {
+    return _posDataCache.get(trackingDataId) || null;
+  }
+
+  /**
+   * Store posData + metaData in the in-memory cache.
+   */
+  function cacheData(trackingDataId, posData, metaData) {
+    _posDataCache.set(trackingDataId, { posData, metaData });
+  }
+
+  /**
    * Load position data in chunks from backend API.
    * Returns { posData, metaData } or null on failure.
    */
@@ -52,8 +72,8 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
     loadProgress.value = 0;
 
     try {
-      // Check IndexedDB cache first
-      const cached = await loadPosData(trackingDataId);
+      // Check in-memory cache first
+      const cached = _posDataCache.get(trackingDataId);
       if (cached) {
         loadProgress.value = 100;
         return { posData: cached.posData, metaData: cached.metaData };
@@ -61,7 +81,7 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
 
       // Load from backend in chunks
       let offset = 0;
-      const limit = 5000;
+      const limit = 10000;
       let total = null;
       let metaData = null;
       const allFrames = {};
@@ -84,27 +104,17 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
         );
       }
 
-      // Persist to IndexedDB
-      await savePosData(trackingDataId, allFrames, metaData);
+      // Store in in-memory cache
+      const result = { posData: allFrames, metaData: metaData || {} };
+      _posDataCache.set(trackingDataId, result);
 
       loadProgress.value = 100;
-      return { posData: allFrames, metaData: metaData || {} };
+      return result;
     } catch (err) {
       console.error("Chunk loading failed:", err);
       return null;
     } finally {
       isLoading.value = false;
-    }
-  }
-
-  /**
-   * Persist position data that was loaded via the legacy (non-chunked) flow.
-   */
-  async function persistToIDB(trackingDataId, posData, metaData) {
-    try {
-      await savePosData(trackingDataId, toRaw(posData), toRaw(metaData));
-    } catch (err) {
-      console.error("Failed to persist posdata to IDB:", err);
     }
   }
 
@@ -218,7 +228,8 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
     loadProgress,
     isCalculating,
     loadChunked,
-    persistToIDB,
+    getCached,
+    cacheData,
     calcRunningDistances,
     calcHeatmapPoints,
     exportPositionsCSV,

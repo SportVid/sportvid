@@ -368,6 +368,7 @@ export const useTopViewStore = defineStore(
       viewPlayerId,
       currentTime,
       currentFrameKey,
+      sortedFrameKeys,
       currentTimeOffset,
     };
   },

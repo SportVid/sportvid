@@ -1,5 +1,6 @@
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { defineStore } from "pinia";
+import { throttle } from "lodash";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { usePlayerStore } from "@/stores/player";
@@ -9,7 +10,6 @@ import { useTopViewStore } from "./top_view";
 import { useBboxesStore } from "./bboxes";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
-import { loadPosData } from "@/services/posdata-idb";
 
 export const usePositionDataStore = defineStore(
   "position_data",
@@ -59,17 +59,13 @@ export const usePositionDataStore = defineStore(
 
       const workerStore = usePosdataWorkerStore();
 
-      // 1. Try IndexedDB cache (instant, no network)
-      try {
-        const cached = await loadPosData(id);
-        if (cached) {
-          topViewStore.positionDataTopView = cached.posData || {};
-          topViewStore.metaDataTopView = cached.metaData || {};
-          setTimeRangeToFullMatch();
-          return;
-        }
-      } catch (e) {
-        console.warn("IDB read failed, trying other sources:", e);
+      // 1. Try in-memory cache (instant, no network)
+      const cached = workerStore.getCached(id);
+      if (cached) {
+        topViewStore.positionDataTopView = cached.posData;
+        topViewStore.metaDataTopView = cached.metaData;
+        setTimeRangeToFullMatch();
+        return;
       }
 
       // 2. Try existing plugin run results (already in memory from fetchForVideo)
@@ -88,8 +84,8 @@ export const usePositionDataStore = defineStore(
       if (posData) {
         topViewStore.positionDataTopView = posData;
         topViewStore.metaDataTopView = metaData || {};
-        // Persist to IDB for future loads
-        workerStore.persistToIDB(id, posData, metaData || {});
+        // Store in in-memory cache for future accesses
+        workerStore.cacheData(id, posData, metaData || {});
         setTimeRangeToFullMatch();
         return;
       }
@@ -261,61 +257,56 @@ export const usePositionDataStore = defineStore(
     });
     const minTimeGap = () => (1000 / playerStore.videoFPS) * 10;
 
-    const setSelectedTimeRangeStart = (time) => {
-      const gap = minTimeGap();
-      const maxTime =
-        Object.keys(topViewStore.positionDataTopView)
-          .map(Number)
-          .sort((a, b) => a - b)
-          .at(-1) ?? 0;
+    // Use cached maxTime from topViewStore's pre-sorted frame keys
+    const maxFrameTime = computed(() => {
+      const keys = topViewStore.sortedFrameKeys;
+      return keys.length > 0 ? keys[keys.length - 1] : 0;
+    });
 
-      let start = Math.max(0, Math.min(time, maxTime - gap));
+    const _setSelectedTimeRangeStart = (time) => {
+      const gap = minTimeGap();
+      const max = maxFrameTime.value;
+
+      let start = Math.max(0, Math.min(time, max - gap));
       selectedTimeRange.value.start = start;
 
       if (selectedTimeRange.value.end < start + gap) {
-        selectedTimeRange.value.end = Math.min(start + gap, maxTime);
+        selectedTimeRange.value.end = Math.min(start + gap, max);
       }
     };
+    const setSelectedTimeRangeStart = throttle(_setSelectedTimeRangeStart, 30);
 
-    const setSelectedTimeRangeEnd = (time) => {
+    const _setSelectedTimeRangeEnd = (time) => {
       const gap = minTimeGap();
-      const maxTime =
-        Object.keys(topViewStore.positionDataTopView)
-          .map(Number)
-          .sort((a, b) => a - b)
-          .at(-1) ?? 0;
+      const max = maxFrameTime.value;
 
-      let end = Math.min(maxTime, Math.max(time, gap));
+      let end = Math.min(max, Math.max(time, gap));
       selectedTimeRange.value.end = end;
 
       if (selectedTimeRange.value.start > end - gap) {
         selectedTimeRange.value.start = Math.max(end - gap, 0);
       }
     };
+    const setSelectedTimeRangeEnd = throttle(_setSelectedTimeRangeEnd, 30);
 
     function setTimeRangeToFullMatch() {
-      const keys = Object.keys(topViewStore.positionDataTopView)
-        .map(Number)
-        .sort((a, b) => a - b);
+      const keys = topViewStore.sortedFrameKeys;
       if (keys.length > 0) {
         selectedTimeRange.value = { start: keys[0], end: keys[keys.length - 1] };
       }
     }
 
-    async function restoreFromIDB() {
+    /**
+     * Restore posData after navigation. Checks in-memory cache first,
+     * then falls back to a full reload from the backend.
+     */
+    async function restoreFromCache() {
       const id = positionDataId.value;
       if (!id) return;
       if (Object.keys(topViewStore.positionDataTopView).length > 0) return;
       isRestoringPosData.value = true;
       try {
-        const cached = await loadPosData(id);
-        if (cached) {
-          topViewStore.positionDataTopView = cached.posData || {};
-          topViewStore.metaDataTopView = cached.metaData || {};
-          setTimeRangeToFullMatch();
-        }
-      } catch (e) {
-        console.warn("Auto-restore from IDB failed:", e);
+        await loadPositionData(id);
       } finally {
         isRestoringPosData.value = false;
       }
@@ -339,7 +330,7 @@ export const usePositionDataStore = defineStore(
       selectedTimeRange,
       setSelectedTimeRangeStart,
       setSelectedTimeRangeEnd,
-      restoreFromIDB,
+      restoreFromCache,
       isRestoringPosData,
     };
   },

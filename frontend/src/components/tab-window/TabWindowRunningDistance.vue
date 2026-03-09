@@ -440,11 +440,7 @@ const toggleKpi = (option) => {
   }
 };
 
-const allFrameKeys = computed(() =>
-  Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b)
-);
+const allFrameKeys = computed(() => topViewStore.sortedFrameKeys);
 const selectedStartFrame = computed(() => positionDataStore.selectedTimeRange.start);
 const selectedEndFrame = computed(() => positionDataStore.selectedTimeRange.end);
 const maxFrameIndex = ref(0);
@@ -592,9 +588,7 @@ const runningDistanceTeamAggregated = computed(() => {
   return result;
 });
 
-const hasPositionData = computed(() => {
-  return Object.keys(topViewStore.positionDataTopView).length > 0;
-});
+const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
 
 const getTeamName = (teamId) => {
   const meta = topViewStore.metaDataTopView;
