@@ -171,3 +171,10 @@ CLAUDE.md
 
 # Editor
 .vscode/
+
+# Tests
+tests/
+test_env/
+
+# SportVid Models
+models/
