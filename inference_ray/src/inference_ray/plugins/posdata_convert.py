@@ -269,10 +269,11 @@ class PosDataConvert(
                 df["pos_y"] = (MAX_Y - df["pos_y"]) / PITCH_SIZE_Y  # inverted Y-axis, images start at top left corner
         
             # ---- FPS filtering: checks if specified fps parameter is in an applicable range
-            unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
+            unique_timestamps = np.sort(df[df.columns[0]].unique())
             diffs = unique_timestamps[1:] - unique_timestamps[:-1]
-            freq = np.median(diffs)
+            freq = np.median(diffs)  # compute median frame time to determine original fps, more robust to outliers than mean
             origin_fps = int(np.rint(1000./freq))
+            logging.info(f"posdata_convert: freq={freq:.4f}ms, origin_fps={origin_fps}, requested_fps={parameters['fps']}")
             actual_fps = origin_fps
             
             step_size = 0
@@ -295,12 +296,12 @@ class PosDataConvert(
                     df_players = df.groupby(
                         'player_id', group_keys=False
                     ).apply(
-                        lambda x: x.to_numpy(),  # type: ignore
+                        lambda x: x[['pos_x', 'pos_y']].to_numpy(),  # type: ignore
                         include_groups=False
                     )
                     actualp, subsampled = None, None
                     for player_id in df["player_id"].unique():
-                        actualp = np.array(df_players[player_id][:,3:], dtype=np.float32)  # [[x,y]]
+                        actualp = np.array(df_players[player_id], dtype=np.float32)  # [[x,y]]
                         ap_idx = np.arange(actualp.shape[0])
                         subs_idx = ap_idx[::step_size]
                         N = actualp.shape[0]; M = actualp.shape[1]
