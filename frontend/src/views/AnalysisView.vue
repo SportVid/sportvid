@@ -25,7 +25,7 @@
             <div class="spinner">
               <i class="mdi mdi-loading mdi-spin" />
             </div>
-            <div class="loading-text">Loading...</div>
+            <div class="loading-text">{{ $t("loading_screen") }}</div>
           </v-card>
 
           <v-card
@@ -38,7 +38,7 @@
           >
             <template v-if="calibrationAssetStore.calibrationMode">
               <v-row justify="center" class="position-relative">
-                <v-card-title class="mt-5 mb-n1"> Calibration Asset </v-card-title>
+                <v-card-title class="mt-5 mb-n1">{{ $t("calibration_asset.title") }}</v-card-title>
                 <v-btn
                   variant="tonal"
                   color="error"

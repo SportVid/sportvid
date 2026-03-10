@@ -3,7 +3,7 @@
     <div class="spinner">
       <i class="mdi mdi-loading mdi-spin" />
     </div>
-    <div class="loading-text">Loading...</div>
+    <div class="loading-text">{{ $t("loading_screen") }}</div>
   </v-row>
 
   <v-row

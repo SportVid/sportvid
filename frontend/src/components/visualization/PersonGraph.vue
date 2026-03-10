@@ -14,7 +14,7 @@
         <div class="spinner">
           <i class="mdi mdi-loading mdi-spin"></i>
         </div>
-        <div class="loading-text">Loading...</div>
+        <div class="loading-text">{{ $t("loading_screen") }}</div>
       </div>
       <div id="graphContainer"></div>
 
