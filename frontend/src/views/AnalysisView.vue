@@ -663,13 +663,19 @@ watch(
 );
 
 onBeforeUnmount(() => {
-  // Clear all position data and selection when leaving video
   positionDataStore.positionDataId = null;
   positionDataStore.selectedTimeRange = { start: 0, end: 0 };
   topViewStore.positionDataTopView = {};
   topViewStore.metaDataTopView = {};
   bboxesStore.bboxDataInterpolated = {};
 });
+
+watch(
+  () => topViewStore.metaDataTopView,
+  (neww) => {
+    console.log("metaDataTopView changed", neww);
+  }
+);
 </script>
 
 <style scoped>
