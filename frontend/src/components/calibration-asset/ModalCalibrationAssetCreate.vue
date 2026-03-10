@@ -46,9 +46,12 @@
 import { ref, watch } from "vue";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
+import { useI18n } from "vue-i18n";
 
 const calibrationAssetStore = useCalibrationAssetStore();
 const topViewStore = useTopViewStore();
+
+const { t } = useI18n();
 
 const props = defineProps({
   modelValue: {
@@ -63,8 +66,8 @@ const dialog = ref(props.modelValue);
 const sport = ref(null);
 const objectType = ref(null);
 const objectTypes = [
-  { value: "marker", title: "Marker" },
-  { value: "segment", title: "Segment" },
+  { value: "marker", title: t("calibration_asset.object_types.marker") },
+  { value: "segment", title: t("calibration_asset.object_types.segment") },
 ];
 
 const createCalibrationAsset = (sport, objectType) => {

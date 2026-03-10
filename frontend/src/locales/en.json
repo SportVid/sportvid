@@ -150,6 +150,10 @@
     "select": "Select Calibration Asset",
     "create": "Create new Calibration Asset",
     "update": "Update Calibration Asset",
+    "object_types": {
+      "marker": "Marker",
+      "segment": "Segment"
+    },
     "marker": {
       "title": "Marker",
       "switch_to_segments": "Switch to Segments",
