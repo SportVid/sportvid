@@ -51,6 +51,7 @@ let handleGroup, handleLeft, handleRight, handleBar;
 let selectionLayer, scaleLayer, timeBarLayer;
 let timeBarLine;
 let animFrameId;
+let isDragging = false;
 
 const canvasWidth = ref(null);
 const canvasHeight = ref(null);
@@ -59,12 +60,10 @@ const containerHeight = ref(null);
 
 const redraw = ref(false);
 
-const duration = computed(() =>
-  Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .at(-1)
-);
+const duration = computed(() => {
+  const keys = topViewStore.sortedFrameKeys;
+  return keys.length > 0 ? keys[keys.length - 1] : undefined;
+});
 const selectedStart = computed(() => positionDataStore.selectedTimeRange.start);
 const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
 const hiddenStart = ref(positionDataStore.selectedTimeRange.start);
@@ -73,6 +72,7 @@ const minFrameGap = (1000 / playerStore.videoFPS) * 10;
 watch(
   () => positionDataStore.selectedTimeRange,
   (val) => {
+    if (isDragging) return;
     hiddenStart.value = val.start;
     hiddenEnd.value = val.end;
     nextTick(() => draw());
@@ -242,6 +242,11 @@ function drawSelection() {
 
   handleGroup = new paper.Group([path, handleLeft, handleRight]);
 
+  const onDragStart = () => { isDragging = true; };
+  const onDragEnd = () => { isDragging = false; };
+
+  handleLeft.onMouseDown = onDragStart;
+  handleLeft.onMouseUp = onDragEnd;
   handleLeft.onMouseDrag = (event) => {
     let newStart = hiddenStart.value + xToFrame(event.delta.x);
 
@@ -253,6 +258,8 @@ function drawSelection() {
     onSelectionChange();
   };
 
+  handleRight.onMouseDown = onDragStart;
+  handleRight.onMouseUp = onDragEnd;
   handleRight.onMouseDrag = (event) => {
     let newEnd = hiddenEnd.value + xToFrame(event.delta.x);
 
@@ -264,6 +271,8 @@ function drawSelection() {
     onSelectionChange();
   };
 
+  path.onMouseDown = onDragStart;
+  path.onMouseUp = onDragEnd;
   path.onMouseDrag = (event) => {
     const span = hiddenEnd.value - hiddenStart.value;
     const df = xToFrame(event.delta.x);

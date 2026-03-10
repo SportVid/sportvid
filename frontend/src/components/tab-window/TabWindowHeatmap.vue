@@ -1,6 +1,13 @@
 <template>
+  <v-row v-if="videoStore.isLoading" class="loading-card">
+    <div class="spinner">
+      <i class="mdi mdi-loading mdi-spin" />
+    </div>
+    <div class="loading-text">{{ $t("loading_screen") }}</div>
+  </v-row>
+
   <v-row
-    v-if="!hasPositionData"
+    v-else-if="!hasPositionData"
     class="text-h6 text-grey font-weight-light mx-16 px-10"
     style="
       align-items: center;
@@ -155,28 +162,19 @@
           }"
         ></div>
 
-        <template v-if="displayMode === 'movement'">
-          <div
-            v-for="(position, idx) in selectedPositions"
-            :key="idx"
-            :style="{
-              position: 'absolute',
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              transform: 'translate(-50%, -50%)',
-              top:
-                position[4] * (localSize.height * currentArea.heightRel) +
-                ((1 - currentArea.heightRel) / 2) * localSize.height +
-                'px',
-              left:
-                position[3] * (localSize.width * currentArea.widthRel) +
-                ((1 - currentArea.widthRel) / 2) * localSize.width +
-                'px',
-              backgroundColor: visualizationStore.getTeamColor(position[1]),
-            }"
-          />
-        </template>
+        <canvas
+          v-if="displayMode === 'movement'"
+          ref="movementCanvas"
+          :width="localSize.width"
+          :height="localSize.height"
+          :style="{
+            position: 'absolute',
+            top: '0px',
+            left: '0px',
+            width: localSize.width + 'px',
+            height: localSize.height + 'px',
+          }"
+        />
       </div>
     </v-row>
 
@@ -221,21 +219,25 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, toRaw } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
+import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import RunningDistanceTimeSelector from "@/components/kpi/RunningDistanceTimeSelector.vue";
 import h337 from "heatmap.js";
 import { toRgb } from "@/plugins/helpers";
+import { resampleApprox } from "@/plugins/draw/utils";
+import { debounce } from "lodash";
 
 const topViewStore = useTopViewStore();
 const videoStore = useVideoStore();
 const visualizationStore = useVisualizationStore();
 const playerStore = usePlayerStore();
 const positionDataStore = usePositionDataStore();
+const posdataWorkerStore = usePosdataWorkerStore();
 
 const currentArea = computed(
   () => topViewStore.currentSport.areas?.[topViewStore.currentAreaSize] ?? {}
@@ -279,13 +281,10 @@ onBeforeUnmount(() => {
   if (topViewElement.value) {
     resizeObserver.unobserve(topViewElement.value);
   }
+  triggerHeatmapCalc.cancel();
 });
 
-const allFrameKeys = computed(() =>
-  Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b)
-);
+const allFrameKeys = computed(() => topViewStore.sortedFrameKeys);
 
 const selectHalftime = (half) => {
   const entries = Object.entries(topViewStore.positionDataTopView);
@@ -307,21 +306,37 @@ const selectHalftime = (half) => {
 const selectedPlayerIds = ref([]);
 
 const playerOptions = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView)
-    .flat()
-    .filter((p) => p[1] !== 1);
-  return all
-    .map((p) => ({ playerId: p[0], teamId: p[1] }))
-    .filter((v, i, a) => a.findIndex((x) => x.playerId === v.playerId) === i)
-    .sort((a, b) => a.playerId - b.playerId);
+  // Sample a few frames to find all players (avoids iterating all ~135k frames)
+  const keys = Object.keys(topViewStore.positionDataTopView);
+  if (!keys.length) return [];
+  const seen = new Map();
+  const step = Math.max(1, Math.floor(keys.length / 10));
+  for (let i = 0; i < keys.length; i += step) {
+    const players = topViewStore.positionDataTopView[keys[i]];
+    if (!players) continue;
+    for (const p of players) {
+      if (p[1] !== 1 && !seen.has(p[0])) {
+        seen.set(p[0], { playerId: p[0], teamId: p[1] });
+      }
+    }
+  }
+  // Also check last frame
+  const last = topViewStore.positionDataTopView[keys[keys.length - 1]];
+  if (last) {
+    for (const p of last) {
+      if (p[1] !== 1 && !seen.has(p[0])) {
+        seen.set(p[0], { playerId: p[0], teamId: p[1] });
+      }
+    }
+  }
+  return Array.from(seen.values()).sort((a, b) => a.playerId - b.playerId);
 });
 
 const playerColors = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
   const map = {};
-  all.forEach((p) => {
-    map[p[0]] = visualizationStore.getTeamColor(p[1]);
-  });
+  for (const p of playerOptions.value) {
+    map[p.playerId] = visualizationStore.getTeamColor(p.teamId);
+  }
   return map;
 });
 
@@ -338,7 +353,7 @@ function togglePlayerId(playerId) {
   if (selectedPlayerIds.value.includes(playerId)) {
     selectedPlayerIds.value = selectedPlayerIds.value.filter((id) => id !== playerId);
   } else {
-    selectedPlayerIds.value.push(playerId);
+    selectedPlayerIds.value = [...selectedPlayerIds.value, playerId];
   }
 }
 
@@ -375,36 +390,46 @@ const getTeamName = (teamId) => {
   return teamId;
 };
 
-const transformCoordinateToCrop = (x, y, cropPct) => {
-  if (!cropPct) return { x, y };
-  const xCrop = (x - cropPct.x[0]) / (cropPct.x[1] - cropPct.x[0]);
-  const yCrop = (y - cropPct.y[0]) / (cropPct.y[1] - cropPct.y[0]);
-  return { x: xCrop, y: yCrop };
-};
+const selectedPositions = ref([]);
 
-const selectedPositions = computed(() => {
-  if (selectedPlayerIds.value.length === 0) return [];
+const triggerHeatmapCalc = debounce(async () => {
+  const posData = toRaw(topViewStore.positionDataTopView);
+  if (!posData || !Object.keys(posData).length || selectedPlayerIds.value.length === 0) {
+    selectedPositions.value = [];
+    return;
+  }
+  const rawCrop = toRaw(currentArea.value.templateCrop);
+  const cropPct = rawCrop
+    ? { x: [rawCrop.x[0], rawCrop.x[1]], y: [rawCrop.y[0], rawCrop.y[1]] }
+    : { x: [0, 1], y: [0, 1] };
+  try {
+    const result = await posdataWorkerStore.calcHeatmapPoints(
+      posData,
+      selectedPlayerIds.value,
+      positionDataStore.selectedTimeRange.start,
+      positionDataStore.selectedTimeRange.end,
+      cropPct
+    );
+    selectedPositions.value = result;
+  } catch (err) {
+    console.error("Worker heatmap calc failed:", err);
+    selectedPositions.value = [];
+  }
+}, 200);
 
-  const cropPct = currentArea.value.templateCrop || { x: [0, 1], y: [0, 1] };
-  const startFrame = positionDataStore.selectedTimeRange.start;
-  const endFrame = positionDataStore.selectedTimeRange.end;
+watch(
+  [
+    selectedPlayerIds,
+    () => positionDataStore.selectedTimeRange.start,
+    () => positionDataStore.selectedTimeRange.end,
+    () => currentArea.value.templateCrop,
+    () => topViewStore.positionDataTopView,
+  ],
+  () => triggerHeatmapCalc(),
+  { immediate: true }
+);
 
-  const allPositions = [];
-  Object.entries(topViewStore.positionDataTopView).forEach(([timeKey, arr]) => {
-    const t = Number(timeKey);
-    if (t < startFrame || t > endFrame) return;
-    if (Array.isArray(arr)) {
-      arr.forEach((pos) => {
-        if (selectedPlayerIds.value.includes(pos[0])) {
-          const transformed = transformCoordinateToCrop(pos[3], pos[4], cropPct);
-          allPositions.push([pos[0], pos[1], pos[2], transformed.x, transformed.y]);
-        }
-      });
-    }
-  });
-  return allPositions;
-});
-
+const movementCanvas = ref(null);
 const heatmapContainer = ref(null);
 let heatmapInstance = null;
 
@@ -452,19 +477,63 @@ function renderHeatmap() {
   });
 }
 
+function renderMovementCanvas() {
+  const canvas = movementCanvas.value;
+  if (!canvas || !localSize.value.width || !localSize.value.height) return;
+
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (selectedPositions.value.length === 0) return;
+
+  const area = currentArea.value;
+  const points = resampleApprox({ data: selectedPositions.value, targetSize: 5000 });
+
+  // Group by teamId for batch drawing
+  const byTeam = {};
+  for (const pos of points) {
+    const teamId = pos[1];
+    if (!byTeam[teamId]) byTeam[teamId] = [];
+    byTeam[teamId].push(pos);
+  }
+
+  for (const [teamId, positions] of Object.entries(byTeam)) {
+    ctx.fillStyle = visualizationStore.getTeamColor(teamId);
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    for (const pos of positions) {
+      const x =
+        pos[3] * (localSize.value.width * area.widthRel) +
+        ((1 - area.widthRel) / 2) * localSize.value.width;
+      const y =
+        pos[4] * (localSize.value.height * area.heightRel) +
+        ((1 - area.heightRel) / 2) * localSize.value.height;
+      ctx.moveTo(x + 6, y);
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+    }
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
 watch([() => localSize.value.width, () => localSize.value.height], () => {
   if (displayMode.value === "heatmap") {
     nextTick(() => {
       createHeatmap();
       nextTick(() => renderHeatmap());
     });
+  } else if (displayMode.value === "movement") {
+    nextTick(() => renderMovementCanvas());
   }
 });
 
 watch(selectedPositions, () => {
-  if (displayMode.value !== "heatmap") return;
-  if (!heatmapInstance) createHeatmap();
-  renderHeatmap();
+  if (displayMode.value === "heatmap") {
+    if (!heatmapInstance) createHeatmap();
+    renderHeatmap();
+  } else if (displayMode.value === "movement") {
+    nextTick(() => renderMovementCanvas());
+  }
 });
 
 watch(
@@ -475,6 +544,8 @@ watch(
         createHeatmap();
         nextTick(() => renderHeatmap());
       });
+    } else if (displayMode.value === "movement") {
+      nextTick(() => renderMovementCanvas());
     }
   }
 );
@@ -485,12 +556,12 @@ watch(displayMode, (mode) => {
       createHeatmap();
       nextTick(() => renderHeatmap());
     });
+  } else if (mode === "movement") {
+    nextTick(() => renderMovementCanvas());
   }
 });
 
-const hasPositionData = computed(() => {
-  return Object.keys(topViewStore.positionDataTopView).length > 0;
-});
+const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
 </script>
 
 <style scoped>
@@ -570,5 +641,23 @@ const hasPositionData = computed(() => {
 .top-view-wrapper {
   position: relative;
   overflow: hidden;
+}
+
+.loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+.spinner {
+  font-size: 48px;
+  color: #ac1414;
+}
+
+.loading-text {
+  margin-top: 10px;
+  font-size: 18px;
 }
 </style>

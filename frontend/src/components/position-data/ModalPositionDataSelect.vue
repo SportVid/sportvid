@@ -265,13 +265,16 @@ const confirmSelection = (
 ) => {
   if (selectedMode.value === "bytetrack") {
     topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
+    const keys = Object.keys(topViewStore.positionDataTopView)
+      .map(Number)
+      .sort((a, b) => a - b);
+    if (keys.length > 0) {
+      positionDataStore.setSelectedTimeRangeStart(keys[0]);
+      positionDataStore.setSelectedTimeRangeEnd(keys[keys.length - 1]);
+    }
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
   }
-  positionDataStore.selectedTimeRange.end = Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .at(-1);
 
   topViewStore.onSportChange(sport, areaSize);
   dialog.value = false;

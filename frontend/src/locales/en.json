@@ -908,5 +908,6 @@
       "date_joined": "Joined",
       "actions": "Actions"
     }
-  }
+  },
+  "loading_screen": "Loading ..."
 }

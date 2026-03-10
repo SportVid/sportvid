@@ -952,7 +952,7 @@ onMounted(async () => {
 
   // Component was unmounted while PIXI was initializing
   if (!isMounted.value) {
-    app.value.destroy(true);
+    try { app.value?.destroy(true); } catch (e) { /* not fully initialized */ }
     app.value = null;
     return;
   }
@@ -1099,7 +1099,11 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   isMounted.value = false;
   if (app.value) {
-    app.value.destroy(true);
+    try {
+      app.value.destroy(true);
+    } catch (e) {
+      // Pixi may not be fully initialized yet (e.g. init() still pending)
+    }
     app.value = null;
   }
 });

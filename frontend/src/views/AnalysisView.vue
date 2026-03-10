@@ -25,7 +25,7 @@
             <div class="spinner">
               <i class="mdi mdi-loading mdi-spin" />
             </div>
-            <div class="loading-text">Loading...</div>
+            <div class="loading-text">{{ $t("loading_screen") }}</div>
           </v-card>
 
           <v-card
@@ -38,7 +38,7 @@
           >
             <template v-if="calibrationAssetStore.calibrationMode">
               <v-row justify="center" class="position-relative">
-                <v-card-title class="mt-5 mb-n1"> Calibration Asset </v-card-title>
+                <v-card-title class="mt-5 mb-n1">{{ $t("calibration_asset.title") }}</v-card-title>
                 <v-btn
                   variant="tonal"
                   color="error"
@@ -91,7 +91,10 @@
         </v-col>
       </v-row> -->
 
-      <v-row v-if="!calibrationAssetStore.calibrationMode" class="ma-n2">
+      <v-row
+        v-if="!calibrationAssetStore.calibrationMode && !positionDataStore.isRestoringPosData"
+        class="ma-n2"
+      >
         <v-col>
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2">
             <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.visualizationTabId">
@@ -269,6 +272,7 @@ const fetchData = async ({ addResults = true }) => {
 onMounted(async () => {
   try {
     await fetchData({ addResults: true });
+    positionDataStore.restoreFromCache();
   } catch (error) {
   } finally {
     isLoading.value = false;
@@ -659,14 +663,19 @@ watch(
 );
 
 onBeforeUnmount(() => {
-  calibrationAssetStore.calibrationAssetObjects = [];
-  calibrationAssetStore.videoObject = [];
-  calibrationAssetStore.calibrationMatrixPersisted = [];
+  positionDataStore.positionDataId = null;
+  positionDataStore.selectedTimeRange = { start: 0, end: 0 };
   topViewStore.positionDataTopView = {};
   topViewStore.metaDataTopView = {};
-  topViewStore.positionDataId = {};
   bboxesStore.bboxDataInterpolated = {};
 });
+
+watch(
+  () => topViewStore.metaDataTopView,
+  (neww) => {
+    console.log("metaDataTopView changed", neww);
+  }
+);
 </script>
 
 <style scoped>
