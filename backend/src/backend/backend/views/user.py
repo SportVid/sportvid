@@ -11,7 +11,7 @@ from django.views import View
 from django.contrib.auth import update_session_auth_hash
 
 from backend.models import (
-    TibavaUser,
+    SportVidUser,
     Video,
     TrackingData,
     PluginRun,
@@ -223,8 +223,8 @@ def user_update(request):
                     return JsonResponse({"status": "error", "message": "User ID missing for admin update"})
 
                 try:
-                    user = TibavaUser.objects.get(id=user_id)
-                except TibavaUser.DoesNotExist:
+                    user = SportVidUser.objects.get(id=user_id)
+                except SportVidUser.DoesNotExist:
                     return JsonResponse({"status": "error", "message": "User not found"})
 
                 fields_to_update = ["email", "role", "max_storage_size", "max_video_size", "max_file_size"]
@@ -286,8 +286,8 @@ def user_delete(request):
             return JsonResponse({"status": "error"})
 
         try:
-            user = TibavaUser.objects.get(id=user_id)
-        except TibavaUser.DoesNotExist:
+            user = SportVidUser.objects.get(id=user_id)
+        except SportVidUser.DoesNotExist:
             return JsonResponse({"status": "error", "message": "User not found"})
     
     else: 
@@ -374,7 +374,7 @@ def user_list(request):
     if request.user.role != "admin":
         return JsonResponse({"status": "error", "error": "not_authorized"})
 
-    users = TibavaUser.objects.all()
+    users = SportVidUser.objects.all()
     
     data = [u.to_dict() for u in users]
 

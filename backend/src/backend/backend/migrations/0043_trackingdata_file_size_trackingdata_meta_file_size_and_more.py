@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0042_rename_storage_size_tibavauser_max_storage_size'),
+        ('backend', '0042_rename_storage_size_sportviduser_max_storage_size'),
     ]
 
     operations = [

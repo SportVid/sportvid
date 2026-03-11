@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AddField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='role',
             field=models.CharField(default='user', max_length=256),
         ),
