@@ -75,12 +75,6 @@ exec_docker(){
 
     if ! docker compose -p $ENVIRONMENT --env-file $ENV_FILE \
         $DOCKER_FILE \
-    local original_dir
-    original_dir=$(pwd)
-    prepare
-
-    if ! docker compose -p $ENVIRONMENT --env-file $ENV_FILE \
-        $DOCKER_FILE \
         $DOCKER_CMD; then
         echo "Running cmd '$DOCKER_CMD' failed..."
         cd "$original_dir" || true
@@ -123,15 +117,6 @@ case $COMMAND in
         exec_docker
         ;;
     "migrate")
-        if [[ "$ENVIRONMENT" == "shared" ]]; then
-            echo "Can not migrate shared environment, exiting..."
-            safe_exit 1
-            return 1
-        else
-            DOCKER_CMD="exec backend python3 backend/src/backend/manage.py migrate"
-	        echo "Migrating..."
-            exec_docker
-        fi
         if [[ "$ENVIRONMENT" == "shared" ]]; then
             echo "Can not migrate shared environment, exiting..."
             safe_exit 1
