@@ -25,6 +25,7 @@
     "pixi-filters": "^6.1.2",
     "pixi.js": "^8.9.1",
     "plotly.js": "^3.0.1",
+    "plotly.js-dist-min": "^3.4.0",
     "shepherd.js": "^14.5.1",
     "simpleheat": "^0.4.0",
     "stopword": "^3.1.4",
@@ -36,8 +37,7 @@
     "vuetify": "^3.8.1"
   },
   "devDependencies": {
-    "@vue/cli-service": "~5.0.0",
-    "baseline-browser-mapping": "^2.9.17"
+    "@vue/cli-service": "~5.0.0"
   },
   "browserslist": [
     "> 1%",

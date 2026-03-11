@@ -25,7 +25,7 @@ class CalibrationAssetsCreate(View):
         except CalibrationAssets.DoesNotExist:
             create_args = {
                 "name": data.get("name"),
-                "template": data.get("template"),
+                "sport": data.get("sport"),
                 "object_type": data.get("object_type"),
                 "owner": request.user
             }
@@ -47,12 +47,6 @@ class CalibrationAssetsCreate(View):
                         active=obj.get("active"),
                         comp_area_coords_rel=obj.get("compAreaCoordsRel"),
                         video_coords_rel=obj.get("videoCoordsRel")
-                        # compAreaCoord_x=obj["compAreaCoordsRel"]["x"],
-                        # compAreaCoord_y=obj["compAreaCoordsRel"]["y"],
-                        # compAreaCoord_z=obj["compAreaCoordsRel"]["z"] if "z" in obj["compAreaCoordsRel"] else 0.0,
-                        # videoCoord_x=obj["videoCoordsRel"]["x"],
-                        # videoCoord_y=obj["videoCoordsRel"]["y"],
-                        # videoCoord_z=obj["videoCoordsRel"]["z"] if "z" in obj["videoCoordsRel"] else 0.0,
                     )
 
         return JsonResponse({"status": "ok", "entry": data_db.to_dict()})
@@ -64,8 +58,8 @@ class CalibrationAssetsChange(View):
             calibration_assets = CalibrationAssets.objects.get(id=data.get("id"))
             if "name" in data:
                 calibration_assets.name = data.get("name")
-            if "template" in data:
-                calibration_assets.template = data.get("template")
+            if "sport" in data:
+                calibration_assets.sport = data.get("sport")
             if "object_type" in data:
                 calibration_assets.object_type = data.get("object_type")
             if "object_data" in data:
@@ -79,12 +73,6 @@ class CalibrationAssetsChange(View):
                         active=obj.get("active"),
                         comp_area_coords_rel=obj.get("compAreaCoordsRel"),
                         video_coords_rel=obj.get("videoCoordsRel")
-                        # compAreaCoord_x=obj["compAreaCoordsRel"]["x"],
-                        # compAreaCoord_y=obj["compAreaCoordsRel"]["y"],
-                        # compAreaCoord_z=obj["compAreaCoordsRel"]["z"] if "z" in obj["compAreaCoordsRel"] else 0.0,
-                        # videoCoord_x=obj["videoCoordsRel"]["x"],
-                        # videoCoord_y=obj["videoCoordsRel"]["y"],
-                        # videoCoord_z=obj["videoCoordsRel"]["z"] if "z" in obj["videoCoordsRel"] else 0.0,
                     )
             calibration_assets.save()
 

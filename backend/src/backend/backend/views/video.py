@@ -23,6 +23,7 @@ from backend.models import Video
 
 from utils.video_converter import convert_to_hls
 from utils.helper import remove_file, remove_dir
+from backend.tasks.convert_video import convert_video
 
 
 logger = logging.getLogger(__name__)
@@ -125,47 +126,34 @@ class VideoUpload(View):
                 field_width = parse_number(request.POST.get("fieldWidth"))
                 if not field_width: field_width = 68.
 
-                meta = {
-                    "name": request.POST.get("title"),
-                    "width": size[0],
-                    "height": size[1],
-                    "ext": ext,
-                    "fps": fps,
-                    "duration": duration,
-                    "field_length": field_length,
-                    "field_width": field_width,
-                    "division": request.POST.get("division"),
-                    "current_position": request.POST.get("currentPosition"),
-                    "total_number_of_teams": request.POST.get("totalNumberofTeams"),
-                    "age_group": request.POST.get("ageGroup"),
-                }
-                video_db, created = Video.objects.get_or_create(
-                    name=meta["name"],
+                video_db = Video.objects.create(
+                    name=request.POST.get("title"),
                     id=video_id_uuid,
                     file=video_id_uuid,
-                    ext=meta["ext"],
-                    fps=meta["fps"],
-                    duration=meta["duration"],
-                    width=meta["width"],
-                    height=meta["height"],
+                    file_size=request.FILES["file"].size,
+                    ext=ext,
                     owner=request.user,
-                    field_length=meta["field_length"],
-                    field_width=meta["field_width"],
-                    division=meta["division"],
-                    current_position=meta["current_position"],
-                    total_number_of_teams=meta["total_number_of_teams"],
-                    age_group=meta["age_group"],
+                    field_length=field_length,
+                    field_width=field_width,
+                    division=request.POST.get("division"),
+                    current_position=request.POST.get("currentPosition"),
+                    total_number_of_teams=request.POST.get("totalNumberofTeams"),
+                    age_group=request.POST.get("ageGroup"),
+                    status=Video.STATUS_PROCESSING,
                 )
-                if not created:
-                    logger.error("VideoUpload::database_create_failed")
-                    return JsonResponse(
-                        {"status": "error", "type": "database_error"}, status=500
-                    )
 
-                analyers = request.POST.get("analyser").split(",")
-                self.submit_analyse(
-                    plugins=["thumbnail"] + analyers, video=video_db, user=request.user
-                )
+                # schedule conversion & analysis asynchronously
+                analyers = []
+                try:
+                    analyers = request.POST.get("analyser").split(",")
+                except Exception:
+                    analyers = []
+
+                # pass original ext (e.g., .mp4) to the task
+                convert_video.apply_async((video_db.id.hex, ext, analyers))
+
+                request.user.used_storage_size += request.FILES["file"].size
+                request.user.save()
 
                 video_id_hex = video_db.id.hex if not video_db.file.hex else video_db.id.hex
                 return JsonResponse(
@@ -175,7 +163,7 @@ class VideoUpload(View):
                             {
                                 "id": video_id,
                                 **video_db.to_dict(),
-                                "url": media_url_to_file(video_id_hex, meta["ext"]),
+                                "url": media_url_to_file(video_id_hex, video_db.ext),
                             }
                         ],
                     }
@@ -282,11 +270,19 @@ class VideoDelete(View):
                 data = json.loads(body)
             except Exception as e:
                 return JsonResponse({"status": "error"}, status=500)
-            count, _ = Video.objects.filter(
-                id=data.get("id"), owner=request.user
-            ).delete()
+            
+            video = Video.objects.filter(id=data.get("id"), owner=request.user).first()
+            if not video:
+                return JsonResponse({"status": "error"}, status=500)
+            
+            file_size = video.file_size
+            count, _ = Video.objects.filter(id=video.id, owner=request.user).delete()
+
             if count:
+                request.user.used_storage_size = max(0, request.user.used_storage_size - file_size)
+                request.user.save()
                 return JsonResponse({"status": "ok"})
+
             return JsonResponse({"status": "error"}, status=500)
         except Exception:
             logger.exception("Failed to delete video")

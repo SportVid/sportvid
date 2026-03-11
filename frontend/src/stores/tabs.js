@@ -7,17 +7,16 @@ export const useTabStore = defineStore(
   () => {
     const { t } = useI18n();
 
-    const analysisTabId = ref("calibration");
+    const analysisTabId = ref("position_data");
     const analysisTabs = computed(() => [
-      { id: "calibration", name: t("analysis_view.analysis_tabs.calibration") },
       { id: "position_data", name: t("analysis_view.analysis_tabs.position_data") },
-      { id: "heatmap", name: t("analysis_view.analysis_tabs.heatmap") },
     ]);
 
     const visualizationTabId = ref("timeline");
     const visualizationTabs = computed(() => [
       { id: "timeline", name: t("analysis_view.visualization_tabs.timeline") },
       { id: "events", name: t("analysis_view.visualization_tabs.events") },
+      { id: "heatmap", name: t("analysis_view.visualization_tabs.heatmap") },
       { id: "running_distance", name: t("analysis_view.visualization_tabs.running_distance") },
     ]);
 

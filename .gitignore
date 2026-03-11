@@ -177,3 +177,5 @@ cython_debug/
 
 # Ignore GitHub Actions Runner
 /actions-runner/
+
+.claude/
