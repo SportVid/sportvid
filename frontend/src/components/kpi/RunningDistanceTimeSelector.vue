@@ -12,26 +12,20 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
 import paper from "paper";
 import { getTimecode } from "@/plugins/time";
 import { useTabStore } from "@/stores/tabs";
+import { usePositionDataStore } from "@/stores/position_data";
+import { useTopViewStore } from "@/stores/top_view";
+import { usePlayerStore } from "@/stores/player";
 
 const tabStore = useTabStore();
+const positionDataStore = usePositionDataStore();
+const topViewStore = useTopViewStore();
+const playerStore = usePlayerStore();
 
 const props = defineProps({
-  duration: {
-    type: Number,
-    required: true,
-  },
-  start: {
-    type: Number,
-    default: 0,
-  },
-  end: {
-    type: Number,
-    default: 100,
-  },
   width: {
     type: String,
     default: "100%",
@@ -52,57 +46,53 @@ const container = ref(null);
 const canvas = ref(null);
 const canvasStyle = ref({ width: props.width, height: props.height });
 
-let scope, tool;
+let scope;
 let handleGroup, handleLeft, handleRight, handleBar;
-let selectionLayer, scaleLayer;
+let selectionLayer, scaleLayer, timeBarLayer;
+let timeBarLine;
+let animFrameId;
+let isDragging = false;
 
-const canvasWidth = ref(0);
-const canvasHeight = ref(0);
-const containerWidth = ref(0);
-const containerHeight = ref(0);
+const canvasWidth = ref(null);
+const canvasHeight = ref(null);
+const containerWidth = ref(null);
+const containerHeight = ref(null);
 
 const redraw = ref(false);
 
-const hiddenStart = ref(props.start);
-const hiddenEnd = ref(props.end);
-const minFrameGap = 1;
-
-const duration = ref(props.duration);
-const selectedStart = ref(props.start);
-const selectedEnd = ref(props.end);
+const duration = computed(() => {
+  const keys = topViewStore.sortedFrameKeys;
+  return keys.length > 0 ? keys[keys.length - 1] : undefined;
+});
+const selectedStart = computed(() => positionDataStore.selectedTimeRange.start);
+const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
+const hiddenStart = ref(positionDataStore.selectedTimeRange.start);
+const hiddenEnd = ref(positionDataStore.selectedTimeRange.end);
+const minFrameGap = (1000 / playerStore.videoFPS) * 10;
 watch(
-  () => props.start,
+  () => positionDataStore.selectedTimeRange,
   (val) => {
-    selectedStart.value = val;
-    hiddenStart.value = val;
-    draw();
-  }
+    if (isDragging) return;
+    hiddenStart.value = val.start;
+    hiddenEnd.value = val.end;
+    nextTick(() => draw());
+  },
+  { deep: true }
 );
-watch(
-  () => props.end,
-  (val) => {
-    selectedEnd.value = val;
-    hiddenEnd.value = val;
-    draw();
-  }
-);
-watch(
-  () => props.duration,
-  (val) => {
-    duration.value = val;
-    hiddenStart.value = props.start;
-    hiddenEnd.value = props.end;
-    draw();
-  }
-);
+watch(duration, () => {
+  hiddenStart.value = selectedStart.value;
+  hiddenEnd.value = selectedEnd.value;
+  nextTick(() => draw());
+});
 watch(hiddenStart, () => {
   nextTick(() => {
+    positionDataStore.setSelectedTimeRangeStart(hiddenStart.value);
     emit("update:start", hiddenStart.value);
   });
 });
-
 watch(hiddenEnd, () => {
   nextTick(() => {
+    positionDataStore.setSelectedTimeRangeEnd(hiddenEnd.value);
     emit("update:end", hiddenEnd.value);
   });
 });
@@ -116,11 +106,11 @@ function linspace(startValue, numSteps, step) {
 }
 
 function frameToX(frame) {
-  return (canvasWidth.value / props.duration) * frame;
+  return (canvasWidth.value / duration.value) * frame;
 }
 
 function xToFrame(x) {
-  return (x / canvasWidth.value) * props.duration;
+  return (x / canvasWidth.value) * duration.value;
 }
 
 function onResize() {
@@ -145,10 +135,9 @@ function draw() {
 
   if (isNaN(canvasWidth.value / duration.value)) return;
 
-  tool = new paper.Tool();
-
   drawScale();
   drawSelection();
+  drawTimeBar();
   scope.view.draw();
 }
 
@@ -157,7 +146,7 @@ function drawScale() {
   scope.activate();
   scaleLayer = new paper.Layer();
 
-  const interval = props.duration / 5;
+  const interval = duration.value / 5;
   const frames = linspace(0, 5, interval);
 
   const mainStrokes = frames.map((frame) => {
@@ -175,7 +164,7 @@ function drawScale() {
     } else {
       text.justification = "center";
     }
-    text.content = getTimecode(Math.round(frame, 2), 2);
+    text.content = getTimecode(Math.round(frame, 3));
     return text;
   });
 
@@ -193,6 +182,32 @@ function drawScale() {
     return new paper.Path(new paper.Point(x, 25), new paper.Point(x, 30));
   });
   new paper.Group(minorStrokes).strokeColor = "black";
+}
+
+function drawTimeBar() {
+  if (timeBarLayer) timeBarLayer.removeChildren();
+  scope.activate();
+  timeBarLayer = new paper.Layer();
+
+  const time = playerStore.currentTime;
+  if (time == null || !duration.value) return;
+
+  const x = frameToX(time);
+  timeBarLine = new paper.Path([new paper.Point(x, 0), new paper.Point(x, canvasHeight.value)]);
+  timeBarLine.strokeColor = "white";
+  timeBarLine.strokeWidth = 2;
+}
+
+function updateTimeBar() {
+  if (!timeBarLine || !canvasWidth.value || !duration.value) return;
+  const x = frameToX(playerStore.currentTime);
+  timeBarLine.segments[0].point.x = x;
+  timeBarLine.segments[1].point.x = x;
+}
+
+function animLoop() {
+  updateTimeBar();
+  animFrameId = requestAnimationFrame(animLoop);
 }
 
 function drawSelection() {
@@ -227,24 +242,37 @@ function drawSelection() {
 
   handleGroup = new paper.Group([path, handleLeft, handleRight]);
 
+  const onDragStart = () => { isDragging = true; };
+  const onDragEnd = () => { isDragging = false; };
+
+  handleLeft.onMouseDown = onDragStart;
+  handleLeft.onMouseUp = onDragEnd;
   handleLeft.onMouseDrag = (event) => {
-    const df = xToFrame(event.delta.x);
-    hiddenStart.value =
-      df > 0
-        ? Math.min(hiddenStart.value + df, hiddenEnd.value - minFrameGap)
-        : Math.max(hiddenStart.value + df, 0);
+    let newStart = hiddenStart.value + xToFrame(event.delta.x);
+
+    if (newStart < 0) newStart = 0;
+
+    if (newStart > hiddenEnd.value - minFrameGap) newStart = hiddenEnd.value - minFrameGap;
+
+    hiddenStart.value = newStart;
     onSelectionChange();
   };
 
+  handleRight.onMouseDown = onDragStart;
+  handleRight.onMouseUp = onDragEnd;
   handleRight.onMouseDrag = (event) => {
-    const df = xToFrame(event.delta.x);
-    hiddenEnd.value =
-      df < 0
-        ? Math.max(hiddenEnd.value + df, hiddenStart.value + minFrameGap)
-        : Math.min(hiddenEnd.value + df, duration.value);
+    let newEnd = hiddenEnd.value + xToFrame(event.delta.x);
+
+    if (newEnd > duration.value) newEnd = duration.value;
+
+    if (newEnd < hiddenStart.value + minFrameGap) newEnd = hiddenStart.value + minFrameGap;
+
+    hiddenEnd.value = newEnd;
     onSelectionChange();
   };
 
+  path.onMouseDown = onDragStart;
+  path.onMouseUp = onDragEnd;
   path.onMouseDrag = (event) => {
     const span = hiddenEnd.value - hiddenStart.value;
     const df = xToFrame(event.delta.x);
@@ -297,9 +325,12 @@ onMounted(() => {
     redraw.value = setTimeout(onResize, 100);
   };
 
-  draw();
+  nextTick(() => draw());
+
+  animFrameId = requestAnimationFrame(animLoop);
 });
 onBeforeUnmount(() => {
+  if (animFrameId) cancelAnimationFrame(animFrameId);
   if (scope) {
     scope.view.onFrame = null;
     scope.view.onResize = null;
@@ -307,6 +338,12 @@ onBeforeUnmount(() => {
     scope.remove();
   }
 });
+watch(
+  () => tabStore.visualizationTabId,
+  () => {
+    nextTick(() => draw());
+  }
+);
 
 onMounted(() => {
   window.addEventListener("resize", onResize);

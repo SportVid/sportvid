@@ -23,9 +23,9 @@
           </v-row>
           <v-row>
             <v-list class="color-map-list">
-              <v-subheader>
+              <div>
                 {{ $t("modal.timeline.visualization.description") }}
-              </v-subheader>
+              </div>
               <v-list-item-group v-model="colormap_idx" color="primary">
                 <template v-for="(colormap, i) in colormap_options">
                   <v-list-item :key="colormap.id">

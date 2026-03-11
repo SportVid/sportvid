@@ -1,3 +1,8 @@
+# Project specific things
+README.md
+*.yml
+Dockerfile
+
 *Zone.Identifier
 *.tar.gz
 *.tar
@@ -164,3 +169,13 @@ cython_debug/
 .idea/
 
 .DS_Store
+
+# Allow CI/CD workflow files to be tracked
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
+
+# Ignore GitHub Actions Runner
+/actions-runner/
+
+.claude/

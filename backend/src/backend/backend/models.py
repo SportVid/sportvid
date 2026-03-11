@@ -40,18 +40,24 @@ def receiver_with_multiple_senders(signal, senders, **kwargs):
 
 
 class SportVidUser(AbstractUser):
-    allowance = models.IntegerField(default=40) # 10
-    max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # 5GB, 500MB: 500*1024*1024
-    max_file_size = models.BigIntegerField(default=10 * 1024 * 1024 * 1024)  # 1GB
+    role=models.CharField(max_length=256, default="user")
+    max_storage_size = models.BigIntegerField(default=100 * 1024 * 1024 * 1024) # GB
+    used_storage_size = models.BigIntegerField(default=0)
+    max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB, 500MB: 500*1024*1024
+    max_file_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB
     objects = SportVidUserManager()
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {
             "id": self.id,
             "username": self.username,
-            "allowance": self.allowance,
+            "email": self.email,
+            "role": self.role,
+            "max_storage_size": self.max_storage_size,
+            "used_storage_size": self.used_storage_size,
             "max_video_size": self.max_video_size,
-            "max_file_size": self.max_file_size
+            "max_file_size": self.max_file_size,
+            "date_joined": self.date_joined
         }
 
     def __str__(self):
@@ -65,7 +71,22 @@ class Video(models.Model):
     )
     name = models.CharField(max_length=256)
     file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
+    file_size = models.BigIntegerField(default=0)
     ext = models.CharField(max_length=256)
+    # status field for processing/done/error
+    STATUS_PROCESSING = "P"
+    STATUS_DONE = "D"
+    STATUS_ERROR = "E"
+    STATUS = {
+        STATUS_PROCESSING: "PROCESSING",
+        STATUS_DONE: "DONE",
+        STATUS_ERROR: "ERROR",
+    }
+    status = models.CharField(
+        max_length=2,
+        choices=[(k, v) for k, v in STATUS.items()],
+        default=STATUS_DONE,
+    )
     date = models.DateTimeField(auto_now_add=True)
     # some extracted meta information
     fps = models.FloatField(blank=True, null=True)
@@ -99,6 +120,8 @@ class Video(models.Model):
             "current_position": self.current_position,
             "total_number_of_teams": self.total_number_of_teams,
             "age_group": self.age_group,
+            "status": self.status,
+            "processing": True if self.status == self.STATUS_PROCESSING else False,
         }
 
     def clone(self, owner=None, include_timelines=True, include_annotations=True):
@@ -124,7 +147,9 @@ class TrackingData(models.Model):
     video = models.ForeignKey(Video, blank=True, null=True, on_delete=models.CASCADE)
     name = models.CharField(max_length=256)
     file = models.UUIDField(default=uuid.uuid4,blank=True, null=True)
+    file_size = models.BigIntegerField(default=0)
     meta_file = models.UUIDField(blank=True, null=True)
+    meta_file_size = models.BigIntegerField(default=0)
     ext = models.CharField(default="", max_length=256)
     meta_ext = models.CharField(default="", max_length=256)
     date = models.DateTimeField(auto_now_add=True)
@@ -703,19 +728,21 @@ class CalibrationAssets(models.Model):
         settings.AUTH_USER_MODEL, blank=True, null=True, on_delete=models.CASCADE
     )
     name = models.CharField(max_length=1024)
+    sport = models.CharField(max_length=1024, null=True)
     # store 3x3 matrix as JSON array of arrays, default to identity matrix
     homography_matrix = models.JSONField(default=default_homography_matrix)
-    template = models.CharField(max_length=1024, null=True) # TODO: enum
+    object_type = models.CharField(max_length=1024, null=True)
 
     def to_dict(self, include_refs_hashes=True, include_refs=True, **kwargs):
         result = {
             "id": self.id.hex,
             "name": self.name,
+            "sport": self.sport,
             "homography_matrix": self.homography_matrix,
-            "template": self.template,
+            "object_type": self.object_type
         }
         if include_refs:
-            result["marker_data"] = [x.to_dict() for x in self.marker_data.all()]
+            result["object_data"] = [x.to_dict() for x in self.object_data.all()]
         return result
 
 
@@ -724,17 +751,13 @@ class PointCorrespondence(models.Model):
     calibration_asset = models.ForeignKey(
         CalibrationAssets, 
         on_delete=models.CASCADE,
-        related_name='marker_data'
+        related_name='object_data'
     )
     name = models.CharField(max_length=1024)
     set = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
-    compAreaCoord_x = models.FloatField()
-    compAreaCoord_y = models.FloatField()
-    compAreaCoord_z = models.FloatField(default=0.0)
-    videoCoord_x = models.FloatField()
-    videoCoord_y = models.FloatField()
-    videoCoord_z = models.FloatField(default=0.0)
+    comp_area_coords_rel = models.JSONField(default=list)
+    video_coords_rel = models.JSONField(default=list)
 
     def to_dict(self):
         return {
@@ -742,14 +765,6 @@ class PointCorrespondence(models.Model):
             "name": self.name,
             "set": self.set,
             "active": self.active,
-            "compAreaCoordsRel": {
-                "x": self.compAreaCoord_x,
-                "y": self.compAreaCoord_y,
-                "z": self.compAreaCoord_z
-            },
-            "videoCoordsRel": {
-                "x": self.videoCoord_x,
-                "y": self.videoCoord_y,
-                "z": self.videoCoord_z
-            }
+            "compAreaCoordsRel": self.comp_area_coords_rel,
+            "videoCoordsRel": self.video_coords_rel
         }

@@ -7,13 +7,14 @@
     "demo_title": "Video Demonstration",
     "demo_text": "We are currently preparing a video that demonstrates the features of SportVid and explains how to use it to simplify the onboarding process. It is expected to be available by 2027 at the latest.",
     "login_title": "Need an account?",
-    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an E-Mail to {'xyz@123.de'} with a short explanation of your intended usecase.",
+    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an email to {'xyz@123.de'} with a short explanation of your intended usecase.",
     "format_title": "Video File Support",
     "format_text": "Please note that SportVid currently only supports the analysis of <b>mp4</b> video files to avoid long processing times due to transcoding videos on our server."
   },
-  "terms_of_service": {
-    "title": "Terms of Service",
-    "text": "By using SportVid, you agree to the following terms and conditions: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Consent to the use of uploaded and submitted videos and data for scientific research purposes.</li><li>Consent to allow other users to search for videos.</li><li>...</li></ol>",
+  "terms_of_use": {
+    "title": "Terms of Use",
+    "text": "<strong>1. Introduction</strong><br>These Terms of Use ('Terms') govern access to and use of the video analysis portal ('Portal') of SportVid. By using the Portal, you agree to the following Terms of Use.<br><br><strong>2. Rights to Upload</strong><br>2.1. By uploading content ('Content') to the Portal, you grant SportVid the non-exclusive right to store, process, analyze, and use the Content in order to provide the Portal's services.<br>2.2. You confirm that you have the necessary rights to upload the Content, including copyrights, trademark rights, and other rights required for the use of the Content.<br><br><strong>3. Processing and Analysis</strong><br>3.1. SportVid processes and analyzes the Content to provide the Portal's services, including the analysis of usage data and the optimization of the Content.<br>3.2. By using the Portal, you agree that SportVid may process and analyze the Content to provide the Portal's services.<br><br><strong>4. Data Protection</strong><br>4.1. SportVid treats your personal data confidentially and in accordance with data protection regulations.<br>4.2. By using the Portal, you agree that SportVid may process your personal data to provide the Portal's services.<br><br><strong>5. Liability</strong><br>5.1. SportVid is not liable for damages resulting from the use of the Portal, including the infringement of third-party rights.<br>5.2. By using the Portal, you agree that SportVid cannot be held liable for damages resulting from the use of the Portal.<br><br><strong>6. Changes</strong><br>6.1. SportVid may change these Terms of Use at any time.<br>6.2. By continuing to use the Portal after changes to the Terms of Use, you agree to the modified Terms of Use.<br><br><strong>7. Final Provisions</strong><br>7.1. These Terms of Use govern the entire contractual relationship between you and SportVid.<br>7.2. By using the Portal, you agree to these Terms of Use and confirm that you accept the following terms.",
+    "last_updated": "<em>Last updated: February 4, 2026</em>",
     "confirmation": "Do you agree with the {title}?"
   },
   "guidelines": {
@@ -23,8 +24,7 @@
   "user": {
     "name": "Username",
     "password": "Password",
-    "email": "E-Mail",
-    "joined": "Joined {n_days} days ago",
+    "email": "Email address",
     "login": {
       "title": "Login",
       "text": "Don't have an account?",
@@ -44,7 +44,8 @@
         "min": "Min. 5 characters.",
         "max": "Max. 50 characters."
       }
-    }
+    },
+    "delete": {}
   },
   "button": {
     "to_timeline": "To Timeline",
@@ -66,7 +67,11 @@
     "run_batch_plugin": "Run Batch Plugin",
     "run_plugin": "Run Plugin",
     "delete_plugin_runs": "Delete all plugin runs",
-    "upload_video": "Upload new Video"
+    "upload_video": "Upload new Video",
+    "settings": "Settings",
+    "continue": "Continue",
+    "admin_panel": "Admin Panel",
+    "exit": "Exit"
   },
   "field": {
     "required": "This field is required."
@@ -83,6 +88,7 @@
     "video_upload_menu": "Upload new Video"
   },
   "video_view": {
+    "video_processing": "Video is being processed",
     "video_id": "Video ID:",
     "length": "Length:",
     "uploaded": "Uploaded:",
@@ -98,14 +104,44 @@
       "select": "Select Visualization",
       "timeline": "Timeline",
       "events": "Events",
+      "heatmap": "Heatmap",
       "running_distance": "Running Distance"
     }
   },
   "sports": {
-    "soccer": "Soccer",
-    "handball": "Handball",
-    "basketball": "Basketball",
-    "climbing": "Climbing"
+    "soccer": {
+      "title": "Soccer",
+      "areas": {
+        "full": "Full Pitch",
+        "half_left": "Left Half",
+        "half_right": "Right Half",
+        "box_to_box": "Box to Box",
+        "double_box_left": "Double Box Left",
+        "double_box_right": "Double Box Right"
+      }
+    },
+    "handball": {
+      "title": "Handball",
+      "areas": {
+        "full": "Full Court",
+        "half_left": "Left Half",
+        "half_right": "Right Half"
+      }
+    },
+    "basketball": {
+      "title": "Basketball",
+      "areas": {
+        "full": "Full Court",
+        "half_left": "Left Half",
+        "half_right": "Right Half"
+      }
+    },
+    "climbing": {
+      "title": "Climbing",
+      "areas": {
+        "full": "Full Area"
+      }
+    }
   },
   "calibration_asset": {
     "not_selected": "No calibration asset selected.<br>Please create a new calibration asset or choose an existing one.",
@@ -114,8 +150,13 @@
     "select": "Select Calibration Asset",
     "create": "Create new Calibration Asset",
     "update": "Update Calibration Asset",
+    "object_types": {
+      "marker": "Marker",
+      "segment": "Segment"
+    },
     "marker": {
       "title": "Marker",
+      "switch_to_segments": "Switch to Segments",
       "view_vid_marker": "View Video Marker",
       "add_ref_marker": {
         "title": "Add Reference Marker",
@@ -123,7 +164,18 @@
       },
       "delete_ref_marker": "Delete Reference Marker",
       "delete_single_ref_marker": "Delete"
-    }
+    },
+    "segments": {
+      "title": "Segments",
+      "switch_to_marker": "Switch to Marker",
+      "view_vid_segments": "View Video Segments",
+      "add_ref_segment": {
+        "title": "Add Reference Segment"
+      },
+      "delete_ref_segment": "Delete Reference Segment",
+      "delete_single_ref_segment": "Delete"
+    },
+    "time-conflict": "Video markers were set at {time}. Adding a new marker on another timestamp will overwrite the existing ones."
   },
   "position_data": {
     "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
@@ -147,22 +199,6 @@
     },
     "fps_deviation": "Downsampling & interpolation introduces a maximum frame-by-frame deviation of up to {interpErr}% compared to the original frame rate."
   },
-  "heatmap": {
-    "display_settings": {
-      "title": "Display Settings",
-      "view_heatmap": "View heatmap",
-      "view_movement": "View movement"
-    }
-  },
-  "data": {
-    "options": {
-      "title": "Options",
-      "aggregated_full": "Aggregated full match",
-      "aggregated_first": "Aggregated first half",
-      "aggregated_second": "Aggregated second half",
-      "progress": "Progress"
-    }
-  },
   "visualization": {
     "title": "Visualize",
     "start": "Apply",
@@ -185,11 +221,43 @@
         "ySelect": "Not selected"
       }
     },
+    "time_selection": {
+      "sync_start": "Synchronize start time with video time",
+      "sync_end": "Synchronize end time with video time",
+      "full_match": "Select full match",
+      "first_half": "Select first half",
+      "second_half": "Select second half"
+    },
     "running_distance": {
       "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
-      "player_id": "Player-ID",
-      "team_id": "Team",
-      "distance": "Distance [m]"
+      "kpi_selection": {
+        "title": "KPI selection",
+        "running_distance": "Running distance",
+        "running_distance_cumulative": "Running distance (cumulative)",
+        "running_distance_interval": "Running distance (per {frames} frames)",
+        "interval_frames": "Interval (frames)",
+        "velocity_max": "Maximum Velocity",
+        "velocity_mean": "Mean Velocity",
+        "metabolic_work": "Metabolic work"
+      },
+      "player_view": {
+        "player_id": "Player-ID",
+        "team_id": "Team",
+        "distance": "Distance [m]",
+        "best": "Best",
+        "total": "Total"
+      },
+      "team_view": {
+        "total_distance": "Total Distance",
+        "avg_distance": "Avg. Distance",
+        "player_count": "Players"
+      }
+    },
+    "heatmap": {
+      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually."
+    },
+    "timeline": {
+      "not_available": "No timeline available.<br>Please run a plugin that creates a timeline."
     }
   },
   "timelines": {
@@ -226,6 +294,56 @@
     "error": {
       "title": "Error"
     },
+    "admin": {
+      "delete_account": {
+        "title": "Delete Account",
+        "confirmation": "Are you sure you want to delete the account of user '{username}'?<br>This action cannot be undone."
+      },
+      "update_account": {
+        "title": "Edit Account",
+        "email": "Email address",
+        "role": "Role",
+        "max_storage_size": "Max. Storage Size",
+        "max_video_size": "Max. Video Size",
+        "max_file_size": "Max. File Size",
+        "roles": {
+          "user": "User",
+          "admin": "Admin"
+        }
+      }
+    },
+    "settings": {
+      "title": "Account Settings",
+      "information": "Information",
+      "language": "Language",
+      "security": "Security",
+      "username": "Username",
+      "joined": "Joined",
+      "email": "Email address",
+      "password": "Password",
+      "password_current": "Current Password",
+      "password_new": "New Password",
+      "rules": {
+        "min": "Min. 5 characters.",
+        "uppercase": "At least one uppercase letter.",
+        "lowercase": "At least one lowercase letter.",
+        "number": "At least one number.",
+        "special": "At least one special character."
+      },
+      "delete_account": "Delete Account",
+      "success": "Password successfully changed",
+      "settings_success": "Account successfully updated",
+      "password_both_required": "Both current and new password must be provided",
+      "invalid_current_password": "Invalid current password",
+      "password_min": "New password must be at least {min} characters",
+      "password_invalid": "Password does not meet the requirements",
+      "no_changes": "No changes to save",
+      "update_failed": "Update failed"
+    },
+    "delete_account": {
+      "title": "Delete Account",
+      "success": "Account successfully deleted"
+    },
     "video": {
       "rename": {
         "title": "Rename Video",
@@ -234,8 +352,7 @@
       },
       "upload": {
         "title": "Upload new Video",
-        "videos_uploaded": "Videos uploaded: {numVideos} out of {allowance}",
-        "upload_denied": "You have uploaded the maximum amount of videos that you are allowed to. If you require more, please contact abc@xyz.de.",
+        "upload_denied": "You have reached the maximum storage available for uploading videos and files. If you require more, please contact abc@xyz.de.",
         "validate": {
           "file_required": "Please select a file with a maximum file size of {maxSize}",
           "file_exceeds": "File exceeds your maximum file size of {maxSize}",
@@ -277,14 +394,15 @@
       "position_data": {
         "export_name": "Position Data",
         "teams": {
-          "all": "Select all",
-          "ball": "Ball",
-          "team": "Team {id}"
+          "all": "Select all"
         },
         "attributes": {
           "all": "Select all",
+          "timestamp_ms": "Timestamp (ms)",
           "player_id": "Player-ID",
+          "player_name": "Player name",
           "team_id": "Team-ID",
+          "team_name": "Team name",
           "game_section": "Game section",
           "x": "X coordinate",
           "y": "Y coordinate",
@@ -300,8 +418,15 @@
       "running_distance": {
         "export_name": "Running Distance",
         "teams": {
+          "all": "Select all"
+        },
+        "attributes": {
           "all": "Select all",
-          "team": "Team {id}"
+          "player_id": "Player-ID",
+          "player_name": "Player name",
+          "team_id": "Team-ID",
+          "team_name": "Team name",
+          "distance": "Distance"
         },
         "file_name": "running_distance"
       },
@@ -340,10 +465,12 @@
       "scalar_timeline_hint": "The scalar values of the selected timelines will be aggregated.",
       "position_data_team_name": "Select groups",
       "position_data_team_hint": "Exporting selected groups.",
-      "position_data_attribute_name": "Select attributes",
-      "position_data_attribute_hint": "Exporting selected attributes.",
+      "position_data_attribute_name": "Additional attributes",
+      "position_data_attribute_hint": "Timestamp (ms), Player-ID, and X/Y coordinates are always included. Optionally add more attributes.",
       "running_distance_team_name": "Select teams",
       "running_distance_team_hint": "Exporting selected teams.",
+      "running_distance_attribute_name": "Additional attributes",
+      "running_distance_attribute_hint": "Player-ID and Distance are always included. Optionally add more attributes.",
       "running_distance_start_frame_name": "Select start frame",
       "running_distance_end_frame_name": "Select end frame",
       "fps": "Frames per Second (FPS)",
@@ -613,7 +740,12 @@
     "tutorial": {
       "title": "Tutorials",
       "show_steps": "Show Steps",
+      "show_missing_requirements": "Show missing requirements",
       "step": "Step",
+      "missing_requirements": {
+        "title": "Missing requirements",
+        "video_uploaded": "You need to upload a video first."
+      },
       "position_data_generation": {
         "name": "Position Data Generation",
         "description": "Calibrate camera, run homography, track players"
@@ -638,7 +770,8 @@
     "calibration_asset": {
       "create": {
         "title": "Create Calibration Asset",
-        "template": "Select sport"
+        "sport": "Select sport",
+        "object_type": "Select object type"
       },
       "select": {
         "title": "Select Calibration Asset"
@@ -655,6 +788,9 @@
       },
       "delete": {
         "success": "Calibration Asset successfully deleted"
+      },
+      "video_marker": {
+        "warning": "Attention: Video markers were set at {time}. Adding a new marker will overwrite the existing ones."
       }
     },
     "position_data": {
@@ -664,6 +800,7 @@
         "format": "Select the data provider",
         "file": "Select the position data file",
         "meta_data": "Select the meta data file",
+        "hint": "Maximum file size: {maxSize}",
         "delimiter": "Select the delimiter used in the csv file",
         "origin": "Select the origin (0/0) of the coordinate system",
         "team_id_ball": "Enter the team id/ group name of the ball (optional)",
@@ -682,9 +819,11 @@
           "kickoff": "Kickoff",
           "bottom_left": "Bottom-Left"
         },
+        "upload_denied": "You have reached the maximum storage available for uploading videos and files. If you require more, please contact abc@xyz.de.",
         "validate": {
-          "file_required": "Please select a file.",
-          "file_format_invalid": "File is not in .csv oder .xml format."
+          "file_required": "Please select a file with a maximum file size of {maxSize}",
+          "file_exceeds": "File exceeds your maximum file size of {maxSize}",
+          "file_format_invalid": "File is not in the .mp4 format."
         },
         "success": "Position data successfully uploaded"
       },
@@ -696,6 +835,8 @@
         },
         "asset": "Select Calibration Asset",
         "bytetrack": "Select Bytetrack Plugin",
+        "sport": "Select sport",
+        "area_size": "Select area size",
         "uploaded_position_data": "Select uploaded position data"
       },
       "rename": {
@@ -707,8 +848,7 @@
         "success": "Position data successfully deleted"
       },
       "team_colors": {
-        "title": "Change team colors",
-        "team_id": "Team-ID"
+        "title": "Change team colors"
       },
       "offset": {
         "title": "Set offset",
@@ -750,5 +890,28 @@
         "all_success": "Bounding Boxes successfully deleted"
       }
     }
-  }
+  },
+  "admin_panel": {
+    "title": "Admin Panel",
+    "search": "Search",
+    "role": {
+      "label": "Role",
+      "all": "All",
+      "admin": "Admin",
+      "user": "User"
+    },
+    "user": {
+      "id": "ID",
+      "username": "Username",
+      "email": "Email",
+      "role": "Role",
+      "used_storage_size": "Used Storage Size",
+      "max_storage_size": "Max. Storage Size",
+      "max_video_size": "Max. Video Size",
+      "max_file_size": "Max. File Size",
+      "date_joined": "Joined",
+      "actions": "Actions"
+    }
+  },
+  "loading_screen": "Loading ..."
 }

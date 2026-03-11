@@ -1,8 +1,9 @@
+import os
 import imageio
 import json
 import uuid
 import logging
-import logging
+import tarfile
 
 from pathlib import Path
 from urllib.parse import urlparse
@@ -16,8 +17,13 @@ from backend.utils import (
     download_file,
     media_url_to_file,
     media_dir_to_file,
+    media_path_to_file
 )
 from backend.models import Video
+
+from utils.video_converter import convert_to_hls
+from utils.helper import remove_file, remove_dir
+from backend.tasks.convert_video import convert_video
 
 
 logger = logging.getLogger(__name__)
@@ -54,7 +60,6 @@ class VideoUpload(View):
 
             if "file" in request.FILES:
                 output_dir = media_dir_to_file(video_id)
-
                 download_result = download_file(
                     output_dir=output_dir,
                     output_name=video_id,
@@ -69,11 +74,51 @@ class VideoUpload(View):
 
                 path = Path(request.FILES["file"].name)
                 ext = "".join(path.suffixes)
+                
+                file_path = media_path_to_file(video_id, ext)
+                file_in = file_path
 
+                # ------------> convert to HLS
+                # TODO: only convert if not done already
+                file_out = f'{output_dir}{video_id}/{video_id}.m3u8'
+                os.makedirs(f'{output_dir}{video_id}', exist_ok=True)
+                logger.error(f'{ext}')
+                logger.error(f'{file_in}')
+                logger.error(f'{file_out}')
+                
+                convert_to_hls(file_in, ext.split(sep='.')[-1], file_out)
+                
+                # ------------> archive here
+                ext = '.tar.gz'
+                archive_path = Path(f'{output_dir}{video_id}{ext}')
+                hls_dir = Path(f'{output_dir}{video_id}/')
+
+                logger.error(f'{hls_dir}')
+                logger.error(f'{archive_path}')
+                # TODO: Adjust logic to keep HLS as a dir.
+                # Requires adaptaion to inference server transfer & DB schema.
+                def create_tar_archive(archive_path, hls_dir):
+                    with tarfile.open(archive_path, 'w:gz') as tar:
+                        tar.add(hls_dir,
+                                arcname=".", #arcname=hls_dir.name,
+                                recursive=True)
+                    return archive_path.absolute()
+                
+                archive_path = create_tar_archive(archive_path, hls_dir)
+                logger.error(archive_path)
+                
+                # ------------> get meta data 
                 reader = imageio.get_reader(download_result["path"])
                 fps = reader.get_meta_data()["fps"]
                 duration = reader.get_meta_data()["duration"]*1000.
                 size = reader.get_meta_data()["size"]
+                
+                # ------------> remove temporary data
+                if remove_file(file_path):
+                    logger.debug(f'{file_path} removed successfully!')
+                
+                # if remove_dir(hls_dir):
+                #    logger.debug(f'{hls_dir} removed successfully!')
 
                 field_length = parse_number(request.POST.get("fieldLength"))
                 if not field_length: field_length = 105.
@@ -81,47 +126,34 @@ class VideoUpload(View):
                 field_width = parse_number(request.POST.get("fieldWidth"))
                 if not field_width: field_width = 68.
 
-                meta = {
-                    "name": request.POST.get("title"),
-                    "width": size[0],
-                    "height": size[1],
-                    "ext": ext,
-                    "fps": fps,
-                    "duration": duration,
-                    "field_length": field_length,
-                    "field_width": field_width,
-                    "division": request.POST.get("division"),
-                    "current_position": request.POST.get("currentPosition"),
-                    "total_number_of_teams": request.POST.get("totalNumberofTeams"),
-                    "age_group": request.POST.get("ageGroup"),
-                }
-                video_db, created = Video.objects.get_or_create(
-                    name=meta["name"],
+                video_db = Video.objects.create(
+                    name=request.POST.get("title"),
                     id=video_id_uuid,
                     file=video_id_uuid,
-                    ext=meta["ext"],
-                    fps=meta["fps"],
-                    duration=meta["duration"],
-                    width=meta["width"],
-                    height=meta["height"],
+                    file_size=request.FILES["file"].size,
+                    ext=ext,
                     owner=request.user,
-                    field_length=meta["field_length"],
-                    field_width=meta["field_width"],
-                    division=meta["division"],
-                    current_position=meta["current_position"],
-                    total_number_of_teams=meta["total_number_of_teams"],
-                    age_group=meta["age_group"],
+                    field_length=field_length,
+                    field_width=field_width,
+                    division=request.POST.get("division"),
+                    current_position=request.POST.get("currentPosition"),
+                    total_number_of_teams=request.POST.get("totalNumberofTeams"),
+                    age_group=request.POST.get("ageGroup"),
+                    status=Video.STATUS_PROCESSING,
                 )
-                if not created:
-                    logger.error("VideoUpload::database_create_failed")
-                    return JsonResponse(
-                        {"status": "error", "type": "database_error"}, status=500
-                    )
 
-                analyers = request.POST.get("analyser").split(",")
-                self.submit_analyse(
-                    plugins=["thumbnail"] + analyers, video=video_db, user=request.user
-                )
+                # schedule conversion & analysis asynchronously
+                analyers = []
+                try:
+                    analyers = request.POST.get("analyser").split(",")
+                except Exception:
+                    analyers = []
+
+                # pass original ext (e.g., .mp4) to the task
+                convert_video.apply_async((video_db.id.hex, ext, analyers))
+
+                request.user.used_storage_size += request.FILES["file"].size
+                request.user.save()
 
                 video_id_hex = video_db.id.hex if not video_db.file.hex else video_db.id.hex
                 return JsonResponse(
@@ -131,7 +163,7 @@ class VideoUpload(View):
                             {
                                 "id": video_id,
                                 **video_db.to_dict(),
-                                "url": media_url_to_file(video_id_hex, meta["ext"]),
+                                "url": media_url_to_file(video_id_hex, video_db.ext),
                             }
                         ],
                     }
@@ -238,11 +270,19 @@ class VideoDelete(View):
                 data = json.loads(body)
             except Exception as e:
                 return JsonResponse({"status": "error"}, status=500)
-            count, _ = Video.objects.filter(
-                id=data.get("id"), owner=request.user
-            ).delete()
+            
+            video = Video.objects.filter(id=data.get("id"), owner=request.user).first()
+            if not video:
+                return JsonResponse({"status": "error"}, status=500)
+            
+            file_size = video.file_size
+            count, _ = Video.objects.filter(id=video.id, owner=request.user).delete()
+
             if count:
+                request.user.used_storage_size = max(0, request.user.used_storage_size - file_size)
+                request.user.save()
                 return JsonResponse({"status": "ok"})
+
             return JsonResponse({"status": "error"}, status=500)
         except Exception:
             logger.exception("Failed to delete video")

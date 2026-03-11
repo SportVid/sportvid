@@ -1,10 +1,12 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, toRaw } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { useI18n } from "vue-i18n";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "./position_data";
+import { usePosdataWorkerStore } from "@/stores/posdata_worker";
+import { usePlayerStore } from "@/stores/player";
 
 export const useExportStore = defineStore("export", () => {
   const topViewStore = useTopViewStore();
@@ -52,11 +54,49 @@ export const useExportStore = defineStore("export", () => {
   };
 
   const allPositionDataAttributes = [
-    { id: 0, name: t("modal.export.position_data.attributes.player_id"), csv: "player_id" },
+    {
+      id: "timestamp_ms",
+      name: t("modal.export.position_data.attributes.timestamp_ms"),
+      csv: "timestamp_ms",
+      alwaysIncluded: true,
+      position: "first",
+    },
+    {
+      id: "player_number",
+      name: t("modal.export.position_data.attributes.player_id"),
+      csv: "player_id",
+      meta: true,
+      alwaysIncluded: true,
+      position: "first",
+    },
+    {
+      id: "player_name",
+      name: t("modal.export.position_data.attributes.player_name"),
+      csv: "player_name",
+      meta: true,
+    },
     { id: 1, name: t("modal.export.position_data.attributes.team_id"), csv: "team_id" },
+    {
+      id: "team_name",
+      name: t("modal.export.position_data.attributes.team_name"),
+      csv: "team_name",
+      meta: true,
+    },
     { id: 2, name: t("modal.export.position_data.attributes.game_section"), csv: "game_section" },
-    { id: 3, name: t("modal.export.position_data.attributes.x"), csv: "x" },
-    { id: 4, name: t("modal.export.position_data.attributes.y"), csv: "y" },
+    {
+      id: 3,
+      name: t("modal.export.position_data.attributes.x"),
+      csv: "x",
+      alwaysIncluded: true,
+      position: "last",
+    },
+    {
+      id: 4,
+      name: t("modal.export.position_data.attributes.y"),
+      csv: "y",
+      alwaysIncluded: true,
+      position: "last",
+    },
     { id: 5, name: t("modal.export.position_data.attributes.bbox_id"), csv: "bbox_id" },
     { id: 6, name: t("modal.export.position_data.attributes.bbox_left"), csv: "bbox_left" },
     { id: 7, name: t("modal.export.position_data.attributes.bbox_top"), csv: "bbox_top" },
@@ -71,34 +111,137 @@ export const useExportStore = defineStore("export", () => {
         .flatMap((pos) => pos.map((_, idx) => idx))
     );
 
-    return allPositionDataAttributes.filter((attr) => presentIndices.has(attr.id));
+    const meta = topViewStore.metaDataTopView;
+    const hasPlayerMeta = meta?.player_ids && Object.keys(meta.player_ids).length > 0;
+    const hasTeamMeta = meta?.team_ids && Object.keys(meta.team_ids).length > 0;
+
+    return allPositionDataAttributes.filter((attr) => {
+      if (attr.alwaysIncluded) return false;
+      if (attr.meta) {
+        if (attr.id === "player_name") return hasPlayerMeta;
+        if (attr.id === "team_name") return hasTeamMeta;
+        return false;
+      }
+      return presentIndices.has(attr.id);
+    });
   });
+
+  const allRunningDistanceAttributes = [
+    {
+      id: "player_id",
+      name: t("modal.export.running_distance.attributes.player_id"),
+      csv: "player_id",
+      alwaysIncluded: true,
+      position: "first",
+    },
+    {
+      id: "player_name",
+      name: t("modal.export.running_distance.attributes.player_name"),
+      csv: "player_name",
+      meta: true,
+    },
+    { id: "team_id", name: t("modal.export.running_distance.attributes.team_id"), csv: "team_id" },
+    {
+      id: "team_name",
+      name: t("modal.export.running_distance.attributes.team_name"),
+      csv: "team_name",
+      meta: true,
+    },
+    {
+      id: "distance",
+      name: t("modal.export.running_distance.attributes.distance"),
+      csv: "distance",
+      alwaysIncluded: true,
+      position: "last",
+    },
+  ];
+
+  const selectableRunningDistanceAttributes = computed(() => {
+    const meta = topViewStore.metaDataTopView;
+    const hasPlayerMeta = meta?.player_ids && Object.keys(meta.player_ids).length > 0;
+    const hasTeamMeta = meta?.team_ids && Object.keys(meta.team_ids).length > 0;
+
+    return allRunningDistanceAttributes.filter((attr) => {
+      if (attr.alwaysIncluded) return false;
+      if (attr.meta) {
+        if (attr.id === "player_name") return hasPlayerMeta;
+        if (attr.id === "team_name") return hasTeamMeta;
+        return false;
+      }
+      return true;
+    });
+  });
+
+  const resolveAttrValue = (pos, attr, frameKey) => {
+    if (attr.id === "timestamp_ms") return frameKey;
+    const meta = topViewStore.metaDataTopView;
+    if (attr.meta) {
+      const playerId = pos[0];
+      const teamId = pos[1];
+      switch (attr.id) {
+        case "player_number": {
+          const num = meta?.player_ids?.[playerId]?.number;
+          return num != null ? num : playerId;
+        }
+        case "player_name": {
+          return meta?.player_ids?.[playerId]?.name || "";
+        }
+        case "team_name": {
+          return meta?.team_ids?.[teamId]?.name || "";
+        }
+        default:
+          return "";
+      }
+    }
+    if (attr.csv === "team_id") {
+      const teamId = pos[1];
+      return meta?.team_ids?.[teamId]?.id || teamId;
+    }
+    return pos[attr.id];
+  };
 
   const exportPositionData = async (parameters = [], videoId) => {
     const selectedTeam = parameters.find((p) => p.name === "position_data_team")?.value;
-    const selectedAttributes = parameters.find((p) => p.name === "position_data_attribute")?.value;
+    const selectedAttributes =
+      parameters.find((p) => p.name === "position_data_attribute")?.value || [];
 
-    const csvHeader = selectedAttributes.map((i) => allPositionDataAttributes[i].csv).join(",");
-    const csvRows = Object.entries(topViewStore.positionDataTopView)
-      .map(([_, positions]) =>
-        positions
-          .filter((pos) => selectedTeam.includes(pos[1]) || pos[1] === selectedTeam)
-          .map((pos) => selectedAttributes.map((i) => pos[i]).join(","))
-          .join("\n")
-      )
-      .join("\n");
+    const alwaysFirstAttrs = allPositionDataAttributes.filter(
+      (a) => a.alwaysIncluded && a.position === "first"
+    );
+    const alwaysLastAttrs = allPositionDataAttributes.filter(
+      (a) => a.alwaysIncluded && a.position === "last"
+    );
+    const selectedOptionalAttrs = selectedAttributes
+      .map((attrId) => allPositionDataAttributes.find((a) => a.id === attrId))
+      .filter(Boolean);
 
-    const teamSuffix = Array.isArray(selectedTeam) ? selectedTeam.join("-") : selectedTeam;
+    const attrDefs = [...alwaysFirstAttrs, ...selectedOptionalAttrs, ...alwaysLastAttrs];
 
-    const blob = new Blob([csvHeader + "\n" + csvRows], { type: "text/csv" });
+    const posdataWorkerStore = usePosdataWorkerStore();
+    const csvData = await posdataWorkerStore.exportPositionsCSV(
+      toRaw(topViewStore.positionDataTopView),
+      toRaw(topViewStore.metaDataTopView),
+      attrDefs,
+      selectedTeam
+    );
+
+    const meta = topViewStore.metaDataTopView;
+    const teamNames = Array.isArray(selectedTeam)
+      ? selectedTeam.map((id) => meta?.team_ids?.[id]?.name || id).join("-")
+      : meta?.team_ids?.[selectedTeam]?.name || selectedTeam;
+    const teamSuffix = teamNames.replace(/[\s/\\]+/g, "_");
+
+    const blob = new Blob([csvData], { type: "text/csv" });
     const link = document.createElement("a");
     link.href = window.URL.createObjectURL(blob);
     link.download = `${t("modal.export.position_data.file_name")}_${videoId}_${teamSuffix}.csv`;
     link.click();
   };
 
-  const exportRunningDistanceData = (parameters, videoId) => {
+  const exportRunningDistanceData = async (parameters, videoId) => {
     const selectedTeam = parameters.find((p) => p.name === "running_distance_team")?.value || [];
+    const selectedAttributes =
+      parameters.find((p) => p.name === "running_distance_attribute")?.value || [];
     const startFrame =
       parameters.find((p) => p.name === "running_distance_start_frame")?.value ?? 0;
     const endFrame = parameters.find((p) => p.name === "running_distance_end_frame")?.value ?? 0;
@@ -110,16 +253,39 @@ export const useExportStore = defineStore("export", () => {
       });
     });
 
-    const distances = positionDataStore.calculateRunningDistances(allPlayers, startFrame, endFrame);
+    const alwaysFirstAttrs = allRunningDistanceAttributes.filter(
+      (a) => a.alwaysIncluded && a.position === "first"
+    );
+    const alwaysLastAttrs = allRunningDistanceAttributes.filter(
+      (a) => a.alwaysIncluded && a.position === "last"
+    );
+    const selectedOptionalAttrs = selectedAttributes
+      .map((attrId) => allRunningDistanceAttributes.find((a) => a.id === attrId))
+      .filter(Boolean);
 
-    const csvHeader = "player_id,team_id,distance";
-    const csvRows = distances
-      .map((p) => `${p.player_id},${p.team_id},${p.distance.toFixed(2)}`)
-      .join("\n");
+    const attrDefs = [...alwaysFirstAttrs, ...selectedOptionalAttrs, ...alwaysLastAttrs];
 
-    const teamSuffix = Array.isArray(selectedTeam) ? selectedTeam.join("-") : selectedTeam;
+    const playerStore = usePlayerStore();
+    const posdataWorkerStore = usePosdataWorkerStore();
+    const csvData = await posdataWorkerStore.exportRunningDistanceCSV(
+      toRaw(topViewStore.positionDataTopView),
+      toRaw(topViewStore.metaDataTopView),
+      attrDefs,
+      allPlayers,
+      startFrame,
+      endFrame,
+      playerStore.video?.field_length || 105,
+      playerStore.video?.field_width || 68,
+      selectedTeam
+    );
 
-    const blob = new Blob([csvHeader + "\n" + csvRows], { type: "text/csv" });
+    const meta = topViewStore.metaDataTopView;
+    const teamNames = Array.isArray(selectedTeam)
+      ? selectedTeam.map((id) => meta?.team_ids?.[id]?.name || id).join("-")
+      : meta?.team_ids?.[selectedTeam]?.name || selectedTeam;
+    const teamSuffix = teamNames.replace(/[\s/\\]+/g, "_");
+
+    const blob = new Blob([csvData], { type: "text/csv" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `${t("modal.export.running_distance.file_name")}_${videoId}_${teamSuffix}.csv`;
@@ -146,5 +312,6 @@ export const useExportStore = defineStore("export", () => {
   return {
     exportData,
     selectablePositionDataAttributes,
+    selectableRunningDistanceAttributes,
   };
 });

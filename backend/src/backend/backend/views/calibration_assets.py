@@ -23,7 +23,12 @@ class CalibrationAssetsCreate(View):
             data_db = CalibrationAssets.objects.get(**query_args)
                 
         except CalibrationAssets.DoesNotExist:
-            create_args = {"name": data.get("name"), "template": data.get("template"), "owner": request.user}
+            create_args = {
+                "name": data.get("name"),
+                "sport": data.get("sport"),
+                "object_type": data.get("object_type"),
+                "owner": request.user
+            }
             if "video_id" in data:
                 try:
                     video_db = Video.objects.get(id=data.get("video_id"))
@@ -34,18 +39,14 @@ class CalibrationAssetsCreate(View):
             # create new entry
             data_db = CalibrationAssets.objects.create(**create_args)
             # Create marker data points if provided
-            if "marker_data" in data:
-                for marker in data.get("marker_data"):
-                    data_db.marker_data.create(
-                        name=marker.get("name"),
-                        set=marker.get("set"),
-                        active=marker.get("active"),
-                        compAreaCoord_x=marker["compAreaCoordsRel"]["x"],
-                        compAreaCoord_y=marker["compAreaCoordsRel"]["y"],
-                        compAreaCoord_z=marker["compAreaCoordsRel"]["z"] if "z" in marker["compAreaCoordsRel"] else 0.0,
-                        videoCoord_x=marker["videoCoordsRel"]["x"],
-                        videoCoord_y=marker["videoCoordsRel"]["y"],
-                        videoCoord_z=marker["videoCoordsRel"]["z"] if "z" in marker["videoCoordsRel"] else 0.0,
+            if "object_data" in data:
+                for obj in data.get("object_data"):
+                    data_db.object_data.create(
+                        name=obj.get("name"),
+                        set=obj.get("set"),
+                        active=obj.get("active"),
+                        comp_area_coords_rel=obj.get("compAreaCoordsRel"),
+                        video_coords_rel=obj.get("videoCoordsRel")
                     )
 
         return JsonResponse({"status": "ok", "entry": data_db.to_dict()})
@@ -57,23 +58,21 @@ class CalibrationAssetsChange(View):
             calibration_assets = CalibrationAssets.objects.get(id=data.get("id"))
             if "name" in data:
                 calibration_assets.name = data.get("name")
-            if "template" in data:
-                calibration_assets.template = data.get("template")
-            if "marker_data" in data:
+            if "sport" in data:
+                calibration_assets.sport = data.get("sport")
+            if "object_type" in data:
+                calibration_assets.object_type = data.get("object_type")
+            if "object_data" in data:
                 # Clear existing marker data
-                calibration_assets.marker_data.all().delete()
+                calibration_assets.object_data.all().delete()
                 # Create new marker data points
-                for marker in data.get("marker_data"):
-                    calibration_assets.marker_data.create(
-                        name=marker.get("name"),
-                        set=marker.get("set"),
-                        active=marker.get("active"),
-                        compAreaCoord_x=marker["compAreaCoordsRel"]["x"],
-                        compAreaCoord_y=marker["compAreaCoordsRel"]["y"],
-                        compAreaCoord_z=marker["compAreaCoordsRel"]["z"] if "z" in marker["compAreaCoordsRel"] else 0.0,
-                        videoCoord_x=marker["videoCoordsRel"]["x"],
-                        videoCoord_y=marker["videoCoordsRel"]["y"],
-                        videoCoord_z=marker["videoCoordsRel"]["z"] if "z" in marker["videoCoordsRel"] else 0.0,
+                for obj in data.get("object_data"):
+                    calibration_assets.object_data.create(
+                        name=obj.get("name"),
+                        set=obj.get("set"),
+                        active=obj.get("active"),
+                        comp_area_coords_rel=obj.get("compAreaCoordsRel"),
+                        video_coords_rel=obj.get("videoCoordsRel")
                     )
             calibration_assets.save()
 
@@ -91,9 +90,9 @@ class CalibrationAssetsDelete(View):
         try:
             calibration_assets = CalibrationAssets.objects.get(id=data.get("id"))
             calibration_assets.delete()
-            if "marker_data" in data:
-                for marker in data.get("marker_data"):
-                    marker.delete()
+            if "object_data" in data:
+                for obj in data.get("object_data"):
+                    obj.delete()
             return JsonResponse({"status": "ok"})
         except CalibrationAssets.DoesNotExist:
             return JsonResponse({"status": "error", "type": "not_exist"})   

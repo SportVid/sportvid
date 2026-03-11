@@ -57,7 +57,7 @@ services:
       - prod
 
   analyser:
-    container_name: analyser_prod
+    container_name: analyser_dev
     build:
       context: .
     env_file:
@@ -77,14 +77,14 @@ services:
       - prod
 
   memcached:
-    container_name: memcached_prod
+    container_name: memcached_dev
     image: memcached:1.6.10-buster
     command: -I 32m
     networks:
       - prod
 
   valkey:
-    container_name: valkey_prod
+    container_name: valkey_dev
     image: valkey/valkey:8.1.1-alpine
     command: /usr/local/bin/valkey-server --port ${VALKEY_PORT} --bind 0.0.0.0
     ports:
@@ -93,7 +93,7 @@ services:
       - prod
 
   celery:
-    container_name: celery_prod
+    container_name: celery_dev
     build:
       context: .
     env_file:
@@ -132,7 +132,7 @@ services:
       - prod
 
   backend:
-    container_name: backend_prod
+    container_name: backend_dev
     build:
       context: .
       args:
@@ -144,7 +144,7 @@ services:
     environment:
       - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
     env_file:
-     - /opt/deploy/.env.prod
+      - /opt/deploy/.env.prod
     volumes:
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
@@ -173,8 +173,11 @@ services:
       - "--capture-output"
       - "--log-level"
       - "${LOG_LEVEL}"
+      - "--timeout"
+      - "300"
       - "--workers=${GUNICORN_WORKERS}"
     depends_on:
+      # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
       # postgres:
       #   condition: service_healthy
       memcached:
@@ -186,7 +189,7 @@ services:
       - prod
 
   frontend:
-    container_name: frontend_prod
+    container_name: frontend_dev
     build:
       context: ./frontend
     volumes:

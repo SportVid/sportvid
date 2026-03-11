@@ -42,7 +42,7 @@ const container = ref(null);
 const canvas = ref(null);
 const canvasStyle = ref({ width: props.width, height: props.height });
 
-let scope, tool;
+let scope;
 let handleGroup, handleLeft, handleRight, handleBar;
 let selectionLayer, scaleLayer;
 
@@ -63,20 +63,20 @@ watch(
   () => startTime,
   (val) => {
     hiddenStartTime.value = val;
-    draw();
+    nextTick(() => draw());
   }
 );
 watch(
   () => endTime,
   (val) => {
     hiddenEndTime.value = val;
-    draw();
+    nextTick(() => draw());
   }
 );
 watch(duration, () => {
   hiddenStartTime.value = startTime.value;
   hiddenEndTime.value = endTime.value;
-  draw();
+  nextTick(() => draw());
 });
 watch(hiddenStartTime, () => {
   nextTick(() => {
@@ -129,8 +129,6 @@ function draw() {
   canvasHeight.value = scope.view.size.height;
 
   if (isNaN(canvasWidth.value / duration.value)) return;
-
-  tool = new paper.Tool();
 
   drawScale();
   drawSelection();
@@ -257,20 +255,24 @@ function drawSelection() {
   handleGroup = new paper.Group([path, handleLeft, handleRight]);
 
   handleLeft.onMouseDrag = (event) => {
-    const dt = xToTime(event.delta.x);
-    hiddenStartTime.value =
-      dt > 0
-        ? Math.min(hiddenStartTime.value + dt, hiddenEndTime.value - minTime)
-        : Math.max(hiddenStartTime.value + dt, 0);
+    let newStart = hiddenStartTime.value + xToTime(event.delta.x);
+
+    if (newStart < 0) newStart = 0;
+
+    if (newStart > hiddenEndTime.value - minTime) newStart = hiddenEndTime.value - minTime;
+
+    hiddenStartTime.value = newStart;
     onSelectionChange();
   };
 
   handleRight.onMouseDrag = (event) => {
-    const dt = xToTime(event.delta.x);
-    hiddenEndTime.value =
-      dt < 0
-        ? Math.max(hiddenEndTime.value + dt, hiddenStartTime.value + minTime)
-        : Math.min(hiddenEndTime.value + dt, duration.value);
+    let newEnd = hiddenEndTime.value + xToTime(event.delta.x);
+
+    if (newEnd > duration.value) newEnd = duration.value;
+
+    if (newEnd < hiddenStartTime.value + minTime) newEnd = hiddenStartTime.value + minTime;
+
+    hiddenEndTime.value = newEnd;
     onSelectionChange();
   };
 
@@ -325,7 +327,7 @@ onMounted(() => {
     redraw.value = setTimeout(onResize, 100);
   };
 
-  draw();
+  nextTick(() => draw());
 });
 onBeforeUnmount(() => {
   if (scope) {
@@ -334,5 +336,18 @@ onBeforeUnmount(() => {
     scope.project.clear();
     scope.remove();
   }
+});
+watch(
+  () => tabStore.visualizationTabId,
+  () => {
+    nextTick(() => draw());
+  }
+);
+
+onMounted(() => {
+  window.addEventListener("resize", onResize);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", onResize);
 });
 </script>

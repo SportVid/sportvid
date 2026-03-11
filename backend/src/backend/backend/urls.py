@@ -15,6 +15,13 @@ urlpatterns = [
         views.register, name="register"),
     path("user/get",
         views.UserGet.as_view(), name="user_get"),
+    path("user/update",
+        views.user_update, name="user_update"),
+    path("user/delete",
+        views.user_delete, name="user_delete"),
+    # ---------- ADMIN
+    path("user/admin/user/list",
+        views.user_list, name="admin_user_list"),
     # ---------- VIDEO
     path("video/upload",
         views.VideoUpload.as_view(), name="video_upload"),
@@ -39,6 +46,8 @@ urlpatterns = [
         views.TrackingDataRename.as_view(), name="tracking_data_rename"),
     path("tracking_data/delete",
         views.TrackingDataDelete.as_view(), name="tracking_data_delete"),
+    path("tracking_data/pos_data/chunk",
+        views.TrackingDataPosDataChunk.as_view(), name="tracking_data_pos_data_chunk"),
     # ---------- POSITION DATA / BBOXES
     path("position_data/bboxes/edit",
          views.BoundingBoxesChange.as_view(), name="position_data_bboxes_edit"),

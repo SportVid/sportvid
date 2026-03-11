@@ -79,7 +79,7 @@
         </v-card-title>
         <v-card-text>
           <v-list dense>
-            <v-subheader>Clusters</v-subheader>
+            <div>Clusters</div>
             <v-list-item-group
               v-model="toMoveCluster"
               color="primary"

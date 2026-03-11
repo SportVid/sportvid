@@ -1,10 +1,11 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTabStore } from "./tabs";
-import { useBboxesStore } from "@/stores/bboxes";
+import { useTopViewStore } from "@/stores/top_view";
+import { useVideoStore } from "@/stores/video";
 
 export const useTutorialStore = defineStore("tutorial", () => {
   const router = useRouter();
@@ -12,7 +13,8 @@ export const useTutorialStore = defineStore("tutorial", () => {
 
   const calibrationAssetStore = useCalibrationAssetStore();
   const tabStore = useTabStore();
-  const bboxesStore = useBboxesStore();
+  const topViewStore = useTopViewStore();
+  const videoStore = useVideoStore();
 
   const currentTutorialId = ref(null);
   const currentStepId = ref(null);
@@ -25,6 +27,25 @@ export const useTutorialStore = defineStore("tutorial", () => {
 
   const modalPluginVisible = ref(false);
 
+  function evaluateRequirements(tutorial) {
+    const missing = [];
+
+    if (tutorial.requirements?.length) {
+      tutorial.requirements.forEach((req) => {
+        switch (req) {
+          case "video-uploaded":
+            if (videoStore.all.length === 0) missing.push(tutorialRequirements[req]);
+            break;
+        }
+      });
+    }
+
+    return {
+      isAvailable: missing.length === 0,
+      missing,
+    };
+  }
+
   const tutorials = [
     {
       id: "position-data-generation",
@@ -32,6 +53,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
       description: t("modal.tutorial.position_data_generation.description"),
       icon: "mdi-crosshairs-gps",
       disabled: false,
+      requirements: ["video-uploaded", "t1", "t2"],
     },
     {
       id: "timeline-plugin",
@@ -39,6 +61,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
       description: t("modal.tutorial.timeline_plugin.description"),
       icon: "mdi-timeline-text",
       disabled: true,
+      requirements: ["video-uploaded"],
     },
     {
       id: "run-aggregation",
@@ -46,6 +69,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
       description: t("modal.tutorial.run_aggregation.description"),
       icon: "mdi-run-fast",
       disabled: true,
+      requirements: ["video-uploaded"],
     },
     {
       id: "kpi-visualization",
@@ -53,6 +77,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
       description: t("modal.tutorial.kpi_visualization.description"),
       icon: "mdi-chart-line",
       disabled: true,
+      requirements: ["video-uploaded"],
     },
     {
       id: "data-export",
@@ -60,8 +85,19 @@ export const useTutorialStore = defineStore("tutorial", () => {
       description: t("modal.tutorial.data_export.description"),
       icon: "mdi-file-export",
       disabled: true,
+      requirements: ["video-uploaded"],
     },
   ];
+  const availableTutorials = computed(() =>
+    tutorials.map((t) => {
+      const result = evaluateRequirements(t);
+      return {
+        ...t,
+        isAvailable: result.isAvailable,
+        missingRequirements: result.missing,
+      };
+    })
+  );
 
   const tutorialSteps = {
     "position-data-generation": {
@@ -102,7 +138,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
               if (tabStore.analysisTabId !== "calibration") {
                 tabStore.analysisTabId = "calibration";
               }
-              const showMenu = calibrationAssetStore.marker.length === 0;
+              const showMenu = calibrationAssetStore.calibrationAssetObjects.length === 0;
               if (!showMenu) {
                 tour.value.next();
               } else {
@@ -223,6 +259,13 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
   };
 
+  const tutorialRequirements = {
+    "video-uploaded": {
+      id: "video-uploaded",
+      text: t("modal.tutorial.missing_requirements.video_uploaded"),
+    },
+  };
+
   function createClickToNextStepHandler(currentStepIndex, forbiddenStepIds = []) {
     let targetEl = null;
     let onClick;
@@ -319,6 +362,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
 
   return {
     tutorials,
+    availableTutorials,
     tutorialSteps,
     modalPluginVisible,
     isTutorialRunning,

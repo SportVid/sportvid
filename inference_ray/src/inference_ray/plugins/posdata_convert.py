@@ -61,22 +61,24 @@ class PosDataConvert(
         import pandas as pd
         
         df = pd.read_csv(t_data, delimiter=parameters["delimiter"])
-         
-        df = df.drop(['formatted local time', 'mapped id', 'full name', 'group id'], axis=1)
-        df["game_section"] = 0
+        
+        # Rename relevant Kinexon columns to unified names
         df = df.rename(columns={
             "ts in ms": "timestamp", 
-            "number": "player_id", 
-            "group name": "team_id", 
+            "number": "player_id",
+            "full name": "player_name",
+            "group id": "team_id",
+            "group name": "team_name",
             "x in m": "pos_x", 
             "y in m": "pos_y"
         })
         
-        # rearrange indices to keep it consistent with dfl
-        cols = list(df.columns)
-        pos_x, pos_y, gs = cols.index('pos_x'), cols.index('pos_y'), cols.index('game_section')
-        cols[pos_x], cols[pos_y], cols[gs] = cols[gs], cols[pos_x], cols[pos_y]
-        df = df[cols]
+        df["game_section"] = 0
+        df["player_number"] = df["player_id"]  # For KNX, player_id IS the shirt number
+        
+        # Keep only relevant columns, drop everything else (speed, acceleration, etc.)
+        keep_cols = ['timestamp', 'player_id', 'player_name', 'team_id', 'team_name', 'game_section', 'pos_x', 'pos_y', 'player_number']
+        df = df[[c for c in keep_cols if c in df.columns]]
         
         df["pos_x"] = df["pos_x"].apply(lambda x: round(x, ndigits=2))
         df["pos_y"] = df["pos_y"].apply(lambda x: round(x, ndigits=2))
@@ -160,6 +162,26 @@ class PosDataConvert(
         pitch_x = float(root.findall("./MatchInformation/Environment")[0].attrib["PitchX"])
         pitch_y = float(root.findall("./MatchInformation/Environment")[0].attrib["PitchY"])
         
+        # ---- Extract team and player names/numbers from matchinfo XML
+        team_name_lookup = {}
+        player_name_lookup = {}
+        player_number_lookup = {}
+        for team_el in root.findall("./MatchInformation/Teams/Team"):
+            tid = team_el.get("TeamId")
+            tname = team_el.get("TeamName") or tid
+            team_name_lookup[tid] = tname
+            for player_el in team_el.findall("Players/Player"):
+                pid = player_el.get("PersonId")
+                pname = player_el.get("Shortname") or pid
+                pnumber = player_el.get("ShirtNumber", "")
+                player_name_lookup[pid] = pname
+                player_number_lookup[pid] = int(pnumber) if pnumber.isdigit() else pname
+        
+        # Map names and numbers into DataFrame
+        df["team_name"] = df["team_id"].map(team_name_lookup)
+        df["player_name"] = df["player_id"].map(player_name_lookup)
+        df["player_number"] = df["player_id"].map(player_number_lookup)
+
         self.meta_dict.update({
             "kickoff_time": int(datetime.fromisoformat(root.findall("./MatchInformation/General")[0].attrib["KickoffTime"]).timestamp()*1000),
             "total_time_first_half": root.findall("./MatchInformation/OtherGameInformation")[0].attrib["TotalTimeFirstHalf"],
@@ -216,6 +238,22 @@ class PosDataConvert(
                 'pos_y': 'float32'
             })
             df = df.loc[:, ~df.columns.str.contains('^Unnamed')]  # remove empty columns
+            # ---- Extract name/number mappings and drop auxiliary columns
+            player_name_map = {}
+            player_number_map = {}
+            team_name_map = {}
+            if 'player_name' in df.columns:
+                for pid, pname in df[['player_id', 'player_name']].drop_duplicates().values:
+                    player_name_map[pid] = pname
+                df = df.drop('player_name', axis=1)
+            if 'player_number' in df.columns:
+                for pid, pnum in df[['player_id', 'player_number']].drop_duplicates().values:
+                    player_number_map[pid] = pnum
+                df = df.drop('player_number', axis=1)
+            if 'team_name' in df.columns:
+                for tid, tname in df[['team_id', 'team_name']].drop_duplicates().values:
+                    team_name_map[tid] = tname
+                df = df.drop('team_name', axis=1)
             # ---- Data/Coords normalization
             # origin (0,0)^T is at the kickoff, i.e. x values left of kickoff are negative & y values below kickoff are negative
             if parameters["origin"] == "kickoff":  
@@ -233,7 +271,7 @@ class PosDataConvert(
             # ---- FPS filtering: checks if specified fps parameter is in an applicable range
             unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
             diffs = unique_timestamps[1:] - unique_timestamps[:-1]
-            freq = diffs.mean()
+            freq = np.median(diffs)
             origin_fps = int(np.rint(1000./freq))
             actual_fps = origin_fps
             
@@ -316,29 +354,37 @@ class PosDataConvert(
 
             unique_teams = list(df["team_id"].unique())
             if parameters["format"] == "kinexon":
-                ball_id = parameters["team_id_ball"]
+                ball_name = parameters["team_id_ball"]
+                # reverse lookup: find team_id whose team_name matches the ball parameter
+                ball_id = next((tid for tid, tname in team_name_map.items() if tname == ball_name), ball_name)
             elif parameters["format"] == "dfl":
                 ball_id = 'BALL'
                 self.meta_dict["kickoff_time"] = int( # type: ignore
                     self.meta_dict["kickoff_time"] - unique_timestamps.min()) 
             
-            # ---- map player and team ids
-            df["team_id"] = df["team_id"].cat.rename_categories({ball_id: 1})
-            self.meta_dict["team_ids"].update({ 1 : ball_id})
-            for i, entry in enumerate(unique_teams):
-                if entry == ball_id: unique_teams.pop(i)
+            # ---- map team ids (build full mapping first, then apply at once to avoid category collisions)
+            team_id_mapping = {ball_id: 1}
+            self.meta_dict["team_ids"].update({ 1 : {"id": ball_id, "name": team_name_map.get(ball_id) or str(ball_id)}})
+            next_id = 2
+            for team_label in unique_teams:
+                if team_label == ball_id:
+                    continue
+                team_id_mapping[team_label] = next_id
+                self.meta_dict["team_ids"].update({ next_id : {"id": team_label, "name": team_name_map.get(team_label) or str(team_label)}})
+                next_id += 1
+            df["team_id"] = df["team_id"].map(team_id_mapping).astype('category')
             
-            # if not is_numeric_dtype(df["team_id"].dtype):
-            for i, team_label in enumerate(unique_teams, start=2):
-                df["team_id"] = df["team_id"].cat.rename_categories({team_label: i})
-                # df["team_id"] = df["team_id"].replace(team_label, i)
-                # df.loc[df["team_id"] == team_label, "team_id"] = i
-                self.meta_dict["team_ids"].update({ i : team_label})
-            if not is_numeric_dtype(df["player_id"].cat.categories.dtype):
-                unique_players = df["player_id"].unique()
-                for i, player_label in enumerate(unique_players, start=1):
-                    df["player_id"] = df["player_id"].cat.rename_categories({player_label: i})
-                    self.meta_dict["player_ids"].update({ i : player_label})
+            # ---- map player ids
+            unique_players = df["player_id"].unique()
+            player_id_mapping = {}
+            for i, player_label in enumerate(unique_players, start=1):
+                player_id_mapping[player_label] = i
+                self.meta_dict["player_ids"].update({ i : {
+                    "id": player_label,
+                    "name": player_name_map.get(player_label) or str(player_label),
+                    "number": player_number_map.get(player_label, player_label)
+                }})
+            df["player_id"] = df["player_id"].map(player_id_mapping).astype('category')
 
             # --- old dict conversion
             # grouped_data = df.groupby(

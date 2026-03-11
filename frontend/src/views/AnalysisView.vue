@@ -1,7 +1,7 @@
 <template>
   <v-main class="main" tabindex="0" ref="main">
     <v-container fluid>
-      <ModalMarkerOverlay v-if="calibrationAssetStore.isAnyReferenceMarkerActive" />
+      <ModalObjectOverlay v-if="calibrationAssetStore.isAnyReferenceObjectActive" />
 
       <v-row class="ma-n2">
         <v-col cols="6">
@@ -25,40 +25,62 @@
             <div class="spinner">
               <i class="mdi mdi-loading mdi-spin" />
             </div>
-            <div class="loading-text">Loading...</div>
+            <div class="loading-text">{{ $t("loading_screen") }}</div>
           </v-card>
 
           <v-card
             v-else
             class="d-flex flex-column flex-nowrap px-2 fill-height"
+            :class="{ 'calibration-card': calibrationAssetStore.calibrationMode }"
             elevation="2"
             ref="topViewCard"
+            style="position: relative"
           >
-            <v-row class="sticky-tabs-bar" justify="center">
-              <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.analysisTabId">
-                <v-tab
-                  v-for="analysisTab in tabStore.analysisTabs"
-                  :key="analysisTab.id"
-                  :value="analysisTab.id"
+            <template v-if="calibrationAssetStore.calibrationMode">
+              <v-row justify="center" class="position-relative">
+                <v-card-title class="mt-5 mb-n1">{{ $t("calibration_asset.title") }}</v-card-title>
+                <v-btn
+                  variant="tonal"
+                  color="error"
+                  size="small"
+                  prepend-icon="mdi-close"
+                  class="calibration-close-btn"
+                  @click="calibrationAssetStore.calibrationMode = false"
                 >
-                  {{ analysisTab.name }}
-                </v-tab>
-              </v-tabs>
-            </v-row>
+                  {{ $t("button.exit") }}
+                </v-btn>
+              </v-row>
 
-            <v-row class="flex-grow-1">
-              <v-col>
-                <v-tabs-window v-model="tabStore.analysisTabId">
-                  <v-tabs-window-item
-                    v-for="analysisTab in tabStore.analysisTabs"
-                    :key="analysisTab.id"
-                    :value="analysisTab.id"
-                  >
-                    <component :is="getAnalysisTabComponent(analysisTab.id)" />
-                  </v-tabs-window-item>
-                </v-tabs-window>
-              </v-col>
-            </v-row>
+              <v-row class="flex-grow-1">
+                <v-col>
+                  <TabWindowCalibration />
+                </v-col>
+              </v-row>
+            </template>
+
+            <template v-else>
+              <v-row justify="center">
+                <v-card-title class="mt-5 mb-n1">
+                  <div class="matchup-title">
+                    <template v-for="(team, index) in matchupTeams" :key="team.id">
+                      <span class="matchup-title-team">
+                        <span class="matchup-title-name">{{ team.name }}</span>
+                        <span class="matchup-title-line" :style="{ backgroundColor: team.color }" />
+                      </span>
+                      <span v-if="index < matchupTeams.length - 1" class="matchup-title-sep"
+                        >:</span
+                      >
+                    </template>
+                  </div>
+                </v-card-title>
+              </v-row>
+
+              <v-row class="flex-grow-1">
+                <v-col>
+                  <TabWindowPositionData />
+                </v-col>
+              </v-row>
+            </template>
           </v-card>
         </v-col>
       </v-row>
@@ -69,7 +91,10 @@
         </v-col>
       </v-row> -->
 
-      <v-row v-if="tabStore.analysisTabId === 'position_data'" class="ma-n2">
+      <v-row
+        v-if="!calibrationAssetStore.calibrationMode && !positionDataStore.isRestoringPosData"
+        class="ma-n2"
+      >
         <v-col>
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2">
             <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.visualizationTabId">
@@ -90,18 +115,6 @@
                     :key="visualizationTab.id"
                     :value="visualizationTab.id"
                   >
-                    <!-- <TabWindowTimeline
-                      v-if="visualizationTab.id === 'timeline'"
-                      :key="tabStore.visualizationTabId"
-                    />
-                    <TabWindowEvents
-                      v-if="visualizationTab.id === 'events'"
-                      :key="tabStore.visualizationTabId"
-                    />
-                    <TabWindowRunningDistance
-                      v-if="visualizationTab.id === 'running_distance'"
-                      :key="tabStore.visualizationTabId"
-                    /> -->
                     <component :is="getVisualizationTabComponent(visualizationTab.id)" />
                   </v-tabs-window-item>
                 </v-tabs-window>
@@ -115,28 +128,28 @@
 
     <v-snackbar v-model="showCalibrationAssetActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ calibrationAssetActionMessage }}</span>
       </div>
     </v-snackbar>
 
     <v-snackbar v-model="showPositionDataActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ positionDataActionMessage }}</span>
       </div>
     </v-snackbar>
 
     <v-snackbar v-model="showPluginRunActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ pluginRunActionMessage }}</span>
       </div>
     </v-snackbar>
 
     <v-snackbar v-model="showBboxDataActionSnackbar">
       <div class="d-flex justify-center">
-        <snackbar-icon />
+        <snackbar-icon-success />
         <span class="text-h6">{{ bboxDataActionMessage }}</span>
       </div>
     </v-snackbar>
@@ -144,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick } from "vue";
+import { ref, computed, onMounted, watch, nextTick, onBeforeUnmount } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
@@ -162,6 +175,7 @@ import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 import { useShotStore } from "@/stores/shot";
 import { useTabStore } from "@/stores/tabs";
 import { usePositionDataStore } from "@/stores/position_data";
+import { useVisualizationStore } from "@/stores/visualization";
 // import * as Keyboard from "../plugins/keyboard";
 import VideoPlayer from "@/components/video/VideoPlayer.vue";
 import TabWindowPositionData from "@/components/tab-window/TabWindowPositionData.vue";
@@ -170,7 +184,7 @@ import TabWindowHeatmap from "@/components/tab-window/TabWindowHeatmap.vue";
 import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
 import TabWindowEvents from "@/components/tab-window/TabWindowEvents.vue";
 import TabWindowRunningDistance from "@/components/tab-window/TabWindowRunningDistance.vue";
-import ModalMarkerOverlay from "@/components/ModalMarkerOverlay.vue";
+import ModalObjectOverlay from "@/components/ModalObjectOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
@@ -197,23 +211,28 @@ const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
 const tabStore = useTabStore();
 const positionDataStore = usePositionDataStore();
+const visualizationStore = useVisualizationStore();
 
-function getAnalysisTabComponent(tabId) {
-  if (tabId === "calibration") {
-    return TabWindowCalibration;
-  } else if (tabId === "position_data") {
-    return TabWindowPositionData;
-  } else if (tabId === "heatmap") {
-    return TabWindowHeatmap;
-  } else {
-    return null;
-  }
-}
+const matchupTeams = computed(() => {
+  const meta = topViewStore.metaDataTopView;
+  if (!meta?.team_ids) return [];
+  return Object.entries(meta.team_ids)
+    .filter(([teamId]) => Number(teamId) !== 1)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([teamId, info]) => ({
+      id: Number(teamId),
+      name: info.name,
+      color: visualizationStore.getTeamColor(Number(teamId)),
+    }));
+});
+
 function getVisualizationTabComponent(tabId) {
   if (tabId === "timeline") {
     return TabWindowTimeline;
   } else if (tabId === "events") {
     return TabWindowEvents;
+  } else if (tabId === "heatmap") {
+    return TabWindowHeatmap;
   } else if (tabId === "running_distance") {
     return TabWindowRunningDistance;
   } else {
@@ -222,30 +241,24 @@ function getVisualizationTabComponent(tabId) {
 }
 
 watch(
-  () => tabStore.analysisTabId,
-  async (newTabId) => {
+  () => calibrationAssetStore.calibrationMode,
+  async (isCalibration) => {
     topViewStore.showItems = false;
 
     await nextTick();
 
-    if (newTabId === "calibration") {
-      calibrationAssetStore.showVideoMarker = true;
-    } else {
-      calibrationAssetStore.showVideoMarker = false;
-    }
-
-    if (newTabId === "position_data" || newTabId === "heatmap") {
-      bboxesStore.showBoundingBox = true;
-    } else {
+    if (isCalibration) {
+      calibrationAssetStore.showVideoAsset = true;
       bboxesStore.showBoundingBox = false;
+    } else {
+      calibrationAssetStore.showVideoAsset = false;
+      bboxesStore.showBoundingBox = true;
     }
 
     topViewStore.showItems = true;
-  }
+  },
+  { immediate: true }
 );
-onMounted(() => {
-  tabStore.visualizationTabId = tabStore.visualizationTabs.find((tab) => tab.id === "timeline")?.id;
-});
 
 const isLoading = ref(true);
 const fetchData = async ({ addResults = true }) => {
@@ -259,6 +272,7 @@ const fetchData = async ({ addResults = true }) => {
 onMounted(async () => {
   try {
     await fetchData({ addResults: true });
+    positionDataStore.restoreFromCache();
   } catch (error) {
   } finally {
     isLoading.value = false;
@@ -517,7 +531,7 @@ const onAnnotateSegment = () => {
 
 const showCalibrationAssetActionSnackbar = ref(false);
 const calibrationAssetActionMessage = ref("");
-const resetcalibrationAssetActionSnackbar = async () => {
+const resetCalibrationAssetActionSnackbar = async () => {
   showCalibrationAssetActionSnackbar.value = false;
   await nextTick();
   showCalibrationAssetActionSnackbar.value = true;
@@ -531,15 +545,15 @@ watch(
   ([save, update, del]) => {
     if (save === true) {
       calibrationAssetActionMessage.value = t("modal.calibration_asset.save.success");
-      resetcalibrationAssetActionSnackbar();
+      resetCalibrationAssetActionSnackbar();
       calibrationAssetStore.calibrationAssetSaveSuccess = false;
     } else if (update === true) {
       calibrationAssetActionMessage.value = t("modal.calibration_asset.update.success");
-      resetcalibrationAssetActionSnackbar();
+      resetCalibrationAssetActionSnackbar();
       calibrationAssetStore.calibrationAssetUpdateSuccess = false;
     } else if (del === true) {
       calibrationAssetActionMessage.value = t("modal.calibration_asset.delete.success");
-      resetcalibrationAssetActionSnackbar();
+      resetCalibrationAssetActionSnackbar();
       calibrationAssetStore.calibrationAssetDeleteSuccess = false;
     }
   }
@@ -636,16 +650,31 @@ watch(
 );
 
 watch(
-  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  () => calibrationAssetStore.isAnyReferenceObjectActive,
   (active) => {
     if (active) {
-      calibrationAssetStore.previousShowVideoMarker = calibrationAssetStore.showVideoMarker;
-      calibrationAssetStore.showVideoMarker = true;
+      calibrationAssetStore.previousShowVideoAsset = calibrationAssetStore.showVideoAsset;
+      calibrationAssetStore.showVideoAsset = true;
     } else {
-      calibrationAssetStore.showVideoMarker = calibrationAssetStore.previousShowVideoMarker;
+      calibrationAssetStore.showVideoAsset = calibrationAssetStore.previousShowVideoAsset;
     }
   },
   { immediate: true }
+);
+
+onBeforeUnmount(() => {
+  positionDataStore.positionDataId = null;
+  positionDataStore.selectedTimeRange = { start: 0, end: 0 };
+  topViewStore.positionDataTopView = {};
+  topViewStore.metaDataTopView = {};
+  bboxesStore.bboxDataInterpolated = {};
+});
+
+watch(
+  () => topViewStore.metaDataTopView,
+  (neww) => {
+    console.log("metaDataTopView changed", neww);
+  }
 );
 </script>
 
@@ -687,5 +716,46 @@ watch(
 .loading-text {
   margin-top: 10px;
   font-size: 18px;
+}
+
+.calibration-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 12px;
+  z-index: 10;
+}
+
+.calibration-card {
+  border: 2px solid rgba(var(--v-theme-secondary), 0.45);
+  transition: border-color 0.3s ease;
+}
+
+.matchup-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.matchup-title-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.matchup-title-name {
+  font-size: 1rem;
+}
+
+.matchup-title-line {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 1px;
+  margin-top: -4px;
+}
+
+.matchup-title-sep {
+  font-size: 1.1rem;
 }
 </style>

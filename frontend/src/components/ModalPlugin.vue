@@ -61,7 +61,12 @@
               <v-card-text style="flex-grow: 1; overflow-y: auto; max-height: 50vh">
                 <div style="padding-bottom: 2em" v-html="selected.description" />
 
-                <Parameters :parameters="selected.parameters" :videoIds="videoIds" />
+                <Parameters
+                  :parameters="selected.parameters"
+                  :videoIds="videoIds"
+                  @create-calibration="onCreateCalibration"
+                  @select-calibration="onSelectCalibration"
+                />
 
                 <v-expansion-panels
                   v-if="selected.optional_parameters && selected.optional_parameters.length > 0"
@@ -95,6 +100,8 @@
       </v-card-text>
     </v-card>
   </v-dialog>
+
+  <ModalCalibrationAssetCreate v-if="showCalibrationCreate" v-model="showCalibrationCreate" />
 </template>
 
 <script setup>
@@ -103,11 +110,14 @@ import { useI18n } from "vue-i18n";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePlayerStore } from "@/stores/player";
 import { useTutorialStore } from "@/stores/tutorial";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import Parameters from "./Parameters.vue";
+import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
 const tutorialStore = useTutorialStore();
+const calibrationAssetStore = useCalibrationAssetStore();
 
 const props = defineProps({
   modelValue: {
@@ -123,6 +133,23 @@ const { t } = useI18n();
 const dialog = ref(props.modelValue);
 const searchPlugin = ref(null);
 const activeNode = ref([]);
+const showCalibrationCreate = ref(false);
+
+const onCreateCalibration = () => {
+  showCalibrationCreate.value = true;
+};
+
+const onSelectCalibration = () => {
+  dialog.value = false;
+  calibrationAssetStore.calibrationMode = true;
+};
+
+watch(showCalibrationCreate, (newVal, oldVal) => {
+  if (oldVal && !newVal && calibrationAssetStore.calibrationAssetObjects.length > 0) {
+    dialog.value = false;
+    calibrationAssetStore.calibrationMode = true;
+  }
+});
 const plugins = ref([
   {
     id: 1,

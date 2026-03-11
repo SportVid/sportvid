@@ -7,7 +7,9 @@ authors = [
     { name = "matthias springstein", email = "matthias.springstein@gmail.com" },
 ]
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "ffmpeg-python"
+]
 
 [project.scripts]
 utils = "utils:main"
