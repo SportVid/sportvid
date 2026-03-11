@@ -17,7 +17,7 @@ case $ENVIRONMENT in
     "shared")
         ENV_FILE="/opt/deploy/.env.db"
         DOCKER_FILE="-f docker-compose.proxy.yml -f docker-compose.db.yml"
-        BRANCH="deploy-dev" # TODO: change to deploy-prod later on?!
+        BRANCH="deploy-prod"
         ;;
     *)
         echo "Usage: $0 {prod|dev|shared} {build|up|down|restart|logs|shell|migrate}"
@@ -75,6 +75,12 @@ exec_docker(){
 
     if ! docker compose -p $ENVIRONMENT --env-file $ENV_FILE \
         $DOCKER_FILE \
+    local original_dir
+    original_dir=$(pwd)
+    prepare
+
+    if ! docker compose -p $ENVIRONMENT --env-file $ENV_FILE \
+        $DOCKER_FILE \
         $DOCKER_CMD; then
         echo "Running cmd '$DOCKER_CMD' failed..."
         cd "$original_dir" || true
@@ -87,7 +93,6 @@ exec_docker(){
 }
 
 case $COMMAND in
-
     "build")
         DOCKER_CMD="up --build -d"
         echo "Building..."
@@ -118,6 +123,15 @@ case $COMMAND in
         exec_docker
         ;;
     "migrate")
+        if [[ "$ENVIRONMENT" == "shared" ]]; then
+            echo "Can not migrate shared environment, exiting..."
+            safe_exit 1
+            return 1
+        else
+            DOCKER_CMD="exec backend python3 backend/src/backend/manage.py migrate"
+	        echo "Migrating..."
+            exec_docker
+        fi
         if [[ "$ENVIRONMENT" == "shared" ]]; then
             echo "Can not migrate shared environment, exiting..."
             safe_exit 1
