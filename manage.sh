@@ -7,12 +7,10 @@ case $ENVIRONMENT in
     "prod"|"production")
         ENV_FILE="/opt/deploy/.env.prod"
         DOCKER_FILE="-f docker-compose.$ENVIRONMENT.yml"
-        DOCKER_FILE="-f docker-compose.$ENVIRONMENT.yml"
         BRANCH="deploy-prod"
         ;;
     "dev"|"development")
         ENV_FILE="/opt/deploy/.env.dev"
-        DOCKER_FILE="-f docker-compose.$ENVIRONMENT.yml"
         DOCKER_FILE="-f docker-compose.$ENVIRONMENT.yml"
         BRANCH="deploy-dev"
         ;;
@@ -22,7 +20,6 @@ case $ENVIRONMENT in
         BRANCH="deploy-prod"
         ;;
     *)
-        echo "Usage: $0 {prod|dev|shared} {build|up|down|restart|logs|shell|migrate}"
         echo "Usage: $0 {prod|dev|shared} {build|up|down|restart|logs|shell|migrate}"
         exit 1
         ;;
@@ -98,19 +95,15 @@ exec_docker(){
 case $COMMAND in
     "build")
         DOCKER_CMD="up --build -d"
-        DOCKER_CMD="up --build -d"
         echo "Building..."
         exec_docker
         ;;
     "up")
         DOCKER_CMD="up -d"
-        DOCKER_CMD="up -d"
         echo "Up..."
         exec_docker
         ;;
     "down")
-        DOCKER_CMD="down"
-        echo "Shutting down..."
         DOCKER_CMD="down"
         echo "Shutting down..."
         exec_docker
