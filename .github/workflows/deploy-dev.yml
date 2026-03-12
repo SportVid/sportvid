@@ -1,4 +1,4 @@
-name: Deploy DEV (via systemctl)
+name: deploy_dev
 
 on:
   push:
