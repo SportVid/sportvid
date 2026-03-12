@@ -175,7 +175,8 @@
       "delete_ref_segment": "Delete Reference Segment",
       "delete_single_ref_segment": "Delete"
     },
-    "time-conflict": "Video markers were set at {time}. Adding a new marker on another timestamp will overwrite the existing ones."
+    "time-conflict": "Video markers were set at {time}. Adding a new marker on another timestamp will overwrite the existing ones.",
+    "go_to_marker_time": "Go back to {time}"
   },
   "position_data": {
     "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",

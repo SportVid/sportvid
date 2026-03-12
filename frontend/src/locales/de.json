@@ -118,7 +118,8 @@
       "view_vid_marker": "Video-Marker anzeigen",
       "add_ref_marker": "Referenzmarker hinzufügen",
       "delete_ref_marker": "Referenzmarker löschen"
-    }
+    },
+    "go_to_marker_time": "Zurück zu {time}"
   },
   "position_data": {
     "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das Bytetrack-Plugin aus oder laden Sie die Positionsdaten manuell hoch.",
