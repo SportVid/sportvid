@@ -57,7 +57,7 @@ services:
       - prod
 
   analyser:
-    container_name: analyser_dev
+    container_name: analyser_prod
     build:
       context: .
     env_file:
@@ -77,14 +77,14 @@ services:
       - prod
 
   memcached:
-    container_name: memcached_dev
+    container_name: memcached_prod
     image: memcached:1.6.10-buster
     command: -I 32m
     networks:
       - prod
 
   valkey:
-    container_name: valkey_dev
+    container_name: valkey_prod
     image: valkey/valkey:8.1.1-alpine
     command: /usr/local/bin/valkey-server --port ${VALKEY_PORT} --bind 0.0.0.0
     ports:
@@ -93,7 +93,7 @@ services:
       - prod
 
   celery:
-    container_name: celery_dev
+    container_name: celery_prod
     build:
       context: .
     env_file:
@@ -132,7 +132,7 @@ services:
       - prod
 
   backend:
-    container_name: backend_dev
+    container_name: backend_prod
     build:
       context: .
       args:
@@ -189,7 +189,7 @@ services:
       - prod
 
   frontend:
-    container_name: frontend_dev
+    container_name: frontend_prod
     build:
       context: ./frontend
     volumes:
