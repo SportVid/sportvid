@@ -1,9 +1,9 @@
-name: Deploy DEV (via systemctl)
+name: deploy_prod
 
 on:
   push:
     branches:
-      - deploy-dev
+      - deploy-prod
 
 jobs:
   deploy:
@@ -12,6 +12,6 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
-      - name: Restart dev systemd service
+      - name: Restart prod systemd service
         run: |
-          systemctl restart sportvid_dev
+          systemctl restart sportvid_prod
