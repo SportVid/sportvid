@@ -23,5 +23,6 @@ services:
       # - /var/www/prod:/prod/dist
       - /etc/cert/:/etc/cert:ro
       - assets:/var/www/html:ro  # mounts shared vol.
+      - /auth/htpasswd:/etc/nginx/.htpasswd:ro  # basic access control
     networks:
       - shared
