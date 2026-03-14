@@ -272,6 +272,7 @@ const fetchData = async ({ addResults = true }) => {
 onMounted(async () => {
   try {
     await fetchData({ addResults: true });
+    topViewStore.setSportFromVideo(playerStore.video?.sport);
     positionDataStore.restoreFromCache();
   } catch (error) {
   } finally {

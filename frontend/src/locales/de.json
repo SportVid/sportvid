@@ -118,7 +118,8 @@
       "view_vid_marker": "Video-Marker anzeigen",
       "add_ref_marker": "Referenzmarker hinzufügen",
       "delete_ref_marker": "Referenzmarker löschen"
-    }
+    },
+    "go_to_marker_time": "Zurück zu {time}"
   },
   "position_data": {
     "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das Bytetrack-Plugin aus oder laden Sie die Positionsdaten manuell hoch.",
@@ -135,6 +136,11 @@
         "title": "Positionsdaten",
         "upload": "Positionsdaten hochladen",
         "select": "Positionsdaten auswählen"
+      },
+      "set_grid": {
+        "title": "Raster",
+        "longitudinal": "Längsstreifen",
+        "transverse": "Querstreifen"
       }
     }
   },
@@ -244,7 +250,8 @@
         "position": "Aktuelle Position auswählen",
         "age_group": "Altersgruppe auswählen",
         "total_teams": "Gesamtzahl der Teams auswählen",
-        "out_of": "von"
+        "out_of": "von",
+        "sport": "Sportart"
       },
       "delete": {
         "success": "Video erfolgreich gelöscht"

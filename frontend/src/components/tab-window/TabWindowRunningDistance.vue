@@ -62,7 +62,9 @@
 
         <v-menu location="bottom" :close-on-content-click="false">
           <template #activator="{ props }">
-            <v-btn v-bind="props" size="small" style="height: 40px" class="mt-n2"> KPI </v-btn>
+            <v-btn v-bind="props" size="small" style="height: 40px" class="mt-n2">
+              {{ $t("visualization.running_distance.kpi_selection.title") }}
+            </v-btn>
           </template>
 
           <v-list class="py-0" density="compact" width="300px">
@@ -97,6 +99,20 @@
               </v-list-item>
             </template>
           </v-list>
+        </v-menu>
+
+        <v-menu location="bottom" :close-on-content-click="false">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" size="small" style="height: 40px" class="mt-n2">
+              {{ $t("visualization.running_distance.zone_selection.title") }}
+            </v-btn>
+          </template>
+
+          <ZoneSelectorPicker
+            v-model="selectedZones"
+            :sport="topViewStore.currentSport"
+            :area-size="topViewStore.currentAreaSize"
+          />
         </v-menu>
 
         <v-menu location="bottom">
@@ -297,6 +313,7 @@
         :windowFrames="windowFrames"
         :playerOptions="playerOptions"
         :playerColors="playerColors"
+        :selectedZones="selectedZones"
       />
 
       <div v-if="groupMode === 'player'" class="chart-legend mt-2">
@@ -350,6 +367,7 @@ import { useVideoStore } from "@/stores/video";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import RunningDistanceTimeSelector from "../kpi/RunningDistanceTimeSelector.vue";
 import KpiChart from "../kpi/KpiChart.vue";
+import ZoneSelectorPicker from "../kpi/ZoneSelectorPicker.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
 import { debounce } from "lodash";
@@ -365,6 +383,17 @@ const { t } = useI18n();
 
 const viewMode = ref("table");
 const groupMode = ref("player");
+
+// Initialize with all 25 pitch zones selected (full pitch)
+const LONG_BOUNDS = [0, 0.2025, 0.365, 0.635, 0.7955, 1];
+const TRANS_BOUNDS = [0, 0.1575, 0.33, 0.67, 0.8425, 1];
+const initialZones = [];
+for (let r = 0; r < 5; r++) {
+  for (let c = 0; c < 5; c++) {
+    initialZones.push({ x0: TRANS_BOUNDS[c], y0: LONG_BOUNDS[r], x1: TRANS_BOUNDS[c + 1], y1: LONG_BOUNDS[r + 1] });
+  }
+}
+const selectedZones = ref(initialZones);
 
 const kpiOptions = [
   { id: "running_distance_cumulative", kpi: "running_distance", mode: "cumulative" },
@@ -541,7 +570,8 @@ const triggerDistanceCalc = debounce(async () => {
       selectedStartFrame.value,
       selectedEndFrame.value,
       playerStore.video?.field_length || 105,
-      playerStore.video?.field_width || 68
+      playerStore.video?.field_width || 68,
+      selectedZones.value
     );
     runningDistanceItems.value = result;
   } catch (err) {
@@ -549,7 +579,8 @@ const triggerDistanceCalc = debounce(async () => {
     runningDistanceItems.value = positionDataStore.calculateRunningDistances(
       selectedPlayerIds.value,
       selectedStartFrame.value,
-      selectedEndFrame.value
+      selectedEndFrame.value,
+      selectedZones.value
     );
   } finally {
     isComputingDistance.value = false;
@@ -557,7 +588,7 @@ const triggerDistanceCalc = debounce(async () => {
 }, 150);
 
 watch(
-  [selectedPlayerIds, selectedStartFrame, selectedEndFrame, () => topViewStore.positionDataTopView],
+  [selectedPlayerIds, selectedStartFrame, selectedEndFrame, () => topViewStore.positionDataTopView, selectedZones],
   () => triggerDistanceCalc(),
   { immediate: true }
 );

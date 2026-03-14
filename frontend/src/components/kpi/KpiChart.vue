@@ -30,6 +30,7 @@ const props = defineProps({
   windowFrames: { type: Number, default: 0 }, // frames for display label
   playerOptions: { type: Array, default: () => [] },
   playerColors: { type: Object, default: () => ({}) },
+  selectedZones: { type: Array, default: () => [] },
 });
 
 const plotContainer = ref(null);
@@ -81,6 +82,14 @@ const getPlayerNumber = (playerId) => {
   const num = meta?.player_ids?.[playerId]?.number;
   return num != null ? num : playerId;
 };
+
+function isInAnyZone(x, y, zones) {
+  if (!zones || zones.length === 0) return false;
+  for (const z of zones) {
+    if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1) return true;
+  }
+  return false;
+}
 
 const getTeamName = (teamId) => {
   const meta = topViewStore.metaDataTopView;
@@ -145,6 +154,7 @@ function buildRawTimeSeries() {
 
       const pp = prevPlayers.find((p) => p[0] === pid);
       if (!pp) continue;
+      if (!isInAnyZone(cp[3], cp[4], props.selectedZones)) continue;
 
       const dx = (cp[3] - pp[3]) * fieldLength;
       const dy = (cp[4] - pp[4]) * fieldWidth;

@@ -100,6 +100,7 @@ class Video(models.Model):
     current_position = models.IntegerField(blank=True, null=True)
     total_number_of_teams = models.IntegerField(blank=True, null=True)
     age_group = models.CharField(blank=True, null=True)
+    sport = models.CharField(max_length=64, blank=True, null=True)
 
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
@@ -120,6 +121,7 @@ class Video(models.Model):
             "current_position": self.current_position,
             "total_number_of_teams": self.total_number_of_teams,
             "age_group": self.age_group,
+            "sport": self.sport,
             "status": self.status,
             "processing": True if self.status == self.STATUS_PROCESSING else False,
         }

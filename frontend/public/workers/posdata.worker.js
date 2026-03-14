@@ -10,6 +10,15 @@
  * so the main thread can match responses to promises.
  */
 
+function isInAnyZone(x, y, zones) {
+  if (!zones || zones.length === 0) return false;
+  for (var zi = 0; zi < zones.length; zi++) {
+    var z = zones[zi];
+    if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1) return true;
+  }
+  return false;
+}
+
 /* eslint-disable no-restricted-globals */
 self.onmessage = function (e) {
   var msg = e.data;
@@ -49,6 +58,7 @@ function handleRunningDistance(id, msg) {
   var endFrame = msg.endFrame;
   var fieldLength = msg.fieldLength;
   var fieldWidth = msg.fieldWidth;
+  var zones = msg.zones || [];
 
   var playerIdsSet = {};
   for (var pi = 0; pi < playerIds.length; pi++) {
@@ -100,6 +110,7 @@ function handleRunningDistance(id, msg) {
         if (cp[1] === 1) continue;
         var pp = prevMap[cp[0]];
         if (!pp) continue;
+        if (!isInAnyZone(cp[3], cp[4], zones)) continue;
 
         var dx = (cp[3] - pp[3]) * fieldLength;
         var dy = (cp[4] - pp[4]) * fieldWidth;

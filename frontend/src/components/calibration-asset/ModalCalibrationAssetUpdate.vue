@@ -21,19 +21,10 @@
           style="width: 260px"
         />
 
-        <v-select
-          v-model="template"
-          :items="topViewStore.sports.map((sport) => sport.title)"
-          :label="$t('modal.calibration_asset.save.template')"
-          variant="underlined"
-          class="mr-6"
-          style="width: 260px"
-        />
-
         <v-btn
-          @click="updateCalibrationAsset(name, template, objectType)"
+          @click="updateCalibrationAsset(name, topViewStore.currentSport.title, objectType)"
           :disabled="
-            !name || !template || !objectType || !calibrationAssetStore.allAssetObjectsValid
+            !name || !calibrationAssetStore.allAssetObjectsValid
           "
           size="small"
         >
@@ -74,7 +65,6 @@ const name = computed({
     nameProxy.value = val;
   },
 });
-const template = ref(topViewStore.currentSport.title);
 const objectType = ref(calibrationAssetStore.calibrationAssetType);
 
 const updateCalibrationAsset = (name, template, objectType) => {

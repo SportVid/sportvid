@@ -87,32 +87,20 @@
       <v-menu location="top">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
-            {{ topViewStore.currentSport.title }}
+            {{ $t("position_data.area_size") }}
           </v-btn>
         </template>
-        <v-list class="py-0" density="compact" width="115px">
-          <v-menu location="end" open-on-hover v-for="sport in topViewStore.sports" :key="sport">
-            <template #activator="{ props }">
-              <v-list-item v-bind="props" class="menu-item">
-                <v-list-item-title class="d-flex justify-space-between">
-                  {{ sport.title }}
-                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
-                </v-list-item-title>
-              </v-list-item>
-            </template>
-            <v-list class="py-0" density="compact">
-              <v-list-item
-                v-for="(areaData, areaSize) in sport.areas"
-                :key="areaSize"
-                class="menu-item"
-                @click="topViewStore.onSportChange(sport.title, areaSize)"
-              >
-                <v-list-item-title class="my-0">
-                  {{ areaData.title }}
-                </v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
+        <v-list class="py-0" density="compact">
+          <v-list-item
+            v-for="(areaData, areaSize) in topViewStore.currentSport.areas"
+            :key="areaSize"
+            class="menu-item"
+            @click="topViewStore.onSportChange(topViewStore.currentSport.title, areaSize)"
+          >
+            <v-list-item-title class="my-0">
+              {{ areaData.title }}
+            </v-list-item-title>
+          </v-list-item>
         </v-list>
       </v-menu>
 
@@ -185,6 +173,64 @@
               {{ $t("position_data.display_settings.offset") }}
             </v-list-item-title>
           </v-list-item>
+
+          <v-menu location="end" open-on-hover>
+            <template #activator="{ props }">
+              <v-list-item v-bind="props" class="menu-item">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.set_grid.title") }}
+                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+            <v-list class="py-0" density="compact" width="220px">
+              <v-list-item class="menu-item" @click.stop>
+                <v-list-item-title class="d-flex justify-space-between align-center">
+                  {{ $t("position_data.display_settings.set_grid.longitudinal") }}
+                  <v-btn-toggle
+                    v-model="topViewStore.gridLongitudinal"
+                    color="primary"
+                    border
+                    elevation="2"
+                    mandatory
+                    density="compact"
+                    divided
+                  >
+                    <v-btn
+                      v-for="opt in topViewStore.gridConfig.longitudinal.options"
+                      :key="opt"
+                      :value="opt"
+                      size="x-small"
+                      >{{ opt }}</v-btn
+                    >
+                  </v-btn-toggle>
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-list-item class="menu-item" @click.stop>
+                <v-list-item-title class="d-flex justify-space-between align-center">
+                  {{ $t("position_data.display_settings.set_grid.transverse") }}
+                  <v-btn-toggle
+                    v-model="topViewStore.gridTransverse"
+                    color="primary"
+                    border
+                    elevation="2"
+                    mandatory
+                    density="compact"
+                    divided
+                  >
+                    <v-btn
+                      v-for="opt in topViewStore.gridConfig.transverse.options"
+                      :key="opt"
+                      :value="opt"
+                      size="x-small"
+                      >{{ opt }}</v-btn
+                    >
+                  </v-btn-toggle>
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <v-menu location="end" open-on-hover>
             <template #activator="{ props }">
@@ -743,6 +789,35 @@ function drawCanvas() {
     }
   }
 
+  // Draw grid lines
+  const { horizontal: gridH, vertical: gridV } = topViewStore.gridLines;
+  if (gridH.length || gridV.length) {
+    const areaLeft = ((1 - sport.widthRel) / 2) * w;
+    const areaTop = ((1 - sport.heightRel) / 2) * h;
+    const areaWidth = w * sport.widthRel;
+    const areaHeight = h * sport.heightRel;
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(128,128,128,1)";
+    ctx.lineWidth = 2;
+
+    for (const yRel of gridH) {
+      const py = areaTop + yRel * areaHeight;
+      ctx.beginPath();
+      ctx.moveTo(areaLeft, py);
+      ctx.lineTo(areaLeft + areaWidth, py);
+      ctx.stroke();
+    }
+    for (const xRel of gridV) {
+      const px = areaLeft + xRel * areaWidth;
+      ctx.beginPath();
+      ctx.moveTo(px, areaTop);
+      ctx.lineTo(px, areaTop + areaHeight);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // Draw players and ball
   const frameKey = topViewStore.currentFrameKey;
   const framePositions = topViewStore.positionDataTopView[frameKey];
@@ -855,6 +930,8 @@ watch(
     () => topViewStore.topViewSize.width,
     () => topViewStore.topViewSize.height,
     () => topViewStore.currentAreaSize,
+    () => topViewStore.gridLongitudinal,
+    () => topViewStore.gridTransverse,
     includedPlayers,
   ],
   () => scheduleCanvasDraw()

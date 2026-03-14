@@ -7,11 +7,6 @@ export const useTabStore = defineStore(
   () => {
     const { t } = useI18n();
 
-    const analysisTabId = ref("position_data");
-    const analysisTabs = computed(() => [
-      { id: "position_data", name: t("analysis_view.analysis_tabs.position_data") },
-    ]);
-
     const visualizationTabId = ref("timeline");
     const visualizationTabs = computed(() => [
       { id: "timeline", name: t("analysis_view.visualization_tabs.timeline") },
@@ -21,15 +16,13 @@ export const useTabStore = defineStore(
     ]);
 
     return {
-      analysisTabId,
-      analysisTabs,
       visualizationTabId,
       visualizationTabs,
     };
   },
   {
     persist: {
-      pick: ["analysisTabId", "visualizationTabId"],
+      pick: ["visualizationTabId"],
       storage: sessionStorage,
     },
   }
