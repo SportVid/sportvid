@@ -564,26 +564,6 @@
       style="height: 60px"
       data-tour="calibration-asset-edit-row"
     >
-      <v-menu location="top start">
-        <template #activator="{ props }">
-          <v-btn v-bind="props" size="small">
-            {{ topViewStore.currentSport.title }}
-          </v-btn>
-        </template>
-        <v-list class="py-0" density="compact">
-          <v-list-item
-            v-for="item in topViewStore.sports"
-            :key="item"
-            class="menu-item"
-            v-on:click="topViewStore.onSportChange(item.title)"
-          >
-            <v-list-item-title>
-              {{ item.title }}
-            </v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
-
       <v-menu location="top center">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
@@ -750,31 +730,53 @@
         </v-list>
       </v-menu>
 
-      <v-tooltip
+      <v-menu
         v-if="
           calibrationAssetStore.timeChangeConflict &&
           calibrationAssetStore.videoObjectTime !== playerStore.currentTime
         "
-        class="time-conflict-tooltip"
-        :text="
-          $t('calibration_asset.time-conflict', {
-            time: getTimecode(calibrationAssetStore.videoObjectTime ?? 0),
-          })
-        "
+        open-on-hover
+        :close-delay="200"
+        location="top"
       >
         <template #activator="{ props }">
           <v-icon v-bind="props" color="warning" size="small" class="ml-2 mt-1"
             >mdi-information-outline</v-icon
           >
         </template>
-      </v-tooltip>
+        <div class="time-conflict-menu pa-3 d-flex flex-column align-center">
+          <div>
+            {{
+              $t("calibration_asset.time-conflict", {
+                time: getTimecode(calibrationAssetStore.videoObjectTime ?? 0),
+              })
+            }}
+          </div>
+          <v-btn variant="outlined" size="small" class="mt-2" @click="goToMarkerTime">
+            {{
+              $t("calibration_asset.go_to_marker_time", {
+                time: getTimecode(calibrationAssetStore.videoObjectTime ?? 0),
+              })
+            }}
+          </v-btn>
+        </div>
+      </v-menu>
     </v-row>
   </v-container>
 
-  <v-snackbar color="accent" timeout="3000" v-model="showvideoObjectActionSnackbar">
-    <div class="d-flex justify-center">
-      <snackbar-icon-warning />
-      <span class="text-h6">{{ videoObjectActionMessage }}</span>
+  <v-snackbar color="accent" v-model="showvideoObjectActionSnackbar">
+    <div class="d-flex flex-column align-center">
+      <div class="d-flex justify-center">
+        <snackbar-icon-warning />
+        <span class="text-h6">{{ videoObjectActionMessage }}</span>
+      </div>
+      <v-btn variant="outlined" class="mt-2" @click="goToMarkerTime">
+        {{
+          $t("calibration_asset.go_to_marker_time", {
+            time: getTimecode(calibrationAssetStore.videoObjectTime ?? 0),
+          })
+        }}
+      </v-btn>
     </div>
   </v-snackbar>
 </template>
@@ -1003,6 +1005,14 @@ watch(
 
 const showvideoObjectActionSnackbar = ref(false);
 const videoObjectActionMessage = ref("");
+const goToMarkerTime = () => {
+  if (calibrationAssetStore.videoObjectTime !== null) {
+    playerStore.setCurrentTime(calibrationAssetStore.videoObjectTime);
+    if (showvideoObjectActionSnackbar.value) {
+      showvideoObjectActionSnackbar.value = false;
+    }
+  }
+};
 const resetVideoObjectActionSnackbar = async () => {
   showvideoObjectActionSnackbar.value = false;
   await nextTick();
@@ -1097,8 +1107,12 @@ watch([() => calibrationAssetStore.timeChangeConflict], ([warning]) => {
   opacity: 1;
 }
 
-.time-conflict-tooltip ::v-deep(.v-overlay__content) {
+.time-conflict-menu {
   background-color: rgb(var(--v-theme-accent));
+  color: white;
+  border-radius: 4px;
+  /* font-size: 12px; */
+  width: 500px;
 }
 
 ::v-deep(.object-hover-marker):hover {

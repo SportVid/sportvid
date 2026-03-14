@@ -139,6 +139,7 @@ class VideoUpload(View):
                     current_position=request.POST.get("currentPosition"),
                     total_number_of_teams=request.POST.get("totalNumberofTeams"),
                     age_group=request.POST.get("ageGroup"),
+                    sport=request.POST.get("sport"),
                     status=Video.STATUS_PROCESSING,
                 )
 

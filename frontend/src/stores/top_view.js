@@ -24,6 +24,7 @@ export const useTopViewStore = defineStore(
     const currentAreaSize = ref("full");
 
     const currentSport = ref({
+      key: "soccer",
       title: t("sports.soccer.title"),
       areaImage: require("../assets/top-view/pitch_soccer_full.png"),
       areas: {
@@ -73,6 +74,7 @@ export const useTopViewStore = defineStore(
     });
     const sports = ref([
       {
+        key: "soccer",
         title: t("sports.soccer.title"),
         areaImage: require("../assets/top-view/pitch_soccer_full.png"),
         areas: {
@@ -121,6 +123,7 @@ export const useTopViewStore = defineStore(
         },
       },
       {
+        key: "handball",
         title: t("sports.handball.title"),
         areaImage: require("../assets/top-view/court_handball_full.png"),
         areas: {
@@ -148,6 +151,7 @@ export const useTopViewStore = defineStore(
         },
       },
       {
+        key: "basketball",
         title: t("sports.basketball.title"),
         areaImage: require("../assets/top-view/court_basketball_full.png"),
         areas: {
@@ -175,6 +179,7 @@ export const useTopViewStore = defineStore(
         },
       },
       {
+        key: "climbing",
         title: t("sports.climbing.title"),
         areaImage: require("../assets/top-view/area_climbing_full.png"),
         areas: {
@@ -192,6 +197,7 @@ export const useTopViewStore = defineStore(
       showItems.value = false;
       const sport = sports.value.find((s) => s.title === title);
       if (!sport) return;
+      currentSport.value.key = sport.key;
       currentSport.value.title = sport.title;
       currentSport.value.areas = sport.areas;
       currentSport.value.areaImage =
@@ -210,6 +216,11 @@ export const useTopViewStore = defineStore(
       nextTick(() => {
         showItems.value = true;
       });
+    };
+
+    const setSportFromVideo = (sportKey, areaSize = "full") => {
+      const sport = sports.value.find((s) => s.key === sportKey);
+      if (sport) onSportChange(sport.title, areaSize);
     };
 
     const showSpaceControl = ref(false);
@@ -311,6 +322,29 @@ export const useTopViewStore = defineStore(
       }
     }
 
+    const gridConfig = {
+      longitudinal: {
+        options: [0, 3, 5],
+        positions: {
+          3: [0.2025, 0.7955],
+          5: [0.2025, 0.365, 0.635, 0.7955],
+        },
+      },
+      transverse: {
+        options: [0, 3, 5],
+        positions: {
+          3: [0.33, 0.67],
+          5: [0.1575, 0.33, 0.67, 0.8425],
+        },
+      },
+    };
+    const gridLongitudinal = ref(0);
+    const gridTransverse = ref(0);
+    const gridLines = computed(() => ({
+      horizontal: gridConfig.longitudinal.positions[gridLongitudinal.value] ?? [],
+      vertical: gridConfig.transverse.positions[gridTransverse.value] ?? [],
+    }));
+
     const currentTime = ref(0);
     const currentTimeOffset = ref(0);
 
@@ -351,6 +385,7 @@ export const useTopViewStore = defineStore(
       currentSport,
       sports,
       onSportChange,
+      setSportFromVideo,
       currentAreaSize,
       showItems,
       showSpaceControl,
@@ -366,6 +401,10 @@ export const useTopViewStore = defineStore(
       transformBBoxToPositionDataTopView,
       showPlayerId,
       viewPlayerId,
+      gridConfig,
+      gridLongitudinal,
+      gridTransverse,
+      gridLines,
       currentTime,
       currentFrameKey,
       sortedFrameKeys,

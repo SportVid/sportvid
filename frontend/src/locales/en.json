@@ -95,11 +95,6 @@
     "timelines": "Timelines:"
   },
   "analysis_view": {
-    "analysis_tabs": {
-      "calibration": "Calibration",
-      "position_data": "Position Data",
-      "heatmap": "Heatmap"
-    },
     "visualization_tabs": {
       "select": "Select Visualization",
       "timeline": "Timeline",
@@ -175,10 +170,12 @@
       "delete_ref_segment": "Delete Reference Segment",
       "delete_single_ref_segment": "Delete"
     },
-    "time-conflict": "Video markers were set at {time}. Adding a new marker on another timestamp will overwrite the existing ones."
+    "time-conflict": "Video markers were set at {time}. Adding a new marker on another timestamp will overwrite the existing ones.",
+    "go_to_marker_time": "Go back to {time}"
   },
   "position_data": {
     "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+    "area_size": "Area size",
     "display_settings": {
       "title": "Display Settings",
       "view_bounding_box": "View bounding-boxes",
@@ -186,6 +183,11 @@
       "video_sync": "Sychronise with video",
       "team_colors": "Change team colors",
       "offset": "Set offset",
+      "set_grid": {
+        "title": "Set Grid",
+        "longitudinal": "Longitudinal",
+        "transverse": "Transverse"
+      },
       "view_kpis": {
         "title": "View performance indicator",
         "space_control": "Space control",
@@ -231,7 +233,7 @@
     "running_distance": {
       "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
       "kpi_selection": {
-        "title": "KPI selection",
+        "title": "KPI",
         "running_distance": "Running distance",
         "running_distance_cumulative": "Running distance (cumulative)",
         "running_distance_interval": "Running distance (per {frames} frames)",
@@ -239,6 +241,13 @@
         "velocity_max": "Maximum Velocity",
         "velocity_mean": "Mean Velocity",
         "metabolic_work": "Metabolic work"
+      },
+      "zone_selection": {
+        "title": "Zone",
+        "full_size": "Full size",
+        "all_data": "All data",
+        "clear": "Clear",
+        "selected": "zone(s)"
       },
       "player_view": {
         "player_id": "Player-ID",
@@ -254,7 +263,8 @@
       }
     },
     "heatmap": {
-      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually."
+      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+      "area_size": "Area size"
     },
     "timeline": {
       "not_available": "No timeline available.<br>Please run a plugin that creates a timeline."
@@ -367,6 +377,7 @@
         "age_group": "Select age group",
         "total_teams": "Select total number of teams",
         "out_of": "out of",
+        "sport": "Sport",
         "field_length": "Field length [m]",
         "field_width": "Field width [m]",
         "field_warning": "If no dimensions are specified, default dimensions of {defaultLength}x{defaultWidth} m are used. This may affect the accuracy of the analysis."

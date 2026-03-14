@@ -14,7 +14,7 @@
 
         <v-card-text class="pt-4 scrollable-content">
           <v-form v-if="canUpload">
-            <div class="text-center d-flex justify-center">
+            <div class="text-center d-flex justify-center mb-2">
               <div class="storage-bar-container">
                 <div class="storage-bar-fill" :style="{ width: progressPercentage + '%' }">
                   {{ sizeInWords(usedStorageSize) }} / {{ sizeInWords(maxStorageSize) }}
@@ -46,9 +46,22 @@
                 $t('modal.video.upload.hint', { maxSize: sizeInWords(userStore.maxVideoSize) })
               "
               persistent-hint
+              variant="underlined"
             />
 
-            <v-row dense class="mt-2">
+            <v-select
+              v-model="video.sport"
+              :items="sportOptions"
+              item-title="title"
+              item-value="value"
+              prepend-icon="mdi-run"
+              :label="$t('modal.video.upload.sport')"
+              density="compact"
+              variant="outlined"
+              class="mt-6"
+            />
+
+            <v-row dense>
               <v-col cols="6">
                 <v-text-field
                   v-model.number="video.fieldLength"
@@ -60,6 +73,7 @@
                   min="1"
                   density="comfortable"
                   hide-spin-buttons
+                  variant="underlined"
                 />
               </v-col>
 
@@ -74,6 +88,7 @@
                   min="1"
                   density="comfortable"
                   hide-spin-buttons
+                  variant="underlined"
                 />
               </v-col>
             </v-row>
@@ -185,9 +200,11 @@ import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useVideoUploadStore } from "@/stores/video_upload";
 import { useUserStore } from "@/stores/user";
+import { useTopViewStore } from "@/stores/top_view";
 
 const videoUploadStore = useVideoUploadStore();
 const userStore = useUserStore();
+const topViewStore = useTopViewStore();
 
 const props = defineProps({
   modelValue: {
@@ -202,6 +219,7 @@ const { t } = useI18n();
 const video = ref({
   title: null,
   file: null,
+  sport: null,
   fieldLength: null,
   fieldWidth: null,
   division: null,
@@ -209,6 +227,10 @@ const video = ref({
   totalNumberofTeams: null,
   ageGroup: null,
 });
+
+const sportOptions = computed(() =>
+  topViewStore.sports.map((s) => ({ title: s.title, value: s.key }))
+);
 const analysers = ref([
   {
     label: "Shot Detection",
@@ -281,6 +303,7 @@ const disabled = computed(() => {
     uploadingProgress.value !== 0 ||
     !v.title ||
     !v.file ||
+    !v.sport ||
     !v.division ||
     !v.currentPosition ||
     !v.totalNumberofTeams ||

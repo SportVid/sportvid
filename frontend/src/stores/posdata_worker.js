@@ -128,7 +128,8 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
     startFrame,
     endFrame,
     fieldLength,
-    fieldWidth
+    fieldWidth,
+    zones = []
   ) {
     isCalculating.value = true;
     try {
@@ -143,6 +144,7 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
         endFrame,
         fieldLength,
         fieldWidth,
+        zones,
       });
     } finally {
       isCalculating.value = false;
