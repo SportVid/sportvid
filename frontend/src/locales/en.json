@@ -237,7 +237,7 @@
     "running_distance": {
       "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
       "kpi_selection": {
-        "title": "KPI selection",
+        "title": "KPI",
         "running_distance": "Running distance",
         "running_distance_cumulative": "Running distance (cumulative)",
         "running_distance_interval": "Running distance (per {frames} frames)",
@@ -245,6 +245,13 @@
         "velocity_max": "Maximum Velocity",
         "velocity_mean": "Mean Velocity",
         "metabolic_work": "Metabolic work"
+      },
+      "zone_selection": {
+        "title": "Zone",
+        "full_size": "Full size",
+        "all_data": "All data",
+        "clear": "Clear",
+        "selected": "zone(s)"
       },
       "player_view": {
         "player_id": "Player-ID",

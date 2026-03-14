@@ -176,7 +176,15 @@ export const usePositionDataStore = defineStore(
       }
     };
 
-    function calculateRunningDistances(selectedPlayerIds, startFrame, endFrame) {
+    function isInAnyZone(x, y, zones) {
+      if (!zones || zones.length === 0) return false;
+      for (const z of zones) {
+        if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1) return true;
+      }
+      return false;
+    }
+
+    function calculateRunningDistances(selectedPlayerIds, startFrame, endFrame, zones = []) {
       const distancesByPlayerId = new Map();
 
       const allTimes = Object.keys(topViewStore.positionDataTopView).map(Number);
@@ -220,6 +228,7 @@ export const usePositionDataStore = defineStore(
 
             const prevPlayer = playersPrev.find((p) => p[0] === currPlayer[0]);
             if (!prevPlayer) continue;
+            if (!isInAnyZone(currPlayer[3], currPlayer[4], zones)) continue;
 
             if (
               (visualizationStore.showAggregatedFirst && currPlayer[2] !== 1) ||
