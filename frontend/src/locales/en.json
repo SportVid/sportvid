@@ -187,6 +187,11 @@
       "video_sync": "Sychronise with video",
       "team_colors": "Change team colors",
       "offset": "Set offset",
+      "set_grid": {
+        "title": "Set Grid",
+        "longitudinal": "Longitudinal",
+        "transverse": "Transverse"
+      },
       "view_kpis": {
         "title": "View performance indicator",
         "space_control": "Space control",

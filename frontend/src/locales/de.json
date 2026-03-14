@@ -136,6 +136,11 @@
         "title": "Positionsdaten",
         "upload": "Positionsdaten hochladen",
         "select": "Positionsdaten auswählen"
+      },
+      "set_grid": {
+        "title": "Raster",
+        "longitudinal": "Längsstreifen",
+        "transverse": "Querstreifen"
       }
     }
   },

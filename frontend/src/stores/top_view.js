@@ -311,6 +311,29 @@ export const useTopViewStore = defineStore(
       }
     }
 
+    const gridConfig = {
+      longitudinal: {
+        options: [0, 3, 5],
+        positions: {
+          3: [0.2025, 0.7955],
+          5: [0.2025, 0.365, 0.635, 0.7955],
+        },
+      },
+      transverse: {
+        options: [0, 3, 5],
+        positions: {
+          3: [0.33, 0.67],
+          5: [0.1575, 0.33, 0.67, 0.8425],
+        },
+      },
+    };
+    const gridLongitudinal = ref(0);
+    const gridTransverse = ref(0);
+    const gridLines = computed(() => ({
+      horizontal: gridConfig.longitudinal.positions[gridLongitudinal.value] ?? [],
+      vertical: gridConfig.transverse.positions[gridTransverse.value] ?? [],
+    }));
+
     const currentTime = ref(0);
     const currentTimeOffset = ref(0);
 
@@ -366,6 +389,10 @@ export const useTopViewStore = defineStore(
       transformBBoxToPositionDataTopView,
       showPlayerId,
       viewPlayerId,
+      gridConfig,
+      gridLongitudinal,
+      gridTransverse,
+      gridLines,
       currentTime,
       currentFrameKey,
       sortedFrameKeys,
