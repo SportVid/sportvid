@@ -46,13 +46,6 @@
                   />
 
                   <v-select
-                    v-model="sport"
-                    :items="topViewStore.sports.map((sport) => sport.title)"
-                    :label="$t('modal.position_data.select.sport')"
-                    variant="underlined"
-                    class="mt-2 mx-4"
-                  />
-                  <v-select
                     v-model="areaSize"
                     :items="areaOptions"
                     item-title="title"
@@ -111,13 +104,6 @@
                   </v-list>
 
                   <v-select
-                    v-model="sport"
-                    :items="topViewStore.sports.map((sport) => sport.title)"
-                    :label="$t('modal.position_data.select.sport')"
-                    variant="underlined"
-                    class="mt-2 mx-4"
-                  />
-                  <v-select
                     v-model="areaSize"
                     :items="areaOptions"
                     item-title="title"
@@ -146,7 +132,6 @@
               selectedCalibrationAsset,
               selectedBytetrack,
               selectedPositionData,
-              sport,
               areaSize
             )
           "
@@ -247,11 +232,10 @@ const isButtonDisabled = computed(() => {
     return (
       selectedCalibrationAsset.value === null ||
       selectedBytetrack.value === null ||
-      !sport.value ||
       !areaSize.value
     );
   } else if (selectedMode.value === "manual") {
-    return !selectedPositionData.value || !sport.value || !areaSize.value;
+    return !selectedPositionData.value || !areaSize.value;
   }
   return true;
 });
@@ -260,7 +244,6 @@ const confirmSelection = (
   calibrationAssetId,
   bytetrackPluginId,
   positionDataId,
-  sport,
   areaSize
 ) => {
   if (selectedMode.value === "bytetrack") {
@@ -276,17 +259,16 @@ const confirmSelection = (
     positionDataStore.loadPositionData(positionDataId);
   }
 
-  topViewStore.onSportChange(sport, areaSize);
+  topViewStore.onSportChange(topViewStore.currentSport.title, areaSize);
   dialog.value = false;
 };
 
 const showModalPositionDataRename = ref(false);
 
-const sport = ref(null);
 const areaSize = ref(null);
+const currentSportObj = computed(() => topViewStore.currentSport);
 const areaOptions = computed(() => {
-  if (!sport.value) return [];
-  const s = topViewStore.sports.find((x) => x.title === sport.value);
+  const s = currentSportObj.value;
   if (!s || !s.areas) return [];
   return Object.keys(s.areas).map((areaKey) => ({
     title: s.areas[areaKey].title || areaKey,
@@ -294,13 +276,14 @@ const areaOptions = computed(() => {
   }));
 });
 
-watch(sport, () => {
-  areaSize.value = areaOptions.value.length > 0 ? areaOptions.value[0].value : null;
-});
-
-const currentSportObj = computed(
-  () => topViewStore.sports.find((x) => x.title === sport.value) || null
+watch(
+  () => topViewStore.currentSport.title,
+  () => {
+    areaSize.value = areaOptions.value.length > 0 ? areaOptions.value[0].value : null;
+  },
+  { immediate: true }
 );
+
 const mainPreview = computed(() => {
   return (
     currentSportObj.value.areas?.full?.image ||
@@ -311,8 +294,7 @@ const mainPreview = computed(() => {
 
 const cropPct = computed(() => {
   if (!areaSize.value) return { x: [0, 1], y: [0, 1] };
-  const sportObj =
-    topViewStore.sports.find((x) => x.title === sport.value) || currentSportObj.value;
+  const sportObj = currentSportObj.value;
   let tpl = sportObj?.areas?.[areaSize.value]?.templateCrop ?? sportObj?.areas?.full?.templateCrop;
   return { x: tpl.x, y: tpl.y };
 });

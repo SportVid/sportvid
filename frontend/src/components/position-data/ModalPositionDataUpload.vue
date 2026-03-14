@@ -13,7 +13,7 @@
 
       <v-card-text class="pt-4" style="overflow-y: auto">
         <v-form v-if="canUpload">
-          <div class="text-center d-flex justify-center">
+          <div class="text-center d-flex justify-center mb-2">
             <div class="storage-bar-container">
               <div class="storage-bar-fill" :style="{ width: progressPercentage + '%' }">
                 {{ sizeInWords(usedStorageSize) }} / {{ sizeInWords(maxStorageSize) }}
@@ -56,6 +56,7 @@
               $t('modal.position_data.upload.hint', { maxSize: sizeInWords(userStore.maxFileSize) })
             "
             persistent-hint
+            variant="underlined"
           />
 
           <v-file-input

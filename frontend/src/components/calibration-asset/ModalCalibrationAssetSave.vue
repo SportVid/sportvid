@@ -21,19 +21,10 @@
           style="width: 260px"
         />
 
-        <v-select
-          v-model="template"
-          :items="topViewStore.sports.map((sport) => sport.title)"
-          :label="$t('modal.calibration_asset.save.template')"
-          variant="underlined"
-          class="mr-6"
-          style="width: 260px"
-        />
-
         <v-btn
-          @click="saveCalibrationAsset(name, template, objectType)"
+          @click="saveCalibrationAsset(name, topViewStore.currentSport.title, objectType)"
           :disabled="
-            !name || !template || !objectType || !calibrationAssetStore.allAssetObjectsValid
+            !name || !calibrationAssetStore.allAssetObjectsValid
           "
           size="small"
         >
@@ -63,7 +54,6 @@ const emit = defineEmits();
 const dialog = ref(props.modelValue);
 
 const name = ref(null);
-const template = ref(topViewStore.currentSport.title);
 const objectType = ref(calibrationAssetStore.calibrationAssetType);
 
 const saveCalibrationAsset = (name, template, objectType) => {

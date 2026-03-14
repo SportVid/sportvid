@@ -135,9 +135,9 @@ export const useTutorialStore = defineStore("tutorial", () => {
           buttons: [],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
-              if (tabStore.analysisTabId !== "calibration") {
-                tabStore.analysisTabId = "calibration";
-              }
+              // if (tabStore.analysisTabId !== "calibration") {
+              //   tabStore.analysisTabId = "calibration";
+              // }
               const showMenu = calibrationAssetStore.calibrationAssetObjects.length === 0;
               if (!showMenu) {
                 tour.value.next();
@@ -165,9 +165,9 @@ export const useTutorialStore = defineStore("tutorial", () => {
           ],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
-              if (tabStore.analysisTabId !== "calibration") {
-                tabStore.analysisTabId = "calibration";
-              }
+              // if (tabStore.analysisTabId !== "calibration") {
+              //   tabStore.analysisTabId = "calibration";
+              // }
               resolve();
             });
           },
@@ -213,17 +213,17 @@ export const useTutorialStore = defineStore("tutorial", () => {
           buttons: [],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
-              if (
-                tabStore.analysisTabId === "position_data" &&
-                modalPluginVisible.value === false
-              ) {
-                const showMenu = Object.keys(topViewStore.positionDataTopView).length === 0;
-                if (!showMenu) {
-                  tour.value.next();
-                } else {
-                  resolve();
-                }
-              }
+              // if (
+              //   tabStore.analysisTabId === "position_data" &&
+              //   modalPluginVisible.value === false
+              // ) {
+              //   const showMenu = Object.keys(topViewStore.positionDataTopView).length === 0;
+              //   if (!showMenu) {
+              //     tour.value.next();
+              //   } else {
+              //     resolve();
+              //   }
+              // }
             });
           },
           when: createClickToNextStepHandler(5, []),
@@ -245,12 +245,12 @@ export const useTutorialStore = defineStore("tutorial", () => {
           ],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
-              if (
-                tabStore.analysisTabId === "position_data" &&
-                modalPluginVisible.value === false
-              ) {
-                resolve();
-              }
+              // if (
+              //   tabStore.analysisTabId === "position_data" &&
+              //   modalPluginVisible.value === false
+              // ) {
+              //   resolve();
+              // }
             });
           },
           classes: "tutorial-final-step",

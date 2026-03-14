@@ -95,11 +95,6 @@
     "timelines": "Timelines:"
   },
   "analysis_view": {
-    "analysis_tabs": {
-      "calibration": "Calibration",
-      "position_data": "Position Data",
-      "heatmap": "Heatmap"
-    },
     "visualization_tabs": {
       "select": "Select Visualization",
       "timeline": "Timeline",
@@ -180,6 +175,7 @@
   },
   "position_data": {
     "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+    "area_size": "Area size",
     "display_settings": {
       "title": "Display Settings",
       "view_bounding_box": "View bounding-boxes",
@@ -267,7 +263,8 @@
       }
     },
     "heatmap": {
-      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually."
+      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+      "area_size": "Area size"
     },
     "timeline": {
       "not_available": "No timeline available.<br>Please run a plugin that creates a timeline."
@@ -380,6 +377,7 @@
         "age_group": "Select age group",
         "total_teams": "Select total number of teams",
         "out_of": "out of",
+        "sport": "Sport",
         "field_length": "Field length [m]",
         "field_width": "Field width [m]",
         "field_warning": "If no dimensions are specified, default dimensions of {defaultLength}x{defaultWidth} m are used. This may affect the accuracy of the analysis."

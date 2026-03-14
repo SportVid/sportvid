@@ -13,14 +13,6 @@
 
       <v-card-text class="d-flex align-center">
         <v-select
-          v-model="sport"
-          :items="topViewStore.sports.map((sport) => sport.title)"
-          :label="$t('modal.calibration_asset.create.sport')"
-          variant="underlined"
-          class="mr-6"
-        />
-
-        <v-select
           v-model="objectType"
           :items="objectTypes"
           item-title="title"
@@ -31,8 +23,8 @@
         />
 
         <v-btn
-          @click="createCalibrationAsset(sport, objectType)"
-          :disabled="!sport || !objectType"
+          @click="createCalibrationAsset(topViewStore.currentSport.title, objectType)"
+          :disabled="!objectType"
           size="small"
         >
           {{ $t("button.create") }}
@@ -63,7 +55,6 @@ const emit = defineEmits();
 
 const dialog = ref(props.modelValue);
 
-const sport = ref(null);
 const objectType = ref(null);
 const objectTypes = [
   { value: "marker", title: t("calibration_asset.object_types.marker") },

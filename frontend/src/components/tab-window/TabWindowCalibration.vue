@@ -564,26 +564,6 @@
       style="height: 60px"
       data-tour="calibration-asset-edit-row"
     >
-      <v-menu location="top start">
-        <template #activator="{ props }">
-          <v-btn v-bind="props" size="small">
-            {{ topViewStore.currentSport.title }}
-          </v-btn>
-        </template>
-        <v-list class="py-0" density="compact">
-          <v-list-item
-            v-for="item in topViewStore.sports"
-            :key="item"
-            class="menu-item"
-            v-on:click="topViewStore.onSportChange(item.title)"
-          >
-            <v-list-item-title>
-              {{ item.title }}
-            </v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
-
       <v-menu location="top center">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">

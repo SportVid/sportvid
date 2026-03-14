@@ -250,7 +250,8 @@
         "position": "Aktuelle Position auswählen",
         "age_group": "Altersgruppe auswählen",
         "total_teams": "Gesamtzahl der Teams auswählen",
-        "out_of": "von"
+        "out_of": "von",
+        "sport": "Sportart"
       },
       "delete": {
         "success": "Video erfolgreich gelöscht"
