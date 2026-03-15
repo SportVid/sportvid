@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Read(///wsl.localhost/Ubuntu/home/ypaul/sportvid/**)",
-      "Write(///wsl.localhost/Ubuntu/home/ypaul/sportvid/**)"
-    ]
-  }
-}
