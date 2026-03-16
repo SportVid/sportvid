@@ -174,7 +174,7 @@ services:
       - "--log-level"
       - "${LOG_LEVEL}"
       - "--timeout"
-      - "300"
+      - "1800" # TODO: fix later
       - "--workers=${GUNICORN_WORKERS}"
     depends_on:
       # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
