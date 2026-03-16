@@ -241,6 +241,13 @@ class KpiComputation(
 
                 frame_offset += n_frames
 
+        # ----------------- FRAME INDEX → MILLISECONDS
+        freq = 1000.0 / framerate
+        all_frame_kpis = {
+            int(np.rint(frame_idx * freq)): players
+            for frame_idx, players in all_frame_kpis.items()
+        }
+
         # ----------------- OUTPUT
         meta = {
             "format": fmt,
