@@ -12,7 +12,15 @@
       </v-toolbar>
 
       <v-card-text class="pt-4" style="overflow-y: auto">
-        <v-form>
+        <v-form v-if="canUpload">
+          <div class="text-center d-flex justify-center mb-2">
+            <div class="storage-bar-container">
+              <div class="storage-bar-fill" :style="{ width: progressPercentage + '%' }">
+                {{ sizeInWords(usedStorageSize) }} / {{ sizeInWords(maxStorageSize) }}
+              </div>
+            </div>
+          </div>
+
           <v-text-field
             v-model="positionData.title"
             :counter="120"
@@ -42,8 +50,13 @@
             :label="$t('modal.position_data.upload.file')"
             prepend-icon="mdi-file-upload"
             class="mt-2"
+            density="comfortable"
             show-size
+            :hint="
+              $t('modal.position_data.upload.hint', { maxSize: sizeInWords(userStore.maxFileSize) })
+            "
             persistent-hint
+            variant="underlined"
           />
 
           <v-file-input
@@ -53,7 +66,11 @@
             :label="$t('modal.position_data.upload.meta_data')"
             prepend-icon="mdi-file-upload"
             class="mt-5"
+            density="comfortable"
             show-size
+            :hint="
+              $t('modal.position_data.upload.hint', { maxSize: sizeInWords(userStore.maxFileSize) })
+            "
             persistent-hint
           />
 
@@ -119,14 +136,14 @@
 
           <v-checkbox v-model="checkbox" required class="ml-n2">
             <template #label>
-              <i18n-t keypath="terms_of_service.confirmation" tag="span">
+              <i18n-t keypath="terms_of_use.confirmation" tag="span">
                 <template #title>
                   <router-link
-                    to="/terms-of-service"
+                    to="/terms-of-use"
                     target="_blank"
-                    class="text-primary terms-of-service-link"
+                    class="text-primary terms-of-use-link"
                   >
-                    {{ $t("terms_of_service.title") }}
+                    {{ $t("terms_of_use.title") }}
                   </router-link>
                 </template>
               </i18n-t>
@@ -137,6 +154,12 @@
             {{ $t("button.upload") }}
           </v-btn>
         </v-form>
+
+        <div v-else class="text-center my-4">
+          <span class="text-error">
+            {{ $t("modal.position_data.upload.upload_denied") }}
+          </span>
+        </div>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -146,8 +169,11 @@
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePositionDataStore } from "@/stores/position_data";
+import { useUserStore } from "@/stores/user";
 
 const positionDataStore = usePositionDataStore();
+const userStore = useUserStore();
+
 const { t } = useI18n();
 
 const props = defineProps({
@@ -182,6 +208,22 @@ const origins = [
 
 const checkbox = ref(false);
 const fileValid = ref(false);
+
+const sizeInWords = (size) => {
+  if (size === null || size === undefined) return "0 B";
+
+  const units = ["B", "kB", "MB", "GB", "TB"];
+  let i = 0;
+  let s = size;
+
+  while (s >= 1024 && i < units.length - 1) {
+    s = s / 1024;
+    i++;
+  }
+
+  return Math.round(s * 100) / 100 + units[i];
+};
+
 const validateFile = (file) => {
   if (Array.isArray(file)) {
     file = file[0];
@@ -189,7 +231,15 @@ const validateFile = (file) => {
 
   if (!file || !file.name) {
     fileValid.value = false;
-    return t("modal.position_data.upload.validate.file_required");
+    return t("modal.position_data.upload.validate.file_required", {
+      maxSize: sizeInWords(userStore.maxFileSize),
+    });
+  }
+  if (file.size > userStore.maxFileSize) {
+    fileValid.value = false;
+    return t("modal.position_data.upload.validate.file_exceeds", {
+      maxSize: sizeInWords(userStore.maxFileSize),
+    });
   }
   if (!(file.name.endsWith(".csv") || file.name.endsWith(".xml"))) {
     fileValid.value = false;
@@ -200,9 +250,16 @@ const validateFile = (file) => {
   return true;
 };
 
+const usedStorageSize = computed(() => userStore.usedStorageSize);
+const maxStorageSize = computed(() => userStore.maxStorageSize);
+const remainingStorageSize = computed(() => userStore.remainingStorageSize);
+
 const isUploading = computed(() => positionDataStore.isUploading);
 const uploadingProgress = computed(() => positionDataStore.progress);
 
+const canUpload = computed(() => {
+  return remainingStorageSize.value > 0;
+});
 const disabled = computed(() => {
   if (
     !checkbox.value ||
@@ -218,8 +275,7 @@ const disabled = computed(() => {
   }
   if (
     positionData.value.format === "kinexon" &&
-    !positionData.value.delimiter &&
-    !positionData.value.origin
+    (!positionData.value.delimiter || !positionData.value.origin || !positionData.value.fps)
   ) {
     return true;
   }
@@ -248,19 +304,52 @@ watch(
     }
   }
 );
+
+const progressPercentage = computed(() => {
+  if (!maxStorageSize.value) return 0;
+  return Math.min(100, Math.max(0, (remainingStorageSize.value / maxStorageSize.value) * 100));
+});
 </script>
 
 <style scoped>
-.terms-of-service-link {
+.terms-of-use-link {
   font-weight: bold;
   text-decoration: none;
 }
 
-.terms-of-service-link:hover {
+.terms-of-use-link:hover {
   text-decoration: underline;
 }
 
-.fps-tooltip ::v-deep .v-overlay__content {
+.fps-tooltip ::v-deep(.v-overlay__content) {
   background-color: rgb(var(--v-theme-primary));
+}
+
+.span-border {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+.storage-bar-container {
+  width: 80%;
+  background-color: #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 40px;
+}
+
+.storage-bar-fill {
+  background-color: rgba(var(--v-theme-primary));
+  color: white;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  transition: width 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
 }
 </style>

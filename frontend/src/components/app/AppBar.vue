@@ -8,14 +8,14 @@
     </template>
 
     <template #append>
-      <v-btn v-if="(termsOfServiceView || guidelinesView) && !loggedIn" to="/">
+      <v-btn v-if="(termsOfUseView || guidelinesView) && !loggedIn" to="/">
         <app-bar-icon>mdi-home</app-bar-icon>
         <span class="text-primary">
           {{ $t("app_bar.home") }}
         </span>
       </v-btn>
 
-      <v-btn v-if="(analysisView || termsOfServiceView || guidelinesView) && loggedIn" to="/">
+      <v-btn v-if="!videoView && loggedIn" to="/">
         <app-bar-icon>mdi-movie</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.video_view") }}</span>
       </v-btn>
@@ -45,7 +45,11 @@
         <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
       </v-btn>
 
-      <v-btn v-if="videoView && loggedIn" @click="showModalVideoUpload = true">
+      <v-btn
+        v-if="videoView && loggedIn"
+        @click="showModalVideoUpload = true"
+        :disabled="videoUploadStore.isUploading"
+      >
         <app-bar-icon>mdi-plus</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.video_upload_menu") }}</span>
       </v-btn>
@@ -149,6 +153,7 @@ import { useVideoStore } from "@/stores/video";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useLanguageStore } from "@/stores/languages";
+import { useVideoUploadStore } from "@/stores/video_upload";
 import ModalHistory from "@/components/ModalHistory.vue";
 import ModalPlugin from "@/components/ModalPlugin.vue";
 import ModalShortcut from "@/components/ModalShortcut.vue";
@@ -166,12 +171,13 @@ const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 const tutorialStore = useTutorialStore();
 const languageStore = useLanguageStore();
+const videoUploadStore = useVideoUploadStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
 
 const videoView = computed(() => route.name === "VideoView");
 const analysisView = computed(() => route.name === "AnalysisView");
-const termsOfServiceView = computed(() => route.name === "TermsOfServiceView");
+const termsOfUseView = computed(() => route.name === "TermsOfUseView");
 const guidelinesView = computed(() => route.name === "GuidelinesView");
 
 const showModalPlugin = ref(false);
@@ -243,7 +249,7 @@ const showModalTutorial = ref(false);
 </script>
 
 <style scoped>
-.tutorial-icon-tooltip ::v-deep .v-overlay__content {
+.tutorial-icon-tooltip ::v-deep(.v-overlay__content) {
   background: rgb(var(--v-theme-primary));
   border-radius: 2px;
   font-size: 0.7rem;

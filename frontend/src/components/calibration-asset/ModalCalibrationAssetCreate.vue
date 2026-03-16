@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" width="450px">
+  <v-dialog v-model="dialog" width="600px">
     <v-card>
       <v-toolbar color="primary">
         <v-toolbar-title class="text-h6">
@@ -13,14 +13,20 @@
 
       <v-card-text class="d-flex align-center">
         <v-select
-          v-model="template"
-          :items="topViewStore.sports.map((sport) => sport.title)"
-          :label="$t('modal.calibration_asset.create.template')"
+          v-model="objectType"
+          :items="objectTypes"
+          item-title="title"
+          item-value="value"
+          :label="$t('modal.calibration_asset.create.object_type')"
           variant="underlined"
           class="mr-6"
         />
 
-        <v-btn @click="createCalibrationAsset(template)" :disabled="!template" size="small">
+        <v-btn
+          @click="createCalibrationAsset(topViewStore.currentSport.title, objectType)"
+          :disabled="!objectType"
+          size="small"
+        >
           {{ $t("button.create") }}
         </v-btn>
       </v-card-text>
@@ -32,9 +38,12 @@
 import { ref, watch } from "vue";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
+import { useI18n } from "vue-i18n";
 
 const calibrationAssetStore = useCalibrationAssetStore();
 const topViewStore = useTopViewStore();
+
+const { t } = useI18n();
 
 const props = defineProps({
   modelValue: {
@@ -46,10 +55,17 @@ const emit = defineEmits();
 
 const dialog = ref(props.modelValue);
 
-const template = ref(null);
+const objectType = ref(null);
+const objectTypes = [
+  { value: "marker", title: t("calibration_asset.object_types.marker") },
+  { value: "segment", title: t("calibration_asset.object_types.segment") },
+];
 
-const createCalibrationAsset = (template) => {
-  calibrationAssetStore.createCalibrationAsset(template);
+const createCalibrationAsset = (sport, objectType) => {
+  calibrationAssetStore.createCalibrationAsset({
+    sport: sport,
+    objectType: objectType,
+  });
   dialog.value = false;
 };
 

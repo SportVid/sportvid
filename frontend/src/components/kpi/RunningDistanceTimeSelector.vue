@@ -48,7 +48,10 @@ const canvasStyle = ref({ width: props.width, height: props.height });
 
 let scope;
 let handleGroup, handleLeft, handleRight, handleBar;
-let selectionLayer, scaleLayer;
+let selectionLayer, scaleLayer, timeBarLayer;
+let timeBarLine;
+let animFrameId;
+let isDragging = false;
 
 const canvasWidth = ref(null);
 const canvasHeight = ref(null);
@@ -57,12 +60,10 @@ const containerHeight = ref(null);
 
 const redraw = ref(false);
 
-const duration = computed(() =>
-  Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .at(-1)
-);
+const duration = computed(() => {
+  const keys = topViewStore.sortedFrameKeys;
+  return keys.length > 0 ? keys[keys.length - 1] : undefined;
+});
 const selectedStart = computed(() => positionDataStore.selectedTimeRange.start);
 const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
 const hiddenStart = ref(positionDataStore.selectedTimeRange.start);
@@ -71,6 +72,7 @@ const minFrameGap = (1000 / playerStore.videoFPS) * 10;
 watch(
   () => positionDataStore.selectedTimeRange,
   (val) => {
+    if (isDragging) return;
     hiddenStart.value = val.start;
     hiddenEnd.value = val.end;
     nextTick(() => draw());
@@ -135,6 +137,7 @@ function draw() {
 
   drawScale();
   drawSelection();
+  drawTimeBar();
   scope.view.draw();
 }
 
@@ -181,6 +184,32 @@ function drawScale() {
   new paper.Group(minorStrokes).strokeColor = "black";
 }
 
+function drawTimeBar() {
+  if (timeBarLayer) timeBarLayer.removeChildren();
+  scope.activate();
+  timeBarLayer = new paper.Layer();
+
+  const time = playerStore.currentTime;
+  if (time == null || !duration.value) return;
+
+  const x = frameToX(time);
+  timeBarLine = new paper.Path([new paper.Point(x, 0), new paper.Point(x, canvasHeight.value)]);
+  timeBarLine.strokeColor = "white";
+  timeBarLine.strokeWidth = 2;
+}
+
+function updateTimeBar() {
+  if (!timeBarLine || !canvasWidth.value || !duration.value) return;
+  const x = frameToX(playerStore.currentTime);
+  timeBarLine.segments[0].point.x = x;
+  timeBarLine.segments[1].point.x = x;
+}
+
+function animLoop() {
+  updateTimeBar();
+  animFrameId = requestAnimationFrame(animLoop);
+}
+
 function drawSelection() {
   if (selectionLayer) selectionLayer.removeChildren();
   scope.activate();
@@ -213,6 +242,11 @@ function drawSelection() {
 
   handleGroup = new paper.Group([path, handleLeft, handleRight]);
 
+  const onDragStart = () => { isDragging = true; };
+  const onDragEnd = () => { isDragging = false; };
+
+  handleLeft.onMouseDown = onDragStart;
+  handleLeft.onMouseUp = onDragEnd;
   handleLeft.onMouseDrag = (event) => {
     let newStart = hiddenStart.value + xToFrame(event.delta.x);
 
@@ -224,6 +258,8 @@ function drawSelection() {
     onSelectionChange();
   };
 
+  handleRight.onMouseDown = onDragStart;
+  handleRight.onMouseUp = onDragEnd;
   handleRight.onMouseDrag = (event) => {
     let newEnd = hiddenEnd.value + xToFrame(event.delta.x);
 
@@ -235,6 +271,8 @@ function drawSelection() {
     onSelectionChange();
   };
 
+  path.onMouseDown = onDragStart;
+  path.onMouseUp = onDragEnd;
   path.onMouseDrag = (event) => {
     const span = hiddenEnd.value - hiddenStart.value;
     const df = xToFrame(event.delta.x);
@@ -288,8 +326,11 @@ onMounted(() => {
   };
 
   nextTick(() => draw());
+
+  animFrameId = requestAnimationFrame(animLoop);
 });
 onBeforeUnmount(() => {
+  if (animFrameId) cancelAnimationFrame(animFrameId);
   if (scope) {
     scope.view.onFrame = null;
     scope.view.onResize = null;

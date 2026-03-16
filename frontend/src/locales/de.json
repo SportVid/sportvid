@@ -11,7 +11,7 @@
     "format_title": "Unterstützte Videoformate",
     "format_text": "Bitte beachten Sie, dass SportVid derzeit nur die Analyse von MP4-Videodateien unterstützt, um lange Verarbeitungszeiten durch serverseitiges Transkodieren zu vermeiden."
   },
-  "terms_of_service": {
+  "terms_of_use": {
     "title": "Nutzungsbedingungen",
     "text": "Durch die Nutzung von SportVid erklären Sie sich mit den folgenden Bedingungen einverstanden: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Zustimmung zur Verwendung hochgeladener und eingereichter Videos und Daten zu wissenschaftlichen Forschungszwecken.</li><li>Zustimmung, dass andere Benutzer nach Videos suchen dürfen.</li><li>...</li></ol>",
     "confirmation": "Stimmen Sie den {title} zu?"
@@ -60,7 +60,8 @@
     "save": "Speichern",
     "run_batch_plugin": "Batch-Plugin ausführen",
     "run_plugin": "Plugin ausführen",
-    "upload_video": "Neues Video hochladen"
+    "upload_video": "Neues Video hochladen",
+    "exit": "Beenden"
   },
   "field": {
     "required": "Dieses Feld ist erforderlich."
@@ -87,6 +88,17 @@
       "calibration": "Kalibrierung",
       "position_data": "Positionsdaten"
     },
+    "analysis_tabs": {
+      "calibration": "Kalibrierung",
+      "position_data": "Positionsdaten"
+    },
+    "visualization_tabs": {
+      "select": "Visualisierung auswählen",
+      "timeline": "Timeline",
+      "events": "Ereignisse",
+      "heatmap": "Heatmap",
+      "running_distance": "Laufdistanz"
+    },
     "sports": {
       "soccer": "Fußball",
       "handball": "Handball",
@@ -106,7 +118,8 @@
       "view_vid_marker": "Video-Marker anzeigen",
       "add_ref_marker": "Referenzmarker hinzufügen",
       "delete_ref_marker": "Referenzmarker löschen"
-    }
+    },
+    "go_to_marker_time": "Zurück zu {time}"
   },
   "position_data": {
     "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das Bytetrack-Plugin aus oder laden Sie die Positionsdaten manuell hoch.",
@@ -123,6 +136,11 @@
         "title": "Positionsdaten",
         "upload": "Positionsdaten hochladen",
         "select": "Positionsdaten auswählen"
+      },
+      "set_grid": {
+        "title": "Raster",
+        "longitudinal": "Längsstreifen",
+        "transverse": "Querstreifen"
       }
     }
   },
@@ -146,6 +164,43 @@
         "xSelect": "Nicht ausgewählt",
         "yTitle": "Y-Achsendaten auswählen:",
         "ySelect": "Nicht ausgewählt"
+      }
+    }
+  },
+  "data": {
+    "options": {
+      "title": "Optionen",
+      "time_selection": {
+        "title": "Zeitauswahl",
+        "full_match": "Gesamtes Spiel auswählen",
+        "first_half": "Erste Halbzeit auswählen",
+        "second_half": "Zweite Halbzeit auswählen"
+      },
+      "kpi_selection": {
+        "title": "KPI-Auswahl",
+        "running_distance": "Laufdistanz",
+        "running_distance_cumulative": "Laufdistanz (kumulativ)",
+        "running_distance_interval": "Laufdistanz (pro {frames} Frames)",
+        "interval_frames": "Intervall (Frames)",
+        "velocity_max": "Maximale Geschwindigkeit",
+        "velocity_mean": "Mittlere Geschwindigkeit",
+        "metabolic_work": "Metabolische Leistung"
+      },
+      "chart_mode": {
+        "cumulative": "Kumulativ",
+        "windowed": "Pro Sekunde"
+      },
+      "team_view": {
+        "total_distance": "Gesamtdistanz",
+        "avg_distance": "Durchschn. Distanz",
+        "player_count": "Spieler"
+      },
+      "player_view": {
+        "best": "Bester Wert",
+        "total": "Gesamt"
+      },
+      "view": {
+        "chart_placeholder": "Diagrammansicht kommt bald."
       }
     }
   },
@@ -195,11 +250,25 @@
         "position": "Aktuelle Position auswählen",
         "age_group": "Altersgruppe auswählen",
         "total_teams": "Gesamtzahl der Teams auswählen",
-        "out_of": "von"
+        "out_of": "von",
+        "sport": "Sportart"
       },
       "delete": {
         "success": "Video erfolgreich gelöscht"
       }
+    },
+    "delete_account": {
+      "success": "Account erfolgreich gelöscht"
+    },
+    "settings": {
+      "settings_success": "Konto erfolgreich aktualisiert",
+      "email_success": "E-Mail erfolgreich aktualisiert",
+      "password_changed": "Passwort erfolgreich geändert",
+      "invalid_current_password": "Ungültiges aktuelles Passwort",
+      "password_both_required": "Aktuelles und neues Passwort müssen beide ausgefüllt sein",
+      "password_min": "Neues Passwort muss mindestens {min} Zeichen lang sein",
+      "no_changes": "Keine Änderungen zum Speichern",
+      "update_failed": "Aktualisierung fehlgeschlagen"
     },
     "export": {
       "title": "Ergebnisse exportieren",
@@ -218,7 +287,43 @@
         "include_category": "Kategorie einbeziehen"
       },
       "position_data": {
-        "export_name": "Positionsdaten"
+        "export_name": "Positionsdaten",
+        "teams": {
+          "all": "Alle auswählen"
+        },
+        "attributes": {
+          "all": "Alle auswählen",
+          "timestamp_ms": "Zeitstempel (ms)",
+          "player_id": "Spieler-ID",
+          "player_name": "Spielername",
+          "team_id": "Team-ID",
+          "team_name": "Teamname",
+          "game_section": "Spielabschnitt",
+          "x": "X-Koordinate",
+          "y": "Y-Koordinate",
+          "bbox_id": "Bounding-Box-ID",
+          "bbox_left": "Bounding-Box links",
+          "bbox_top": "Bounding-Box oben",
+          "bbox_width": "Bounding-Box Breite",
+          "bbox_height": "Bounding-Box Höhe",
+          "det_score": "Det-Score"
+        },
+        "file_name": "positionsdaten"
+      },
+      "running_distance": {
+        "export_name": "Laufdistanz",
+        "teams": {
+          "all": "Alle auswählen"
+        },
+        "attributes": {
+          "all": "Alle auswählen",
+          "player_id": "Spieler-ID",
+          "player_name": "Spielername",
+          "team_id": "Team-ID",
+          "team_name": "Teamname",
+          "distance": "Distanz"
+        },
+        "file_name": "laufdistanz"
       },
       "json": {
         "export_name": "JSON"
@@ -255,6 +360,16 @@
       "scalar_timeline_hint": "Die skalaren Werte der ausgewählten Zeitleisten werden aggregiert.",
       "position_data_name": "Mannschaft auswählen",
       "position_data_hint": "Exportiert die Daten für eine der Mannschaften oder für beide.",
+      "position_data_team_name": "Gruppen auswählen",
+      "position_data_team_hint": "Exportiert die ausgewählten Gruppen.",
+      "position_data_attribute_name": "Zusätzliche Attribute",
+      "position_data_attribute_hint": "Zeitstempel (ms), Spieler-ID, X und Y sind immer enthalten. Optional weitere Attribute hinzufügen.",
+      "running_distance_team_name": "Teams auswählen",
+      "running_distance_team_hint": "Exportiert die ausgewählten Teams.",
+      "running_distance_attribute_name": "Zusätzliche Attribute",
+      "running_distance_attribute_hint": "Spieler-ID und Distanz sind immer enthalten. Optional weitere Attribute hinzufügen.",
+      "running_distance_start_frame_name": "Startframe auswählen",
+      "running_distance_end_frame_name": "Endframe auswählen",
       "fps": "Bilder pro Sekunde (FPS)",
       "normalize": "Ergebnisse normalisieren?",
       "aggregation": {

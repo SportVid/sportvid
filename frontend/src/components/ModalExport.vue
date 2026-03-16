@@ -38,7 +38,7 @@
                 <v-card flat>
                   <v-card-title class="mb-0">{{ exportFormat.name }}</v-card-title>
 
-                  <v-card-text style="height: 275px; overflow-y: auto">
+                  <v-card-text style="height: 290px; overflow-y: auto">
                     <Parameters
                       :videoIds="[playerStore.videoId]"
                       :parameters="exportFormat.parameters"
@@ -219,7 +219,7 @@ const exportFormats = ref([
       {
         field: "select_position_data_attribute",
         name: "position_data_attribute",
-        value: null,
+        value: [],
         text: t("modal.plugin.position_data_attribute_name"),
         hint: t("modal.plugin.position_data_attribute_hint"),
       },
@@ -236,6 +236,13 @@ const exportFormats = ref([
         value: null,
         text: t("modal.plugin.running_distance_team_name"),
         hint: t("modal.plugin.running_distance_team_hint"),
+      },
+      {
+        field: "select_running_distance_attribute",
+        name: "running_distance_attribute",
+        value: [],
+        text: t("modal.plugin.running_distance_attribute_name"),
+        hint: t("modal.plugin.running_distance_attribute_hint"),
       },
       {
         field: "select_running_distance_frame",
@@ -268,7 +275,8 @@ const downloadExport = async (format, parameters, videoId) => {
     } else if (
       e.name === "position_data_team" ||
       e.name === "position_data_attribute" ||
-      e.name === "running_distance_team"
+      e.name === "running_distance_team" ||
+      e.name === "running_distance_attribute"
     ) {
       return { name: e.name, value: [...e.value] };
     } else {
@@ -286,6 +294,9 @@ const isExportDisabled = (exportFormat) => {
 
   const emptyRequired = selectParams.some((p) => {
     if (p.name === "running_distance_start_frame" || p.name === "running_distance_end_frame") {
+      return false;
+    }
+    if (p.name === "position_data_attribute" || p.name === "running_distance_attribute") {
       return false;
     }
     return !p.value || (Array.isArray(p.value) && p.value.length === 0);

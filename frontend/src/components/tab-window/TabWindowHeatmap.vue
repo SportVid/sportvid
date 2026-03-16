@@ -1,371 +1,429 @@
 <template>
-  <PositionDataMenu v-if="Object.keys(topViewStore.positionDataTopView).length === 0" />
+  <v-row v-if="videoStore.isLoading" class="loading-card">
+    <div class="spinner">
+      <i class="mdi mdi-loading mdi-spin" />
+    </div>
+    <div class="loading-text">{{ $t("loading_screen") }}</div>
+  </v-row>
 
-  <v-container v-else class="d-flex flex-column">
-    <v-row class="mt-1" justify="center">
-      <div
-        ref="topViewDiv"
-        class="top-view-wrapper"
-        @mouseenter="hovering = true"
-        @mouseleave="hovering = false"
-      >
+  <v-row
+    v-else-if="!hasPositionData"
+    class="text-h6 text-grey font-weight-light mx-16 px-10"
+    style="
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.5;
+      height: 25vh;
+    "
+    v-html="$t('visualization.heatmap.not_selected')"
+  />
+
+  <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
+    <v-row align="center">
+      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px">
+        <v-menu location="bottom">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" style="height: 40px" class="ml-2 mt-n2" size="small">
+              {{ $t("visualization.heatmap.area_size") }}
+            </v-btn>
+          </template>
+          <v-list class="py-0" density="compact">
+            <v-list-item
+              v-for="(areaData, areaSize) in topViewStore.currentSport.areas"
+              :key="areaSize"
+              class="menu-item"
+              @click="topViewStore.onSportChange(topViewStore.currentSport.title, areaSize)"
+            >
+              <v-list-item-title class="my-0">
+                {{ areaData.title }}
+              </v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+
+        <v-btn-toggle
+          v-model="displayMode"
+          color="primary"
+          border
+          mandatory
+          elevation="2"
+          style="height: 40px"
+          class="mt-n2"
+        >
+          <v-btn value="heatmap" size="small">
+            <v-icon>mdi-blur</v-icon>
+          </v-btn>
+          <v-btn value="movement" size="small">
+            <v-icon>mdi-map-marker-path</v-icon>
+          </v-btn>
+        </v-btn-toggle>
+
+        <v-menu location="bottom">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" style="height: 40px" size="small" class="mt-n2">
+              <v-icon>mdi-timer-sync-outline</v-icon>
+            </v-btn>
+          </template>
+          <v-list class="py-0" density="compact" width="250px">
+            <v-list-item
+              class="menu-item"
+              @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
+            >
+              <v-list-item-title>
+                {{ $t("visualization.time_selection.sync_start") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item
+              class="menu-item"
+              @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
+            >
+              <v-list-item-title>
+                {{ $t("visualization.time_selection.sync_end") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-divider />
+
+            <v-list-item
+              class="menu-item"
+              @click="
+                positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
+                positionDataStore.setSelectedTimeRangeEnd(allFrameKeys[allFrameKeys.length - 1]);
+              "
+            >
+              <v-list-item-title>
+                {{ $t("visualization.time_selection.full_match") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item
+              class="menu-item"
+              :disabled="!visualizationStore.halftimesExist"
+              @click="selectHalftime(1)"
+            >
+              <v-list-item-title>
+                {{ $t("visualization.time_selection.first_half") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item
+              class="menu-item"
+              :disabled="!visualizationStore.halftimesExist"
+              @click="selectHalftime(2)"
+            >
+              <v-list-item-title>
+                {{ $t("visualization.time_selection.second_half") }}
+              </v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </v-col>
+      <v-col class="mt-2">
+        <RunningDistanceTimeSelector class="ml-n1" />
+      </v-col>
+    </v-row>
+
+    <v-row class="mt-2" justify="center">
+      <div class="top-view-wrapper">
         <img
           ref="topViewElement"
           class="visualizer-image"
-          :src="topViewStore.currentSport.pitchImage"
-          @load="updateTopViewSize"
-          :style="
-            isTopViewFullscreen
-              ? {
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: 'contain',
-                }
-              : {
-                  maxHeight: maxVideoHeight * 100 + 'vh',
-                  height: videoStore.videoSize.height + 'px',
-                }
-          "
+          :src="topViewStore.currentSport.areaImage"
+          @load="onImageLoad"
+          :style="{
+            height: videoStore.videoSize.height + 'px',
+            maxWidth: '100%',
+          }"
         />
 
-        <v-icon
-          class="fullscreen-toggle"
-          @click="toggleTopViewFullscreen"
-          :class="{ visible: hovering }"
-        >
-          {{ isTopViewFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
-        </v-icon>
-
         <div
-          v-if="isTopViewFullscreen"
-          class="fullscreen-controls"
-          :class="{ visible: hovering }"
-          :style="{
-            top:
-              topViewStore.topViewSize.top +
-              topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
-              ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height -
-              20 +
-              'px',
-          }"
-        >
-          <div class="player-selector">
-            <div
-              v-for="playerId in uniquePlayerIds"
-              :key="playerId"
-              class="player-dot"
-              :style="{
-                backgroundColor: selectedPlayerIds.includes(playerId)
-                  ? toRgb(playerColors[playerId], 0)
-                  : toRgb(playerColors[playerId], 0.7),
-                color: selectedPlayerIds.includes(playerId) ? '#fff' : '#222',
-                borderColor: selectedPlayerIds.includes(playerId)
-                  ? toRgb(playerColors[playerId], 0)
-                  : toRgb(playerColors[playerId], 0.7),
-              }"
-              @click="togglePlayerId(playerId)"
-            >
-              {{ playerId }}
-            </div>
-          </div>
-        </div>
-
-        <div
-          v-if="topViewStore.showHeatmap"
+          v-if="displayMode === 'heatmap'"
           ref="heatmapContainer"
           :style="{
             position: 'absolute',
-            top: isTopViewFullscreen ? topViewStore.topViewSize.top + 'px' : '0px',
-            left: isTopViewFullscreen ? topViewStore.topViewSize.left + 'px' : '0px',
-            width: topViewStore.topViewSize.width + 'px',
-            height: topViewStore.topViewSize.height + 'px',
+            top: '0px',
+            left: '0px',
+            width: localSize.width + 'px',
+            height: localSize.height + 'px',
           }"
         ></div>
 
-        <template v-if="topViewStore.showMovement">
-          <div
-            v-for="position in selectedPositions"
-            v-show="topViewStore.showItems"
-            :key="position"
-            :style="{
-              position: 'absolute',
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              transform: 'translate(-50%, -50%)',
-              top: isTopViewFullscreen
-                ? topViewStore.topViewSize.top +
-                  position[4] *
-                    (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-                  ((1 - topViewStore.currentSport.heightRel) / 2) *
-                    topViewStore.topViewSize.height +
-                  'px'
-                : position[4] *
-                    (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-                  ((1 - topViewStore.currentSport.heightRel) / 2) *
-                    topViewStore.topViewSize.height +
-                  'px',
-              left: isTopViewFullscreen
-                ? topViewStore.topViewSize.left +
-                  position[3] *
-                    (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-                  ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
-                  'px'
-                : position[3] *
-                    (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-                  ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
-                  'px',
-              backgroundColor: visualizationStore.getTeamColor(position[1]),
-            }"
-          />
-        </template>
+        <canvas
+          v-if="displayMode === 'movement'"
+          ref="movementCanvas"
+          :width="localSize.width"
+          :height="localSize.height"
+          :style="{
+            position: 'absolute',
+            top: '0px',
+            left: '0px',
+            width: localSize.width + 'px',
+            height: localSize.height + 'px',
+          }"
+        />
       </div>
     </v-row>
 
-    <v-row ref="playerSelector" class="justify-center">
-      <div class="player-selector mt-2">
+    <div class="chart-legend mt-6">
+      <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
         <div
-          v-for="playerId in uniquePlayerIds"
-          :key="playerId"
+          class="team-dot"
+          :style="{
+            backgroundColor: isTeamFullySelected(teamId)
+              ? toRgb(visualizationStore.getTeamColor(teamId), 0)
+              : 'transparent',
+            color: isTeamFullySelected(teamId)
+              ? '#fff'
+              : toRgb(visualizationStore.getTeamColor(teamId), 0),
+            borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
+          }"
+          @click="toggleTeam(teamId)"
+        >
+          {{ getTeamName(teamId) }}
+        </div>
+        <span class="chart-legend-sep">|</span>
+        <div
+          v-for="p in players"
+          :key="p.playerId"
           class="player-dot"
           :style="{
-            backgroundColor: selectedPlayerIds.includes(playerId)
-              ? toRgb(playerColors[playerId], 0)
-              : toRgb(playerColors[playerId], 0.7),
-            color: selectedPlayerIds.includes(playerId) ? '#fff' : '#222',
-            borderColor: selectedPlayerIds.includes(playerId)
-              ? toRgb(playerColors[playerId], 0)
-              : toRgb(playerColors[playerId], 0.7),
+            backgroundColor: selectedPlayerIds.includes(p.playerId)
+              ? toRgb(playerColors[p.playerId], 0)
+              : toRgb(playerColors[p.playerId], 0.6),
+            color: selectedPlayerIds.includes(p.playerId) ? '#fff' : '#222',
+            borderColor: selectedPlayerIds.includes(p.playerId)
+              ? toRgb(playerColors[p.playerId], 0)
+              : toRgb(playerColors[p.playerId], 0.6),
           }"
-          @click="togglePlayerId(playerId)"
+          @click="togglePlayerId(p.playerId)"
         >
-          {{ playerId }}
+          {{ getPlayerNumber(p.playerId) }}
         </div>
       </div>
-    </v-row>
-
-    <v-row ref="videoControl" class="video-control mt-4 mb-n2 justify-center">
-      <v-menu location="top">
-        <template #activator="{ props }">
-          <v-btn v-bind="props" size="small">
-            {{ topViewStore.currentSport.title }}
-          </v-btn>
-        </template>
-        <v-list class="py-0" density="compact">
-          <v-list-item
-            v-for="item in topViewStore.sports"
-            :key="item"
-            class="menu-item"
-            v-on:click="topViewStore.onSportChange(item.title)"
-          >
-            <v-list-item-title class="my-0">
-              {{ item.title }}
-            </v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
-
-      <v-menu location="top">
-        <template #activator="{ props }">
-          <v-btn v-bind="props" size="small">
-            {{ $t("heatmap.display_settings.title") }}
-          </v-btn>
-        </template>
-        <v-list class="py-0" density="compact">
-          <v-list-item class="menu-item" @click="topViewStore.viewHeatmap">
-            <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("heatmap.display_settings.view_heatmap") }}
-              <tab-window-icon
-                :class="{
-                  'text-disabled': !topViewStore.showHeatmap,
-                  'text-red': topViewStore.showHeatmap,
-                }"
-              >
-                mdi-check
-              </tab-window-icon>
-            </v-list-item-title>
-          </v-list-item>
-
-          <v-list-item class="menu-item" @click="topViewStore.viewMovement">
-            <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("heatmap.display_settings.view_movement") }}
-              <tab-window-icon
-                :class="{
-                  'text-disabled': !topViewStore.showMovement,
-                  'text-red': topViewStore.showMovement,
-                }"
-              >
-                mdi-check
-              </tab-window-icon>
-            </v-list-item-title>
-          </v-list-item>
-
-          <v-list-item class="menu-item" @click="showModalPositionDataTeamColors = true">
-            <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("position_data.display_settings.team_colors") }}
-            </v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
-      <ModalPositionDataTeamColors
-        v-if="showModalPositionDataTeamColors"
-        v-model="showModalPositionDataTeamColors"
-      />
-    </v-row>
-  </v-container>
+    </div>
+  </v-card>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, toRaw } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
-import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
-import ModalPositionDataTeamColors from "@/components/position-data/ModalPositionDataTeamColors.vue";
+import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
+import { usePosdataWorkerStore } from "@/stores/posdata_worker";
+import RunningDistanceTimeSelector from "@/components/kpi/RunningDistanceTimeSelector.vue";
 import h337 from "heatmap.js";
 import { toRgb } from "@/plugins/helpers";
+import { resampleApprox } from "@/plugins/draw/utils";
+import { debounce } from "lodash";
 
 const topViewStore = useTopViewStore();
 const videoStore = useVideoStore();
 const visualizationStore = useVisualizationStore();
 const playerStore = usePlayerStore();
+const positionDataStore = usePositionDataStore();
+const posdataWorkerStore = usePosdataWorkerStore();
 
-const showModalPositionDataTeamColors = ref(false);
+const currentArea = computed(
+  () => topViewStore.currentSport.areas?.[topViewStore.currentAreaSize] ?? {}
+);
 
+const displayMode = ref("heatmap");
+
+const localSize = ref({ width: 0, height: 0 });
 const topViewElement = ref(null);
-const updateTopViewSize = async () => {
-  await nextTick();
-  await waitForStableElement(topViewElement);
 
+const measureImage = () => {
   if (topViewElement.value) {
     const rect = topViewElement.value.getBoundingClientRect();
-    topViewStore.setTopViewSize({
-      width: rect.width,
-      height: rect.height,
-      top: rect.top,
-      left: rect.left,
-    });
+    localSize.value = { width: rect.width, height: rect.height };
   }
 };
-function waitForStableElement(elRef) {
-  return new Promise((resolve) => {
-    let lastRect = null;
-    let stableCounter = 0;
 
-    const check = () => {
-      const el = elRef.value;
-      if (!el) {
-        requestAnimationFrame(check);
-        return;
-      }
+const onImageLoad = () => {
+  nextTick(() => measureImage());
+};
 
-      const rect = el.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0 || rect.top === 0 || rect.left === 0) {
-        requestAnimationFrame(check);
-        return;
-      }
-
-      if (
-        lastRect &&
-        rect.top === lastRect.top &&
-        rect.left === lastRect.left &&
-        rect.width === lastRect.width &&
-        rect.height === lastRect.height
-      ) {
-        stableCounter++;
-      } else {
-        stableCounter = 0;
-      }
-
-      lastRect = rect;
-
-      if (stableCounter >= 3) {
-        resolve();
-      } else {
-        requestAnimationFrame(check);
-      }
-    };
-
-    check();
-  });
-}
 const resizeObserver = new ResizeObserver(() => {
-  updateTopViewSize();
+  measureImage();
 });
+
 onMounted(() => {
-  window.addEventListener("resize", updateTopViewSize);
+  window.addEventListener("resize", measureImage);
   if (topViewElement.value) {
     resizeObserver.observe(topViewElement.value);
-    updateTopViewSize();
   }
+  nextTick(() => {
+    measureImage();
+    if (displayMode.value === "heatmap" && heatmapContainer.value) {
+      createHeatmap();
+    }
+  });
 });
+
 onBeforeUnmount(() => {
-  window.removeEventListener("resize", updateTopViewSize);
+  window.removeEventListener("resize", measureImage);
   if (topViewElement.value) {
     resizeObserver.unobserve(topViewElement.value);
   }
+  triggerHeatmapCalc.cancel();
 });
 
-const maxVideoHeight = ref(0);
-const videoControl = ref(null);
-const playerSelector = ref(null);
-const updateMaxHeight = () => {
-  if (!videoControl.value || !playerSelector.value) return;
-  maxVideoHeight.value = (window.innerHeight - 104 - 32 - 120 - 60) / window.innerHeight;
-};
-onMounted(() => {
-  nextTick(() => updateMaxHeight());
-  window.addEventListener("resize", updateMaxHeight);
-});
-watch(() => window.innerHeight, updateMaxHeight);
-watch(videoControl, (newVal) => {
-  if (newVal) {
-    nextTick(() => updateMaxHeight());
+const allFrameKeys = computed(() => topViewStore.sortedFrameKeys);
+
+const selectHalftime = (half) => {
+  const entries = Object.entries(topViewStore.positionDataTopView);
+  let first = null;
+  let last = null;
+  for (const [timeKey, players] of entries) {
+    const t = Number(timeKey);
+    if (players.some((p) => p[2] === half)) {
+      if (first === null || t < first) first = t;
+      if (last === null || t > last) last = t;
+    }
   }
-});
+  if (first !== null && last !== null) {
+    positionDataStore.setSelectedTimeRangeStart(first);
+    positionDataStore.setSelectedTimeRangeEnd(last);
+  }
+};
 
 const selectedPlayerIds = ref([]);
-const uniquePlayerIds = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
-  return [...new Set(all.map((p) => p[0]))].sort((a, b) => a - b);
+
+const playerOptions = computed(() => {
+  // Sample a few frames to find all players (avoids iterating all ~135k frames)
+  const keys = Object.keys(topViewStore.positionDataTopView);
+  if (!keys.length) return [];
+  const seen = new Map();
+  const step = Math.max(1, Math.floor(keys.length / 10));
+  for (let i = 0; i < keys.length; i += step) {
+    const players = topViewStore.positionDataTopView[keys[i]];
+    if (!players) continue;
+    for (const p of players) {
+      if (p[1] !== 1 && !seen.has(p[0])) {
+        seen.set(p[0], { playerId: p[0], teamId: p[1] });
+      }
+    }
+  }
+  // Also check last frame
+  const last = topViewStore.positionDataTopView[keys[keys.length - 1]];
+  if (last) {
+    for (const p of last) {
+      if (p[1] !== 1 && !seen.has(p[0])) {
+        seen.set(p[0], { playerId: p[0], teamId: p[1] });
+      }
+    }
+  }
+  return Array.from(seen.values()).sort((a, b) => a.playerId - b.playerId);
 });
+
+const playerColors = computed(() => {
+  const map = {};
+  for (const p of playerOptions.value) {
+    map[p.playerId] = visualizationStore.getTeamColor(p.teamId);
+  }
+  return map;
+});
+
+const teamGroups = computed(() => {
+  const groups = {};
+  for (const p of playerOptions.value) {
+    if (!groups[p.teamId]) groups[p.teamId] = [];
+    groups[p.teamId].push(p);
+  }
+  return groups;
+});
+
 function togglePlayerId(playerId) {
   if (selectedPlayerIds.value.includes(playerId)) {
     selectedPlayerIds.value = selectedPlayerIds.value.filter((id) => id !== playerId);
   } else {
-    selectedPlayerIds.value.push(playerId);
+    selectedPlayerIds.value = [...selectedPlayerIds.value, playerId];
   }
 }
 
-const playerColors = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
-  const map = {};
-  all.forEach((p) => {
-    map[p[0]] = visualizationStore.getTeamColor(p[1]);
-  });
-  return map;
-});
+const toggleTeam = (teamId) => {
+  const teamPlayerIds = (teamGroups.value[teamId] || []).map((p) => p.playerId);
+  const allSelected = teamPlayerIds.every((pid) => selectedPlayerIds.value.includes(pid));
+  if (allSelected) {
+    selectedPlayerIds.value = selectedPlayerIds.value.filter((id) => !teamPlayerIds.includes(id));
+  } else {
+    const newIds = [...selectedPlayerIds.value];
+    teamPlayerIds.forEach((pid) => {
+      if (!newIds.includes(pid)) newIds.push(pid);
+    });
+    selectedPlayerIds.value = newIds;
+  }
+};
 
-const selectedPositions = computed(() => {
-  if (selectedPlayerIds.value.length === 0) return [];
-  const allPositions = [];
-  Object.values(topViewStore.positionDataTopView).forEach((arr) => {
-    if (Array.isArray(arr)) {
-      arr.forEach((pos) => {
-        if (selectedPlayerIds.value.includes(pos[0])) {
-          allPositions.push(pos);
-        }
-      });
-    }
-  });
-  return allPositions;
-});
+const isTeamFullySelected = (teamId) => {
+  const teamPlayerIds = (teamGroups.value[teamId] || []).map((p) => p.playerId);
+  return (
+    teamPlayerIds.length > 0 && teamPlayerIds.every((pid) => selectedPlayerIds.value.includes(pid))
+  );
+};
 
+const getPlayerNumber = (playerId) => {
+  const meta = topViewStore.metaDataTopView;
+  const num = meta?.player_ids?.[playerId]?.number;
+  return num != null ? num : playerId;
+};
+
+const getTeamName = (teamId) => {
+  const meta = topViewStore.metaDataTopView;
+  if (meta?.team_ids?.[teamId]?.name) return meta.team_ids[teamId].name;
+  return teamId;
+};
+
+const selectedPositions = ref([]);
+
+const triggerHeatmapCalc = debounce(async () => {
+  const posData = toRaw(topViewStore.positionDataTopView);
+  if (!posData || !Object.keys(posData).length || selectedPlayerIds.value.length === 0) {
+    selectedPositions.value = [];
+    return;
+  }
+  const rawCrop = toRaw(currentArea.value.templateCrop);
+  const cropPct = rawCrop
+    ? { x: [rawCrop.x[0], rawCrop.x[1]], y: [rawCrop.y[0], rawCrop.y[1]] }
+    : { x: [0, 1], y: [0, 1] };
+  try {
+    const result = await posdataWorkerStore.calcHeatmapPoints(
+      posData,
+      selectedPlayerIds.value,
+      positionDataStore.selectedTimeRange.start,
+      positionDataStore.selectedTimeRange.end,
+      cropPct
+    );
+    selectedPositions.value = result;
+  } catch (err) {
+    console.error("Worker heatmap calc failed:", err);
+    selectedPositions.value = [];
+  }
+}, 200);
+
+watch(
+  [
+    selectedPlayerIds,
+    () => positionDataStore.selectedTimeRange.start,
+    () => positionDataStore.selectedTimeRange.end,
+    () => currentArea.value.templateCrop,
+    () => topViewStore.positionDataTopView,
+  ],
+  () => triggerHeatmapCalc(),
+  { immediate: true }
+);
+
+const movementCanvas = ref(null);
 const heatmapContainer = ref(null);
 let heatmapInstance = null;
+
 function createHeatmap() {
   if (!heatmapContainer.value) return;
+  if (heatmapContainer.value.offsetWidth === 0 || heatmapContainer.value.offsetHeight === 0) return;
 
   heatmapContainer.value.innerHTML = "";
 
@@ -383,18 +441,21 @@ function createHeatmap() {
       1.0: "red",
     },
   });
-}
-function renderHeatmap() {
-  if (!heatmapInstance || !topViewStore.topViewSize.width || !topViewStore.topViewSize.height)
-    return;
 
+  heatmapContainer.value.style.position = "absolute";
+}
+
+function renderHeatmap() {
+  if (!heatmapInstance || !localSize.value.width || !localSize.value.height) return;
+
+  const area = currentArea.value;
   const points = selectedPositions.value.map((pos) => {
     const x =
-      pos[3] * (topViewStore.topViewSize.width * topViewStore.currentSport.widthRel) +
-      ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
+      pos[3] * (localSize.value.width * area.widthRel) +
+      ((1 - area.widthRel) / 2) * localSize.value.width;
     const y =
-      pos[4] * (topViewStore.topViewSize.height * topViewStore.currentSport.heightRel) +
-      ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
+      pos[4] * (localSize.value.height * area.heightRel) +
+      ((1 - area.heightRel) / 2) * localSize.value.height;
     return { x: Math.round(x), y: Math.round(y), value: 1 };
   });
 
@@ -403,86 +464,99 @@ function renderHeatmap() {
     data: points,
   });
 }
-watch(
-  () => topViewStore.topViewSize.height,
-  () => {
-    renderHeatmap();
-    updateTopViewSize();
+
+function renderMovementCanvas() {
+  const canvas = movementCanvas.value;
+  if (!canvas || !localSize.value.width || !localSize.value.height) return;
+
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (selectedPositions.value.length === 0) return;
+
+  const area = currentArea.value;
+  const points = resampleApprox({ data: selectedPositions.value, targetSize: 5000 });
+
+  // Group by teamId for batch drawing
+  const byTeam = {};
+  for (const pos of points) {
+    const teamId = pos[1];
+    if (!byTeam[teamId]) byTeam[teamId] = [];
+    byTeam[teamId].push(pos);
   }
-);
-watch(selectedPositions, () => {
-  createHeatmap();
-  nextTick(() => {
-    renderHeatmap();
-    updateTopViewSize();
-  });
+
+  for (const [teamId, positions] of Object.entries(byTeam)) {
+    ctx.fillStyle = visualizationStore.getTeamColor(teamId);
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    for (const pos of positions) {
+      const x =
+        pos[3] * (localSize.value.width * area.widthRel) +
+        ((1 - area.widthRel) / 2) * localSize.value.width;
+      const y =
+        pos[4] * (localSize.value.height * area.heightRel) +
+        ((1 - area.heightRel) / 2) * localSize.value.height;
+      ctx.moveTo(x + 6, y);
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+    }
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+watch([() => localSize.value.width, () => localSize.value.height], () => {
+  if (displayMode.value === "heatmap") {
+    nextTick(() => {
+      createHeatmap();
+      nextTick(() => renderHeatmap());
+    });
+  } else if (displayMode.value === "movement") {
+    nextTick(() => renderMovementCanvas());
+  }
 });
+
+watch(selectedPositions, () => {
+  if (displayMode.value === "heatmap") {
+    if (!heatmapInstance) createHeatmap();
+    renderHeatmap();
+  } else if (displayMode.value === "movement") {
+    nextTick(() => renderMovementCanvas());
+  }
+});
+
 watch(
-  () => topViewStore.showHeatmap,
-  (val) => {
-    if (val === true) {
+  () => topViewStore.currentAreaSize,
+  () => {
+    if (displayMode.value === "heatmap") {
       nextTick(() => {
         createHeatmap();
-        nextTick(() => {
-          renderHeatmap();
-          updateTopViewSize();
-        });
+        nextTick(() => renderHeatmap());
       });
+    } else if (displayMode.value === "movement") {
+      nextTick(() => renderMovementCanvas());
     }
   }
 );
 
-const hovering = ref(false);
-const topViewDiv = ref(null);
-const isTopViewFullscreen = ref(false);
-const toggleTopViewFullscreen = () => {
-  const div = topViewDiv.value;
-  if (!document.fullscreenElement) {
-    div.requestFullscreen?.();
-    playerStore.isSynced = false;
-  } else {
-    document.exitFullscreen?.();
+watch(displayMode, (mode) => {
+  if (mode === "heatmap") {
+    nextTick(() => {
+      createHeatmap();
+      nextTick(() => renderHeatmap());
+    });
+  } else if (mode === "movement") {
+    nextTick(() => renderMovementCanvas());
   }
-};
-
-const onFullscreenChange = async () => {
-  const isTopViewFullscreenPrev = isTopViewFullscreen.value;
-  isTopViewFullscreen.value = document.fullscreenElement === topViewDiv.value;
-
-  if (isTopViewFullscreenPrev === true || isTopViewFullscreen.value === true) {
-    await nextTick();
-    if (topViewElement.value) {
-      const rect = topViewElement.value.getBoundingClientRect();
-      topViewStore.setTopViewSize({
-        width: rect.width,
-        height: rect.height,
-        top: rect.top,
-        left: rect.left,
-      });
-    }
-  }
-};
-onMounted(() => {
-  document.addEventListener("fullscreenchange", onFullscreenChange);
 });
-onBeforeUnmount(() => {
-  document.removeEventListener("fullscreenchange", onFullscreenChange);
-});
+
+const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
 </script>
 
 <style scoped>
 .visualizer-image {
+  display: block;
   max-width: 100%;
   max-height: 100%;
-}
-
-.video-control {
-  gap: 5px;
-}
-
-.video-control > .time-code {
-  margin-top: auto;
-  margin-bottom: auto;
 }
 
 .menu-item {
@@ -497,13 +571,46 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
-.player-selector {
+.chart-legend {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
   justify-content: center;
-  margin: 12px 0 8px 0;
+  column-gap: 40px;
+  row-gap: 8px;
+  flex-wrap: wrap;
 }
+
+.chart-legend-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.team-dot {
+  height: 28px;
+  border-radius: 14px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.7rem;
+  cursor: pointer;
+  border: 2px solid;
+  transition: background 0.2s, border 0.2s, color 0.2s;
+  user-select: none;
+  white-space: nowrap;
+}
+.team-dot:hover {
+  opacity: 0.8;
+}
+
+.chart-legend-sep {
+  color: #ccc;
+  font-size: 18px;
+  margin: 0 2px;
+  user-select: none;
+}
+
 .player-dot {
   width: 28px;
   height: 28px;
@@ -518,54 +625,27 @@ onBeforeUnmount(() => {
   transition: background 0.2s, border 0.2s;
   user-select: none;
 }
-.player-dot.selected {
-  border: 2px solid;
-}
-
-.team-row {
-  display: flex;
-  justify-content: center;
-  gap: 5px;
-  margin-bottom: 6px;
-}
 
 .top-view-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
 }
 
-.fullscreen-toggle {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  color: white;
-  font-size: 28px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  z-index: 20;
-}
-
-.fullscreen-toggle.visible {
-  opacity: 0.8;
-}
-
-.fullscreen-controls {
-  position: absolute;
-  left: 0;
-  width: 100%;
-  padding: 16px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+.loading-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  z-index: 20;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
 }
 
-.fullscreen-controls.visible {
-  opacity: 1;
+.spinner {
+  font-size: 48px;
+  color: #ac1414;
+}
+
+.loading-text {
+  margin-top: 10px;
+  font-size: 18px;
 }
 </style>

@@ -14,15 +14,12 @@
 
         <v-card-text class="pt-4 scrollable-content">
           <v-form v-if="canUpload">
-            <div class="text-center">
-              <span class="span-border">
-                {{
-                  $t("modal.video.upload.videos_uploaded", {
-                    numVideos: numVideos,
-                    allowance: allowance,
-                  })
-                }}
-              </span>
+            <div class="text-center d-flex justify-center mb-2">
+              <div class="storage-bar-container">
+                <div class="storage-bar-fill" :style="{ width: progressPercentage + '%' }">
+                  {{ sizeInWords(usedStorageSize) }} / {{ sizeInWords(maxStorageSize) }}
+                </div>
+              </div>
             </div>
 
             <v-text-field
@@ -45,11 +42,26 @@
               class="mt-2"
               density="comfortable"
               show-size
-              :hint="$t('modal.video.upload.hint', { maxSize: maxSizeInWords })"
+              :hint="
+                $t('modal.video.upload.hint', { maxSize: sizeInWords(userStore.maxVideoSize) })
+              "
               persistent-hint
+              variant="underlined"
             />
 
-            <v-row dense class="mt-2">
+            <v-select
+              v-model="video.sport"
+              :items="sportOptions"
+              item-title="title"
+              item-value="value"
+              prepend-icon="mdi-run"
+              :label="$t('modal.video.upload.sport')"
+              density="compact"
+              variant="outlined"
+              class="mt-6"
+            />
+
+            <v-row dense>
               <v-col cols="6">
                 <v-text-field
                   v-model.number="video.fieldLength"
@@ -61,6 +73,7 @@
                   min="1"
                   density="comfortable"
                   hide-spin-buttons
+                  variant="underlined"
                 />
               </v-col>
 
@@ -75,6 +88,7 @@
                   min="1"
                   density="comfortable"
                   hide-spin-buttons
+                  variant="underlined"
                 />
               </v-col>
             </v-row>
@@ -151,14 +165,14 @@
 
             <v-checkbox v-model="checkbox" required class="ml-n2">
               <template #label>
-                <i18n-t keypath="terms_of_service.confirmation" tag="span">
+                <i18n-t keypath="terms_of_use.confirmation" tag="span">
                   <template #title>
                     <router-link
-                      to="/terms-of-service"
+                      to="/terms-of-use"
                       target="_blank"
-                      class="text-primary terms-of-service-link"
+                      class="text-primary terms-of-use-link"
                     >
-                      {{ $t("terms_of_service.title") }}
+                      {{ $t("terms_of_use.title") }}
                     </router-link>
                   </template>
                 </i18n-t>
@@ -186,7 +200,11 @@ import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useVideoUploadStore } from "@/stores/video_upload";
 import { useUserStore } from "@/stores/user";
-import { useVideoStore } from "@/stores/video";
+import { useTopViewStore } from "@/stores/top_view";
+
+const videoUploadStore = useVideoUploadStore();
+const userStore = useUserStore();
+const topViewStore = useTopViewStore();
 
 const props = defineProps({
   modelValue: {
@@ -198,13 +216,10 @@ const emit = defineEmits();
 
 const { t } = useI18n();
 
-const videoUploadStore = useVideoUploadStore();
-const userStore = useUserStore();
-const videoStore = useVideoStore();
-
 const video = ref({
   title: null,
   file: null,
+  sport: null,
   fieldLength: null,
   fieldWidth: null,
   division: null,
@@ -212,6 +227,10 @@ const video = ref({
   totalNumberofTeams: null,
   ageGroup: null,
 });
+
+const sportOptions = computed(() =>
+  topViewStore.sports.map((s) => ({ title: s.title, value: s.key }))
+);
 const analysers = ref([
   {
     label: "Shot Detection",
@@ -227,9 +246,6 @@ watch(
   },
   { immediate: true }
 );
-
-const checkbox = ref(false);
-const fileValid = ref(false);
 
 const dialog = ref(props.modelValue);
 watch(
@@ -267,7 +283,18 @@ const ageGroups = ref([
   "U17 Juniorinnen",
 ]);
 
-const canUpload = computed(() => userStore.allowance > videoStore.all.length);
+const isUploading = computed(() => videoUploadStore.isUploading);
+const uploadingProgress = computed(() => videoUploadStore.progress);
+
+const checkbox = ref(false);
+const fileValid = ref(false);
+
+const maxStorageSize = computed(() => userStore.maxStorageSize);
+const usedStorageSize = computed(() => userStore.usedStorageSize);
+const remainingStorageSize = computed(() => userStore.remainingStorageSize);
+const canUpload = computed(() => {
+  return remainingStorageSize.value > 0;
+});
 const disabled = computed(() => {
   const v = video.value;
   return (
@@ -276,29 +303,28 @@ const disabled = computed(() => {
     uploadingProgress.value !== 0 ||
     !v.title ||
     !v.file ||
+    !v.sport ||
     !v.division ||
     !v.currentPosition ||
     !v.totalNumberofTeams ||
     !v.ageGroup
   );
 });
-const isUploading = computed(() => videoUploadStore.isUploading);
-const uploadingProgress = computed(() => videoUploadStore.progress);
-const allowance = computed(() => userStore.allowance);
-const numVideos = computed(() => videoStore.all.length);
 
-const maxSizeInWords = computed(() => {
-  let size = userStore.maxVideoSize;
-  let extensionId = 0;
-  const extensions = [" B", " kB", " MB", " GB"];
-  while (size > 1024) {
-    size = (size / 1024).toFixed(2);
-    extensionId++;
+const sizeInWords = (size) => {
+  if (size === null || size === undefined) return "0 B";
+
+  const units = ["B", "kB", "MB", "GB", "TB"];
+  let i = 0;
+  let s = size;
+
+  while (s >= 1024 && i < units.length - 1) {
+    s = s / 1024;
+    i++;
   }
-  return size + extensions[extensionId];
-});
 
-const maxSize = computed(() => userStore.maxVideoSize);
+  return Math.round(s * 100) / 100 + units[i];
+};
 
 const validateFile = (file) => {
   if (Array.isArray(file)) {
@@ -307,11 +333,15 @@ const validateFile = (file) => {
 
   if (!file || !file.name) {
     fileValid.value = false;
-    return t("modal.video.upload.validate.file_required", { maxSize: maxSizeInWords.value });
+    return t("modal.video.upload.validate.file_required", {
+      maxSize: sizeInWords(userStore.maxVideoSize),
+    });
   }
-  if (file.size > maxSize.value) {
+  if (file.size > userStore.maxVideoSize) {
     fileValid.value = false;
-    return t("modal.video.upload.validate.file_exceeds", { maxSize: maxSizeInWords.value });
+    return t("modal.video.upload.validate.file_exceeds", {
+      maxSize: sizeInWords(userStore.maxVideoSize),
+    });
   }
   if (!file.name.endsWith(".mp4")) {
     fileValid.value = false;
@@ -332,15 +362,20 @@ const uploadVideo = async () => {
   dialog.value = false;
   fileValid.value = false;
 };
+
+const progressPercentage = computed(() => {
+  if (!maxStorageSize.value) return 0;
+  return Math.min(100, Math.max(0, (remainingStorageSize.value / maxStorageSize.value) * 100));
+});
 </script>
 
 <style scoped>
-.terms-of-service-link {
+.terms-of-use-link {
   font-weight: bold;
   text-decoration: none;
 }
 
-.terms-of-service-link:hover {
+.terms-of-use-link:hover {
   text-decoration: underline;
 }
 
@@ -354,5 +389,26 @@ const uploadVideo = async () => {
 .scrollable-content {
   max-height: 500px;
   overflow-y: auto;
+}
+
+.storage-bar-container {
+  width: 80%;
+  background-color: #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 40px;
+}
+
+.storage-bar-fill {
+  background-color: rgba(var(--v-theme-primary));
+  color: white;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  transition: width 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
 }
 </style>

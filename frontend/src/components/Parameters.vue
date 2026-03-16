@@ -29,18 +29,41 @@
         variant="underlined"
       />
 
-      <v-select
-        v-model="parameter.value"
-        :items="calibrationAssets"
-        :label="parameter.text"
-        :hint="parameter.hint"
-        item-title="name"
-        item-value="id"
-        v-if="parameter.field == 'select_calibration'"
-        :key="parameter.name"
-        persistent-hint
-        variant="underlined"
-      />
+      <div v-if="parameter.field == 'select_calibration'" :key="parameter.name">
+        <div class="d-flex ga-2 mb-6">
+          <v-btn
+            variant="outlined"
+            prepend-icon="mdi-plus"
+            class="flex-grow-1"
+            @click="emit('create-calibration')"
+          >
+            {{ $t("calibration_asset.create") }}
+          </v-btn>
+          <v-btn
+            variant="outlined"
+            prepend-icon="mdi-pencil"
+            class="flex-grow-1"
+            @click="showModalCalibrationAssetSelectForEdit = true"
+          >
+            {{ $t("calibration_asset.select") }}
+          </v-btn>
+        </div>
+        <ModalCalibrationAssetSelect
+          v-if="showModalCalibrationAssetSelectForEdit"
+          v-model="showModalCalibrationAssetSelectForEdit"
+          @selected="onCalibrationAssetSelected"
+        />
+        <v-select
+          v-model="parameter.value"
+          :items="calibrationAssets"
+          :label="parameter.text"
+          :hint="parameter.hint"
+          item-title="name"
+          item-value="id"
+          persistent-hint
+          variant="underlined"
+        />
+      </div>
 
       <v-select
         v-model="parameter.value"
@@ -155,6 +178,49 @@
         </template>
       </v-select>
 
+      <v-select
+        v-model="parameter.value"
+        :items="exportStore.selectableRunningDistanceAttributes"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_running_distance_attribute'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+        multiple
+        class="mt-6"
+        :menu-props="{ location: 'bottom', maxHeight: 250 }"
+      >
+        <template
+          v-slot:prepend-item
+          v-if="exportStore.selectableRunningDistanceAttributes?.length > 0"
+        >
+          <v-checkbox
+            class="ml-4 my-n2 text-body-2"
+            v-model="isRunningDistanceAttributeSelectAll"
+            @click="toggleRunningDistanceAttributeSelectAll(parameter)"
+            hide-details
+            ripple
+          >
+            <template v-slot:label>
+              <span class="text-body-1">{{
+                $t("modal.export.running_distance.attributes.all")
+              }}</span>
+            </template>
+          </v-checkbox>
+          <v-divider />
+        </template>
+
+        <template v-slot:selection="{ item, index }">
+          <v-chip v-if="index < 2" :text="item.title" />
+          <v-chip v-if="index === 2" class="text-grey text-caption">
+            (+{{ parameter.value.length - 2 }} others)
+          </v-chip>
+        </template>
+      </v-select>
+
       <v-autocomplete
         v-model="parameter.value"
         v-if="parameter.field == 'select_running_distance_frame'"
@@ -168,6 +234,11 @@
         persistent-hint
         variant="underlined"
         :menu-props="{ location: 'bottom', maxHeight: 160 }"
+        :style="{
+          display: 'inline-block',
+          width: '48%',
+          marginRight: parameter.name === 'running_distance_start_frame' ? '4%' : '0',
+        }"
       />
 
       <v-select
@@ -296,11 +367,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useTimelineStore } from "../stores/timeline";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
+import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
 import { useExportStore } from "@/stores/export";
 import { usePlayerStore } from "@/stores/player";
 
@@ -316,6 +388,13 @@ const props = defineProps({
   parameters: Array,
   videoIds: Array,
 });
+
+const emit = defineEmits(["create-calibration", "select-calibration"]);
+
+const showModalCalibrationAssetSelectForEdit = ref(false);
+const onCalibrationAssetSelected = () => {
+  emit("select-calibration");
+};
 
 const groupTimelines = (timelines) => {
   let timelinesGroups = {};
@@ -376,12 +455,10 @@ const positionDataTeams = computed(() => {
     return a - b;
   });
 
+  const meta = topViewStore.metaDataTopView;
   const teamItems = sortedTeams.map((team_id) => {
-    if (team_id === 1) {
-      return { name: t("modal.export.position_data.teams.ball"), id: team_id };
-    } else {
-      return { name: t("modal.export.position_data.teams.team", { id: team_id }), id: team_id };
-    }
+    const teamName = meta?.team_ids?.[team_id]?.name;
+    return { id: team_id, name: teamName };
   });
 
   return teamItems;
@@ -401,7 +478,7 @@ const togglePositionDataTeamSelectAll = (parameter) => {
 const isPositionDataAttributeSelectAll = ref(false);
 const togglePositionDataAttributeSelectAll = (parameter) => {
   if (!isPositionDataAttributeSelectAll.value) {
-    parameter.value = exportStore.selectablePositionDataAttributes.map((team) => team.id);
+    parameter.value = exportStore.selectablePositionDataAttributes.map((a) => a.id);
   } else {
     parameter.value = [];
   }
@@ -423,10 +500,11 @@ const runningDistanceTeams = computed(() => {
 
   const sortedTeams = [...teams].sort((a, b) => a - b);
 
-  return sortedTeams.map((team_id) => ({
-    name: t("modal.export.running_distance.teams.team", { id: team_id }),
-    id: team_id,
-  }));
+  const meta = topViewStore.metaDataTopView;
+  return sortedTeams.map((team_id) => {
+    const teamName = meta?.team_ids?.[team_id]?.name;
+    return { id: team_id, name: teamName };
+  });
 });
 
 const isRunningDistanceTeamSelectAll = ref(false);
@@ -438,6 +516,17 @@ const toggleRunningDistanceTeamSelectAll = (parameter) => {
   }
 
   isRunningDistanceTeamSelectAll.value = !isRunningDistanceTeamSelectAll.value;
+};
+
+const isRunningDistanceAttributeSelectAll = ref(false);
+const toggleRunningDistanceAttributeSelectAll = (parameter) => {
+  if (!isRunningDistanceAttributeSelectAll.value) {
+    parameter.value = exportStore.selectableRunningDistanceAttributes.map((a) => a.id);
+  } else {
+    parameter.value = [];
+  }
+
+  isRunningDistanceAttributeSelectAll.value = !isRunningDistanceAttributeSelectAll.value;
 };
 
 const calibrationAssets = computed(() => {

@@ -1,63 +1,58 @@
 <template>
   <v-container ref="videoContainer" class="d-flex flex-column">
     <v-row justify="center">
-      <div
-        ref="videoDiv"
-        class="video-wrapper"
-        @mouseenter="hovering = true"
-        @mouseleave="hovering = false"
-      >
-        <video
-          ref="videoElement"
-          @play="onPlay"
-          @pause="onPause"
-          @ended="onEnded"
-          @timeupdate="onTimeUpdate"
-          @loadedmetadata="updateVideoSize"
-          :src="playerStore.videoUrl"
-          :style="
-            ((border = '1px solid red'),
-            isVideoFullscreen
-              ? { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }
-              : {
-                  maxHeight: maxVideoHeight * 100 + 'vh',
-                  maxWidth: '100%',
-                })
-          "
-        />
+      <div ref="videoFullscreenRoot" class="video-fullscreen-root">
+        <div class="video-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
+          <video
+            ref="videoElement"
+            @play="onPlay"
+            @pause="onPause"
+            @ended="onEnded"
+            @timeupdate="onTimeUpdate"
+            @loadedmetadata="updateVideoSize"
+            :style="
+              isVideoFullscreen
+                ? {
+                    maxHeight: 100 + 'vh',
+                  }
+                : {
+                    maxHeight: maxVideoHeight * 100 + 'vh',
+                    maxWidth: '100%',
+                  }
+            "
+          />
 
-        <v-icon
-          class="fullscreen-toggle"
-          @click="toggleVideoFullscreen"
-          :class="{ visible: hovering }"
-        >
-          {{ isVideoFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
-        </v-icon>
+          <v-icon
+            class="fullscreen-toggle"
+            @click="toggleVideoFullscreen"
+            :class="{ visible: hovering }"
+          >
+            {{ isVideoFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
+          </v-icon>
 
-        <!-- Fullscreen Controls -->
-        <div v-if="isVideoFullscreen" class="fullscreen-controls" :class="{ visible: hovering }">
-          <div class="controls-top">
-            <v-icon @click="togglePlaying" class="control-icon">
-              <template v-if="videoEnded">mdi-restart</template>
-              <template v-else-if="videoPlaying">mdi-pause</template>
-              <template v-else>mdi-play</template>
-            </v-icon>
-            <div class="time-code">{{ getTimecode(playerStore.currentTime) }}</div>
+          <div v-if="isVideoFullscreen" class="fullscreen-controls" :class="{ visible: hovering }">
+            <div class="controls-top">
+              <v-icon @click="togglePlaying" class="control-icon">
+                <template v-if="videoEnded">mdi-restart</template>
+                <template v-else-if="videoPlaying">mdi-pause</template>
+                <template v-else>mdi-play</template>
+              </v-icon>
+              <div class="time-code">{{ getTimecode(playerStore.currentTime) }}</div>
+            </div>
+
+            <v-slider
+              v-model="progress"
+              @update:model-value="onProgressChange"
+              hide-details
+              color="white"
+              :thumb-size="15"
+              :step="1000 / playerStore.videoFPS"
+              min="0"
+              :max="playerStore.videoDuration"
+            />
           </div>
 
-          <v-slider
-            v-model="progress"
-            @update:model-value="onProgressChange"
-            hide-details
-            color="white"
-            :thumb-size="15"
-            :step="1000 / playerStore.videoFPS"
-            min="0"
-            :max="playerStore.videoDuration"
-          />
-        </div>
-
-        <div
+          <!-- <div
           v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
           v-show="bboxesStore.showBoundingBox"
           :key="position"
@@ -73,36 +68,55 @@
             height: position[9] * videoStore.videoSize.height + 'px',
             border: `2px solid ${visualizationStore.getTeamColor(position[1])}`,
           }"
-          @click="openEditBBox(position)"
         >
-          <v-tooltip
-            activator="parent"
-            location="top"
-            class="bounding-box-tooltip"
-            :style="{ '--tooltip-bg': toRgb(visualizationStore.getTeamColor(position[1]), 0.7) }"
-            interactive
-          >
-            <div>
-              <div>
-                <strong>{{ $t("modal.bounding_box.tooltip.box_id") }}: {{ position[5] }}</strong>
-              </div>
-              <v-divider class="my-1" />
-              <div>{{ $t("modal.bounding_box.tooltip.player_id") }}: {{ position[0] }}</div>
-              <div>{{ $t("modal.bounding_box.tooltip.team_id") }}: {{ position[1] }}</div>
-            </div>
-          </v-tooltip>
-          <div
-            class="bounding-box-player-id"
-            :style="{ color: visualizationStore.getTeamColor(position[1]) }"
-          >
-            {{ position[0] }}
-          </div>
-        </div>
+        </div> -->
 
-        <div
-          v-for="m in calibrationAssetStore.filteredVideoMarker"
-          v-show="calibrationAssetStore.showVideoMarker"
-          :key="m.id"
+          <div
+            v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
+            v-show="bboxesStore.showBoundingBox"
+            :key="position"
+            :style="getEllipseSvg(position).style"
+            @click="openEditBBox(position)"
+          >
+            <svg class="player-ellipse">
+              <path
+                :d="getEllipseSvg(position).arc"
+                :stroke="getEllipseSvg(position).color"
+                stroke-width="2"
+                fill="none"
+                stroke-linecap="round"
+              />
+            </svg>
+            <v-tooltip
+              activator="parent"
+              location="top"
+              class="bounding-box-tooltip"
+              :style="{ '--tooltip-bg': toRgb(visualizationStore.getTeamColor(position[1]), 0.7) }"
+              interactive
+            >
+              <div>
+                <div>
+                  <strong>{{ $t("modal.bounding_box.tooltip.box_id") }}: {{ position[5] }}</strong>
+                </div>
+                <v-divider class="my-1" />
+                <div>{{ $t("modal.bounding_box.tooltip.player_id") }}: {{ position[0] }}</div>
+                <div>{{ $t("modal.bounding_box.tooltip.team_id") }}: {{ position[1] }}</div>
+              </div>
+            </v-tooltip>
+            <div
+              class="bounding-box-player-id"
+              :style="{
+                color: visualizationStore.getTeamColor(position[1]),
+              }"
+            >
+              {{ position[0] }}
+            </div>
+          </div>
+
+          <!-- <div
+          v-for="o in calibrationAssetStore.filteredVideoObject"
+          v-show="calibrationAssetStore.showVideoAsset"
+          :key="o.id"
           :style="{
             position: 'absolute',
             width: '12px',
@@ -111,36 +125,136 @@
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             top: isVideoFullscreen
-              ? videoStore.videoSize.top + m.videoCoordsRel.y * videoStore.videoSize.height + 'px'
-              : m.videoCoordsRel.y * videoStore.videoSize.height + 'px',
+              ? videoStore.videoSize.top + o.videoCoordsRel.y * videoStore.videoSize.height + 'px'
+              : o.videoCoordsRel.y * videoStore.videoSize.height + 'px',
             left: isVideoFullscreen
-              ? videoStore.videoSize.left + m.videoCoordsRel.x * videoStore.videoSize.width + 'px'
-              : m.videoCoordsRel.x * videoStore.videoSize.width + 'px',
+              ? videoStore.videoSize.left + o.videoCoordsRel.x * videoStore.videoSize.width + 'px'
+              : o.videoCoordsRel.x * videoStore.videoSize.width + 'px',
           }"
-          @mouseenter="calibrationAssetStore.hoveredVideoMarker = m.id"
-          @mouseleave="calibrationAssetStore.hoveredVideoMarker = null"
-        />
+          @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+          @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+        /> -->
+          <svg
+            :width="videoStore.videoSize.width"
+            :height="videoStore.videoSize.height"
+            style="position: absolute; top: 0; left: 0; pointer-events: none"
+          >
+            <template v-for="o in calibrationAssetStore.filteredVideoObject">
+              <circle
+                v-if="o.videoCoordsRel.length === 1"
+                v-show="calibrationAssetStore.showVideoAsset"
+                :key="o.id"
+                :cx="o.videoCoordsRel[0].x * videoStore.videoSize.width"
+                :cy="o.videoCoordsRel[0].y * videoStore.videoSize.height"
+                r="6"
+                fill="red"
+                fill-opacity="0.8"
+                style="pointer-events: all"
+                @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+                @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+              />
 
-        <div
-          v-for="point in calibrationAssetStore.videoMarkerReprojection"
-          v-show="calibrationAssetStore.showVideoMarker"
-          :key="point"
-          :style="{
-            position: 'absolute',
-            width: '5px',
-            height: '5px',
-            backgroundColor: 'blue',
-            borderRadius: '50%',
-            transform: 'translate(-50%, -50%)',
-            pointerEvents: 'none',
-            top: isVideoFullscreen
-              ? videoStore.videoSize.top + point.y * videoStore.videoSize.height + 'px'
-              : point.y * videoStore.videoSize.height + 'px',
-            left: isVideoFullscreen
-              ? videoStore.videoSize.left + point.x * videoStore.videoSize.width + 'px'
-              : point.x * videoStore.videoSize.width + 'px',
-          }"
-        />
+              <line
+                v-if="o.videoCoordsRel.length === 2"
+                v-show="calibrationAssetStore.showVideoAsset"
+                :key="o.id"
+                :x1="o.videoCoordsRel[0].x * videoStore.videoSize.width"
+                :y1="o.videoCoordsRel[0].y * videoStore.videoSize.height"
+                :x2="o.videoCoordsRel[1].x * videoStore.videoSize.width"
+                :y2="o.videoCoordsRel[1].y * videoStore.videoSize.height"
+                stroke-width="4"
+                stroke="red"
+                stroke-opacity="0.8"
+                fill="none"
+                style="pointer-events: all"
+                @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+                @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+              />
+
+              <path
+                v-if="o.videoCoordsRel.length > 2"
+                v-show="calibrationAssetStore.showVideoAsset"
+                :key="o.id"
+                :d="
+                  (() => {
+                    const points = o.videoCoordsRel.map((p) => ({
+                      x: p.x * videoStore.videoSize.width,
+                      y: p.y * videoStore.videoSize.height,
+                    }));
+                    let d = `M ${points[0].x} ${points[0].y}`;
+                    for (let i = 1; i < points.length; i++) {
+                      d += ` L ${points[i].x} ${points[i].y}`;
+                    }
+                    return d;
+                  })()
+                "
+                stroke="red"
+                stroke-width="4"
+                stroke-opacity="0.8"
+                fill="none"
+                style="pointer-events: all"
+                @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+                @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+              />
+            </template>
+          </svg>
+
+          <svg
+            :width="videoStore.videoSize.width"
+            :height="videoStore.videoSize.height"
+            style="position: absolute; top: 0; left: 0; pointer-events: none"
+          >
+            <template v-for="o in calibrationAssetStore.videoObjectReprojection">
+              <circle
+                v-if="o.length === 1"
+                v-show="calibrationAssetStore.showVideoAsset"
+                :key="o.id"
+                :cx="o[0].x * videoStore.videoSize.width + 'px'"
+                :cy="o[0].y * videoStore.videoSize.height + 'px'"
+                r="3"
+                fill="blue"
+                style="pointer-events: none"
+              />
+
+              <line
+                v-if="o.length === 2"
+                v-show="calibrationAssetStore.showVideoAsset"
+                :key="o.id"
+                :x1="o[0].x * videoStore.videoSize.width + 'px'"
+                :y1="o[0].y * videoStore.videoSize.height + 'px'"
+                :x2="o[1].x * videoStore.videoSize.width + 'px'"
+                :y2="o[1].y * videoStore.videoSize.height + 'px'"
+                stroke-width="3"
+                stroke="blue"
+                fill="none"
+                style="pointer-events: none"
+              />
+
+              <path
+                v-if="o.length > 2"
+                v-show="calibrationAssetStore.showVideoAsset"
+                :key="o.id"
+                :d="
+                  (() => {
+                    const points = o.map((p) => ({
+                      x: p.x * videoStore.videoSize.width,
+                      y: p.y * videoStore.videoSize.height,
+                    }));
+                    let d = `M ${points[0].x} ${points[0].y}`;
+                    for (let i = 1; i < points.length; i++) {
+                      d += ` L ${points[i].x} ${points[i].y}`;
+                    }
+                    return d;
+                  })()
+                "
+                stroke="blue"
+                stroke-width="3"
+                fill="none"
+                style="pointer-events: none"
+              />
+            </template>
+          </svg>
+        </div>
       </div>
     </v-row>
 
@@ -151,7 +265,7 @@
         <v-icon>mdi-skip-backward</v-icon>
       </v-btn>
 
-      <v-btn @click="deltaSeek(-(1 / playerStore.videoFPS))" size="small">
+      <v-btn @click="stepBackwardFrame" size="small">
         <v-icon>mdi-skip-previous</v-icon>
       </v-btn>
 
@@ -161,7 +275,7 @@
         <v-icon v-else>mdi-play</v-icon>
       </v-btn>
 
-      <v-btn @click="deltaSeek(1 / playerStore.videoFPS)" size="small">
+      <v-btn @click="stepForwardFrame" size="small">
         <v-icon> mdi-skip-next</v-icon>
       </v-btn>
 
@@ -230,6 +344,7 @@ import { useVisualizationStore } from "@/stores/visualization";
 import { getTimecode } from "@/plugins/time";
 import ModalBBoxUpdate from "./ModalBboxUpdate.vue";
 import { toRgb } from "@/plugins/helpers";
+import Hls from "hls.js";
 
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
@@ -243,18 +358,15 @@ onMounted(() => {
   if (videoElement.value) playerStore.videoElement = videoElement.value;
 });
 
+const lastReportedFrame = ref(null);
 const onTimeUpdate = (event) => {
   const videoTimeMs = Math.round(event.target.currentTime * 1000);
-  const frameKeys = [];
-  for (let t = 0; t <= playerStore.videoDuration * 1000; t += 1000 / playerStore.videoFPS) {
-    frameKeys.push(Math.round(t));
+  const frameMs = Math.round(1000 / (playerStore.videoFPS || 30));
+  const closestFrame = Math.round(videoTimeMs / frameMs) * frameMs;
+  if (lastReportedFrame.value !== closestFrame) {
+    lastReportedFrame.value = closestFrame;
+    playerStore.setCurrentTime(closestFrame);
   }
-  const closestFrame = frameKeys.reduce(
-    (prev, curr) => (Math.abs(curr - videoTimeMs) < Math.abs(prev - videoTimeMs) ? curr : prev),
-    frameKeys[0]
-  );
-
-  playerStore.setCurrentTime(closestFrame);
 };
 const deltaSeek = (delta) => {
   if (videoElement.value) {
@@ -263,6 +375,31 @@ const deltaSeek = (delta) => {
     videoElement.value.currentTime = newTime;
   }
 };
+
+function goToFrameMs(frameMs) {
+  if (!videoElement.value) return;
+  const timeSec = frameMs / 1000;
+  videoElement.value.currentTime = timeSec;
+  lastReportedFrame.value = frameMs;
+  playerStore.setCurrentTime(frameMs);
+}
+
+function goToFrameIndex(frameIndex) {
+  const frameMs = Math.round((frameIndex * 1000) / (playerStore.videoFPS || 30));
+  goToFrameMs(frameMs);
+}
+
+function stepForwardFrame() {
+  const frameMsLen = Math.round(1000 / (playerStore.videoFPS || 30));
+  const current = Math.round(playerStore.currentTime / frameMsLen) * frameMsLen;
+  goToFrameMs(current + frameMsLen);
+}
+
+function stepBackwardFrame() {
+  const frameMsLen = Math.round(1000 / (playerStore.videoFPS || 30));
+  const current = Math.round(playerStore.currentTime / frameMsLen) * frameMsLen;
+  goToFrameMs(Math.max(0, current - frameMsLen));
+}
 
 const targetTime = computed(() => playerStore.targetTime);
 const onProgressChange = (time) => {
@@ -280,16 +417,22 @@ watch(targetTime, (newTargetTime) => {
 });
 
 let updateTimer = null;
+const MIN_INTERVAL_MS = 16;
 const startUpdatingTime = () => {
   if (updateTimer) clearInterval(updateTimer);
 
-  const interval = 1 / (playerStore.videoFPS * 1000);
+  const frameMs = Math.max(Math.round(1000 / (playerStore.videoFPS || 30)), MIN_INTERVAL_MS);
 
   updateTimer = setInterval(() => {
     if (videoElement.value) {
-      playerStore.setCurrentTime(Math.round(videoElement.value.currentTime * 1000));
+      const videoTimeMs = Math.round(videoElement.value.currentTime * 1000);
+      const roundedFrame = Math.round(videoTimeMs / frameMs) * frameMs;
+      if (lastReportedFrame.value !== roundedFrame) {
+        lastReportedFrame.value = roundedFrame;
+        playerStore.setCurrentTime(roundedFrame);
+      }
     }
-  }, interval);
+  }, frameMs);
 };
 const stopUpdatingTime = () => {
   if (updateTimer) {
@@ -394,7 +537,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", updateVideoSize);
 });
 watch(
-  () => calibrationAssetStore.isAnyReferenceMarkerActive,
+  () => calibrationAssetStore.isAnyReferenceObjectActive,
   async (newVal) => {
     if (!newVal) {
       await nextTick();
@@ -433,40 +576,219 @@ function openEditBBox(bbox) {
   editDialog.value = true;
 }
 
-const currentFrameKey = computed(() => {
-  return Object.keys(bboxesStore.bboxDataInterpolated)
+const bboxSortedKeys = computed(() =>
+  Object.keys(bboxesStore.bboxDataInterpolated)
     .map(Number)
     .sort((a, b) => a - b)
-    .reduce(
-      (prev, key) => (key <= playerStore.currentTime ? key : prev),
-      Object.keys(bboxesStore.bboxDataInterpolated)[0]
-    );
+);
+const currentFrameKey = computed(() => {
+  const keys = bboxSortedKeys.value;
+  if (!keys.length) return undefined;
+  const target = playerStore.currentTime;
+  if (target < keys[0]) return keys[0];
+  if (target >= keys[keys.length - 1]) return keys[keys.length - 1];
+  // Binary search for largest key <= target
+  let lo = 0;
+  let hi = keys.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >>> 1;
+    if (keys[mid] <= target) lo = mid;
+    else hi = mid - 1;
+  }
+  return keys[lo];
 });
 
 const hovering = ref(false);
-const videoDiv = ref(null);
 const isVideoFullscreen = ref(false);
+const videoFullscreenRoot = ref(null);
 const toggleVideoFullscreen = () => {
-  const div = videoDiv.value;
+  const root = videoFullscreenRoot.value;
+
   if (!document.fullscreenElement) {
-    div.requestFullscreen?.();
+    root.requestFullscreen?.();
+    playerStore.isSynced = false;
   } else {
     document.exitFullscreen?.();
   }
 };
-const onFullscreenChange = () => {
-  const isVideoFullscreenPrev = isVideoFullscreen.value;
-  isVideoFullscreen.value = document.fullscreenElement === videoDiv.value;
+const onFullscreenChange = async () => {
+  isVideoFullscreen.value = document.fullscreenElement === videoFullscreenRoot.value;
 
-  if (isVideoFullscreenPrev === true || isVideoFullscreen.value === true) {
-    updateVideoSize();
+  await nextTick();
+
+  if (videoElement.value) {
+    const rect = videoElement.value.getBoundingClientRect();
+    videoStore.setVideoSize({
+      width: rect.width,
+      height: rect.height,
+      top: 0,
+      left: 0,
+    });
   }
 };
+// const toggleVideoFullscreen = () => {
+//   const div = videoDiv.value;
+//   if (!document.fullscreenElement) {
+//     div.requestFullscreen?.();
+//   } else {
+//     document.exitFullscreen?.();
+//   }
+// };
+// const onFullscreenChange = () => {
+//   const isVideoFullscreenPrev = isVideoFullscreen.value;
+//   isVideoFullscreen.value = document.fullscreenElement === videoDiv.value;
+
+//   if (isVideoFullscreenPrev === true || isVideoFullscreen.value === true) {
+//     updateVideoSize();
+//   }
+// };
 onMounted(() => {
   document.addEventListener("fullscreenchange", onFullscreenChange);
 });
 onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
+});
+
+const getEllipseSvg = (position) => {
+  const x = position[6];
+  const y = position[7];
+  const w = position[8];
+  const h = position[9];
+
+  const vid = videoStore.videoSize;
+
+  const color = visualizationStore.getTeamColor(position[1]);
+
+  // via SoccerNet
+  const ellipseWidth = w * vid.width;
+  const ellipseHeight = ellipseWidth * 0.35;
+
+  const centerX = (x + w / 2) * vid.width + (isVideoFullscreen.value ? vid.left : 0);
+  const centerY =
+    (y + h) * vid.height +
+    (isVideoFullscreen.value ? vid.top : 0) -
+    ellipseHeight * (0.1 + (1 - (y + h)) * 1.5);
+
+  const left = centerX - ellipseWidth;
+  const top = centerY - ellipseHeight;
+
+  const rx = ellipseWidth;
+  const ry = ellipseHeight;
+
+  const startAngle = (-45 * Math.PI) / 180;
+  const endAngle = (235 * Math.PI) / 180;
+
+  const sx = rx + rx * Math.cos(startAngle);
+  const sy = ry + ry * Math.sin(startAngle);
+
+  const ex = rx + rx * Math.cos(endAngle);
+  const ey = ry + ry * Math.sin(endAngle);
+
+  const arcPath = `M ${sx},${sy} A ${rx} ${ry} 0 1 1 ${ex},${ey}`;
+
+  return {
+    style: {
+      position: "absolute",
+      left: left + "px",
+      top: top + "px",
+      width: ellipseWidth * 2 + "px",
+      height: ellipseHeight * 2 + "px",
+      overflow: "visible",
+      zIndex: 12,
+      cursor: isVideoFullscreen.value ? "default" : "pointer",
+    },
+    arc: arcPath,
+    color,
+    centerX,
+    centerY,
+  };
+};
+
+// function tarGzUrlToMp4Url(tarUrl) {
+//   const url = new URL(tarUrl);
+
+//   const parts = url.pathname.split("/");
+//   const fileName = parts.pop();
+//   const mp4Name = fileName.replace(/\.tar\.gz$/, ".mp4");
+
+//   parts.push(mp4Name);
+//   url.pathname = parts.join("/");
+
+//   return url.toString();
+// }
+// watch(
+//   () => playerStore.videoUrl,
+//   (url) => {
+//     if (!url || !videoElement.value) return;
+//     const video = videoElement.value;
+
+//     video.src = tarGzUrlToMp4Url(url);
+//   }
+// );
+
+let hls = null;
+function tarGzUrlToHlsUrl(tarUrl) {
+  const url = new URL(tarUrl);
+
+  // Dateiname extrahieren
+  const parts = url.pathname.split("/");
+  const fileName = parts.pop(); // <hash>.tar.gz
+  const id = fileName.replace(/\.tar\.gz$/, "");
+
+  // Neuer Pfad: nested id/<id>.m3u8 (HLS index)
+  parts.push(id, `${id}.m3u8`);
+  url.pathname = parts.join("/");
+
+  return url.toString();
+}
+watch(
+  () => playerStore.videoUrl,
+  (url) => {
+    if (!url || !videoElement.value) return;
+
+    const video = videoElement.value;
+    const hlsUrl = tarGzUrlToHlsUrl(url);
+
+    if (!hlsUrl) return;
+
+    if (hls) {
+      try {
+        hls.destroy();
+      } catch (e) {
+        console.error("Failed to destroy existing hls instance", e);
+      }
+      hls = null;
+      try {
+        video.src = "";
+      } catch (e) {}
+    }
+
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        backBufferLength: 30,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+      });
+
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        updateVideoSize();
+      });
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = hlsUrl;
+    }
+  },
+  { immediate: true }
+);
+onBeforeUnmount(() => {
+  if (hls) {
+    hls.destroy();
+    hls = null;
+  }
 });
 </script>
 
@@ -488,7 +810,7 @@ onBeforeUnmount(() => {
   background-color: #f0f0f0;
 }
 
-.bounding-box-tooltip ::v-deep .v-overlay__content {
+.bounding-box-tooltip ::v-deep(.v-overlay__content) {
   background-color: var(--tooltip-bg);
   border-radius: 2px;
   font-size: 0.7rem;
@@ -510,7 +832,7 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
-.bounding-box-player-id {
+.bounding-box-player-id-old {
   position: absolute;
   left: 50%;
   bottom: -20px;
@@ -519,11 +841,26 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
+.bounding-box-player-id {
+  position: absolute;
+  left: 50%;
+  bottom: -25px;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+.video-fullscreen-root {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
 .video-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
 }
 
 .fullscreen-toggle {
@@ -576,5 +913,10 @@ onBeforeUnmount(() => {
   color: white;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+.player-ellipse {
+  width: 100%;
+  height: 100%;
 }
 </style>

@@ -11,7 +11,7 @@
         </template>
       </v-toolbar>
 
-      <v-card-text>
+      <v-card-text style="max-height: 490px; overflow-y: auto">
         <v-row justify="center" class="mt-0 mb-1">
           <v-tabs v-model="selectedMode" fixed-tabs slider-color="primary">
             <v-tab v-for="mode in PositionDataModes" :key="mode.id" :value="mode.id">
@@ -32,7 +32,7 @@
                     item-value="id"
                     :label="$t('modal.position_data.select.asset')"
                     variant="underlined"
-                    class="mt-0"
+                    class="mt-0 mx-4"
                   />
 
                   <v-select
@@ -42,12 +42,29 @@
                     item-value="id"
                     :label="$t('modal.position_data.select.bytetrack')"
                     variant="underlined"
-                    class="mt-2"
+                    class="mt-2 mx-4"
                   />
+
+                  <v-select
+                    v-model="areaSize"
+                    :items="areaOptions"
+                    item-title="title"
+                    item-value="value"
+                    :label="$t('modal.position_data.select.area_size')"
+                    variant="underlined"
+                    class="mt-2 mx-4"
+                  />
+
+                  <v-row class="justify-center my-2">
+                    <div v-if="areaSize" style="position: relative; display: inline-block">
+                      <img :src="mainPreview" style="height: 200px; display: block" />
+                      <div v-if="cropPct" :style="cropOverlayStyle" />
+                    </div>
+                  </v-row>
                 </template>
 
                 <template v-else-if="mode.id === 'manual'">
-                  <v-list density="compact" style="height: 210px; overflow-y: auto">
+                  <v-list density="compact" style="max-height: 210px; overflow-y: auto">
                     <v-list-item
                       v-for="data in positionDataStore.positionDataList"
                       :key="data.id"
@@ -85,6 +102,23 @@
                       />
                     </v-list-item>
                   </v-list>
+
+                  <v-select
+                    v-model="areaSize"
+                    :items="areaOptions"
+                    item-title="title"
+                    item-value="value"
+                    :label="$t('modal.position_data.select.area_size')"
+                    variant="underlined"
+                    class="mt-2 mx-4"
+                  />
+
+                  <v-row class="justify-center my-2">
+                    <div v-if="areaSize" style="position: relative; display: inline-block">
+                      <img :src="mainPreview" style="height: 200px; display: block" />
+                      <div v-if="cropPct" :style="cropOverlayStyle" />
+                    </div>
+                  </v-row>
                 </template>
               </v-tabs-window-item>
             </v-tabs-window>
@@ -94,7 +128,12 @@
         <v-btn
           class="mt-2"
           @click="
-            confirmSelection(selectedCalibrationAsset, selectedBytetrack, selectedPositionData)
+            confirmSelection(
+              selectedCalibrationAsset,
+              selectedBytetrack,
+              selectedPositionData,
+              areaSize
+            )
           "
           :disabled="isButtonDisabled"
         >
@@ -109,7 +148,6 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
-import { useBboxesStore } from "@/stores/bboxes";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
@@ -119,7 +157,6 @@ import ModalPositionDataRename from "./ModalPositionDataRename.vue";
 const { t } = useI18n();
 
 const playerStore = usePlayerStore();
-const bboxesStore = useBboxesStore();
 const pluginRunStore = usePluginRunStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const positionDataStore = usePositionDataStore();
@@ -192,25 +229,102 @@ const bytetrackRuns = computed(() => {
 
 const isButtonDisabled = computed(() => {
   if (selectedMode.value === "bytetrack") {
-    return selectedCalibrationAsset.value === null || selectedBytetrack.value === null;
+    return (
+      selectedCalibrationAsset.value === null ||
+      selectedBytetrack.value === null ||
+      !areaSize.value
+    );
   } else if (selectedMode.value === "manual") {
-    return !selectedPositionData.value;
+    return !selectedPositionData.value || !areaSize.value;
   }
   return true;
 });
 
-const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId) => {
+const confirmSelection = (
+  calibrationAssetId,
+  bytetrackPluginId,
+  positionDataId,
+  areaSize
+) => {
   if (selectedMode.value === "bytetrack") {
     topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
+    const keys = Object.keys(topViewStore.positionDataTopView)
+      .map(Number)
+      .sort((a, b) => a - b);
+    if (keys.length > 0) {
+      positionDataStore.setSelectedTimeRangeStart(keys[0]);
+      positionDataStore.setSelectedTimeRangeEnd(keys[keys.length - 1]);
+    }
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
   }
-  positionDataStore.selectedTimeRange.end = Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b)
-    .at(-1);
+
+  topViewStore.onSportChange(topViewStore.currentSport.title, areaSize);
   dialog.value = false;
 };
 
 const showModalPositionDataRename = ref(false);
+
+const areaSize = ref(null);
+const currentSportObj = computed(() => topViewStore.currentSport);
+const areaOptions = computed(() => {
+  const s = currentSportObj.value;
+  if (!s || !s.areas) return [];
+  return Object.keys(s.areas).map((areaKey) => ({
+    title: s.areas[areaKey].title || areaKey,
+    value: areaKey,
+  }));
+});
+
+watch(
+  () => topViewStore.currentSport.title,
+  () => {
+    areaSize.value = areaOptions.value.length > 0 ? areaOptions.value[0].value : null;
+  },
+  { immediate: true }
+);
+
+const mainPreview = computed(() => {
+  return (
+    currentSportObj.value.areas?.full?.image ||
+    Object.values(currentSportObj.value.areas || {})[0]?.image ||
+    null
+  );
+});
+
+const cropPct = computed(() => {
+  if (!areaSize.value) return { x: [0, 1], y: [0, 1] };
+  const sportObj = currentSportObj.value;
+  let tpl = sportObj?.areas?.[areaSize.value]?.templateCrop ?? sportObj?.areas?.full?.templateCrop;
+  return { x: tpl.x, y: tpl.y };
+});
+const sportWidthRel = computed(() => {
+  const sportObj = currentSportObj.value;
+  return sportObj?.areas?.full?.widthRel ?? sportObj?.widthRel ?? 1;
+});
+const sportHeightRel = computed(() => {
+  const sportObj = currentSportObj.value;
+  return sportObj?.areas?.full?.heightRel ?? sportObj?.heightRel ?? 1;
+});
+
+const cropOverlayStyle = computed(() => {
+  const crop = cropPct.value;
+  if (!crop) return {};
+
+  const leftRel = (1 - sportWidthRel.value) / 2 + crop.x[0] * sportWidthRel.value;
+  const widthRel = (crop.x[1] - crop.x[0]) * sportWidthRel.value;
+  const topRel = (1 - sportHeightRel.value) / 2 + crop.y[0] * sportHeightRel.value;
+  const heightRel = (crop.y[1] - crop.y[0]) * sportHeightRel.value;
+
+  return {
+    position: "absolute",
+    top: topRel * 100 + "%",
+    left: leftRel * 100 + "%",
+    width: Math.max(0, widthRel * 100) + "%",
+    height: Math.max(0, heightRel * 100) + "%",
+    border: "4px solid red",
+    boxSizing: "border-box",
+    pointerEvents: "none",
+  };
+});
 </script>
