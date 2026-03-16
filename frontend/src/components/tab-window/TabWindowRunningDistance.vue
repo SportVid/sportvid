@@ -495,7 +495,6 @@ const teamHeaders = [
 
 const playerOptions = ref([]);
 const selectedPlayerIds = ref(new Set());
-const playerColors = ref({});
 watch(
   () => topViewStore.positionDataTopView,
   (newVal) => {
@@ -508,15 +507,16 @@ watch(
       .map((p) => ({ playerId: p[0], teamId: p[1] }))
       .filter((v, i, a) => a.findIndex((x) => x.playerId === v.playerId) === i)
       .sort((a, b) => a.playerId - b.playerId);
-
-    const map = {};
-    all.forEach((p) => {
-      map[p[0]] = visualizationStore.getTeamColor(p[1]);
-    });
-    playerColors.value = map;
   },
   { immediate: true, deep: true }
 );
+const playerColors = computed(() => {
+  const map = {};
+  for (const p of playerOptions.value) {
+    map[p.playerId] = visualizationStore.getTeamColor(p.teamId);
+  }
+  return map;
+});
 const togglePlayerId = (playerId) => {
   const newSet = new Set(selectedPlayerIds.value);
   if (newSet.has(playerId)) {

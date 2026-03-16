@@ -30,7 +30,7 @@ export const useVisualizationStore = defineStore(
       return teamColorMapping.value[teamId] || "#808080";
     }
     function setTeamColor(teamId, newColor) {
-      teamColorMapping.value[teamId] = newColor;
+      teamColorMapping.value = { ...teamColorMapping.value, [teamId]: newColor };
     }
 
     function getNextTeamId() {
