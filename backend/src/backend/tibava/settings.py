@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
+from celery.schedules import crontab
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -73,6 +74,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_celery_beat",
 ]
 
 AUTH_USER_MODEL = "backend.TibavaUser"
@@ -139,6 +141,16 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"}
 ]
 
+# Celery beat (crontab)
+# TODO: not detecting task, fix this....
+# CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+# CELERY_BEAT_SCHEDULE = {
+#     'cleanup-orphans': {
+#         'task': 'tibava.backend.tasks.convert_video.cleanup_upload_orphans',
+#         'schedule': crontab(hour='*/1'),  # hourly schedule for cleanup
+#     },
+# }
+
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
 
@@ -174,6 +186,12 @@ THUMBNAIL_URL = "http://localhost/thumbnails/"
 
 # the last resolution will use for indexing
 IMAGE_RESOLUTIONS = [{"min_dim": 200, "suffix": "_m"}, {"min_dim": 1080, "suffix": ""}]
+
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
+    'django.core.files.uploadhandler.MemoryFileUploadHandler',
+]
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB threshold
 
 import json
 

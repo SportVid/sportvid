@@ -134,6 +134,7 @@ services:
 
     depends_on:
       - postgres
+      - valkey
 
     working_dir: /app/backend/src/backend/
     environment:
@@ -143,6 +144,54 @@ services:
       # - GRPC_VERBOSITY=debug
       # - GRPC_TRACE=all
     command: uv run --package backend celery -A tibava worker -l INFO
+
+  # TODO!
+  # celery_beat:
+  #   build: .
+
+  #   volumes:
+  #     - type: bind
+  #       source: ./inference_ray
+  #       target: /app/inference_ray
+  #     - type: bind
+  #       source: ./analyser
+  #       target: /app/analyser
+  #     - type: bind
+  #       source: ./packages
+  #       target: /app/packages
+  #     - type: bind
+  #       source: ./backend/
+  #       target: /app/backend
+  #     - type: bind
+  #       source: ./data/media/
+  #       target: /media
+  #     - type: bind
+  #       source: ./data/predictions
+  #       target: /predictions
+  #     - type: bind
+  #       source: ./data/backend_cache
+  #       target: /cache
+  #     - type: bind
+  #       source: ./data/tmp
+  #       target: /tmp
+  #     - type: bind
+  #       source: ./pyproject.toml
+  #       target: /app/pyproject.toml
+  #     - type: bind
+  #       source: ./.python-version
+  #       target: /app/.python-version
+
+  #   depends_on:
+  #     - postgres
+  #     - valkey
+
+  #   working_dir: /app/backend/src/backend/
+
+  #   environment:
+  #     - TIBAVA_BACKEND_CONFIG=/app/backend/config.json
+      
+  #   command: uv run --package backend celery -A tibava beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
 
   backend:
     build: .

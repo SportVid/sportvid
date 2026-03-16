@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from pathlib import Path
 import PIL
@@ -30,20 +31,25 @@ def download_file(file, output_dir, output_name=None, max_size=None, extensions=
         else:
             output_path = os.path.join(output_dir, f"{file.name}")
 
-        if extensions is not None:
-            if not check_extension(path, extensions):
-                return {"status": "error", "type": "wrong_file_extension"}
-        # TODO add parameter
-        if max_size is not None:
-            if file.size > max_size:
-                return {"status": "error", "type": "file_too_large"}
+        if extensions and not check_extension(path, extensions):
+            return {"status": "error", "type": "wrong_file_extension"}
+        if max_size and file.size > max_size: # TODO add parameter
+            return {"status": "error", "type": "file_too_large"}
 
         os.makedirs(output_dir, exist_ok=True)
-
-        with open(os.path.join(output_dir, output_path), "wb") as f:
-
-            for i, chunk in enumerate(file.chunks()):
-                f.write(chunk)
+        # ---->
+        # with open(os.path.join(output_dir, output_path), "wb") as f:
+        #    for i, chunk in enumerate(file.chunks()):
+        #        f.write(chunk)
+                
+        # ----> atomic move
+        input_path = getattr(file, 'temporary_file_path', None) and file.temporary_file_path()
+        if input_path and os.path.exists(input_path):
+            shutil.move(input_path, str(output_path))
+        else:
+            with open(output_path, "wb") as f:
+                for chunk in file.chunks():
+                    f.write(chunk)
 
         return {"status": "ok", "path": Path(output_path), "origin": file.name}
     except Exception:

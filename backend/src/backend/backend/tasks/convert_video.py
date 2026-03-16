@@ -1,10 +1,12 @@
 import os
+import shutil
 import tarfile
 import logging
 from pathlib import Path
 
 import imageio
 from celery import shared_task
+from django.conf import settings
 
 from backend.utils import media_dir_to_file, media_path_to_file
 from utils.video_converter import convert_to_hls
@@ -14,9 +16,26 @@ from backend.plugin_manager import PluginManager
 
 logger = logging.getLogger(__name__)
 
-
-@shared_task(bind=True)
-def convert_video(self, video_id_hex, original_ext, analyzers=None):
+@shared_task
+def cleanup_upload_orphans():
+    """ Delete files without DB Video record. """
+    media_root = Path(settings.MEDIA_ROOT)
+    db_files = set()
+    
+    # builds set of valid DB entries
+    for video in Video.objects.filter(status__in=[Video.STATUS_UPLOADING, Video.STATUS_PROCESSING, Video.STATUS_ERROR]):
+        db_files.add(str(media_path_to_file(video.file.hex, f".{video.ext}")))
+    
+    # scan filesystem
+    for file_path in media_root.rglob('*.tar.gz'):
+        if str(file_path) not in db_files:
+            safe_delete(file_path)
+            logger.info(f"Removed orphan: {file_path}")
+            
+@shared_task(bind=True, time_limit=7200, soft_time_limit=5400)
+def convert_video(video_id_hex, original_ext, analyzers=None):
+    
+    archive_path = ""; hls_dir = ""
     try:
         video_db = Video.objects.get(id=video_id_hex)
         output_dir = media_dir_to_file(video_id_hex)
@@ -78,3 +97,19 @@ def convert_video(self, video_id_hex, original_ext, analyzers=None):
             video_db.save()
         except Exception:
             logger.exception("Failed to mark video as error")
+        finally:
+            safe_delete([archive_path, hls_dir])
+
+
+def safe_delete(file_path):
+    if type(file_path) == type([]): 
+        for fp in file_path:
+            path = Path(fp)
+            try:
+                if path.is_file():
+                    path.unlink(missing_ok=True)
+                elif path.is_dir():
+                    shutil.rmtree(path, ignore_errors=True)
+                logger.debug(f"Deleted {file_path}")
+            except Exception as e:
+                logger.warning(f"Failed to delete {file_path}: {e}")
