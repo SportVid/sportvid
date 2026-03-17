@@ -111,11 +111,13 @@ import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePlayerStore } from "@/stores/player";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import { usePositionDataStore } from "@/stores/position_data";
 import Parameters from "./Parameters.vue";
 import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
+const positionDataStore = usePositionDataStore();
 const tutorialStore = useTutorialStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 
@@ -1046,7 +1048,7 @@ const plugins = ref([
             field: "select_options",
             name: "format",
             value: "kinexon",
-            items: ["kinexon", "dfl"],
+            items: positionDataStore.provider.map((p) => ({ title: p.name, value: p.id })),
             text: t("modal.plugin.kpi_computation.format"),
           },
         ],

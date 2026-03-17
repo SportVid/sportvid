@@ -76,6 +76,7 @@
         :key="parameter.name"
         persistent-hint
         variant="underlined"
+        class="mb-4"
       />
 
       <v-select

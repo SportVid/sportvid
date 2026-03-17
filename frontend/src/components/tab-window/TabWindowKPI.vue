@@ -184,7 +184,7 @@
         </v-menu>
       </v-col>
       <v-col class="mt-2">
-        <RunningDistanceTimeSelector class="ml-n1" />
+        <VisualizationTimeSelector class="ml-n1" />
       </v-col>
     </v-row>
 
@@ -225,7 +225,6 @@
           color="primary"
           :headers="playerHeaders"
           :items="teamPlayers"
-          #
           :items-per-page="-1"
           class="elevation-2"
           hide-default-footer
@@ -363,8 +362,7 @@ import { useVideoStore } from "@/stores/video";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { usePluginRunStore } from "@/stores/plugin_run";
-import { usePlayerStore } from "@/stores/player";
-import RunningDistanceTimeSelector from "../kpi/RunningDistanceTimeSelector.vue";
+import VisualizationTimeSelector from "../visualization/VisualizationTimeSelector.vue";
 import KpiChart from "../kpi/KpiChart.vue";
 import ZoneSelectorPicker from "../kpi/ZoneSelectorPicker.vue";
 import { useI18n } from "vue-i18n";
@@ -678,20 +676,6 @@ const findLastFrameWithHalftime = (half) => {
   }
   return last ?? 0;
 };
-
-const plugins = computed(() =>
-  pluginRunStore
-    .forVideo(playerStore.videoId)
-    .filter((e) => e.type === "kpi_computation" && e.status === "DONE")
-    .map((e) => {
-      e.results = pluginRunResultStore.forPluginRun(e.id);
-      return e;
-    })
-);
-watchEffect(() => {
-  if (!plugins.value.length) return;
-  console.log("KPIs:", plugins.value[0]?.results[0]?.data?.kpis);
-});
 </script>
 
 <style scoped>
@@ -741,7 +725,7 @@ watchEffect(() => {
   font-size: 12px;
   padding: 0 2px;
   background: transparent;
-  -moz-appearance: textfield;
+  appearance: textfield;
 }
 .inline-frame-input::-webkit-outer-spin-button,
 .inline-frame-input::-webkit-inner-spin-button {

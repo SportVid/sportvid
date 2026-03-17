@@ -121,7 +121,7 @@
         </v-menu>
       </v-col>
       <v-col class="mt-2">
-        <RunningDistanceTimeSelector class="ml-n1" />
+        <VisualizationTimeSelector class="ml-n1" />
       </v-col>
     </v-row>
 
@@ -214,7 +214,7 @@ import { usePlayerStore } from "@/stores/player";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
-import RunningDistanceTimeSelector from "@/components/kpi/RunningDistanceTimeSelector.vue";
+import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
 import h337 from "heatmap.js";
 import { toRgb } from "@/plugins/helpers";
 import { resampleApprox } from "@/plugins/draw/utils";

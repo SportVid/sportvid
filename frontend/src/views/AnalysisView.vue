@@ -677,6 +677,21 @@ watch(
     console.log("metaDataTopView changed", neww);
   }
 );
+
+watch(
+  () => topViewStore.positionDataTopView,
+  (neww) => {
+    console.log("positionDataTopView changed", neww);
+  }
+);
+
+watch(
+  () => visualizationStore.kpiData,
+  (neww) => {
+    console.log("kpiData", neww);
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>
