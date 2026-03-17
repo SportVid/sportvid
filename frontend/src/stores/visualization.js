@@ -82,6 +82,8 @@ export const useVisualizationStore = defineStore(
 
         hasValidData = true;
 
+        console.log("Loaded KPI data:", _kpiData[0]);
+
         kpiData.value = _kpiData[0]?.results[0]?.data?.kpis;
       } finally {
         if (hasValidData) {

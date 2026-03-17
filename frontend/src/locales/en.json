@@ -230,8 +230,9 @@
       "first_half": "Select first half",
       "second_half": "Select second half"
     },
-    "running_distance": {
-      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+    "kpi": {
+      "posdata_not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+      "kpi_not_selected": "No KPI data available.<br>Please run the KPI computation plugin to compute KPIs based on the selected position data.",
       "kpi_selection": {
         "title": "KPI",
         "running_distance": "Running distance",

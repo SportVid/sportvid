@@ -16,7 +16,20 @@
       line-height: 1.5;
       height: 25vh;
     "
-    v-html="$t('visualization.running_distance.not_selected')"
+    v-html="$t('visualization.kpi.posdata_not_selected')"
+  />
+
+  <v-row
+    v-else-if="!hasKpiData"
+    class="text-h6 text-grey font-weight-light mx-16 px-10"
+    style="
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.5;
+      height: 25vh;
+    "
+    v-html="$t('visualization.kpi.kpi_not_selected')"
   />
 
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
@@ -63,7 +76,7 @@
         <v-menu location="bottom" :close-on-content-click="false">
           <template #activator="{ props }">
             <v-btn v-bind="props" size="small" style="height: 40px" class="mt-n2">
-              {{ $t("visualization.running_distance.kpi_selection.title") }}
+              {{ $t("visualization.kpi.kpi_selection.title") }}
             </v-btn>
           </template>
 
@@ -73,7 +86,7 @@
                 <v-list-item-title class="d-flex align-center" style="gap: 4px">
                   <template v-if="option.id === 'running_distance_interval'">
                     <i18n-t
-                      keypath="visualization.running_distance.kpi_selection.running_distance_interval"
+                      keypath="visualization.kpi.kpi_selection.running_distance_interval"
                       tag="span"
                       class="flex-grow-1"
                     >
@@ -92,7 +105,7 @@
                     </i18n-t>
                   </template>
                   <span v-else class="flex-grow-1">
-                    {{ $t(`visualization.running_distance.kpi_selection.${option.id}`) }}
+                    {{ $t(`visualization.kpi.kpi_selection.${option.id}`) }}
                   </span>
                   <v-icon v-if="isKpiSelected(option)" size="small">mdi-check</v-icon>
                 </v-list-item-title>
@@ -104,7 +117,7 @@
         <v-menu location="bottom" :close-on-content-click="false">
           <template #activator="{ props }">
             <v-btn v-bind="props" size="small" style="height: 40px" class="mt-n2">
-              {{ $t("visualization.running_distance.zone_selection.title") }}
+              {{ $t("visualization.kpi.zone_selection.title") }}
             </v-btn>
           </template>
 
@@ -249,7 +262,7 @@
                 backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
               }"
             >
-              <td>{{ $t("visualization.running_distance.player_view.best") }}</td>
+              <td>{{ $t("visualization.kpi.player_view.best") }}</td>
               <td>{{ getTeamBest(teamPlayers) }}</td>
             </tr>
             <tr
@@ -258,7 +271,7 @@
                 backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
               }"
             >
-              <td>{{ $t("visualization.running_distance.player_view.total") }}</td>
+              <td>{{ $t("visualization.kpi.player_view.total") }}</td>
               <td>{{ getTeamTotal(teamPlayers) }}</td>
             </tr>
           </template>
@@ -487,16 +500,16 @@ watch(
 );
 
 const playerHeaders = [
-  { title: t("visualization.running_distance.player_view.player_id"), key: "player_id" },
-  { title: t("visualization.running_distance.player_view.distance"), key: "distance" },
+  { title: t("visualization.kpi.player_view.player_id"), key: "player_id" },
+  { title: t("visualization.kpi.player_view.distance"), key: "distance" },
 ];
 
 const teamHeaders = [
-  { title: t("visualization.running_distance.team_view.total_distance"), key: "total_distance" },
-  { title: t("visualization.running_distance.team_view.avg_distance"), key: "avg_distance" },
-  { title: t("visualization.running_distance.team_view.player_count"), key: "player_count" },
-  { title: t("visualization.running_distance.velocity"), key: "velocity" },
-  { title: t("visualization.running_distance.metabolic_power"), key: "metabolic_power" },
+  { title: t("visualization.kpi.team_view.total_distance"), key: "total_distance" },
+  { title: t("visualization.kpi.team_view.avg_distance"), key: "avg_distance" },
+  { title: t("visualization.kpi.team_view.player_count"), key: "player_count" },
+  { title: t("visualization.kpi.velocity"), key: "velocity" },
+  { title: t("visualization.kpi.metabolic_power"), key: "metabolic_power" },
 ];
 
 const playerOptions = ref([]);
@@ -632,6 +645,8 @@ const runningDistanceTeamAggregated = computed(() => {
 });
 
 const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
+
+const hasKpiData = computed(() => visualizationStore.kpiData.length > 0);
 
 const getTeamName = (teamId) => {
   const meta = topViewStore.metaDataTopView;
