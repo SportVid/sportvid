@@ -17,7 +17,8 @@ from backend.plugin_manager import PluginManager
 logger = logging.getLogger(__name__)
 
 @shared_task
-def cleanup_upload_orphans():
+# TODO: get cronjob with cleaning of orphaned videos working...
+def cleanup_upload_orphans(self):
     """ Delete files without DB Video record. """
     media_root = Path(settings.MEDIA_ROOT)
     db_files = set()
@@ -33,7 +34,7 @@ def cleanup_upload_orphans():
             logger.info(f"Removed orphan: {file_path}")
             
 @shared_task(bind=True, time_limit=7200, soft_time_limit=5400)
-def convert_video(video_id_hex, original_ext, analyzers=None):
+def convert_video(self, video_id_hex, original_ext, analyzers=None):
     
     archive_path = ""; hls_dir = ""
     try:
@@ -99,7 +100,6 @@ def convert_video(video_id_hex, original_ext, analyzers=None):
             logger.exception("Failed to mark video as error")
         finally:
             safe_delete([archive_path, hls_dir])
-
 
 def safe_delete(file_path):
     if type(file_path) == type([]): 
