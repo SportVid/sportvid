@@ -60,6 +60,28 @@ class KpiComputation(
 
         fmt = parameters["format"]
 
+        # Load posdata metadata if available
+        pos_meta_raw = parameters.get("pos_meta", "")
+        pos_meta = json.loads(pos_meta_raw) if pos_meta_raw else None
+
+        # Build reverse lookups from posdata metadata
+        team_id_by_orig = {}   # str(original_id) → posdata int_id
+        team_id_by_name = {}   # team_name → posdata int_id
+        player_id_by_orig = {}   # str(original_id) → posdata int_id
+        player_id_by_name = {}   # player_name → posdata int_id
+        player_id_by_number = {} # str(number) → posdata int_id
+
+        if pos_meta:
+            for int_id_str, info in pos_meta.get("team_ids", {}).items():
+                int_id = int(int_id_str)
+                team_id_by_orig[str(info["id"])] = int_id
+                team_id_by_name[info["name"]] = int_id
+            for int_id_str, info in pos_meta.get("player_ids", {}).items():
+                int_id = int(int_id_str)
+                player_id_by_orig[str(info["id"])] = int_id
+                player_id_by_name[info["name"]] = int_id
+                player_id_by_number[str(info["number"])] = int_id
+
         # player_id_map: combined_idx (int) -> player identifier string
         player_id_map = {}
         # team_players: team_name -> list of combined_idx values (ordered by xID)
@@ -137,20 +159,48 @@ class KpiComputation(
                     raise ValueError(f"Unsupported format: '{fmt}'. Use 'dfl' or 'kinexon'.")
 
         # ----------------- TEAM ID MAPPING
-        # 1 non-ball team → teamID 0; ball → teamID 1; 2+ non-ball teams → teamID 2, 3, ...
-        non_ball_teams = [t for t in team_players if t not in ball_team_names]
-        if len(non_ball_teams) == 1:
-            team_to_id = {non_ball_teams[0]: 0}
+        if pos_meta:
+            # Use posdata team IDs: look up each team name in the reverse maps
+            team_to_id = {}
+            for t in list(team_players.keys()) + list(ball_team_names):
+                if t in team_to_id:
+                    continue
+                if t in team_id_by_name:
+                    team_to_id[t] = team_id_by_name[t]
+                elif str(t) in team_id_by_orig:
+                    team_to_id[t] = team_id_by_orig[str(t)]
+                else:
+                    logging.warning(f"Team '{t}' not found in posdata metadata, skipping.")
         else:
-            team_to_id = {t: i + 2 for i, t in enumerate(non_ball_teams)}
-        for bt in ball_team_names:
-            team_to_id[bt] = 1
+            # Fallback: 1 non-ball team → teamID 0; ball → teamID 1; 2+ non-ball teams → teamID 2, 3, ...
+            non_ball_teams = [t for t in team_players if t not in ball_team_names]
+            if len(non_ball_teams) == 1:
+                team_to_id = {non_ball_teams[0]: 0}
+            else:
+                team_to_id = {t: i + 2 for i, t in enumerate(non_ball_teams)}
+            for bt in ball_team_names:
+                team_to_id[bt] = 1
 
         player_to_team_id = {}
         for tname, comb_ids in team_players.items():
             tid = team_to_id.get(tname, 0)
             for comb_idx in comb_ids:
                 player_to_team_id[comb_idx] = tid
+
+        # ----------------- PLAYER ID MAPPING (posdata-compatible)
+        comb_idx_to_posdata_pid = {}
+        if pos_meta:
+            for comb_idx, player_str in player_id_map.items():
+                # Try matching by original ID, then name, then number
+                if player_str in player_id_by_orig:
+                    comb_idx_to_posdata_pid[comb_idx] = player_id_by_orig[player_str]
+                elif player_str in player_id_by_name:
+                    comb_idx_to_posdata_pid[comb_idx] = player_id_by_name[player_str]
+                elif player_str in player_id_by_number:
+                    comb_idx_to_posdata_pid[comb_idx] = player_id_by_number[player_str]
+                else:
+                    logging.warning(f"Player '{player_str}' (comb_idx={comb_idx}) not matched in posdata metadata.")
+                    comb_idx_to_posdata_pid[comb_idx] = -1
 
         # ----------------- COMPUTE KPIs
         all_frame_kpis = {}  # {absolute_frame_idx: [[player_id, dist, vel, metpow], ...]}
@@ -199,7 +249,10 @@ class KpiComputation(
                             all_frame_kpis[frame_idx] = []
                         for p in range(n_players):
                             comb_idx_p = team_comb_ids[p] if p < len(team_comb_ids) else -1
-                            pid = player_id_map.get(comb_idx_p, f"{team_name}_p{p}")
+                            if pos_meta:
+                                pid = comb_idx_to_posdata_pid.get(comb_idx_p, -1)
+                            else:
+                                pid = player_id_map.get(comb_idx_p, f"{team_name}_p{p}")
                             tid = player_to_team_id.get(comb_idx_p, team_to_id.get(team_name, 0))
                             d = dist_list[frame_idx][p]
                             v = vel_list[frame_idx][p]
@@ -260,7 +313,10 @@ class KpiComputation(
                             all_frame_kpis[abs_frame] = []
                         for p in range(n_players):
                             comb_idx_p = team_comb_ids[p] if p < len(team_comb_ids) else -1
-                            pid = player_id_map.get(comb_idx_p, f"{team_name}_p{p}")
+                            if pos_meta:
+                                pid = comb_idx_to_posdata_pid.get(comb_idx_p, -1)
+                            else:
+                                pid = player_id_map.get(comb_idx_p, f"{team_name}_p{p}")
                             tid = player_to_team_id.get(comb_idx_p, team_to_id.get(team_name, 1))
                             d = dist_list[frame_idx][p]
                             v = vel_list[frame_idx][p]
@@ -283,14 +339,24 @@ class KpiComputation(
         }
 
         # ----------------- OUTPUT
-        meta = {
-            "format": fmt,
-            "kpi_names": ["distance_covered", "velocity", "metabolic_power"],
-            "player_ids": {str(k): v for k, v in player_id_map.items()}, # TODO: number instead of xID
-            "team_ids": team_to_id,  # team_name -> teamID
-            "framerate": framerate,
-            "tracking_data_id": parameters.get("tracking_data_id"),
-        }
+        if pos_meta:
+            meta = {
+                "format": fmt,
+                "kpi_names": ["distance_covered", "velocity", "metabolic_power"],
+                "player_ids": pos_meta["player_ids"],
+                "team_ids": pos_meta["team_ids"],
+                "framerate": framerate,
+                "tracking_data_id": parameters.get("tracking_data_id"),
+            }
+        else:
+            meta = {
+                "format": fmt,
+                "kpi_names": ["distance_covered", "velocity", "metabolic_power"],
+                "player_ids": {str(k): v for k, v in player_id_map.items()},
+                "team_ids": team_to_id,
+                "framerate": framerate,
+                "tracking_data_id": parameters.get("tracking_data_id"),
+            }
 
         with data_manager.create_data("KpiData") as kpi_data:
             kpi_data.tracking_data_id = parameters.get("tracking_data_id")
