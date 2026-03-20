@@ -2,6 +2,7 @@ import logging
 import os
 import tempfile
 
+import pandas as pd
 from typing import Callable, Dict
 
 from data import KpiData, TrackingData
@@ -65,29 +66,20 @@ class KpiComputation(
         pos_meta = json.loads(pos_meta_raw) if pos_meta_raw else None
 
         # Build reverse lookups from posdata metadata
-        team_id_by_orig = {}   # str(original_id) → posdata int_id
-        team_id_by_name = {}   # team_name → posdata int_id
-        player_id_by_orig = {}   # str(original_id) → posdata int_id
-        player_id_by_name = {}   # player_name → posdata int_id
-        player_id_by_number = {} # str(number) → posdata int_id
+        team_id_by_orig = {}   # original_id → posdata int_id
+        player_id_by_orig = {}  # original_id → posdata int_id
 
         if pos_meta:
             for int_id_str, info in pos_meta.get("team_ids", {}).items():
-                int_id = int(int_id_str)
-                team_id_by_orig[str(info["id"])] = int_id
-                team_id_by_name[info["name"]] = int_id
+                team_id_by_orig[info["id"]] = int(int_id_str)
             for int_id_str, info in pos_meta.get("player_ids", {}).items():
-                int_id = int(int_id_str)
-                player_id_by_orig[str(info["id"])] = int_id
-                player_id_by_name[info["name"]] = int_id
-                player_id_by_number[str(info["number"])] = int_id
+                player_id_by_orig[info["id"]] = int(int_id_str)
 
-        # player_id_map: combined_idx (int) -> player identifier string
+        # player_id_map / team_players: used by DFL path only
         player_id_map = {}
-        # team_players: team_name -> list of combined_idx values (ordered by xID)
         team_players = {}
-        # ball_team_names: set of team names that represent the ball group
-        ball_team_names = set()
+        # ball_team_ids: set of original group/team id values that represent the ball
+        ball_team_ids = set()
         framerate = None
 
         # ----------------- PARSING
@@ -101,19 +93,31 @@ class KpiComputation(
                         # NOTE: knx reader returns lists for pos_data and teamsheets (different from DFL reader below, returning same-named variables as dicts)
                         pos_data = knx.read_position_data_csv(tmp_path, delimiter=parameters.get("delimiter", ";")) # pos_data is List[XY]
                         teamsheets = knx.read_teamsheets_from_csv(tmp_path, delimiter=parameters.get("delimiter", ";")) # teamsheets is List[Teamsheet]
+                        csv_data = pd.read_csv(tmp_path, delimiter=parameters.get("delimiter", ";"))
+                        group_id_map = csv_data[["number", "group id"]].drop_duplicates(subset=["number"])
+                        for idx, i in enumerate(teamsheets):
+                            teamsheets[idx].teamsheet = pd.merge(
+                                i.teamsheet.astype({"number": int}),
+                                group_id_map,
+                                on=["number"]
+                            )
                     finally:
                         os.unlink(tmp_path)
 
                     for i, (pos_xy, ts) in enumerate(zip(pos_data, teamsheets)):
-                        team_name = ts.teamsheet['tID'].iloc[0] if not ts.teamsheet.empty else f"team_{i+1}"
-                        if "ball" in team_name.lower():
-                            ball_team_names.add(team_name)
-                        df_ts = ts.teamsheet.sort_values("xID")
-                        team_players[team_name] = []
-                        for _, row in df_ts.iterrows():
-                            comb_idx = len(player_id_map)
-                            player_id_map[comb_idx] = str(row.get("player", row.get("sensor_id", row.get("xID", comb_idx))))
-                            team_players[team_name].append(comb_idx)
+                        group_id_val = ts.teamsheet['group id'].iloc[0] if not ts.teamsheet.empty else f"team_{i+1}"
+                        tid = team_id_by_orig.get(group_id_val, group_id_val)
+                        if pos_meta:
+                            if tid == 1:  # posdata_convert always maps ball → team id 1
+                                ball_team_ids.add(group_id_val)
+                                continue
+                        elif "ball" in str(group_id_val).lower():
+                            ball_team_ids.add(group_id_val)
+                            continue
+                        df = ts.teamsheet.copy()
+                        df['pid'] = df['number'].map(player_id_by_orig) if pos_meta else df['number'].astype(str)
+                        df['tid'] = tid
+                        teamsheets[i].teamsheet = df
 
                     if pos_data:
                         framerate = int(pos_data[0].framerate) if pos_data[0].framerate else 25
@@ -150,7 +154,7 @@ class KpiComputation(
                     for _, teams_dict in pos_data.items():
                         for tn in teams_dict:
                             if tn not in team_players:
-                                ball_team_names.add(tn)
+                                ball_team_ids.add(tn)
 
                     first_xy = next(iter(next(iter(pos_data.values())).values()))
                     framerate = int(first_xy.framerate) if first_xy.framerate else 25
@@ -158,62 +162,18 @@ class KpiComputation(
                 else:
                     raise ValueError(f"Unsupported format: '{fmt}'. Use 'dfl' or 'kinexon'.")
 
-        # ----------------- TEAM ID MAPPING
-        if pos_meta:
-            # Use posdata team IDs: look up each team name in the reverse maps
-            team_to_id = {}
-            for t in list(team_players.keys()) + list(ball_team_names):
-                if t in team_to_id:
-                    continue
-                if t in team_id_by_name:
-                    team_to_id[t] = team_id_by_name[t]
-                elif str(t) in team_id_by_orig:
-                    team_to_id[t] = team_id_by_orig[str(t)]
-                else:
-                    logging.warning(f"Team '{t}' not found in posdata metadata, skipping.")
-        else:
-            # Fallback: 1 non-ball team → teamID 0; ball → teamID 1; 2+ non-ball teams → teamID 2, 3, ...
-            non_ball_teams = [t for t in team_players if t not in ball_team_names]
-            if len(non_ball_teams) == 1:
-                team_to_id = {non_ball_teams[0]: 0}
-            else:
-                team_to_id = {t: i + 2 for i, t in enumerate(non_ball_teams)}
-            for bt in ball_team_names:
-                team_to_id[bt] = 1
-
-        player_to_team_id = {}
-        for tname, comb_ids in team_players.items():
-            tid = team_to_id.get(tname, 0)
-            for comb_idx in comb_ids:
-                player_to_team_id[comb_idx] = tid
-
-        # ----------------- PLAYER ID MAPPING (posdata-compatible)
-        comb_idx_to_posdata_pid = {}
-        if pos_meta:
-            for comb_idx, player_str in player_id_map.items():
-                # Try matching by original ID, then name, then number
-                if player_str in player_id_by_orig:
-                    comb_idx_to_posdata_pid[comb_idx] = player_id_by_orig[player_str]
-                elif player_str in player_id_by_name:
-                    comb_idx_to_posdata_pid[comb_idx] = player_id_by_name[player_str]
-                elif player_str in player_id_by_number:
-                    comb_idx_to_posdata_pid[comb_idx] = player_id_by_number[player_str]
-                else:
-                    logging.warning(f"Player '{player_str}' (comb_idx={comb_idx}) not matched in posdata metadata.")
-                    comb_idx_to_posdata_pid[comb_idx] = -1
-
         # ----------------- COMPUTE KPIs
         all_frame_kpis = {}  # {absolute_frame_idx: [[player_id, dist, vel, metpow], ...]}
         frame_offset = 0
 
         if fmt == "kinexon":
             # pos_data is List[XY], one entry per group/team (including ball if tracked).
-            team_kpi_arrays = {}
+            team_kpi_arrays = {}  # i → (df_ts_sorted, dist_arr, vel_arr, metpow_arr)
             n_frames = None
 
             for i, xy_obj in enumerate(pos_data):
-                team_name = teamsheets[i].teamsheet["tID"].iloc[0] if not teamsheets[i].teamsheet.empty else f"team_{i+1}"
-                if team_name in ball_team_names:
+                df_ts = teamsheets[i].teamsheet
+                if df_ts['group id'].iloc[0] in ball_team_ids:
                     continue
 
                 dist_mod = DistanceModel()
@@ -228,16 +188,12 @@ class KpiComputation(
                 vel_arr = np.array(vel_mod.velocity()).round(2)                       # (T, N)
                 metpow_arr = np.array(metpow_mod.metabolic_power()).round(2)          # (T, N)
 
-                team_kpi_arrays[team_name] = (dist_arr, vel_arr, metpow_arr)
+                team_kpi_arrays[i] = (df_ts.sort_values("xID").reset_index(drop=True), dist_arr, vel_arr, metpow_arr)
                 if n_frames is None:
                     n_frames = dist_arr.shape[0]
 
             if n_frames is not None:
-
-                for team_name, (dist_arr, vel_arr, metpow_arr) in team_kpi_arrays.items():
-                    if team_name in ball_team_names:
-                        continue
-                    team_comb_ids = team_players.get(team_name, [])
+                for i, (df_sorted, dist_arr, vel_arr, metpow_arr) in team_kpi_arrays.items():
                     n_players = dist_arr.shape[1]
 
                     dist_list = dist_arr.tolist()
@@ -248,12 +204,9 @@ class KpiComputation(
                         if frame_idx not in all_frame_kpis:
                             all_frame_kpis[frame_idx] = []
                         for p in range(n_players):
-                            comb_idx_p = team_comb_ids[p] if p < len(team_comb_ids) else -1
-                            if pos_meta:
-                                pid = comb_idx_to_posdata_pid.get(comb_idx_p, -1)
-                            else:
-                                pid = player_id_map.get(comb_idx_p, f"{team_name}_p{p}")
-                            tid = player_to_team_id.get(comb_idx_p, team_to_id.get(team_name, 0))
+                            row = df_sorted.iloc[p] if p < len(df_sorted) else None
+                            pid = int(row['pid']) if row is not None and pd.notna(row['pid']) else -1
+                            tid = int(row['tid']) if row is not None and pd.notna(row['tid']) else -1
                             d = dist_list[frame_idx][p]
                             v = vel_list[frame_idx][p]
                             m = metpow_list[frame_idx][p]
@@ -275,7 +228,7 @@ class KpiComputation(
                 n_frames = None
 
                 for team_name, xy_obj in teams_dict.items():
-                    if team_name in ball_team_names:
+                    if team_name in ball_team_ids:
                         continue
                     dist_mod = DistanceModel()
                     vel_mod = VelocityModel()
@@ -298,7 +251,7 @@ class KpiComputation(
 
 
                 for team_name, (dist_arr, vel_arr, metpow_arr) in team_kpi_arrays.items():
-                    if team_name in ball_team_names:
+                    if team_name in ball_team_ids:
                         continue
                     team_comb_ids = team_players.get(team_name, [])
                     n_players = dist_arr.shape[1]
@@ -313,10 +266,7 @@ class KpiComputation(
                             all_frame_kpis[abs_frame] = []
                         for p in range(n_players):
                             comb_idx_p = team_comb_ids[p] if p < len(team_comb_ids) else -1
-                            if pos_meta:
-                                pid = comb_idx_to_posdata_pid.get(comb_idx_p, -1)
-                            else:
-                                pid = player_id_map.get(comb_idx_p, f"{team_name}_p{p}")
+                            pid = player_id_map.get(comb_idx_p, f"{team_name}_p{p}")
                             tid = player_to_team_id.get(comb_idx_p, team_to_id.get(team_name, 1))
                             d = dist_list[frame_idx][p]
                             v = vel_list[frame_idx][p]

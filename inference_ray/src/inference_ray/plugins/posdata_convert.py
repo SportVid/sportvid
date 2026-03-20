@@ -207,7 +207,11 @@ class PosDataConvert(
         
         from collections import defaultdict
         from pandas.api.types import is_numeric_dtype
-        
+
+        # Reset instance state to prevent data leaking between calls
+        self.meta_dict = defaultdict(team_ids={}, player_ids={})
+        self.py_dict = {}
+
         if "format" not in parameters:
             raise ValueError("'format' is required for plugin execution.")
         
