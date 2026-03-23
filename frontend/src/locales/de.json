@@ -165,6 +165,42 @@
         "yTitle": "Y-Achsendaten auswählen:",
         "ySelect": "Nicht ausgewählt"
       }
+    },
+    "time_selection": {
+      "sync_start": "Startzeit mit Videozeit synchronisieren",
+      "sync_end": "Endzeit mit Videozeit synchronisieren",
+      "full_match": "Gesamtes Spiel auswählen",
+      "first_half": "Erste Halbzeit auswählen",
+      "second_half": "Zweite Halbzeit auswählen"
+    },
+    "kpi": {
+      "posdata_not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führe das Bytetrack-Plugin aus oder lade Positionsdaten manuell hoch.",
+      "kpi_not_selected": "Keine KPI-Daten verfügbar.<br>Bitte führe das KPI-Berechnungs-Plugin aus, um KPIs auf Basis der ausgewählten Positionsdaten zu berechnen.",
+      "kpi_selection": {
+        "title": "KPI",
+        "running_distance_cumulative": "Laufdistanz [m] (kumulativ)",
+        "running_distance_interval": "Laufdistanz [m] (pro {frames} Frames)",
+        "velocity_max": "V<sub>max</sub> [m⋅s<sup>-1</sup>]",
+        "metabolic_work": "Met. Arbeit [J⋅kg<sup>-1</sup>]"
+      },
+      "zone_selection": {
+        "title": "Zone",
+        "full_size": "Gesamtfläche",
+        "all_data": "Alle Daten",
+        "clear": "Löschen",
+        "selected": "Zone(n)"
+      },
+      "player_view": {
+        "player_id": "Spieler-ID",
+        "distance": "Distanz [m]",
+        "best": "Bester Wert",
+        "total": "Gesamt"
+      },
+      "team_view": {
+        "kpi": "KPI",
+        "total": "Gesamt",
+        "average": "Durchschnitt"
+      }
     }
   },
   "data": {
@@ -182,18 +218,20 @@
         "running_distance_cumulative": "Laufdistanz (kumulativ)",
         "running_distance_interval": "Laufdistanz (pro {frames} Frames)",
         "interval_frames": "Intervall (Frames)",
-        "velocity_max": "Maximale Geschwindigkeit",
-        "velocity_mean": "Mittlere Geschwindigkeit",
-        "metabolic_work": "Metabolische Leistung"
+        "velocity_max": "Maximale Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "velocity_mean": "Mittlere Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "metabolic_work": "Metabolische Arbeit [J⋅kg<sup>-1</sup>]",
+        "velocity": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "metabolic_power": "Metabolische Leistung [W⋅kg<sup>-1</sup>]"
       },
       "chart_mode": {
         "cumulative": "Kumulativ",
         "windowed": "Pro Sekunde"
       },
       "team_view": {
-        "total_distance": "Gesamtdistanz",
-        "avg_distance": "Durchschn. Distanz",
-        "player_count": "Spieler"
+        "kpi": "KPI",
+        "total": "Gesamt",
+        "average": "Durchschnitt"
       },
       "player_view": {
         "best": "Bester Wert",

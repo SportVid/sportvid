@@ -80,15 +80,14 @@
             </v-btn>
           </template>
 
-          <v-list class="py-0" density="compact" width="300px">
+          <v-list class="py-0" density="compact" width="250px">
             <template v-for="option in kpiOptions" :key="option.id">
               <v-list-item class="menu-item" @click="toggleKpi(option)">
-                <v-list-item-title class="d-flex align-center" style="gap: 4px">
+                <v-list-item-title class="d-flex justify-space-between">
                   <template v-if="option.id === 'running_distance_interval'">
                     <i18n-t
                       keypath="visualization.kpi.kpi_selection.running_distance_interval"
                       tag="span"
-                      class="flex-grow-1"
                     >
                       <template #frames>
                         <input
@@ -104,10 +103,15 @@
                       </template>
                     </i18n-t>
                   </template>
-                  <span v-else class="flex-grow-1">
-                    {{ $t(`visualization.kpi.kpi_selection.${option.id}`) }}
-                  </span>
-                  <v-icon v-if="isKpiSelected(option)" size="small">mdi-check</v-icon>
+                  <span v-else v-html="$t(`visualization.kpi.kpi_selection.${option.id}`)" />
+                  <tab-window-icon
+                    :class="{
+                      'text-disabled': !isKpiSelected(option),
+                      'text-red': isKpiSelected(option),
+                    }"
+                  >
+                    mdi-check
+                  </tab-window-icon>
                 </v-list-item-title>
               </v-list-item>
             </template>
@@ -250,7 +254,7 @@
               }"
             >
               <td v-for="col in columns" :key="col.key">
-                {{ col.key === "player_id" ? getPlayerNumber(item[col.key]) : item[col.key] }}
+                {{ col.key === "player_id" ? getPlayerNumber(item[col.key]) : (item[col.key] ?? "-") }}
               </td>
             </tr>
           </template>
@@ -263,7 +267,9 @@
               }"
             >
               <td>{{ $t("visualization.kpi.player_view.best") }}</td>
-              <td>{{ getTeamBest(teamPlayers) }}</td>
+              <td v-for="col in playerHeaders.slice(1)" :key="col.key">
+                {{ getColBest(teamPlayers, col.key) }}
+              </td>
             </tr>
             <tr
               :style="{
@@ -272,8 +278,17 @@
               }"
             >
               <td>{{ $t("visualization.kpi.player_view.total") }}</td>
-              <td>{{ getTeamTotal(teamPlayers) }}</td>
+              <td v-for="col in playerHeaders.slice(1)" :key="col.key">
+                {{ getColTotal(teamPlayers, col.key) }}
+              </td>
             </tr>
+          </template>
+
+          <template #header.velocity_max="{ column }">
+            <span v-html="column.title" />
+          </template>
+          <template #header.metabolic_work="{ column }">
+            <span v-html="column.title" />
           </template>
         </v-data-table>
       </v-card>
@@ -284,28 +299,49 @@
       class="team-tables d-flex flex-wrap justify-space-around"
     >
       <v-card
-        v-for="row in runningDistanceTeamAggregated"
-        :key="row.team_id"
+        v-for="teamRow in runningDistanceTeamAggregated"
+        :key="teamRow.team_id"
         class="team-card pa-4 ma-2"
         outlined
-        :style="{ backgroundColor: toRgb(visualizationStore.getTeamColor(row.team_id), 0.8) }"
+        :style="{ backgroundColor: toRgb(visualizationStore.getTeamColor(teamRow.team_id), 0.8) }"
       >
-        <v-card-title class="text-center mt-n1">{{ getTeamName(row.team_id) }}</v-card-title>
+        <v-card-title class="text-center mt-n1">{{ getTeamName(teamRow.team_id) }}</v-card-title>
+
+        <div class="player-selector mb-3">
+          <div
+            v-for="p in playerOptions.filter((p) => p.teamId == teamRow.team_id)"
+            :key="p.playerId"
+            class="player-dot"
+            :style="{
+              backgroundColor: selectedPlayerIds.has(p.playerId)
+                ? toRgb(playerColors[p.playerId], 0)
+                : toRgb(playerColors[p.playerId], 0.6),
+              color: selectedPlayerIds.has(p.playerId) ? '#fff' : '#222',
+              borderColor: selectedPlayerIds.has(p.playerId)
+                ? toRgb(playerColors[p.playerId], 0)
+                : toRgb(playerColors[p.playerId], 0.6),
+            }"
+            @click="togglePlayerId(p.playerId)"
+          >
+            {{ getPlayerNumber(p.playerId) }}
+          </div>
+        </div>
 
         <v-data-table
           color="primary"
           :headers="teamHeaders"
-          :items="[row]"
+          :items="teamRow.rows"
           :items-per-page="-1"
           class="elevation-2"
           hide-default-footer
           density="compact"
         >
-          <template #header.velocity="{ column }">
-            <span v-html="column.title"></span>
-          </template>
-          <template #header.metabolic_power="{ column }">
-            <span v-html="column.title"></span>
+          <template #item="{ item }">
+            <tr :style="{ backgroundColor: toRgb(visualizationStore.getTeamColor(teamRow.team_id), 0.6) }">
+              <td><span v-html="item.label" /></td>
+              <td>{{ item.total ?? "-" }}</td>
+              <td>{{ item.avg ?? "-" }}</td>
+            </tr>
           </template>
         </v-data-table>
       </v-card>
@@ -324,7 +360,7 @@
         :selectedZones="selectedZones"
       />
 
-      <div v-if="groupMode === 'player'" class="chart-legend mt-2">
+      <div class="chart-legend mt-2">
         <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
           <div
             class="team-dot"
@@ -366,29 +402,22 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, toRaw, watchEffect } from "vue";
+import { ref, computed, watch } from "vue";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
-import { usePosdataWorkerStore } from "@/stores/posdata_worker";
-import { usePluginRunResultStore } from "@/stores/plugin_run_result";
-import { usePluginRunStore } from "@/stores/plugin_run";
 import VisualizationTimeSelector from "../visualization/VisualizationTimeSelector.vue";
 import KpiChart from "../kpi/KpiChart.vue";
 import ZoneSelectorPicker from "../kpi/ZoneSelectorPicker.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
-import { debounce } from "lodash";
 
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
 const positionDataStore = usePositionDataStore();
-const pluginRunResultStore = usePluginRunResultStore();
-const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
-const posdataWorkerStore = usePosdataWorkerStore();
 const videoStore = useVideoStore();
 
 const { t } = useI18n();
@@ -412,13 +441,33 @@ for (let r = 0; r < 5; r++) {
 }
 const selectedZones = ref(initialZones);
 
-const kpiOptions = [
-  { id: "running_distance_cumulative", kpi: "running_distance", mode: "cumulative" },
-  { id: "running_distance_interval", kpi: "running_distance", mode: "windowed" },
-  { id: "velocity_max", kpi: "velocity_max", mode: "cumulative" },
-  { id: "velocity_mean", kpi: "velocity_mean", mode: "cumulative" },
-  { id: "metabolic_work", kpi: "metabolic_work", mode: "cumulative" },
-];
+// Maps kpi_names (from kpi_computation meta_data) → available display options.
+// views: null = both table and chart, "chart" = chart only, "table" = table only.
+// Maps kpi_names (from kpi_computation meta_data) → available display options.
+// views: "both" | "chart" | "table"
+const KPI_CONFIG = {
+  distance_covered: [
+    {
+      id: "running_distance_cumulative",
+      kpi: "running_distance",
+      mode: "cumulative",
+      views: "both",
+    },
+    { id: "running_distance_interval", kpi: "running_distance", mode: "windowed", views: "chart" },
+  ],
+  velocity: [{ id: "velocity_max", kpi: "velocity_max", mode: "cumulative", views: "both" }],
+  metabolic_power: [
+    { id: "metabolic_work", kpi: "metabolic_work", mode: "cumulative", views: "both" },
+  ],
+};
+
+const kpiOptions = computed(() => {
+  const names = visualizationStore.kpiNames;
+  if (!names || !names.length) return [];
+  return names
+    .flatMap((name) => KPI_CONFIG[name] || [])
+    .filter((opt) => opt.views === "both" || opt.views === viewMode.value);
+});
 
 // Chart mode: single selected option (includes mode + window info)
 const selectedKpiId = ref("running_distance_cumulative");
@@ -459,10 +508,10 @@ const windowTimeLabel = computed(() => {
 });
 
 const selectedKpiOption = computed(
-  () => kpiOptions.find((o) => o.id === selectedKpiId.value) || kpiOptions[0]
+  () => kpiOptions.value.find((o) => o.id === selectedKpiId.value) || kpiOptions.value[0]
 );
-const chartKpi = computed(() => selectedKpiOption.value.kpi);
-const chartMode = computed(() => selectedKpiOption.value.mode);
+const chartKpi = computed(() => selectedKpiOption.value?.kpi);
+const chartMode = computed(() => selectedKpiOption.value?.mode);
 
 const isKpiSelected = (option) => {
   if (viewMode.value === "chart") {
@@ -499,18 +548,28 @@ watch(
   }
 );
 
-const playerHeaders = [
-  { title: t("visualization.kpi.player_view.player_id"), key: "player_id" },
-  { title: t("visualization.kpi.player_view.distance"), key: "distance" },
-];
+const playerHeaders = computed(() => {
+  const cols = [{ title: t("visualization.kpi.player_view.player_id"), key: "player_id" }];
+  if (selectedKpis.value.has("running_distance_cumulative")) {
+    cols.push({ title: t("visualization.kpi.kpi_table.distance"), key: "distance" });
+  }
+  if (selectedKpis.value.has("velocity_max")) {
+    cols.push({ title: t("visualization.kpi.kpi_table.velocity_max"), key: "velocity_max" });
+  }
+  if (selectedKpis.value.has("metabolic_work")) {
+    cols.push({
+      title: t("visualization.kpi.kpi_table.metabolic_work"),
+      key: "metabolic_work",
+    });
+  }
+  return cols;
+});
 
-const teamHeaders = [
-  { title: t("visualization.kpi.team_view.total_distance"), key: "total_distance" },
-  { title: t("visualization.kpi.team_view.avg_distance"), key: "avg_distance" },
-  { title: t("visualization.kpi.team_view.player_count"), key: "player_count" },
-  { title: t("visualization.kpi.velocity"), key: "velocity" },
-  { title: t("visualization.kpi.metabolic_power"), key: "metabolic_power" },
-];
+const teamHeaders = computed(() => [
+  { title: t("visualization.kpi.team_view.kpi"), key: "label" },
+  { title: t("visualization.kpi.team_view.total"), key: "total" },
+  { title: t("visualization.kpi.team_view.average"), key: "avg" },
+]);
 
 const playerOptions = ref([]);
 const selectedPlayerIds = ref(new Set());
@@ -572,81 +631,158 @@ const isTeamFullySelected = (teamId) => {
   return teamPlayerIds.length > 0 && teamPlayerIds.every((pid) => selectedPlayerIds.value.has(pid));
 };
 
-const runningDistanceItems = ref([]);
-const isComputingDistance = ref(false);
-
-const triggerDistanceCalc = debounce(async () => {
-  const posData = toRaw(topViewStore.positionDataTopView);
-  if (!posData || !Object.keys(posData).length) {
-    runningDistanceItems.value = [];
-    return;
+const isInAnyZone = (x, y, zones) => {
+  if (!zones || zones.length === 0) return false;
+  for (const z of zones) {
+    if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1) return true;
   }
-  isComputingDistance.value = true;
-  try {
-    const result = await posdataWorkerStore.calcRunningDistances(
-      posData,
-      [...selectedPlayerIds.value],
-      selectedStartFrame.value,
-      selectedEndFrame.value,
-      playerStore.video?.field_length || 105,
-      playerStore.video?.field_width || 68,
-      selectedZones.value
-    );
-    runningDistanceItems.value = result;
-  } catch (err) {
-    console.error("Worker distance calc failed, using fallback:", err);
-    runningDistanceItems.value = positionDataStore.calculateRunningDistances(
-      selectedPlayerIds.value,
-      selectedStartFrame.value,
-      selectedEndFrame.value,
-      selectedZones.value
-    );
-  } finally {
-    isComputingDistance.value = false;
-  }
-}, 150);
+  return false;
+};
 
-watch(
-  [
-    selectedPlayerIds,
-    selectedStartFrame,
-    selectedEndFrame,
-    () => topViewStore.positionDataTopView,
-    selectedZones,
-  ],
-  () => triggerDistanceCalc(),
-  { immediate: true }
-);
+const kpiItems = computed(() => {
+  const rawKpiData = visualizationStore.kpiData;
+  if (!rawKpiData || typeof rawKpiData !== "object" || !Object.keys(rawKpiData).length) return [];
+
+  const startMs = selectedStartFrame.value;
+  const endMs = selectedEndFrame.value;
+  const zones = selectedZones.value;
+  const posData = topViewStore.positionDataTopView;
+
+  const frameKeys = Object.keys(rawKpiData)
+    .map(Number)
+    .filter((t) => t >= startMs && t <= endMs)
+    .sort((a, b) => a - b);
+
+  if (!frameKeys.length) return [];
+
+  const playerData = {};
+  for (const t of frameKeys) {
+    const players = rawKpiData[t] || [];
+
+    // Build position lookup for zone filtering
+    const posPlayers = posData[t] || [];
+    const posMap = {};
+    for (const p of posPlayers) posMap[p[0]] = p;
+
+    for (const [pid, tid, dist, vel, metpow] of players) {
+      if (!selectedPlayerIds.value.has(pid)) continue;
+      if (!playerData[pid]) {
+        playerData[pid] = { tid, prevDist: null, totalDist: 0, velocities: [], metpows: [] };
+      }
+      const data = playerData[pid];
+
+      // Zone check via position data
+      const pp = posMap[pid];
+      const inZone = pp ? isInAnyZone(pp[3], pp[4], zones) : true;
+
+      // Accumulate incremental distance only when in zone
+      if (dist != null) {
+        if (data.prevDist !== null && inZone) {
+          const inc = dist - data.prevDist;
+          if (inc > 0) data.totalDist += inc;
+        }
+        data.prevDist = dist;
+      }
+
+      if (inZone) {
+        if (vel != null) data.velocities.push(vel);
+        if (metpow != null) data.metpows.push(metpow);
+      }
+    }
+  }
+
+  const dt = 1 / (playerStore.videoFPS || 25);
+
+  return Object.entries(playerData).map(([pid, data]) => {
+    const velocity_max =
+      data.velocities.length > 0 ? parseFloat(Math.max(...data.velocities).toFixed(2)) : null;
+    const metabolic_work =
+      data.metpows.length > 0
+        ? parseFloat((data.metpows.reduce((a, b) => a + b, 0) * dt).toFixed(1))
+        : null;
+
+    return {
+      player_id: typeof pid === "string" && !isNaN(pid) ? parseInt(pid) : pid,
+      team_id: data.tid,
+      distance: data.totalDist > 0 ? parseFloat(data.totalDist.toFixed(1)) : null,
+      velocity_max,
+      metabolic_work,
+    };
+  });
+});
+
 const runningDistanceTeamItems = computed(() => {
   const grouped = {};
   playerOptions.value.forEach((p) => {
     if (!grouped[p.teamId]) grouped[p.teamId] = [];
   });
-  runningDistanceItems.value.forEach((item) => {
-    if (!grouped[item.team_id]) grouped[item.team_id] = [];
-    grouped[item.team_id].push(item);
+
+  const kpiMap = {};
+  kpiItems.value.forEach((item) => {
+    kpiMap[item.player_id] = item;
   });
+
+  playerOptions.value.forEach((p) => {
+    if (!selectedPlayerIds.value.has(p.playerId)) return;
+    grouped[p.teamId].push(
+      kpiMap[p.playerId] ?? {
+        player_id: p.playerId,
+        team_id: p.teamId,
+        distance: null,
+        velocity_max: null,
+        metabolic_work: null,
+      }
+    );
+  });
+
   return grouped;
 });
 
 const runningDistanceTeamAggregated = computed(() => {
   const result = [];
   for (const [teamId, players] of Object.entries(runningDistanceTeamItems.value)) {
-    const total = players.reduce((sum, p) => sum + p.distance, 0);
-    const count = players.length;
-    result.push({
-      team_id: teamId,
-      total_distance: parseFloat(total.toFixed(1)),
-      avg_distance: count > 0 ? parseFloat((total / count).toFixed(1)) : 0,
-      player_count: count,
-    });
+    const rows = [];
+
+    if (selectedKpis.value.has("running_distance_cumulative")) {
+      const vals = players.map((p) => p.distance).filter((v) => v != null);
+      const total = vals.length > 0 ? parseFloat(vals.reduce((a, b) => a + b, 0).toFixed(1)) : "-";
+      const avg = vals.length > 0 ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)) : "-";
+      rows.push({ label: t("visualization.kpi.kpi_table.distance"), total, avg });
+    }
+
+    if (selectedKpis.value.has("velocity_max")) {
+      const vals = players.map((p) => p.velocity_max).filter((v) => v != null);
+      const total = vals.length > 0 ? parseFloat(Math.max(...vals).toFixed(2)) : "-";
+      const avg =
+        vals.length > 0
+          ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2))
+          : "-";
+      rows.push({ label: t("visualization.kpi.kpi_table.velocity_max"), total, avg });
+    }
+
+    if (selectedKpis.value.has("metabolic_work")) {
+      const vals = players.map((p) => p.metabolic_work).filter((v) => v != null);
+      const total = vals.length > 0 ? parseFloat(vals.reduce((a, b) => a + b, 0).toFixed(1)) : "-";
+      const avg =
+        vals.length > 0
+          ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
+          : "-";
+      rows.push({ label: t("visualization.kpi.kpi_table.metabolic_work"), total, avg });
+    }
+
+    result.push({ team_id: teamId, rows });
   }
   return result;
 });
 
 const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
 
-const hasKpiData = computed(() => visualizationStore.kpiData.length > 0);
+const hasKpiData = computed(
+  () =>
+    visualizationStore.kpiData != null &&
+    typeof visualizationStore.kpiData === "object" &&
+    Object.keys(visualizationStore.kpiData).length > 0
+);
 
 const getTeamName = (teamId) => {
   const meta = topViewStore.metaDataTopView;
@@ -660,14 +796,21 @@ const getPlayerNumber = (playerId) => {
   return num != null ? num : playerId;
 };
 
-const getTeamBest = (teamPlayers) => {
-  if (!teamPlayers || teamPlayers.length === 0) return 0;
-  return Math.max(...teamPlayers.map((p) => p.distance));
+const getColBest = (players, colKey) => {
+  if (!players || !players.length) return "-";
+  const vals = players.map((p) => p[colKey]).filter((v) => v != null);
+  if (!vals.length) return "-";
+  return parseFloat(Math.max(...vals).toFixed(2));
 };
 
-const getTeamTotal = (teamPlayers) => {
-  if (!teamPlayers || teamPlayers.length === 0) return 0;
-  return parseFloat(teamPlayers.reduce((sum, p) => sum + p.distance, 0).toFixed(1));
+const getColTotal = (players, colKey) => {
+  if (!players || !players.length) return "-";
+  const vals = players.map((p) => p[colKey]).filter((v) => v != null);
+  if (!vals.length) return "-";
+  if (colKey === "velocity_max") {
+    return parseFloat(Math.max(...vals).toFixed(2));
+  }
+  return parseFloat(vals.reduce((a, b) => a + b, 0).toFixed(1));
 };
 
 const findFirstFrameWithHalftime = (half) => {
