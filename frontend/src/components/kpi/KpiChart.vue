@@ -42,16 +42,11 @@ const selectedStart = computed(() => positionDataStore.selectedTimeRange.start);
 const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
 
 const kpiLabel = computed(() => {
-  if (props.selectedKpi === "running_distance") {
-    if (props.chartMode === "windowed") {
-      return t("visualization.kpi.kpi_selection.running_distance_interval", {
-        frames: props.windowFrames,
-      });
-    }
-    return t("visualization.kpi.kpi_table.distance");
-  }
-  if (props.selectedKpi === "velocity_max") return "Velocity [m/s]";
-  if (props.selectedKpi === "metabolic_work") return "Metabolic Work [W/kg]";
+  if (props.selectedKpi === "running_distance") return t("visualization.kpi.kpi_label.distance");
+  if (props.selectedKpi === "velocity") return t("visualization.kpi.kpi_label.velocity");
+  if (props.selectedKpi === "velocity_max") return t("visualization.kpi.kpi_label.velocity_max");
+  if (props.selectedKpi === "metabolic_work")
+    return t("visualization.kpi.kpi_label.metabolic_work");
   return props.selectedKpi;
 });
 
@@ -59,7 +54,8 @@ const kpiUnit = computed(() => {
   const units = {
     running_distance: "m",
     velocity_max: "m/s",
-    metabolic_work: "W/kg",
+    velocity: "m/s",
+    metabolic_work: "J/kg",
   };
   return units[props.selectedKpi] || "";
 });
@@ -75,7 +71,7 @@ const formatWindowLabel = (ms) => {
 
 const yAxisLabel = computed(() => {
   if (props.chartMode === "windowed") {
-    return `${kpiLabel.value} / ${formatWindowLabel(props.windowSize)} (${kpiUnit.value})`;
+    return `${kpiLabel.value} / ${formatWindowLabel(props.windowSize)}`;
   }
   return kpiLabel.value;
 });
@@ -156,7 +152,7 @@ function buildRawTimeSeries() {
           series.times.push(t);
           series.values.push(inc);
         }
-      } else if (props.selectedKpi === "velocity_max") {
+      } else if (props.selectedKpi === "velocity_max" || props.selectedKpi === "velocity") {
         if (vel != null && inZone) {
           series.times.push(t);
           series.values.push(vel);
@@ -179,7 +175,7 @@ function buildRawTimeSeries() {
  * - velocity_max: keep per-frame values as-is (velocity profile over time)
  */
 function toCumulative(rawMap) {
-  if (props.selectedKpi === "velocity_max") return rawMap;
+  if (props.selectedKpi === "velocity_max" || props.selectedKpi === "velocity") return rawMap;
 
   const result = new Map();
   for (const [pid, series] of rawMap) {
@@ -226,7 +222,11 @@ function toWindowed(rawMap, windowSize) {
     for (const t of fullTimeRange) {
       const idx = Math.floor((t - rangeStart) / windowSize);
       const v = valLookup.get(t) || 0;
-      intervalSums.set(idx, (intervalSums.get(idx) || 0) + v);
+      if (props.selectedKpi === "velocity") {
+        intervalSums.set(idx, Math.max(intervalSums.get(idx) ?? 0, v));
+      } else {
+        intervalSums.set(idx, (intervalSums.get(idx) || 0) + v);
+      }
     }
 
     const outTimes = [];
@@ -250,7 +250,11 @@ function toWindowed(rawMap, windowSize) {
 const chartData = computed(() => {
   const rawMap = buildRawTimeSeries();
   const seriesMap =
-    props.chartMode === "windowed" ? toWindowed(rawMap, props.windowSize) : toCumulative(rawMap);
+    props.chartMode === "windowed"
+      ? toWindowed(rawMap, props.windowSize)
+      : props.chartMode === "per_frame"
+      ? rawMap
+      : toCumulative(rawMap);
 
   if (props.groupMode === "team") {
     // Aggregate per team using time-keyed maps for correct alignment

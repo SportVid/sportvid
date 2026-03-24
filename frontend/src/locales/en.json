@@ -235,10 +235,18 @@
       "kpi_not_selected": "No KPI data available.<br>Please run the KPI computation plugin to compute KPIs based on the selected position data.",
       "kpi_selection": {
         "title": "KPI",
+        "group_distance": "Distance",
+        "group_velocity": "Velocity",
+        "group_metabolic_work": "Metabolic Work",
         "running_distance_cumulative": "Distance [m] (cumulative)",
+        "running_distance_frame": "Distance [m] (per frame)",
         "running_distance_interval": "Distance [m] (per {frames} frames)",
         "velocity_max": "Velocity<sub>max</sub> [m⋅s<sup>-1</sup>]",
-        "metabolic_work": "Metabolic Work [J⋅kg<sup>-1</sup>]"
+        "velocity_frame": "Velocity [m⋅s<sup>-1</sup>]",
+        "velocity_interval": "Velocity<sub>max</sub> [m⋅s<sup>-1</sup>] (per {frames} frames)",
+        "metabolic_work_cumulative": "Metabolic Work [J⋅kg<sup>-1</sup>] (cumulative)",
+        "metabolic_work_frame": "Metabolic Work [J⋅kg<sup>-1</sup>] (per frame)",
+        "metabolic_work_interval": "Metabolic Work [J⋅kg<sup>-1</sup>] (per {frames} frames)"
       },
       "zone_selection": {
         "title": "Zone",
@@ -248,7 +256,7 @@
         "selected": "zone(s)"
       },
       "player_view": {
-        "player_id": "Player-ID",
+        "player_id": "Player",
         "best": "Best",
         "total": "Total"
       },
@@ -257,8 +265,9 @@
         "total": "Total",
         "average": "Average"
       },
-      "kpi_table": {
+      "kpi_label": {
         "distance": "Distance [m]",
+        "velocity": "Velocity [m⋅s<sup>-1</sup>]",
         "velocity_max": "Vel<sub>max</sub> [m⋅s<sup>-1</sup>]",
         "metabolic_work": "Met. Work [J⋅kg<sup>-1</sup>]"
       }

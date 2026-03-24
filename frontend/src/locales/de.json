@@ -178,10 +178,18 @@
       "kpi_not_selected": "Keine KPI-Daten verfügbar.<br>Bitte führe das KPI-Berechnungs-Plugin aus, um KPIs auf Basis der ausgewählten Positionsdaten zu berechnen.",
       "kpi_selection": {
         "title": "KPI",
+        "group_distance": "Distanz",
+        "group_velocity": "Geschwindigkeit",
+        "group_metabolic_work": "Metabolische Arbeit",
         "running_distance_cumulative": "Laufdistanz [m] (kumulativ)",
+        "running_distance_frame": "Laufdistanz [m] (pro Frame)",
         "running_distance_interval": "Laufdistanz [m] (pro {frames} Frames)",
         "velocity_max": "V<sub>max</sub> [m⋅s<sup>-1</sup>]",
-        "metabolic_work": "Met. Arbeit [J⋅kg<sup>-1</sup>]"
+        "velocity_frame": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "velocity_interval": "V<sub>max</sub> [m⋅s<sup>-1</sup>] (pro {frames} Frames)",
+        "metabolic_work_cumulative": "Met. Arbeit [J⋅kg<sup>-1</sup>] (kumulativ)",
+        "metabolic_work_frame": "Met. Arbeit [J⋅kg<sup>-1</sup>] (pro Frame)",
+        "metabolic_work_interval": "Met. Arbeit [J⋅kg<sup>-1</sup>] (pro {frames} Frames)"
       },
       "zone_selection": {
         "title": "Zone",
@@ -200,6 +208,12 @@
         "kpi": "KPI",
         "total": "Gesamt",
         "average": "Durchschnitt"
+      },
+      "kpi_label": {
+        "distance": "Distanz [m]",
+        "velocity": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "velocity_max": "V<sub>max</sub> [m⋅s<sup>-1</sup>]",
+        "metabolic_work": "Met. Arbeit [J⋅kg<sup>-1</sup>]"
       }
     }
   },

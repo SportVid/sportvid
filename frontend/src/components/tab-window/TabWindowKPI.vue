@@ -73,47 +73,83 @@
           </v-btn>
         </v-btn-toggle>
 
-        <v-menu location="bottom" :close-on-content-click="false">
+        <v-menu v-model="kpiMenuOpen" location="bottom" :close-on-content-click="false">
           <template #activator="{ props }">
             <v-btn v-bind="props" size="small" style="height: 40px" class="mt-n2">
               {{ $t("visualization.kpi.kpi_selection.title") }}
             </v-btn>
           </template>
 
-          <v-list class="py-0" density="compact" width="250px">
-            <template v-for="option in kpiOptions" :key="option.id">
-              <v-list-item class="menu-item" @click="toggleKpi(option)">
-                <v-list-item-title class="d-flex justify-space-between">
-                  <template v-if="option.id === 'running_distance_interval'">
-                    <i18n-t
-                      keypath="visualization.kpi.kpi_selection.running_distance_interval"
-                      tag="span"
-                    >
-                      <template #frames>
-                        <input
-                          v-model.number="windowFrames"
-                          type="number"
-                          min="1"
-                          class="inline-frame-input"
-                          :style="{ width: inputWidth }"
-                          @click.stop
-                          @keydown.stop
-                          @blur="onFrameInputBlur"
-                        />
-                      </template>
-                    </i18n-t>
+          <v-list class="py-0" density="compact" :width="viewMode === 'chart' ? '160px' : '280px'">
+            <!-- Chart mode: nested submenu per KPI group -->
+            <template v-if="viewMode === 'chart'">
+              <template v-for="group in chartKpiGroups" :key="group.key">
+                <v-menu location="end" open-on-hover>
+                  <template #activator="{ props: groupProps }">
+                    <v-list-item v-bind="groupProps" class="menu-item">
+                      <v-list-item-title class="d-flex justify-space-between">
+                        {{ $t(group.labelKey) }}
+                        <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                      </v-list-item-title>
+                    </v-list-item>
                   </template>
-                  <span v-else v-html="$t(`visualization.kpi.kpi_selection.${option.id}`)" />
-                  <tab-window-icon
-                    :class="{
-                      'text-disabled': !isKpiSelected(option),
-                      'text-red': isKpiSelected(option),
-                    }"
-                  >
-                    mdi-check
-                  </tab-window-icon>
-                </v-list-item-title>
-              </v-list-item>
+                  <v-list class="py-0" density="compact" :width="group.chartWidth">
+                    <template v-for="option in group.options" :key="option.id">
+                      <v-list-item class="menu-item" @click="toggleKpi(option)">
+                        <v-list-item-title class="d-flex justify-space-between">
+                          <template v-if="option.mode === 'windowed'">
+                            <span class="d-flex align-center" style="gap: 2px">
+                              <span v-html="splitWindowedLabel(option.id).before" />
+                              <input
+                                v-model.number="windowFrames"
+                                type="number"
+                                min="1"
+                                class="inline-frame-input"
+                                :style="{ width: inputWidth }"
+                                @click.stop
+                                @keydown.stop
+                                @blur="onFrameInputBlur"
+                              />
+                              <span v-html="splitWindowedLabel(option.id).after" />
+                            </span>
+                          </template>
+                          <span
+                            v-else
+                            v-html="$t(`visualization.kpi.kpi_selection.${option.id}`)"
+                          />
+                          <tab-window-icon
+                            :class="{
+                              'text-disabled': !isKpiSelected(option),
+                              'text-red': isKpiSelected(option),
+                            }"
+                          >
+                            mdi-check
+                          </tab-window-icon>
+                        </v-list-item-title>
+                      </v-list-item>
+                    </template>
+                  </v-list>
+                </v-menu>
+              </template>
+            </template>
+
+            <!-- Table mode: flat list -->
+            <template v-else>
+              <template v-for="option in kpiOptions" :key="option.id">
+                <v-list-item class="menu-item" @click="toggleKpi(option)">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    <span v-html="$t(`visualization.kpi.kpi_selection.${option.id}`)" />
+                    <tab-window-icon
+                      :class="{
+                        'text-disabled': !isKpiSelected(option),
+                        'text-red': isKpiSelected(option),
+                      }"
+                    >
+                      mdi-check
+                    </tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+              </template>
             </template>
           </v-list>
         </v-menu>
@@ -254,7 +290,9 @@
               }"
             >
               <td v-for="col in columns" :key="col.key">
-                {{ col.key === "player_id" ? getPlayerNumber(item[col.key]) : (item[col.key] ?? "-") }}
+                {{
+                  col.key === "player_id" ? getPlayerNumber(item[col.key]) : item[col.key] ?? "-"
+                }}
               </td>
             </tr>
           </template>
@@ -337,7 +375,11 @@
           density="compact"
         >
           <template #item="{ item }">
-            <tr :style="{ backgroundColor: toRgb(visualizationStore.getTeamColor(teamRow.team_id), 0.6) }">
+            <tr
+              :style="{
+                backgroundColor: toRgb(visualizationStore.getTeamColor(teamRow.team_id), 0.6),
+              }"
+            >
               <td><span v-html="item.label" /></td>
               <td>{{ item.total ?? "-" }}</td>
               <td>{{ item.avg ?? "-" }}</td>
@@ -422,6 +464,16 @@ const videoStore = useVideoStore();
 
 const { t } = useI18n();
 
+// Split a windowed locale string at the {frames} placeholder so each half
+// can be rendered with v-html (preserving <sub>/<sup> tags).
+const splitWindowedLabel = (optionId) => {
+  const SENTINEL = "\u0001";
+  const msg = t(`visualization.kpi.kpi_selection.${optionId}`, { frames: SENTINEL });
+  const idx = msg.indexOf(SENTINEL);
+  if (idx === -1) return { before: msg, after: "" };
+  return { before: msg.slice(0, idx), after: msg.slice(idx + 1) };
+};
+
 const viewMode = ref("table");
 const groupMode = ref("player");
 
@@ -441,36 +493,62 @@ for (let r = 0; r < 5; r++) {
 }
 const selectedZones = ref(initialZones);
 
-// Maps kpi_names (from kpi_computation meta_data) → available display options.
-// views: null = both table and chart, "chart" = chart only, "table" = table only.
-// Maps kpi_names (from kpi_computation meta_data) → available display options.
-// views: "both" | "chart" | "table"
+// Maps kpi_names (from kpi_computation meta_data) → display options per view mode.
 const KPI_CONFIG = {
-  distance_covered: [
-    {
-      id: "running_distance_cumulative",
-      kpi: "running_distance",
-      mode: "cumulative",
-      views: "both",
-    },
-    { id: "running_distance_interval", kpi: "running_distance", mode: "windowed", views: "chart" },
-  ],
-  velocity: [{ id: "velocity_max", kpi: "velocity_max", mode: "cumulative", views: "both" }],
-  metabolic_power: [
-    { id: "metabolic_work", kpi: "metabolic_work", mode: "cumulative", views: "both" },
-  ],
+  distance_covered: {
+    labelKey: "visualization.kpi.kpi_selection.group_distance",
+    chartWidth: "230px",
+    chart: [
+      { id: "running_distance_frame", kpi: "running_distance", mode: "per_frame" },
+      { id: "running_distance_interval", kpi: "running_distance", mode: "windowed" },
+      { id: "running_distance_cumulative", kpi: "running_distance", mode: "cumulative" },
+    ],
+    table: [{ id: "running_distance_cumulative", kpi: "running_distance", mode: "cumulative" }],
+  },
+  velocity: {
+    labelKey: "visualization.kpi.kpi_selection.group_velocity",
+    chartWidth: "260px",
+    chart: [
+      { id: "velocity_frame", kpi: "velocity", mode: "per_frame" },
+      { id: "velocity_interval", kpi: "velocity", mode: "windowed" },
+    ],
+    table: [{ id: "velocity_max", kpi: "velocity_max", mode: "cumulative" }],
+  },
+  metabolic_power: {
+    labelKey: "visualization.kpi.kpi_selection.group_metabolic_work",
+    chartWidth: "290px",
+    chart: [
+      { id: "metabolic_work_frame", kpi: "metabolic_work", mode: "per_frame" },
+      { id: "metabolic_work_interval", kpi: "metabolic_work", mode: "windowed" },
+      { id: "metabolic_work_cumulative", kpi: "metabolic_work", mode: "cumulative" },
+    ],
+    table: [{ id: "metabolic_work_cumulative", kpi: "metabolic_work", mode: "cumulative" }],
+  },
 };
 
+// For table mode: flat list of table options for available KPI names
 const kpiOptions = computed(() => {
   const names = visualizationStore.kpiNames;
   if (!names || !names.length) return [];
+  return names.flatMap((name) => KPI_CONFIG[name]?.table || []);
+});
+
+// For chart mode: grouped structure for nested submenu
+const chartKpiGroups = computed(() => {
+  const names = visualizationStore.kpiNames;
+  if (!names || !names.length) return [];
   return names
-    .flatMap((name) => KPI_CONFIG[name] || [])
-    .filter((opt) => opt.views === "both" || opt.views === viewMode.value);
+    .filter((name) => KPI_CONFIG[name])
+    .map((name) => ({
+      key: name,
+      labelKey: KPI_CONFIG[name].labelKey,
+      chartWidth: KPI_CONFIG[name].chartWidth,
+      options: KPI_CONFIG[name].chart,
+    }));
 });
 
 // Chart mode: single selected option (includes mode + window info)
-const selectedKpiId = ref("running_distance_cumulative");
+const selectedKpiId = ref("running_distance_frame");
 // Table mode: set of KPI ids (independent selection)
 const selectedKpis = ref(new Set(["running_distance_cumulative"]));
 
@@ -507,11 +585,15 @@ const windowTimeLabel = computed(() => {
   return sec > 0 ? `${min} min ${sec}s` : `${min} min`;
 });
 
+const allChartOptions = computed(() => chartKpiGroups.value.flatMap((g) => g.options));
+
 const selectedKpiOption = computed(
-  () => kpiOptions.value.find((o) => o.id === selectedKpiId.value) || kpiOptions.value[0]
+  () => allChartOptions.value.find((o) => o.id === selectedKpiId.value) || allChartOptions.value[0]
 );
 const chartKpi = computed(() => selectedKpiOption.value?.kpi);
 const chartMode = computed(() => selectedKpiOption.value?.mode);
+
+const kpiMenuOpen = ref(false);
 
 const isKpiSelected = (option) => {
   if (viewMode.value === "chart") {
@@ -523,6 +605,7 @@ const isKpiSelected = (option) => {
 const toggleKpi = (option) => {
   if (viewMode.value === "chart") {
     selectedKpiId.value = option.id;
+    kpiMenuOpen.value = false;
   } else {
     // Table: multi select by id, keep at least one
     const newSet = new Set(selectedKpis.value);
@@ -551,14 +634,14 @@ watch(
 const playerHeaders = computed(() => {
   const cols = [{ title: t("visualization.kpi.player_view.player_id"), key: "player_id" }];
   if (selectedKpis.value.has("running_distance_cumulative")) {
-    cols.push({ title: t("visualization.kpi.kpi_table.distance"), key: "distance" });
+    cols.push({ title: t("visualization.kpi.kpi_label.distance"), key: "distance" });
   }
   if (selectedKpis.value.has("velocity_max")) {
-    cols.push({ title: t("visualization.kpi.kpi_table.velocity_max"), key: "velocity_max" });
+    cols.push({ title: t("visualization.kpi.kpi_label.velocity_max"), key: "velocity_max" });
   }
-  if (selectedKpis.value.has("metabolic_work")) {
+  if (selectedKpis.value.has("metabolic_work_cumulative")) {
     cols.push({
-      title: t("visualization.kpi.kpi_table.metabolic_work"),
+      title: t("visualization.kpi.kpi_label.metabolic_work"),
       key: "metabolic_work",
     });
   }
@@ -746,8 +829,11 @@ const runningDistanceTeamAggregated = computed(() => {
     if (selectedKpis.value.has("running_distance_cumulative")) {
       const vals = players.map((p) => p.distance).filter((v) => v != null);
       const total = vals.length > 0 ? parseFloat(vals.reduce((a, b) => a + b, 0).toFixed(1)) : "-";
-      const avg = vals.length > 0 ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)) : "-";
-      rows.push({ label: t("visualization.kpi.kpi_table.distance"), total, avg });
+      const avg =
+        vals.length > 0
+          ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
+          : "-";
+      rows.push({ label: t("visualization.kpi.kpi_label.distance"), total, avg });
     }
 
     if (selectedKpis.value.has("velocity_max")) {
@@ -757,17 +843,17 @@ const runningDistanceTeamAggregated = computed(() => {
         vals.length > 0
           ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2))
           : "-";
-      rows.push({ label: t("visualization.kpi.kpi_table.velocity_max"), total, avg });
+      rows.push({ label: t("visualization.kpi.kpi_label.velocity_max"), total, avg });
     }
 
-    if (selectedKpis.value.has("metabolic_work")) {
+    if (selectedKpis.value.has("metabolic_work_cumulative")) {
       const vals = players.map((p) => p.metabolic_work).filter((v) => v != null);
       const total = vals.length > 0 ? parseFloat(vals.reduce((a, b) => a + b, 0).toFixed(1)) : "-";
       const avg =
         vals.length > 0
           ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
           : "-";
-      rows.push({ label: t("visualization.kpi.kpi_table.metabolic_work"), total, avg });
+      rows.push({ label: t("visualization.kpi.kpi_label.metabolic_work"), total, avg });
     }
 
     result.push({ team_id: teamId, rows });
