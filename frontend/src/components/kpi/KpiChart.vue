@@ -488,4 +488,23 @@ onBeforeUnmount(() => {
     Plotly.purge(plotContainer.value);
   }
 });
+
+defineExpose({ saveChart });
+
+async function saveChart() {
+  if (!plotContainer.value || !plotInitialized) return;
+  try {
+    const dataUrl = await Plotly.toImage(plotContainer.value, {
+      format: "png",
+      width: 1920,
+      height: 1080,
+    });
+    const link = document.createElement("a");
+    link.download = "kpi_chart.png";
+    link.href = dataUrl;
+    link.click();
+  } catch (e) {
+    console.error("Chart export failed:", e);
+  }
+}
 </script>

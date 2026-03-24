@@ -59,6 +59,10 @@
           </v-btn>
         </v-btn-toggle>
 
+        <v-btn style="height: 40px" size="small" class="mt-n2" @click="saveScreenshot">
+          <v-icon>mdi-download</v-icon>
+        </v-btn>
+
         <v-menu location="bottom">
           <template #activator="{ props }">
             <v-btn v-bind="props" style="height: 40px" size="small" class="mt-n2">
@@ -550,6 +554,31 @@ watch(displayMode, (mode) => {
 });
 
 const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
+
+async function saveScreenshot() {
+  const img = topViewElement.value;
+  if (!img || !localSize.value.width || !localSize.value.height) return;
+  const scale = 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = localSize.value.width * scale;
+  canvas.height = localSize.value.height * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  if (displayMode.value === "heatmap" && heatmapContainer.value) {
+    const heatmapCanvas = heatmapContainer.value.querySelector("canvas");
+    if (heatmapCanvas) ctx.drawImage(heatmapCanvas, 0, 0, canvas.width, canvas.height);
+  } else if (displayMode.value === "movement" && movementCanvas.value) {
+    ctx.drawImage(movementCanvas.value, 0, 0, canvas.width, canvas.height);
+  }
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.download = "heatmap.png";
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+}
 </script>
 
 <style scoped>

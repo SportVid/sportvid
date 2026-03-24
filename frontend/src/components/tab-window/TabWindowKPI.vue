@@ -168,6 +168,16 @@
           />
         </v-menu>
 
+        <v-btn
+          v-if="viewMode === 'chart'"
+          style="height: 40px"
+          size="small"
+          class="mt-n2"
+          @click="kpiChartRef?.saveChart()"
+        >
+          <v-icon>mdi-download</v-icon>
+        </v-btn>
+
         <v-menu location="bottom">
           <template #activator="{ props }">
             <v-btn v-bind="props" size="small" style="height: 40px" class="mt-n2">
@@ -391,6 +401,7 @@
 
     <div v-else-if="viewMode === 'chart'" class="px-2 mt-2">
       <KpiChart
+        ref="kpiChartRef"
         :selectedPlayerIds="selectedPlayerIds"
         :selectedKpi="chartKpi"
         :groupMode="groupMode"
@@ -463,6 +474,8 @@ const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 
 const { t } = useI18n();
+
+const kpiChartRef = ref(null);
 
 // Split a windowed locale string at the {frames} placeholder so each half
 // can be rendered with v-html (preserving <sub>/<sup> tags).

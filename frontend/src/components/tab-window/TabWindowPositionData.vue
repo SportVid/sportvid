@@ -312,6 +312,10 @@
         v-model="showModalPositionDataOffset"
       />
 
+      <v-btn size="small" @click="saveScreenshot">
+        <v-icon>mdi-download</v-icon>
+      </v-btn>
+
       <div class="time-code ml-2">
         {{ getTimecode(currentTime) }}
       </div>
@@ -1054,6 +1058,31 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
 });
+
+async function saveScreenshot() {
+  const img = topViewElement.value;
+  if (!img) return;
+  const w = topViewStore.topViewSize.width;
+  const h = topViewStore.topViewSize.height;
+  if (!w || !h) return;
+  const scale = 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = w * scale;
+  canvas.height = h * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  if (playerCanvas.value) {
+    ctx.drawImage(playerCanvas.value, 0, 0, canvas.width, canvas.height);
+  }
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.download = "position_data.png";
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+}
 </script>
 
 <style scoped>
