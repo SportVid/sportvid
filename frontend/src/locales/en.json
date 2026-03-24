@@ -246,7 +246,10 @@
         "velocity_interval": "Velocity<sub>max</sub> [m⋅s<sup>-1</sup>] (per {frames} frames)",
         "metabolic_work_cumulative": "Metabolic Work [J⋅kg<sup>-1</sup>] (cumulative)",
         "metabolic_work_frame": "Metabolic Work [J⋅kg<sup>-1</sup>] (per frame)",
-        "metabolic_work_interval": "Metabolic Work [J⋅kg<sup>-1</sup>] (per {frames} frames)"
+        "metabolic_work_interval": "Metabolic Work [J⋅kg<sup>-1</sup>] (per {frames} frames)",
+        "distance_covered": "Distance [m]",
+        "velocity": "Velocity [m⋅s<sup>-1</sup>]",
+        "metabolic_power": "Metabolic Power [W⋅kg<sup>-1</sup>]"
       },
       "zone_selection": {
         "title": "Zone",
@@ -436,20 +439,43 @@
         },
         "file_name": "position_data"
       },
-      "running_distance": {
-        "export_name": "Running Distance",
+      "kpi": {
+        "export_name": "KPI",
         "teams": {
           "all": "Select all"
         },
+        "kpi_names": {
+          "all": "Select all",
+          "distance_covered": "distance",
+          "velocity": "velocity",
+          "metabolic_power": "metabolic_work"
+        },
         "attributes": {
           "all": "Select all",
-          "player_id": "Player-ID",
           "player_name": "Player name",
           "team_id": "Team-ID",
-          "team_name": "Team name",
-          "distance": "Distance"
+          "team_name": "Team name"
         },
-        "file_name": "running_distance"
+        "file_name": "kpi_data"
+      },
+      "kpi_aggregated": {
+        "export_name": "KPI (aggregated)",
+        "teams": {
+          "all": "Select all"
+        },
+        "kpi_names": {
+          "all": "Select all",
+          "distance_covered": "distance",
+          "velocity": "velocity",
+          "metabolic_power": "metabolic_work"
+        },
+        "attributes": {
+          "all": "Select all",
+          "player_name": "Player name",
+          "team_id": "Team-ID",
+          "team_name": "Team name"
+        },
+        "file_name": "kpi_aggregated_data"
       },
       "json": {
         "export_name": "JSON"
@@ -488,12 +514,14 @@
       "position_data_team_hint": "Exporting selected groups.",
       "position_data_attribute_name": "Additional attributes",
       "position_data_attribute_hint": "Timestamp (ms), Player-ID, and X/Y coordinates are always included. Optionally add more attributes.",
-      "running_distance_team_name": "Select teams",
-      "running_distance_team_hint": "Exporting selected teams.",
-      "running_distance_attribute_name": "Additional attributes",
-      "running_distance_attribute_hint": "Player-ID and Distance are always included. Optionally add more attributes.",
-      "running_distance_start_frame_name": "Select start frame",
-      "running_distance_end_frame_name": "Select end frame",
+      "kpi_team_name": "Select teams",
+      "kpi_team_hint": "Exporting selected teams.",
+      "kpi_names_name": "Select KPIs",
+      "kpi_names_hint": "Select which KPIs to include (min. 1 required).",
+      "kpi_attribute_name": "Additional attributes",
+      "kpi_attribute_hint": "Timestamp (ms) and Player-ID are always included. Optionally add more attributes.",
+      "kpi_start_frame_name": "Select start frame",
+      "kpi_end_frame_name": "Select end frame",
       "fps": "Frames per Second (FPS)",
       "normalize": "Normalize Results?",
       "aggregation": {

@@ -62,6 +62,7 @@ export const useVisualizationStore = defineStore(
 
     const kpiData = ref({});
     const kpiNames = ref([]);
+    const kpiFramerate = ref(null);
     const kpiDataLoaded = ref(false);
 
     const loadKpiData = async (trackingDataId) => {
@@ -87,6 +88,7 @@ export const useVisualizationStore = defineStore(
 
         kpiData.value = _kpiData[0]?.results[0]?.data?.kpis;
         kpiNames.value = _kpiData[0]?.results[0]?.data?.meta_data?.kpi_names;
+        kpiFramerate.value = _kpiData[0]?.results[0]?.data?.meta_data?.framerate;
       } finally {
         if (hasValidData) {
           kpiDataLoaded.value = true;
@@ -105,6 +107,7 @@ export const useVisualizationStore = defineStore(
       addTeamColor,
       kpiData,
       kpiNames,
+      kpiFramerate,
       loadKpiData,
     };
   },

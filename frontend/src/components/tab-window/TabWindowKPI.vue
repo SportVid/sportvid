@@ -774,7 +774,7 @@ const kpiItems = computed(() => {
     }
   }
 
-  const dt = 1 / (playerStore.videoFPS || 25);
+  const dt = 1 / visualizationStore.kpiFramerate;
 
   return Object.entries(playerData).map(([pid, data]) => {
     const velocity_max =
