@@ -398,6 +398,10 @@ export const useTopViewStore = defineStore(
       viewMovement,
       positionDataTopView,
       metaDataTopView,
+      setPositionData(posData, metaData) {
+        positionDataTopView.value = posData;
+        metaDataTopView.value = metaData;
+      },
       transformBBoxToPositionDataTopView,
       showPlayerId,
       viewPlayerId,

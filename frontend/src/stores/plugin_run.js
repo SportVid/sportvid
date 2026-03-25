@@ -114,7 +114,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
             .filter(
               (e) =>
                 e.status === "DONE" &&
-                !currentPluginRunStatus.find((t) => t.id === e.id)?.status === "DONE"
+                currentPluginRunStatus.find((t) => t.id === e.id)?.status !== "DONE"
             )
             .map((e) => e.id),
         };

@@ -75,9 +75,6 @@ class KpiComputation(
             for int_id_str, info in pos_meta.get("player_ids", {}).items():
                 player_id_by_orig[info["id"]] = int(int_id_str)
 
-        # player_id_map / team_players: used by DFL path only
-        player_id_map = {}
-        team_players = {}
         # ball_team_ids: set of original group/team id values that represent the ball
         ball_team_ids = set()
         framerate = None
@@ -104,23 +101,25 @@ class KpiComputation(
                     finally:
                         os.unlink(tmp_path)
 
-                    for i, (pos_xy, ts) in enumerate(zip(pos_data, teamsheets)):
-                        group_id_val = ts.teamsheet['group id'].iloc[0] if not ts.teamsheet.empty else f"team_{i+1}"
+                    for idx, ts in enumerate(teamsheets):
+                        df = ts.teamsheet.copy()
+                        group_id_val = df['group id'].iloc[0] if not ts.teamsheet.empty else f"team_{idx+1}"
                         tid = team_id_by_orig.get(group_id_val, group_id_val)
                         if pos_meta:
-                            if tid == 1:  # posdata_convert always maps ball → team id 1
+                            if tid == 1:
                                 ball_team_ids.add(group_id_val)
                                 continue
                         elif "ball" in str(group_id_val).lower():
                             ball_team_ids.add(group_id_val)
                             continue
-                        df = ts.teamsheet.copy()
+
                         df['pid'] = df['number'].map(player_id_by_orig) if pos_meta else df['number'].astype(str)
                         df['tid'] = tid
-                        teamsheets[i].teamsheet = df
+                        teamsheets[idx].teamsheet = df
 
                     if pos_data:
                         framerate = int(pos_data[0].framerate) if pos_data[0].framerate else 25
+                        
                 elif fmt == "dfl":
                     with tempfile.NamedTemporaryFile(mode='w+b', suffix='.xml', delete=False) as tmp_data:
                         tmp_data.write(t_data.read())
@@ -140,21 +139,18 @@ class KpiComputation(
                         os.unlink(tmp_data_path)
 
                     for team_name, team_ts in teamsheets.items():
-                        if team_name == "Ball":
-                            continue
-                        df_ts = team_ts.teamsheet.sort_values("xID")
-                        team_players[team_name] = []
-                        for _, row in df_ts.iterrows():
-                            comb_idx = len(player_id_map)
-                            player_id_map[comb_idx] = str(row.get("player", row.get("pID", comb_idx))) # TODO: check name columns
-                            team_players[team_name].append(comb_idx)
+                        df = team_ts.teamsheet.copy()
+                        group_id_val = df['tID'].iloc[0] if not team_ts.teamsheet.empty else f"team_{team_name}"
+                        tid = team_id_by_orig.get(group_id_val, group_id_val)
 
+                        if pos_meta:
+                            if tid == 1:
+                                ball_team_ids.add(group_id_val)
+                                continue
 
-                    # Identify ball teams: present in pos_data but absent from team_players
-                    for _, teams_dict in pos_data.items():
-                        for tn in teams_dict:
-                            if tn not in team_players:
-                                ball_team_ids.add(tn)
+                        df["pid"] = df["pID"].map(player_id_by_orig) if pos_meta else df["pID"].astype(str)
+                        df["tid"] = tid
+                        teamsheets[team_name].teamsheet = df
 
                     first_xy = next(iter(next(iter(pos_data.values())).values()))
                     framerate = int(first_xy.framerate) if first_xy.framerate else 25
@@ -173,7 +169,8 @@ class KpiComputation(
 
             for i, xy_obj in enumerate(pos_data):
                 df_ts = teamsheets[i].teamsheet
-                if df_ts['group id'].iloc[0] in ball_team_ids:
+                gid = df_ts['group id'].iloc[0]
+                if gid in ball_team_ids:
                     continue
 
                 dist_mod = DistanceModel()
@@ -213,7 +210,7 @@ class KpiComputation(
                             all_frame_kpis[frame_idx].append([
                                 pid,
                                 tid,
-                                None if d != d else d,   # NaN → None (NaN != NaN is always True)
+                                None if d != d else d,
                                 None if v != v else v,
                                 None if m != m else m,
                             ])
@@ -228,8 +225,12 @@ class KpiComputation(
                 n_frames = None
 
                 for team_name, xy_obj in teams_dict.items():
-                    if team_name in ball_team_ids:
+                    if team_name not in teamsheets:
                         continue
+                    df_ts = teamsheets[team_name].teamsheet
+                    if df_ts['tID'].iloc[0] in ball_team_ids:
+                        continue
+
                     dist_mod = DistanceModel()
                     vel_mod = VelocityModel()
                     metpow_mod = MetabolicPowerModel()
@@ -249,12 +250,9 @@ class KpiComputation(
                 if n_frames is None:
                     continue
 
-
                 for team_name, (dist_arr, vel_arr, metpow_arr) in team_kpi_arrays.items():
-                    if team_name in ball_team_ids:
-                        continue
-                    team_comb_ids = team_players.get(team_name, [])
                     n_players = dist_arr.shape[1]
+                    df_sorted = teamsheets[team_name].teamsheet.sort_values("xID").reset_index(drop=True)
 
                     dist_list = dist_arr.tolist()
                     vel_list = vel_arr.tolist()
@@ -265,16 +263,16 @@ class KpiComputation(
                         if abs_frame not in all_frame_kpis:
                             all_frame_kpis[abs_frame] = []
                         for p in range(n_players):
-                            comb_idx_p = team_comb_ids[p] if p < len(team_comb_ids) else -1
-                            pid = player_id_map.get(comb_idx_p, f"{team_name}_p{p}")
-                            tid = player_to_team_id.get(comb_idx_p, team_to_id.get(team_name, 1))
+                            row = df_sorted.iloc[p] if p < len(df_sorted) else None
+                            pid = int(row['pid']) if row is not None and pd.notna(row['pid']) else -1
+                            tid = int(row['tid']) if row is not None and pd.notna(row['tid']) else -1
                             d = dist_list[frame_idx][p]
                             v = vel_list[frame_idx][p]
                             m = metpow_list[frame_idx][p]
                             all_frame_kpis[abs_frame].append([
                                 pid,
                                 tid,
-                                None if d != d else d,   # NaN → None (NaN != NaN is always True)
+                                None if d != d else d,
                                 None if v != v else v,
                                 None if m != m else m,
                             ])
@@ -283,7 +281,7 @@ class KpiComputation(
 
         # ----------------- FRAME INDEX → MILLISECONDS
         freq = 1000.0 / framerate
-        all_frame_kpis = {
+        all_frame_kpis_ms = {
             int(np.rint(frame_idx * freq)): players
             for frame_idx, players in all_frame_kpis.items()
         }
@@ -299,11 +297,34 @@ class KpiComputation(
                 "tracking_data_id": parameters.get("tracking_data_id"),
             }
         else:
+            # pos_meta is always expected; build fallback mappings from parsed teamsheets
+            fallback_player_ids = {}
+            fallback_team_ids = {}
+            if fmt == "kinexon":
+                for ts in teamsheets:
+                    df = ts.teamsheet
+                    if df.empty or df["group id"].iloc[0] in ball_team_ids:
+                        continue
+                    tid = df["tid"].iloc[0]
+                    fallback_team_ids[str(tid)] = {"id": df["group id"].iloc[0]}
+                    for _, row in df.iterrows():
+                        if pd.notna(row.get("pid")):
+                            fallback_player_ids[str(row["pid"])] = {"id": str(row["number"])}
+            elif fmt == "dfl":
+                for team_name, ts in teamsheets.items():
+                    df = ts.teamsheet
+                    if df.empty or df["tID"].iloc[0] in ball_team_ids:
+                        continue
+                    tid = df["tid"].iloc[0]
+                    fallback_team_ids[str(tid)] = {"id": df["tID"].iloc[0]}
+                    for _, row in df.iterrows():
+                        if pd.notna(row.get("pid")):
+                            fallback_player_ids[str(row["pid"])] = {"id": str(row["pID"])}
             meta = {
                 "format": fmt,
                 "kpi_names": ["distance_covered", "velocity", "metabolic_power"],
-                "player_ids": {str(k): v for k, v in player_id_map.items()},
-                "team_ids": team_to_id,
+                "player_ids": fallback_player_ids,
+                "team_ids": fallback_team_ids,
                 "framerate": framerate,
                 "tracking_data_id": parameters.get("tracking_data_id"),
             }
@@ -311,7 +332,7 @@ class KpiComputation(
         with data_manager.create_data("KpiData") as kpi_data:
             kpi_data.tracking_data_id = parameters.get("tracking_data_id")
             kpi_data.meta_data = json.dumps(meta)
-            kpi_data.kpis = json.dumps(all_frame_kpis)
+            kpi_data.kpis = json.dumps(all_frame_kpis_ms)
 
             self.update_callbacks(callbacks, progress=1.0)
 
