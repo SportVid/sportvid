@@ -175,21 +175,22 @@
   },
   "position_data": {
     "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
-    "area_size": "Area size",
     "display_settings": {
       "title": "Display Settings",
       "view_bounding_box": "View bounding-boxes",
       "view_player_id": "View player ids",
+      "toggle_entities": "Toggle entities",
       "video_sync": "Sychronise with video",
       "team_colors": "Change team colors",
       "offset": "Set offset",
+      "area_size": "Area size",
       "set_grid": {
         "title": "Set Grid",
         "longitudinal": "Longitudinal",
         "transverse": "Transverse"
       },
       "view_kpis": {
-        "title": "View performance indicator",
+        "title": "View KPIs",
         "space_control": "Space control",
         "eps": "Effective playing space"
       },
