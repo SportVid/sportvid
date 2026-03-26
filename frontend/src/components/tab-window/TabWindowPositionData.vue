@@ -932,6 +932,7 @@ watch(
     () => topViewStore.currentAreaSize,
     () => topViewStore.gridLongitudinal,
     () => topViewStore.gridTransverse,
+    () => visualizationStore.teamColorMapping,
     includedPlayers,
   ],
   () => scheduleCanvasDraw()

@@ -514,6 +514,11 @@ export const useCalibrationAssetStore = defineStore(
     const currentTemplate = computed(() => {
       return calibrationAssetType.value === "marker" ? markerTemplate.value : segmentTemplate.value;
     });
+    const availableTemplateObjects = computed(() => {
+      return currentTemplate.value.filter(
+        (o) => !calibrationAssetObjects.value.some((obj) => obj.id === o.id)
+      );
+    });
 
     const allAssetObjectsValid = computed(() =>
       calibrationAssetObjects.value.every(
@@ -562,8 +567,7 @@ export const useCalibrationAssetStore = defineStore(
       }
     };
     const addTemplateReferenceObject = (m) => {
-      m.set = true;
-      calibrationAssetObjects.value.push(m);
+      calibrationAssetObjects.value.push(JSON.parse(JSON.stringify({ ...m, set: true })));
     };
     const setReferenceObject = (event) => {
       if (isAddingReferenceObject.value) {
@@ -775,6 +779,7 @@ export const useCalibrationAssetStore = defineStore(
     return {
       calibrationAssetObjects,
       currentTemplate,
+      availableTemplateObjects,
       markerTemplate,
       segmentTemplate,
       allAssetObjectsValid,

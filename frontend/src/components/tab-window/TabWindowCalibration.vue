@@ -2,7 +2,7 @@
   <CalibrationAssetMenu v-if="calibrationAssetStore.calibrationAssetObjects.length === 0" />
 
   <v-container v-else class="d-flex flex-column">
-    <v-row ref="container" justify="center">
+    <v-row justify="center">
       <div ref="topViewFullscreenRoot" class="top-view-fullscreen-root">
         <div class="top-view-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
           <img
@@ -560,7 +560,7 @@
 
     <v-row
       ref="videoControl"
-      class="video-control mt-6 mb-0 justify-center align-center"
+      class="video-control mt-6 mb-n2 justify-center align-center"
       style="height: 60px"
       data-tour="calibration-asset-edit-row"
     >
@@ -621,7 +621,7 @@
         v-model="showModalCalibrationAssetUpdate"
       />
 
-      <v-menu location="top">
+      <v-menu v-model="showMarkerTypeMenu" location="top" :close-on-content-click="false">
         <template #activator="{ props }">
           <v-btn v-bind="props" size="small">
             {{
@@ -632,7 +632,15 @@
           </v-btn>
         </template>
         <v-list class="py-0" density="compact" width="220px">
-          <v-list-item class="menu-item" @click="calibrationAssetStore.toggleVideoAsset">
+          <v-list-item
+            class="menu-item"
+            @click="
+              () => {
+                calibrationAssetStore.toggleVideoAsset();
+                showMarkerTypeMenu = false;
+              }
+            "
+          >
             <v-list-item-title class="d-flex justify-space-between">
               {{
                 calibrationAssetStore.calibrationAssetType === "marker"
@@ -654,8 +662,10 @@
 
           <v-menu
             v-if="calibrationAssetStore.calibrationAssetType === 'marker'"
+            v-model="showAddMarkerMenu"
             location="end"
             open-on-hover
+            :close-on-content-click="false"
           >
             <template #activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
@@ -666,7 +676,16 @@
               </v-list-item>
             </template>
             <v-list class="py-0" density="compact" width="230px">
-              <v-list-item class="menu-item" @click="addReferenceObject">
+              <v-list-item
+                class="menu-item"
+                @click="
+                  () => {
+                    addReferenceObject();
+                    showAddMarkerMenu = false;
+                    showMarkerTypeMenu = false;
+                  }
+                "
+              >
                 <v-list-item-title>
                   {{ $t("calibration_asset.marker.add_ref_marker.custom_marker") }}
                 </v-list-item-title>
@@ -676,7 +695,7 @@
 
               <div style="max-height: 160px; overflow-y: auto">
                 <v-list-item
-                  v-for="o in calibrationAssetStore.currentTemplate.filter((o) => !o.set)"
+                  v-for="o in calibrationAssetStore.availableTemplateObjects"
                   :key="o.id"
                   class="menu-item"
                   @click="addTemplateReferenceObject(o)"
@@ -691,8 +710,10 @@
 
           <v-menu
             v-else-if="calibrationAssetStore.calibrationAssetType === 'segment'"
+            v-model="showAddSegmentMenu"
             location="end"
             open-on-hover
+            :close-on-content-click="false"
           >
             <template #activator="{ props }">
               <v-list-item v-bind="props" class="menu-item">
@@ -705,7 +726,7 @@
             <v-list class="py-0" density="compact" width="225px">
               <div style="max-height: 160px; overflow-y: auto">
                 <v-list-item
-                  v-for="o in calibrationAssetStore.currentTemplate.filter((o) => !o.set)"
+                  v-for="o in calibrationAssetStore.availableTemplateObjects"
                   :key="o.id"
                   class="menu-item"
                   @click="addTemplateReferenceObject(o)"
@@ -718,7 +739,15 @@
             </v-list>
           </v-menu>
 
-          <v-list-item class="menu-item" @click="showDeleteButton = !showDeleteButton">
+          <v-list-item
+            class="menu-item"
+            @click="
+              () => {
+                showDeleteButton = !showDeleteButton;
+                showMarkerTypeMenu = false;
+              }
+            "
+          >
             <v-list-item-title>
               {{
                 calibrationAssetStore.calibrationAssetType === "marker"
@@ -897,6 +926,9 @@ const openDeleteModal = (object) => {
 };
 
 const showDeleteButton = ref(false);
+const showMarkerTypeMenu = ref(false);
+const showAddMarkerMenu = ref(false);
+const showAddSegmentMenu = ref(false);
 const addReferenceObject = () => {
   if (showDeleteButton.value) {
     showDeleteButton.value = false;
