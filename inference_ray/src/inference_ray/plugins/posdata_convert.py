@@ -176,6 +176,12 @@ class PosDataConvert(
                 pnumber = player_el.get("ShirtNumber", "")
                 player_name_lookup[pid] = pname
                 player_number_lookup[pid] = int(pnumber) if pnumber.isdigit() else pname
+
+        for ref_el in root.findall("./MatchInformation/Referees/Referee"):
+            pid = ref_el.get("PersonId")
+            pname = ref_el.get("Shortname") or pid
+            player_name_lookup[pid] = pname
+            player_number_lookup[pid] = None
         
         # Map names and numbers into DataFrame
         df["team_name"] = df["team_id"].map(team_name_lookup)
@@ -207,7 +213,11 @@ class PosDataConvert(
         
         from collections import defaultdict
         from pandas.api.types import is_numeric_dtype
-        
+
+        # Reset instance state to prevent data leaking between calls
+        self.meta_dict = defaultdict(team_ids={}, player_ids={})
+        self.py_dict = {}
+
         if "format" not in parameters:
             raise ValueError("'format' is required for plugin execution.")
         
@@ -248,7 +258,7 @@ class PosDataConvert(
                 df = df.drop('player_name', axis=1)
             if 'player_number' in df.columns:
                 for pid, pnum in df[['player_id', 'player_number']].drop_duplicates().values:
-                    player_number_map[pid] = pnum
+                    player_number_map[pid] = int(pnum) if pd.notna(pnum) else None
                 df = df.drop('player_number', axis=1)
             if 'team_name' in df.columns:
                 for tid, tname in df[['team_id', 'team_name']].drop_duplicates().values:
@@ -269,10 +279,11 @@ class PosDataConvert(
                 df["pos_y"] = (MAX_Y - df["pos_y"]) / PITCH_SIZE_Y  # inverted Y-axis, images start at top left corner
         
             # ---- FPS filtering: checks if specified fps parameter is in an applicable range
-            unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
+            unique_timestamps = np.sort(df[df.columns[0]].unique())
             diffs = unique_timestamps[1:] - unique_timestamps[:-1]
-            freq = np.median(diffs)
+            freq = np.median(diffs)  # compute median frame time to determine original fps, more robust to outliers than mean
             origin_fps = int(np.rint(1000./freq))
+            logging.info(f"posdata_convert: freq={freq:.4f}ms, origin_fps={origin_fps}, requested_fps={parameters['fps']}")
             actual_fps = origin_fps
             
             step_size = 0
@@ -295,12 +306,12 @@ class PosDataConvert(
                     df_players = df.groupby(
                         'player_id', group_keys=False
                     ).apply(
-                        lambda x: x.to_numpy(),  # type: ignore
+                        lambda x: x[['pos_x', 'pos_y']].to_numpy(),  # type: ignore
                         include_groups=False
                     )
                     actualp, subsampled = None, None
                     for player_id in df["player_id"].unique():
-                        actualp = np.array(df_players[player_id][:,3:], dtype=np.float32)  # [[x,y]]
+                        actualp = np.array(df_players[player_id], dtype=np.float32)  # [[x,y]]
                         ap_idx = np.arange(actualp.shape[0])
                         subs_idx = ap_idx[::step_size]
                         N = actualp.shape[0]; M = actualp.shape[1]
@@ -361,16 +372,18 @@ class PosDataConvert(
                 ball_id = 'BALL'
                 self.meta_dict["kickoff_time"] = int( # type: ignore
                     self.meta_dict["kickoff_time"] - unique_timestamps.min()) 
+                
+            _n = lambda v, f: v if pd.notna(v) else str(f)    
             
             # ---- map team ids (build full mapping first, then apply at once to avoid category collisions)
             team_id_mapping = {ball_id: 1}
-            self.meta_dict["team_ids"].update({ 1 : {"id": ball_id, "name": team_name_map.get(ball_id) or str(ball_id)}})
+            self.meta_dict["team_ids"].update({ 1 : {"id": ball_id, "name": _n(team_name_map.get(ball_id), ball_id)}})
             next_id = 2
             for team_label in unique_teams:
                 if team_label == ball_id:
                     continue
                 team_id_mapping[team_label] = next_id
-                self.meta_dict["team_ids"].update({ next_id : {"id": team_label, "name": team_name_map.get(team_label) or str(team_label)}})
+                self.meta_dict["team_ids"].update({ next_id : {"id": team_label, "name": _n(team_name_map.get(team_label), team_label)}})
                 next_id += 1
             df["team_id"] = df["team_id"].map(team_id_mapping).astype('category')
             
@@ -381,7 +394,7 @@ class PosDataConvert(
                 player_id_mapping[player_label] = i
                 self.meta_dict["player_ids"].update({ i : {
                     "id": player_label,
-                    "name": player_name_map.get(player_label) or str(player_label),
+                    "name": _n(player_name_map.get(player_label), player_label),
                     "number": player_number_map.get(player_label, player_label)
                 }})
             df["player_id"] = df["player_id"].map(player_id_mapping).astype('category')
@@ -401,6 +414,7 @@ class PosDataConvert(
             #     py_dict[corrected_series[i]] = py_dict.pop(k)
             
             # --- new dict conversion
+            df = df.dropna(subset=['pos_x', 'pos_y'])
             grouped_data = {}
             for timestamp, group in df.groupby('timestamp', group_keys=False):
                 grouped_data[timestamp] = [list(row[1:]) for row in group.itertuples(index=False)]
@@ -433,4 +447,3 @@ class PosDataConvert(
             self.update_callbacks(callbacks, progress=1.0)
         
         return {"pos_data": pos_data}
-        

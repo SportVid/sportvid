@@ -183,7 +183,7 @@ import TabWindowCalibration from "@/components/tab-window/TabWindowCalibration.v
 import TabWindowHeatmap from "@/components/tab-window/TabWindowHeatmap.vue";
 import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
 import TabWindowEvents from "@/components/tab-window/TabWindowEvents.vue";
-import TabWindowRunningDistance from "@/components/tab-window/TabWindowRunningDistance.vue";
+import TabWindowKPI from "@/components/tab-window/TabWindowKPI.vue";
 import ModalObjectOverlay from "@/components/ModalObjectOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
@@ -233,8 +233,8 @@ function getVisualizationTabComponent(tabId) {
     return TabWindowEvents;
   } else if (tabId === "heatmap") {
     return TabWindowHeatmap;
-  } else if (tabId === "running_distance") {
-    return TabWindowRunningDistance;
+  } else if (tabId === "kpi") {
+    return TabWindowKPI;
   } else {
     return null;
   }
@@ -676,6 +676,21 @@ watch(
   (neww) => {
     console.log("metaDataTopView changed", neww);
   }
+);
+
+watch(
+  () => topViewStore.positionDataTopView,
+  (neww) => {
+    console.log("positionDataTopView changed", neww);
+  }
+);
+
+watch(
+  () => visualizationStore.kpiData,
+  (neww) => {
+    console.log("kpiData", neww);
+  },
+  { immediate: true }
 );
 </script>
 

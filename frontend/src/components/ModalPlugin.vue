@@ -111,11 +111,13 @@ import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePlayerStore } from "@/stores/player";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import { usePositionDataStore } from "@/stores/position_data";
 import Parameters from "./Parameters.vue";
 import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
+const positionDataStore = usePositionDataStore();
 const tutorialStore = useTutorialStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 
@@ -1027,6 +1029,37 @@ const plugins = ref([
           },
         ],
         optional_parameters: [],
+      },
+      {
+        name: t("modal.plugin.kpi_computation.plugin_name"),
+        description: t("modal.plugin.kpi_computation.plugin_description"),
+        icon: "mdi-chart-line",
+        plugin: "kpi_computation",
+        id: 703,
+        parameters: [
+          {
+            field: "select_tracking_data",
+            name: "tracking_data_id",
+            value: "",
+            text: t("modal.plugin.kpi_computation.tracking_data_id"),
+            hint: t("modal.plugin.kpi_computation.tracking_data_id_hint"),
+          },
+          {
+            field: "select_options",
+            name: "format",
+            value: "kinexon",
+            items: positionDataStore.provider.map((p) => ({ title: p.name, value: p.id })),
+            text: t("modal.plugin.kpi_computation.format"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "text_field",
+            name: "delimiter",
+            value: ";",
+            text: t("modal.plugin.kpi_computation.delimiter"),
+          },
+        ],
       },
     ],
   },

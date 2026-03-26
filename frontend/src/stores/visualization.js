@@ -1,11 +1,17 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
+import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
+import { usePlayerStore } from "@/stores/player";
 
 export const useVisualizationStore = defineStore(
   "visualization",
   () => {
     const topViewStore = useTopViewStore();
+    const pluginRunStore = usePluginRunStore();
+    const pluginRunResultStore = usePluginRunResultStore();
+    const playerStore = usePlayerStore();
 
     const halftimesExist = computed(() => {
       const allPositions = Object.values(topViewStore.positionDataTopView).flat();
@@ -54,6 +60,44 @@ export const useVisualizationStore = defineStore(
       return id;
     }
 
+    const kpiData = ref({});
+    const kpiNames = ref([]);
+    const kpiFramerate = ref(null);
+    const kpiDataLoaded = ref(false);
+
+    const loadKpiData = async (trackingDataId) => {
+      let hasValidData = false;
+
+      try {
+        const _kpiData = pluginRunStore
+          .forVideo(playerStore.videoId)
+          .filter((e) => e.type === "kpi_computation" && e.status === "DONE")
+          .map((e) => {
+            const results = pluginRunResultStore.forPluginRun(e.id);
+            return { ...e, results: JSON.parse(JSON.stringify(results)) };
+          })
+          .filter((e) => e.results?.[0]?.data?.tracking_data_id === trackingDataId);
+
+        if (!_kpiData.length || !_kpiData[0]?.results?.length) {
+          return (kpiData.value = {});
+        }
+
+        hasValidData = true;
+
+        console.log("Loaded KPI data:", _kpiData);
+
+        kpiData.value = _kpiData[0]?.results[0]?.data?.kpis;
+        kpiNames.value = _kpiData[0]?.results[0]?.data?.meta_data?.kpi_names;
+        kpiFramerate.value = _kpiData[0]?.results[0]?.data?.meta_data?.framerate;
+      } finally {
+        if (hasValidData) {
+          kpiDataLoaded.value = true;
+        } else {
+          kpiDataLoaded.value = false;
+        }
+      }
+    };
+
     return {
       halftimesExist,
       teamColorMapping,
@@ -61,6 +105,10 @@ export const useVisualizationStore = defineStore(
       setTeamColor,
       getNextTeamId,
       addTeamColor,
+      kpiData,
+      kpiNames,
+      kpiFramerate,
+      loadKpiData,
     };
   },
   {
