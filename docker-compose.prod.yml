@@ -1,7 +1,7 @@
 networks:
   shared:
     external: true
-  dev:
+  prod:
     driver: bridge
 
 secrets:
@@ -15,7 +15,7 @@ volumes:
 
 services:
   inference_ray:
-    container_name: inference_ray_dev
+    container_name: inference_ray_prod
     build:
       context: .
     environment:
@@ -24,7 +24,7 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
       - BACKEND_PORT=${BACKEND_PORT} # TODO: not working ???
     env_file:
-      - /opt/deploy/.env.dev
+      - /opt/deploy/.env.prod
     volumes:
       - ${DATA_PATH}/analyser:/data/
       - ${DATA_PATH}/media/:/media/
@@ -54,14 +54,14 @@ services:
       - "run"
       - "/app/inference_ray/deploy.cuda.yml"
     networks:
-      - dev
+      - prod
 
   analyser:
-    container_name: analyser_dev
+    container_name: analyser_prod
     build:
       context: .
     env_file:
-      - /opt/deploy/.env.dev
+      - /opt/deploy/.env.prod
     volumes:
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
@@ -74,30 +74,30 @@ services:
     working_dir: /app/
     command: uv run --package analyser analyser/src/analyser/server.py -v -c analyser/config.yml
     networks:
-      - dev
+      - prod
 
   memcached:
-    container_name: memcached_dev
+    container_name: memcached_prod
     image: memcached:1.6.10-buster
     command: -I 32m
     networks:
-      - dev
+      - prod
 
   valkey:
-    container_name: valkey_dev
+    container_name: valkey_prod
     image: valkey/valkey:8.1.1-alpine
     command: /usr/local/bin/valkey-server --port ${VALKEY_PORT} --bind 0.0.0.0
     ports:
-      - ${VALKEY_PORT}:6379 # remap valkey port to the one specified by cfg
+      - ${VALKEY_PORT}:6379  # remap valkey port to the one specified by cfg
     networks:
-      - dev
+      - prod
 
   celery:
-    container_name: celery_dev
+    container_name: celery_prod
     build:
       context: .
     env_file:
-      - /opt/deploy/.env.dev
+      - /opt/deploy/.env.prod
     volumes:
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
@@ -129,10 +129,10 @@ services:
       - "INFO"
     networks:
       - shared
-      - dev
+      - prod
 
   backend:
-    container_name: backend_dev
+    container_name: backend_prod
     build:
       context: .
       args:
@@ -144,7 +144,7 @@ services:
     environment:
       - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
     env_file:
-      - /opt/deploy/.env.dev
+      - /opt/deploy/.env.prod
     volumes:
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
@@ -174,7 +174,7 @@ services:
       - "--log-level"
       - "${LOG_LEVEL}"
       - "--timeout"
-      - "300"
+      - "1800" # TODO: fix later
       - "--workers=${GUNICORN_WORKERS}"
     depends_on:
       # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
@@ -186,10 +186,10 @@ services:
         condition: service_started
     networks:
       - shared
-      - dev
+      - prod
 
   frontend:
-    container_name: frontend_dev
+    container_name: frontend_prod
     build:
       context: ./frontend
     volumes:
@@ -197,7 +197,7 @@ services:
       # - ${DATA_PATH}/predictions/:/thumbnails
       # - ${DATA_PATH}/media/:/media
       - assets:/assets
-    command: sh -c 'mkdir -p /assets/dev && cp -r dist/* /assets/dev/'
+    command: sh -c 'mkdir -p /assets/prod && cp -r dist/* /assets/prod/'
     networks:
       - shared
-      - dev
+      - prod
