@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from interface import analyser_pb2 as analyser__pb2
+import analyser_pb2 as analyser__pb2
 
 GRPC_GENERATED_VERSION = '1.71.0'
 GRPC_VERSION = grpc.__version__
@@ -76,8 +76,8 @@ class AnalyserStub(object):
                 _registered_method=True)
         self.get_pipeline_status = channel.unary_unary(
                 '/sportvid.analyser.Analyser/get_pipeline_status',
-                request_serializer=analyser__pb2.GetPieplineStatusRequest.SerializeToString,
-                response_deserializer=analyser__pb2.GetPieplineStatusResponse.FromString,
+                request_serializer=analyser__pb2.GetPipelineStatusRequest.SerializeToString,
+                response_deserializer=analyser__pb2.GetPipelineStatusResponse.FromString,
                 _registered_method=True)
 
 
@@ -183,8 +183,8 @@ def add_AnalyserServicer_to_server(servicer, server):
             ),
             'get_pipeline_status': grpc.unary_unary_rpc_method_handler(
                     servicer.get_pipeline_status,
-                    request_deserializer=analyser__pb2.GetPieplineStatusRequest.FromString,
-                    response_serializer=analyser__pb2.GetPieplineStatusResponse.SerializeToString,
+                    request_deserializer=analyser__pb2.GetPipelineStatusRequest.FromString,
+                    response_serializer=analyser__pb2.GetPipelineStatusResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -428,8 +428,8 @@ class Analyser(object):
             request,
             target,
             '/sportvid.analyser.Analyser/get_pipeline_status',
-            analyser__pb2.GetPieplineStatusRequest.SerializeToString,
-            analyser__pb2.GetPieplineStatusResponse.FromString,
+            analyser__pb2.GetPipelineStatusRequest.SerializeToString,
+            analyser__pb2.GetPipelineStatusResponse.FromString,
             options,
             channel_credentials,
             insecure,
