@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='pluginrunresult',
             name='type',
-            field=models.CharField(choices=[('V', 'VIDEO'), ('I', 'IMAGES'), ('S', 'SCALAR'), ('H', 'HIST'), ('SH', 'SHOTS'), ('R', 'RGB_HIST'), ('CL', 'CLUSTER'), ('FA', 'FACE'), ('E', 'IMAGE_EMBEDDINGS'), ('B', 'BBOXES'), ('P', 'POS'), ('FL', 'FL'), ('KPI', 'KPI')], default='S', max_length=2),
+            field=models.CharField(choices=[('V', 'VIDEO'), ('I', 'IMAGES'), ('S', 'SCALAR'), ('H', 'HIST'), ('SH', 'SHOTS'), ('R', 'RGB_HIST'), ('CL', 'CLUSTER'), ('FA', 'FACE'), ('E', 'IMAGE_EMBEDDINGS'), ('B', 'BBOXES'), ('P', 'POS'), ('FL', 'FL'), ('KPI', 'KPI')], default='S', max_length=3),
         ),
     ]
