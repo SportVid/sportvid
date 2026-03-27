@@ -275,7 +275,7 @@ class PluginRunResult(models.Model):
         TYPE_KPI: "KPI",
     }
     type = models.CharField(
-        max_length=2,
+        max_length=3,
         choices=[(k, v) for k, v in TYPE.items()],
         default=TYPE_SCALAR,
     )
