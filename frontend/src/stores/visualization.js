@@ -69,14 +69,20 @@ export const useVisualizationStore = defineStore(
       let hasValidData = false;
 
       try {
-        const _kpiData = pluginRunStore
+        const kpiPluginRuns = pluginRunStore
           .forVideo(playerStore.videoId)
-          .filter((e) => e.type === "kpi_computation" && e.status === "DONE")
-          .map((e) => {
-            const results = pluginRunResultStore.forPluginRun(e.id);
+          .filter((e) => e.type === "kpi_computation" && e.status === "DONE");
+
+        const kpiRunsWithResults = await Promise.all(
+          kpiPluginRuns.map(async (e) => {
+            const results = await pluginRunResultStore.forPluginRunWithData(e.id, playerStore.videoId);
             return { ...e, results: JSON.parse(JSON.stringify(results)) };
           })
-          .filter((e) => e.results?.[0]?.data?.tracking_data_id === trackingDataId);
+        );
+
+        const _kpiData = kpiRunsWithResults.filter(
+          (e) => e.results?.[0]?.data?.tracking_data_id === trackingDataId
+        );
 
         if (!_kpiData.length || !_kpiData[0]?.results?.length) {
           return (kpiData.value = {});

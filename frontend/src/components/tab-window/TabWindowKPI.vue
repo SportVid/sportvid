@@ -1,13 +1,6 @@
 <template>
-  <v-row v-if="videoStore.isLoading" class="loading-card">
-    <div class="spinner">
-      <i class="mdi mdi-loading mdi-spin" />
-    </div>
-    <div class="loading-text">{{ $t("loading_screen") }}</div>
-  </v-row>
-
   <v-row
-    v-else-if="!hasPositionData"
+    v-if="!hasPositionData"
     class="text-h6 text-grey font-weight-light mx-16 px-10"
     style="
       align-items: center;
@@ -1042,23 +1035,5 @@ const findLastFrameWithHalftime = (half) => {
   font-size: 18px;
   margin: 0 2px;
   user-select: none;
-}
-
-.loading-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-}
-
-.spinner {
-  font-size: 48px;
-  color: #ac1414;
-}
-
-.loading-text {
-  margin-top: 10px;
-  font-size: 18px;
 }
 </style>

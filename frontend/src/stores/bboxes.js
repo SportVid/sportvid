@@ -29,13 +29,15 @@ export const useBboxesStore = defineStore("bboxes", () => {
     bboxPluginRunId.value = pluginRunId;
 
     try {
-      const _bboxData = pluginRunStore
-        .forVideo(playerStore.videoId)
-        .filter((e) => e.type === "bytetrack" && e.status === "DONE" && e.id === pluginRunId)
-        .map((e) => {
-          e.results = pluginRunResultStore.forPluginRun(e.id);
-          return e;
-        });
+      const _bboxData = await Promise.all(
+        pluginRunStore
+          .forVideo(playerStore.videoId)
+          .filter((e) => e.type === "bytetrack" && e.status === "DONE" && e.id === pluginRunId)
+          .map(async (e) => ({
+            ...e,
+            results: await pluginRunResultStore.forPluginRunWithData(e.id, playerStore.videoId),
+          }))
+      );
 
       if (!_bboxData.length || !_bboxData[0]?.results?.length) {
         return [];

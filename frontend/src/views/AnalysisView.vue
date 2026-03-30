@@ -91,10 +91,7 @@
         </v-col>
       </v-row> -->
 
-      <v-row
-        v-if="!calibrationAssetStore.calibrationMode && !positionDataStore.isRestoringPosData"
-        class="ma-n2"
-      >
+      <v-row v-if="!calibrationAssetStore.calibrationMode && !isLoading" class="ma-n2">
         <v-col>
           <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2">
             <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.visualizationTabId">
@@ -273,7 +270,7 @@ onMounted(async () => {
   try {
     await fetchData({ addResults: true });
     topViewStore.setSportFromVideo(playerStore.video?.sport);
-    positionDataStore.restoreFromCache();
+    // positionDataStore.restoreFromCache();
   } catch (error) {
   } finally {
     isLoading.value = false;
