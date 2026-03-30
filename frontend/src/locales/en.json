@@ -521,6 +521,7 @@
       "kpi_names_hint": "Select which KPIs to include (min. 1 required).",
       "kpi_attribute_name": "Additional attributes",
       "kpi_attribute_hint": "Timestamp (ms) and Player-ID are always included. Optionally add more attributes.",
+      "kpi_aggregated_attribute_hint": "Player-ID is always included. Optionally add more attributes.",
       "kpi_start_frame_name": "Select start frame",
       "kpi_end_frame_name": "Select end frame",
       "fps": "Frames per Second (FPS)",

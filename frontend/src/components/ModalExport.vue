@@ -305,7 +305,7 @@ const exportFormats = ref([
         name: "kpi_attribute",
         value: [],
         text: t("modal.plugin.kpi_attribute_name"),
-        hint: t("modal.plugin.kpi_attribute_hint"),
+        hint: t("modal.plugin.kpi_aggregated_attribute_hint"),
       },
       {
         field: "select_kpi_frame",
