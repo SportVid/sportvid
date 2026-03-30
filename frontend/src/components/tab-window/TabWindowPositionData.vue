@@ -869,14 +869,14 @@ function scheduleCanvasDraw() {
   });
 }
 
-function drawCanvas() {
-  const canvas = playerCanvas.value;
+function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
+  const canvas = offscreenCanvas ?? playerCanvas.value;
   if (!canvas) return;
   const w = topViewStore.topViewSize.width;
   const h = topViewStore.topViewSize.height;
   if (!w || !h) return;
 
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = offscreenCanvas ? offscreenScale : (window.devicePixelRatio || 1);
   canvas.width = w * dpr;
   canvas.height = h * dpr;
   const ctx = canvas.getContext("2d");
@@ -973,7 +973,7 @@ function drawCanvas() {
   if (!framePositions) return;
 
   // Store positions for click hit-testing
-  _playerHitTargets.length = 0;
+  if (!offscreenCanvas) _playerHitTargets.length = 0;
 
   for (const pos of framePositions) {
     const { px, py } = toPixel(pos[3], pos[4]);
@@ -1002,7 +1002,7 @@ function drawCanvas() {
       ctx.fill();
 
       // Store for hit testing (KPI toggle)
-      _playerHitTargets.push({ id: pos[0], x: px, y: py });
+      if (!offscreenCanvas) _playerHitTargets.push({ id: pos[0], x: px, y: py });
 
       // Player ID label
       if (topViewStore.showPlayerId) {
@@ -1210,15 +1210,15 @@ async function saveScreenshot() {
   const w = topViewStore.topViewSize.width;
   const h = topViewStore.topViewSize.height;
   if (!w || !h) return;
-  const scale = 2;
+  const scale = 4;
+  const offscreen = document.createElement("canvas");
+  drawCanvas(offscreen, scale);
   const canvas = document.createElement("canvas");
   canvas.width = w * scale;
   canvas.height = h * scale;
   const ctx = canvas.getContext("2d");
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  if (playerCanvas.value) {
-    ctx.drawImage(playerCanvas.value, 0, 0, canvas.width, canvas.height);
-  }
+  ctx.drawImage(offscreen, 0, 0);
   canvas.toBlob((blob) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

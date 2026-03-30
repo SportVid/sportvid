@@ -462,19 +462,17 @@ function renderHeatmap() {
   });
 }
 
-function renderMovementCanvas() {
-  const canvas = movementCanvas.value;
-  if (!canvas || !localSize.value.width || !localSize.value.height) return;
-
+function renderMovementToCanvas(canvas, targetW, targetH) {
+  if (!canvas || !targetW || !targetH) return;
   const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, targetW, targetH);
 
   if (selectedPositions.value.length === 0) return;
 
   const area = currentArea.value;
+  const dotRadius = 6 * (targetW / localSize.value.width);
   const points = resampleApprox({ data: selectedPositions.value, targetSize: 5000 });
 
-  // Group by teamId for batch drawing
   const byTeam = {};
   for (const pos of points) {
     const teamId = pos[1];
@@ -487,18 +485,20 @@ function renderMovementCanvas() {
     ctx.globalAlpha = 0.7;
     ctx.beginPath();
     for (const pos of positions) {
-      const x =
-        pos[3] * (localSize.value.width * area.widthRel) +
-        ((1 - area.widthRel) / 2) * localSize.value.width;
-      const y =
-        pos[4] * (localSize.value.height * area.heightRel) +
-        ((1 - area.heightRel) / 2) * localSize.value.height;
-      ctx.moveTo(x + 6, y);
-      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      const x = pos[3] * (targetW * area.widthRel) + ((1 - area.widthRel) / 2) * targetW;
+      const y = pos[4] * (targetH * area.heightRel) + ((1 - area.heightRel) / 2) * targetH;
+      ctx.moveTo(x + dotRadius, y);
+      ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
     }
     ctx.fill();
   }
   ctx.globalAlpha = 1;
+}
+
+function renderMovementCanvas() {
+  const canvas = movementCanvas.value;
+  if (!canvas || !localSize.value.width || !localSize.value.height) return;
+  renderMovementToCanvas(canvas, localSize.value.width, localSize.value.height);
 }
 
 watch([() => localSize.value.width, () => localSize.value.height], () => {
@@ -551,19 +551,47 @@ const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
 async function saveScreenshot() {
   const img = topViewElement.value;
   if (!img || !localSize.value.width || !localSize.value.height) return;
-  const scale = 2;
-  const canvas = document.createElement("canvas");
-  canvas.width = localSize.value.width * scale;
-  canvas.height = localSize.value.height * scale;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  if (displayMode.value === "heatmap" && heatmapContainer.value) {
-    const heatmapCanvas = heatmapContainer.value.querySelector("canvas");
-    if (heatmapCanvas) ctx.drawImage(heatmapCanvas, 0, 0, canvas.width, canvas.height);
-  } else if (displayMode.value === "movement" && movementCanvas.value) {
-    ctx.drawImage(movementCanvas.value, 0, 0, canvas.width, canvas.height);
+  const scale = 4;
+  const targetW = localSize.value.width * scale;
+  const targetH = localSize.value.height * scale;
+
+  const finalCanvas = document.createElement("canvas");
+  finalCanvas.width = targetW;
+  finalCanvas.height = targetH;
+  const ctx = finalCanvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, targetW, targetH);
+
+  if (displayMode.value === "heatmap" && selectedPositions.value.length > 0) {
+    const tempContainer = document.createElement("div");
+    tempContainer.style.cssText = `position:fixed;left:${-(targetW + 10)}px;top:0;width:${targetW}px;height:${targetH}px;overflow:hidden;`;
+    document.body.appendChild(tempContainer);
+    const area = currentArea.value;
+    const hiResHeatmap = h337.create({
+      container: tempContainer,
+      radius: 18 * scale,
+      maxOpacity: 0.7,
+      minOpacity: 0,
+      blur: 0.7,
+      gradient: { 0.2: "blue", 0.4: "cyan", 0.6: "lime", 0.8: "yellow", 1.0: "red" },
+    });
+    const points = selectedPositions.value.map((pos) => ({
+      x: Math.round(pos[3] * (targetW * area.widthRel) + ((1 - area.widthRel) / 2) * targetW),
+      y: Math.round(pos[4] * (targetH * area.heightRel) + ((1 - area.heightRel) / 2) * targetH),
+      value: 1,
+    }));
+    hiResHeatmap.setData({ max: 10, data: points });
+    const heatmapCanvas = tempContainer.querySelector("canvas");
+    if (heatmapCanvas) ctx.drawImage(heatmapCanvas, 0, 0);
+    document.body.removeChild(tempContainer);
+  } else if (displayMode.value === "movement") {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = targetW;
+    offscreen.height = targetH;
+    renderMovementToCanvas(offscreen, targetW, targetH);
+    ctx.drawImage(offscreen, 0, 0);
   }
-  canvas.toBlob((blob) => {
+
+  finalCanvas.toBlob((blob) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.download = "heatmap.png";
