@@ -3,7 +3,7 @@ import logging
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 
 from utils import VideoDecoder
-from data import ImageData, VideoData, ImagesData
+from data import ImageData, VideoAssetData, ImagesData
 from utils import VideoDecoder
 from data import DataManager, Data
 
@@ -16,7 +16,7 @@ default_config = {"data_dir": "/data"}
 default_parameters = {"fps": 5.0, "max_dimension": 128}
 
 requires = {
-    "video": VideoData,
+    "video": VideoAssetData,
 }
 
 provides = {
