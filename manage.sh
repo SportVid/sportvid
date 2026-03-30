@@ -92,6 +92,11 @@ case $COMMAND in
         echo "Building..."
         exec_docker
         ;;
+    "rebuild")
+        DOCKER_CMD="up --build --force-recreate -d"
+        echo "Rebuilding (force recreate)..."
+        exec_docker
+        ;;
     "up")
         DOCKER_CMD="up -d"
         echo "Up..."
