@@ -82,7 +82,12 @@ services:
       - POSTGRES_PASSWORD=postgres
     ports:
       # TODO: do not expose port for production!
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tibava"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   memcached:
     image: memcached:1.6.10-buster
@@ -130,7 +135,8 @@ services:
         target: /app/.python-version
 
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
     working_dir: /app/backend/src/backend/
     environment:
@@ -185,9 +191,12 @@ services:
     command: uv run --package backend python3 backend/src/backend/manage.py runserver 0.0.0.0:8000
 
     depends_on:
-      - postgres
-      - memcached
-      - celery
+      postgres:
+        condition: service_healthy
+      memcached:
+        condition: service_started
+      celery:
+        condition: service_started
 
   frontend:
     image: frontend

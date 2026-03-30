@@ -73,279 +73,354 @@
       </div>
     </v-row>
 
-    <v-row
-      ref="videoControl"
-      class="video-control mt-6 mb-n2 justify-center"
-      data-tour="position-data-edit-row"
-    >
-      <v-btn :disabled="playerStore.isSynced" @click="toggleTopView" size="small">
-        <v-icon v-if="topViewEnded">mdi-restart</v-icon>
-        <v-icon v-else-if="topViewPlaying">mdi-pause</v-icon>
-        <v-icon v-else>mdi-play</v-icon>
-      </v-btn>
-
-      <v-menu location="top">
-        <template #activator="{ props }">
-          <v-btn v-bind="props" size="small">
-            {{ $t("position_data.area_size") }}
-          </v-btn>
-        </template>
-        <v-list class="py-0" density="compact">
-          <v-list-item
-            v-for="(areaData, areaSize) in topViewStore.currentSport.areas"
-            :key="areaSize"
-            class="menu-item"
-            @click="topViewStore.onSportChange(topViewStore.currentSport.title, areaSize)"
-          >
-            <v-list-item-title class="my-0">
-              {{ areaData.title }}
-            </v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
-
-      <v-menu location="top">
-        <template #activator="{ props }">
-          <v-btn v-bind="props" size="small">
-            {{ $t("position_data.display_settings.title") }}
-          </v-btn>
-        </template>
-        <v-list class="py-0" density="compact" width="225px">
-          <v-list-item
-            class="menu-item"
-            @click="bboxesStore.viewBoundingBox"
-            :disabled="
-              !bboxesStore.bboxDataActive || Object.keys(bboxesStore.bboxDataActive).length === 0
-            "
-          >
-            <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("position_data.display_settings.view_bounding_box") }}
-              <tab-window-icon
-                :class="{
-                  'text-disabled':
-                    !bboxesStore.showBoundingBox ||
-                    !bboxesStore.bboxDataActive ||
-                    Object.keys(bboxesStore.bboxDataActive).length === 0,
-                  'text-red': bboxesStore.showBoundingBox,
-                }"
-              >
-                mdi-check
-              </tab-window-icon>
-            </v-list-item-title>
-          </v-list-item>
-
-          <v-list-item class="menu-item" @click="topViewStore.viewPlayerId">
-            <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("position_data.display_settings.view_player_id") }}
-              <tab-window-icon
-                :class="{
-                  'text-disabled': !topViewStore.showPlayerId,
-                  'text-red': topViewStore.showPlayerId,
-                }"
-              >
-                mdi-check
-              </tab-window-icon>
-            </v-list-item-title>
-          </v-list-item>
-
-          <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
-            <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("position_data.display_settings.video_sync") }}
-              <tab-window-icon
-                :class="{
-                  'text-disabled': !playerStore.isSynced,
-                  'text-red': playerStore.isSynced,
-                }"
-              >
-                mdi-check
-              </tab-window-icon>
-            </v-list-item-title>
-          </v-list-item>
-
-          <v-list-item class="menu-item" @click="showModalPositionDataTeamColors = true">
-            <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("position_data.display_settings.team_colors") }}
-            </v-list-item-title>
-          </v-list-item>
-
-          <v-list-item class="menu-item" @click="showModalPositionDataOffset = true">
-            <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("position_data.display_settings.offset") }}
-            </v-list-item-title>
-          </v-list-item>
-
-          <v-menu location="end" open-on-hover>
-            <template #activator="{ props }">
-              <v-list-item v-bind="props" class="menu-item">
-                <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("position_data.display_settings.set_grid.title") }}
-                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
-                </v-list-item-title>
-              </v-list-item>
-            </template>
-            <v-list class="py-0" density="compact" width="220px">
-              <v-list-item class="menu-item" @click.stop>
-                <v-list-item-title class="d-flex justify-space-between align-center">
-                  {{ $t("position_data.display_settings.set_grid.longitudinal") }}
-                  <v-btn-toggle
-                    v-model="topViewStore.gridLongitudinal"
-                    color="primary"
-                    border
-                    elevation="2"
-                    mandatory
-                    density="compact"
-                    divided
-                  >
-                    <v-btn
-                      v-for="opt in topViewStore.gridConfig.longitudinal.options"
-                      :key="opt"
-                      :value="opt"
-                      size="x-small"
-                      >{{ opt }}</v-btn
-                    >
-                  </v-btn-toggle>
-                </v-list-item-title>
-              </v-list-item>
-
-              <v-list-item class="menu-item" @click.stop>
-                <v-list-item-title class="d-flex justify-space-between align-center">
-                  {{ $t("position_data.display_settings.set_grid.transverse") }}
-                  <v-btn-toggle
-                    v-model="topViewStore.gridTransverse"
-                    color="primary"
-                    border
-                    elevation="2"
-                    mandatory
-                    density="compact"
-                    divided
-                  >
-                    <v-btn
-                      v-for="opt in topViewStore.gridConfig.transverse.options"
-                      :key="opt"
-                      :value="opt"
-                      size="x-small"
-                      >{{ opt }}</v-btn
-                    >
-                  </v-btn-toggle>
-                </v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
-
-          <v-menu location="end" open-on-hover>
-            <template #activator="{ props }">
-              <v-list-item v-bind="props" class="menu-item">
-                <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("position_data.display_settings.view_kpis.title") }}
-                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
-                </v-list-item-title>
-              </v-list-item>
-            </template>
-            <v-list class="py-0" density="compact" width="180px">
-              <v-list-item class="menu-item" @click="topViewStore.viewSpaceControl">
-                <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("position_data.display_settings.view_kpis.space_control") }}
-                  <tab-window-icon
-                    :class="{
-                      'text-disabled': !topViewStore.showSpaceControl,
-                      'text-red': topViewStore.showSpaceControl,
-                    }"
-                  >
-                    mdi-check
-                  </tab-window-icon>
-                </v-list-item-title>
-              </v-list-item>
-              <v-list-item class="menu-item" @click="topViewStore.viewEffectivePlayingSpace">
-                <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("position_data.display_settings.view_kpis.eps") }}
-                  <tab-window-icon
-                    :class="{
-                      'text-disabled': !topViewStore.showEffectivePlayingSpace,
-                      'text-red': topViewStore.showEffectivePlayingSpace,
-                    }"
-                  >
-                    mdi-check
-                  </tab-window-icon>
-                </v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
-
-          <v-menu location="end" open-on-hover>
-            <template #activator="{ props }">
-              <v-list-item v-bind="props" class="menu-item">
-                <v-list-item-title class="d-flex justify-space-between">
-                  {{ $t("position_data.display_settings.position_data.title") }}
-                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
-                </v-list-item-title>
-              </v-list-item>
-            </template>
-            <v-list class="py-0" density="compact">
-              <v-list-item class="menu-item" @click="showModalPositionDataUpload = true">
-                <v-list-item-title>
-                  {{ $t("position_data.display_settings.position_data.upload") }}
-                </v-list-item-title>
-              </v-list-item>
-              <v-list-item class="menu-item" @click="showModalPositionDataSelect = true">
-                <v-list-item-title>
-                  {{ $t("position_data.display_settings.position_data.select") }}
-                </v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
-        </v-list>
-      </v-menu>
-      <ModalPositionDataUpload
-        v-if="showModalPositionDataUpload"
-        v-model="showModalPositionDataUpload"
-      />
-      <ModalPositionDataSelect
-        v-if="showModalPositionDataSelect"
-        v-model="showModalPositionDataSelect"
-      />
-      <ModalPositionDataTeamColors
-        v-if="showModalPositionDataTeamColors"
-        v-model="showModalPositionDataTeamColors"
-      />
-      <ModalPositionDataOffset
-        v-if="showModalPositionDataOffset"
-        v-model="showModalPositionDataOffset"
-      />
-
-      <div class="time-code ml-2">
-        {{ getTimecode(currentTime) }}
-      </div>
-
-      <v-tooltip
-        v-if="topViewStore.metaDataTopView.interp_err > 0"
-        class="fps-tooltip"
-        :text="
-          $t('position_data.fps_deviation', {
-            interpErr: topViewStore.metaDataTopView.interp_err.toFixed(1),
-          })
-        "
+    <div style="position: relative">
+      <v-row
+        ref="videoControl"
+        class="video-control mt-6 mb-n2 justify-center"
+        data-tour="position-data-edit-row"
       >
-        <template #activator="{ props }">
-          <v-icon v-bind="props" color="warning" size="small" class="ml-2 mt-1"
-            >mdi-information-outline</v-icon
-          >
-        </template>
-      </v-tooltip>
-    </v-row>
+        <v-btn :disabled="playerStore.isSynced" @click="toggleTopView" size="small">
+          <v-icon v-if="topViewEnded">mdi-restart</v-icon>
+          <v-icon v-else-if="topViewPlaying">mdi-pause</v-icon>
+          <v-icon v-else>mdi-play</v-icon>
+        </v-btn>
 
-    <v-row ref="videoSlider">
-      <v-slider
-        v-model="currentTime"
-        @update:model-value="onProgressChange"
-        hide-details
-        color="primary"
-        :disabled="playerStore.isSynced"
-        :thumb-size="15"
-        :step="1000 / playerStore.videoFPS"
-        min="0"
-        :max="playerStore.videoDuration"
-      />
-    </v-row>
+        <v-menu location="top">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" size="small">
+              {{ $t("position_data.display_settings.title") }}
+            </v-btn>
+          </template>
+          <v-list class="py-0" density="compact" width="200px">
+            <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.video_sync") }}
+                <tab-window-icon
+                  :class="{
+                    'text-disabled': !playerStore.isSynced,
+                    'text-red': playerStore.isSynced,
+                  }"
+                >
+                  mdi-check
+                </tab-window-icon>
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item class="menu-item" @click="showModalPositionDataOffset = true">
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.offset") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-divider />
+
+            <v-list-item
+              class="menu-item"
+              @click="bboxesStore.viewBoundingBox"
+              :disabled="
+                !bboxesStore.bboxDataActive || Object.keys(bboxesStore.bboxDataActive).length === 0
+              "
+            >
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.view_bounding_box") }}
+                <tab-window-icon
+                  :class="{
+                    'text-disabled':
+                      !bboxesStore.showBoundingBox ||
+                      !bboxesStore.bboxDataActive ||
+                      Object.keys(bboxesStore.bboxDataActive).length === 0,
+                    'text-red': bboxesStore.showBoundingBox,
+                  }"
+                >
+                  mdi-check
+                </tab-window-icon>
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item class="menu-item" @click="topViewStore.viewPlayerId">
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.view_player_id") }}
+                <tab-window-icon
+                  :class="{
+                    'text-disabled': !topViewStore.showPlayerId,
+                    'text-red': topViewStore.showPlayerId,
+                  }"
+                >
+                  mdi-check
+                </tab-window-icon>
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item class="menu-item" @click="showModalToggleEntities = true">
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.toggle_entities") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item class="menu-item" @click="showModalPositionDataTeamColors = true">
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.team_colors") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-menu location="end" open-on-hover>
+              <template #activator="{ props }">
+                <v-list-item v-bind="props" class="menu-item">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("position_data.display_settings.view_kpis.title") }}
+                    <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+              </template>
+              <v-list class="py-0" density="compact" width="180px">
+                <v-list-item class="menu-item" @click="topViewStore.viewSpaceControl">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("position_data.display_settings.view_kpis.space_control") }}
+                    <tab-window-icon
+                      :class="{
+                        'text-disabled': !topViewStore.showSpaceControl,
+                        'text-red': topViewStore.showSpaceControl,
+                      }"
+                    >
+                      mdi-check
+                    </tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+                <v-list-item class="menu-item" @click="topViewStore.viewEffectivePlayingSpace">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("position_data.display_settings.view_kpis.eps") }}
+                    <tab-window-icon
+                      :class="{
+                        'text-disabled': !topViewStore.showEffectivePlayingSpace,
+                        'text-red': topViewStore.showEffectivePlayingSpace,
+                      }"
+                    >
+                      mdi-check
+                    </tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+
+            <v-divider />
+
+            <v-menu location="end" open-on-hover>
+              <template #activator="{ props }">
+                <v-list-item v-bind="props" class="menu-item">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("position_data.display_settings.area_size") }}
+                    <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+              </template>
+              <v-list class="py-0" density="compact">
+                <v-list-item
+                  v-for="(areaData, areaSize) in topViewStore.currentSport.areas"
+                  :key="areaSize"
+                  class="menu-item"
+                  @click="topViewStore.onSportChange(topViewStore.currentSport.title, areaSize)"
+                >
+                  <v-list-item-title class="my-0">
+                    {{ areaData.title }}
+                  </v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+
+            <v-menu location="end" open-on-hover>
+              <template #activator="{ props }">
+                <v-list-item v-bind="props" class="menu-item">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("position_data.display_settings.set_grid.title") }}
+                    <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+              </template>
+              <v-list class="py-0" density="compact" width="220px">
+                <v-list-item class="menu-item" @click.stop>
+                  <v-list-item-title class="d-flex justify-space-between align-center">
+                    {{ $t("position_data.display_settings.set_grid.longitudinal") }}
+                    <v-btn-toggle
+                      v-model="topViewStore.gridLongitudinal"
+                      color="primary"
+                      border
+                      elevation="2"
+                      mandatory
+                      density="compact"
+                      divided
+                    >
+                      <v-btn
+                        v-for="opt in topViewStore.gridConfig.longitudinal.options"
+                        :key="opt"
+                        :value="opt"
+                        size="x-small"
+                        >{{ opt }}</v-btn
+                      >
+                    </v-btn-toggle>
+                  </v-list-item-title>
+                </v-list-item>
+
+                <v-list-item class="menu-item" @click.stop>
+                  <v-list-item-title class="d-flex justify-space-between align-center">
+                    {{ $t("position_data.display_settings.set_grid.transverse") }}
+                    <v-btn-toggle
+                      v-model="topViewStore.gridTransverse"
+                      color="primary"
+                      border
+                      elevation="2"
+                      mandatory
+                      density="compact"
+                      divided
+                    >
+                      <v-btn
+                        v-for="opt in topViewStore.gridConfig.transverse.options"
+                        :key="opt"
+                        :value="opt"
+                        size="x-small"
+                        >{{ opt }}</v-btn
+                      >
+                    </v-btn-toggle>
+                  </v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+
+            <v-divider />
+
+            <v-menu location="end" open-on-hover>
+              <template #activator="{ props }">
+                <v-list-item v-bind="props" class="menu-item">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("position_data.display_settings.position_data.title") }}
+                    <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+              </template>
+              <v-list class="py-0" density="compact">
+                <v-list-item class="menu-item" @click="showModalPositionDataUpload = true">
+                  <v-list-item-title>
+                    {{ $t("position_data.display_settings.position_data.upload") }}
+                  </v-list-item-title>
+                </v-list-item>
+                <v-list-item class="menu-item" @click="showModalPositionDataSelect = true">
+                  <v-list-item-title>
+                    {{ $t("position_data.display_settings.position_data.select") }}
+                  </v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </v-list>
+        </v-menu>
+        <ModalPositionDataUpload
+          v-if="showModalPositionDataUpload"
+          v-model="showModalPositionDataUpload"
+        />
+        <ModalPositionDataSelect
+          v-if="showModalPositionDataSelect"
+          v-model="showModalPositionDataSelect"
+        />
+        <ModalPositionDataTeamColors
+          v-if="showModalPositionDataTeamColors"
+          v-model="showModalPositionDataTeamColors"
+        />
+        <ModalPositionDataOffset
+          v-if="showModalPositionDataOffset"
+          v-model="showModalPositionDataOffset"
+        />
+
+        <v-btn size="small" @click="saveScreenshot">
+          <v-icon>mdi-download</v-icon>
+        </v-btn>
+
+        <div class="time-code ml-2">
+          {{ getTimecode(currentTime) }}
+        </div>
+
+        <v-tooltip
+          v-if="topViewStore.metaDataTopView.interp_err > 0"
+          class="fps-tooltip"
+          :text="
+            $t('position_data.fps_deviation', {
+              interpErr: topViewStore.metaDataTopView.interp_err.toFixed(1),
+            })
+          "
+        >
+          <template #activator="{ props }">
+            <v-icon v-bind="props" color="warning" size="small" class="ml-2 mt-1"
+              >mdi-information-outline</v-icon
+            >
+          </template>
+        </v-tooltip>
+      </v-row>
+
+      <v-row ref="videoSlider">
+        <v-slider
+          v-model="currentTime"
+          @update:model-value="onProgressChange"
+          hide-details
+          color="primary"
+          :disabled="playerStore.isSynced"
+          :thumb-size="15"
+          :step="1000 / playerStore.videoFPS"
+          min="0"
+          :max="playerStore.videoDuration"
+        />
+      </v-row>
+
+      <div v-if="showModalToggleEntities" class="players-toggle-overlay">
+        <v-icon
+          variant="tonal"
+          color="error"
+          size="small"
+          class="players-toggle-close"
+          @click="showModalToggleEntities = false"
+        >
+          mdi-close
+        </v-icon>
+        <div class="players-toggle-content">
+          <div
+            v-for="(players, teamId) in overlayTeamGroups"
+            :key="teamId"
+            class="chart-legend-team"
+          >
+            <div
+              class="team-dot"
+              :style="{
+                backgroundColor: overlayIsTeamFullySelected(teamId)
+                  ? toRgb(visualizationStore.getTeamColor(teamId), 0)
+                  : 'transparent',
+                color: overlayIsTeamFullySelected(teamId)
+                  ? '#fff'
+                  : toRgb(visualizationStore.getTeamColor(teamId), 0),
+                borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
+              }"
+              @click="overlayToggleTeam(teamId)"
+            >
+              <v-icon v-if="Number(teamId) === 1" size="14">mdi-soccer</v-icon>
+              <template v-else>{{ overlayGetTeamName(teamId) }}</template>
+            </div>
+            <span class="chart-legend-sep">|</span>
+            <div
+              v-for="p in players"
+              :key="p.playerId"
+              class="player-dot"
+              :style="{
+                backgroundColor: includedPlayers.has(p.playerId)
+                  ? toRgb(overlayPlayerColors[p.playerId], 0)
+                  : toRgb(overlayPlayerColors[p.playerId], 0.6),
+                color: includedPlayers.has(p.playerId) ? '#fff' : '#222',
+                borderColor: includedPlayers.has(p.playerId)
+                  ? toRgb(overlayPlayerColors[p.playerId], 0)
+                  : toRgb(overlayPlayerColors[p.playerId], 0.6),
+              }"
+              @click="togglePlayersForKPIs(p.playerId)"
+            >
+              {{ overlayGetPlayerNumber(p.playerId) }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </v-container>
 </template>
 
@@ -359,6 +434,7 @@ import { useVideoStore } from "@/stores/video";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useBboxesStore } from "@/stores/bboxes";
 import { getTimecode } from "@/plugins/time";
+import { toRgb } from "@/plugins/helpers";
 import { Delaunay } from "d3-delaunay";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
@@ -399,6 +475,7 @@ const showModalPositionDataSelect = ref(false);
 const showModalPositionDataUpload = ref(false);
 const showModalPositionDataTeamColors = ref(false);
 const showModalPositionDataOffset = ref(false);
+const showModalToggleEntities = ref(false);
 
 const progress = ref(0);
 watch(
@@ -526,14 +603,14 @@ watch(
       const players = newVal[keys[i]];
       if (!players) continue;
       for (const p of players) {
-        if (p[1] !== 1) playerIds.add(p[0]);
+        playerIds.add(p[0]);
       }
     }
     // Also check last frame
     const lastFrame = newVal[keys[keys.length - 1]];
     if (lastFrame) {
       for (const p of lastFrame) {
-        if (p[1] !== 1) playerIds.add(p[0]);
+        playerIds.add(p[0]);
       }
     }
     includedPlayers.value = playerIds;
@@ -546,6 +623,78 @@ const togglePlayersForKPIs = (playerId) => {
     newSet.delete(playerId);
   } else {
     newSet.add(playerId);
+  }
+  includedPlayers.value = newSet;
+};
+
+const overlayPlayerOptions = computed(() => {
+  const posData = topViewStore.positionDataTopView;
+  const keys = Object.keys(posData);
+  if (!keys.length) return [];
+  const seen = new Map();
+  const step = Math.max(1, Math.floor(keys.length / 10));
+  for (let i = 0; i < keys.length; i += step) {
+    const players = posData[keys[i]];
+    if (!players) continue;
+    for (const p of players) {
+      if (!seen.has(p[0])) {
+        seen.set(p[0], { playerId: p[0], teamId: p[1] });
+      }
+    }
+  }
+  const last = posData[keys[keys.length - 1]];
+  if (last) {
+    for (const p of last) {
+      if (!seen.has(p[0])) {
+        seen.set(p[0], { playerId: p[0], teamId: p[1] });
+      }
+    }
+  }
+  return Array.from(seen.values()).sort((a, b) => a.teamId - b.teamId || a.playerId - b.playerId);
+});
+
+const overlayTeamGroups = computed(() => {
+  const groups = {};
+  for (const p of overlayPlayerOptions.value) {
+    if (!groups[p.teamId]) groups[p.teamId] = [];
+    groups[p.teamId].push(p);
+  }
+  return groups;
+});
+
+const overlayPlayerColors = computed(() => {
+  const map = {};
+  for (const p of overlayPlayerOptions.value) {
+    map[p.playerId] = visualizationStore.getTeamColor(p.teamId);
+  }
+  return map;
+});
+
+const overlayGetPlayerNumber = (playerId) => {
+  const meta = topViewStore.metaDataTopView;
+  const num = meta?.player_ids?.[playerId]?.number;
+  return num != null ? num : playerId;
+};
+
+const overlayGetTeamName = (teamId) => {
+  const meta = topViewStore.metaDataTopView;
+  if (meta?.team_ids?.[teamId]?.name) return meta.team_ids[teamId].name;
+  return teamId;
+};
+
+const overlayIsTeamFullySelected = (teamId) => {
+  const teamPlayerIds = (overlayTeamGroups.value[teamId] || []).map((p) => p.playerId);
+  return teamPlayerIds.length > 0 && teamPlayerIds.every((pid) => includedPlayers.value.has(pid));
+};
+
+const overlayToggleTeam = (teamId) => {
+  const teamPlayerIds = (overlayTeamGroups.value[teamId] || []).map((p) => p.playerId);
+  const allSelected = teamPlayerIds.every((pid) => includedPlayers.value.has(pid));
+  const newSet = new Set(includedPlayers.value);
+  if (allSelected) {
+    teamPlayerIds.forEach((pid) => newSet.delete(pid));
+  } else {
+    teamPlayerIds.forEach((pid) => newSet.add(pid));
   }
   includedPlayers.value = newSet;
 };
@@ -829,7 +978,7 @@ function drawCanvas() {
   for (const pos of framePositions) {
     const { px, py } = toPixel(pos[3], pos[4]);
 
-    if (pos[1] === 1) {
+    if (pos[1] === 1 && includedPlayers.value.has(pos[0])) {
       // Ball – sport-specific SVG icon
       const ballSize = 8;
       const ballImg = getBallImage(sport.title);
@@ -845,8 +994,8 @@ function drawCanvas() {
         ctx.fill();
         ctx.stroke();
       }
-    } else {
-      // Player dot
+    } else if (includedPlayers.value.has(pos[0])) {
+      // Player dot (only if not excluded)
       ctx.beginPath();
       ctx.arc(px, py, 6, 0, Math.PI * 2);
       ctx.fillStyle = visualizationStore.getTeamColor(pos[1]);
@@ -1054,6 +1203,31 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
 });
+
+async function saveScreenshot() {
+  const img = topViewElement.value;
+  if (!img) return;
+  const w = topViewStore.topViewSize.width;
+  const h = topViewStore.topViewSize.height;
+  if (!w || !h) return;
+  const scale = 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = w * scale;
+  canvas.height = h * scale;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  if (playerCanvas.value) {
+    ctx.drawImage(playerCanvas.value, 0, 0, canvas.width, canvas.height);
+  }
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.download = "position_data.png";
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+}
 </script>
 
 <style scoped>
@@ -1205,5 +1379,87 @@ onBeforeUnmount(() => {
   color: white;
   font-size: 0.9rem;
   font-weight: 500;
+}
+
+.players-toggle-overlay {
+  position: absolute;
+  top: 20px;
+  left: -15px;
+  right: -15px;
+  bottom: -10px;
+  background: white;
+  border: 2px solid rgba(var(--v-theme-primary), 0.45);
+  transition: border-color 0.3s ease;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+}
+
+.players-toggle-close {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  z-index: 10;
+}
+
+.players-toggle-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 20px;
+  row-gap: 2px;
+  flex: 1;
+  margin: 0px 20px;
+  overflow-y: auto;
+}
+
+.chart-legend-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.chart-legend-sep {
+  color: #ccc;
+  font-size: 18px;
+  margin: 0 2px;
+  user-select: none;
+}
+
+.team-dot {
+  height: 20px;
+  border-radius: 10px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.7rem;
+  cursor: pointer;
+  border: 2px solid;
+  transition: background 0.2s, border 0.2s, color 0.2s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.team-dot:hover {
+  opacity: 0.8;
+}
+
+.player-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.7rem;
+  cursor: pointer;
+  border: 2px solid;
+  transition: background 0.2s, border 0.2s;
+  user-select: none;
 }
 </style>

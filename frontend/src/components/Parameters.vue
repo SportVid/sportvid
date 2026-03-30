@@ -67,6 +67,20 @@
 
       <v-select
         v-model="parameter.value"
+        :items="trackingDatasets"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_tracking_data'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+        class="mb-4"
+      />
+
+      <v-select
+        v-model="parameter.value"
         :items="positionDataTeams"
         :label="parameter.text"
         :hint="parameter.hint"
@@ -144,27 +158,27 @@
 
       <v-select
         v-model="parameter.value"
-        :items="runningDistanceTeams"
+        :items="kpiTeams"
         :label="parameter.text"
         :hint="parameter.hint"
         item-title="name"
         item-value="id"
-        v-if="parameter.field == 'select_running_distance_team'"
+        v-if="parameter.field == 'select_kpi_team'"
         :key="parameter.name"
         persistent-hint
         variant="underlined"
         multiple
       >
-        <template v-slot:prepend-item v-if="runningDistanceTeams?.length > 0">
+        <template v-slot:prepend-item v-if="kpiTeams?.length > 0">
           <v-checkbox
             class="ml-4 my-n2 text-body-2"
-            v-model="isRunningDistanceTeamSelectAll"
-            @click="toggleRunningDistanceTeamSelectAll(parameter)"
+            v-model="isKpiTeamSelectAll"
+            @click="toggleKpiTeamSelectAll(parameter)"
             hide-details
             ripple
           >
             <template v-slot:label>
-              <span class="text-body-1">{{ $t("modal.export.running_distance.teams.all") }}</span>
+              <span class="text-body-1">{{ $t("modal.export.kpi.teams.all") }}</span>
             </template>
           </v-checkbox>
           <v-divider />
@@ -180,12 +194,12 @@
 
       <v-select
         v-model="parameter.value"
-        :items="exportStore.selectableRunningDistanceAttributes"
+        :items="kpiNameItems"
         :label="parameter.text"
         :hint="parameter.hint"
         item-title="name"
         item-value="id"
-        v-if="parameter.field == 'select_running_distance_attribute'"
+        v-if="parameter.field == 'select_kpi_names'"
         :key="parameter.name"
         persistent-hint
         variant="underlined"
@@ -193,21 +207,118 @@
         class="mt-6"
         :menu-props="{ location: 'bottom', maxHeight: 250 }"
       >
-        <template
-          v-slot:prepend-item
-          v-if="exportStore.selectableRunningDistanceAttributes?.length > 0"
-        >
+        <template v-slot:prepend-item v-if="kpiNameItems?.length > 0">
           <v-checkbox
             class="ml-4 my-n2 text-body-2"
-            v-model="isRunningDistanceAttributeSelectAll"
-            @click="toggleRunningDistanceAttributeSelectAll(parameter)"
+            v-model="isKpiNamesSelectAll"
+            @click="toggleKpiNamesSelectAll(parameter)"
             hide-details
             ripple
           >
             <template v-slot:label>
-              <span class="text-body-1">{{
-                $t("modal.export.running_distance.attributes.all")
-              }}</span>
+              <span class="text-body-1">{{ $t("modal.export.kpi.kpi_names.all") }}</span>
+            </template>
+          </v-checkbox>
+          <v-divider />
+        </template>
+
+        <template v-slot:item="{ item, props: itemProps }">
+          <v-list-item v-bind="itemProps" :title="undefined">
+            <template #prepend="{ isSelected }">
+              <v-checkbox-btn :model-value="isSelected" />
+            </template>
+            <template #title>
+              <span v-html="item.raw.name" />
+            </template>
+          </v-list-item>
+        </template>
+
+        <template v-slot:selection="{ item, index }">
+          <v-chip v-if="index < 2">
+            <span v-html="item.raw.name" />
+          </v-chip>
+          <v-chip v-if="index === 2" class="text-grey text-caption">
+            (+{{ parameter.value.length - 2 }} others)
+          </v-chip>
+        </template>
+      </v-select>
+
+      <v-select
+        v-model="parameter.value"
+        :items="kpiNameItemsAggregated"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_kpi_names_aggregated'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+        multiple
+        class="mt-6"
+        :menu-props="{ location: 'bottom', maxHeight: 250 }"
+      >
+        <template v-slot:prepend-item v-if="kpiNameItemsAggregated?.length > 0">
+          <v-checkbox
+            class="ml-4 my-n2 text-body-2"
+            v-model="isKpiNamesAggregatedSelectAll"
+            @click="toggleKpiNamesAggregatedSelectAll(parameter)"
+            hide-details
+            ripple
+          >
+            <template v-slot:label>
+              <span class="text-body-1">{{ $t("modal.export.kpi_aggregated.kpi_names.all") }}</span>
+            </template>
+          </v-checkbox>
+          <v-divider />
+        </template>
+
+        <template v-slot:item="{ item, props: itemProps }">
+          <v-list-item v-bind="itemProps" :title="undefined">
+            <template #prepend="{ isSelected }">
+              <v-checkbox-btn :model-value="isSelected" />
+            </template>
+            <template #title>
+              <span v-html="item.raw.name" />
+            </template>
+          </v-list-item>
+        </template>
+
+        <template v-slot:selection="{ item, index }">
+          <v-chip v-if="index < 2">
+            <span v-html="item.raw.name" />
+          </v-chip>
+          <v-chip v-if="index === 2" class="text-grey text-caption">
+            (+{{ parameter.value.length - 2 }} others)
+          </v-chip>
+        </template>
+      </v-select>
+
+      <v-select
+        v-model="parameter.value"
+        :items="exportStore.selectableKpiAttributes"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_kpi_attribute'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+        multiple
+        class="mt-6"
+        :menu-props="{ location: 'bottom', maxHeight: 250 }"
+      >
+        <template v-slot:prepend-item v-if="exportStore.selectableKpiAttributes?.length > 0">
+          <v-checkbox
+            class="ml-4 my-n2 text-body-2"
+            v-model="isKpiAttributeSelectAll"
+            @click="toggleKpiAttributeSelectAll(parameter)"
+            hide-details
+            ripple
+          >
+            <template v-slot:label>
+              <span class="text-body-1">{{ $t("modal.export.kpi.attributes.all") }}</span>
             </template>
           </v-checkbox>
           <v-divider />
@@ -223,7 +334,7 @@
 
       <v-autocomplete
         v-model="parameter.value"
-        v-if="parameter.field == 'select_running_distance_frame'"
+        v-if="parameter.field == 'select_kpi_frame'"
         type="number"
         :min="parameter.min"
         :max="parameter.max"
@@ -237,7 +348,7 @@
         :style="{
           display: 'inline-block',
           width: '48%',
-          marginRight: parameter.name === 'running_distance_start_frame' ? '4%' : '0',
+          marginRight: parameter.name === 'kpi_start_frame' ? '4%' : '0',
         }"
       />
 
@@ -374,13 +485,15 @@ import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
 import { useExportStore } from "@/stores/export";
-import { usePlayerStore } from "@/stores/player";
+import { usePositionDataStore } from "@/stores/position_data";
+import { useVisualizationStore } from "@/stores/visualization";
 
 const timelineStore = useTimelineStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const topViewStore = useTopViewStore();
 const exportStore = useExportStore();
-const playerStore = usePlayerStore();
+const positionDataStore = usePositionDataStore();
+const visualizationStore = useVisualizationStore();
 
 const { t } = useI18n();
 
@@ -486,58 +599,99 @@ const togglePositionDataAttributeSelectAll = (parameter) => {
   isPositionDataAttributeSelectAll.value = !isPositionDataAttributeSelectAll.value;
 };
 
-const runningDistanceTeams = computed(() => {
+const kpiTeams = computed(() => {
+  const kpiData = visualizationStore.kpiData;
+  if (!kpiData || Object.keys(kpiData).length === 0) return [];
+
   const teams = new Set(
-    Object.values(topViewStore.positionDataTopView)
+    Object.values(kpiData)
       .flat()
-      .map((pos) => pos[1])
-      .filter((id) => id !== 1)
+      .map((entry) => entry[1])
   );
-
-  if (teams.size === 0) {
-    return [];
-  }
-
   const sortedTeams = [...teams].sort((a, b) => a - b);
-
   const meta = topViewStore.metaDataTopView;
-  return sortedTeams.map((team_id) => {
-    const teamName = meta?.team_ids?.[team_id]?.name;
-    return { id: team_id, name: teamName };
-  });
+  return sortedTeams.map((team_id) => ({
+    id: team_id,
+    name: meta?.team_ids?.[team_id]?.name ?? String(team_id),
+  }));
 });
 
-const isRunningDistanceTeamSelectAll = ref(false);
-const toggleRunningDistanceTeamSelectAll = (parameter) => {
-  if (!isRunningDistanceTeamSelectAll.value) {
-    parameter.value = runningDistanceTeams.value.map((team) => team.id);
+const kpiNameItems = computed(() =>
+  (visualizationStore.kpiNames || []).map((name) => ({
+    id: name,
+    name: t(`visualization.kpi.kpi_selection.${name}`, name),
+  }))
+);
+
+// Aggregated selection labels reuse the existing visualization.kpi.kpi_selection translations
+// for the matching table-mode KPI variants (cumulative distance, velocity_max, cumulative work).
+const KPI_AGG_TRANSLATION_KEY = {
+  distance_covered: "running_distance_cumulative",
+  velocity: "velocity_max",
+  metabolic_power: "metabolic_work_cumulative",
+};
+const kpiNameItemsAggregated = computed(() =>
+  (visualizationStore.kpiNames || []).map((name) => {
+    const key = KPI_AGG_TRANSLATION_KEY[name];
+    return {
+      id: name,
+      name: key ? t(`visualization.kpi.kpi_selection.${key}`, name) : name,
+    };
+  })
+);
+
+const isKpiTeamSelectAll = ref(false);
+const toggleKpiTeamSelectAll = (parameter) => {
+  if (!isKpiTeamSelectAll.value) {
+    parameter.value = kpiTeams.value.map((team) => team.id);
   } else {
     parameter.value = [];
   }
-
-  isRunningDistanceTeamSelectAll.value = !isRunningDistanceTeamSelectAll.value;
+  isKpiTeamSelectAll.value = !isKpiTeamSelectAll.value;
 };
 
-const isRunningDistanceAttributeSelectAll = ref(false);
-const toggleRunningDistanceAttributeSelectAll = (parameter) => {
-  if (!isRunningDistanceAttributeSelectAll.value) {
-    parameter.value = exportStore.selectableRunningDistanceAttributes.map((a) => a.id);
+const isKpiNamesSelectAll = ref(false);
+const toggleKpiNamesSelectAll = (parameter) => {
+  if (!isKpiNamesSelectAll.value) {
+    parameter.value = kpiNameItems.value.map((item) => item.id);
   } else {
     parameter.value = [];
   }
+  isKpiNamesSelectAll.value = !isKpiNamesSelectAll.value;
+};
 
-  isRunningDistanceAttributeSelectAll.value = !isRunningDistanceAttributeSelectAll.value;
+const isKpiNamesAggregatedSelectAll = ref(false);
+const toggleKpiNamesAggregatedSelectAll = (parameter) => {
+  if (!isKpiNamesAggregatedSelectAll.value) {
+    parameter.value = kpiNameItemsAggregated.value.map((item) => item.id);
+  } else {
+    parameter.value = [];
+  }
+  isKpiNamesAggregatedSelectAll.value = !isKpiNamesAggregatedSelectAll.value;
+};
+
+const isKpiAttributeSelectAll = ref(false);
+const toggleKpiAttributeSelectAll = (parameter) => {
+  if (!isKpiAttributeSelectAll.value) {
+    parameter.value = exportStore.selectableKpiAttributes.map((a) => a.id);
+  } else {
+    parameter.value = [];
+  }
+  isKpiAttributeSelectAll.value = !isKpiAttributeSelectAll.value;
 };
 
 const calibrationAssets = computed(() => {
   return Object.values(calibrationAssetStore.calibrationAssetsList);
 });
 
-onMounted(() => {
-  calibrationAssetStore.loadCalibrationAssetsList();
+const trackingDatasets = computed(() => {
+  return Object.values(positionDataStore.positionDataList);
 });
 
-const allFrameKeys = computed(() => Object.keys(topViewStore.positionDataTopView).map(Number));
+onMounted(() => {
+  calibrationAssetStore.loadCalibrationAssetsList();
+  positionDataStore.loadPositionDataList();
+});
 </script>
 
 <style scoped>

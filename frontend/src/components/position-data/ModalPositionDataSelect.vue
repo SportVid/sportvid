@@ -153,6 +153,7 @@ import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
 import ModalPositionDataRename from "./ModalPositionDataRename.vue";
+import { useVisualizationStore } from "@/stores/visualization";
 
 const { t } = useI18n();
 
@@ -161,6 +162,7 @@ const pluginRunStore = usePluginRunStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const positionDataStore = usePositionDataStore();
 const topViewStore = useTopViewStore();
+const visualizationStore = useVisualizationStore();
 
 const props = defineProps({
   modelValue: {
@@ -230,9 +232,7 @@ const bytetrackRuns = computed(() => {
 const isButtonDisabled = computed(() => {
   if (selectedMode.value === "bytetrack") {
     return (
-      selectedCalibrationAsset.value === null ||
-      selectedBytetrack.value === null ||
-      !areaSize.value
+      selectedCalibrationAsset.value === null || selectedBytetrack.value === null || !areaSize.value
     );
   } else if (selectedMode.value === "manual") {
     return !selectedPositionData.value || !areaSize.value;
@@ -240,12 +240,7 @@ const isButtonDisabled = computed(() => {
   return true;
 });
 
-const confirmSelection = (
-  calibrationAssetId,
-  bytetrackPluginId,
-  positionDataId,
-  areaSize
-) => {
+const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId, areaSize) => {
   if (selectedMode.value === "bytetrack") {
     topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
     const keys = Object.keys(topViewStore.positionDataTopView)
@@ -257,6 +252,7 @@ const confirmSelection = (
     }
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
+    visualizationStore.loadKpiData(positionDataId);
   }
 
   topViewStore.onSportChange(topViewStore.currentSport.title, areaSize);

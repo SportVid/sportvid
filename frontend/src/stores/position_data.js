@@ -4,8 +4,6 @@ import { throttle } from "lodash";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { usePlayerStore } from "@/stores/player";
-import { usePluginRunStore } from "@/stores/plugin_run";
-import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useTopViewStore } from "./top_view";
 import { useBboxesStore } from "./bboxes";
 import { useVisualizationStore } from "@/stores/visualization";
@@ -15,8 +13,6 @@ export const usePositionDataStore = defineStore(
   "position_data",
   () => {
     const playerStore = usePlayerStore();
-    const pluginRunStore = usePluginRunStore();
-    const pluginRunResultStore = usePluginRunResultStore();
     const topViewStore = useTopViewStore();
     const bboxesStore = useBboxesStore();
     const visualizationStore = useVisualizationStore();
@@ -62,39 +58,15 @@ export const usePositionDataStore = defineStore(
       // 1. Try in-memory cache (instant, no network)
       const cached = workerStore.getCached(id);
       if (cached) {
-        topViewStore.positionDataTopView = cached.posData;
-        topViewStore.metaDataTopView = cached.metaData;
+        topViewStore.setPositionData(cached.posData, cached.metaData);
         setTimeRangeToFullMatch();
         return;
       }
 
-      // 2. Try existing plugin run results (already in memory from fetchForVideo)
-      const _positionData = pluginRunStore
-        .forVideo(playerStore.videoId)
-        .filter((e) => e.type === "posdata_convert" && e.status === "DONE")
-        .map((e) => {
-          const results = pluginRunResultStore.forPluginRun(e.id);
-          return { ...e, results: JSON.parse(JSON.stringify(results)) };
-        })
-        .filter((e) => e.results?.[0]?.data?.tracking_data_id === id);
-
-      const posData = _positionData[0]?.results[0]?.data?.pos_data;
-      const metaData = _positionData[0]?.results[0]?.data?.meta_data;
-
-      if (posData) {
-        topViewStore.positionDataTopView = posData;
-        topViewStore.metaDataTopView = metaData || {};
-        // Store in in-memory cache for future accesses
-        workerStore.cacheData(id, posData, metaData || {});
-        setTimeRangeToFullMatch();
-        return;
-      }
-
-      // 3. Chunk-load from backend (progressive, with progress bar)
+      // 2. Chunk-load from backend (progressive, with progress bar)
       const result = await workerStore.loadChunked(id, playerStore.videoId);
       if (result) {
-        topViewStore.positionDataTopView = result.posData;
-        topViewStore.metaDataTopView = result.metaData;
+        topViewStore.setPositionData(result.posData, result.metaData);
         setTimeRangeToFullMatch();
       }
     };
@@ -166,8 +138,7 @@ export const usePositionDataStore = defineStore(
             !positionDataList.value.find((d) => d.id === positionDataId.value)
           ) {
             positionDataId.value = null;
-            topViewStore.positionDataTopView = {};
-            topViewStore.metaDataTopView = {};
+            topViewStore.setPositionData({}, {});
           }
         }
       } catch (error) {
@@ -316,6 +287,7 @@ export const usePositionDataStore = defineStore(
       isRestoringPosData.value = true;
       try {
         await loadPositionData(id);
+        await visualizationStore.loadKpiData(id);
       } finally {
         isRestoringPosData.value = false;
       }

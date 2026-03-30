@@ -20,18 +20,19 @@ from django.db import transaction
 from django.conf import settings
 
 
-@PluginManager.export_parser("floodlight_convert")
-class FloodlightConvertParser(Parser):
+@PluginManager.export_parser("kpi_computation")
+class KpiComputationParser(Parser):
     def __init__(self):
         self.valid_parameter = {
             "tracking_data_id": {"parser": str, "required": True},
             "format": {"parser": str, "required": True},
-            "delimiter": {"parser": str, "required": False, "default": ";"}
+            "delimiter": {"parser": str, "required": False, "default": ";"},
+            "pos_meta": {"parser": str, "required": False, "default": ""},
         }
 
 
-@PluginManager.export_plugin("floodlight_convert")
-class FloodlightConvert(Task):
+@PluginManager.export_plugin("kpi_computation")
+class KpiComputation(Task):
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",
@@ -63,14 +64,37 @@ class FloodlightConvert(Task):
             meta_data_ = self.upload_td(client, tracking_data_db.meta_file.hex, tracking_data_db.meta_ext)
             input_dict.update({"meta_data": meta_data_})
 
+        # --------> FIND POSDATA METADATA
+        pos_meta_json = ""
+        pos_data_results = PluginRunResult.objects.filter(
+            plugin_run__type="posdata_convert",
+            plugin_run__status=PluginRun.STATUS_DONE,
+            plugin_run__video=tracking_data_db.video,
+            name="pos_data",
+            type=PluginRunResult.TYPE_POS,
+        ).order_by("-plugin_run__date")
+
+        for prr in pos_data_results:
+            pos_data_obj = manager.load(prr.data_id)
+            if pos_data_obj is None:
+                continue
+            with pos_data_obj:
+                if pos_data_obj.tracking_data_id == parameters.get("tracking_data_id"):
+                    pos_meta_json = pos_data_obj.meta_data or ""
+                    break
+
+        if not pos_meta_json:
+            logging.warning("No matching posdata_convert result found; KPI IDs will use plugin-local mapping.")
+
         # --------> RUN
         result = self.run_analyser(
             client,
-            "floodlight_convert",
+            "kpi_computation",
             parameters={
                 "format": parameters.get("format"),
                 "delimiter": parameters.get("delimiter"),
                 "tracking_data_id": parameters.get("tracking_data_id"),
+                "pos_meta": pos_meta_json,
             },
             inputs={**input_dict},
             outputs=["kpi_data"],

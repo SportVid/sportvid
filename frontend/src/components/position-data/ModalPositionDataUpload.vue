@@ -203,7 +203,7 @@ const delimiters = [
 ];
 const origins = [
   { value: "kickoff", title: t("modal.position_data.upload.origins.kickoff") },
-  { value: "bottom-left", title: t("modal.position_data.upload.origins.bottom_left") },
+  { value: "bottom_left", title: t("modal.position_data.upload.origins.bottom_left") },
 ];
 
 const checkbox = ref(false);

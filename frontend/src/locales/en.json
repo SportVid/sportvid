@@ -100,7 +100,7 @@
       "timeline": "Timeline",
       "events": "Events",
       "heatmap": "Heatmap",
-      "running_distance": "Running Distance"
+      "kpi": "KPIs"
     }
   },
   "sports": {
@@ -175,21 +175,22 @@
   },
   "position_data": {
     "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
-    "area_size": "Area size",
     "display_settings": {
       "title": "Display Settings",
       "view_bounding_box": "View bounding-boxes",
       "view_player_id": "View player ids",
+      "toggle_entities": "Toggle entities",
       "video_sync": "Sychronise with video",
       "team_colors": "Change team colors",
       "offset": "Set offset",
+      "area_size": "Area size",
       "set_grid": {
         "title": "Set Grid",
         "longitudinal": "Longitudinal",
         "transverse": "Transverse"
       },
       "view_kpis": {
-        "title": "View performance indicator",
+        "title": "View KPIs",
         "space_control": "Space control",
         "eps": "Effective playing space"
       },
@@ -230,17 +231,26 @@
       "first_half": "Select first half",
       "second_half": "Select second half"
     },
-    "running_distance": {
-      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+    "kpi": {
+      "posdata_not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+      "kpi_not_selected": "No KPI data available.<br>Please run the KPI computation plugin to compute KPIs based on the selected position data.",
       "kpi_selection": {
         "title": "KPI",
-        "running_distance": "Running distance",
-        "running_distance_cumulative": "Running distance (cumulative)",
-        "running_distance_interval": "Running distance (per {frames} frames)",
-        "interval_frames": "Interval (frames)",
-        "velocity_max": "Maximum Velocity",
-        "velocity_mean": "Mean Velocity",
-        "metabolic_work": "Metabolic work"
+        "group_distance": "Distance",
+        "group_velocity": "Velocity",
+        "group_metabolic_work": "Metabolic Work",
+        "running_distance_cumulative": "Distance [m] (cumulative)",
+        "running_distance_frame": "Distance [m] (per frame)",
+        "running_distance_interval": "Distance [m] (per {frames} frames)",
+        "velocity_max": "Velocity<sub>max</sub> [m⋅s<sup>-1</sup>]",
+        "velocity_frame": "Velocity [m⋅s<sup>-1</sup>]",
+        "velocity_interval": "Velocity<sub>max</sub> [m⋅s<sup>-1</sup>] (per {frames} frames)",
+        "metabolic_work_cumulative": "Metabolic Work [J⋅kg<sup>-1</sup>] (cumulative)",
+        "metabolic_work_frame": "Metabolic Work [J⋅kg<sup>-1</sup>] (per frame)",
+        "metabolic_work_interval": "Metabolic Work [J⋅kg<sup>-1</sup>] (per {frames} frames)",
+        "distance_covered": "Distance [m]",
+        "velocity": "Velocity [m⋅s<sup>-1</sup>]",
+        "metabolic_power": "Metabolic Power [W⋅kg<sup>-1</sup>]"
       },
       "zone_selection": {
         "title": "Zone",
@@ -250,16 +260,20 @@
         "selected": "zone(s)"
       },
       "player_view": {
-        "player_id": "Player-ID",
-        "team_id": "Team",
-        "distance": "Distance [m]",
+        "player_id": "Player",
         "best": "Best",
         "total": "Total"
       },
       "team_view": {
-        "total_distance": "Total Distance",
-        "avg_distance": "Avg. Distance",
-        "player_count": "Players"
+        "kpi": "KPI",
+        "total": "Total",
+        "average": "Average"
+      },
+      "kpi_label": {
+        "distance": "Distance [m]",
+        "velocity": "Velocity [m⋅s<sup>-1</sup>]",
+        "velocity_max": "Vel<sub>max</sub> [m⋅s<sup>-1</sup>]",
+        "metabolic_work": "Met. Work [J⋅kg<sup>-1</sup>]"
       }
     },
     "heatmap": {
@@ -426,20 +440,43 @@
         },
         "file_name": "position_data"
       },
-      "running_distance": {
-        "export_name": "Running Distance",
+      "kpi": {
+        "export_name": "KPI",
         "teams": {
           "all": "Select all"
         },
+        "kpi_names": {
+          "all": "Select all",
+          "distance_covered": "distance",
+          "velocity": "velocity",
+          "metabolic_power": "metabolic_work"
+        },
         "attributes": {
           "all": "Select all",
-          "player_id": "Player-ID",
           "player_name": "Player name",
           "team_id": "Team-ID",
-          "team_name": "Team name",
-          "distance": "Distance"
+          "team_name": "Team name"
         },
-        "file_name": "running_distance"
+        "file_name": "kpi_data"
+      },
+      "kpi_aggregated": {
+        "export_name": "KPI (aggregated)",
+        "teams": {
+          "all": "Select all"
+        },
+        "kpi_names": {
+          "all": "Select all",
+          "distance_covered": "distance",
+          "velocity": "velocity",
+          "metabolic_power": "metabolic_work"
+        },
+        "attributes": {
+          "all": "Select all",
+          "player_name": "Player name",
+          "team_id": "Team-ID",
+          "team_name": "Team name"
+        },
+        "file_name": "kpi_aggregated_data"
       },
       "json": {
         "export_name": "JSON"
@@ -478,12 +515,14 @@
       "position_data_team_hint": "Exporting selected groups.",
       "position_data_attribute_name": "Additional attributes",
       "position_data_attribute_hint": "Timestamp (ms), Player-ID, and X/Y coordinates are always included. Optionally add more attributes.",
-      "running_distance_team_name": "Select teams",
-      "running_distance_team_hint": "Exporting selected teams.",
-      "running_distance_attribute_name": "Additional attributes",
-      "running_distance_attribute_hint": "Player-ID and Distance are always included. Optionally add more attributes.",
-      "running_distance_start_frame_name": "Select start frame",
-      "running_distance_end_frame_name": "Select end frame",
+      "kpi_team_name": "Select teams",
+      "kpi_team_hint": "Exporting selected teams.",
+      "kpi_names_name": "Select KPIs",
+      "kpi_names_hint": "Select which KPIs to include (min. 1 required).",
+      "kpi_attribute_name": "Additional attributes",
+      "kpi_attribute_hint": "Timestamp (ms) and Player-ID are always included. Optionally add more attributes.",
+      "kpi_start_frame_name": "Select start frame",
+      "kpi_end_frame_name": "Select end frame",
       "fps": "Frames per Second (FPS)",
       "normalize": "Normalize Results?",
       "aggregation": {
@@ -498,7 +537,6 @@
         "min": "Minimum",
         "prod": "Product"
       },
-
       "bytetrack": {
         "plugin_name": "ByteTrack",
         "plugin_description": "This plugin performs multi-object tracking (MOT). It uses the 'bytetrack_x_mot17' model from https://github.com/ifzhang/ByteTrack.",
@@ -510,6 +548,14 @@
         "timeline_name": "Calibration Static DLT",
         "calibration_id": "Select Calibration Asset",
         "calibration_id_hint": "Select a calibration asset to use for the calibration."
+      },
+      "kpi_computation": {
+        "plugin_name": "KPI Computation",
+        "plugin_description": "This plugin computes a selected key performance indicator (KPI) based on the position data. The following KPIs are currently available: <br><br> <em>Distance Covered, Velocity & Metabolic Power</em>",
+        "tracking_data_id": "Select Position Data",
+        "tracking_data_id_hint": "Select a position dataset to use for the computation.",
+        "format": "Select the data provider",
+        "delimiter": "Delimiter"
       },
       "audio_waveform": {
         "plugin_name": "Audio Waveform",
