@@ -44,7 +44,9 @@ const canvasStyle = ref({ width: props.width, height: props.height });
 
 let scope;
 let handleGroup, handleLeft, handleRight, handleBar;
-let selectionLayer, scaleLayer;
+let selectionLayer, scaleLayer, timeBarLayer;
+let timeBarLine;
+let animFrameId;
 
 const canvasWidth = ref(null);
 const canvasHeight = ref(null);
@@ -60,18 +62,13 @@ const hiddenStartTime = ref(playerStore.selectedTimeRange.start);
 const hiddenEndTime = ref(playerStore.selectedTimeRange.end);
 const minTime = (1000 / playerStore.videoFPS) * 10;
 watch(
-  () => startTime,
+  () => playerStore.selectedTimeRange,
   (val) => {
-    hiddenStartTime.value = val;
+    hiddenStartTime.value = val.start;
+    hiddenEndTime.value = val.end;
     nextTick(() => draw());
-  }
-);
-watch(
-  () => endTime,
-  (val) => {
-    hiddenEndTime.value = val;
-    nextTick(() => draw());
-  }
+  },
+  { deep: true }
 );
 watch(duration, () => {
   hiddenStartTime.value = startTime.value;
@@ -132,6 +129,7 @@ function draw() {
 
   drawScale();
   drawSelection();
+  drawTimeBar();
   scope.view.draw();
 }
 
@@ -290,6 +288,33 @@ function drawSelection() {
   };
 }
 
+function drawTimeBar() {
+  if (timeBarLayer) timeBarLayer.removeChildren();
+  scope.activate();
+  timeBarLayer = new paper.Layer();
+
+  const time = playerStore.currentTime;
+  if (time == null || !duration.value) return;
+
+  const x = timeToX(time);
+  timeBarLine = new paper.Path([new paper.Point(x, 0), new paper.Point(x, canvasHeight.value)]);
+  timeBarLine.strokeColor = "white";
+  timeBarLine.strokeWidth = 2;
+  timeBarLine.guide = true;
+}
+
+function updateTimeBar() {
+  if (!timeBarLine || !canvasWidth.value || !duration.value) return;
+  const x = timeToX(playerStore.currentTime);
+  timeBarLine.segments[0].point.x = x;
+  timeBarLine.segments[1].point.x = x;
+}
+
+function animLoop() {
+  updateTimeBar();
+  animFrameId = requestAnimationFrame(animLoop);
+}
+
 function onSelectionChange() {
   const posStart = timeToX(hiddenStartTime.value);
   const posEnd = timeToX(hiddenEndTime.value);
@@ -328,8 +353,11 @@ onMounted(() => {
   };
 
   nextTick(() => draw());
+
+  animFrameId = requestAnimationFrame(animLoop);
 });
 onBeforeUnmount(() => {
+  if (animFrameId) cancelAnimationFrame(animFrameId);
   if (scope) {
     scope.view.onFrame = null;
     scope.view.onResize = null;

@@ -228,8 +228,21 @@
       "sync_start": "Synchronize start time with video time",
       "sync_end": "Synchronize end time with video time",
       "full_match": "Select full match",
+      "full_video": "Select full video",
       "first_half": "Select first half",
       "second_half": "Select second half"
+    },
+    "timeline": {
+      "not_available": "No timeline available.<br>Please run a plugin that creates a timeline.",
+      "options": {
+        "title": "Options",
+        "create": "Create Timeline",
+        "import": "Import Timeline"
+      }
+    },
+    "heatmap": {
+      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+      "area_size": "Area size"
     },
     "kpi": {
       "posdata_not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
@@ -275,17 +288,7 @@
         "velocity_max": "Vel<sub>max</sub> [m⋅s<sup>-1</sup>]",
         "metabolic_work": "Met. Work [J⋅kg<sup>-1</sup>]"
       }
-    },
-    "heatmap": {
-      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
-      "area_size": "Area size"
-    },
-    "timeline": {
-      "not_available": "No timeline available.<br>Please run a plugin that creates a timeline."
     }
-  },
-  "timelines": {
-    "title": "Timelines"
   },
   "timelineSegment": {
     "title": "Title",
@@ -731,16 +734,12 @@
       "shortcut": "Shortcut"
     },
     "timeline": {
-      "options": "Options",
       "export_result": {
         "title": "Export Timeline Data",
         "csv": {
           "title": "CSV",
           "text": "Export timeline as CSV."
         }
-      },
-      "menu": {
-        "title": "Options"
       },
       "create": {
         "title": "Create Timeline",

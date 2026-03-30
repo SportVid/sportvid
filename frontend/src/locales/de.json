@@ -170,6 +170,7 @@
       "sync_start": "Startzeit mit Videozeit synchronisieren",
       "sync_end": "Endzeit mit Videozeit synchronisieren",
       "full_match": "Gesamtes Spiel auswählen",
+      "full_video": "Gesamtes Video auswählen",
       "first_half": "Erste Halbzeit auswählen",
       "second_half": "Zweite Halbzeit auswählen"
     },
