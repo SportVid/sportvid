@@ -71,7 +71,8 @@
     "settings": "Settings",
     "continue": "Continue",
     "admin_panel": "Admin Panel",
-    "exit": "Exit"
+    "exit": "Exit",
+    "add": "Add"
   },
   "field": {
     "required": "This field is required."
@@ -151,24 +152,13 @@
     },
     "marker": {
       "title": "Marker",
-      "switch_to_segments": "Switch to Segments",
-      "view_vid_marker": "View Video Marker",
-      "add_ref_marker": {
-        "title": "Add Reference Marker",
-        "custom_marker": "Custom Marker"
-      },
-      "delete_ref_marker": "Delete Reference Marker",
-      "delete_single_ref_marker": "Delete"
+      "view_vid_marker": "View video marker",
+      "add_custom_marker": "Add custom marker",
+      "delete_custom_marker": "Delete custom marker"
     },
     "segments": {
       "title": "Segments",
-      "switch_to_marker": "Switch to Marker",
-      "view_vid_segments": "View Video Segments",
-      "add_ref_segment": {
-        "title": "Add Reference Segment"
-      },
-      "delete_ref_segment": "Delete Reference Segment",
-      "delete_single_ref_segment": "Delete"
+      "view_vid_segments": "View video segments"
     },
     "time-conflict": "Video markers were set at {time}. Adding a new marker on another timestamp will overwrite the existing ones.",
     "go_to_marker_time": "Go back to {time}"
@@ -825,6 +815,11 @@
       }
     },
     "calibration_asset": {
+      "object_types": {
+        "marker": "markers",
+        "segment": "segments"
+      },
+      "required": "{current} / {required} set (at least {required} {type} required).",
       "create": {
         "title": "Create Calibration Asset",
         "sport": "Select sport",
@@ -836,7 +831,6 @@
       "save": {
         "title": "Save Calibration Asset",
         "name": "Calibration Asset name",
-        "template": "Select sport",
         "success": "Calibration Asset successfully saved"
       },
       "update": {

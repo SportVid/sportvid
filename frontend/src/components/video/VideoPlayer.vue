@@ -147,7 +147,7 @@
                 :cx="o.videoCoordsRel[0].x * videoStore.videoSize.width"
                 :cy="o.videoCoordsRel[0].y * videoStore.videoSize.height"
                 r="6"
-                fill="red"
+                :fill="calibrationAssetStore.objectColorMap[o.id] ?? 'red'"
                 fill-opacity="0.8"
                 style="pointer-events: all"
                 @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
@@ -163,7 +163,7 @@
                 :x2="o.videoCoordsRel[1].x * videoStore.videoSize.width"
                 :y2="o.videoCoordsRel[1].y * videoStore.videoSize.height"
                 stroke-width="4"
-                stroke="red"
+                :stroke="calibrationAssetStore.objectColorMap[o.id] ?? 'red'"
                 stroke-opacity="0.8"
                 fill="none"
                 style="pointer-events: all"
@@ -188,7 +188,7 @@
                     return d;
                   })()
                 "
-                stroke="red"
+                :stroke="calibrationAssetStore.objectColorMap[o.id] ?? 'red'"
                 stroke-width="4"
                 stroke-opacity="0.8"
                 fill="none"

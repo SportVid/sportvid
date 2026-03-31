@@ -758,7 +758,6 @@ class PointCorrespondence(models.Model):
         related_name='object_data'
     )
     name = models.CharField(max_length=1024)
-    set = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
     comp_area_coords_rel = models.JSONField(default=list)
     video_coords_rel = models.JSONField(default=list)
@@ -767,7 +766,6 @@ class PointCorrespondence(models.Model):
         return {
             "id": self.id.hex,
             "name": self.name,
-            "set": self.set,
             "active": self.active,
             "compAreaCoordsRel": self.comp_area_coords_rel,
             "videoCoordsRel": self.video_coords_rel
