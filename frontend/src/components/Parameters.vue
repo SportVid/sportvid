@@ -1,6 +1,6 @@
 <template>
   <div>
-    <template v-for="parameter in parameters">
+    <template v-for="parameter in parameters.filter(p => !p.hidden)">
       <v-text-field
         v-model="parameter.value"
         :label="parameter.text"

@@ -348,6 +348,9 @@
           <template #header.metabolic_work="{ column }">
             <span v-html="column.title" />
           </template>
+          <template #header.centroid_distance_max="{ column }">
+            <span v-html="column.title" />
+          </template>
         </v-data-table>
       </v-card>
     </div>
@@ -550,6 +553,25 @@ const KPI_CONFIG = {
     ],
     table: [{ id: "metabolic_work_cumulative", kpi: "metabolic_work", mode: "cumulative" }],
   },
+  equivalent_distance: {
+    labelKey: "visualization.kpi.kpi_selection.group_equivalent_distance",
+    chartWidth: "310px",
+    chart: [
+      { id: "equivalent_distance_frame", kpi: "equivalent_distance", mode: "per_frame" },
+      { id: "equivalent_distance_interval", kpi: "equivalent_distance", mode: "windowed" },
+      { id: "equivalent_distance_cumulative", kpi: "equivalent_distance", mode: "cumulative" },
+    ],
+    table: [{ id: "equivalent_distance_cumulative", kpi: "equivalent_distance", mode: "cumulative" }],
+  },
+  centroid_distance: {
+    labelKey: "visualization.kpi.kpi_selection.group_centroid_distance",
+    chartWidth: "290px",
+    chart: [
+      { id: "centroid_distance_frame", kpi: "centroid_distance", mode: "per_frame" },
+      { id: "centroid_distance_interval", kpi: "centroid_distance", mode: "windowed" },
+    ],
+    table: [{ id: "centroid_distance_max", kpi: "centroid_distance_max", mode: "table_max" }],
+  },
 };
 
 // For table mode: flat list of table options for available KPI names
@@ -666,10 +688,13 @@ const playerHeaders = computed(() => {
     cols.push({ title: t("visualization.kpi.kpi_label.velocity_max"), key: "velocity_max" });
   }
   if (selectedKpis.value.has("metabolic_work_cumulative")) {
-    cols.push({
-      title: t("visualization.kpi.kpi_label.metabolic_work"),
-      key: "metabolic_work",
-    });
+    cols.push({ title: t("visualization.kpi.kpi_label.metabolic_work"), key: "metabolic_work" });
+  }
+  if (selectedKpis.value.has("equivalent_distance_cumulative")) {
+    cols.push({ title: t("visualization.kpi.kpi_label.equivalent_distance"), key: "equivalent_distance" });
+  }
+  if (selectedKpis.value.has("centroid_distance_max")) {
+    cols.push({ title: t("visualization.kpi.kpi_label.centroid_distance_max"), key: "centroid_distance_max" });
   }
   return cols;
 });
@@ -799,6 +824,8 @@ const runningDistanceTeamItems = computed(() => {
         distance: null,
         velocity_max: null,
         metabolic_work: null,
+        equivalent_distance: null,
+        centroid_distance_max: null,
       }
     );
   });
@@ -841,6 +868,26 @@ const runningDistanceTeamAggregated = computed(() => {
       rows.push({ label: t("visualization.kpi.kpi_label.metabolic_work"), total, avg });
     }
 
+    if (selectedKpis.value.has("equivalent_distance_cumulative")) {
+      const vals = players.map((p) => p.equivalent_distance).filter((v) => v != null);
+      const total = vals.length > 0 ? parseFloat(vals.reduce((a, b) => a + b, 0).toFixed(1)) : "-";
+      const avg =
+        vals.length > 0
+          ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
+          : "-";
+      rows.push({ label: t("visualization.kpi.kpi_label.equivalent_distance"), total, avg });
+    }
+
+    if (selectedKpis.value.has("centroid_distance_max")) {
+      const vals = players.map((p) => p.centroid_distance_max).filter((v) => v != null);
+      const total = vals.length > 0 ? parseFloat(Math.max(...vals).toFixed(2)) : "-";
+      const avg =
+        vals.length > 0
+          ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2))
+          : "-";
+      rows.push({ label: t("visualization.kpi.kpi_label.centroid_distance_max"), total, avg });
+    }
+
     result.push({ team_id: teamId, rows });
   }
   return result;
@@ -878,7 +925,7 @@ const getColTotal = (players, colKey) => {
   if (!players || !players.length) return "-";
   const vals = players.map((p) => p[colKey]).filter((v) => v != null);
   if (!vals.length) return "-";
-  if (colKey === "velocity_max") {
+  if (colKey === "velocity_max" || colKey === "centroid_distance_max") {
     return parseFloat(Math.max(...vals).toFixed(2));
   }
   return parseFloat(vals.reduce((a, b) => a + b, 0).toFixed(1));

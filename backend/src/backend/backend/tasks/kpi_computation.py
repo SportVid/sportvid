@@ -26,8 +26,12 @@ class KpiComputationParser(Parser):
         self.valid_parameter = {
             "tracking_data_id": {"parser": str, "required": True},
             "format": {"parser": str, "required": True},
-            "delimiter": {"parser": str, "required": False, "default": ";"},
             "pos_meta": {"parser": str, "required": False, "default": ""},
+            "filter_type": {"parser": str, "required": False, "default": ""},
+            "order": {"parser": int, "required": False, "default": 3},
+            "Wn": {"parser": float, "required": False, "default": 1.0},
+            "window_length": {"parser": int, "required": False, "default": 5},
+            "poly_order": {"parser": int, "required": False, "default": 3},
         }
 
 
@@ -56,6 +60,7 @@ class KpiComputation(Task):
             manager=manager,
         )
         tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
+        delimiter = tracking_data_db.delimiter or ";"
 
         tracking_data_ = self.upload_td(client, tracking_data_db.file.hex, tracking_data_db.ext)
 
@@ -92,8 +97,13 @@ class KpiComputation(Task):
             "kpi_computation",
             parameters={
                 "format": parameters.get("format"),
-                "delimiter": parameters.get("delimiter"),
+                "delimiter": delimiter,
                 "tracking_data_id": parameters.get("tracking_data_id"),
+                "filter_type": parameters.get("filter_type"),
+                "order": parameters.get("order"),
+                "Wn": parameters.get("Wn"),
+                "window_length": parameters.get("window_length"),
+                "poly_order": parameters.get("poly_order"),
                 "pos_meta": pos_meta_json,
             },
             inputs={**input_dict},

@@ -242,6 +242,8 @@
         "group_distance": "Distance",
         "group_velocity": "Velocity",
         "group_metabolic_work": "Metabolic Work",
+        "group_equivalent_distance": "Equivalent Distance",
+        "group_centroid_distance": "Centroid Distance",
         "running_distance_cumulative": "Distance [m] (cumulative)",
         "running_distance_frame": "Distance [m] (per frame)",
         "running_distance_interval": "Distance [m] (per {frames} frames)",
@@ -251,6 +253,12 @@
         "metabolic_work_cumulative": "Metabolic Work [J⋅kg<sup>-1</sup>] (cumulative)",
         "metabolic_work_frame": "Metabolic Work [J⋅kg<sup>-1</sup>] (per frame)",
         "metabolic_work_interval": "Metabolic Work [J⋅kg<sup>-1</sup>] (per {frames} frames)",
+        "equivalent_distance_cumulative": "Equiv. Distance [m] (cumulative)",
+        "equivalent_distance_frame": "Equiv. Distance [m] (per frame)",
+        "equivalent_distance_interval": "Equiv. Distance [m] (per {frames} frames)",
+        "centroid_distance_max": "Centroid Dist.<sub>max</sub> [m]",
+        "centroid_distance_frame": "Centroid Distance [m] (per frame)",
+        "centroid_distance_interval": "Centroid Distance<sub>max</sub> [m] (per {frames} frames)",
         "distance_covered": "Distance [m]",
         "velocity": "Velocity [m⋅s<sup>-1</sup>]",
         "metabolic_power": "Metabolic Power [W⋅kg<sup>-1</sup>]"
@@ -276,7 +284,10 @@
         "distance": "Distance [m]",
         "velocity": "Velocity [m⋅s<sup>-1</sup>]",
         "velocity_max": "Vel<sub>max</sub> [m⋅s<sup>-1</sup>]",
-        "metabolic_work": "Met. Work [J⋅kg<sup>-1</sup>]"
+        "metabolic_work": "Met. Work [J⋅kg<sup>-1</sup>]",
+        "equivalent_distance": "Equiv. Distance [m]",
+        "centroid_distance": "Centroid Distance [m]",
+        "centroid_distance_max": "Centroid Dist.<sub>max</sub> [m]"
       }
     }
   },
@@ -545,11 +556,18 @@
       },
       "kpi_computation": {
         "plugin_name": "KPI Computation",
-        "plugin_description": "This plugin computes a selected key performance indicator (KPI) based on the position data. The following KPIs are currently available: <br><br> <em>Distance Covered, Velocity & Metabolic Power</em>",
+        "plugin_description": "This plugin computes selected key performance indicator (KPI) based on the position data. The computation is performed using the <a href=\"https://floodlight.readthedocs.io/en/latest/index.html\">floodlight</a> package. The following KPIs are currently available: <br><br> <em>Distance Covered, Velocity, Metabolic Power, Equivalent Distance, and Distance to the Team Centroid.</em>",
         "tracking_data_id": "Select Position Data",
         "tracking_data_id_hint": "Select a position dataset to use for the computation.",
         "format": "Select the data provider",
-        "delimiter": "Delimiter"
+        "filter_type": "Smoothing Filter",
+        "filter_none": "None",
+        "filter_butterworth": "Butterworth Lowpass",
+        "filter_savgol": "Savitzky-Golay Lowpass",
+        "order": "Order (Butterworth)",
+        "Wn": "Cutoff Frequency Wn (Butterworth)",
+        "window_length": "Window Length (Savitzky-Golay)",
+        "poly_order": "Polynomial Order (Savitzky-Golay)"
       },
       "audio_waveform": {
         "plugin_name": "Audio Waveform",

@@ -1054,10 +1054,55 @@ const plugins = ref([
         ],
         optional_parameters: [
           {
-            field: "text_field",
-            name: "delimiter",
-            value: ";",
-            text: t("modal.plugin.kpi_computation.delimiter"),
+            field: "select_options",
+            name: "filter_type",
+            value: "",
+            items: [
+              { title: t("modal.plugin.kpi_computation.filter_none"), value: "" },
+              { title: t("modal.plugin.kpi_computation.filter_butterworth"), value: "butterworth_lowpass" },
+              { title: t("modal.plugin.kpi_computation.filter_savgol"), value: "savgol_lowpass" },
+            ],
+            text: t("modal.plugin.kpi_computation.filter_type"),
+          },
+          {
+            field: "slider",
+            name: "order",
+            value: 3,
+            min: 1,
+            max: 10,
+            step: 1,
+            text: t("modal.plugin.kpi_computation.order"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            name: "Wn",
+            value: 1.0,
+            min: 0.01,
+            max: 10.0,
+            step: 0.01,
+            text: t("modal.plugin.kpi_computation.Wn"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            name: "window_length",
+            value: 5,
+            min: 3,
+            max: 51,
+            step: 2,
+            text: t("modal.plugin.kpi_computation.window_length"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            name: "poly_order",
+            value: 3,
+            min: 1,
+            max: 10,
+            step: 1,
+            text: t("modal.plugin.kpi_computation.poly_order"),
+            hidden: true,
           },
         ],
       },
@@ -1065,6 +1110,27 @@ const plugins = ref([
   },
   // TODO: add extra view for all calibration plugins
 ]);
+
+// Toggle visibility of filter hyperparameters for kpi_computation based on selected filter_type
+const kpiOptionalParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 703);
+  return plugin?.optional_parameters || [];
+});
+
+watch(
+  () => kpiOptionalParams.value.find((p) => p.name === "filter_type")?.value,
+  (filterType) => {
+    for (const p of kpiOptionalParams.value) {
+      if (p.name === "order" || p.name === "Wn") {
+        p.hidden = filterType !== "butterworth_lowpass";
+      } else if (p.name === "window_length" || p.name === "poly_order") {
+        p.hidden = filterType !== "savgol_lowpass";
+      }
+    }
+  },
+  { immediate: true }
+);
 
 const pluginsSorted = computed(() => {
   return plugins.value.slice(0).sort((a, b) => a.name.localeCompare(b.name));

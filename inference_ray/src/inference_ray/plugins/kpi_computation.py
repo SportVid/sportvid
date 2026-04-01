@@ -53,14 +53,26 @@ class KpiComputation(
 
         import floodlight.io.kinexon as knx
         import floodlight.io.dfl as dfl
+        from floodlight.transforms.filter import butterworth_lowpass, savgol_lowpass
         from floodlight.models.kinematics import DistanceModel, VelocityModel
         from floodlight.models.kinetics import MetabolicPowerModel
+        from floodlight.models.geometry import CentroidModel
 
         if "format" not in parameters:
             raise ValueError("'format' is required for plugin execution.")
 
         fmt = parameters["format"]
 
+        # Load filter parameters if provided
+        filter_type = parameters.get("filter_type")  # "butterworth_lowpass", "savgol_lowpass", or None
+        filter_kwargs = {}
+        if filter_type == "butterworth_lowpass":
+                filter_kwargs["order"] = int(parameters.get("order", 3))
+                filter_kwargs["Wn"] = float(parameters.get("Wn", 1))
+        elif filter_type == "savgol_lowpass":
+                filter_kwargs["window_length"] = int(parameters.get("window_length", 5))
+                filter_kwargs["poly_order"] = int(parameters.get("poly_order", 3))
+        
         # Load posdata metadata if available
         pos_meta_raw = parameters.get("pos_meta", "")
         pos_meta = json.loads(pos_meta_raw) if pos_meta_raw else None
@@ -162,10 +174,11 @@ class KpiComputation(
         all_frame_kpis = {}  # {absolute_frame_idx: [[player_id, dist, vel, metpow], ...]}
         frame_offset = 0
 
+
         if fmt == "kinexon":
             # pos_data is List[XY], one entry per group/team (including ball if tracked).
             team_kpi_arrays = {}  # i → (df_ts_sorted, dist_arr, vel_arr, metpow_arr)
-            n_frames = None
+            n_frames = None  
 
             for i, xy_obj in enumerate(pos_data):
                 df_ts = teamsheets[i].teamsheet
@@ -173,29 +186,48 @@ class KpiComputation(
                 if gid in ball_team_ids:
                     continue
 
+                # Apply filter, if enabled
+                xy_filtered = xy_obj
+                if filter_type == "butterworth_lowpass":
+                    xy_filtered = butterworth_lowpass(xy_filtered, **filter_kwargs)
+                elif filter_type == "savgol_lowpass":
+                    xy_filtered = savgol_lowpass(xy_filtered, **filter_kwargs)
+
                 dist_mod = DistanceModel()
                 vel_mod = VelocityModel()
                 metpow_mod = MetabolicPowerModel()
+                cent_mod = CentroidModel()
 
-                dist_mod.fit(xy_obj)
-                vel_mod.fit(xy_obj)
-                metpow_mod.fit(xy_obj)
+                dist_mod.fit(xy_filtered)
+                vel_mod.fit(xy_filtered)
+                metpow_mod.fit(xy_filtered)
+                cent_mod.fit(xy_filtered)
 
-                dist_arr = np.array(dist_mod.cumulative_distance_covered()).round(2)  # (T, N)
+                dist_arr = np.array(dist_mod.distance_covered()).round(2)  # (T, N)
+                dist_cumulative_arr = np.array(dist_mod.cumulative_distance_covered()).round(2)  # (T, N)
                 vel_arr = np.array(vel_mod.velocity()).round(2)                       # (T, N)
                 metpow_arr = np.array(metpow_mod.metabolic_power()).round(2)          # (T, N)
+                metpow_cumulative_arr = np.array(metpow_mod.cumulative_metabolic_power()).round(2)  # (T, N)
+                equiv_dist_arr = np.array(metpow_mod.equivalent_distance()).round(2)          # (T, N)
+                equiv_dist_cumulative_arr = np.array(metpow_mod.cumulative_equivalent_distance()).round(2)  # (T, N)
+                cent_dist_arr = np.array(cent_mod.centroid_distance(xy_filtered)).round(2)          # (T, N)
 
-                team_kpi_arrays[i] = (df_ts.sort_values("xID").reset_index(drop=True), dist_arr, vel_arr, metpow_arr)
+                team_kpi_arrays[i] = (df_ts.sort_values("xID").reset_index(drop=True), dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr)
                 if n_frames is None:
                     n_frames = dist_arr.shape[0]
 
             if n_frames is not None:
-                for i, (df_sorted, dist_arr, vel_arr, metpow_arr) in team_kpi_arrays.items():
+                for i, (df_sorted, dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr) in team_kpi_arrays.items():
                     n_players = dist_arr.shape[1]
 
                     dist_list = dist_arr.tolist()
+                    dist_cumulative_list = dist_cumulative_arr.tolist()
                     vel_list = vel_arr.tolist()
                     metpow_list = metpow_arr.tolist()
+                    metpow_cumulative_list = metpow_cumulative_arr.tolist()
+                    equiv_dist_list = equiv_dist_arr.tolist()
+                    equiv_dist_cumulative_list = equiv_dist_cumulative_arr.tolist()
+                    cent_dist_list = cent_dist_arr.tolist()
 
                     for frame_idx in range(n_frames):
                         if frame_idx not in all_frame_kpis:
@@ -205,15 +237,26 @@ class KpiComputation(
                             pid = int(row['pid']) if row is not None and pd.notna(row['pid']) else -1
                             tid = int(row['tid']) if row is not None and pd.notna(row['tid']) else -1
                             d = dist_list[frame_idx][p]
+                            d_cum = dist_cumulative_list[frame_idx][p]
                             v = vel_list[frame_idx][p]
                             m = metpow_list[frame_idx][p]
+                            m_cum = metpow_cumulative_list[frame_idx][p]
+                            e_dist = equiv_dist_list[frame_idx][p]
+                            e_dist_cum = equiv_dist_cumulative_list[frame_idx][p]
+                            c_dist = cent_dist_list[frame_idx][p]
                             all_frame_kpis[frame_idx].append([
                                 pid,
                                 tid,
                                 None if d != d else d,
+                                None if d_cum != d_cum else d_cum,
                                 None if v != v else v,
                                 None if m != m else m,
+                                None if m_cum != m_cum else m_cum,
+                                None if e_dist != e_dist else e_dist,
+                                None if e_dist_cum != e_dist_cum else e_dist_cum,
+                                None if c_dist != c_dist else c_dist,
                             ])
+
 
         elif fmt == "dfl":
             # pos_data is Dict[half_name → Dict[team_name → XY]].
@@ -231,33 +274,51 @@ class KpiComputation(
                     if df_ts['tID'].iloc[0] in ball_team_ids:
                         continue
 
+                    # Apply filter, if enabled
+                    xy_filtered = xy_obj
+                    if filter_type == "butterworth_lowpass":
+                        xy_filtered = butterworth_lowpass(xy_filtered, **filter_kwargs)
+                    elif filter_type == "savgol_lowpass":
+                        xy_filtered = savgol_lowpass(xy_filtered, **filter_kwargs)
+
                     dist_mod = DistanceModel()
                     vel_mod = VelocityModel()
                     metpow_mod = MetabolicPowerModel()
+                    cent_mod = CentroidModel()
 
-                    dist_mod.fit(xy_obj)
-                    vel_mod.fit(xy_obj)
-                    metpow_mod.fit(xy_obj)
+                    dist_mod.fit(xy_filtered)
+                    vel_mod.fit(xy_filtered)
+                    metpow_mod.fit(xy_filtered)
+                    cent_mod.fit(xy_filtered)
 
-                    dist_arr = np.array(dist_mod.cumulative_distance_covered()).round(2)  # (T, N)
+                    dist_arr = np.array(dist_mod.distance_covered()).round(2)  # (T, N)
+                    dist_cumulative_arr = np.array(dist_mod.cumulative_distance_covered()).round(2)  # (T, N)
                     vel_arr = np.array(vel_mod.velocity()).round(2)                       # (T, N)
                     metpow_arr = np.array(metpow_mod.metabolic_power()).round(2)          # (T, N)
-
-                    team_kpi_arrays[team_name] = (dist_arr, vel_arr, metpow_arr)
+                    metpow_cumulative_arr = np.array(metpow_mod.cumulative_metabolic_power()).round(2)  # (T, N)
+                    equiv_dist_arr = np.array(metpow_mod.equivalent_distance()).round(2)          # (T, N)
+                    equiv_dist_cumulative_arr = np.array(metpow_mod.cumulative_equivalent_distance()).round(2)  # (T, N)
+                    cent_dist_arr = np.array(cent_mod.centroid_distance(xy_filtered)).round(2)          # (T, N)
+                    
+                    team_kpi_arrays[team_name] = (dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr)
                     if n_frames is None:
                         n_frames = dist_arr.shape[0]
 
                 if n_frames is None:
                     continue
 
-                for team_name, (dist_arr, vel_arr, metpow_arr) in team_kpi_arrays.items():
+                for team_name, (dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr) in team_kpi_arrays.items():
                     n_players = dist_arr.shape[1]
                     df_sorted = teamsheets[team_name].teamsheet.sort_values("xID").reset_index(drop=True)
 
                     dist_list = dist_arr.tolist()
+                    dist_cumulative_list = dist_cumulative_arr.tolist()
                     vel_list = vel_arr.tolist()
                     metpow_list = metpow_arr.tolist()
-
+                    metpow_cumulative_list = metpow_cumulative_arr.tolist()
+                    equiv_dist_list = equiv_dist_arr.tolist()
+                    equiv_dist_cumulative_list = equiv_dist_cumulative_arr.tolist()
+                    cent_dist_list = cent_dist_arr.tolist()
                     for frame_idx in range(n_frames):
                         abs_frame = frame_offset + frame_idx
                         if abs_frame not in all_frame_kpis:
@@ -267,14 +328,24 @@ class KpiComputation(
                             pid = int(row['pid']) if row is not None and pd.notna(row['pid']) else -1
                             tid = int(row['tid']) if row is not None and pd.notna(row['tid']) else -1
                             d = dist_list[frame_idx][p]
+                            d_cum = dist_cumulative_list[frame_idx][p]
                             v = vel_list[frame_idx][p]
                             m = metpow_list[frame_idx][p]
+                            m_cum = metpow_cumulative_list[frame_idx][p]
+                            e_dist = equiv_dist_list[frame_idx][p]
+                            e_dist_cum = equiv_dist_cumulative_list[frame_idx][p]
+                            c_dist = cent_dist_list[frame_idx][p]
                             all_frame_kpis[abs_frame].append([
                                 pid,
                                 tid,
                                 None if d != d else d,
+                                None if d_cum != d_cum else d_cum,
                                 None if v != v else v,
                                 None if m != m else m,
+                                None if m_cum != m_cum else m_cum,
+                                None if e_dist != e_dist else e_dist,
+                                None if e_dist_cum != e_dist_cum else e_dist_cum,
+                                None if c_dist != c_dist else c_dist,
                             ])
 
                 frame_offset += n_frames
@@ -290,7 +361,7 @@ class KpiComputation(
         if pos_meta:
             meta = {
                 "format": fmt,
-                "kpi_names": ["distance_covered", "velocity", "metabolic_power"],
+                "kpi_names": ["distance_covered", "cumulative_distance_covered", "velocity", "metabolic_power", "cumulative_metabolic_power", "equivalent_distance", "cumulative_equivalent_distance", "centroid_distance"],
                 "player_ids": pos_meta["player_ids"],
                 "team_ids": pos_meta["team_ids"],
                 "framerate": framerate,
@@ -322,7 +393,7 @@ class KpiComputation(
                             fallback_player_ids[str(row["pid"])] = {"id": str(row["pID"])}
             meta = {
                 "format": fmt,
-                "kpi_names": ["distance_covered", "velocity", "metabolic_power"],
+                "kpi_names": ["distance_covered", "cumulative_distance_covered", "velocity", "metabolic_power", "cumulative_metabolic_power", "equivalent_distance", "cumulative_equivalent_distance", "centroid_distance"],
                 "player_ids": fallback_player_ids,
                 "team_ids": fallback_team_ids,
                 "framerate": framerate,

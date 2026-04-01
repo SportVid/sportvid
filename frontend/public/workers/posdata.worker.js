@@ -449,14 +449,17 @@ function handleKpiAggregation(id, msg) {
     for (var j = 0; j < players.length; j++) {
       var pid = players[j][0];
       var tid = players[j][1];
-      var dist = players[j][2];
-      var vel = players[j][3];
-      var metpow = players[j][4];
+      // New format: [pid, tid, dist_inc, dist_cum, vel, metpow, metpow_cum, equiv_dist_inc, equiv_dist_cum, cent_dist]
+      var dist_inc = players[j][2];
+      var vel = players[j][4];
+      var metpow = players[j][5];
+      var equiv_dist_inc = players[j][7];
+      var cent_dist = players[j][9];
 
       if (!pidSet[pid]) continue;
 
       if (!playerData[pid]) {
-        playerData[pid] = { tid: tid, prevDist: null, totalDist: 0, velocities: [], metpows: [] };
+        playerData[pid] = { tid: tid, totalDist: 0, velocities: [], metpows: [], totalEquivDist: 0, centDistances: [] };
       }
       var data = playerData[pid];
 
@@ -464,18 +467,12 @@ function handleKpiAggregation(id, msg) {
       var pp = posMap[pid];
       var inZone = pp ? isInAnyZone(pp[3], pp[4], zones) : true;
 
-      // Accumulate incremental distance only when in zone
-      if (dist != null && dist === dist) { // NaN check
-        if (data.prevDist !== null && inZone) {
-          var inc = dist - data.prevDist;
-          if (inc > 0) data.totalDist += inc;
-        }
-        data.prevDist = dist;
-      }
-
       if (inZone) {
+        if (dist_inc != null && dist_inc === dist_inc && dist_inc > 0) data.totalDist += dist_inc;
+        if (equiv_dist_inc != null && equiv_dist_inc === equiv_dist_inc && equiv_dist_inc > 0) data.totalEquivDist += equiv_dist_inc;
         if (vel != null && vel === vel) data.velocities.push(vel);
         if (metpow != null && metpow === metpow) data.metpows.push(metpow);
+        if (cent_dist != null && cent_dist === cent_dist) data.centDistances.push(cent_dist);
       }
     }
   }
@@ -504,6 +501,15 @@ function handleKpiAggregation(id, msg) {
       metabolic_work = parseFloat((sum * dt).toFixed(1));
     }
 
+    var centroid_distance_max = null;
+    if (d.centDistances.length > 0) {
+      var maxCent = d.centDistances[0];
+      for (var ci = 1; ci < d.centDistances.length; ci++) {
+        if (d.centDistances[ci] > maxCent) maxCent = d.centDistances[ci];
+      }
+      centroid_distance_max = parseFloat(maxCent.toFixed(2));
+    }
+
     var parsedPid = typeof rpid === "string" && !isNaN(rpid) ? parseInt(rpid) : rpid;
 
     result.push({
@@ -512,6 +518,8 @@ function handleKpiAggregation(id, msg) {
       distance: d.totalDist > 0 ? parseFloat(d.totalDist.toFixed(1)) : null,
       velocity_max: velocity_max,
       metabolic_work: metabolic_work,
+      equivalent_distance: d.totalEquivDist > 0 ? parseFloat((d.totalEquivDist / kpiFramerate).toFixed(1)) : null,
+      centroid_distance_max: centroid_distance_max,
     });
   }
 
