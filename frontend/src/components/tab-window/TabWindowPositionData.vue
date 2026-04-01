@@ -603,10 +603,12 @@ onBeforeUnmount(() => {
 });
 
 const includedPlayers = ref(new Set());
+const kpiExcludedByClick = ref(new Set());
 watch(
   () => topViewStore.precomputedPlayerIdSet,
   (newSet) => {
     includedPlayers.value = new Set(newSet);
+    kpiExcludedByClick.value = new Set();
   },
   { immediate: true }
 );
@@ -618,6 +620,15 @@ const togglePlayersForKPIs = (playerId) => {
     newSet.add(playerId);
   }
   includedPlayers.value = newSet;
+};
+const togglePlayerKpiByClick = (playerId) => {
+  const newSet = new Set(kpiExcludedByClick.value);
+  if (newSet.has(playerId)) {
+    newSet.delete(playerId);
+  } else {
+    newSet.add(playerId);
+  }
+  kpiExcludedByClick.value = newSet;
 };
 
 const overlayPlayerOptions = computed(() => {
@@ -724,7 +735,7 @@ const convexHullForCurrentFrame = computed(() => {
 
   const teams = {};
   framePositions
-    .filter((position) => position[1] !== 1 && includedPlayers.value.has(position[0]))
+    .filter((position) => position[1] !== 1 && includedPlayers.value.has(position[0]) && !kpiExcludedByClick.value.has(position[0]))
     .forEach((position) => {
       const transformed = transformCoordinateToCrop(position[3], position[4], cropPct);
 
@@ -783,7 +794,7 @@ const voronoiForCurrentFrame = computed(() => {
   };
 
   const allPlayers = framePositions
-    .filter((player) => player[1] !== 1 && includedPlayers.value.has(player[0]))
+    .filter((player) => player[1] !== 1 && includedPlayers.value.has(player[0]) && !kpiExcludedByClick.value.has(player[0]))
     .map((player) => {
       const transformed = transformCoordinateToCrop(player[3], player[4], cropPct);
 
@@ -1008,7 +1019,7 @@ function onCanvasClick(event) {
       closest = t;
     }
   }
-  if (closest) togglePlayersForKPIs(closest.id);
+  if (closest) togglePlayerKpiByClick(closest.id);
 }
 
 function onCanvasMouseMove(event) {
@@ -1052,6 +1063,7 @@ watch(
     () => topViewStore.gridTransverse,
     () => visualizationStore.teamColorMapping,
     includedPlayers,
+    kpiExcludedByClick,
   ],
   () => scheduleCanvasDraw()
 );
