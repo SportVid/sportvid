@@ -112,9 +112,7 @@ watch(
 
 const tab = ref(null);
 
-const allFrameKeys = Object.keys(topViewStore.positionDataTopView)
-  .map(Number)
-  .sort((a, b) => a - b);
+const allFrameKeys = topViewStore.sortedFrameKeys;
 
 const exportFormats = ref([
   {

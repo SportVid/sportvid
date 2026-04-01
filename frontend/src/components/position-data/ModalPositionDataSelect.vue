@@ -243,9 +243,7 @@ const isButtonDisabled = computed(() => {
 const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId, areaSize) => {
   if (selectedMode.value === "bytetrack") {
     topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
-    const keys = Object.keys(topViewStore.positionDataTopView)
-      .map(Number)
-      .sort((a, b) => a - b);
+    const keys = topViewStore.sortedFrameKeys;
     if (keys.length > 0) {
       positionDataStore.setSelectedTimeRangeStart(keys[0]);
       positionDataStore.setSelectedTimeRangeEnd(keys[keys.length - 1]);

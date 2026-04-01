@@ -39,6 +39,9 @@ self.onmessage = function (e) {
       case "EXPORT_RUNNING_DISTANCE_CSV":
         handleExportRunningDistanceCSV(id, msg);
         break;
+      case "CALC_KPI_AGGREGATION":
+        handleKpiAggregation(id, msg);
+        break;
       default:
         self.postMessage({ type: "ERROR", id: id, error: "Unknown command: " + type });
     }
@@ -396,4 +399,121 @@ function handleExportRunningDistanceCSV(id, msg) {
   }
 
   self.postMessage({ type: "EXPORT_RESULT", id: id, data: csvHeader + "\n" + rows.join("\n") });
+}
+
+// ---------------------------------------------------------------------------
+// KPI Aggregation
+// ---------------------------------------------------------------------------
+
+function handleKpiAggregation(id, msg) {
+  var kpiData = msg.kpiData;
+  var posData = msg.posData;
+  var playerIds = msg.playerIds;
+  var startMs = msg.startMs;
+  var endMs = msg.endMs;
+  var zones = msg.zones || [];
+  var kpiFramerate = msg.kpiFramerate || 25;
+
+  var pidSet = {};
+  for (var i = 0; i < playerIds.length; i++) {
+    pidSet[playerIds[i]] = true;
+  }
+
+  var frameKeys = Object.keys(kpiData).map(Number);
+  var filtered = [];
+  for (var fi = 0; fi < frameKeys.length; fi++) {
+    if (frameKeys[fi] >= startMs && frameKeys[fi] <= endMs) {
+      filtered.push(frameKeys[fi]);
+    }
+  }
+  filtered.sort(function (a, b) { return a - b; });
+
+  if (!filtered.length) {
+    self.postMessage({ type: "KPI_AGGREGATION_RESULT", id: id, data: [] });
+    return;
+  }
+
+  var playerData = {};
+
+  for (var ki = 0; ki < filtered.length; ki++) {
+    var t = filtered[ki];
+    var players = kpiData[t] || [];
+
+    // Build position lookup for zone filtering
+    var posPlayers = posData[t] || [];
+    var posMap = {};
+    for (var pi = 0; pi < posPlayers.length; pi++) {
+      posMap[posPlayers[pi][0]] = posPlayers[pi];
+    }
+
+    for (var j = 0; j < players.length; j++) {
+      var pid = players[j][0];
+      var tid = players[j][1];
+      var dist = players[j][2];
+      var vel = players[j][3];
+      var metpow = players[j][4];
+
+      if (!pidSet[pid]) continue;
+
+      if (!playerData[pid]) {
+        playerData[pid] = { tid: tid, prevDist: null, totalDist: 0, velocities: [], metpows: [] };
+      }
+      var data = playerData[pid];
+
+      // Zone check via position data
+      var pp = posMap[pid];
+      var inZone = pp ? isInAnyZone(pp[3], pp[4], zones) : true;
+
+      // Accumulate incremental distance only when in zone
+      if (dist != null && dist === dist) { // NaN check
+        if (data.prevDist !== null && inZone) {
+          var inc = dist - data.prevDist;
+          if (inc > 0) data.totalDist += inc;
+        }
+        data.prevDist = dist;
+      }
+
+      if (inZone) {
+        if (vel != null && vel === vel) data.velocities.push(vel);
+        if (metpow != null && metpow === metpow) data.metpows.push(metpow);
+      }
+    }
+  }
+
+  var dt = 1 / kpiFramerate;
+  var result = [];
+  var pids = Object.keys(playerData);
+
+  for (var ri = 0; ri < pids.length; ri++) {
+    var rpid = pids[ri];
+    var d = playerData[rpid];
+
+    var velocity_max = null;
+    if (d.velocities.length > 0) {
+      var maxVel = d.velocities[0];
+      for (var vi = 1; vi < d.velocities.length; vi++) {
+        if (d.velocities[vi] > maxVel) maxVel = d.velocities[vi];
+      }
+      velocity_max = parseFloat(maxVel.toFixed(2));
+    }
+
+    var metabolic_work = null;
+    if (d.metpows.length > 0) {
+      var sum = 0;
+      for (var mi = 0; mi < d.metpows.length; mi++) sum += d.metpows[mi];
+      metabolic_work = parseFloat((sum * dt).toFixed(1));
+    }
+
+    var parsedPid = typeof rpid === "string" && !isNaN(rpid) ? parseInt(rpid) : rpid;
+
+    result.push({
+      player_id: parsedPid,
+      team_id: d.tid,
+      distance: d.totalDist > 0 ? parseFloat(d.totalDist.toFixed(1)) : null,
+      velocity_max: velocity_max,
+      metabolic_work: metabolic_work,
+    });
+  }
+
+  self.postMessage({ type: "KPI_AGGREGATION_RESULT", id: id, data: result });
 }

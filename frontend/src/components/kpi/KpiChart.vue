@@ -110,7 +110,6 @@ function buildRawTimeSeries() {
   const start = selectedStart.value;
   const end = selectedEnd.value;
   const zones = props.selectedZones;
-  const posData = topViewStore.positionDataTopView;
   const dt = 1 / (playerStore.videoFPS || 25);
 
   const frameKeys = Object.keys(rawKpiData)
@@ -125,7 +124,7 @@ function buildRawTimeSeries() {
 
   for (const t of frameKeys) {
     const players = rawKpiData[t] || [];
-    const posPlayers = posData[t] || [];
+    const posPlayers = topViewStore.getFrameAt(t);
     const posMap = {};
     for (const p of posPlayers) posMap[p[0]] = p;
 
@@ -195,9 +194,7 @@ function toCumulative(rawMap) {
  * sums incremental distances per interval, assigns that sum to every frame in the interval.
  */
 function toWindowed(rawMap, windowSize) {
-  const allTimes = Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b);
+  const allTimes = topViewStore.sortedFrameKeys;
   const start = selectedStart.value;
   const end = selectedEnd.value;
   const fullTimeRange = allTimes.filter((t) => t >= start && t <= end);
@@ -247,7 +244,21 @@ function toWindowed(rawMap, windowSize) {
   return result;
 }
 
-const chartData = computed(() => {
+const MAX_CHART_POINTS = 3000;
+
+function strideDownsample(times, values) {
+  if (times.length <= MAX_CHART_POINTS) return { times, values };
+  const stride = Math.ceil(times.length / MAX_CHART_POINTS);
+  const t = [];
+  const v = [];
+  for (let i = 0; i < times.length; i += stride) {
+    t.push(times[i]);
+    v.push(values[i]);
+  }
+  return { times: t, values: v };
+}
+
+function buildChartTraces() {
   const rawMap = buildRawTimeSeries();
   const seriesMap =
     props.chartMode === "windowed"
@@ -257,7 +268,6 @@ const chartData = computed(() => {
       : toCumulative(rawMap);
 
   if (props.groupMode === "team") {
-    // Aggregate per team using time-keyed maps for correct alignment
     const teamMap = new Map();
     for (const [, series] of seriesMap) {
       const tid = series.team_id;
@@ -269,10 +279,8 @@ const chartData = computed(() => {
         const t = series.times[i];
         const v = series.values[i];
         if (props.selectedKpi === "velocity_max") {
-          // Take max across players
           teamData.timeValues.set(t, Math.max(teamData.timeValues.get(t) ?? 0, v));
         } else {
-          // Sum across players
           teamData.timeValues.set(t, (teamData.timeValues.get(t) ?? 0) + v);
         }
       }
@@ -281,10 +289,12 @@ const chartData = computed(() => {
     const traces = [];
     for (const [teamId, team] of teamMap) {
       const sortedTimes = [...team.timeValues.keys()].sort((a, b) => a - b);
+      const allValues = sortedTimes.map((t) => parseFloat((team.timeValues.get(t) || 0).toFixed(2)));
+      const { times, values } = strideDownsample(sortedTimes, allValues);
       const color = toRgb(visualizationStore.getTeamColor(teamId), 0);
       traces.push({
-        x: sortedTimes,
-        y: sortedTimes.map((t) => parseFloat((team.timeValues.get(t) || 0).toFixed(2))),
+        x: times,
+        y: values,
         type: "scatter",
         mode: "lines",
         name: getTeamName(teamId),
@@ -294,13 +304,14 @@ const chartData = computed(() => {
     }
     return traces;
   } else {
-    // Per player
     const traces = [];
     for (const [playerId, series] of seriesMap) {
+      const allValues = series.values.map((v) => parseFloat(v.toFixed(2)));
+      const { times, values } = strideDownsample(series.times, allValues);
       const color = toRgb(props.playerColors[playerId] || "#888888", 0);
       traces.push({
-        x: series.times,
-        y: series.values.map((v) => parseFloat(v.toFixed(2))),
+        x: times,
+        y: values,
         type: "scatter",
         mode: "lines",
         name: `#${getPlayerNumber(playerId)}`,
@@ -311,7 +322,9 @@ const chartData = computed(() => {
     }
     return traces;
   }
-});
+}
+
+const chartData = computed(() => buildChartTraces());
 
 const chartLayout = computed(() => ({
   xaxis: {
@@ -453,13 +466,9 @@ function animLoop() {
   animFrameId = requestAnimationFrame(animLoop);
 }
 
-watch(
-  [chartData, chartLayout],
-  () => {
-    nextTick(() => updatePlot());
-  },
-  { deep: true }
-);
+watch([chartData, chartLayout], () => {
+  nextTick(() => updatePlot());
+});
 
 watch(
   () => [selectedStart.value, selectedEnd.value],

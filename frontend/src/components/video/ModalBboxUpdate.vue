@@ -275,24 +275,17 @@ const BboxUpdateModes = ref([
 ]);
 
 const playerOptions = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
-  return [...new Set(all.map((p) => p[0]))].sort((a, b) => a - b);
+  return topViewStore.precomputedPlayerList.map((p) => p.playerId);
 });
 const playerColors = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
   const map = {};
-  all.forEach((p) => {
-    map[p[0]] = visualizationStore.getTeamColor(p[1]);
-  });
+  for (const p of topViewStore.precomputedPlayerList) {
+    map[p.playerId] = visualizationStore.getTeamColor(p.teamId);
+  }
   return map;
 });
-// const teamOptions = computed(() => {
-//   const all = Object.values(topViewStore.positionDataTopView).flat();
-//   return [...new Set(all.map((p) => p[1]))].sort((a, b) => a - b);
-// });
 const teamOptions = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
-  const existing = [...new Set(all.map((p) => p[1]))].sort((a, b) => a - b);
+  const existing = [...new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId))].sort((a, b) => a - b);
 
   let nextId = 2;
   while (existing.includes(nextId) && nextId <= 10) {
@@ -313,7 +306,8 @@ const teamOptions = computed(() => {
 });
 
 const checkPlayerId = (value) => {
-  const playerIds = topViewStore.positionDataTopView[playerStore.currentTime].map((p) => p[0]);
+  const frame = topViewStore.getFrameAt(playerStore.currentTime);
+  const playerIds = frame.map((p) => p[0]);
 
   if (!value) {
     return t("field.required");

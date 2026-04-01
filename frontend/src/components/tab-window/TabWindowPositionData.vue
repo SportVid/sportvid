@@ -1,5 +1,15 @@
 <template>
-  <PositionDataMenu v-if="Object.keys(topViewStore.positionDataTopView).length === 0" />
+  <div
+    v-if="topViewStore.sortedFrameKeys.length === 0 && posdataWorkerStore.isLoading"
+    class="posdata-loading-card"
+  >
+    <div class="posdata-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
+    <div class="posdata-loading-text">
+      {{ posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100 ? `${posdataWorkerStore.loadProgress}%` : "" }}
+    </div>
+  </div>
+
+  <PositionDataMenu v-else-if="topViewStore.sortedFrameKeys.length === 0" />
 
   <v-container v-else class="d-flex flex-column">
     <v-row justify="center">
@@ -433,6 +443,7 @@ import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useBboxesStore } from "@/stores/bboxes";
+import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { getTimecode } from "@/plugins/time";
 import { toRgb } from "@/plugins/helpers";
 import { Delaunay } from "d3-delaunay";
@@ -447,6 +458,7 @@ const topViewStore = useTopViewStore();
 const videoStore = useVideoStore();
 const visualizationStore = useVisualizationStore();
 const bboxesStore = useBboxesStore();
+const posdataWorkerStore = usePosdataWorkerStore();
 const { t } = useI18n();
 
 const _BALL_SVG = {
@@ -592,28 +604,9 @@ onBeforeUnmount(() => {
 
 const includedPlayers = ref(new Set());
 watch(
-  () => topViewStore.positionDataTopView,
-  (newVal) => {
-    // Collect unique player IDs by sampling a few frames instead of iterating all
-    const keys = Object.keys(newVal);
-    const playerIds = new Set();
-    // Sample up to 10 evenly spaced frames to find all players
-    const step = Math.max(1, Math.floor(keys.length / 10));
-    for (let i = 0; i < keys.length; i += step) {
-      const players = newVal[keys[i]];
-      if (!players) continue;
-      for (const p of players) {
-        playerIds.add(p[0]);
-      }
-    }
-    // Also check last frame
-    const lastFrame = newVal[keys[keys.length - 1]];
-    if (lastFrame) {
-      for (const p of lastFrame) {
-        playerIds.add(p[0]);
-      }
-    }
-    includedPlayers.value = playerIds;
+  () => topViewStore.precomputedPlayerIdSet,
+  (newSet) => {
+    includedPlayers.value = new Set(newSet);
   },
   { immediate: true }
 );
@@ -628,29 +621,9 @@ const togglePlayersForKPIs = (playerId) => {
 };
 
 const overlayPlayerOptions = computed(() => {
-  const posData = topViewStore.positionDataTopView;
-  const keys = Object.keys(posData);
-  if (!keys.length) return [];
-  const seen = new Map();
-  const step = Math.max(1, Math.floor(keys.length / 10));
-  for (let i = 0; i < keys.length; i += step) {
-    const players = posData[keys[i]];
-    if (!players) continue;
-    for (const p of players) {
-      if (!seen.has(p[0])) {
-        seen.set(p[0], { playerId: p[0], teamId: p[1] });
-      }
-    }
-  }
-  const last = posData[keys[keys.length - 1]];
-  if (last) {
-    for (const p of last) {
-      if (!seen.has(p[0])) {
-        seen.set(p[0], { playerId: p[0], teamId: p[1] });
-      }
-    }
-  }
-  return Array.from(seen.values()).sort((a, b) => a.teamId - b.teamId || a.playerId - b.playerId);
+  return [...topViewStore.precomputedPlayerList].sort(
+    (a, b) => a.teamId - b.teamId || a.playerId - b.playerId
+  );
 });
 
 const overlayTeamGroups = computed(() => {
@@ -744,9 +717,8 @@ const convexHullForCurrentFrame = computed(() => {
   if (!topViewStore.topViewSize || !topViewStore.positionDataTopView) {
     return {};
   }
-  const frameKey = topViewStore.currentFrameKey;
-  const framePositions = topViewStore.positionDataTopView[frameKey];
-  if (!framePositions) return {};
+  const framePositions = topViewStore.currentFramePlayers;
+  if (!framePositions || !framePositions.length) return {};
 
   const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop;
 
@@ -802,9 +774,8 @@ const voronoiForCurrentFrame = computed(() => {
   if (!topViewStore.topViewSize || !topViewStore.positionDataTopView) {
     return [];
   }
-  const frameKey = topViewStore.currentFrameKey;
-  const framePositions = topViewStore.positionDataTopView[frameKey];
-  if (!framePositions) return [];
+  const framePositions = topViewStore.currentFramePlayers;
+  if (!framePositions || !framePositions.length) return [];
 
   const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
     x: [0, 1],
@@ -830,9 +801,8 @@ const voronoiForCurrentFrame = computed(() => {
 const positionDataForCurrentFrame = computed(() => {
   if (!topViewStore.positionDataTopView) return [];
 
-  const frameKey = topViewStore.currentFrameKey;
-  const framePositions = topViewStore.positionDataTopView[frameKey];
-  if (!framePositions) return [];
+  const framePositions = topViewStore.currentFramePlayers;
+  if (!framePositions || !framePositions.length) return [];
 
   const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
     x: [0, 1],
@@ -968,9 +938,8 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
   }
 
   // Draw players and ball
-  const frameKey = topViewStore.currentFrameKey;
-  const framePositions = topViewStore.positionDataTopView[frameKey];
-  if (!framePositions) return;
+  const framePositions = topViewStore.currentFramePlayers;
+  if (!framePositions || !framePositions.length) return;
 
   // Store positions for click hit-testing
   if (!offscreenCanvas) _playerHitTargets.length = 0;
@@ -1231,6 +1200,25 @@ async function saveScreenshot() {
 </script>
 
 <style scoped>
+.posdata-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 25vh;
+}
+
+.posdata-spinner {
+  font-size: 48px;
+  color: rgb(var(--v-theme-primary));
+}
+
+.posdata-loading-text {
+  margin-top: 10px;
+  font-size: 18px;
+  color: rgb(var(--v-theme-primary));
+}
+
 .visualizer-image {
   display: block;
   max-width: 100%;

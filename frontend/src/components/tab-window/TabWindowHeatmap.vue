@@ -1,6 +1,16 @@
 <template>
+  <div
+    v-if="!hasPositionData && posdataWorkerStore.isLoading"
+    class="heatmap-loading-card"
+  >
+    <div class="heatmap-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
+    <div class="heatmap-loading-text">
+      {{ posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100 ? `${posdataWorkerStore.loadProgress}%` : "" }}
+    </div>
+  </div>
+
   <v-row
-    v-if="!hasPositionData"
+    v-else-if="!hasPositionData"
     class="text-h6 text-grey font-weight-light mx-16 px-10"
     style="
       align-items: center;
@@ -272,50 +282,16 @@ onBeforeUnmount(() => {
 const allFrameKeys = computed(() => topViewStore.sortedFrameKeys);
 
 const selectHalftime = (half) => {
-  const entries = Object.entries(topViewStore.positionDataTopView);
-  let first = null;
-  let last = null;
-  for (const [timeKey, players] of entries) {
-    const t = Number(timeKey);
-    if (players.some((p) => p[2] === half)) {
-      if (first === null || t < first) first = t;
-      if (last === null || t > last) last = t;
-    }
-  }
-  if (first !== null && last !== null) {
-    positionDataStore.setSelectedTimeRangeStart(first);
-    positionDataStore.setSelectedTimeRangeEnd(last);
+  const b = topViewStore.precomputedHalftimeBoundaries[half];
+  if (b) {
+    positionDataStore.setSelectedTimeRangeStart(b.first);
+    positionDataStore.setSelectedTimeRangeEnd(b.last);
   }
 };
 
 const selectedPlayerIds = ref([]);
 
-const playerOptions = computed(() => {
-  // Sample a few frames to find all players (avoids iterating all ~135k frames)
-  const keys = Object.keys(topViewStore.positionDataTopView);
-  if (!keys.length) return [];
-  const seen = new Map();
-  const step = Math.max(1, Math.floor(keys.length / 10));
-  for (let i = 0; i < keys.length; i += step) {
-    const players = topViewStore.positionDataTopView[keys[i]];
-    if (!players) continue;
-    for (const p of players) {
-      if (p[1] !== 1 && !seen.has(p[0])) {
-        seen.set(p[0], { playerId: p[0], teamId: p[1] });
-      }
-    }
-  }
-  // Also check last frame
-  const last = topViewStore.positionDataTopView[keys[keys.length - 1]];
-  if (last) {
-    for (const p of last) {
-      if (p[1] !== 1 && !seen.has(p[0])) {
-        seen.set(p[0], { playerId: p[0], teamId: p[1] });
-      }
-    }
-  }
-  return Array.from(seen.values()).sort((a, b) => a.playerId - b.playerId);
-});
+const playerOptions = computed(() => topViewStore.precomputedPlayerList);
 
 const playerColors = computed(() => {
   const map = {};
@@ -378,8 +354,7 @@ const getTeamName = (teamId) => {
 const selectedPositions = ref([]);
 
 const triggerHeatmapCalc = debounce(async () => {
-  const posData = toRaw(topViewStore.positionDataTopView);
-  if (!posData || !Object.keys(posData).length || selectedPlayerIds.value.length === 0) {
+  if (!topViewStore.positionDataTopView || selectedPlayerIds.value.length === 0) {
     selectedPositions.value = [];
     return;
   }
@@ -388,11 +363,14 @@ const triggerHeatmapCalc = debounce(async () => {
     ? { x: [rawCrop.x[0], rawCrop.x[1]], y: [rawCrop.y[0], rawCrop.y[1]] }
     : { x: [0, 1], y: [0, 1] };
   try {
+    const start = positionDataStore.selectedTimeRange.start;
+    const end = positionDataStore.selectedTimeRange.end;
+    const posData = topViewStore.getSubsetObject(start, end);
     const result = await posdataWorkerStore.calcHeatmapPoints(
       posData,
       selectedPlayerIds.value,
-      positionDataStore.selectedTimeRange.start,
-      positionDataStore.selectedTimeRange.end,
+      start,
+      end,
       cropPct
     );
     selectedPositions.value = result;
@@ -603,6 +581,25 @@ async function saveScreenshot() {
 </script>
 
 <style scoped>
+.heatmap-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 25vh;
+}
+
+.heatmap-spinner {
+  font-size: 48px;
+  color: rgb(var(--v-theme-primary));
+}
+
+.heatmap-loading-text {
+  margin-top: 10px;
+  font-size: 18px;
+  color: rgb(var(--v-theme-primary));
+}
+
 .visualizer-image {
   display: block;
   max-width: 100%;

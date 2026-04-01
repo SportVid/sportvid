@@ -663,8 +663,7 @@ watch(
 onBeforeUnmount(() => {
   positionDataStore.positionDataId = null;
   positionDataStore.selectedTimeRange = { start: 0, end: 0 };
-  topViewStore.positionDataTopView = {};
-  topViewStore.metaDataTopView = {};
+  topViewStore.setPositionData(null, {});
   bboxesStore.bboxDataInterpolated = {};
 });
 
@@ -723,12 +722,13 @@ watch(
 
 .spinner {
   font-size: 48px;
-  color: #ac1414;
+  color: rgb(var(--v-theme-primary));
 }
 
 .loading-text {
   margin-top: 10px;
   font-size: 18px;
+  color: rgb(var(--v-theme-primary));
 }
 
 .calibration-close-btn {

@@ -58,7 +58,12 @@ export const usePositionDataStore = defineStore(
       // 1. Try in-memory cache (instant, no network)
       const cached = workerStore.getCached(id);
       if (cached) {
-        topViewStore.setPositionData(cached.posData, cached.metaData);
+        topViewStore.setPositionData(cached.compact, cached.metaData, {
+          playerList: cached.playerList,
+          playerIdSet: cached.playerIdSet,
+          gameSections: cached.gameSections,
+          halftimeBoundaries: cached.halftimeBoundaries,
+        });
         setTimeRangeToFullMatch();
         return;
       }
@@ -66,7 +71,12 @@ export const usePositionDataStore = defineStore(
       // 2. Chunk-load from backend (progressive, with progress bar)
       const result = await workerStore.loadChunked(id, playerStore.videoId);
       if (result) {
-        topViewStore.setPositionData(result.posData, result.metaData);
+        topViewStore.setPositionData(result.compact, result.metaData, {
+          playerList: result.playerList,
+          playerIdSet: result.playerIdSet,
+          gameSections: result.gameSections,
+          halftimeBoundaries: result.halftimeBoundaries,
+        });
         setTimeRangeToFullMatch();
       }
     };
@@ -138,7 +148,7 @@ export const usePositionDataStore = defineStore(
             !positionDataList.value.find((d) => d.id === positionDataId.value)
           ) {
             positionDataId.value = null;
-            topViewStore.setPositionData({}, {});
+            topViewStore.setPositionData(null, {});
           }
         }
       } catch (error) {
@@ -158,15 +168,16 @@ export const usePositionDataStore = defineStore(
     function calculateRunningDistances(selectedPlayerIds, startFrame, endFrame, zones = []) {
       const distancesByPlayerId = new Map();
 
-      const allTimes = Object.keys(topViewStore.positionDataTopView).map(Number);
+      // Use pre-sorted frame keys instead of creating new 135k-element array
+      const allTimes = topViewStore.sortedFrameKeys;
 
       const timeRange = allTimes.filter((t) => t >= startFrame && t <= endFrame);
 
       const allPlayersSet = new Map();
 
-      for (const frame of allTimes) {
-        const players = topViewStore.positionDataTopView[frame];
-        if (!players) continue;
+      for (let ti = 0; ti < allTimes.length; ti++) {
+        const players = topViewStore.getFrameAt(allTimes[ti]);
+        if (!players || !players.length) continue;
         for (const p of players) {
           if (p[1] === 1) continue;
           if (
@@ -190,14 +201,18 @@ export const usePositionDataStore = defineStore(
           const tPrev = timeRange[i - 1];
           const tCurr = timeRange[i];
 
-          const playersPrev = topViewStore.positionDataTopView[tPrev];
-          const playersCurr = topViewStore.positionDataTopView[tCurr];
+          const playersPrev = topViewStore.getFrameAt(tPrev);
+          const playersCurr = topViewStore.getFrameAt(tCurr);
           if (!playersPrev || !playersCurr) continue;
+
+          // Build Map lookup for prev frame instead of O(n) .find() per player
+          const prevMap = new Map();
+          for (const p of playersPrev) prevMap.set(p[0], p);
 
           for (const currPlayer of playersCurr) {
             if (currPlayer[1] === 1) continue;
 
-            const prevPlayer = playersPrev.find((p) => p[0] === currPlayer[0]);
+            const prevPlayer = prevMap.get(currPlayer[0]);
             if (!prevPlayer) continue;
             if (!isInAnyZone(currPlayer[3], currPlayer[4], zones)) continue;
 
@@ -283,7 +298,7 @@ export const usePositionDataStore = defineStore(
     async function restoreFromCache() {
       const id = positionDataId.value;
       if (!id) return;
-      if (Object.keys(topViewStore.positionDataTopView).length > 0) return;
+      if (topViewStore.sortedFrameKeys.length > 0) return;
       isRestoringPosData.value = true;
       try {
         await loadPositionData(id);

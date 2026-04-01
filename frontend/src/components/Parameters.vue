@@ -553,9 +553,7 @@ const scalar_timelines = computed(() => {
 
 const positionDataTeams = computed(() => {
   const teams = new Set(
-    Object.values(topViewStore.positionDataTopView)
-      .flat()
-      .map((pos) => pos[1])
+    topViewStore.precomputedPlayerList.map((p) => p.teamId)
   );
 
   if (teams.size === 0) {
