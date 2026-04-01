@@ -1,7 +1,10 @@
 services:
   inference_ray:
-    image: ghcr.io/astral-sh/uv:debian
-
+    build: .
+    
+    init: true
+    shm_size: "2g" # TODO: should be 30% of total available memory?
+    
     environment:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
