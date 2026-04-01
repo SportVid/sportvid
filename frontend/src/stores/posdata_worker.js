@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
-import { fromPosDataObject } from "./compact_posdata";
+import { fromPosDataObject } from "../plugins/compact_posdata";
 
 /**
  * Module-level in-memory cache: trackingDataId -> { posData, metaData }

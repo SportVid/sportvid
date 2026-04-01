@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePlayerStore } from "@/stores/player";
-import { fromPosDataObject } from "./compact_posdata";
+import { fromPosDataObject } from "../plugins/compact_posdata";
 
 export const useTopViewStore = defineStore(
   "top_view",
