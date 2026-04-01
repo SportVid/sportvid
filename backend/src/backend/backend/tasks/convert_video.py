@@ -95,7 +95,7 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
 
 
 @shared_task(bind=True)
-def convert_video(self, video_id_hex, original_ext, analyzers=None):
+def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
     try:
         video_db = Video.objects.get(id=video_id_hex)
         output_dir = media_dir_to_file(video_id_hex)

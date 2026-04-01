@@ -23,7 +23,7 @@ from backend.models import Video
 
 from utils.video_converter import convert_to_hls
 from utils.helper import remove_file, remove_dir
-from backend.tasks.convert_video import convert_video
+from backend.tasks.convert_video import convert_video_to_hls, convert_video_to_fmp4
 
 
 logger = logging.getLogger(__name__)
@@ -108,8 +108,8 @@ class VideoUpload(View):
                 except Exception:
                     analyers = []
 
-                # pass original ext (e.g., .mp4) to the task
-                convert_video.apply_async((video_db.id.hex, ext, analyers))
+                convert_video_to_fmp4.apply_async((video_db.id.hex, ext, analyers))
+                # convert_video_to_hls.apply_async((video_db.id.hex, ext, analyers))
 
                 request.user.used_storage_size += request.FILES["file"].size
                 request.user.save()
