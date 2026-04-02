@@ -43,10 +43,17 @@ const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
 
 const kpiLabel = computed(() => {
   if (props.selectedKpi === "running_distance") return t("visualization.kpi.kpi_label.distance");
-  if (props.selectedKpi === "velocity") return t("visualization.kpi.kpi_label.velocity");
+  if (props.selectedKpi === "velocity") {
+    if (props.chartMode === "windowed") return t("visualization.kpi.kpi_label.velocity_max");
+    return t("visualization.kpi.kpi_label.velocity");
+  }
   if (props.selectedKpi === "velocity_max") return t("visualization.kpi.kpi_label.velocity_max");
-  if (props.selectedKpi === "metabolic_work")
-    return t("visualization.kpi.kpi_label.metabolic_work");
+  if (props.selectedKpi === "metabolic_work") return t("visualization.kpi.kpi_label.metabolic_work");
+  if (props.selectedKpi === "equivalent_distance") return t("visualization.kpi.kpi_label.equivalent_distance");
+  if (props.selectedKpi === "centroid_distance") {
+    if (props.chartMode === "windowed") return t("visualization.kpi.kpi_label.centroid_distance_max");
+    return t("visualization.kpi.kpi_label.centroid_distance");
+  }
   return props.selectedKpi;
 });
 
@@ -56,6 +63,8 @@ const kpiUnit = computed(() => {
     velocity_max: "m/s",
     velocity: "m/s",
     metabolic_work: "J/kg",
+    equivalent_distance: "m",
+    centroid_distance: "m",
   };
   return units[props.selectedKpi] || "";
 });
@@ -120,7 +129,6 @@ function buildRawTimeSeries() {
   if (frameKeys.length < 2) return new Map();
 
   const playerSeries = new Map();
-  const playerPrevDist = new Map();
 
   for (const t of frameKeys) {
     const players = rawKpiData[t] || [];
@@ -128,7 +136,16 @@ function buildRawTimeSeries() {
     const posMap = {};
     for (const p of posPlayers) posMap[p[0]] = p;
 
-    for (const [pid, tid, dist, vel, metpow] of players) {
+    for (const p of players) {
+      // [pid, tid, dist_inc, dist_cum, vel, metpow, metpow_cum, equiv_dist_inc, equiv_dist_cum, cent_dist]
+      const pid = p[0];
+      const tid = p[1];
+      const dist_inc = p[2];
+      const vel = p[4];
+      const metpow = p[5];
+      const equiv_dist_inc = p[7];
+      const cent_dist = p[9];
+
       if (!props.selectedPlayerIds.has(pid)) continue;
 
       const pp = posMap[pid];
@@ -140,16 +157,9 @@ function buildRawTimeSeries() {
       const series = playerSeries.get(pid);
 
       if (props.selectedKpi === "running_distance") {
-        if (dist != null) {
-          const prevDist = playerPrevDist.get(pid);
-          let inc = 0;
-          if (prevDist !== undefined && inZone) {
-            inc = dist - prevDist;
-            if (inc < 0) inc = 0;
-          }
-          playerPrevDist.set(pid, dist);
+        if (dist_inc != null) {
           series.times.push(t);
-          series.values.push(inc);
+          series.values.push(inZone && dist_inc > 0 ? dist_inc : 0);
         }
       } else if (props.selectedKpi === "velocity_max" || props.selectedKpi === "velocity") {
         if (vel != null && inZone) {
@@ -160,6 +170,16 @@ function buildRawTimeSeries() {
         if (metpow != null && inZone) {
           series.times.push(t);
           series.values.push(metpow * dt);
+        }
+      } else if (props.selectedKpi === "equivalent_distance") {
+        if (equiv_dist_inc != null) {
+          series.times.push(t);
+          series.values.push(inZone && equiv_dist_inc > 0 ? equiv_dist_inc : 0);
+        }
+      } else if (props.selectedKpi === "centroid_distance") {
+        if (cent_dist != null) {
+          series.times.push(t);
+          series.values.push(cent_dist);
         }
       }
     }
@@ -174,7 +194,7 @@ function buildRawTimeSeries() {
  * - velocity_max: keep per-frame values as-is (velocity profile over time)
  */
 function toCumulative(rawMap) {
-  if (props.selectedKpi === "velocity_max" || props.selectedKpi === "velocity") return rawMap;
+  if (props.selectedKpi === "velocity_max" || props.selectedKpi === "velocity" || props.selectedKpi === "centroid_distance") return rawMap;
 
   const result = new Map();
   for (const [pid, series] of rawMap) {
@@ -219,7 +239,7 @@ function toWindowed(rawMap, windowSize) {
     for (const t of fullTimeRange) {
       const idx = Math.floor((t - rangeStart) / windowSize);
       const v = valLookup.get(t) || 0;
-      if (props.selectedKpi === "velocity") {
+      if (props.selectedKpi === "velocity" || props.selectedKpi === "centroid_distance") {
         intervalSums.set(idx, Math.max(intervalSums.get(idx) ?? 0, v));
       } else {
         intervalSums.set(idx, (intervalSums.get(idx) || 0) + v);

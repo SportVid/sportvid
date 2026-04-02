@@ -268,7 +268,7 @@ export const useTopViewStore = defineStore(
     // Whether the current positionDataTopView is a CompactPositionData instance
     const _isCompact = ref(false);
 
-    function transformBBoxToPositionDataTopView(
+    async function transformBBoxToPositionDataTopView(
       calibrationAssetId,
       bytetrackPluginId,
       updatedBboxes = null
@@ -279,7 +279,7 @@ export const useTopViewStore = defineStore(
         bboxesStore.bboxDataActive = updatedBboxes;
         bboxesStore.bboxDataLoaded = true;
       } else {
-        bboxesStore.loadBboxData(bytetrackPluginId);
+        await bboxesStore.loadBboxData(bytetrackPluginId);
       }
 
       if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
@@ -509,7 +509,11 @@ export const useTopViewStore = defineStore(
           positionDataTopView.value = posDataOrCompact || null;
           _isCompact.value = false;
 
-          if (posDataOrCompact && typeof posDataOrCompact === "object" && Object.keys(posDataOrCompact).length) {
+          if (
+            posDataOrCompact &&
+            typeof posDataOrCompact === "object" &&
+            Object.keys(posDataOrCompact).length
+          ) {
             // Single-pass scan to precompute metadata (reuses fromPosDataObject but
             // we only keep the metadata, not the compact instance, to avoid double storage)
             const result = fromPosDataObject(posDataOrCompact);

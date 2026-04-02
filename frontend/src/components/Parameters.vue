@@ -1,6 +1,6 @@
 <template>
   <div>
-    <template v-for="parameter in parameters">
+    <template v-for="parameter in parameters.filter((p) => !p.hidden)">
       <v-text-field
         v-model="parameter.value"
         :label="parameter.text"
@@ -30,7 +30,7 @@
       />
 
       <div v-if="parameter.field == 'select_calibration'" :key="parameter.name">
-        <div class="d-flex ga-2 mb-6">
+        <div v-if="!parameter.dlt" class="d-flex ga-2 mb-6">
           <v-btn
             variant="outlined"
             prepend-icon="mdi-plus"
@@ -67,7 +67,11 @@
 
       <v-select
         v-model="parameter.value"
-        :items="trackingDatasets"
+        :items="
+          parameter.format_filter
+            ? trackingDatasets.filter((d) => d.file_type === parameter.format_filter)
+            : trackingDatasets
+        "
         :label="parameter.text"
         :hint="parameter.hint"
         item-title="name"
@@ -77,6 +81,21 @@
         persistent-hint
         variant="underlined"
         class="mb-4"
+      />
+
+      <v-select
+        v-model="parameter.value"
+        :items="bytetrackRuns"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_bytetrack_run'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+        class="mb-4"
+        :no-data-text="$t('modal.plugin.kpi_computation.bytetrack_run_none')"
       />
 
       <v-select
@@ -411,6 +430,7 @@
           :hint="parameter.hint"
           thumb-label="always"
           persistent-hint
+          class="mt-4"
         />
       </div>
 
@@ -487,6 +507,8 @@ import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCal
 import { useExportStore } from "@/stores/export";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
+import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePlayerStore } from "@/stores/player";
 
 const timelineStore = useTimelineStore();
 const calibrationAssetStore = useCalibrationAssetStore();
@@ -494,6 +516,8 @@ const topViewStore = useTopViewStore();
 const exportStore = useExportStore();
 const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
+const pluginRunStore = usePluginRunStore();
+const playerStore = usePlayerStore();
 
 const { t } = useI18n();
 
@@ -552,9 +576,7 @@ const scalar_timelines = computed(() => {
 });
 
 const positionDataTeams = computed(() => {
-  const teams = new Set(
-    topViewStore.precomputedPlayerList.map((p) => p.teamId)
-  );
+  const teams = new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId));
 
   if (teams.size === 0) {
     return;
@@ -684,6 +706,28 @@ const calibrationAssets = computed(() => {
 
 const trackingDatasets = computed(() => {
   return Object.values(positionDataStore.positionDataList);
+});
+
+const formatLocalDate = (dateString) => {
+  if (!dateString) return "";
+  let isoString = dateString.replace(" ", "T");
+  if (!isoString.endsWith("Z")) {
+    isoString += "Z";
+  }
+  const date = new Date(isoString);
+  const isoDate = date.toISOString().slice(0, 10);
+  const localTime = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return `${isoDate} ${localTime}`;
+};
+
+const bytetrackRuns = computed(() => {
+  return pluginRunStore
+    .forVideo(playerStore.videoId)
+    .filter((e) => e.type === "bytetrack" && e.status === "DONE")
+    .map((e) => ({
+      id: e.id,
+      name: formatLocalDate(e.date),
+    }));
 });
 
 onMounted(() => {

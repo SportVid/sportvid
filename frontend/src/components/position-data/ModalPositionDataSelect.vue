@@ -240,14 +240,15 @@ const isButtonDisabled = computed(() => {
   return true;
 });
 
-const confirmSelection = (calibrationAssetId, bytetrackPluginId, positionDataId, areaSize) => {
+const confirmSelection = async (calibrationAssetId, bytetrackPluginId, positionDataId, areaSize) => {
   if (selectedMode.value === "bytetrack") {
-    topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
+    await topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
     const keys = topViewStore.sortedFrameKeys;
     if (keys.length > 0) {
       positionDataStore.setSelectedTimeRangeStart(keys[0]);
       positionDataStore.setSelectedTimeRangeEnd(keys[keys.length - 1]);
     }
+    visualizationStore.loadKpiData(bytetrackPluginId);
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
     visualizationStore.loadKpiData(positionDataId);

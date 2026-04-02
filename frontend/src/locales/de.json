@@ -182,6 +182,8 @@
         "group_distance": "Distanz",
         "group_velocity": "Geschwindigkeit",
         "group_metabolic_work": "Metabolische Arbeit",
+        "group_equivalent_distance": "Äquivalente Distanz",
+        "group_centroid_distance": "Zentroiddistanz",
         "running_distance_cumulative": "Laufdistanz [m] (kumulativ)",
         "running_distance_frame": "Laufdistanz [m] (pro Frame)",
         "running_distance_interval": "Laufdistanz [m] (pro {frames} Frames)",
@@ -191,6 +193,12 @@
         "metabolic_work_cumulative": "Met. Arbeit [J⋅kg<sup>-1</sup>] (kumulativ)",
         "metabolic_work_frame": "Met. Arbeit [J⋅kg<sup>-1</sup>] (pro Frame)",
         "metabolic_work_interval": "Met. Arbeit [J⋅kg<sup>-1</sup>] (pro {frames} Frames)",
+        "equivalent_distance_cumulative": "Äquiv. Distanz [m] (kumulativ)",
+        "equivalent_distance_frame": "Äquiv. Distanz [m] (pro Frame)",
+        "equivalent_distance_interval": "Äquiv. Distanz [m] (pro {frames} Frames)",
+        "centroid_distance_max": "Zentroiddist.<sub>max</sub> [m]",
+        "centroid_distance_frame": "Zentroiddistanz [m] (pro Frame)",
+        "centroid_distance_interval": "Zentroiddistanz<sub>max</sub> [m] (pro {frames} Frames)",
         "distance_covered": "Distanz [m]",
         "velocity": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
         "metabolic_power": "Metabolische Leistung [W⋅kg<sup>-1</sup>]"
@@ -217,7 +225,10 @@
         "distance": "Distanz [m]",
         "velocity": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
         "velocity_max": "V<sub>max</sub> [m⋅s<sup>-1</sup>]",
-        "metabolic_work": "Met. Arbeit [J⋅kg<sup>-1</sup>]"
+        "metabolic_work": "Met. Arbeit [J⋅kg<sup>-1</sup>]",
+        "equivalent_distance": "Äquiv. Distanz [m]",
+        "centroid_distance": "Zentroiddistanz [m]",
+        "centroid_distance_max": "Zentroiddist.<sub>max</sub> [m]"
       }
     }
   },
@@ -476,6 +487,21 @@
         "timeline_name": "Calibration Static DLT",
         "calibration_id": "Kalibrierungs-Asset auswählen",
         "calibration_id_hint": "Wählen Sie ein Kalibrierungs-Asset zur Verwendung bei der Kalibrierung aus."
+      },
+      "kpi_computation": {
+        "plugin_name": "KPI-Berechnung",
+        "plugin_description": "Dieses Plugin berechnet ausgewählte Key Performance Indicators (KPIs) auf Basis der Positionsdaten. Die Berechnung erfolgt mithilfe des <a href=\"https://floodlight.readthedocs.io/en/latest/index.html\">floodlight</a>-Pakets. Verfügbare KPIs: <br><br> <em>Zurückgelegte Distanz, Geschwindigkeit & Metabolische Leistung</em>",
+        "tracking_data_id": "Positionsdaten auswählen",
+        "tracking_data_id_hint": "Wählen Sie einen Positionsdatensatz für die Berechnung aus.",
+        "format": "Datenanbieter auswählen",
+        "filter_type": "Glättungsfilter",
+        "filter_none": "Keiner",
+        "filter_butterworth": "Butterworth-Tiefpassfilter",
+        "filter_savgol": "Savitzky-Golay-Tiefpassfilter",
+        "order": "Ordnung (Butterworth)",
+        "Wn": "Grenzfrequenz Wn (Butterworth)",
+        "window_length": "Fensterlänge (Savitzky-Golay)",
+        "poly_order": "Polynomordnung (Savitzky-Golay)"
       },
       "audio_waveform": {
         "plugin_name": "Audio-Wellenform",

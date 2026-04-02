@@ -156,7 +156,8 @@ class TrackingData(models.Model):
     meta_ext = models.CharField(default="", max_length=256)
     date = models.DateTimeField(auto_now_add=True)
     file_type = models.CharField(default="", max_length=256)
-    
+    delimiter = models.CharField(default=";", max_length=10)
+
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         result = {
             "name": self.name,
@@ -166,7 +167,8 @@ class TrackingData(models.Model):
             "ext": self.ext,
             "meta_ext": self.meta_ext,
             "date": self.date,
-            "file_type": self.file_type
+            "file_type": self.file_type,
+            "delimiter": self.delimiter,
         }
         if include_refs_hashes:
             result["video_id"] = self.video.id.hex
