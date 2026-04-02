@@ -510,6 +510,7 @@
         "queued": "QUEUED",
         "waiting": "WAITING"
       },
+      "advanced_options": "Advanced Options",
       "timeline_name": "Timeline name",
       "shot_timeline_name": "Shot boundaries from timeline",
       "shot_timeline_hint": "Annotations are created based on shot boundaries of the selected timeline.",
@@ -556,9 +557,14 @@
       },
       "kpi_computation": {
         "plugin_name": "KPI Computation",
-        "plugin_description": "This plugin computes selected key performance indicator (KPI) based on the position data. The computation is performed using the <a href=\"https://floodlight.readthedocs.io/en/latest/index.html\">floodlight</a> package. The following KPIs are currently available: <br><br> <em>Distance Covered, Velocity, Metabolic Power, Equivalent Distance, and Distance to the Team Centroid.</em>",
+        "plugin_description": "This plugin computes selected key performance indicator (KPI) based on the position data. The computation is performed using the <a href=\"https://floodlight.readthedocs.io/en/latest/index.html\">floodlight</a> package. The following KPIs are currently available: <br><br> <em>Distance Covered, Velocity, Metabolic Power, Equivalent Distance, & Distance to the Team Centroid.</em>",
         "tracking_data_id": "Select Position Data",
         "tracking_data_id_hint": "Select a position dataset to use for the computation.",
+        "bytetrack_run_id": "Select ByteTrack Run",
+        "bytetrack_run_id_hint": "Select a completed ByteTrack run to use for the computation.",
+        "bytetrack_run_none": "No completed ByteTrack runs found.",
+        "calibration_id": "Select Calibration",
+        "calibration_id_hint": "Select the calibration asset used to map video positions to top-view coordinates.",
         "format": "Select the data provider",
         "filter_type": "Smoothing Filter",
         "filter_none": "None",

@@ -70,10 +70,11 @@
 
                 <v-expansion-panels
                   v-if="selected.optional_parameters && selected.optional_parameters.length > 0"
+                  class="mt-4"
                 >
                   <v-expansion-panel>
                     <v-expansion-panel-title expand-icon="mdi-menu-down">
-                      Advanced Options
+                      {{ $t("modal.plugin.advanced_options") }}
                     </v-expansion-panel-title>
 
                     <v-expansion-panel-text>
@@ -1038,18 +1039,39 @@ const plugins = ref([
         id: 703,
         parameters: [
           {
+            field: "select_options",
+            name: "format",
+            value: "kinexon",
+            items: [
+              ...positionDataStore.provider.map((p) => ({ title: p.name, value: p.id })),
+              { title: "SportVid (ByteTrack)", value: "sportvid" },
+            ],
+            text: t("modal.plugin.kpi_computation.format"),
+          },
+          {
             field: "select_tracking_data",
             name: "tracking_data_id",
             value: "",
             text: t("modal.plugin.kpi_computation.tracking_data_id"),
             hint: t("modal.plugin.kpi_computation.tracking_data_id_hint"),
+            format_filter: "kinexon",
           },
           {
-            field: "select_options",
-            name: "format",
-            value: "kinexon",
-            items: positionDataStore.provider.map((p) => ({ title: p.name, value: p.id })),
-            text: t("modal.plugin.kpi_computation.format"),
+            field: "select_bytetrack_run",
+            name: "bytetrack_run_id",
+            value: "",
+            text: t("modal.plugin.kpi_computation.bytetrack_run_id"),
+            hint: t("modal.plugin.kpi_computation.bytetrack_run_id_hint"),
+            hidden: true,
+          },
+          {
+            field: "select_calibration",
+            name: "calibration_id",
+            value: "",
+            text: t("modal.plugin.kpi_computation.calibration_id"),
+            hint: t("modal.plugin.kpi_computation.calibration_id_hint"),
+            hidden: true,
+            dlt: true,
           },
         ],
         optional_parameters: [
@@ -1059,7 +1081,10 @@ const plugins = ref([
             value: "",
             items: [
               { title: t("modal.plugin.kpi_computation.filter_none"), value: "" },
-              { title: t("modal.plugin.kpi_computation.filter_butterworth"), value: "butterworth_lowpass" },
+              {
+                title: t("modal.plugin.kpi_computation.filter_butterworth"),
+                value: "butterworth_lowpass",
+              },
               { title: t("modal.plugin.kpi_computation.filter_savgol"), value: "savgol_lowpass" },
             ],
             text: t("modal.plugin.kpi_computation.filter_type"),
@@ -1128,6 +1153,30 @@ watch(
         p.hidden = filterType !== "savgol_lowpass";
       }
     }
+  },
+  { immediate: true }
+);
+
+// Toggle tracking_data_id / bytetrack_run_id visibility based on format
+const kpiParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 703);
+  return plugin?.parameters || [];
+});
+
+watch(
+  () => kpiParams.value.find((p) => p.name === "format")?.value,
+  (fmt) => {
+    const trackingParam = kpiParams.value.find((p) => p.name === "tracking_data_id");
+    const bytetrackParam = kpiParams.value.find((p) => p.name === "bytetrack_run_id");
+    const calibrationParam = kpiParams.value.find((p) => p.name === "calibration_id");
+    if (trackingParam) {
+      trackingParam.hidden = fmt === "sportvid";
+      trackingParam.format_filter = fmt !== "sportvid" ? fmt : null;
+      trackingParam.value = "";
+    }
+    if (bytetrackParam) bytetrackParam.hidden = fmt !== "sportvid";
+    if (calibrationParam) calibrationParam.hidden = fmt !== "sportvid";
   },
   { immediate: true }
 );
