@@ -11,7 +11,7 @@
         </template>
       </v-toolbar>
 
-      <v-card-text>
+      <v-card-text style="overflow-y: auto">
         <v-row>
           <v-col cols="4" class="ml-n2 mr-2">
             <v-tabs direction="vertical" slider-color="primary" v-model="tab">
@@ -38,7 +38,7 @@
                 <v-card flat>
                   <v-card-title class="mb-0">{{ exportFormat.name }}</v-card-title>
 
-                  <v-card-text style="height: 290px; overflow-y: auto">
+                  <v-card-text style="height: 290px">
                     <Parameters
                       :videoIds="[playerStore.videoId]"
                       :parameters="exportFormat.parameters"

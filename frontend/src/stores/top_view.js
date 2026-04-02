@@ -469,6 +469,43 @@ export const useTopViewStore = defineStore(
       return data[timestampMs] || [];
     }
 
+    function setPositionData(posDataOrCompact, metaData, precomputed = null) {
+      metaDataTopView.value = metaData;
+
+      if (precomputed) {
+        // Compact path: data is a CompactPositionData instance with precomputed metadata
+        positionDataTopView.value = posDataOrCompact;
+        _isCompact.value = true;
+        precomputedPlayerList.value = precomputed.playerList;
+        precomputedPlayerIdSet.value = precomputed.playerIdSet;
+        precomputedGameSections.value = precomputed.gameSections;
+        precomputedHalftimeBoundaries.value = precomputed.halftimeBoundaries;
+      } else {
+        // Plain-object path (bbox data or legacy)
+        positionDataTopView.value = posDataOrCompact || null;
+        _isCompact.value = false;
+
+        if (
+          posDataOrCompact &&
+          typeof posDataOrCompact === "object" &&
+          Object.keys(posDataOrCompact).length
+        ) {
+          // Single-pass scan to precompute metadata (reuses fromPosDataObject but
+          // we only keep the metadata, not the compact instance, to avoid double storage)
+          const result = fromPosDataObject(posDataOrCompact);
+          precomputedPlayerList.value = result.playerList;
+          precomputedPlayerIdSet.value = result.playerIdSet;
+          precomputedGameSections.value = result.gameSections;
+          precomputedHalftimeBoundaries.value = result.halftimeBoundaries;
+        } else {
+          precomputedPlayerList.value = [];
+          precomputedPlayerIdSet.value = new Set();
+          precomputedGameSections.value = new Set();
+          precomputedHalftimeBoundaries.value = {};
+        }
+      }
+    }
+
     return {
       topViewSize,
       setTopViewSize,
@@ -488,47 +525,7 @@ export const useTopViewStore = defineStore(
       viewMovement,
       positionDataTopView,
       metaDataTopView,
-      /**
-       * Set position data. Accepts either:
-       * - A CompactPositionData result from posdata_worker (with precomputed metadata)
-       * - A plain object (for backward compatibility / bbox path)
-       */
-      setPositionData(posDataOrCompact, metaData, precomputed = null) {
-        metaDataTopView.value = metaData;
-
-        if (precomputed) {
-          // Compact path: data is a CompactPositionData instance with precomputed metadata
-          positionDataTopView.value = posDataOrCompact;
-          _isCompact.value = true;
-          precomputedPlayerList.value = precomputed.playerList;
-          precomputedPlayerIdSet.value = precomputed.playerIdSet;
-          precomputedGameSections.value = precomputed.gameSections;
-          precomputedHalftimeBoundaries.value = precomputed.halftimeBoundaries;
-        } else {
-          // Plain-object path (bbox data or legacy)
-          positionDataTopView.value = posDataOrCompact || null;
-          _isCompact.value = false;
-
-          if (
-            posDataOrCompact &&
-            typeof posDataOrCompact === "object" &&
-            Object.keys(posDataOrCompact).length
-          ) {
-            // Single-pass scan to precompute metadata (reuses fromPosDataObject but
-            // we only keep the metadata, not the compact instance, to avoid double storage)
-            const result = fromPosDataObject(posDataOrCompact);
-            precomputedPlayerList.value = result.playerList;
-            precomputedPlayerIdSet.value = result.playerIdSet;
-            precomputedGameSections.value = result.gameSections;
-            precomputedHalftimeBoundaries.value = result.halftimeBoundaries;
-          } else {
-            precomputedPlayerList.value = [];
-            precomputedPlayerIdSet.value = new Set();
-            precomputedGameSections.value = new Set();
-            precomputedHalftimeBoundaries.value = {};
-          }
-        }
-      },
+      setPositionData,
       transformBBoxToPositionDataTopView,
       showPlayerId,
       viewPlayerId,

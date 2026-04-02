@@ -751,7 +751,6 @@ export const useCalibrationAssetStore = defineStore(
       topViewStore.onSportChange(sport);
 
       calibrationAssetId.value = null;
-      videoObject.value = [];
       calibrationMatrixPersisted.value = [];
     };
     const loadCalibrationAssetsList = async () => {
@@ -773,7 +772,6 @@ export const useCalibrationAssetStore = defineStore(
       if (calibrationAsset) {
         calibrationAssetType.value = calibrationAsset.object_type;
         calibrationAssetObjects.value = calibrationAsset.object_data;
-        videoObject.value = calibrationAssetObjects.value.map((m) => m.videoCoordsRel);
         topViewStore.onSportChange(calibrationAsset.sport);
 
         calibrationAssetId.value = id;
@@ -791,7 +789,6 @@ export const useCalibrationAssetStore = defineStore(
         video_id: playerStore.videoId,
       };
 
-      console.log("Saving calibration asset with params:", params);
       try {
         const res = await axios.post(`${config.API_LOCATION}/calibration_assets/create`, params);
         if (res.data.status === "ok") {
@@ -876,12 +873,12 @@ export const useCalibrationAssetStore = defineStore(
 
       return { x: X / W, y: Y / W };
     }
-    const videoObject = ref([]);
+    const videoObject = computed(() => calibrationAssetObjects.value.map((m) => m.videoCoordsRel));
     const topViewObjectProjection = computed(() => {
       if (!calibrationMatrix.value) return [];
-      return videoObject.value.map((pointList) =>
-        pointList.map((p) => applyHomography(calibrationMatrix.value, p))
-      );
+      return videoObject.value
+        .filter((pointList) => pointList.some((p) => p.x !== null && p.y !== null))
+        .map((pointList) => pointList.map((p) => applyHomography(calibrationMatrix.value, p)));
     });
     const videoObjectReprojection = computed(() => {
       if (!calibrationMatrixInv.value) return [];
@@ -944,7 +941,6 @@ export const useCalibrationAssetStore = defineStore(
         "calibrationMode",
         "calibrationAssetType",
         "calibrationAssetObjects",
-        "videoObject",
         "calibrationMatrixPersisted",
       ],
       storage: sessionStorage,

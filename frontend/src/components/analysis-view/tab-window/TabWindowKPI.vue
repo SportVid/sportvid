@@ -1,11 +1,12 @@
 <template>
-  <div
-    v-if="!hasPositionData && posdataWorkerStore.isLoading"
-    class="kpi-loading-card"
-  >
+  <div v-if="!hasPositionData && posdataWorkerStore.isLoading" class="kpi-loading-card">
     <div class="kpi-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
     <div class="kpi-loading-text">
-      {{ posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100 ? `${posdataWorkerStore.loadProgress}%` : "" }}
+      {{
+        posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100
+          ? `${posdataWorkerStore.loadProgress}%`
+          : ""
+      }}
     </div>
   </div>
 
@@ -22,10 +23,7 @@
     v-html="$t('visualization.kpi.posdata_not_selected')"
   />
 
-  <div
-    v-else-if="!hasKpiData && visualizationStore.isLoadingKpi"
-    class="kpi-loading-card"
-  >
+  <div v-else-if="!hasKpiData && visualizationStore.isLoadingKpi" class="kpi-loading-card">
     <div class="kpi-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
   </div>
 
@@ -475,9 +473,9 @@ import { usePositionDataStore } from "@/stores/position_data";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
-import VisualizationTimeSelector from "../visualization/VisualizationTimeSelector.vue";
-import KpiChart from "../kpi/KpiChart.vue";
-import ZoneSelectorPicker from "../kpi/ZoneSelectorPicker.vue";
+import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
+import KpiChart from "@/components/kpi/KpiChart.vue";
+import ZoneSelectorPicker from "@/components/kpi/ZoneSelectorPicker.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
 import { debounce } from "lodash";
@@ -561,7 +559,9 @@ const KPI_CONFIG = {
       { id: "equivalent_distance_interval", kpi: "equivalent_distance", mode: "windowed" },
       { id: "equivalent_distance_cumulative", kpi: "equivalent_distance", mode: "cumulative" },
     ],
-    table: [{ id: "equivalent_distance_cumulative", kpi: "equivalent_distance", mode: "cumulative" }],
+    table: [
+      { id: "equivalent_distance_cumulative", kpi: "equivalent_distance", mode: "cumulative" },
+    ],
   },
   centroid_distance: {
     labelKey: "visualization.kpi.kpi_selection.group_centroid_distance",
@@ -691,10 +691,16 @@ const playerHeaders = computed(() => {
     cols.push({ title: t("visualization.kpi.kpi_label.metabolic_work"), key: "metabolic_work" });
   }
   if (selectedKpis.value.has("equivalent_distance_cumulative")) {
-    cols.push({ title: t("visualization.kpi.kpi_label.equivalent_distance"), key: "equivalent_distance" });
+    cols.push({
+      title: t("visualization.kpi.kpi_label.equivalent_distance"),
+      key: "equivalent_distance",
+    });
   }
   if (selectedKpis.value.has("centroid_distance_max")) {
-    cols.push({ title: t("visualization.kpi.kpi_label.centroid_distance_max"), key: "centroid_distance_max" });
+    cols.push({
+      title: t("visualization.kpi.kpi_label.centroid_distance_max"),
+      key: "centroid_distance_max",
+    });
   }
   return cols;
 });

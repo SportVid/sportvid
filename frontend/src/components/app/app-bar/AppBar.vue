@@ -154,12 +154,12 @@ import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useLanguageStore } from "@/stores/languages";
 import { useVideoUploadStore } from "@/stores/video_upload";
-import ModalHistory from "@/components/ModalHistory.vue";
-import ModalPlugin from "@/components/ModalPlugin.vue";
-import ModalShortcut from "@/components/ModalShortcut.vue";
-import ModalExport from "@/components/ModalExport.vue";
+import ModalHistory from "@/components/app/app-bar/ModalHistory.vue";
+import ModalPlugin from "@/components/app/app-bar/ModalPlugin.vue";
+import ModalShortcut from "@/components/app/app-bar/ModalShortcut.vue";
+import ModalExport from "@/components/app/app-bar/ModalExport.vue";
 import UserMenu from "@/components/user/UserMenu.vue";
-import ModalTutorial from "../ModalTutorial.vue";
+import ModalTutorial from "@/components/app/app-bar/ModalTutorial.vue";
 import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 
 const route = useRoute();
@@ -232,6 +232,8 @@ const pluginName = (type) => {
     thumbnail: "modal.plugin.thumbnail.plugin_name",
     bytetrack: "modal.plugin.bytetrack.plugin_name",
     calibration_static_dlt: "modal.plugin.calibration_static_dlt.plugin_name",
+    posdata_convert: "modal.plugin.posdata_convert.plugin_name",
+    kpi_computation: "modal.plugin.kpi_computation.plugin_name",
   };
   return t(typeMap[type] || type);
 };

@@ -174,14 +174,14 @@ import { useTabStore } from "@/stores/tabs";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
 // import * as Keyboard from "../plugins/keyboard";
-import VideoPlayer from "@/components/video/VideoPlayer.vue";
-import TabWindowPositionData from "@/components/tab-window/TabWindowPositionData.vue";
-import TabWindowCalibration from "@/components/tab-window/TabWindowCalibration.vue";
-import TabWindowHeatmap from "@/components/tab-window/TabWindowHeatmap.vue";
-import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
-import TabWindowEvents from "@/components/tab-window/TabWindowEvents.vue";
-import TabWindowKPI from "@/components/tab-window/TabWindowKPI.vue";
-import ModalObjectOverlay from "@/components/ModalObjectOverlay.vue";
+import VideoPlayer from "@/components/analysis-view/VideoPlayer.vue";
+import TabWindowPositionData from "@/components/analysis-view/TopView.vue";
+import TabWindowCalibration from "@/components/calibration-asset/CalibrationAsset.vue";
+import TabWindowHeatmap from "@/components/analysis-view/tab-window/TabWindowHeatmap.vue";
+import TabWindowTimeline from "@/components/analysis-view/tab-window/TabWindowTimeline.vue";
+import TabWindowEvents from "@/components/analysis-view/tab-window/TabWindowEvents.vue";
+import TabWindowKPI from "@/components/analysis-view/tab-window/TabWindowKPI.vue";
+import ModalObjectOverlay from "@/components/calibration-asset/ModalObjectOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
@@ -312,7 +312,6 @@ onMounted(async () => {
 //           }
 //         }
 //         topViewStore.positionDataTopView = _bboxDataTopView.value;
-//         console.log("positionDataTopView", topViewStore.positionDataTopView);
 //       }
 //     }
 //   },
@@ -666,28 +665,6 @@ onBeforeUnmount(() => {
   topViewStore.setPositionData(null, {});
   bboxesStore.bboxDataInterpolated = {};
 });
-
-watch(
-  () => topViewStore.metaDataTopView,
-  (neww) => {
-    console.log("metaDataTopView changed", neww);
-  }
-);
-
-watch(
-  () => topViewStore.positionDataTopView,
-  (neww) => {
-    console.log("positionDataTopView changed", neww);
-  }
-);
-
-watch(
-  () => visualizationStore.kpiData,
-  (neww) => {
-    console.log("kpiData", neww);
-  },
-  { immediate: true }
-);
 </script>
 
 <style scoped>

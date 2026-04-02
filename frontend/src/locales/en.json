@@ -260,8 +260,13 @@
         "centroid_distance_frame": "Centroid Distance [m] (per frame)",
         "centroid_distance_interval": "Centroid Distance<sub>max</sub> [m] (per {frames} frames)",
         "distance_covered": "Distance [m]",
+        "cumulative_distance_covered": "Distance [m] (cumulative)",
         "velocity": "Velocity [m⋅s<sup>-1</sup>]",
-        "metabolic_power": "Metabolic Power [W⋅kg<sup>-1</sup>]"
+        "metabolic_power": "Metabolic Power [W⋅kg<sup>-1</sup>]",
+        "cumulative_metabolic_power": "Metabolic Work [J⋅kg<sup>-1</sup>] (cumulative)",
+        "equivalent_distance": "Equiv. Distance [m]",
+        "cumulative_equivalent_distance": "Equiv. Distance [m] (cumulative)",
+        "centroid_distance": "Centroid Distance [m]"
       },
       "zone_selection": {
         "title": "Zone",
@@ -554,6 +559,9 @@
         "timeline_name": "Calibration Static DLT",
         "calibration_id": "Select Calibration Asset",
         "calibration_id_hint": "Select a calibration asset to use for the calibration."
+      },
+      "posdata_convert": {
+        "plugin_name": "Position Data Convert"
       },
       "kpi_computation": {
         "plugin_name": "KPI Computation",

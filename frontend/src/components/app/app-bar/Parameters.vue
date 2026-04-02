@@ -500,7 +500,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
-import { useTimelineStore } from "../stores/timeline";
+import { useTimelineStore } from "@/stores/timeline";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
@@ -645,19 +645,32 @@ const kpiNameItems = computed(() =>
 
 // Aggregated selection labels reuse the existing visualization.kpi.kpi_selection translations
 // for the matching table-mode KPI variants (cumulative distance, velocity_max, cumulative work).
+// Only the base KPI names are shown for aggregated export (same as table view in TabWindowKPI).
+// The cumulative_* variants are excluded because they duplicate the base names for aggregated display.
+const KPI_AGG_NAMES = new Set([
+  "distance_covered",
+  "velocity",
+  "metabolic_power",
+  "equivalent_distance",
+  "centroid_distance",
+]);
 const KPI_AGG_TRANSLATION_KEY = {
   distance_covered: "running_distance_cumulative",
   velocity: "velocity_max",
   metabolic_power: "metabolic_work_cumulative",
+  equivalent_distance: "equivalent_distance_cumulative",
+  centroid_distance: "centroid_distance_max",
 };
 const kpiNameItemsAggregated = computed(() =>
-  (visualizationStore.kpiNames || []).map((name) => {
-    const key = KPI_AGG_TRANSLATION_KEY[name];
-    return {
-      id: name,
-      name: key ? t(`visualization.kpi.kpi_selection.${key}`, name) : name,
-    };
-  })
+  (visualizationStore.kpiNames || [])
+    .filter((name) => KPI_AGG_NAMES.has(name))
+    .map((name) => {
+      const key = KPI_AGG_TRANSLATION_KEY[name];
+      return {
+        id: name,
+        name: key ? t(`visualization.kpi.kpi_selection.${key}`, name) : name,
+      };
+    })
 );
 
 const isKpiTeamSelectAll = ref(false);

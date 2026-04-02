@@ -342,7 +342,7 @@ import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useVisualizationStore } from "@/stores/visualization";
 import { getTimecode } from "@/plugins/time";
-import ModalBBoxUpdate from "./ModalBboxUpdate.vue";
+import ModalBBoxUpdate from "@/components/position-data/ModalBboxUpdate.vue";
 import { toRgb } from "@/plugins/helpers";
 import Hls from "hls.js";
 

@@ -168,13 +168,6 @@ const finishSegment = () => {
     currentSegmentPoints.value = [];
   }
 };
-watch(
-  () => currentSegmentPoints.value,
-  (nww) => {
-    console.log("segemtnpoints", nww);
-  },
-  { deep: true }
-);
 
 const updateVideoSize = () => {
   nextTick(() => {
