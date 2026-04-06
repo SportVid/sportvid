@@ -11,62 +11,75 @@
         </template>
       </v-toolbar>
 
-      <v-card-text class="mt-2">
-        <v-row>
-          <v-col
-            cols="12"
-            sm="6"
-            v-for="tutorial in tutorialStore.availableTutorials"
-            :key="tutorial.id"
-          >
-            <v-card
-              :class="[
-                'd-flex flex-row align-center px-4 py-3',
-                tutorial.disabled
-                  ? 'opacity-30 pointer-events-none'
-                  : !tutorial.isAvailable
-                  ? 'opacity-60'
-                  : 'hover:bg-gray-100',
-                tutorialStore.currentTutorialId === tutorial.id ? 'tutorial-active' : '',
-              ]"
-              :ripple="!tutorial.disabled && !tutorial.isAvailable"
-              @click="handleTutorialClick(tutorial)"
+      <v-tabs v-model="tabStore.tutorialTabId" fixed-tabs slider-color="primary">
+        <v-tab v-for="tab in tabStore.tutorialTabs" :key="tab.id" :value="tab.id">
+          {{ tab.name }}
+        </v-tab>
+      </v-tabs>
+      <v-divider />
+
+      <v-card-text class="mt-2" style="height: 400px; overflow-y: auto">
+        <v-tabs-window v-model="tabStore.tutorialTabId">
+          <v-tabs-window-item v-for="tab in tabStore.tutorialTabs" :key="tab.id" :value="tab.id">
+            <div
+              v-for="([groupKey, groupTutorials]) in getGroupedTutorialsForTab(tab.id)"
+              :key="groupKey"
+              class="mb-4"
             >
-              <div class="d-flex align-center justify-center" style="min-width: 40px">
-                <v-icon size="32" class="text-primary">
-                  {{ tutorial.icon }}
-                </v-icon>
+              <div class="tutorial-group-header text-caption text-uppercase font-weight-bold text-medium-emphasis mb-2 px-1">
+                {{ $t(`modal.tutorial.groups.${groupKey}`) }}
               </div>
-
-              <div class="d-flex flex-column justify-center ml-4">
-                <span class="text-subtitle-1 font-weight-medium">
-                  {{ tutorial.name }}
-
-                  <v-icon
-                    size="20"
-                    class="mt-n1 steps-overview-icon"
-                    @click.stop="showStepsOverview(tutorial.id)"
-                    :title="$t('modal.tutorial.show_steps')"
+              <v-row dense>
+                <v-col
+                  cols="12"
+                  sm="6"
+                  v-for="tutorial in groupTutorials"
+                  :key="tutorial.id"
+                >
+                  <v-card
+                    :class="[
+                      'd-flex flex-row align-center px-4 py-3',
+                      tutorial.disabled
+                        ? 'opacity-30 pointer-events-none'
+                        : !tutorial.isAvailable
+                        ? 'opacity-60'
+                        : 'hover:bg-gray-100',
+                      tutorialStore.currentTutorialId === tutorial.id ? 'tutorial-active' : '',
+                    ]"
+                    :ripple="!tutorial.disabled && !tutorial.isAvailable"
+                    @click="handleTutorialClick(tutorial)"
                   >
-                    mdi-information-outline
-                  </v-icon>
-
-                  <v-icon
-                    v-if="!tutorial.isAvailable"
-                    size="20"
-                    color="error"
-                    class="mt-n1 steps-overview-icon"
-                    @click.stop="showMissingRequirements(tutorial.id)"
-                    :title="$t('modal.tutorial.show_missing_requirements')"
-                  >
-                    mdi-alert-circle-outline
-                  </v-icon>
-                </span>
-                <span class="text-body-2 text-grey-darken-1">{{ tutorial.description }}</span>
-              </div>
-            </v-card>
-          </v-col>
-        </v-row>
+                    <div class="d-flex align-center justify-center" style="min-width: 40px">
+                      <v-icon size="32" class="text-primary">{{ tutorial.icon }}</v-icon>
+                    </div>
+                    <div class="d-flex flex-column justify-center ml-4">
+                      <span class="text-subtitle-1 font-weight-medium">
+                        {{ tutorial.name }}
+                        <v-icon
+                          size="20"
+                          class="mt-n1 steps-overview-icon"
+                          @click.stop="showStepsOverview(tutorial.id)"
+                          :title="$t('modal.tutorial.show_steps')"
+                          >mdi-information-outline</v-icon
+                        >
+                        <v-icon
+                          v-if="!tutorial.isAvailable"
+                          size="20"
+                          color="error"
+                          class="mt-n1 steps-overview-icon"
+                          @click.stop="showMissingRequirements(tutorial.id)"
+                          :title="$t('modal.tutorial.show_missing_requirements')"
+                          >mdi-alert-circle-outline</v-icon
+                        >
+                      </span>
+                      <span class="text-body-2 text-grey-darken-1">{{ tutorial.description }}</span>
+                    </div>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </div>
+          </v-tabs-window-item>
+        </v-tabs-window>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -128,8 +141,10 @@ import Shepherd from "shepherd.js";
 import "shepherd.js/dist/css/shepherd.css";
 
 import { useTutorialStore } from "@/stores/tutorial";
+import { useTabStore } from "@/stores/tabs";
 
 const tutorialStore = useTutorialStore();
+const tabStore = useTabStore();
 
 const props = defineProps({
   modelValue: {
@@ -140,6 +155,17 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const dialog = ref(props.modelValue);
+
+const getGroupedTutorialsForTab = (tabId) => {
+  const filtered = tutorialStore.availableTutorials.filter((t) => t.type === tabId);
+  const grouped = new Map();
+  for (const tutorial of filtered) {
+    const key = tutorial.group ?? "other";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(tutorial);
+  }
+  return [...grouped.entries()];
+};
 
 const toggleTutorial = async (id) => {
   if (tutorialStore.tour) {
@@ -248,5 +274,11 @@ watch(
 
 .subtitle-wrap {
   -webkit-line-clamp: unset !important;
+}
+
+.tutorial-group-header {
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  padding-bottom: 4px;
+  letter-spacing: 0.08em;
 }
 </style>

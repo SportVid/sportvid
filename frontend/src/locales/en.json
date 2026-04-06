@@ -321,6 +321,28 @@
       "modal_plugin_select": "Run the two plugins from the Player and Object Tracking section (ByteTrack & DLT+RANSAC from annotated landmarks) to generate position data.",
       "position_data_select": "Switch to the position data tab and select both the calibration asset and the position data.",
       "position_data_analyse": "You’ve completed the tutorial! You can now analyze your data using your preferred settings."
+    },
+    "upload_video": {
+      "video_view": "This is where all your uploaded videos are listed. Once uploaded, click on a video to open it in the analysis view.",
+      "open_modal": "Click here to open the video upload modal.",
+      "fill_form": "In the video upload modal, you can select a video file from your computer and fill in the required information about the video. Make sure to provide accurate information about the sport, division, age group, and field dimensions to ensure the best analysis results.",
+      "upload_video": "All required fields are filled — click the button to start the upload.",
+      "video_processing": "Your video is currently being processed. This may take some time depending on the video length and server load. Once processing is complete, it will be ready for analysis."
+    },
+    "analyse_video": {
+      "video_view": "This is where all your uploaded videos are listed. Click the Analyse button on a video to open it in the analysis view.",
+      "video_player": "This is the video player. You can play, pause and scrub through your video here. All visualizations can be synchronized to the current playback position.",
+      "top_view": "This is the top-view panel. It shows position data projected onto a 2D field — players, paths and team assignments. Use the controls to select which data to display.",
+      "visualization_tabs": "These tabs give you different ways to explore your data: Timeline for annotated events, Events for a structured event list, Heatmap for spatial density, and KPI for computed metrics.",
+      "appbar_actions": "The toolbar gives you quick access to the main tools: run plugins to process your video, check the run history, manage annotation shortcuts, and export your data."
+    },
+    "calibration_asset_guide": {
+      "step1": "The calibration asset panel lists all saved calibration assets. Create a new one or select an existing one to use during plugin execution. A calibration asset defines the reference points for camera calibration.",
+      "step2": "Click the edit icon on a calibration asset row to open the editor. Here you can place, move or delete markers and segments on the field template. Make sure to save your changes — only saved assets can be used by the plugins."
+    },
+    "run_plugin": {
+      "step1": "Click here to open the plugin panel. Plugins are tools that process your video and generate data — e.g. player tracking or camera calibration.",
+      "step2": "The plugin panel shows all available plugins grouped by category. Each plugin can be configured individually. Run them in the correct order: first run ByteTrack for player detection, then DLT+RANSAC to compute the homography using your calibration asset."
     }
   },
   "modal": {
@@ -820,6 +842,16 @@
       "show_steps": "Show Steps",
       "show_missing_requirements": "Show missing requirements",
       "step": "Step",
+      "tabs": {
+        "pipelines": "Pipelines",
+        "singles": "Single Steps"
+      },
+      "groups": {
+        "pipelines": "Pipelines",
+        "video": "Video",
+        "app_bar": "Toolbar",
+        "plugins": "Plugins"
+      },
       "missing_requirements": {
         "title": "Missing requirements",
         "video_uploaded": "You need to upload a video first."
@@ -843,6 +875,42 @@
       "data_export": {
         "name": "Export",
         "description": "Export position data, stats & visualizations"
+      },
+      "upload_video": {
+        "name": "Upload Video",
+        "description": "Upload and manage videos"
+      },
+      "analyse_video": {
+        "name": "Analyse Video",
+        "description": "Select and analyse videos"
+      },
+      "run_plugin": {
+        "name": "Run a Plugin",
+        "description": "Open plugin panel and run plugins"
+      },
+      "check_history": {
+        "name": "Check History",
+        "description": "View and manage plugin runs"
+      },
+      "export": {
+        "name": "Export",
+        "description": "Export timelines, position data, and KPIs"
+      },
+      "calibration_asset": {
+        "name": "Calibration Asset",
+        "description": "Create, edit and save calibration assets"
+      },
+      "posdata_bytetrack": {
+        "name": "Position Data (ByteTrack)",
+        "description": "Generate position data using the ByteTrack plugin"
+      },
+      "posdata_manual": {
+        "name": "Position Data (Manual)",
+        "description": "Upload position data manually"
+      },
+      "kpi_computation": {
+        "name": "KPI Computation",
+        "description": "Compute key performance indicators"
       }
     },
     "calibration_asset": {

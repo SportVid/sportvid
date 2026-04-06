@@ -24,6 +24,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
   const totalSteps = ref(0);
 
   const isTutorialRunning = ref(false);
+  const uploadFormReady = ref(false);
 
   const modalPluginVisible = ref(false);
 
@@ -49,6 +50,8 @@ export const useTutorialStore = defineStore("tutorial", () => {
   const tutorials = [
     {
       id: "position-data-generation",
+      type: "pipeline",
+      group: "pipelines",
       name: t("modal.tutorial.position_data_generation.name"),
       description: t("modal.tutorial.position_data_generation.description"),
       icon: "mdi-crosshairs-gps",
@@ -57,6 +60,8 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
     {
       id: "timeline-plugin",
+      type: "pipeline",
+      group: "pipelines",
       name: t("modal.tutorial.timeline_plugin.name"),
       description: t("modal.tutorial.timeline_plugin.description"),
       icon: "mdi-timeline-text",
@@ -65,6 +70,8 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
     {
       id: "run-aggregation",
+      type: "pipeline",
+      group: "pipelines",
       name: t("modal.tutorial.run_aggregation.name"),
       description: t("modal.tutorial.run_aggregation.description"),
       icon: "mdi-run-fast",
@@ -73,6 +80,8 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
     {
       id: "kpi-visualization",
+      type: "pipeline",
+      group: "pipelines",
       name: t("modal.tutorial.kpi_visualization.name"),
       description: t("modal.tutorial.kpi_visualization.description"),
       icon: "mdi-chart-line",
@@ -81,10 +90,102 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
     {
       id: "data-export",
+      type: "pipeline",
+      group: "pipelines",
       name: t("modal.tutorial.data_export.name"),
       description: t("modal.tutorial.data_export.description"),
       icon: "mdi-file-export",
       disabled: true,
+      requirements: ["video-uploaded"],
+    },
+    {
+      id: "upload-video",
+      type: "single",
+      group: "video",
+      name: t("modal.tutorial.upload_video.name"),
+      description: t("modal.tutorial.upload_video.description"),
+      icon: "mdi-upload-outline",
+      disabled: false,
+      requirements: [],
+    },
+    {
+      id: "analyse-video",
+      type: "single",
+      group: "video",
+      name: t("modal.tutorial.analyse_video.name"),
+      description: t("modal.tutorial.analyse_video.description"),
+      icon: "mdi-google-analytics",
+      disabled: false,
+      requirements: ["video-uploaded"],
+    },
+    {
+      id: "run-plugin",
+      type: "single",
+      group: "app_bar",
+      name: t("modal.tutorial.run_plugin.name"),
+      description: t("modal.tutorial.run_plugin.description"),
+      icon: "mdi-puzzle-outline",
+      disabled: false,
+      requirements: ["video-uploaded"],
+    },
+    {
+      id: "check-history",
+      type: "single",
+      group: "app_bar",
+      name: t("modal.tutorial.check_history.name"),
+      description: t("modal.tutorial.check_history.description"),
+      icon: "mdi-history",
+      disabled: false,
+      requirements: ["video-uploaded"],
+    },
+    {
+      id: "export",
+      type: "single",
+      group: "app_bar",
+      name: t("modal.tutorial.export.name"),
+      description: t("modal.tutorial.export.description"),
+      icon: "mdi-swap-vertical-bolt",
+      disabled: false,
+      requirements: ["video-uploaded"],
+    },
+    {
+      id: "calibration-asset",
+      type: "single",
+      group: "plugins",
+      name: t("modal.tutorial.calibration_asset.name"),
+      description: t("modal.tutorial.calibration_asset.description"),
+      icon: "mdi-link",
+      disabled: false,
+      requirements: ["video-uploaded"],
+    },
+    {
+      id: "posdata-bytetrack",
+      type: "single",
+      group: "plugins",
+      name: t("modal.tutorial.posdata_bytetrack.name"),
+      description: t("modal.tutorial.posdata_bytetrack.description"),
+      icon: "mdi-crosshairs-gps",
+      disabled: false,
+      requirements: ["video-uploaded"],
+    },
+    {
+      id: "posdata-manual",
+      type: "single",
+      group: "plugins",
+      name: t("modal.tutorial.posdata_manual.name"),
+      description: t("modal.tutorial.posdata_manual.description"),
+      icon: "mdi-crosshairs-gps",
+      disabled: false,
+      requirements: ["video-uploaded"],
+    },
+    {
+      id: "kpi-computation",
+      type: "single",
+      group: "plugins",
+      name: t("modal.tutorial.kpi_computation.name"),
+      description: t("modal.tutorial.kpi_computation.description"),
+      icon: "mdi-chart-areaspline",
+      disabled: false,
       requirements: ["video-uploaded"],
     },
   ];
@@ -100,6 +201,271 @@ export const useTutorialStore = defineStore("tutorial", () => {
   );
 
   const tutorialSteps = {
+    "upload-video": {
+      steps: [
+        {
+          id: "video-overview",
+          text: t("tutorials.upload_video.video_view"),
+          attachTo: {
+            element: '[data-tour="video-select"]',
+            on: "bottom",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              if (router.currentRoute.value.path !== "/") {
+                router.push({ name: "VideoView" }).then(() => {
+                  tour.value.show(0);
+                });
+              } else {
+                resolve();
+              }
+            });
+          },
+        },
+        {
+          id: "open-upload-modal",
+          text: t("tutorials.upload_video.open_modal"),
+          attachTo: {
+            element: '[data-tour="modal-video-upload-open"]',
+            on: "bottom",
+          },
+          buttons: [],
+          when: createClickToNextStepHandler(1, []),
+        },
+        {
+          id: "fill-upload-form",
+          text: t("tutorials.upload_video.fill_form"),
+          attachTo: {
+            element: '[data-tour="modal-video-upload"]',
+            on: "bottom",
+          },
+          buttons: [],
+          when: createClickToNextStepHandler(2, []),
+        },
+        {
+          id: "upload-video",
+          text: t("tutorials.upload_video.upload_video"),
+          attachTo: {
+            element: '[data-tour="upload-video"]',
+            on: "top",
+          },
+          buttons: [],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                if (uploadFormReady.value) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+          when: createClickToNextStepHandler(3, []),
+        },
+        {
+          id: "video-processing",
+          text: t("tutorials.upload_video.video_processing"),
+          attachTo: {
+            element: '[data-tour="video-processing"]',
+            on: "bottom",
+          },
+          buttons: [
+            {
+              text: "Done",
+              action: () => {
+                stopTutorial();
+              },
+            },
+          ],
+          classes: "tutorial-final-step",
+        },
+      ],
+    },
+    "analyse-video": {
+      steps: [
+        {
+          id: "video-overview",
+          text: t("tutorials.analyse_video.video_view"),
+          attachTo: {
+            element: '[data-tour="video-select"]',
+            on: "bottom",
+          },
+          buttons: [],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              if (router.currentRoute.value.path !== "/") {
+                router.push({ name: "VideoView" }).then(() => {
+                  tour.value.show(0);
+                });
+              } else {
+                resolve();
+              }
+            });
+          },
+          when: createClickToNextStepHandler(0, []),
+        },
+        {
+          id: "analysis-video-player",
+          text: t("tutorials.analyse_video.video_player"),
+          attachTo: {
+            element: '[data-tour="analysis-video-player"]',
+            on: "right",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+        },
+        {
+          id: "analysis-top-view",
+          text: t("tutorials.analyse_video.top_view"),
+          attachTo: {
+            element: '[data-tour="analysis-top-view"]',
+            on: "left",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+        },
+        {
+          id: "analysis-visualization-tabs",
+          text: t("tutorials.analyse_video.visualization_tabs"),
+          attachTo: {
+            element: '[data-tour="analysis-visualization-tabs"]',
+            on: "top",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+        },
+        {
+          id: "analysis-appbar-actions",
+          text: t("tutorials.analyse_video.appbar_actions"),
+          attachTo: {
+            element: '[data-tour="analysis-appbar-actions"]',
+            on: "bottom",
+          },
+          buttons: [
+            {
+              text: "Done",
+              action: () => {
+                stopTutorial();
+              },
+            },
+          ],
+          classes: "tutorial-final-step",
+        },
+      ],
+    },
+    "run-plugin": {
+      steps: [
+        {
+          id: "run-plugin-open",
+          text: t("tutorials.run_plugin.step1"),
+          attachTo: {
+            element: '[data-tour="modal-plugin-open"]',
+            on: "bottom",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+        },
+        {
+          id: "run-plugin-select",
+          text: t("tutorials.run_plugin.step2"),
+          attachTo: {
+            element: '[data-tour="plugin-object-tracking-overview"]',
+            on: "right",
+          },
+          buttons: [
+            {
+              text: "Done",
+              action: () => {
+                stopTutorial();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              if (
+                document.querySelector('[data-tour="plugin-object-tracking-overview"]') &&
+                modalPluginVisible.value === true
+              ) {
+                resolve();
+              }
+            });
+          },
+          classes: "tutorial-final-step",
+        },
+      ],
+    },
+    "calibration-asset-guide": {
+      steps: [
+        {
+          id: "calibration-menu-guide",
+          text: t("tutorials.calibration_asset_guide.step1"),
+          attachTo: {
+            element: '[data-tour="calibration-asset-menu"]',
+            on: "left",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+        },
+        {
+          id: "calibration-edit-guide",
+          text: t("tutorials.calibration_asset_guide.step2"),
+          attachTo: {
+            element: '[data-tour="calibration-asset-edit-row"]',
+            on: "bottom",
+          },
+          buttons: [
+            {
+              text: "Done",
+              action: () => {
+                stopTutorial();
+              },
+            },
+          ],
+          classes: "tutorial-final-step",
+        },
+      ],
+    },
     "position-data-generation": {
       steps: [
         {
@@ -351,6 +717,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     isTutorialRunning.value = false;
     currentTutorialId.value = null;
     currentStepId.value = null;
+    uploadFormReady.value = false;
 
     if (tour.value) {
       tour.value.complete();
@@ -372,6 +739,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     currentStepText,
     nextStepText,
     totalSteps,
+    uploadFormReady,
     startTutorial,
     stopTutorial,
     tour,

@@ -10,6 +10,7 @@
               :loading="item.loading"
               :key="item.id"
               :class="item.processing ? 'processing-card' : ''"
+              :data-tour="item.processing ? 'video-processing' : undefined"
               width="370"
             >
               <v-card-title class="video-overview-title mt-2 mb-2">

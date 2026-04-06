@@ -15,14 +15,22 @@ export const useTabStore = defineStore(
       { id: "kpi", name: t("analysis_view.visualization_tabs.kpi") },
     ]);
 
+    const tutorialTabId = ref("pipeline");
+    const tutorialTabs = computed(() => [
+      { id: "pipeline", name: t("modal.tutorial.tabs.pipelines") },
+      { id: "single", name: t("modal.tutorial.tabs.singles") },
+    ]);
+
     return {
       visualizationTabId,
       visualizationTabs,
+      tutorialTabId,
+      tutorialTabs,
     };
   },
   {
     persist: {
-      pick: ["visualizationTabId"],
+      pick: ["visualizationTabId", "tutorialTabId"],
       storage: sessionStorage,
     },
   }
