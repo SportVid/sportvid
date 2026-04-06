@@ -340,7 +340,10 @@
       "password_both_required": "Aktuelles und neues Passwort müssen beide ausgefüllt sein",
       "password_min": "Neues Passwort muss mindestens {min} Zeichen lang sein",
       "no_changes": "Keine Änderungen zum Speichern",
-      "update_failed": "Aktualisierung fehlgeschlagen"
+      "update_failed": "Aktualisierung fehlgeschlagen",
+      "theme": "Design",
+      "theme_light": "Hell",
+      "theme_dark": "Dunkel"
     },
     "export": {
       "title": "Ergebnisse exportieren",

@@ -66,7 +66,13 @@
 
       <v-divider vertical inset class="mx-2" />
 
-      <v-btn v-if="loggedIn" @click="showModalTutorial = true" icon density="compact" class="mx-3">
+      <v-btn
+        v-if="loggedIn"
+        @click="showModalTutorial = true"
+        icon
+        density="compact"
+        class="ml-2 mr-1"
+      >
         <app-bar-icon>mdi-school</app-bar-icon>
         <v-badge
           v-if="tutorialStore.isTutorialRunning"
@@ -103,7 +109,11 @@
         </v-tooltip>
       </v-btn>
 
-      <v-menu location="bottom center">
+      <v-btn v-if="!loggedIn" @click="themeStore.toggle()" icon density="compact" class="mx-2">
+        <app-bar-icon>mdi-theme-light-dark</app-bar-icon>
+      </v-btn>
+
+      <v-menu v-if="!loggedIn" location="bottom center">
         <template #activator="{ props }">
           <v-avatar v-bind="props" size="20" class="ml-2 mr-1">
             <v-img
@@ -154,6 +164,7 @@ import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useLanguageStore } from "@/stores/languages";
 import { useVideoUploadStore } from "@/stores/video_upload";
+import { useThemeStore } from "@/stores/theme";
 import ModalHistory from "@/components/app/app-bar/ModalHistory.vue";
 import ModalPlugin from "@/components/app/app-bar/ModalPlugin.vue";
 import ModalShortcut from "@/components/app/app-bar/ModalShortcut.vue";
@@ -172,6 +183,7 @@ const pluginRunStore = usePluginRunStore();
 const tutorialStore = useTutorialStore();
 const languageStore = useLanguageStore();
 const videoUploadStore = useVideoUploadStore();
+const themeStore = useThemeStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
 
