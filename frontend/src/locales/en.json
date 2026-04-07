@@ -313,15 +313,6 @@
     "color": "Color"
   },
   "tutorials": {
-    "position_data_generation": {
-      "video_select": "Please select a video to start the position data generation process.",
-      "calibration_asset_select": "Create a new calibration asset or select an existing one.",
-      "calibration_asset_edit": "Edit the calibration asset by adding or removing markers, then save it for plugin use.",
-      "modal_plugin_open": "Open the plugin menu.",
-      "modal_plugin_select": "Run the two plugins from the Player and Object Tracking section (ByteTrack & DLT+RANSAC from annotated landmarks) to generate position data.",
-      "position_data_select": "Switch to the position data tab and select both the calibration asset and the position data.",
-      "position_data_analyse": "You’ve completed the tutorial! You can now analyze your data using your preferred settings."
-    },
     "upload_video": {
       "video_view": "This is where all your uploaded videos are listed. Once uploaded, click on a video to open it in the analysis view.",
       "open_modal": "Click here to open the video upload modal.",
@@ -336,13 +327,55 @@
       "visualization_tabs": "These tabs give you different ways to explore your data: Timeline for annotated events, Events for a structured event list, Heatmap for spatial density, and KPI for computed metrics.",
       "appbar_actions": "The toolbar gives you quick access to the main tools: run plugins to process your video, check the run history, manage annotation shortcuts, and export your data."
     },
-    "calibration_asset_guide": {
-      "step1": "The calibration asset panel lists all saved calibration assets. Create a new one or select an existing one to use during plugin execution. A calibration asset defines the reference points for camera calibration.",
-      "step2": "Click the edit icon on a calibration asset row to open the editor. Here you can place, move or delete markers and segments on the field template. Make sure to save your changes — only saved assets can be used by the plugins."
-    },
     "run_plugin": {
-      "step1": "Click here to open the plugin panel. Plugins are tools that process your video and generate data — e.g. player tracking or camera calibration.",
-      "step2": "The plugin panel shows all available plugins grouped by category. Each plugin can be configured individually. Run them in the correct order: first run ByteTrack for player detection, then DLT+RANSAC to compute the homography using your calibration asset."
+      "open_modal": "Click here to open the plugin panel. Plugins are tools that process your video and generate data — e.g. player tracking or camera calibration.",
+      "plugin_panel": "The plugin panel shows all available plugins grouped by category. Each plugin can be configured individually. E.g., run ByteTrack for player detection, DLT+RANSAC to compute the homography using your calibration asset, or the KPI computation plugin to compute performance metrics based on the position data.",
+      "plugin_select": "To select any plugin, just click it in the list. For this tutorial, select the 'KPI Computation' plugin.",
+      "plugin_details": "After selecting a plugin, you see its description and configuration options. Depending on the plugin, you may need to provide different inputs such as selecting files or specifying run IDs. Advanced options allow you to fine-tune the plugin's behavior, but if you're not sure, the default settings are a good starting point."
+    },
+    "check_history": {
+      "open_modal": "Click here to open the plugin run history. This is where you can see the status of all your plugin runs — whether they are queued, running, completed, or if any errors occurred.",
+      "history_table": "This table lists all plugin runs for the current video. Each row shows the plugin name, the date it was run, its progress, and its current status. You can use this to track ongoing runs or review past results.",
+      "delete_panel": "Expand this section to delete plugin runs. You can delete all runs for your account, all runs for the current video, all runs of a specific plugin type for the current video, or select individual runs to remove. This is useful to clean up old or failed runs."
+    },
+
+    "export": {
+      "open_modal": "Click here to open the export panel. Important: export options that rely on computed data — such as KPIs or position data — will only work if that data has already been generated.",
+      "export_panel": "The left panel lists all available export formats. You can export raw position data, computed KPIs (regular or aggregated), merged or individual CSV files, or annotation formats like ELAN. Choose the format that fits your needs.",
+      "export_select": "To select an export format, just click it in the list. For this tutorial, select 'KPI (aggregated)'.",
+      "export_details": "After selecting a format, you see its configuration options. Depending on the format, you may need to choose teams, time ranges, specific metrics, or other parameters. Once configured, click the Export button to download the file. Remember: if the required data hasn't been computed yet, the dropdowns will be empty and the export won't be possible."
+    },
+    "calibration_asset": {},
+    "posdata_bytetrack": {
+      "open_modal": "Click here to open the plugin panel.",
+      "select_plugin": "Select the 'ByteTrack' plugin from the list.",
+      "plugin_overview": "The ByteTrack plugin performs object tracking directly on the video. It detects and tracks players and the ball frame by frame, generating bounding boxes for each detected object.<br><br>The tracking results can later be used together with a camera calibration (DLT+RANSAC) to compute real-world position data, which in turn enables KPI computation.",
+      "fps": "Set the frames per second (FPS) used for tracking. The value is pre-set to your video's frame rate, which is the recommended choice. It ensures every frame is analyzed and no motion is missed.<br><br>You can freely adjust it: a <em>lower</em> FPS speeds up processing but may cause the tracker to lose fast-moving objects between frames. A <em>higher</em> FPS than the video's native rate has no benefit, as no additional information is available.",
+      "run_plugin": "Click 'Run Plugin' to start the ByteTrack tracking. The progress can be tracked in the History panel. Once completed, the tracking results can be used for position data generation via KPI Computation."
+    },
+    "posdata_manual": {
+      "upload_open": "Click the upload button to open the position data upload dialog.",
+      "upload_modal": "Fill in the required fields: give the data a name, select its format, and attach the corresponding file. Depending on the format, additional fields such as delimiter or coordinate origin may appear.",
+      "format_select": "Select the format that matches your position data file. Different providers use different conventions — choosing the correct format ensures the data is parsed and converted correctly.",
+      "upload": "Once all fields are filled in, click 'Upload'. The system will automatically run the <em>Posdata Convert</em> plugin afterwards to normalize the data into the internal format, making it available for visualization and KPI computation."
+    },
+    "kpi_computation": {
+      "open_modal": "Click here to open the plugin panel.",
+      "select_plugin": "Select the 'KPI Computation' plugin from the list.",
+      "plugin_overview": "The KPI Computation plugin calculates performance metrics such as distance covered, velocity, metabolic power, equivalent distance, and centroid distance based on player position data.<br><br>Before running this plugin, make sure you have position data available. You can obtain it either by running <em>ByteTrack</em> (object tracking) and <em>DLT+RANSAC</em> (camera calibration) first, or by uploading position data manually.",
+      "format_select": "Select the data format that matches your position data source. Choosing 'SportVid (ByteTrack)' enables the ByteTrack run and calibration selectors below. All other formats use an externally uploaded position data file.",
+      "tracking_data": "Select the position data to use for the computation. This dropdown lists the position data files that have been uploaded or generated for this video.<br><br>If you selected 'SportVid (ByteTrack)' as the format, you will instead see a ByteTrack run and calibration asset selector. Choose the corresponding run and the calibration asset used during tracking.",
+      "advanced_options": "The 'Advanced Options' panel lets you configure an optional <em>smoothing filter</em> for the position data before computing KPIs. You can choose between a 'Butterworth lowpass' or a 'Savitzky-Golay lowpass' filter, and adjust their hyperparameters. If you are unsure, leaving this at 'None' is a good default.",
+      "run_plugin": "Click 'Run Plugin' to start the KPI computation. The progress can be tracked in the History panel. Once completed, KPI results will appear in the KPI tab of the analysis view."
+    },
+    "position_data_generation": {
+      "video_select": "Please select a video to start the position data generation process.",
+      "calibration_asset_select": "Create a new calibration asset or select an existing one.",
+      "calibration_asset_edit": "Edit the calibration asset by adding or removing markers, then save it for plugin use.",
+      "modal_plugin_open": "Open the plugin menu.",
+      "modal_plugin_select": "Run the two plugins from the Player and Object Tracking section (ByteTrack & DLT+RANSAC from annotated landmarks) to generate position data.",
+      "position_data_select": "Switch to the position data tab and select both the calibration asset and the position data.",
+      "position_data_analyse": "You’ve completed the tutorial! You can now analyze your data using your preferred settings."
     }
   },
   "modal": {
@@ -854,7 +887,8 @@
       },
       "missing_requirements": {
         "title": "Missing requirements",
-        "video_uploaded": "You need to upload a video first."
+        "video_uploaded": "You need to upload a video first.",
+        "analysis_view_opened": "You need to open the analysis view for any video."
       },
       "position_data_generation": {
         "name": "Position Data Generation",

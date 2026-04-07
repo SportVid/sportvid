@@ -26,9 +26,14 @@
           <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
         </v-btn>
 
-        <v-btn @click="showModalHistory = true">
+        <v-btn @click="showModalHistory = true" data-tour="modal-history-open">
           <app-bar-icon>mdi-history</app-bar-icon>
-          <v-badge v-if="numRunningPlugins > 0" color="accent" :content="numRunningPlugins" floating>
+          <v-badge
+            v-if="numRunningPlugins > 0"
+            color="accent"
+            :content="numRunningPlugins"
+            floating
+          >
             <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
           </v-badge>
           <span v-else>
@@ -41,7 +46,7 @@
           <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
         </v-btn>
 
-        <v-btn @click="showModalExport = true">
+        <v-btn @click="showModalExport = true" data-tour="modal-export-open">
           <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
           <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
         </v-btn>

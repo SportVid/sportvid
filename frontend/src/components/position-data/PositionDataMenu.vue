@@ -13,7 +13,7 @@
         v-html="$t('position_data.not_selected')"
       />
       <v-row style="justify-content: center">
-        <v-btn @click="showModalPositionDataUpload = true">{{
+        <v-btn data-tour="posdata-manual-upload-open" @click="showModalPositionDataUpload = true">{{
           $t("position_data.display_settings.position_data.upload")
         }}</v-btn>
       </v-row>
