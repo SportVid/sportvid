@@ -20,35 +20,43 @@
         <span class="text-primary">{{ $t("app_bar.video_view") }}</span>
       </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalPlugin = true" data-tour="modal-plugin-open">
-        <app-bar-icon>mdi-plus</app-bar-icon>
-        <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
-      </v-btn>
+      <div v-if="analysisView" class="d-flex align-center" data-tour="analysis-appbar-actions">
+        <v-btn @click="showModalPlugin = true" data-tour="modal-plugin-open">
+          <app-bar-icon>mdi-puzzle-outline</app-bar-icon>
+          <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
+        </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalHistory = true">
-        <app-bar-icon>mdi-history</app-bar-icon>
-        <v-badge v-if="numRunningPlugins > 0" color="accent" :content="numRunningPlugins" floating>
-          <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
-        </v-badge>
-        <span v-else>
-          <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
-        </span>
-      </v-btn>
+        <v-btn @click="showModalHistory = true" data-tour="modal-history-open">
+          <app-bar-icon>mdi-history</app-bar-icon>
+          <v-badge
+            v-if="numRunningPlugins > 0"
+            color="accent"
+            :content="numRunningPlugins"
+            floating
+          >
+            <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
+          </v-badge>
+          <span v-else>
+            <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
+          </span>
+        </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalShortcut = true">
-        <app-bar-icon>mdi-label-multiple-outline</app-bar-icon>
-        <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
-      </v-btn>
+        <v-btn @click="showModalShortcut = true">
+          <app-bar-icon>mdi-label-multiple-outline</app-bar-icon>
+          <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
+        </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalExport = true">
-        <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
-        <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
-      </v-btn>
+        <v-btn @click="showModalExport = true" data-tour="modal-export-open">
+          <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
+          <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
+        </v-btn>
+      </div>
 
       <v-btn
         v-if="videoView && loggedIn"
         @click="showModalVideoUpload = true"
         :disabled="videoUploadStore.isUploading"
+        data-tour="modal-video-upload-open"
       >
         <app-bar-icon>mdi-plus</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.video_upload_menu") }}</span>

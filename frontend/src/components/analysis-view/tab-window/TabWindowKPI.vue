@@ -41,8 +41,8 @@
   />
 
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
-    <v-row align="center" class="flex-nowrap">
-      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px">
+    <v-row align="center" class="flex-nowrap" data-tour="kpi-controls-row">
+      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px" data-tour="kpi-settings">
         <v-btn-toggle
           v-model="viewMode"
           color="primary"
@@ -259,8 +259,9 @@
       </v-col>
     </v-row>
 
+    <div v-if="viewMode === 'table'" data-tour="kpi-table-view">
     <div
-      v-if="viewMode === 'table' && groupMode === 'player'"
+      v-if="groupMode === 'player'"
       class="team-tables d-flex flex-wrap justify-space-around"
     >
       <v-card
@@ -354,7 +355,7 @@
     </div>
 
     <div
-      v-else-if="viewMode === 'table' && groupMode === 'team'"
+      v-else
       class="team-tables d-flex flex-wrap justify-space-around"
     >
       <v-card
@@ -409,8 +410,9 @@
         </v-data-table>
       </v-card>
     </div>
+    </div>
 
-    <div v-else-if="viewMode === 'chart'" class="px-2 mt-2">
+    <div v-else-if="viewMode === 'chart'" class="px-2 mt-2" data-tour="kpi-chart-view">
       <KpiChart
         ref="kpiChartRef"
         :selectedPlayerIds="selectedPlayerIds"
@@ -467,12 +469,14 @@
 
 <script setup>
 import { ref, computed, watch, toRaw, onBeforeUnmount } from "vue";
+// viewMode is driven by tabStore.kpiViewMode so the tutorial can switch views externally
 import { useVisualizationStore } from "@/stores/visualization";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
+import { useTabStore } from "@/stores/tabs";
 import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
 import KpiChart from "@/components/kpi/KpiChart.vue";
 import ZoneSelectorPicker from "@/components/kpi/ZoneSelectorPicker.vue";
@@ -486,6 +490,7 @@ const positionDataStore = usePositionDataStore();
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 const posdataWorkerStore = usePosdataWorkerStore();
+const tabStore = useTabStore();
 
 const { t } = useI18n();
 
@@ -501,7 +506,10 @@ const splitWindowedLabel = (optionId) => {
   return { before: msg.slice(0, idx), after: msg.slice(idx + 1) };
 };
 
-const viewMode = ref("table");
+const viewMode = computed({
+  get: () => tabStore.kpiViewMode,
+  set: (val) => { tabStore.kpiViewMode = val; },
+});
 const groupMode = ref("player");
 
 // Initialize with all 25 pitch zones selected (full pitch)

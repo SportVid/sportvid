@@ -313,14 +313,102 @@
     "color": "Color"
   },
   "tutorials": {
+    "upload_video": {
+      "video_view": "This is where all your uploaded videos are listed. Once uploaded, click on a video to open it in the analysis view.",
+      "open_modal": "Click here to open the video upload modal.",
+      "fill_form": "In the video upload modal, you can select a video file from your computer and fill in the required information about the video. Make sure to provide accurate information about the sport, division, age group, and field dimensions to ensure the best analysis results.",
+      "upload_video": "All required fields are filled — click the button to start the upload.",
+      "video_processing": "Your video is currently being processed. This may take some time depending on the video length and server load. Once processing is complete, it will be ready for analysis."
+    },
+    "analyse_video": {
+      "video_view": "This is where all your uploaded videos are listed. Click the Analyse button on a video to open it in the analysis view.",
+      "video_player": "This is the video player. You can play, pause and scrub through your video here. All visualizations can be synchronized to the current playback position.",
+      "top_view": "This is the top-view panel. It shows position data projected onto a 2D field — players, paths and team assignments. Use the controls to select which data to display.",
+      "visualization_tabs": "These tabs give you different ways to explore your data: Timeline for annotated events, Events for a structured event list, Heatmap for spatial density, and KPI for computed metrics.",
+      "appbar_actions": "The toolbar gives you quick access to the main tools: run plugins to process your video, check the run history, manage annotation shortcuts, and export your data."
+    },
+    "run_plugin": {
+      "open_modal": "Click here to open the plugin panel. Plugins are tools that process your video and generate data — e.g. player tracking or camera calibration.",
+      "plugin_panel": "The plugin panel shows all available plugins grouped by category. Each plugin can be configured individually. E.g., run ByteTrack for player detection, DLT+RANSAC to compute the homography using your calibration asset, or the KPI computation plugin to compute performance metrics based on the position data.",
+      "plugin_select": "To select any plugin, just click it in the list. For this tutorial, select the 'KPI Computation' plugin.",
+      "plugin_details": "After selecting a plugin, you see its description and configuration options. Depending on the plugin, you may need to provide different inputs such as selecting files or specifying run IDs. Advanced options allow you to fine-tune the plugin's behavior, but if you're not sure, the default settings are a good starting point."
+    },
+    "check_history": {
+      "open_modal": "Click here to open the plugin run history. This is where you can see the status of all your plugin runs — whether they are queued, running, completed, or if any errors occurred.",
+      "history_table": "This table lists all plugin runs for the current video. Each row shows the plugin name, the date it was run, its progress, and its current status. You can use this to track ongoing runs or review past results.",
+      "delete_panel": "Expand this section to delete plugin runs. You can delete all runs for your account, all runs for the current video, all runs of a specific plugin type for the current video, or select individual runs to remove. This is useful to clean up old or failed runs."
+    },
+
+    "export": {
+      "open_modal": "Click here to open the export panel. Important: export options that rely on computed data — such as KPIs or position data — will only work if that data has already been generated.",
+      "export_panel": "The left panel lists all available export formats. You can export raw position data, computed KPIs (regular or aggregated), merged or individual CSV files, or annotation formats like ELAN. Choose the format that fits your needs.",
+      "export_select": "To select an export format, just click it in the list. For this tutorial, select 'KPI (aggregated)'.",
+      "export_details": "After selecting a format, you see its configuration options. Depending on the format, you may need to choose teams, time ranges, specific metrics, or other parameters. Once configured, click the Export button to download the file. Remember: if the required data hasn't been computed yet, the dropdowns will be empty and the export won't be possible."
+    },
+    "dlt_ransac": {
+      "open_modal": "Click here to open the plugin panel.",
+      "select_plugin": "Select the 'DLT+RANSAC from annotated landmarks' plugin from the list.",
+      "plugin_overview": "The DLT+RANSAC plugin computes a static camera calibration by mapping annotated landmark points from the pitch view to their corresponding positions in the video. This calibration is needed to convert pixel coordinates into real-world pitch coordinates, enabling accurate position data generation.<br><br>To run the plugin, you first need a calibration asset — a set of reference points defined on the pitch view.",
+      "create_select": "If you don't have a calibration asset yet, click <em>Create</em> to set one up. Use <em>Select</em> to load an existing asset.",
+      "create_modal": "Choose the calibration type: <em>Marker</em> uses individual landmark points (e.g. corner flags, penalty spots), <em>Segment</em> uses line segments. Select the type matching your setup, then click <em>Create</em>.",
+      "calibration_asset_btn": "Via this button you can create a new calibration asset, save the current one, update an existing one, or switch to a different saved asset.",
+      "object_btn": "This button shows your current calibration type (<em>Marker</em> or <em>Segments</em>). Click it to toggle the video marker overlay — this highlights reference landmarks on the pitch view. In <em>Marker</em> mode, you can also add custom markers or remove existing ones.",
+      "object_info": "Left-click a marker in the pitch view to open a zoomed video overlay, where you can precisely place it on the corresponding video position. Right-click a marker to de-toggle it and remove the video mapping.<br><br>Once all markers are set, save the asset via the <em>Calibration Asset</em> button, then go back to the plugin panel and run DLT+RANSAC with the saved asset selected."
+    },
+    "posdata_bytetrack": {
+      "open_modal": "Click here to open the plugin panel.",
+      "select_plugin": "Select the 'ByteTrack' plugin from the list.",
+      "plugin_overview": "The ByteTrack plugin performs object tracking directly on the video. It detects and tracks players and the ball frame by frame, generating bounding boxes for each detected object.<br><br>The tracking results can later be used together with a camera calibration (DLT+RANSAC) to compute real-world position data, which in turn enables KPI computation.",
+      "fps": "Set the frames per second (FPS) used for tracking. The value is pre-set to your video's frame rate, which is the recommended choice. It ensures every frame is analyzed and no motion is missed.<br><br>You can freely adjust it: a <em>lower</em> FPS speeds up processing but may cause the tracker to lose fast-moving objects between frames. A <em>higher</em> FPS than the video's native rate has no benefit, as no additional information is available.",
+      "run_plugin": "Click 'Run Plugin' to start the ByteTrack tracking. The progress can be tracked in the History panel. Once completed, the tracking results can be used for position data generation via KPI Computation."
+    },
+    "posdata_manual": {
+      "upload_open": "Click the upload button to open the position data upload dialog.",
+      "upload_modal": "Fill in the required fields: give the data a name, select its format, and attach the corresponding file. Depending on the format, additional fields such as delimiter or coordinate origin may appear.",
+      "format_select": "Select the format that matches your position data file. Different providers use different conventions — choosing the correct format ensures the data is parsed and converted correctly.",
+      "upload": "Once all fields are filled in, click 'Upload'. The system will automatically run the <em>Posdata Convert</em> plugin afterwards to normalize the data into the internal format, making it available for visualization and KPI computation."
+    },
+    "kpi_computation": {
+      "open_modal": "Click here to open the plugin panel.",
+      "select_plugin": "Select the 'KPI Computation' plugin from the list.",
+      "plugin_overview": "The KPI Computation plugin calculates performance metrics such as distance covered, velocity, metabolic power, equivalent distance, and centroid distance based on player position data.<br><br>Before running this plugin, make sure you have position data available. You can obtain it either by running <em>ByteTrack</em> (object tracking) and <em>DLT+RANSAC</em> (camera calibration) first, or by uploading position data manually.",
+      "format_select": "Select the data format that matches your position data source. Choosing 'SportVid (ByteTrack)' enables the ByteTrack run and calibration selectors below. All other formats use an externally uploaded position data file.",
+      "tracking_data": "Select the position data to use for the computation. This dropdown lists the position data files that have been uploaded or generated for this video.<br><br>If you selected 'SportVid (ByteTrack)' as the format, you will instead see a ByteTrack run and calibration asset selector. Choose the corresponding run and the calibration asset used during tracking.",
+      "advanced_options": "The 'Advanced Options' panel lets you configure an optional <em>smoothing filter</em> for the position data before computing KPIs. You can choose between a 'Butterworth lowpass' or a 'Savitzky-Golay lowpass' filter, and adjust their hyperparameters. If you are unsure, leaving this at 'None' is a good default.",
+      "run_plugin": "Click 'Run Plugin' to start the KPI computation. The progress can be tracked in the History panel. Once completed, KPI results will appear in the KPI tab of the analysis view."
+    },
+    "top_view": {
+      "pitch_overview": "The top-view shows your position data projected onto a 2D area — this could be a soccer pitch, a handball court, a basketball court, a climbing wall, or any other defined playing field. Each tracked entity appears as a colored dot, grouped and colored by team or assignment.",
+      "controls": "When the top-view is not synchronized with the video player, you can control playback independently. Use the <em>play button</em> to start or pause, and the <em>slider</em> below to seek to any position. The time code next to the download button shows the current position within the position dataset.",
+      "display_settings_open": "Click <em>Display Settings</em> to open the customization menu.",
+      "display_settings": "The Display Settings menu lets you adjust everything about how the top-view looks:<br><br><strong>Playback:</strong> Toggle synchronization with the video player, or set a time offset to align position data and video.<br><br><strong>Visibility:</strong> Show or hide bounding boxes (if available), player IDs on the dots, or toggle individual players and teams on/off. You can also adjust team colors.<br><br><strong>KPI Overlays</strong> (View KPIs submenu): Overlay computed metrics like <em>Space Control</em> (Voronoi-based) or <em>Effective Playing Space</em> (convex hull) directly on the field.<br><br><strong>Area & Grid:</strong> Switch between different predefined area sizes, or configure longitudinal and transverse grid lines.<br><br><strong>Position Data:</strong> Upload a new position data file or switch to a different already-loaded dataset.",
+      "download": "Click the download button to save a screenshot of the current top-view frame as an image file."
+    },
+    "heatmap": {
+      "tab_switch": "The <em>Heatmap</em> tab visualizes the spatial distribution of player positions over time.",
+      "pitch_overview": "This is the playing field. The heatmap or movement trace is rendered directly on top of it. The displayed area can be adjusted — for example, you can zoom in to show only one half of the pitch.",
+      "player_legend": "Below the pitch you can select which players to include in the visualization. Click an individual player dot to toggle them on or off. Click a team name to select or deselect the entire team at once.",
+      "settings": "The toolbar above the pitch gives you several controls:<br><br><strong>Area size:</strong> switch between the full field and sub-areas such as one half or one penalty box.<br><strong>Display mode:</strong> toggle between a classic <em>heatmap</em> (density overlay) and a <em>movement trace</em> (individual dot paths).<br><strong>Save:</strong> export a high-resolution screenshot of the current visualization.<br><strong>Time sync:</strong> quickly sync the start or end of the time window to the current video position, or jump to the full match, first half, or second half.",
+      "time_selector": "The time range selector (right) and the sync menu (left) work together to filter the heatmap to any time window.<br><br>Drag the left or right handle on the range selector to set the start and end time. The sync menu lets you snap either handle to the <em>current video position</em> for frame-accurate selection, or jump instantly to the <em>full match</em>, <em>first half</em>, or <em>second half</em>."
+    },
+    "kpi_visualization": {
+      "tab_switch": "The <em>KPI</em> tab gives you two complementary views of your computed metrics. Let's explore both.",
+      "table_view": "The <strong>table view</strong> shows aggregated statistics per player or per team. Each team gets its own card with a data table. Use the player dots at the top of each card to filter which players are included. Toggle between <em>per-player</em> and <em>per-team</em> grouping using the toolbar.",
+      "chart_view": "The <strong>chart view</strong> shows KPI values as a time series across the match. You can plot multiple metrics simultaneously (e.g. running distance per frame alongside metabolic power). Use the player selection legend at the bottom to show or hide individual players or entire teams.",
+      "settings": "The toolbar gives you full control over what is displayed:<br><br><strong>Table / Chart toggle:</strong> switch between the table summary and the time-series chart.<br><strong>Player / Team grouping:</strong> group results by individual player or aggregate by team.<br><strong>KPI selection:</strong> choose which metrics to show. In chart mode you can also pick windowed variants (rolling window over N frames).<br><strong>Zone selection:</strong> restrict the analysis to specific pitch zones.<br><strong>Download:</strong> export the current chart as an image (chart mode only).<br><strong>Time sync:</strong> snap the time window to the video position or jump to a predefined half.",
+      "time_selector": "The time range selector (right) and the sync menu (left) work together to filter all KPI data to any time window.<br><br>Drag the left or right handle to set the start and end time. Use the sync menu to snap either handle to the <em>current video position</em> for frame-accurate selection, or jump instantly to the <em>full match</em>, <em>first half</em>, or <em>second half</em>."
+    },
     "position_data_generation": {
-      "video_select": "Please select a video to start the position data generation process.",
-      "calibration_asset_select": "Create a new calibration asset or select an existing one.",
-      "calibration_asset_edit": "Edit the calibration asset by adding or removing markers, then save it for plugin use.",
-      "modal_plugin_open": "Open the plugin menu.",
-      "modal_plugin_select": "Run the two plugins from the Player and Object Tracking section (ByteTrack & DLT+RANSAC from annotated landmarks) to generate position data.",
-      "position_data_select": "Switch to the position data tab and select both the calibration asset and the position data.",
-      "position_data_analyse": "You’ve completed the tutorial! You can now analyze your data using your preferred settings."
+      "video_select": "Select a video from the list to open the analysis view.",
+      "choose_path": "How do you want to provide position data?",
+      "choose_manual": "Manual Upload",
+      "choose_bytetrack": "ByteTrack (Automatic)",
+      "manual_upload": "Use the upload button to import your position data file. See the <em>Position Data (Manual)</em> tutorial for a detailed walkthrough.",
+      "open_plugin_panel": "Open the plugin panel.",
+      "select_dlt": "Select <em>DLT+RANSAC from Annotated Landmarks</em> from the list.",
+      "dlt_details": "Configure and run the DLT+RANSAC plugin here. If you don’t have a calibration asset yet, create one first — the <em>DLT+RANSAC</em> tutorial walks you through this step by step.",
+      "select_bytetrack": "Now select <em>ByteTrack</em> from the list.",
+      "run_bytetrack": "Set the FPS to match your video’s frame rate, then click <em>Run Plugin</em> to generate position data."
     }
   },
   "modal": {
@@ -820,29 +908,73 @@
       "show_steps": "Show Steps",
       "show_missing_requirements": "Show missing requirements",
       "step": "Step",
+      "tabs": {
+        "pipelines": "Pipelines",
+        "singles": "Single Steps"
+      },
+      "groups": {
+        "basics": "Basics",
+        "position_data": "Position Data",
+        "analysis": "Analysis",
+        "pipelines": "Pipelines"
+      },
       "missing_requirements": {
         "title": "Missing requirements",
-        "video_uploaded": "You need to upload a video first."
+        "video_uploaded": "You need to upload a video first.",
+        "analysis_view_opened": "You need to open the analysis view for any video.",
+        "position_data_selected": "You need to select position data first."
+      },
+      "upload_video": {
+        "name": "Upload Video",
+        "description": "Upload and manage videos"
+      },
+      "analyse_video": {
+        "name": "Analyse Video",
+        "description": "Select and analyse videos"
+      },
+      "run_plugin": {
+        "name": "Run a Plugin",
+        "description": "Open plugin panel and run plugins"
+      },
+      "check_history": {
+        "name": "Check History",
+        "description": "View and manage plugin runs"
+      },
+      "export": {
+        "name": "Export",
+        "description": "Export timelines, position data, and KPIs"
+      },
+      "dlt_ransac": {
+        "name": "DLT+RANSAC",
+        "description": "Create, edit and save calibration assets"
+      },
+      "posdata_bytetrack": {
+        "name": "Position Data (ByteTrack)",
+        "description": "Generate position data using the ByteTrack plugin"
+      },
+      "posdata_manual": {
+        "name": "Position Data (Manual)",
+        "description": "Upload position data manually"
+      },
+      "kpi_computation": {
+        "name": "KPI Computation",
+        "description": "Compute key performance indicators"
+      },
+      "top_view": {
+        "name": "Top-View Visualization",
+        "description": "Visualize position data in the top-view"
+      },
+      "heatmap": {
+        "name": "Heatmap Visualization",
+        "description": "Visualize position data as heatmap"
+      },
+      "kpi_visualization": {
+        "name": "KPI Visualization",
+        "description": "Visualize KPIs in timelines and top-view"
       },
       "position_data_generation": {
         "name": "Position Data Generation",
         "description": "Calibrate camera, run homography, track players"
-      },
-      "timeline_plugin": {
-        "name": "Timelines",
-        "description": "View events per player & more"
-      },
-      "run_aggregation": {
-        "name": "Running Data",
-        "description": "Aggregate running distance & speed by interval"
-      },
-      "kpi_visualization": {
-        "name": "KPI Visualization",
-        "description": "Visualize space control, EPS & player zones"
-      },
-      "data_export": {
-        "name": "Export",
-        "description": "Export position data, stats & visualizations"
       }
     },
     "calibration_asset": {

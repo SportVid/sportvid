@@ -5,7 +5,11 @@
   >
     <div class="posdata-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
     <div class="posdata-loading-text">
-      {{ posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100 ? `${posdataWorkerStore.loadProgress}%` : "" }}
+      {{
+        posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100
+          ? `${posdataWorkerStore.loadProgress}%`
+          : ""
+      }}
     </div>
   </div>
 
@@ -14,7 +18,12 @@
   <v-container v-else class="d-flex flex-column">
     <v-row justify="center">
       <div ref="topViewFullscreenRoot" class="top-view-fullscreen-root">
-        <div class="top-view-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
+        <div
+          class="top-view-wrapper"
+          data-tour="top-view-pitch"
+          @mouseenter="hovering = true"
+          @mouseleave="hovering = false"
+        >
           <img
             ref="topViewElement"
             class="visualizer-image"
@@ -84,12 +93,28 @@
     </v-row>
 
     <div style="position: relative">
+      <div
+        data-tour="top-view-controls-area"
+        style="
+          position: absolute;
+          top: 18px;
+          left: -16px;
+          right: -16px;
+          bottom: -18px;
+          pointer-events: none;
+        "
+      />
       <v-row
         ref="videoControl"
         class="video-control mt-6 mb-n2 justify-center"
         data-tour="position-data-edit-row"
       >
-        <v-btn :disabled="playerStore.isSynced" @click="toggleTopView" size="small">
+        <v-btn
+          :disabled="playerStore.isSynced"
+          @click="toggleTopView"
+          size="small"
+          data-tour="top-view-play-btn"
+        >
           <v-icon v-if="topViewEnded">mdi-restart</v-icon>
           <v-icon v-else-if="topViewPlaying">mdi-pause</v-icon>
           <v-icon v-else>mdi-play</v-icon>
@@ -97,11 +122,16 @@
 
         <v-menu location="top">
           <template #activator="{ props }">
-            <v-btn v-bind="props" size="small">
+            <v-btn v-bind="props" size="small" data-tour="top-view-display-settings-btn">
               {{ $t("position_data.display_settings.title") }}
             </v-btn>
           </template>
-          <v-list class="py-0" density="compact" width="200px">
+          <v-list
+            class="py-0"
+            density="compact"
+            width="200px"
+            data-tour="top-view-display-settings-list"
+          >
             <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
               <v-list-item-title class="d-flex justify-space-between">
                 {{ $t("position_data.display_settings.video_sync") }}
@@ -338,7 +368,7 @@
           v-model="showModalPositionDataOffset"
         />
 
-        <v-btn size="small" @click="saveScreenshot">
+        <v-btn size="small" @click="saveScreenshot" data-tour="top-view-download">
           <v-icon>mdi-download</v-icon>
         </v-btn>
 
@@ -363,7 +393,7 @@
         </v-tooltip>
       </v-row>
 
-      <v-row ref="videoSlider">
+      <v-row ref="videoSlider" data-tour="top-view-slider">
         <v-slider
           v-model="currentTime"
           @update:model-value="onProgressChange"
@@ -735,7 +765,12 @@ const convexHullForCurrentFrame = computed(() => {
 
   const teams = {};
   framePositions
-    .filter((position) => position[1] !== 1 && includedPlayers.value.has(position[0]) && !kpiExcludedByClick.value.has(position[0]))
+    .filter(
+      (position) =>
+        position[1] !== 1 &&
+        includedPlayers.value.has(position[0]) &&
+        !kpiExcludedByClick.value.has(position[0])
+    )
     .forEach((position) => {
       const transformed = transformCoordinateToCrop(position[3], position[4], cropPct);
 
@@ -794,7 +829,12 @@ const voronoiForCurrentFrame = computed(() => {
   };
 
   const allPlayers = framePositions
-    .filter((player) => player[1] !== 1 && includedPlayers.value.has(player[0]) && !kpiExcludedByClick.value.has(player[0]))
+    .filter(
+      (player) =>
+        player[1] !== 1 &&
+        includedPlayers.value.has(player[0]) &&
+        !kpiExcludedByClick.value.has(player[0])
+    )
     .map((player) => {
       const transformed = transformCoordinateToCrop(player[3], player[4], cropPct);
 
@@ -857,7 +897,7 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
   const h = topViewStore.topViewSize.height;
   if (!w || !h) return;
 
-  const dpr = offscreenCanvas ? offscreenScale : (window.devicePixelRatio || 1);
+  const dpr = offscreenCanvas ? offscreenScale : window.devicePixelRatio || 1;
   canvas.width = w * dpr;
   canvas.height = h * dpr;
   const ctx = canvas.getContext("2d");

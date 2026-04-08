@@ -14,6 +14,7 @@
         :label="parameter.text"
         v-if="parameter.field == 'select_options'"
         :key="parameter.name"
+        :data-tour="parameter.dataTour || undefined"
       />
 
       <v-select
@@ -29,8 +30,8 @@
         variant="underlined"
       />
 
-      <div v-if="parameter.field == 'select_calibration'" :key="parameter.name">
-        <div v-if="!parameter.dlt" class="d-flex ga-2 mb-6">
+      <div v-if="parameter.field == 'select_calibration'" :key="parameter.name" :data-tour="parameter.dataTour || undefined">
+        <div v-if="!parameter.dlt" class="d-flex ga-2 mb-6" data-tour="dlt-calibration-create-select">
           <v-btn
             variant="outlined"
             prepend-icon="mdi-plus"
@@ -81,6 +82,7 @@
         persistent-hint
         variant="underlined"
         class="mb-4"
+        :data-tour="parameter.dataTour || undefined"
       />
 
       <v-select
@@ -96,6 +98,7 @@
         variant="underlined"
         class="mb-4"
         :no-data-text="$t('modal.plugin.kpi_computation.bytetrack_run_none')"
+        :data-tour="parameter.dataTour || undefined"
       />
 
       <v-select
@@ -396,7 +399,7 @@
         persistent-hint
       />
 
-      <div v-if="parameter.field == 'slider'" :key="parameter.name">
+      <div v-if="parameter.field == 'slider'" :key="parameter.name" :data-tour="parameter.dataTour || undefined">
         <v-row v-if="parameter.hint_left && parameter.hint_right">
           <v-col cols="3" style="display: flex; justify-content: flex-end">
             {{ parameter.hint_left }}

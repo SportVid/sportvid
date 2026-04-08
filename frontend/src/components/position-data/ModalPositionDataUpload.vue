@@ -11,7 +11,7 @@
         </template>
       </v-toolbar>
 
-      <v-card-text class="pt-4" style="overflow-y: auto">
+      <v-card-text class="pt-4" style="overflow-y: auto" data-tour="posdata-manual-upload-modal">
         <v-form v-if="canUpload">
           <div class="text-center d-flex justify-center mb-2">
             <div class="storage-bar-container">
@@ -42,6 +42,7 @@
             variant="underlined"
             class="mt-2"
             prepend-icon="mdi-menu"
+            data-tour="posdata-manual-format"
           />
 
           <v-file-input
@@ -150,7 +151,12 @@
             </template>
           </v-checkbox>
 
-          <v-btn class="mr-4 mt-n4" :disabled="disabled" @click="uploadPositionData">
+          <v-btn
+            class="mr-4 mt-n4"
+            :disabled="disabled"
+            @click="uploadPositionData"
+            data-tour="posdata-manual-upload"
+          >
             {{ $t("button.upload") }}
           </v-btn>
         </v-form>

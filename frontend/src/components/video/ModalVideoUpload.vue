@@ -12,7 +12,7 @@
           </template>
         </v-toolbar>
 
-        <v-card-text class="pt-4 scrollable-content">
+        <v-card-text class="pt-4 scrollable-content" data-tour="modal-video-upload">
           <v-form v-if="canUpload">
             <div class="text-center d-flex justify-center mb-2">
               <div class="storage-bar-container">
@@ -179,7 +179,12 @@
               </template>
             </v-checkbox>
 
-            <v-btn class="mr-4 mt-n4" :disabled="disabled" @click="uploadVideo">
+            <v-btn
+              class="mr-4 mt-n4"
+              :disabled="disabled"
+              @click="uploadVideo"
+              data-tour="upload-video"
+            >
               {{ $t("button.upload") }}
             </v-btn>
           </v-form>
@@ -201,10 +206,12 @@ import { useI18n } from "vue-i18n";
 import { useVideoUploadStore } from "@/stores/video_upload";
 import { useUserStore } from "@/stores/user";
 import { useTopViewStore } from "@/stores/top_view";
+import { useTutorialStore } from "@/stores/tutorial";
 
 const videoUploadStore = useVideoUploadStore();
 const userStore = useUserStore();
 const topViewStore = useTopViewStore();
+const tutorialStore = useTutorialStore();
 
 const props = defineProps({
   modelValue: {
@@ -309,6 +316,12 @@ const disabled = computed(() => {
     !v.totalNumberofTeams ||
     !v.ageGroup
   );
+});
+
+watch(disabled, (val) => {
+  if (tutorialStore.isTutorialRunning && tutorialStore.currentTutorialId === "upload-video") {
+    tutorialStore.uploadFormReady = !val;
+  }
 });
 
 const sizeInWords = (size) => {

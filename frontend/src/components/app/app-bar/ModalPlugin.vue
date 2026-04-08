@@ -13,7 +13,7 @@
 
       <v-card-text style="overflow: hidden">
         <v-row>
-          <v-col cols="3" class="ml-n3">
+          <v-col cols="3" class="ml-n3" data-tour="plugin-panel">
             <v-text-field
               v-model="searchPlugin"
               :label="$t('modal.plugin.search')"
@@ -41,12 +41,18 @@
                   {{ item.icon }}
                 </v-icon>
               </template>
+              <template #item="{ item, props: itemProps }">
+                <v-list-item
+                  v-bind="itemProps"
+                  :data-tour="item.id === 703 ? 'plugin-kpi-computation' : item.id === 701 ? 'plugin-bytetrack' : item.id === 702 ? 'plugin-calibration-dlt' : undefined"
+                />
+              </template>
             </v-treeview>
           </v-col>
 
           <v-divider vertical />
 
-          <v-col cols="9">
+          <v-col cols="9" data-tour="plugin-details">
             <div
               v-if="!selected"
               class="text-h4 text-grey font-weight-light"
@@ -71,6 +77,7 @@
                 <v-expansion-panels
                   v-if="selected.optional_parameters && selected.optional_parameters.length > 0"
                   class="mt-4"
+                  data-tour="kpi-advanced-options"
                 >
                   <v-expansion-panel>
                     <v-expansion-panel-title expand-icon="mdi-menu-down">
@@ -92,6 +99,7 @@
                 @click="
                   runPlugin(selected.plugin, selected.parameters, selected.optional_parameters)
                 "
+                data-tour="kpi-run-plugin"
               >
                 {{ $t("button.run_plugin") }}
               </v-btn>
@@ -1009,6 +1017,7 @@ const plugins = ref([
             step: 1,
             name: "fps",
             text: t("modal.plugin.fps"),
+            dataTour: "bytetrack-fps",
           },
         ],
         optional_parameters: [],
@@ -1047,6 +1056,7 @@ const plugins = ref([
               { title: "SportVid (ByteTrack)", value: "sportvid" },
             ],
             text: t("modal.plugin.kpi_computation.format"),
+            dataTour: "kpi-format",
           },
           {
             field: "select_tracking_data",
@@ -1055,6 +1065,7 @@ const plugins = ref([
             text: t("modal.plugin.kpi_computation.tracking_data_id"),
             hint: t("modal.plugin.kpi_computation.tracking_data_id_hint"),
             format_filter: "kinexon",
+            dataTour: "kpi-tracking-data",
           },
           {
             field: "select_bytetrack_run",
@@ -1063,6 +1074,7 @@ const plugins = ref([
             text: t("modal.plugin.kpi_computation.bytetrack_run_id"),
             hint: t("modal.plugin.kpi_computation.bytetrack_run_id_hint"),
             hidden: true,
+            dataTour: "kpi-bytetrack-run",
           },
           {
             field: "select_calibration",
@@ -1072,6 +1084,7 @@ const plugins = ref([
             hint: t("modal.plugin.kpi_computation.calibration_id_hint"),
             hidden: true,
             dlt: true,
+            dataTour: "kpi-calibration",
           },
         ],
         optional_parameters: [
@@ -1088,6 +1101,7 @@ const plugins = ref([
               { title: t("modal.plugin.kpi_computation.filter_savgol"), value: "savgol_lowpass" },
             ],
             text: t("modal.plugin.kpi_computation.filter_type"),
+            dataTour: "kpi-filter-type",
           },
           {
             field: "slider",
@@ -1256,6 +1270,26 @@ watch(
   (stepId) => {
     if (stepId === "modal-plugin-select") {
       opened.value = [7];
+    }
+  }
+);
+watch(
+  () => tutorialStore.tutorialActivePluginId,
+  (pluginId) => {
+    if (pluginId !== null) {
+      const groupId = Math.floor(pluginId / 100);
+      if (!opened.value.includes(groupId)) {
+        opened.value = [...opened.value, groupId];
+      }
+      activeNode.value = [pluginId];
+    }
+  }
+);
+watch(
+  () => tutorialStore.tutorialPluginGroupOpen,
+  (groupId) => {
+    if (groupId !== null && !opened.value.includes(groupId)) {
+      opened.value = [...opened.value, groupId];
     }
   }
 );
