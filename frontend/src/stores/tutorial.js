@@ -3,9 +3,9 @@ import { ref, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
-import { useTabStore } from "./tabs";
-import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
+import { useTopViewStore } from "@/stores/top_view";
+import { useTabStore } from "@/stores/tabs";
 
 export const useTutorialStore = defineStore("tutorial", () => {
   const router = useRouter();
@@ -13,9 +13,9 @@ export const useTutorialStore = defineStore("tutorial", () => {
   const { t } = useI18n();
 
   const calibrationAssetStore = useCalibrationAssetStore();
-  const tabStore = useTabStore();
-  const topViewStore = useTopViewStore();
   const videoStore = useVideoStore();
+  const topViewStore = useTopViewStore();
+  const tabStore = useTabStore();
 
   const currentTutorialId = ref(null);
   const currentStepId = ref(null);
@@ -43,6 +43,8 @@ export const useTutorialStore = defineStore("tutorial", () => {
           case "analysis-view-opened":
             if (route.name !== "AnalysisView") missing.push(tutorialRequirements[req]);
             break;
+          case "position-data-selected":
+            if (topViewStore.sortedFrameKeys.length === 0) missing.push(tutorialRequirements[req]);
         }
       });
     }
@@ -55,59 +57,8 @@ export const useTutorialStore = defineStore("tutorial", () => {
 
   const tutorials = [
     {
-      id: "position-data-generation",
-      type: "pipeline",
-      group: "pipelines",
-      name: t("modal.tutorial.position_data_generation.name"),
-      description: t("modal.tutorial.position_data_generation.description"),
-      icon: "mdi-crosshairs-gps",
-      disabled: false,
-      requirements: ["video-uploaded", "t1", "t2"],
-    },
-    {
-      id: "timeline-plugin",
-      type: "pipeline",
-      group: "pipelines",
-      name: t("modal.tutorial.timeline_plugin.name"),
-      description: t("modal.tutorial.timeline_plugin.description"),
-      icon: "mdi-timeline-text",
-      disabled: true,
-      requirements: ["video-uploaded"],
-    },
-    {
-      id: "run-aggregation",
-      type: "pipeline",
-      group: "pipelines",
-      name: t("modal.tutorial.run_aggregation.name"),
-      description: t("modal.tutorial.run_aggregation.description"),
-      icon: "mdi-run-fast",
-      disabled: true,
-      requirements: ["video-uploaded"],
-    },
-    {
-      id: "kpi-visualization",
-      type: "pipeline",
-      group: "pipelines",
-      name: t("modal.tutorial.kpi_visualization.name"),
-      description: t("modal.tutorial.kpi_visualization.description"),
-      icon: "mdi-chart-line",
-      disabled: true,
-      requirements: ["video-uploaded"],
-    },
-    {
-      id: "data-export",
-      type: "pipeline",
-      group: "pipelines",
-      name: t("modal.tutorial.data_export.name"),
-      description: t("modal.tutorial.data_export.description"),
-      icon: "mdi-file-export",
-      disabled: true,
-      requirements: ["video-uploaded"],
-    },
-    {
       id: "upload-video",
-      type: "single",
-      group: "video",
+      group: "basics",
       name: t("modal.tutorial.upload_video.name"),
       description: t("modal.tutorial.upload_video.description"),
       icon: "mdi-upload-outline",
@@ -116,8 +67,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
     {
       id: "analyse-video",
-      type: "single",
-      group: "video",
+      group: "basics",
       name: t("modal.tutorial.analyse_video.name"),
       description: t("modal.tutorial.analyse_video.description"),
       icon: "mdi-google-analytics",
@@ -126,8 +76,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
     {
       id: "run-plugin",
-      type: "single",
-      group: "app_bar",
+      group: "basics",
       name: t("modal.tutorial.run_plugin.name"),
       description: t("modal.tutorial.run_plugin.description"),
       icon: "mdi-puzzle-outline",
@@ -136,8 +85,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
     {
       id: "check-history",
-      type: "single",
-      group: "app_bar",
+      group: "basics",
       name: t("modal.tutorial.check_history.name"),
       description: t("modal.tutorial.check_history.description"),
       icon: "mdi-history",
@@ -146,28 +94,25 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
     {
       id: "export",
-      type: "single",
-      group: "app_bar",
+      group: "basics",
       name: t("modal.tutorial.export.name"),
       description: t("modal.tutorial.export.description"),
-      icon: "mdi-swap-vertical-bolt",
+      icon: "mdi-swap-vertical-bold",
       disabled: false,
       requirements: ["video-uploaded", "analysis-view-opened"],
     },
     {
-      id: "calibration-asset",
-      type: "single",
-      group: "plugins",
-      name: t("modal.tutorial.calibration_asset.name"),
-      description: t("modal.tutorial.calibration_asset.description"),
+      id: "dlt-ransac",
+      group: "position_data",
+      name: t("modal.tutorial.dlt_ransac.name"),
+      description: t("modal.tutorial.dlt_ransac.description"),
       icon: "mdi-link",
       disabled: false,
       requirements: ["video-uploaded", "analysis-view-opened"],
     },
     {
       id: "posdata-bytetrack",
-      type: "single",
-      group: "plugins",
+      group: "position_data",
       name: t("modal.tutorial.posdata_bytetrack.name"),
       description: t("modal.tutorial.posdata_bytetrack.description"),
       icon: "mdi-crosshairs-gps",
@@ -176,8 +121,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
     {
       id: "posdata-manual",
-      type: "single",
-      group: "plugins",
+      group: "position_data",
       name: t("modal.tutorial.posdata_manual.name"),
       description: t("modal.tutorial.posdata_manual.description"),
       icon: "mdi-crosshairs-gps",
@@ -186,13 +130,48 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
     {
       id: "kpi-computation",
-      type: "single",
-      group: "plugins",
+      group: "analysis",
       name: t("modal.tutorial.kpi_computation.name"),
       description: t("modal.tutorial.kpi_computation.description"),
-      icon: "mdi-chart-areaspline",
+      icon: "mdi-chart-box-plus-outline",
       disabled: false,
       requirements: ["video-uploaded", "analysis-view-opened"],
+    },
+    {
+      id: "top-view",
+      group: "analysis",
+      name: t("modal.tutorial.top_view.name"),
+      description: t("modal.tutorial.top_view.description"),
+      icon: "mdi-soccer-field",
+      disabled: false,
+      requirements: ["video-uploaded", "analysis-view-opened", "position-data-selected"],
+    },
+    {
+      id: "heatmap",
+      group: "analysis",
+      name: t("modal.tutorial.heatmap.name"),
+      description: t("modal.tutorial.heatmap.description"),
+      icon: "mdi-blur",
+      disabled: false,
+      requirements: ["video-uploaded", "analysis-view-opened", "position-data-selected"],
+    },
+    {
+      id: "kpi-visualization",
+      group: "analysis",
+      name: t("modal.tutorial.kpi_visualization.name"),
+      description: t("modal.tutorial.kpi_visualization.description"),
+      icon: "mdi-chart-areaspline",
+      disabled: false,
+      requirements: ["video-uploaded", "analysis-view-opened", "position-data-selected"],
+    },
+    {
+      id: "position-data-generation",
+      group: "pipelines",
+      name: t("modal.tutorial.position_data_generation.name"),
+      description: t("modal.tutorial.position_data_generation.description"),
+      icon: "mdi-map-marker-path",
+      disabled: false,
+      requirements: ["video-uploaded"],
     },
   ];
   const availableTutorials = computed(() =>
@@ -620,8 +599,171 @@ export const useTutorialStore = defineStore("tutorial", () => {
         },
       ],
     },
-    "calibration-asset": {
-      steps: [],
+    "dlt-ransac": {
+      steps: [
+        {
+          id: "calibration-open-modal",
+          text: t("tutorials.dlt_ransac.open_modal"),
+          attachTo: {
+            element: '[data-tour="modal-plugin-open"]',
+            on: "bottom",
+          },
+          buttons: [],
+          when: createClickToNextStepHandler(0, []),
+        },
+        {
+          id: "calibration-select-plugin",
+          text: t("tutorials.dlt_ransac.select_plugin"),
+          attachTo: {
+            element: '[data-tour="plugin-calibration-dlt"]',
+            on: "right",
+          },
+          buttons: [],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              tutorialPluginGroupOpen.value = 7;
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="plugin-calibration-dlt"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+          when: createClickToNextStepHandler(1, []),
+        },
+        {
+          id: "calibration-plugin-overview",
+          text: t("tutorials.dlt_ransac.plugin_overview"),
+          attachTo: {
+            element: '[data-tour="plugin-details"]',
+            on: "left",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="plugin-details"] .v-card-title');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+        },
+        {
+          id: "calibration-create-select",
+          text: t("tutorials.dlt_ransac.create_select"),
+          attachTo: {
+            element: '[data-tour="dlt-calibration-create-select"]',
+            on: "bottom",
+          },
+          buttons: [],
+          when: createClickToNextStepHandler(3, []),
+        },
+        {
+          id: "calibration-create-modal",
+          text: t("tutorials.dlt_ransac.create_modal"),
+          attachTo: {
+            element: '[data-tour="modal-calibration-asset-create"]',
+            on: "bottom",
+          },
+          buttons: [],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="modal-calibration-asset-create"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+          when: createClickToNextStepHandler(4, []),
+        },
+        {
+          id: "calibration-asset-btn",
+          text: t("tutorials.dlt_ransac.calibration_asset_btn"),
+          attachTo: {
+            element: '[data-tour="calibration-asset-btn"]',
+            on: "top",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="calibration-asset-btn"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+        },
+        {
+          id: "calibration-object-btn",
+          text: t("tutorials.dlt_ransac.object_btn"),
+          attachTo: {
+            element: '[data-tour="calibration-object-btn"]',
+            on: "top",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+        },
+        {
+          id: "calibration-object-info",
+          text: t("tutorials.dlt_ransac.object_info"),
+          attachTo: {
+            element: '[data-tour="object-info"]',
+            on: "right",
+          },
+          buttons: [
+            {
+              text: "Done",
+              action: () => {
+                stopTutorial();
+              },
+            },
+          ],
+          classes: "tutorial-final-step",
+        },
+      ],
     },
     "posdata-bytetrack": {
       steps: [
@@ -952,61 +1094,112 @@ export const useTutorialStore = defineStore("tutorial", () => {
         },
       ],
     },
-    "position-data-generation": {
+    "top-view": {
       steps: [
         {
-          id: "video-select",
-          text: t("tutorials.position_data_generation.video_select"),
+          id: "top-view-pitch",
+          text: t("tutorials.top_view.pitch_overview"),
           attachTo: {
-            element: '[data-tour="video-select"]',
+            element: '[data-tour="top-view-pitch"]',
+            on: "right",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+        },
+        {
+          id: "top-view-controls",
+          text: t("tutorials.top_view.controls"),
+          attachTo: {
+            element: '[data-tour="top-view-controls-area"]',
+            on: "top",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+        },
+        {
+          id: "top-view-display-settings-open",
+          text: t("tutorials.top_view.display_settings_open"),
+          attachTo: {
+            element: '[data-tour="top-view-display-settings-btn"]',
             on: "top",
           },
           buttons: [],
-          beforeShowPromise: () => {
-            return new Promise((resolve) => {
-              if (router.currentRoute.value.path.startsWith("/video-analysis")) {
-                tour.value.next();
-              } else if (router.currentRoute.value.path !== "/") {
-                router.push({ name: "VideoView" }).then(() => {
-                  tour.value.show(0);
-                });
-              } else {
-                resolve();
-              }
-            });
-          },
-          when: createClickToNextStepHandler(0, []),
+          when: createClickToNextStepHandler(2, ["top-view-download"]),
         },
         {
-          id: "calibration-asset-select",
-          text: t("tutorials.position_data_generation.calibration_asset_select"),
+          id: "top-view-display-settings",
+          text: t("tutorials.top_view.display_settings"),
           attachTo: {
-            element: '[data-tour="calibration-asset-menu"]',
+            element: '[data-tour="top-view-display-settings-list"]',
             on: "left",
           },
-          buttons: [],
+          when: createNoOverlayHandler(),
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                const btn = document.querySelector('[data-tour="top-view-display-settings-btn"]');
+                if (btn) btn.click();
+                tour.value.next();
+              },
+            },
+          ],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
-              // if (tabStore.analysisTabId !== "calibration") {
-              //   tabStore.analysisTabId = "calibration";
-              // }
-              const showMenu = calibrationAssetStore.calibrationAssetObjects.length === 0;
-              if (!showMenu) {
-                tour.value.next();
-              } else {
-                resolve();
-              }
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="top-view-display-settings-list"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
             });
           },
-          when: createClickToNextStepHandler(1, ["modal-plugin-open"]),
         },
         {
-          id: "calibration-asset-edit",
-          text: t("tutorials.position_data_generation.calibration_asset_edit"),
+          id: "top-view-download",
+          text: t("tutorials.top_view.download"),
           attachTo: {
-            element: '[data-tour="calibration-asset-edit-row"]',
-            on: "bottom",
+            element: '[data-tour="top-view-download"]',
+            on: "top",
           },
+          buttons: [
+            {
+              text: "Done",
+              action: () => {
+                stopTutorial();
+              },
+            },
+          ],
+          classes: "tutorial-final-step",
+        },
+      ],
+    },
+    heatmap: {
+      steps: [
+        {
+          id: "heatmap-tab-switch",
+          text: t("tutorials.heatmap.tab_switch"),
+          attachTo: {
+            element: '[data-tour="analysis-visualization-tabs"]',
+            on: "top",
+          },
+          scrollTo: false,
           buttons: [
             {
               text: "Next",
@@ -1017,79 +1210,121 @@ export const useTutorialStore = defineStore("tutorial", () => {
           ],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
-              // if (tabStore.analysisTabId !== "calibration") {
-              //   tabStore.analysisTabId = "calibration";
-              // }
-              resolve();
-            });
-          },
-          when: createClickToNextStepHandler(2, ["modal-plugin-open"]),
-        },
-        {
-          id: "modal-plugin-open",
-          text: t("tutorials.position_data_generation.modal_plugin_open"),
-          attachTo: {
-            element: '[data-tour="modal-plugin-open"]',
-            on: "bottom",
-          },
-          buttons: [],
-          when: createClickToNextStepHandler(3, []),
-        },
-        {
-          id: "modal-plugin-select",
-          text: t("tutorials.position_data_generation.modal_plugin_select"),
-          attachTo: {
-            element: '[data-tour="plugin-object-tracking-overview"]',
-            on: "right",
-          },
-          buttons: [],
-          beforeShowPromise: () => {
-            return new Promise((resolve) => {
-              if (
-                document.querySelector('[data-tour="plugin-object-tracking-overview"]') &&
-                modalPluginVisible.value === true
-              ) {
-                resolve();
+              if (tabStore.visualizationTabId !== "heatmap") {
+                tabStore.visualizationTabId = "heatmap";
               }
+              const el = document.querySelector('[data-tour="analysis-visualization-tabs"]');
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+              setTimeout(resolve, 150);
             });
           },
-          when: createClickToNextStepHandler(4, []),
         },
         {
-          id: "position-data-select",
-          text: t("tutorials.position_data_generation.position_data_select"),
+          id: "heatmap-pitch",
+          text: t("tutorials.heatmap.pitch_overview"),
           attachTo: {
-            element: '[data-tour="position-data-menu"]',
-            on: "left",
+            element: '[data-tour="heatmap-pitch"]',
+            on: "top",
           },
-          buttons: [],
-          beforeShowPromise: () => {
-            return new Promise((resolve) => {
-              // if (
-              //   tabStore.analysisTabId === "position_data" &&
-              //   modalPluginVisible.value === false
-              // ) {
-              //   const showMenu = Object.keys(topViewStore.positionDataTopView).length === 0;
-              //   if (!showMenu) {
-              //     tour.value.next();
-              //   } else {
-              //     resolve();
-              //   }
-              // }
-            });
-          },
-          when: createClickToNextStepHandler(5, []),
-        },
-        {
-          id: "position-data-analyse",
-          text: t("tutorials.position_data_generation.position_data_analyse"),
-          attachTo: {
-            element: '[data-tour="position-data-edit-row"]',
-            on: "bottom",
-          },
+          scrollTo: false,
           buttons: [
             {
-              text: "Analyse",
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="heatmap-pitch"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+        },
+        {
+          id: "heatmap-player-legend",
+          text: t("tutorials.heatmap.player_legend"),
+          attachTo: {
+            element: '[data-tour="heatmap-player-legend"]',
+            on: "top",
+          },
+          scrollTo: false,
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="heatmap-player-legend"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+        },
+        {
+          id: "heatmap-settings",
+          text: t("tutorials.heatmap.settings"),
+          attachTo: {
+            element: '[data-tour="heatmap-settings"]',
+            on: "bottom",
+          },
+          scrollTo: false,
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="heatmap-settings"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+        },
+        {
+          id: "heatmap-controls-row",
+          text: t("tutorials.heatmap.time_selector"),
+          attachTo: {
+            element: '[data-tour="heatmap-controls-row"]',
+            on: "top",
+          },
+          scrollTo: false,
+          buttons: [
+            {
+              text: "Done",
               action: () => {
                 stopTutorial();
               },
@@ -1097,12 +1332,388 @@ export const useTutorialStore = defineStore("tutorial", () => {
           ],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
-              // if (
-              //   tabStore.analysisTabId === "position_data" &&
-              //   modalPluginVisible.value === false
-              // ) {
-              //   resolve();
-              // }
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="heatmap-controls-row"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+          classes: "tutorial-final-step",
+        },
+      ],
+    },
+    "kpi-visualization": {
+      steps: [
+        {
+          id: "kpi-tab-switch",
+          text: t("tutorials.kpi_visualization.tab_switch"),
+          attachTo: {
+            element: '[data-tour="analysis-visualization-tabs"]',
+            on: "top",
+          },
+          scrollTo: false,
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              if (tabStore.visualizationTabId !== "kpi") {
+                tabStore.visualizationTabId = "kpi";
+              }
+              tabStore.kpiViewMode = "table";
+              const el = document.querySelector('[data-tour="analysis-visualization-tabs"]');
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+              setTimeout(resolve, 150);
+            });
+          },
+        },
+        {
+          id: "kpi-table-view",
+          text: t("tutorials.kpi_visualization.table_view"),
+          attachTo: {
+            element: '[data-tour="kpi-table-view"]',
+            on: "top",
+          },
+          scrollTo: false,
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="kpi-table-view"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+        },
+        {
+          id: "kpi-chart-view",
+          text: t("tutorials.kpi_visualization.chart_view"),
+          attachTo: {
+            element: '[data-tour="kpi-chart-view"]',
+            on: "top",
+          },
+          scrollTo: false,
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              tabStore.kpiViewMode = "chart";
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="kpi-chart-view"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+        },
+        {
+          id: "kpi-settings",
+          text: t("tutorials.kpi_visualization.settings"),
+          attachTo: {
+            element: '[data-tour="kpi-settings"]',
+            on: "bottom",
+          },
+          scrollTo: false,
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="kpi-settings"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+        },
+        {
+          id: "kpi-controls-row",
+          text: t("tutorials.kpi_visualization.time_selector"),
+          attachTo: {
+            element: '[data-tour="kpi-controls-row"]',
+            on: "top",
+          },
+          scrollTo: false,
+          buttons: [
+            {
+              text: "Done",
+              action: () => {
+                stopTutorial();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="kpi-controls-row"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+          classes: "tutorial-final-step",
+        },
+      ],
+    },
+    "position-data-generation": {
+      steps: [
+        // index 0
+        {
+          id: "pipeline-video-select",
+          text: t("tutorials.position_data_generation.video_select"),
+          attachTo: {
+            element: '[data-tour="video-select"]',
+            on: "bottom",
+          },
+          buttons: [],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              if (router.currentRoute.value.path.startsWith("/video-analysis")) {
+                tour.value.show("pipeline-choose-path");
+              } else if (router.currentRoute.value.path !== "/") {
+                router.push({ name: "VideoView" }).then(() => {
+                  resolve();
+                });
+              } else {
+                resolve();
+              }
+            });
+          },
+          when: {
+            show() {
+              const targetEl = document.querySelector('[data-tour="video-select"]');
+              if (!targetEl) return;
+              const onClick = () => {
+                if (!isTutorialRunning.value) return;
+                targetEl.removeEventListener("click", onClick);
+                const waitForAnalysis = () => {
+                  if (!isTutorialRunning.value) return;
+                  if (router.currentRoute.value.path.startsWith("/video-analysis")) {
+                    tour.value.show("pipeline-choose-path");
+                  } else {
+                    requestAnimationFrame(waitForAnalysis);
+                  }
+                };
+                waitForAnalysis();
+              };
+              targetEl.addEventListener("click", onClick);
+            },
+            hide() {},
+          },
+        },
+        // index 1
+        {
+          id: "pipeline-choose-path",
+          text: t("tutorials.position_data_generation.choose_path"),
+          classes: "pipeline-choose-step",
+          buttons: [
+            {
+              text: t("tutorials.position_data_generation.choose_manual"),
+              action: () => {
+                tour.value.show("pipeline-manual-upload");
+              },
+            },
+            {
+              text: t("tutorials.position_data_generation.choose_bytetrack"),
+              action: () => {
+                tour.value.show("pipeline-open-plugin-dlt");
+              },
+            },
+          ],
+        },
+        // index 2
+        {
+          id: "pipeline-manual-upload",
+          text: t("tutorials.position_data_generation.manual_upload"),
+          attachTo: {
+            element: '[data-tour="posdata-manual-upload-open"]',
+            on: "bottom",
+          },
+          buttons: [
+            {
+              text: "Done",
+              action: () => {
+                stopTutorial();
+              },
+            },
+          ],
+          classes: "tutorial-final-step",
+        },
+        // index 3
+        {
+          id: "pipeline-open-plugin-dlt",
+          text: t("tutorials.position_data_generation.open_plugin_panel"),
+          attachTo: {
+            element: '[data-tour="modal-plugin-open"]',
+            on: "bottom",
+          },
+          buttons: [],
+          when: createClickToNextStepHandler(3, []),
+        },
+        // index 4
+        {
+          id: "pipeline-select-dlt",
+          text: t("tutorials.position_data_generation.select_dlt"),
+          attachTo: {
+            element: '[data-tour="plugin-calibration-dlt"]',
+            on: "right",
+          },
+          buttons: [],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              tutorialPluginGroupOpen.value = 7;
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="plugin-calibration-dlt"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+          when: createClickToNextStepHandler(4, []),
+        },
+        // index 5
+        {
+          id: "pipeline-dlt-details",
+          text: t("tutorials.position_data_generation.dlt_details"),
+          attachTo: {
+            element: '[data-tour="plugin-details"]',
+            on: "left",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.show("pipeline-select-bytetrack");
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="plugin-details"] .v-card-title');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+        },
+        // index 6
+        {
+          id: "pipeline-select-bytetrack",
+          text: t("tutorials.position_data_generation.select_bytetrack"),
+          attachTo: {
+            element: '[data-tour="plugin-bytetrack"]',
+            on: "right",
+          },
+          buttons: [],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              tutorialPluginGroupOpen.value = 7;
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="plugin-bytetrack"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+          when: createClickToNextStepHandler(6, []),
+        },
+        // index 7
+        {
+          id: "pipeline-run-bytetrack",
+          text: t("tutorials.position_data_generation.run_bytetrack"),
+          attachTo: {
+            element: '[data-tour="plugin-details"]',
+            on: "left",
+          },
+          buttons: [
+            {
+              text: "Done",
+              action: () => {
+                stopTutorial();
+              },
+            },
+          ],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="bytetrack-fps"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
             });
           },
           classes: "tutorial-final-step",
@@ -1119,6 +1730,10 @@ export const useTutorialStore = defineStore("tutorial", () => {
     "analysis-view-opened": {
       id: "analysis-view-opened",
       text: t("modal.tutorial.missing_requirements.analysis_view_opened"),
+    },
+    "position-data-selected": {
+      id: "position-data-selected",
+      text: t("modal.tutorial.missing_requirements.position_data_selected"),
     },
   };
 

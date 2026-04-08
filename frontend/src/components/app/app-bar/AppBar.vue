@@ -22,7 +22,7 @@
 
       <div v-if="analysisView" class="d-flex align-center" data-tour="analysis-appbar-actions">
         <v-btn @click="showModalPlugin = true" data-tour="modal-plugin-open">
-          <app-bar-icon>mdi-plus</app-bar-icon>
+          <app-bar-icon>mdi-puzzle-outline</app-bar-icon>
           <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
         </v-btn>
 

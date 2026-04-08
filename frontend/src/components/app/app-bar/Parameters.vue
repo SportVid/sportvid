@@ -31,7 +31,7 @@
       />
 
       <div v-if="parameter.field == 'select_calibration'" :key="parameter.name" :data-tour="parameter.dataTour || undefined">
-        <div v-if="!parameter.dlt" class="d-flex ga-2 mb-6">
+        <div v-if="!parameter.dlt" class="d-flex ga-2 mb-6" data-tour="dlt-calibration-create-select">
           <v-btn
             variant="outlined"
             prepend-icon="mdi-plus"

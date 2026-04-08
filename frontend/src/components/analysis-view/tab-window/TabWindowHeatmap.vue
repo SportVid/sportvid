@@ -23,8 +23,8 @@
   />
 
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
-    <v-row align="center">
-      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px">
+    <v-row align="center" data-tour="heatmap-controls-row">
+      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px" data-tour="heatmap-settings">
         <v-menu location="bottom">
           <template #activator="{ props }">
             <v-btn v-bind="props" style="height: 40px" class="ml-2 mt-n2" size="small">
@@ -127,13 +127,13 @@
           </v-list>
         </v-menu>
       </v-col>
-      <v-col class="mt-2">
+      <v-col class="mt-2" data-tour="heatmap-time-selector">
         <VisualizationTimeSelector class="ml-n1" />
       </v-col>
     </v-row>
 
     <v-row class="mt-2" justify="center">
-      <div class="top-view-wrapper">
+      <div class="top-view-wrapper" data-tour="heatmap-pitch">
         <img
           ref="topViewElement"
           class="visualizer-image"
@@ -173,7 +173,7 @@
       </div>
     </v-row>
 
-    <div class="chart-legend mt-6">
+    <div class="chart-legend mt-6" data-tour="heatmap-player-legend">
       <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
         <div
           class="team-dot"

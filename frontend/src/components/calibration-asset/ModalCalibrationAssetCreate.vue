@@ -11,7 +11,7 @@
         </template>
       </v-toolbar>
 
-      <v-card-text class="d-flex align-center">
+      <v-card-text class="d-flex align-center" data-tour="modal-calibration-asset-create">
         <v-select
           v-model="objectType"
           :items="objectTypes"

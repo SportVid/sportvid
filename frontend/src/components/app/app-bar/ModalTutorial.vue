@@ -11,75 +11,64 @@
         </template>
       </v-toolbar>
 
-      <v-tabs v-model="tabStore.tutorialTabId" fixed-tabs slider-color="primary">
-        <v-tab v-for="tab in tabStore.tutorialTabs" :key="tab.id" :value="tab.id">
-          {{ tab.name }}
-        </v-tab>
-      </v-tabs>
-      <v-divider />
-
       <v-card-text class="mt-2" style="height: 400px; overflow-y: auto">
-        <v-tabs-window v-model="tabStore.tutorialTabId">
-          <v-tabs-window-item v-for="tab in tabStore.tutorialTabs" :key="tab.id" :value="tab.id">
-            <div
-              v-for="([groupKey, groupTutorials]) in getGroupedTutorialsForTab(tab.id)"
-              :key="groupKey"
-              class="mb-4"
+        <div
+          v-for="([groupKey, groupTutorials]) in getGroupedTutorials()"
+          :key="groupKey"
+          class="mb-4"
+        >
+          <div class="tutorial-group-header text-caption text-uppercase font-weight-bold text-medium-emphasis mb-2 px-1">
+            {{ $t(`modal.tutorial.groups.${groupKey}`) }}
+          </div>
+          <v-row dense>
+            <v-col
+              cols="12"
+              sm="6"
+              v-for="tutorial in groupTutorials"
+              :key="tutorial.id"
             >
-              <div class="tutorial-group-header text-caption text-uppercase font-weight-bold text-medium-emphasis mb-2 px-1">
-                {{ $t(`modal.tutorial.groups.${groupKey}`) }}
-              </div>
-              <v-row dense>
-                <v-col
-                  cols="12"
-                  sm="6"
-                  v-for="tutorial in groupTutorials"
-                  :key="tutorial.id"
-                >
-                  <v-card
-                    :class="[
-                      'd-flex flex-row align-center px-4 py-3',
-                      tutorial.disabled
-                        ? 'opacity-30 pointer-events-none'
-                        : !tutorial.isAvailable
-                        ? 'opacity-60'
-                        : 'hover:bg-gray-100',
-                      tutorialStore.currentTutorialId === tutorial.id ? 'tutorial-active' : '',
-                    ]"
-                    :ripple="!tutorial.disabled && !tutorial.isAvailable"
-                    @click="handleTutorialClick(tutorial)"
-                  >
-                    <div class="d-flex align-center justify-center" style="min-width: 40px">
-                      <v-icon size="32" class="text-primary">{{ tutorial.icon }}</v-icon>
-                    </div>
-                    <div class="d-flex flex-column justify-center ml-4">
-                      <span class="text-subtitle-1 font-weight-medium">
-                        {{ tutorial.name }}
-                        <v-icon
-                          size="20"
-                          class="mt-n1 steps-overview-icon"
-                          @click.stop="showStepsOverview(tutorial.id)"
-                          :title="$t('modal.tutorial.show_steps')"
-                          >mdi-information-outline</v-icon
-                        >
-                        <v-icon
-                          v-if="!tutorial.isAvailable"
-                          size="20"
-                          color="error"
-                          class="mt-n1 steps-overview-icon"
-                          @click.stop="showMissingRequirements(tutorial.id)"
-                          :title="$t('modal.tutorial.show_missing_requirements')"
-                          >mdi-alert-circle-outline</v-icon
-                        >
-                      </span>
-                      <span class="text-body-2 text-grey-darken-1">{{ tutorial.description }}</span>
-                    </div>
-                  </v-card>
-                </v-col>
-              </v-row>
-            </div>
-          </v-tabs-window-item>
-        </v-tabs-window>
+              <v-card
+                :class="[
+                  'd-flex flex-row align-center px-4 py-3',
+                  tutorial.disabled
+                    ? 'opacity-30 pointer-events-none'
+                    : !tutorial.isAvailable
+                    ? 'opacity-60'
+                    : 'hover:bg-gray-100',
+                  tutorialStore.currentTutorialId === tutorial.id ? 'tutorial-active' : '',
+                ]"
+                :ripple="!tutorial.disabled && !tutorial.isAvailable"
+                @click="handleTutorialClick(tutorial)"
+              >
+                <div class="d-flex align-center justify-center" style="min-width: 40px">
+                  <v-icon size="32" class="text-primary">{{ tutorial.icon }}</v-icon>
+                </div>
+                <div class="d-flex flex-column justify-center ml-4">
+                  <span class="text-subtitle-1 font-weight-medium">
+                    {{ tutorial.name }}
+                    <v-icon
+                      size="20"
+                      class="mt-n1 steps-overview-icon"
+                      @click.stop="showStepsOverview(tutorial.id)"
+                      :title="$t('modal.tutorial.show_steps')"
+                      >mdi-information-outline</v-icon
+                    >
+                    <v-icon
+                      v-if="!tutorial.isAvailable"
+                      size="20"
+                      color="error"
+                      class="mt-n1 steps-overview-icon"
+                      @click.stop="showMissingRequirements(tutorial.id)"
+                      :title="$t('modal.tutorial.show_missing_requirements')"
+                      >mdi-alert-circle-outline</v-icon
+                    >
+                  </span>
+                  <span class="text-body-2 text-grey-darken-1">{{ tutorial.description }}</span>
+                </div>
+              </v-card>
+            </v-col>
+          </v-row>
+        </div>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -141,10 +130,8 @@ import Shepherd from "shepherd.js";
 import "shepherd.js/dist/css/shepherd.css";
 
 import { useTutorialStore } from "@/stores/tutorial";
-import { useTabStore } from "@/stores/tabs";
 
 const tutorialStore = useTutorialStore();
-const tabStore = useTabStore();
 
 const props = defineProps({
   modelValue: {
@@ -156,10 +143,9 @@ const emit = defineEmits(["update:modelValue"]);
 
 const dialog = ref(props.modelValue);
 
-const getGroupedTutorialsForTab = (tabId) => {
-  const filtered = tutorialStore.availableTutorials.filter((t) => t.type === tabId);
+const getGroupedTutorials = () => {
   const grouped = new Map();
-  for (const tutorial of filtered) {
+  for (const tutorial of tutorialStore.availableTutorials) {
     const key = tutorial.group ?? "other";
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key).push(tutorial);
@@ -251,6 +237,13 @@ watch(
   }
 );
 </script>
+
+<style>
+.pipeline-choose-step .shepherd-footer {
+  justify-content: center;
+  gap: 12px;
+}
+</style>
 
 <style scoped>
 .tutorial-active {

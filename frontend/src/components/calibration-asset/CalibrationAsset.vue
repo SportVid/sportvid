@@ -6,6 +6,7 @@
       <div ref="topViewFullscreenRoot" class="top-view-fullscreen-root">
         <div
           class="top-view-wrapper"
+          data-tour="object-info"
           @mouseenter="hovering = true"
           @mouseleave="hovering = false"
           @click="cancelPendingUnmap"
@@ -598,7 +599,7 @@
     >
       <v-menu location="top center">
         <template #activator="{ props }">
-          <v-btn v-bind="props" size="small">
+          <v-btn v-bind="props" size="small" data-tour="calibration-asset-btn">
             {{ $t("calibration_asset.title") }}
           </v-btn>
         </template>
@@ -655,7 +656,7 @@
 
       <v-menu v-model="showMarkerTypeMenu" location="top" :close-on-content-click="false">
         <template #activator="{ props }">
-          <v-btn v-bind="props" size="small">
+          <v-btn v-bind="props" size="small" data-tour="calibration-object-btn">
             {{
               calibrationAssetStore.calibrationAssetType === "marker"
                 ? $t("calibration_asset.marker.title")
@@ -756,10 +757,7 @@
         </div>
       </v-menu>
 
-      <div
-        v-if="calibrationAssetStore.isAddingCustomMarker"
-        class="custom-marker-coords-overlay"
-      >
+      <div v-if="calibrationAssetStore.isAddingCustomMarker" class="custom-marker-coords-overlay">
         <div class="text-caption coords-live">
           X:&nbsp;<template v-if="overlayHoverPos"
             ><span class="coords-val">{{ overlayHoverPos.x }}</span
