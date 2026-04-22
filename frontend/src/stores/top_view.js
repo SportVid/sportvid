@@ -253,6 +253,11 @@ export const useTopViewStore = defineStore(
       showPlayerId.value = !showPlayerId.value;
     };
 
+    const mirrorXY = ref(false);
+    const viewMirrorXY = () => {
+      mirrorXY.value = !mirrorXY.value;
+    };
+
     // positionDataTopView holds EITHER a CompactPositionData instance (tracking data path)
     // or a plain object (bbox path). Use currentFramePlayers for single-frame access.
     const positionDataTopView = shallowRef(null);
@@ -529,6 +534,8 @@ export const useTopViewStore = defineStore(
       transformBBoxToPositionDataTopView,
       showPlayerId,
       viewPlayerId,
+      mirrorXY,
+      viewMirrorXY,
       precomputedPlayerList,
       precomputedPlayerIdSet,
       precomputedGameSections,

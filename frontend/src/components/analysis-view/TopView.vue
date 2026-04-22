@@ -152,6 +152,20 @@
               </v-list-item-title>
             </v-list-item>
 
+            <v-list-item class="menu-item" @click="topViewStore.viewMirrorXY">
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.mirror_xy") }}
+                <tab-window-icon
+                  :class="{
+                    'text-disabled': !topViewStore.mirrorXY,
+                    'text-red': topViewStore.mirrorXY,
+                  }"
+                >
+                  mdi-check
+                </tab-window-icon>
+              </v-list-item-title>
+            </v-list-item>
+
             <v-divider />
 
             <v-list-item
@@ -913,9 +927,11 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
   // Pixel conversion helper
   const toPixel = (x, y) => {
     const cropped = transformCoordinateToCrop(x, y, cropPct);
+    const cx = topViewStore.mirrorXY ? 1 - cropped.x : cropped.x;
+    const cy = topViewStore.mirrorXY ? 1 - cropped.y : cropped.y;
     return {
-      px: cropped.x * (w * sport.widthRel) + ((1 - sport.widthRel) / 2) * w,
-      py: cropped.y * (h * sport.heightRel) + ((1 - sport.heightRel) / 2) * h,
+      px: cx * (w * sport.widthRel) + ((1 - sport.widthRel) / 2) * w,
+      py: cy * (h * sport.heightRel) + ((1 - sport.heightRel) / 2) * h,
     };
   };
 
@@ -1101,6 +1117,7 @@ watch(
     () => topViewStore.currentAreaSize,
     () => topViewStore.gridLongitudinal,
     () => topViewStore.gridTransverse,
+    () => topViewStore.mirrorXY,
     () => visualizationStore.teamColorMapping,
     includedPlayers,
     kpiExcludedByClick,

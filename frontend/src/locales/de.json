@@ -128,6 +128,7 @@
       "title": "Anzeigeeinstellungen",
       "view_bounding_box": "Bounding-Boxen anzeigen",
       "video_sync": "Mit Video synchronisieren",
+      "mirror_xy": "XY-Koordinaten spiegeln",
       "view_kpis": {
         "title": "Leistungsindikator anzeigen",
         "space_control": "Raumkontrolle",
