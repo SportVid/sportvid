@@ -61,7 +61,8 @@
     "run_batch_plugin": "Batch-Plugin ausführen",
     "run_plugin": "Plugin ausführen",
     "upload_video": "Neues Video hochladen",
-    "exit": "Beenden"
+    "exit": "Beenden",
+    "cancel_and_delete": "Abbrechen & Löschen"
   },
   "field": {
     "required": "Dieses Feld ist erforderlich."

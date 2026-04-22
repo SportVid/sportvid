@@ -72,7 +72,8 @@
     "continue": "Continue",
     "admin_panel": "Admin Panel",
     "exit": "Exit",
-    "add": "Add"
+    "add": "Add",
+    "cancel_and_delete": "Cancel & Delete"
   },
   "field": {
     "required": "This field is required."
