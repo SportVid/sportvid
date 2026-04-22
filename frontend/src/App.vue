@@ -22,12 +22,12 @@ const themeStore = useThemeStore();
 const videoStore = useVideoStore();
 const userStore = useUserStore();
 
-theme.global.name.value = themeStore.isDark ? "dark" : "light";
+theme.change(themeStore.isDark ? "dark" : "light");
 
 watch(
   () => themeStore.isDark,
   (isDark) => {
-    theme.global.name.value = isDark ? "dark" : "light";
+    theme.change(isDark ? "dark" : "light");
   }
 );
 
