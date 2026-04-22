@@ -55,11 +55,15 @@ class PluginRunResultList(View):
             #     print(f"\t {x.id.hex}")
 
             add_results = request.GET.get("add_results", True)
+            exclude_types = request.GET.getlist("exclude_types[]")
             if add_results:
                 # print("A", flush=True)
 
                 entries = []
                 for x in analyses:
+                    if exclude_types and PluginRunResult.TYPE.get(x.type) in exclude_types:
+                        entries.append({**x.to_dict()})
+                        continue
                     cache_path = os.path.join(settings.DATA_CACHE_ROOT, f"{x.id}.json")
                     # print("C", flush=True)
                     # print(cache_path, flush=True)

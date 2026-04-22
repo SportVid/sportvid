@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import { ref } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
+import { fromPosDataObject } from "../plugins/compact_posdata";
 
 /**
  * Module-level in-memory cache: trackingDataId -> { posData, metaData }
@@ -50,17 +51,18 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
   }
 
   /**
-   * Return cached { posData, metaData } for a trackingDataId, or null.
+   * Return cached data for a trackingDataId, or null.
+   * Returns { compact, metaData, playerList, playerIdSet, gameSections, halftimeBoundaries }
    */
   function getCached(trackingDataId) {
     return _posDataCache.get(trackingDataId) || null;
   }
 
   /**
-   * Store posData + metaData in the in-memory cache.
+   * Store compact posData + metaData in the in-memory cache.
    */
-  function cacheData(trackingDataId, posData, metaData) {
-    _posDataCache.set(trackingDataId, { posData, metaData });
+  function cacheData(trackingDataId, data) {
+    _posDataCache.set(trackingDataId, data);
   }
 
   /**
@@ -76,7 +78,7 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
       const cached = _posDataCache.get(trackingDataId);
       if (cached) {
         loadProgress.value = 100;
-        return { posData: cached.posData, metaData: cached.metaData };
+        return cached;
       }
 
       // Load from backend in chunks
@@ -104,8 +106,18 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
         );
       }
 
-      // Store in in-memory cache
-      const result = { posData: allFrames, metaData: metaData || {} };
+      // Convert to compact TypedArray format (~45MB vs ~300-500MB for 90min match)
+      const { compact, playerList, playerIdSet, gameSections, halftimeBoundaries } =
+        fromPosDataObject(allFrames);
+
+      const result = {
+        compact,
+        metaData: metaData || {},
+        playerList,
+        playerIdSet,
+        gameSections,
+        halftimeBoundaries,
+      };
       _posDataCache.set(trackingDataId, result);
 
       loadProgress.value = 100;
@@ -214,6 +226,31 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
   }
 
   /**
+   * Calculate KPI aggregation in the Web Worker.
+   * Offloads the heavy iteration of 135k+ KPI frames to a background thread.
+   */
+  async function calcKpiAggregation(kpiData, posData, selectedPlayerIds, startMs, endMs, zones, kpiFramerate) {
+    isCalculating.value = true;
+    try {
+      const kpiSubset = extractRange(kpiData, startMs, endMs);
+      const posSubset = extractRange(posData, startMs, endMs);
+
+      return await sendToWorker({
+        type: "CALC_KPI_AGGREGATION",
+        kpiData: kpiSubset,
+        posData: posSubset,
+        playerIds: Array.from(selectedPlayerIds),
+        startMs,
+        endMs,
+        zones,
+        kpiFramerate,
+      });
+    } finally {
+      isCalculating.value = false;
+    }
+  }
+
+  /**
    * Extract frames in [start, end] from posData to reduce clone size.
    */
   function extractRange(posData, start, end) {
@@ -234,6 +271,7 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
     cacheData,
     calcRunningDistances,
     calcHeatmapPoints,
+    calcKpiAggregation,
     exportPositionsCSV,
     exportRunningDistanceCSV,
   };

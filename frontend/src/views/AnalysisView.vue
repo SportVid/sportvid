@@ -5,7 +5,7 @@
 
       <v-row class="ma-n2">
         <v-col cols="6">
-          <v-card elevation="2" ref="videoCard" class="fill-height">
+          <v-card elevation="2" ref="videoCard" class="fill-height" data-tour="analysis-video-player">
             <v-row justify="center">
               <v-card-title class="mt-5 mb-n1">
                 {{ playerStore.videoName }}
@@ -35,6 +35,7 @@
             elevation="2"
             ref="topViewCard"
             style="position: relative"
+            data-tour="analysis-top-view"
           >
             <template v-if="calibrationAssetStore.calibrationMode">
               <v-row justify="center" class="position-relative">
@@ -91,12 +92,9 @@
         </v-col>
       </v-row> -->
 
-      <v-row
-        v-if="!calibrationAssetStore.calibrationMode && !positionDataStore.isRestoringPosData"
-        class="ma-n2"
-      >
+      <v-row v-if="!calibrationAssetStore.calibrationMode && !isLoading" class="ma-n2">
         <v-col>
-          <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2">
+          <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" data-tour="analysis-visualization-tabs">
             <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.visualizationTabId">
               <v-tab
                 v-for="visualizationTab in tabStore.visualizationTabs"
@@ -177,14 +175,14 @@ import { useTabStore } from "@/stores/tabs";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
 // import * as Keyboard from "../plugins/keyboard";
-import VideoPlayer from "@/components/video/VideoPlayer.vue";
-import TabWindowPositionData from "@/components/tab-window/TabWindowPositionData.vue";
-import TabWindowCalibration from "@/components/tab-window/TabWindowCalibration.vue";
-import TabWindowHeatmap from "@/components/tab-window/TabWindowHeatmap.vue";
-import TabWindowTimeline from "@/components/tab-window/TabWindowTimeline.vue";
-import TabWindowEvents from "@/components/tab-window/TabWindowEvents.vue";
-import TabWindowKPI from "@/components/tab-window/TabWindowKPI.vue";
-import ModalObjectOverlay from "@/components/ModalObjectOverlay.vue";
+import VideoPlayer from "@/components/analysis-view/VideoPlayer.vue";
+import TabWindowPositionData from "@/components/analysis-view/TopView.vue";
+import TabWindowCalibration from "@/components/calibration-asset/CalibrationAsset.vue";
+import TabWindowHeatmap from "@/components/analysis-view/tab-window/TabWindowHeatmap.vue";
+import TabWindowTimeline from "@/components/analysis-view/tab-window/TabWindowTimeline.vue";
+import TabWindowEvents from "@/components/analysis-view/tab-window/TabWindowEvents.vue";
+import TabWindowKPI from "@/components/analysis-view/tab-window/TabWindowKPI.vue";
+import ModalObjectOverlay from "@/components/calibration-asset/ModalObjectOverlay.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
@@ -273,7 +271,7 @@ onMounted(async () => {
   try {
     await fetchData({ addResults: true });
     topViewStore.setSportFromVideo(playerStore.video?.sport);
-    positionDataStore.restoreFromCache();
+    // positionDataStore.restoreFromCache();
   } catch (error) {
   } finally {
     isLoading.value = false;
@@ -315,7 +313,6 @@ onMounted(async () => {
 //           }
 //         }
 //         topViewStore.positionDataTopView = _bboxDataTopView.value;
-//         console.log("positionDataTopView", topViewStore.positionDataTopView);
 //       }
 //     }
 //   },
@@ -666,32 +663,9 @@ watch(
 onBeforeUnmount(() => {
   positionDataStore.positionDataId = null;
   positionDataStore.selectedTimeRange = { start: 0, end: 0 };
-  topViewStore.positionDataTopView = {};
-  topViewStore.metaDataTopView = {};
+  topViewStore.setPositionData(null, {});
   bboxesStore.bboxDataInterpolated = {};
 });
-
-watch(
-  () => topViewStore.metaDataTopView,
-  (neww) => {
-    console.log("metaDataTopView changed", neww);
-  }
-);
-
-watch(
-  () => topViewStore.positionDataTopView,
-  (neww) => {
-    console.log("positionDataTopView changed", neww);
-  }
-);
-
-watch(
-  () => visualizationStore.kpiData,
-  (neww) => {
-    console.log("kpiData", neww);
-  },
-  { immediate: true }
-);
 </script>
 
 <style scoped>
@@ -726,12 +700,13 @@ watch(
 
 .spinner {
   font-size: 48px;
-  color: #ac1414;
+  color: rgb(var(--v-theme-primary));
 }
 
 .loading-text {
   margin-top: 10px;
   font-size: 18px;
+  color: rgb(var(--v-theme-primary));
 }
 
 .calibration-close-btn {

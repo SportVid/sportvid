@@ -1,10 +1,13 @@
 <template>
-  <v-row v-if="videoStore.isLoading" class="loading-card">
-    <div class="spinner">
-      <i class="mdi mdi-loading mdi-spin" />
+  <div
+    v-if="!hasPositionData && posdataWorkerStore.isLoading"
+    class="heatmap-loading-card"
+  >
+    <div class="heatmap-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
+    <div class="heatmap-loading-text">
+      {{ posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100 ? `${posdataWorkerStore.loadProgress}%` : "" }}
     </div>
-    <div class="loading-text">{{ $t("loading_screen") }}</div>
-  </v-row>
+  </div>
 
   <v-row
     v-else-if="!hasPositionData"
@@ -20,8 +23,8 @@
   />
 
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
-    <v-row align="center">
-      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px">
+    <v-row align="center" data-tour="heatmap-controls-row">
+      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px" data-tour="heatmap-settings">
         <v-menu location="bottom">
           <template #activator="{ props }">
             <v-btn v-bind="props" style="height: 40px" class="ml-2 mt-n2" size="small">
@@ -124,13 +127,13 @@
           </v-list>
         </v-menu>
       </v-col>
-      <v-col class="mt-2">
+      <v-col class="mt-2" data-tour="heatmap-time-selector">
         <VisualizationTimeSelector class="ml-n1" />
       </v-col>
     </v-row>
 
     <v-row class="mt-2" justify="center">
-      <div class="top-view-wrapper">
+      <div class="top-view-wrapper" data-tour="heatmap-pitch">
         <img
           ref="topViewElement"
           class="visualizer-image"
@@ -170,7 +173,7 @@
       </div>
     </v-row>
 
-    <div class="chart-legend mt-6">
+    <div class="chart-legend mt-6" data-tour="heatmap-player-legend">
       <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
         <div
           class="team-dot"
@@ -279,50 +282,16 @@ onBeforeUnmount(() => {
 const allFrameKeys = computed(() => topViewStore.sortedFrameKeys);
 
 const selectHalftime = (half) => {
-  const entries = Object.entries(topViewStore.positionDataTopView);
-  let first = null;
-  let last = null;
-  for (const [timeKey, players] of entries) {
-    const t = Number(timeKey);
-    if (players.some((p) => p[2] === half)) {
-      if (first === null || t < first) first = t;
-      if (last === null || t > last) last = t;
-    }
-  }
-  if (first !== null && last !== null) {
-    positionDataStore.setSelectedTimeRangeStart(first);
-    positionDataStore.setSelectedTimeRangeEnd(last);
+  const b = topViewStore.precomputedHalftimeBoundaries[half];
+  if (b) {
+    positionDataStore.setSelectedTimeRangeStart(b.first);
+    positionDataStore.setSelectedTimeRangeEnd(b.last);
   }
 };
 
 const selectedPlayerIds = ref([]);
 
-const playerOptions = computed(() => {
-  // Sample a few frames to find all players (avoids iterating all ~135k frames)
-  const keys = Object.keys(topViewStore.positionDataTopView);
-  if (!keys.length) return [];
-  const seen = new Map();
-  const step = Math.max(1, Math.floor(keys.length / 10));
-  for (let i = 0; i < keys.length; i += step) {
-    const players = topViewStore.positionDataTopView[keys[i]];
-    if (!players) continue;
-    for (const p of players) {
-      if (p[1] !== 1 && !seen.has(p[0])) {
-        seen.set(p[0], { playerId: p[0], teamId: p[1] });
-      }
-    }
-  }
-  // Also check last frame
-  const last = topViewStore.positionDataTopView[keys[keys.length - 1]];
-  if (last) {
-    for (const p of last) {
-      if (p[1] !== 1 && !seen.has(p[0])) {
-        seen.set(p[0], { playerId: p[0], teamId: p[1] });
-      }
-    }
-  }
-  return Array.from(seen.values()).sort((a, b) => a.playerId - b.playerId);
-});
+const playerOptions = computed(() => topViewStore.precomputedPlayerList);
 
 const playerColors = computed(() => {
   const map = {};
@@ -385,8 +354,7 @@ const getTeamName = (teamId) => {
 const selectedPositions = ref([]);
 
 const triggerHeatmapCalc = debounce(async () => {
-  const posData = toRaw(topViewStore.positionDataTopView);
-  if (!posData || !Object.keys(posData).length || selectedPlayerIds.value.length === 0) {
+  if (!topViewStore.positionDataTopView || selectedPlayerIds.value.length === 0) {
     selectedPositions.value = [];
     return;
   }
@@ -395,11 +363,14 @@ const triggerHeatmapCalc = debounce(async () => {
     ? { x: [rawCrop.x[0], rawCrop.x[1]], y: [rawCrop.y[0], rawCrop.y[1]] }
     : { x: [0, 1], y: [0, 1] };
   try {
+    const start = positionDataStore.selectedTimeRange.start;
+    const end = positionDataStore.selectedTimeRange.end;
+    const posData = topViewStore.getSubsetObject(start, end);
     const result = await posdataWorkerStore.calcHeatmapPoints(
       posData,
       selectedPlayerIds.value,
-      positionDataStore.selectedTimeRange.start,
-      positionDataStore.selectedTimeRange.end,
+      start,
+      end,
       cropPct
     );
     selectedPositions.value = result;
@@ -469,19 +440,17 @@ function renderHeatmap() {
   });
 }
 
-function renderMovementCanvas() {
-  const canvas = movementCanvas.value;
-  if (!canvas || !localSize.value.width || !localSize.value.height) return;
-
+function renderMovementToCanvas(canvas, targetW, targetH) {
+  if (!canvas || !targetW || !targetH) return;
   const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, targetW, targetH);
 
   if (selectedPositions.value.length === 0) return;
 
   const area = currentArea.value;
+  const dotRadius = 6 * (targetW / localSize.value.width);
   const points = resampleApprox({ data: selectedPositions.value, targetSize: 5000 });
 
-  // Group by teamId for batch drawing
   const byTeam = {};
   for (const pos of points) {
     const teamId = pos[1];
@@ -494,18 +463,20 @@ function renderMovementCanvas() {
     ctx.globalAlpha = 0.7;
     ctx.beginPath();
     for (const pos of positions) {
-      const x =
-        pos[3] * (localSize.value.width * area.widthRel) +
-        ((1 - area.widthRel) / 2) * localSize.value.width;
-      const y =
-        pos[4] * (localSize.value.height * area.heightRel) +
-        ((1 - area.heightRel) / 2) * localSize.value.height;
-      ctx.moveTo(x + 6, y);
-      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      const x = pos[3] * (targetW * area.widthRel) + ((1 - area.widthRel) / 2) * targetW;
+      const y = pos[4] * (targetH * area.heightRel) + ((1 - area.heightRel) / 2) * targetH;
+      ctx.moveTo(x + dotRadius, y);
+      ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
     }
     ctx.fill();
   }
   ctx.globalAlpha = 1;
+}
+
+function renderMovementCanvas() {
+  const canvas = movementCanvas.value;
+  if (!canvas || !localSize.value.width || !localSize.value.height) return;
+  renderMovementToCanvas(canvas, localSize.value.width, localSize.value.height);
 }
 
 watch([() => localSize.value.width, () => localSize.value.height], () => {
@@ -558,19 +529,47 @@ const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
 async function saveScreenshot() {
   const img = topViewElement.value;
   if (!img || !localSize.value.width || !localSize.value.height) return;
-  const scale = 2;
-  const canvas = document.createElement("canvas");
-  canvas.width = localSize.value.width * scale;
-  canvas.height = localSize.value.height * scale;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  if (displayMode.value === "heatmap" && heatmapContainer.value) {
-    const heatmapCanvas = heatmapContainer.value.querySelector("canvas");
-    if (heatmapCanvas) ctx.drawImage(heatmapCanvas, 0, 0, canvas.width, canvas.height);
-  } else if (displayMode.value === "movement" && movementCanvas.value) {
-    ctx.drawImage(movementCanvas.value, 0, 0, canvas.width, canvas.height);
+  const scale = 4;
+  const targetW = localSize.value.width * scale;
+  const targetH = localSize.value.height * scale;
+
+  const finalCanvas = document.createElement("canvas");
+  finalCanvas.width = targetW;
+  finalCanvas.height = targetH;
+  const ctx = finalCanvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, targetW, targetH);
+
+  if (displayMode.value === "heatmap" && selectedPositions.value.length > 0) {
+    const tempContainer = document.createElement("div");
+    tempContainer.style.cssText = `position:fixed;left:${-(targetW + 10)}px;top:0;width:${targetW}px;height:${targetH}px;overflow:hidden;`;
+    document.body.appendChild(tempContainer);
+    const area = currentArea.value;
+    const hiResHeatmap = h337.create({
+      container: tempContainer,
+      radius: 18 * scale,
+      maxOpacity: 0.7,
+      minOpacity: 0,
+      blur: 0.7,
+      gradient: { 0.2: "blue", 0.4: "cyan", 0.6: "lime", 0.8: "yellow", 1.0: "red" },
+    });
+    const points = selectedPositions.value.map((pos) => ({
+      x: Math.round(pos[3] * (targetW * area.widthRel) + ((1 - area.widthRel) / 2) * targetW),
+      y: Math.round(pos[4] * (targetH * area.heightRel) + ((1 - area.heightRel) / 2) * targetH),
+      value: 1,
+    }));
+    hiResHeatmap.setData({ max: 10, data: points });
+    const heatmapCanvas = tempContainer.querySelector("canvas");
+    if (heatmapCanvas) ctx.drawImage(heatmapCanvas, 0, 0);
+    document.body.removeChild(tempContainer);
+  } else if (displayMode.value === "movement") {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = targetW;
+    offscreen.height = targetH;
+    renderMovementToCanvas(offscreen, targetW, targetH);
+    ctx.drawImage(offscreen, 0, 0);
   }
-  canvas.toBlob((blob) => {
+
+  finalCanvas.toBlob((blob) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.download = "heatmap.png";
@@ -582,6 +581,25 @@ async function saveScreenshot() {
 </script>
 
 <style scoped>
+.heatmap-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 25vh;
+}
+
+.heatmap-spinner {
+  font-size: 48px;
+  color: rgb(var(--v-theme-primary));
+}
+
+.heatmap-loading-text {
+  margin-top: 10px;
+  font-size: 18px;
+  color: rgb(var(--v-theme-primary));
+}
+
 .visualizer-image {
   display: block;
   max-width: 100%;
@@ -658,23 +676,5 @@ async function saveScreenshot() {
 .top-view-wrapper {
   position: relative;
   overflow: hidden;
-}
-
-.loading-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-}
-
-.spinner {
-  font-size: 48px;
-  color: #ac1414;
-}
-
-.loading-text {
-  margin-top: 10px;
-  font-size: 18px;
 }
 </style>

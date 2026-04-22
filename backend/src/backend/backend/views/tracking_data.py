@@ -76,7 +76,8 @@ class TrackingDataUpload(View):
                     "ext": td_ext,
                     "file_type": request.POST.get("format"),
                     "owner": request.user,
-                    "video": video_db
+                    "video": video_db,
+                    "delimiter": request.POST.get("delimiter", ";"),
                 }
             
                 meta_ext = ""

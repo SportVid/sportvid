@@ -15,14 +15,17 @@ export const useTabStore = defineStore(
       { id: "kpi", name: t("analysis_view.visualization_tabs.kpi") },
     ]);
 
+    const kpiViewMode = ref("table");
+
     return {
       visualizationTabId,
       visualizationTabs,
+      kpiViewMode,
     };
   },
   {
     persist: {
-      pick: ["visualizationTabId"],
+      pick: ["visualizationTabId", "kpiViewMode"],
       storage: sessionStorage,
     },
   }

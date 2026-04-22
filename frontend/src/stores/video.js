@@ -98,7 +98,7 @@ export const useVideoStore = defineStore("video", () => {
     if (includeAnalyser && !includeTimeline) {
       pluginRunStore.clearStore();
       pluginRunResultStore.clearStore();
-      promises.push(pluginRunStore.fetchForVideo({ videoId, addResults }));
+      promises.push(pluginRunStore.fetchForVideo({ videoId }));
       promises.push(pluginRunResultStore.fetchForVideo({ videoId, addResults }));
     }
 
@@ -106,8 +106,12 @@ export const useVideoStore = defineStore("video", () => {
       pluginRunStore.clearStore();
       pluginRunResultStore.clearStore();
       const pluginRunPromises = [
-        pluginRunResultStore.fetchForVideo({ videoId, addResults }),
-        pluginRunStore.fetchForVideo({ videoId, addResults }),
+        pluginRunResultStore.fetchForVideo({
+          videoId,
+          addResults,
+          excludeTypes: addResults ? ["KPI", "POS", "FL", "BBOXES"] : [],
+        }),
+        pluginRunStore.fetchForVideo({ videoId }),
       ];
       promises.push(...pluginRunPromises);
       await Promise.all(pluginRunPromises);

@@ -11,62 +11,64 @@
         </template>
       </v-toolbar>
 
-      <v-card-text class="mt-2">
-        <v-row>
-          <v-col
-            cols="12"
-            sm="6"
-            v-for="tutorial in tutorialStore.availableTutorials"
-            :key="tutorial.id"
-          >
-            <v-card
-              :class="[
-                'd-flex flex-row align-center px-4 py-3',
-                tutorial.disabled
-                  ? 'opacity-30 pointer-events-none'
-                  : !tutorial.isAvailable
-                  ? 'opacity-60'
-                  : 'hover:bg-gray-100',
-                tutorialStore.currentTutorialId === tutorial.id ? 'tutorial-active' : '',
-              ]"
-              :ripple="!tutorial.disabled && !tutorial.isAvailable"
-              @click="handleTutorialClick(tutorial)"
+      <v-card-text class="mt-2" style="height: 400px; overflow-y: auto">
+        <div
+          v-for="([groupKey, groupTutorials]) in getGroupedTutorials()"
+          :key="groupKey"
+          class="mb-4"
+        >
+          <div class="tutorial-group-header text-caption text-uppercase font-weight-bold text-medium-emphasis mb-2 px-1">
+            {{ $t(`modal.tutorial.groups.${groupKey}`) }}
+          </div>
+          <v-row dense>
+            <v-col
+              cols="12"
+              sm="6"
+              v-for="tutorial in groupTutorials"
+              :key="tutorial.id"
             >
-              <div class="d-flex align-center justify-center" style="min-width: 40px">
-                <v-icon size="32" class="text-primary">
-                  {{ tutorial.icon }}
-                </v-icon>
-              </div>
-
-              <div class="d-flex flex-column justify-center ml-4">
-                <span class="text-subtitle-1 font-weight-medium">
-                  {{ tutorial.name }}
-
-                  <v-icon
-                    size="20"
-                    class="mt-n1 steps-overview-icon"
-                    @click.stop="showStepsOverview(tutorial.id)"
-                    :title="$t('modal.tutorial.show_steps')"
-                  >
-                    mdi-information-outline
-                  </v-icon>
-
-                  <v-icon
-                    v-if="!tutorial.isAvailable"
-                    size="20"
-                    color="error"
-                    class="mt-n1 steps-overview-icon"
-                    @click.stop="showMissingRequirements(tutorial.id)"
-                    :title="$t('modal.tutorial.show_missing_requirements')"
-                  >
-                    mdi-alert-circle-outline
-                  </v-icon>
-                </span>
-                <span class="text-body-2 text-grey-darken-1">{{ tutorial.description }}</span>
-              </div>
-            </v-card>
-          </v-col>
-        </v-row>
+              <v-card
+                :class="[
+                  'd-flex flex-row align-center px-4 py-3',
+                  tutorial.disabled
+                    ? 'opacity-30 pointer-events-none'
+                    : !tutorial.isAvailable
+                    ? 'opacity-60'
+                    : 'hover:bg-gray-100',
+                  tutorialStore.currentTutorialId === tutorial.id ? 'tutorial-active' : '',
+                ]"
+                :ripple="!tutorial.disabled && !tutorial.isAvailable"
+                @click="handleTutorialClick(tutorial)"
+              >
+                <div class="d-flex align-center justify-center" style="min-width: 40px">
+                  <v-icon size="32" class="text-primary">{{ tutorial.icon }}</v-icon>
+                </div>
+                <div class="d-flex flex-column justify-center ml-4">
+                  <span class="text-subtitle-1 font-weight-medium">
+                    {{ tutorial.name }}
+                    <v-icon
+                      size="20"
+                      class="mt-n1 steps-overview-icon"
+                      @click.stop="showStepsOverview(tutorial.id)"
+                      :title="$t('modal.tutorial.show_steps')"
+                      >mdi-information-outline</v-icon
+                    >
+                    <v-icon
+                      v-if="!tutorial.isAvailable"
+                      size="20"
+                      color="error"
+                      class="mt-n1 steps-overview-icon"
+                      @click.stop="showMissingRequirements(tutorial.id)"
+                      :title="$t('modal.tutorial.show_missing_requirements')"
+                      >mdi-alert-circle-outline</v-icon
+                    >
+                  </span>
+                  <span class="text-body-2 text-grey-darken-1">{{ tutorial.description }}</span>
+                </div>
+              </v-card>
+            </v-col>
+          </v-row>
+        </div>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -140,6 +142,16 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 const dialog = ref(props.modelValue);
+
+const getGroupedTutorials = () => {
+  const grouped = new Map();
+  for (const tutorial of tutorialStore.availableTutorials) {
+    const key = tutorial.group ?? "other";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(tutorial);
+  }
+  return [...grouped.entries()];
+};
 
 const toggleTutorial = async (id) => {
   if (tutorialStore.tour) {
@@ -226,6 +238,13 @@ watch(
 );
 </script>
 
+<style>
+.pipeline-choose-step .shepherd-footer {
+  justify-content: center;
+  gap: 12px;
+}
+</style>
+
 <style scoped>
 .tutorial-active {
   background-color: rgba(var(--v-theme-success), 0.3);
@@ -248,5 +267,11 @@ watch(
 
 .subtitle-wrap {
   -webkit-line-clamp: unset !important;
+}
+
+.tutorial-group-header {
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  padding-bottom: 4px;
+  letter-spacing: 0.08em;
 }
 </style>

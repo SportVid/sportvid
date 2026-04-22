@@ -1,10 +1,29 @@
 <template>
-  <PositionDataMenu v-if="Object.keys(topViewStore.positionDataTopView).length === 0" />
+  <div
+    v-if="topViewStore.sortedFrameKeys.length === 0 && posdataWorkerStore.isLoading"
+    class="posdata-loading-card"
+  >
+    <div class="posdata-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
+    <div class="posdata-loading-text">
+      {{
+        posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100
+          ? `${posdataWorkerStore.loadProgress}%`
+          : ""
+      }}
+    </div>
+  </div>
+
+  <PositionDataMenu v-else-if="topViewStore.sortedFrameKeys.length === 0" />
 
   <v-container v-else class="d-flex flex-column">
     <v-row justify="center">
       <div ref="topViewFullscreenRoot" class="top-view-fullscreen-root">
-        <div class="top-view-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
+        <div
+          class="top-view-wrapper"
+          data-tour="top-view-pitch"
+          @mouseenter="hovering = true"
+          @mouseleave="hovering = false"
+        >
           <img
             ref="topViewElement"
             class="visualizer-image"
@@ -74,12 +93,28 @@
     </v-row>
 
     <div style="position: relative">
+      <div
+        data-tour="top-view-controls-area"
+        style="
+          position: absolute;
+          top: 18px;
+          left: -16px;
+          right: -16px;
+          bottom: -18px;
+          pointer-events: none;
+        "
+      />
       <v-row
         ref="videoControl"
         class="video-control mt-6 mb-n2 justify-center"
         data-tour="position-data-edit-row"
       >
-        <v-btn :disabled="playerStore.isSynced" @click="toggleTopView" size="small">
+        <v-btn
+          :disabled="playerStore.isSynced"
+          @click="toggleTopView"
+          size="small"
+          data-tour="top-view-play-btn"
+        >
           <v-icon v-if="topViewEnded">mdi-restart</v-icon>
           <v-icon v-else-if="topViewPlaying">mdi-pause</v-icon>
           <v-icon v-else>mdi-play</v-icon>
@@ -87,11 +122,16 @@
 
         <v-menu location="top">
           <template #activator="{ props }">
-            <v-btn v-bind="props" size="small">
+            <v-btn v-bind="props" size="small" data-tour="top-view-display-settings-btn">
               {{ $t("position_data.display_settings.title") }}
             </v-btn>
           </template>
-          <v-list class="py-0" density="compact" width="200px">
+          <v-list
+            class="py-0"
+            density="compact"
+            width="200px"
+            data-tour="top-view-display-settings-list"
+          >
             <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
               <v-list-item-title class="d-flex justify-space-between">
                 {{ $t("position_data.display_settings.video_sync") }}
@@ -109,6 +149,20 @@
             <v-list-item class="menu-item" @click="showModalPositionDataOffset = true">
               <v-list-item-title class="d-flex justify-space-between">
                 {{ $t("position_data.display_settings.offset") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item class="menu-item" @click="topViewStore.viewMirrorXY">
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.mirror_xy") }}
+                <tab-window-icon
+                  :class="{
+                    'text-disabled': !topViewStore.mirrorXY,
+                    'text-red': topViewStore.mirrorXY,
+                  }"
+                >
+                  mdi-check
+                </tab-window-icon>
               </v-list-item-title>
             </v-list-item>
 
@@ -328,7 +382,7 @@
           v-model="showModalPositionDataOffset"
         />
 
-        <v-btn size="small" @click="saveScreenshot">
+        <v-btn size="small" @click="saveScreenshot" data-tour="top-view-download">
           <v-icon>mdi-download</v-icon>
         </v-btn>
 
@@ -353,7 +407,7 @@
         </v-tooltip>
       </v-row>
 
-      <v-row ref="videoSlider">
+      <v-row ref="videoSlider" data-tour="top-view-slider">
         <v-slider
           v-model="currentTime"
           @update:model-value="onProgressChange"
@@ -433,6 +487,7 @@ import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useBboxesStore } from "@/stores/bboxes";
+import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { getTimecode } from "@/plugins/time";
 import { toRgb } from "@/plugins/helpers";
 import { Delaunay } from "d3-delaunay";
@@ -447,6 +502,7 @@ const topViewStore = useTopViewStore();
 const videoStore = useVideoStore();
 const visualizationStore = useVisualizationStore();
 const bboxesStore = useBboxesStore();
+const posdataWorkerStore = usePosdataWorkerStore();
 const { t } = useI18n();
 
 const _BALL_SVG = {
@@ -591,29 +647,12 @@ onBeforeUnmount(() => {
 });
 
 const includedPlayers = ref(new Set());
+const kpiExcludedByClick = ref(new Set());
 watch(
-  () => topViewStore.positionDataTopView,
-  (newVal) => {
-    // Collect unique player IDs by sampling a few frames instead of iterating all
-    const keys = Object.keys(newVal);
-    const playerIds = new Set();
-    // Sample up to 10 evenly spaced frames to find all players
-    const step = Math.max(1, Math.floor(keys.length / 10));
-    for (let i = 0; i < keys.length; i += step) {
-      const players = newVal[keys[i]];
-      if (!players) continue;
-      for (const p of players) {
-        playerIds.add(p[0]);
-      }
-    }
-    // Also check last frame
-    const lastFrame = newVal[keys[keys.length - 1]];
-    if (lastFrame) {
-      for (const p of lastFrame) {
-        playerIds.add(p[0]);
-      }
-    }
-    includedPlayers.value = playerIds;
+  () => topViewStore.precomputedPlayerIdSet,
+  (newSet) => {
+    includedPlayers.value = new Set(newSet);
+    kpiExcludedByClick.value = new Set();
   },
   { immediate: true }
 );
@@ -626,31 +665,20 @@ const togglePlayersForKPIs = (playerId) => {
   }
   includedPlayers.value = newSet;
 };
+const togglePlayerKpiByClick = (playerId) => {
+  const newSet = new Set(kpiExcludedByClick.value);
+  if (newSet.has(playerId)) {
+    newSet.delete(playerId);
+  } else {
+    newSet.add(playerId);
+  }
+  kpiExcludedByClick.value = newSet;
+};
 
 const overlayPlayerOptions = computed(() => {
-  const posData = topViewStore.positionDataTopView;
-  const keys = Object.keys(posData);
-  if (!keys.length) return [];
-  const seen = new Map();
-  const step = Math.max(1, Math.floor(keys.length / 10));
-  for (let i = 0; i < keys.length; i += step) {
-    const players = posData[keys[i]];
-    if (!players) continue;
-    for (const p of players) {
-      if (!seen.has(p[0])) {
-        seen.set(p[0], { playerId: p[0], teamId: p[1] });
-      }
-    }
-  }
-  const last = posData[keys[keys.length - 1]];
-  if (last) {
-    for (const p of last) {
-      if (!seen.has(p[0])) {
-        seen.set(p[0], { playerId: p[0], teamId: p[1] });
-      }
-    }
-  }
-  return Array.from(seen.values()).sort((a, b) => a.teamId - b.teamId || a.playerId - b.playerId);
+  return [...topViewStore.precomputedPlayerList].sort(
+    (a, b) => a.teamId - b.teamId || a.playerId - b.playerId
+  );
 });
 
 const overlayTeamGroups = computed(() => {
@@ -744,15 +772,19 @@ const convexHullForCurrentFrame = computed(() => {
   if (!topViewStore.topViewSize || !topViewStore.positionDataTopView) {
     return {};
   }
-  const frameKey = topViewStore.currentFrameKey;
-  const framePositions = topViewStore.positionDataTopView[frameKey];
-  if (!framePositions) return {};
+  const framePositions = topViewStore.currentFramePlayers;
+  if (!framePositions || !framePositions.length) return {};
 
   const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop;
 
   const teams = {};
   framePositions
-    .filter((position) => position[1] !== 1 && includedPlayers.value.has(position[0]))
+    .filter(
+      (position) =>
+        position[1] !== 1 &&
+        includedPlayers.value.has(position[0]) &&
+        !kpiExcludedByClick.value.has(position[0])
+    )
     .forEach((position) => {
       const transformed = transformCoordinateToCrop(position[3], position[4], cropPct);
 
@@ -802,9 +834,8 @@ const voronoiForCurrentFrame = computed(() => {
   if (!topViewStore.topViewSize || !topViewStore.positionDataTopView) {
     return [];
   }
-  const frameKey = topViewStore.currentFrameKey;
-  const framePositions = topViewStore.positionDataTopView[frameKey];
-  if (!framePositions) return [];
+  const framePositions = topViewStore.currentFramePlayers;
+  if (!framePositions || !framePositions.length) return [];
 
   const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
     x: [0, 1],
@@ -812,7 +843,12 @@ const voronoiForCurrentFrame = computed(() => {
   };
 
   const allPlayers = framePositions
-    .filter((player) => player[1] !== 1 && includedPlayers.value.has(player[0]))
+    .filter(
+      (player) =>
+        player[1] !== 1 &&
+        includedPlayers.value.has(player[0]) &&
+        !kpiExcludedByClick.value.has(player[0])
+    )
     .map((player) => {
       const transformed = transformCoordinateToCrop(player[3], player[4], cropPct);
 
@@ -830,9 +866,8 @@ const voronoiForCurrentFrame = computed(() => {
 const positionDataForCurrentFrame = computed(() => {
   if (!topViewStore.positionDataTopView) return [];
 
-  const frameKey = topViewStore.currentFrameKey;
-  const framePositions = topViewStore.positionDataTopView[frameKey];
-  if (!framePositions) return [];
+  const framePositions = topViewStore.currentFramePlayers;
+  if (!framePositions || !framePositions.length) return [];
 
   const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
     x: [0, 1],
@@ -869,14 +904,14 @@ function scheduleCanvasDraw() {
   });
 }
 
-function drawCanvas() {
-  const canvas = playerCanvas.value;
+function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
+  const canvas = offscreenCanvas ?? playerCanvas.value;
   if (!canvas) return;
   const w = topViewStore.topViewSize.width;
   const h = topViewStore.topViewSize.height;
   if (!w || !h) return;
 
-  const dpr = window.devicePixelRatio || 1;
+  const dpr = offscreenCanvas ? offscreenScale : window.devicePixelRatio || 1;
   canvas.width = w * dpr;
   canvas.height = h * dpr;
   const ctx = canvas.getContext("2d");
@@ -892,9 +927,11 @@ function drawCanvas() {
   // Pixel conversion helper
   const toPixel = (x, y) => {
     const cropped = transformCoordinateToCrop(x, y, cropPct);
+    const cx = topViewStore.mirrorXY ? 1 - cropped.x : cropped.x;
+    const cy = topViewStore.mirrorXY ? 1 - cropped.y : cropped.y;
     return {
-      px: cropped.x * (w * sport.widthRel) + ((1 - sport.widthRel) / 2) * w,
-      py: cropped.y * (h * sport.heightRel) + ((1 - sport.heightRel) / 2) * h,
+      px: cx * (w * sport.widthRel) + ((1 - sport.widthRel) / 2) * w,
+      py: cy * (h * sport.heightRel) + ((1 - sport.heightRel) / 2) * h,
     };
   };
 
@@ -968,12 +1005,11 @@ function drawCanvas() {
   }
 
   // Draw players and ball
-  const frameKey = topViewStore.currentFrameKey;
-  const framePositions = topViewStore.positionDataTopView[frameKey];
-  if (!framePositions) return;
+  const framePositions = topViewStore.currentFramePlayers;
+  if (!framePositions || !framePositions.length) return;
 
   // Store positions for click hit-testing
-  _playerHitTargets.length = 0;
+  if (!offscreenCanvas) _playerHitTargets.length = 0;
 
   for (const pos of framePositions) {
     const { px, py } = toPixel(pos[3], pos[4]);
@@ -1002,7 +1038,7 @@ function drawCanvas() {
       ctx.fill();
 
       // Store for hit testing (KPI toggle)
-      _playerHitTargets.push({ id: pos[0], x: px, y: py });
+      if (!offscreenCanvas) _playerHitTargets.push({ id: pos[0], x: px, y: py });
 
       // Player ID label
       if (topViewStore.showPlayerId) {
@@ -1039,7 +1075,7 @@ function onCanvasClick(event) {
       closest = t;
     }
   }
-  if (closest) togglePlayersForKPIs(closest.id);
+  if (closest) togglePlayerKpiByClick(closest.id);
 }
 
 function onCanvasMouseMove(event) {
@@ -1081,8 +1117,10 @@ watch(
     () => topViewStore.currentAreaSize,
     () => topViewStore.gridLongitudinal,
     () => topViewStore.gridTransverse,
+    () => topViewStore.mirrorXY,
     () => visualizationStore.teamColorMapping,
     includedPlayers,
+    kpiExcludedByClick,
   ],
   () => scheduleCanvasDraw()
 );
@@ -1210,15 +1248,15 @@ async function saveScreenshot() {
   const w = topViewStore.topViewSize.width;
   const h = topViewStore.topViewSize.height;
   if (!w || !h) return;
-  const scale = 2;
+  const scale = 4;
+  const offscreen = document.createElement("canvas");
+  drawCanvas(offscreen, scale);
   const canvas = document.createElement("canvas");
   canvas.width = w * scale;
   canvas.height = h * scale;
   const ctx = canvas.getContext("2d");
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  if (playerCanvas.value) {
-    ctx.drawImage(playerCanvas.value, 0, 0, canvas.width, canvas.height);
-  }
+  ctx.drawImage(offscreen, 0, 0);
   canvas.toBlob((blob) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -1231,6 +1269,25 @@ async function saveScreenshot() {
 </script>
 
 <style scoped>
+.posdata-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 25vh;
+}
+
+.posdata-spinner {
+  font-size: 48px;
+  color: rgb(var(--v-theme-primary));
+}
+
+.posdata-loading-text {
+  margin-top: 10px;
+  font-size: 18px;
+  color: rgb(var(--v-theme-primary));
+}
+
 .visualizer-image {
   display: block;
   max-width: 100%;

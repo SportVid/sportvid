@@ -71,11 +71,9 @@ watch(
 );
 
 const teamColors = ref({});
-Object.values(topViewStore.positionDataTopView).forEach((entries) => {
-  entries.forEach((p) => {
-    if (p[1] !== 1) teamColors.value[p[1]] = visualizationStore.getTeamColor(p[1]);
-  });
-});
+for (const p of topViewStore.precomputedPlayerList) {
+  teamColors.value[p.teamId] = visualizationStore.getTeamColor(p.teamId);
+}
 
 function saveTeamColors() {
   for (const [teamId, newColor] of Object.entries(teamColors.value)) {

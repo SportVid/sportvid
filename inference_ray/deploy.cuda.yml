@@ -1,11 +1,11 @@
 proxy_location: EveryNode
 http_options:
   host: 0.0.0.0
-  port: 8001  # TODO: using ${BACKEND_PORT} fails to create inference server...
+  port: 8000
 logging_config:
-  encoding: TEXT        # or JSON
-  log_level: WARNING    # DEBUG, INFO, WARNING, ERROR, CRITICAL
-  logs_dir: null        # or a custom path; null = default
+  encoding: TEXT # or JSON
+  log_level: WARNING # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logs_dir: null # or a custom path; null = default
   enable_access_log: false
 
 applications:
@@ -65,7 +65,7 @@ applications:
               - numpy
               - pandas
               - lxml
-  
+
   - name: bytetrack
     route_prefix: /bytetrack
     import_path: inference_ray.main:app_builder
@@ -180,7 +180,7 @@ applications:
     args:
       model: clip_image_embedding
       data_path: /data
-      params: 
+      params:
         model: xlm-roberta-base-ViT-B-32
         pretrained: laion5b_s13b_b90k
     deployments:
@@ -204,7 +204,7 @@ applications:
     args:
       model: clip_text_embedding
       data_path: /data
-      params: 
+      params:
         model: xlm-roberta-base-ViT-B-32
         pretrained: laion5b_s13b_b90k
     deployments:
@@ -228,7 +228,7 @@ applications:
     args:
       model: clip_probs
       data_path: /data
-      params: 
+      params:
         model: xlm-roberta-base-ViT-B-32
         pretrained: laion5b_s13b_b90k
     deployments:
@@ -269,7 +269,7 @@ applications:
     args:
       model: insightface_video_detector_torch
       data_path: /data
-      params: 
+      params:
         model_path: /models/insightface_detector_torch/scrfd_10g_bnkps.pth
     deployments:
       - name: Deployment
@@ -290,7 +290,7 @@ applications:
     args:
       model: insightface_image_detector_torch
       data_path: /data
-      params: 
+      params:
         model_path: /models/insightface_detector_torch/scrfd_10g_bnkps.pth
     deployments:
       - name: Deployment
@@ -311,7 +311,7 @@ applications:
     args:
       model: insightface_video_feature_extractor
       data_path: /data
-      params: 
+      params:
         model_path: /models/insightface_feature_extraction/w600k_r50.onnx
     deployments:
       - name: Deployment
@@ -333,7 +333,7 @@ applications:
     args:
       model: insightface_image_feature_extractor
       data_path: /data
-      params: 
+      params:
         model_path: /models/insightface_feature_extraction/w600k_r50.onnx
     deployments:
       - name: Deployment
@@ -374,7 +374,7 @@ applications:
         autoscaling_config:
           min_replicas: 0
           max_replicas: 20
-       
+
   - name: shot_annotator
     route_prefix: /shot_annotator
     import_path: inference_ray.main:app_builder
@@ -394,7 +394,7 @@ applications:
     args:
       model: shot_type_classifier
       data_path: /data
-      params: 
+      params:
         model_path: /models/shot_type_classification/shot_type_classifier_e9-s3199.pt
     deployments:
       - name: Deployment
@@ -426,7 +426,7 @@ applications:
     args:
       model: transnet_shotdetection
       data_path: /data
-      params: 
+      params:
         model_path: /models/transnet_shotdetection/transnet.pt
     deployments:
       - name: Deployment
@@ -494,7 +494,7 @@ applications:
           runtime_env:
             uv:
               - scipy==1.12.0
-  
+
   - name: aggregate_scalar_per_time
     route_prefix: /aggregate_scalar_per_time
     import_path: inference_ray.main:app_builder
@@ -514,7 +514,7 @@ applications:
     args:
       model: whisper
       data_path: /data
-      params: 
+      params:
         model: openai/whisper-medium
     deployments:
       - name: Deployment
@@ -536,7 +536,7 @@ applications:
     args:
       model: x_clip_video_embedding
       data_path: /data
-      params: 
+      params:
         model_path: /models/xclip/xclip_16_8_video.onnx
     deployments:
       - name: Deployment
@@ -561,7 +561,7 @@ applications:
     args:
       model: x_clip_text_embedding
       data_path: /data
-      params: 
+      params:
         model_path: /models/xclip/xclip_16_8_text.onnx
     deployments:
       - name: Deployment
@@ -586,7 +586,7 @@ applications:
     args:
       model: x_clip_probs
       data_path: /data
-      params: 
+      params:
         text_model_path: /models/xclip/xclip_16_8_text.onnx
         sim_model_path: /models/xclip/xclip_16_8_sim.onnx
     deployments:
@@ -730,7 +730,7 @@ applications:
   #   args:
   #     model: ocr_video_detector_onnx
   #     data_path: /data
-  #     params: 
+  #     params:
   #       model_path: /models/ocr/yolov7_text_det_dyn_input.onnx
   #   deployments:
   #     - name: Deployment

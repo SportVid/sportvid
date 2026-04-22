@@ -1,4 +1,5 @@
 import os
+import subprocess
 import tarfile
 import logging
 from pathlib import Path
@@ -14,6 +15,8 @@ from backend.plugin_manager import PluginManager
 
 logger = logging.getLogger(__name__)
 
+_POLL_INTERVAL = 2.0  # seconds between cancellation checks
+
 
 @shared_task(bind=True)
 def convert_video(self, video_id_hex, original_ext, analyzers=None):
@@ -27,7 +30,28 @@ def convert_video(self, video_id_hex, original_ext, analyzers=None):
 
         logger.info(f"Starting conversion for {video_id_hex} from {file_in} to {file_out}")
 
-        convert_to_hls(file_in, original_ext.split(sep='.')[-1].lstrip('.'), file_out)
+        ffmpeg_proc = convert_to_hls(file_in, original_ext.split(sep='.')[-1].lstrip('.'), file_out)
+
+        # Poll ffmpeg completion; check for cancellation (video deleted) each interval
+        while True:
+            try:
+                ffmpeg_proc.wait(timeout=_POLL_INTERVAL)
+                break  # ffmpeg finished normally
+            except subprocess.TimeoutExpired:
+                if not Video.objects.filter(id=video_id_hex).exists():
+                    logger.info(f"Video {video_id_hex} deleted during conversion, killing ffmpeg")
+                    ffmpeg_proc.kill()
+                    ffmpeg_proc.wait()
+                    return
+
+        if ffmpeg_proc.returncode != 0:
+            stderr = ffmpeg_proc.stderr.read() if ffmpeg_proc.stderr else b""
+            raise Exception(f"ffmpeg exited with code {ffmpeg_proc.returncode}: {stderr.decode(errors='replace')}")
+
+        # Guard: check if video was deleted while we were converting
+        if not Video.objects.filter(id=video_id_hex).exists():
+            logger.info(f"Video {video_id_hex} was deleted during conversion, aborting.")
+            return
 
         # create archive
         ext = '.tar.gz'
@@ -43,14 +67,16 @@ def convert_video(self, video_id_hex, original_ext, analyzers=None):
         duration = reader.get_meta_data().get('duration') * 1000.0
         size = reader.get_meta_data().get('size')
 
-        # update DB
+        # update DB (use update_fields to avoid re-inserting a deleted record)
+        Video.objects.filter(id=video_id_hex).update(
+            ext=ext,
+            fps=fps,
+            duration=duration,
+            width=size[0],
+            height=size[1],
+            status=Video.STATUS_DONE,
+        )
         video_db.ext = ext
-        video_db.fps = fps
-        video_db.duration = duration
-        video_db.width = size[0]
-        video_db.height = size[1]
-        video_db.status = Video.STATUS_DONE
-        video_db.save()
 
         # cleanup
         try:

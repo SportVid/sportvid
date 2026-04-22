@@ -108,11 +108,15 @@ export const useExportStore = defineStore("export", () => {
     { id: 10, name: t("modal.export.position_data.attributes.det_score"), csv: "det_score" },
   ];
   const selectablePositionDataAttributes = computed(() => {
-    const presentIndices = new Set(
-      Object.values(topViewStore.positionDataTopView)
-        .flat()
-        .flatMap((pos) => pos.map((_, idx) => idx))
-    );
+    // Determine which column indices are present by sampling one frame
+    const keys = topViewStore.sortedFrameKeys;
+    const presentIndices = new Set();
+    if (keys.length > 0) {
+      const sampleFrame = topViewStore.getFrameAt(keys[0]);
+      if (sampleFrame.length > 0) {
+        sampleFrame[0].forEach((_, idx) => presentIndices.add(idx));
+      }
+    }
 
     const meta = topViewStore.metaDataTopView;
     const hasPlayerMeta = meta?.player_ids && Object.keys(meta.player_ids).length > 0;
@@ -207,13 +211,7 @@ export const useExportStore = defineStore("export", () => {
 
     const attrDefs = [...alwaysFirstAttrs, ...selectedOptionalAttrs, ...alwaysLastAttrs];
 
-    const rawPosData = toRaw(topViewStore.positionDataTopView);
-    const filteredPosData = Object.fromEntries(
-      Object.entries(rawPosData).filter(([key]) => {
-        const t = Number(key);
-        return t >= startFrame && t <= endFrame;
-      })
-    );
+    const filteredPosData = topViewStore.getSubsetObject(startFrame, endFrame);
 
     const posdataWorkerStore = usePosdataWorkerStore();
     const csvData = await posdataWorkerStore.exportPositionsCSV(
