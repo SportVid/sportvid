@@ -491,7 +491,29 @@
         "sport": "Sport",
         "field_length": "Field length [m]",
         "field_width": "Field width [m]",
-        "field_warning": "If no dimensions are specified, default dimensions of {defaultLength}x{defaultWidth} m are used. This may affect the accuracy of the analysis."
+        "field_warning": "If no dimensions are specified, default dimensions of {defaultLength}x{defaultWidth} m are used. This may affect the accuracy of the analysis.",
+        "divisions": {
+          "liga_1": "League 1",
+          "liga_2": "League 2",
+          "liga_3": "League 3",
+          "liga_4": "League 4",
+          "liga_5": "League 5",
+          "liga_6": "League 6",
+          "liga_7": "League 7",
+          "liga_8": "League 8",
+          "liga_9": "League 9",
+          "liga_10": "League 10",
+          "other": "Other"
+        },
+        "age_groups": {
+          "men": "Men",
+          "u19_male": "U19 Juniors (male)",
+          "u17_male": "U17 Juniors (male)",
+          "women": "Women",
+          "u19_female": "U19 Juniors (female)",
+          "u17_female": "U17 Juniors (female)",
+          "other": "Other"
+        }
       },
       "delete": {
         "success": "Video successfully deleted"

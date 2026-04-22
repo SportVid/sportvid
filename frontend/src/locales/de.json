@@ -324,7 +324,29 @@
         "age_group": "Altersgruppe auswählen",
         "total_teams": "Gesamtzahl der Teams auswählen",
         "out_of": "von",
-        "sport": "Sportart"
+        "sport": "Sportart",
+        "divisions": {
+          "liga_1": "Liga 1",
+          "liga_2": "Liga 2",
+          "liga_3": "Liga 3",
+          "liga_4": "Liga 4",
+          "liga_5": "Liga 5",
+          "liga_6": "Liga 6",
+          "liga_7": "Liga 7",
+          "liga_8": "Liga 8",
+          "liga_9": "Liga 9",
+          "liga_10": "Liga 10",
+          "other": "Sonstiges"
+        },
+        "age_groups": {
+          "men": "Herren",
+          "u19_male": "U19 Junioren",
+          "u17_male": "U17 Junioren",
+          "women": "Damen",
+          "u19_female": "U19 Juniorinnen",
+          "u17_female": "U17 Juniorinnen",
+          "other": "Sonstiges"
+        }
       },
       "delete": {
         "success": "Video erfolgreich gelöscht"
