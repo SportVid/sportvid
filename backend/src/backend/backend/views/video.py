@@ -13,7 +13,7 @@ from django.http import JsonResponse
 from django.conf import settings
 
 from celery.app.control import Control
-from tibava.celery import app as celery_app
+from sportvid.celery import app as celery_app
 
 from backend.plugin_manager import PluginManager
 from backend.utils import (
