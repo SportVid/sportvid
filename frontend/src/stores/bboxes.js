@@ -16,6 +16,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
   const calibrationAssetStore = useCalibrationAssetStore();
 
   const bboxDataActive = ref({});
+  const bboxMetaData = ref(null);
   const bboxDataInterpolated = ref({});
   const bboxDataTopView = ref({});
   const bboxDataLoaded = ref(false);
@@ -46,6 +47,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
       hasValidData = true;
 
       bboxDataActive.value = _bboxData[0]?.results[0]?.data?.bboxes;
+      bboxMetaData.value = _bboxData[0]?.results[0]?.data?.meta_data ?? null;
     } finally {
       if (hasValidData) {
         bboxDataLoaded.value = true;
@@ -148,6 +150,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
         params.value
       );
       if (res.data.status === "ok") {
+        bboxMetaData.value = res.data.entry.meta_data ?? null;
         topViewStore.transformBBoxToPositionDataTopView(
           calibrationAssetStore.calibrationAssetId,
           bboxPluginRunId.value,
@@ -195,6 +198,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
         params.value
       );
       if (res.data.status === "ok") {
+        bboxMetaData.value = res.data.entry.meta_data ?? null;
         topViewStore.transformBBoxToPositionDataTopView(
           calibrationAssetStore.calibrationAssetId,
           bboxPluginRunId.value,
@@ -228,6 +232,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
     deleteBboxData,
     interpolateBboxData,
     bboxDataActive,
+    bboxMetaData,
     bboxDataLoaded,
     bboxDataInterpolated,
     bboxPluginRunId,

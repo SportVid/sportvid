@@ -831,16 +831,19 @@ const runningDistanceTeamItems = computed(() => {
 
   playerOptions.value.forEach((p) => {
     if (!selectedPlayerIds.value.has(p.playerId)) return;
+    const kpiItem = kpiMap[p.playerId];
     grouped[p.teamId].push(
-      kpiMap[p.playerId] ?? {
-        player_id: p.playerId,
-        team_id: p.teamId,
-        distance: null,
-        velocity_max: null,
-        metabolic_work: null,
-        equivalent_distance: null,
-        centroid_distance_max: null,
-      }
+      kpiItem
+        ? { ...kpiItem, team_id: p.teamId }
+        : {
+            player_id: p.playerId,
+            team_id: p.teamId,
+            distance: null,
+            velocity_max: null,
+            metabolic_work: null,
+            equivalent_distance: null,
+            centroid_distance_max: null,
+          }
     );
   });
 

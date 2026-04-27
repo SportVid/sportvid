@@ -20,6 +20,24 @@ from data import (
 logger = logging.getLogger(__name__)
 
 
+def _compute_meta_data(bbd_data):
+    unique_player_ids = set()
+    unique_team_ids = set()
+    for frame_bboxes in bbd_data.values():
+        for bbox in frame_bboxes:
+            if len(bbox) > 1:
+                unique_player_ids.add(bbox[0])
+                unique_team_ids.add(bbox[1])
+    team_id_meta = {}
+    for idx, tid in enumerate(sorted(unique_team_ids)):
+        name = chr(ord('A') + idx) if idx < 26 else str(tid)
+        team_id_meta[tid] = {"id": tid, "name": name}
+    player_id_meta = {}
+    for pid in sorted(unique_player_ids):
+        player_id_meta[pid] = {"id": pid, "name": str(pid), "number": pid}
+    return json.dumps({"team_ids": team_id_meta, "player_ids": player_id_meta})
+
+
 class BoundingBoxesChange(View):
     @decode_and_authenticate(require_name=False)
     def post(self, request, data):
@@ -103,6 +121,7 @@ class BoundingBoxesChange(View):
                                 if bbx[1] == current_team_id:
                                     bbx[1] = new_team_id
                     altered_bbx.bboxes = json.dumps(bbd_data)
+                    altered_bbx.meta_data = _compute_meta_data(bbd_data)
             logging.info(f"Successfully created new temporary data with id: {altered_bbx.id}")
             # perform the database switch inside a transaction
             with transaction.atomic():
@@ -196,7 +215,8 @@ class BoundingBoxesDelete(View):
                             for bbx_id, bbx in enumerate(bboxes):
                                 if bbx[1] == team_id_to_delete:
                                     del bbd_data[frame_id][bbx_id]
-                    altered_bbx.bboxes = json.dumps(bbd_data)      
+                    altered_bbx.bboxes = json.dumps(bbd_data)
+                    altered_bbx.meta_data = _compute_meta_data(bbd_data)
             logging.info(f"Successfully created new temporary data with id: {altered_bbx.id}")
 
             with transaction.atomic():

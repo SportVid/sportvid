@@ -150,6 +150,8 @@ class ByteTrack(
                 results, img_info = self.track(video_decoder, predictor, args)
 
                 bboxes_dict = defaultdict(list)
+                unique_player_ids = set()
+                unique_team_ids = set()
                 for i, frame_info in enumerate(results):
                     frame_time = round((i/args.fps)*1000.)
                     for id, score, box in zip(
@@ -162,9 +164,9 @@ class ByteTrack(
                         y_norm = int(box[1]) / img_info["height"]
                         w_norm = int(box[2]) / img_info["width"]
                         h_norm = int(box[3]) / img_info["height"]
-                        
+
                         # NOTE: old code used a custom data type, we now serialize as JSON
-                        # bbox = BboxData(...) 
+                        # bbox = BboxData(...)
                         # bbox = {
                         #     'x': x_norm,
                         #     'y': y_norm,
@@ -181,17 +183,30 @@ class ByteTrack(
                         # NOTE: now using a compressed version of results
                         bbox = [
                             id, 0, 0,
-                            x_norm + (w_norm / 2), y_norm + h_norm, 
+                            x_norm + (w_norm / 2), y_norm + h_norm,
                             f'{i}-{id}',
-                            x_norm, y_norm, w_norm, h_norm, 
+                            x_norm, y_norm, w_norm, h_norm,
                             score
                         ]
                         bboxes_dict[frame_time].append(bbox)
-                    
+                        unique_player_ids.add(id)
+                        unique_team_ids.add(0)
+
+                # Build metadata: teams A-Z by sorted team_id, players use id as placeholder
+                team_id_meta = {}
+                for idx, tid in enumerate(sorted(unique_team_ids)):
+                    name = chr(ord('A') + idx) if idx < 26 else str(tid)
+                    team_id_meta[tid] = {"id": tid, "name": name}
+                player_id_meta = {}
+                for pid in sorted(unique_player_ids):
+                    player_id_meta[pid] = {"id": pid, "name": str(pid), "number": pid}
+                meta_dict = {"team_ids": team_id_meta, "player_ids": player_id_meta}
+
                 with data_manager.create_data("BboxesData") as output_data:
                     output_data.bboxes = json.dumps(bboxes_dict)
+                    output_data.meta_data = json.dumps(meta_dict)
                     self.update_callbacks(callbacks, progress=1.0)
-                
+
                 return {"tracklets": output_data}
 
     def track(

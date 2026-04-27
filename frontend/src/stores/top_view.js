@@ -316,27 +316,14 @@ export const useTopViewStore = defineStore(
           _isCompact.value = false;
         }
 
-        const teamIdsMap = {};
-        const playerIdsMap = {};
+        const storedMeta = bboxesStore.bboxMetaData ? JSON.parse(bboxesStore.bboxMetaData) : {};
         const playerMap = new Map();
         const sections = new Set();
         const boundaries = {};
         for (const [timeKey, boxes] of Object.entries(_bboxDataInterpolated)) {
           const t = Number(timeKey);
           for (const b of boxes) {
-            const playerId = b[0];
-            const teamId = b[1];
-            if (!(teamId in teamIdsMap)) {
-              teamIdsMap[teamId] = { id: teamId, name: teamId };
-            }
-            if (!(playerId in playerIdsMap)) {
-              playerIdsMap[playerId] = {
-                id: playerId,
-                name: String(playerId),
-                number: playerId,
-              };
-            }
-            if (teamId !== 1) playerMap.set(playerId, teamId);
+            if (b[1] !== 1) playerMap.set(b[0], b[1]);
             const gs = b[2];
             sections.add(gs);
             if (!boundaries[gs]) {
@@ -348,8 +335,8 @@ export const useTopViewStore = defineStore(
           }
         }
         metaDataTopView.value = {
-          team_ids: teamIdsMap,
-          player_ids: playerIdsMap,
+          team_ids: storedMeta.team_ids ?? {},
+          player_ids: storedMeta.player_ids ?? {},
         };
         precomputedPlayerList.value = Array.from(playerMap, ([pid, tid]) => ({
           playerId: pid,
