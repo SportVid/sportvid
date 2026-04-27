@@ -285,21 +285,32 @@ const playerColors = computed(() => {
   return map;
 });
 const teamOptions = computed(() => {
-  const existing = [...new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId))].sort((a, b) => a - b);
+  const existing = [...new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId))]
+    .filter((id) => id >= 3)
+    .sort((a, b) => a - b);
 
-  let nextId = 2;
+  let nextId = 3;
   while (existing.includes(nextId) && nextId <= 10) {
     nextId++;
   }
 
-  const options = existing.map((id) => ({
-    id,
-    label: String(id),
-    isNew: false,
-  }));
+  const options = [
+    { id: 0, label: t("modal.bounding_box.edit.team.rest"), isNew: false },
+    { id: 1, label: t("modal.bounding_box.edit.team.ball"), isNew: false },
+    { id: 2, label: t("modal.bounding_box.edit.team.referee"), isNew: false },
+    ...existing.map((id) => ({
+      id,
+      label: t("modal.bounding_box.edit.team.team", { id: id }),
+      isNew: false,
+    })),
+  ];
 
-  if (nextId <= 10) {
-    options.push({ id: nextId, label: `New (${nextId})`, isNew: true });
+  if (nextId <= 12) {
+    options.push({
+      id: nextId,
+      label: t("modal.bounding_box.edit.team.new_team", { id: nextId }),
+      isNew: true,
+    });
   }
 
   return options;

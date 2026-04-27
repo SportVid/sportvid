@@ -5,7 +5,12 @@
 
       <v-row class="ma-n2">
         <v-col cols="6">
-          <v-card elevation="2" ref="videoCard" class="fill-height" data-tour="analysis-video-player">
+          <v-card
+            elevation="2"
+            ref="videoCard"
+            class="fill-height"
+            data-tour="analysis-video-player"
+          >
             <v-row justify="center">
               <v-card-title class="mt-5 mb-n1">
                 {{ playerStore.videoName }}
@@ -94,7 +99,11 @@
 
       <v-row v-if="!calibrationAssetStore.calibrationMode && !isLoading" class="ma-n2">
         <v-col>
-          <v-card class="d-flex flex-column flex-nowrap px-2" elevation="2" data-tour="analysis-visualization-tabs">
+          <v-card
+            class="d-flex flex-column flex-nowrap px-2"
+            elevation="2"
+            data-tour="analysis-visualization-tabs"
+          >
             <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.visualizationTabId">
               <v-tab
                 v-for="visualizationTab in tabStore.visualizationTabs"
@@ -214,8 +223,9 @@ const visualizationStore = useVisualizationStore();
 const matchupTeams = computed(() => {
   const meta = topViewStore.metaDataTopView;
   if (!meta?.team_ids) return [];
+  // New scheme: team_id ≥ 3 = active player teams (1=ball, 2=refs, 0=inactive — all hidden from matchup).
   return Object.entries(meta.team_ids)
-    .filter(([teamId]) => Number(teamId) !== 1)
+    .filter(([teamId]) => Number(teamId) >= 3)
     .sort(([a], [b]) => Number(a) - Number(b))
     .map(([teamId, info]) => ({
       id: Number(teamId),
@@ -666,6 +676,14 @@ onBeforeUnmount(() => {
   topViewStore.setPositionData(null, {});
   bboxesStore.bboxDataInterpolated = {};
 });
+
+watch(
+  () => topViewStore.metaDataTopView,
+  (neww) => {
+    console.log("metaDataTopView changed:", neww);
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>

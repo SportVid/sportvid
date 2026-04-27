@@ -113,27 +113,39 @@ class KpiComputation(Task):
             else:
                 fps = 25
 
-            # Build PositionData: apply homography to each bbox's center-bottom position
+            # Build PositionData: apply homography to each bbox's center-bottom position.
+            # ByteTrack outputs team_id=3 by default (single team under new scheme).
             pos_json = {}
             player_ids_meta = {}
+            seen_team_ids = set()
             for ts_str, boxes in bboxes_raw.items():
                 frame_players = []
                 for b in boxes:
                     pid = b[0]
-                    tid = b[1]   # 0 for bytetrack (no team info)
+                    tid = b[1]
                     section = b[2]
                     top_x = b[3]  # center-x normalized in video space
                     top_y = b[4]  # bottom-y normalized in video space
                     hx, hy = _apply_homography(H, top_x, top_y)
                     frame_players.append([pid, tid, section, hx, hy])
+                    seen_team_ids.add(tid)
                     if str(pid) not in player_ids_meta:
-                        player_ids_meta[str(pid)] = {"id": str(pid), "name": str(pid), "number": pid}
+                        player_ids_meta[str(pid)] = {"id": str(pid), "name": str(pid), "number": pid, "team_id": tid}
                 pos_json[ts_str] = frame_players
+
+            team_ids_meta = {}
+            for letter_idx, tid in enumerate(sorted(t for t in seen_team_ids if t >= 3)):
+                name = f"Team {chr(ord('A') + letter_idx)}" if letter_idx < 26 else f"Team {tid}"
+                team_ids_meta[str(tid)] = {"id": tid, "name": name}
+            if not team_ids_meta:
+                team_ids_meta["3"] = {"id": 3, "name": "Team A"}
 
             meta_data = {
                 "fps": fps,
                 "player_ids": player_ids_meta,
-                "team_ids": {"0": {"id": "0", "name": "Team 1"}},
+                "ref_ids": {},
+                "ball_ids": {},
+                "team_ids": team_ids_meta,
             }
 
             # Get field dimensions from the video for denormalization in the inference plugin

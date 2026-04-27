@@ -60,6 +60,9 @@ export const usePositionDataStore = defineStore(
       if (cached) {
         topViewStore.setPositionData(cached.compact, cached.metaData, {
           playerList: cached.playerList,
+          refList: cached.refList,
+          ballList: cached.ballList,
+          inactiveList: cached.inactiveList,
           playerIdSet: cached.playerIdSet,
           gameSections: cached.gameSections,
           halftimeBoundaries: cached.halftimeBoundaries,
@@ -73,6 +76,9 @@ export const usePositionDataStore = defineStore(
       if (result) {
         topViewStore.setPositionData(result.compact, result.metaData, {
           playerList: result.playerList,
+          refList: result.refList,
+          ballList: result.ballList,
+          inactiveList: result.inactiveList,
           playerIdSet: result.playerIdSet,
           gameSections: result.gameSections,
           halftimeBoundaries: result.halftimeBoundaries,
@@ -94,6 +100,7 @@ export const usePositionDataStore = defineStore(
         formData.append("delimiter", params.delimiter);
         formData.append("origin", params.origin);
         formData.append("team_id_ball", params.teamIdBall);
+        formData.append("team_id_ref", params.teamIdRef ?? "");
         formData.append("fps", params.fps);
 
         const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {
@@ -179,7 +186,7 @@ export const usePositionDataStore = defineStore(
         const players = topViewStore.getFrameAt(allTimes[ti]);
         if (!players || !players.length) continue;
         for (const p of players) {
-          if (p[1] === 1) continue;
+          if (p[1] < 3) continue;
           if (
             (visualizationStore.showAggregatedFirst && p[2] !== 1) ||
             (visualizationStore.showAggregatedSecond && p[2] !== 2)

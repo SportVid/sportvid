@@ -111,6 +111,17 @@
           />
 
           <v-text-field
+            v-if="positionData.format === 'kinexon'"
+            v-model="positionData.teamIdRef"
+            variant="underlined"
+            :label="$t('modal.position_data.upload.team_id_ref')"
+            clearable
+            clear-icon="mdi-close-circle-outline"
+            prepend-icon="mdi-pencil"
+            class="mt-4"
+          />
+
+          <v-text-field
             v-model="positionData.fps"
             type="number"
             min="1"
@@ -198,6 +209,7 @@ const positionData = ref({
   delimiter: null,
   origin: null,
   teamIdBall: null,
+  teamIdRef: null,
   fps: null,
 });
 const delimiters = [

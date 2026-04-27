@@ -211,9 +211,9 @@
               </v-list-item-title>
             </v-list-item>
 
-            <v-list-item class="menu-item" @click="showModalPositionDataTeamColors = true">
+            <v-list-item class="menu-item" @click="showModalPositionDataEntityColors = true">
               <v-list-item-title class="d-flex justify-space-between">
-                {{ $t("position_data.display_settings.team_colors") }}
+                {{ $t("position_data.display_settings.entity_colors") }}
               </v-list-item-title>
             </v-list-item>
 
@@ -373,9 +373,9 @@
           v-if="showModalPositionDataSelect"
           v-model="showModalPositionDataSelect"
         />
-        <ModalPositionDataTeamColors
-          v-if="showModalPositionDataTeamColors"
-          v-model="showModalPositionDataTeamColors"
+        <ModalPositionDataEntityColors
+          v-if="showModalPositionDataEntityColors"
+          v-model="showModalPositionDataEntityColors"
         />
         <ModalPositionDataOffset
           v-if="showModalPositionDataOffset"
@@ -432,6 +432,17 @@
           mdi-close
         </v-icon>
         <div class="players-toggle-content">
+          <div class="entity-kind-bar">
+            <div
+              v-for="kind in ENTITY_KINDS"
+              :key="kind.key"
+              class="entity-kind-chip"
+              :class="{ active: topViewStore.visibleEntityKinds[kind.key] }"
+              @click="topViewStore.toggleEntityKind(kind.key)"
+            >
+              {{ $t(kind.labelKey) }}
+            </div>
+          </div>
           <div
             v-for="(players, teamId) in overlayTeamGroups"
             :key="teamId"
@@ -469,7 +480,7 @@
               }"
               @click="togglePlayersForKPIs(p.playerId)"
             >
-              {{ overlayGetPlayerNumber(p.playerId) }}
+              {{ overlayGetPlayerNumber(p.playerId, p.teamId) }}
             </div>
           </div>
         </div>
@@ -494,7 +505,7 @@ import { Delaunay } from "d3-delaunay";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
 import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
-import ModalPositionDataTeamColors from "@/components/position-data/ModalPositionDataTeamColors.vue";
+import ModalPositionDataEntityColors from "@/components/position-data/ModalPositionDataEntityColors.vue";
 import ModalPositionDataOffset from "@/components/position-data/ModalPositionDataOffset.vue";
 
 const playerStore = usePlayerStore();
@@ -529,7 +540,7 @@ function getBallImage(sportTitle) {
 
 const showModalPositionDataSelect = ref(false);
 const showModalPositionDataUpload = ref(false);
-const showModalPositionDataTeamColors = ref(false);
+const showModalPositionDataEntityColors = ref(false);
 const showModalPositionDataOffset = ref(false);
 const showModalToggleEntities = ref(false);
 
@@ -648,10 +659,22 @@ onBeforeUnmount(() => {
 
 const includedPlayers = ref(new Set());
 const kpiExcludedByClick = ref(new Set());
+const _buildAllEntitySet = () => {
+  const ids = new Set(topViewStore.precomputedPlayerIdSet);
+  for (const p of topViewStore.precomputedRefList) ids.add(p.playerId);
+  for (const p of topViewStore.precomputedBallList) ids.add(p.playerId);
+  for (const p of topViewStore.precomputedInactiveList) ids.add(p.playerId);
+  return ids;
+};
 watch(
-  () => topViewStore.precomputedPlayerIdSet,
-  (newSet) => {
-    includedPlayers.value = new Set(newSet);
+  () => [
+    topViewStore.precomputedPlayerIdSet,
+    topViewStore.precomputedRefList,
+    topViewStore.precomputedBallList,
+    topViewStore.precomputedInactiveList,
+  ],
+  () => {
+    includedPlayers.value = _buildAllEntitySet();
     kpiExcludedByClick.value = new Set();
   },
   { immediate: true }
@@ -675,10 +698,22 @@ const togglePlayerKpiByClick = (playerId) => {
   kpiExcludedByClick.value = newSet;
 };
 
+// Toggle bar for visible entity kinds. Refs/inactive default off (see top_view store).
+const ENTITY_KINDS = [
+  { key: "player", labelKey: "position_data.entity_kind.player" },
+  { key: "ref", labelKey: "position_data.entity_kind.ref" },
+  { key: "ball", labelKey: "position_data.entity_kind.ball" },
+  { key: "rest", labelKey: "position_data.entity_kind.rest" },
+];
+
 const overlayPlayerOptions = computed(() => {
-  return [...topViewStore.precomputedPlayerList].sort(
-    (a, b) => a.teamId - b.teamId || a.playerId - b.playerId
-  );
+  const visible = topViewStore.visibleEntityKinds;
+  const lists = [];
+  if (visible.player) lists.push(...topViewStore.precomputedPlayerList);
+  if (visible.ref) lists.push(...topViewStore.precomputedRefList);
+  if (visible.ball) lists.push(...topViewStore.precomputedBallList);
+  if (visible.rest) lists.push(...topViewStore.precomputedInactiveList);
+  return lists.sort((a, b) => a.teamId - b.teamId || a.playerId - b.playerId);
 });
 
 const overlayTeamGroups = computed(() => {
@@ -698,10 +733,8 @@ const overlayPlayerColors = computed(() => {
   return map;
 });
 
-const overlayGetPlayerNumber = (playerId) => {
-  const meta = topViewStore.metaDataTopView;
-  const num = meta?.player_ids?.[playerId]?.number;
-  return num != null ? num : playerId;
+const overlayGetPlayerNumber = (playerId, teamId) => {
+  return topViewStore.getEntityNumber(playerId, teamId);
 };
 
 const overlayGetTeamName = (teamId) => {
@@ -781,7 +814,7 @@ const convexHullForCurrentFrame = computed(() => {
   framePositions
     .filter(
       (position) =>
-        position[1] !== 1 &&
+        position[1] >= 3 &&
         includedPlayers.value.has(position[0]) &&
         !kpiExcludedByClick.value.has(position[0])
     )
@@ -845,7 +878,7 @@ const voronoiForCurrentFrame = computed(() => {
   const allPlayers = framePositions
     .filter(
       (player) =>
-        player[1] !== 1 &&
+        player[1] >= 3 &&
         includedPlayers.value.has(player[0]) &&
         !kpiExcludedByClick.value.has(player[0])
     )
@@ -883,10 +916,8 @@ const positionDataForCurrentFrame = computed(() => {
   });
 });
 
-const getPlayerNumber = (playerId) => {
-  const meta = topViewStore.metaDataTopView;
-  const num = meta?.player_ids?.[playerId]?.number;
-  return num != null ? num : playerId;
+const getPlayerNumber = (playerId, teamId) => {
+  return topViewStore.getEntityNumber(playerId, teamId);
 };
 
 // ---------------------------------------------------------------------------
@@ -1004,24 +1035,28 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
     ctx.restore();
   }
 
-  // Draw players and ball
+  // Draw players, ball, refs, inactive — gated by topViewStore.visibleEntityKinds.
   const framePositions = topViewStore.currentFramePlayers;
   if (!framePositions || !framePositions.length) return;
 
   // Store positions for click hit-testing
   if (!offscreenCanvas) _playerHitTargets.length = 0;
 
+  const visible = topViewStore.visibleEntityKinds;
+
   for (const pos of framePositions) {
     const { px, py } = toPixel(pos[3], pos[4]);
+    const tid = pos[1];
 
-    if (pos[1] === 1 && includedPlayers.value.has(pos[0])) {
+    if (tid === 1) {
+      if (!visible.ball) continue;
+      if (!includedPlayers.value.has(pos[0])) continue;
       // Ball – sport-specific SVG icon
       const ballSize = 8;
       const ballImg = getBallImage(sport.title);
       if (ballImg && ballImg.complete && ballImg.naturalWidth > 0) {
         ctx.drawImage(ballImg, px - ballSize / 2, py - ballSize / 2, ballSize, ballSize);
       } else {
-        // Fallback: simple white circle while image loads
         ctx.beginPath();
         ctx.arc(px, py, 4, 0, Math.PI * 2);
         ctx.fillStyle = "#FFFFFF";
@@ -1030,11 +1065,36 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
         ctx.fill();
         ctx.stroke();
       }
-    } else if (includedPlayers.value.has(pos[0])) {
+    } else if (tid === 2) {
+      if (!visible.ref) continue;
+      if (!includedPlayers.value.has(pos[0])) continue;
+      // Referee – yellow triangle
+      const r = 6;
+      ctx.beginPath();
+      ctx.moveTo(px, py - r);
+      ctx.lineTo(px + r * Math.sin((Math.PI * 2) / 3), py - r * Math.cos((Math.PI * 2) / 3));
+      ctx.lineTo(px + r * Math.sin((Math.PI * 4) / 3), py - r * Math.cos((Math.PI * 4) / 3));
+      ctx.closePath();
+      ctx.fillStyle = "#FFD600";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 1.5;
+      ctx.fill();
+      ctx.stroke();
+    } else if (tid === 0) {
+      if (!visible.rest) continue;
+      if (!includedPlayers.value.has(pos[0])) continue;
+      // Inactive / spectator — dimmed grey
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = "#9E9E9E";
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (visible.player && includedPlayers.value.has(pos[0])) {
       // Player dot (only if not excluded)
       ctx.beginPath();
       ctx.arc(px, py, 6, 0, Math.PI * 2);
-      ctx.fillStyle = visualizationStore.getTeamColor(pos[1]);
+      ctx.fillStyle = visualizationStore.getTeamColor(tid);
       ctx.fill();
 
       // Store for hit testing (KPI toggle)
@@ -1042,7 +1102,7 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
 
       // Player ID label
       if (topViewStore.showPlayerId) {
-        const num = getPlayerNumber(pos[0]);
+        const num = getPlayerNumber(pos[0], tid);
         ctx.fillStyle = visualizationStore.getTeamColor(pos[1]);
         ctx.font = "bold 11px sans-serif";
         ctx.textAlign = "center";
@@ -1119,10 +1179,12 @@ watch(
     () => topViewStore.gridTransverse,
     () => topViewStore.mirrorXY,
     () => visualizationStore.teamColorMapping,
+    () => topViewStore.visibleEntityKinds,
     includedPlayers,
     kpiExcludedByClick,
   ],
-  () => scheduleCanvasDraw()
+  () => scheduleCanvasDraw(),
+  { deep: true }
 );
 onMounted(() => nextTick(() => scheduleCanvasDraw()));
 
@@ -1518,5 +1580,31 @@ async function saveScreenshot() {
   border: 2px solid;
   transition: background 0.2s, border 0.2s;
   user-select: none;
+}
+
+.entity-kind-bar {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.entity-kind-chip {
+  padding: 2px 10px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(var(--v-theme-primary), 0.6);
+  font-size: 0.7rem;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  color: rgba(var(--v-theme-primary), 1);
+  background: transparent;
+  transition: background 0.2s, color 0.2s;
+}
+
+.entity-kind-chip.active {
+  background: rgba(var(--v-theme-primary), 1);
+  color: #fff;
 }
 </style>

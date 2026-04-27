@@ -107,13 +107,24 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
       }
 
       // Convert to compact TypedArray format (~45MB vs ~300-500MB for 90min match)
-      const { compact, playerList, playerIdSet, gameSections, halftimeBoundaries } =
-        fromPosDataObject(allFrames);
+      const {
+        compact,
+        playerList,
+        refList,
+        ballList,
+        inactiveList,
+        playerIdSet,
+        gameSections,
+        halftimeBoundaries,
+      } = fromPosDataObject(allFrames);
 
       const result = {
         compact,
         metaData: metaData || {},
         playerList,
+        refList,
+        ballList,
+        inactiveList,
         playerIdSet,
         gameSections,
         halftimeBoundaries,

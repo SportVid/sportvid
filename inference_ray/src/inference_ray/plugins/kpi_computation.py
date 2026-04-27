@@ -81,9 +81,10 @@ class KpiComputation(
         pos_meta_raw = parameters.get("pos_meta", "")
         pos_meta = json.loads(pos_meta_raw) if pos_meta_raw else None
 
-        # Build reverse lookups from posdata metadata
+        # Build reverse lookups from posdata metadata.
+        # New schema: ref_ids and ball_ids are top-level dicts; player_ids contains only players.
         team_id_by_orig = {}   # original_id → posdata int_id
-        player_id_by_orig = {}  # original_id → posdata int_id
+        player_id_by_orig = {}  # original_id → posdata int_id (players only)
 
         if pos_meta:
             for int_id_str, info in pos_meta.get("team_ids", {}).items():
@@ -91,7 +92,10 @@ class KpiComputation(
             for int_id_str, info in pos_meta.get("player_ids", {}).items():
                 player_id_by_orig[info["id"]] = int(int_id_str)
 
-        # ball_team_ids: set of original group/team id values that represent the ball
+        # Skip teams that aren't real player teams: 1=ball, 2=refs, 0=inactive.
+        # `ball_team_ids` is kept (set of original team ids) but populated for both ball AND ref groups,
+        # since both must be filtered out of KPI computation.
+        SKIP_TEAM_IDS = {0, 1, 2}
         ball_team_ids = set()
         framerate = None
 
@@ -126,7 +130,7 @@ class KpiComputation(
                             group_id_val = df['group id'].iloc[0] if not ts.teamsheet.empty else f"team_{idx+1}"
                             tid = team_id_by_orig.get(group_id_val, group_id_val)
                             if pos_meta:
-                                if tid == 1:
+                                if tid in SKIP_TEAM_IDS:
                                     ball_team_ids.add(group_id_val)
                                     continue
                             elif "ball" in str(group_id_val).lower():
@@ -164,7 +168,7 @@ class KpiComputation(
                             tid = team_id_by_orig.get(group_id_val, group_id_val)
 
                             if pos_meta:
-                                if tid == 1:
+                                if tid in SKIP_TEAM_IDS:
                                     ball_team_ids.add(group_id_val)
                                     continue
 
@@ -194,12 +198,12 @@ class KpiComputation(
             sorted_ts_keys = sorted(pos_json.keys(), key=lambda k: int(k))
             n_frames_sportvid = len(sorted_ts_keys)
 
-            # Build player → team mapping (ball is team_id=1, excluded)
+            # Build player → team mapping. Skip non-player entities (ball=1, refs=2, inactive=0).
             player_team_map = {}
             for ts_key in sorted_ts_keys:
                 for row in pos_json[ts_key]:
                     pid, tid = int(row[0]), int(row[1])
-                    if tid != 1 and pid not in player_team_map:
+                    if tid not in SKIP_TEAM_IDS and pid not in player_team_map:
                         player_team_map[pid] = tid
 
             # Group players by team, each group sorted for deterministic column order
@@ -529,8 +533,10 @@ class KpiComputation(
             meta = {
                 "format": fmt,
                 "kpi_names": ["distance_covered", "cumulative_distance_covered", "velocity", "metabolic_power", "cumulative_metabolic_power", "equivalent_distance", "cumulative_equivalent_distance", "centroid_distance"],
-                "player_ids": pos_meta["player_ids"],
-                "team_ids": pos_meta["team_ids"],
+                "player_ids": pos_meta.get("player_ids", {}),
+                "ref_ids": pos_meta.get("ref_ids", {}),
+                "ball_ids": pos_meta.get("ball_ids", {}),
+                "team_ids": pos_meta.get("team_ids", {}),
                 "framerate": framerate,
                 "tracking_data_id": parameters.get("tracking_data_id"),
             }
@@ -562,6 +568,8 @@ class KpiComputation(
                 "format": fmt,
                 "kpi_names": ["distance_covered", "cumulative_distance_covered", "velocity", "metabolic_power", "cumulative_metabolic_power", "equivalent_distance", "cumulative_equivalent_distance", "centroid_distance"],
                 "player_ids": fallback_player_ids,
+                "ref_ids": {},
+                "ball_ids": {},
                 "team_ids": fallback_team_ids,
                 "framerate": framerate,
                 "tracking_data_id": parameters.get("tracking_data_id"),
