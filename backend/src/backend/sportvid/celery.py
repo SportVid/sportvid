@@ -6,11 +6,13 @@ from celery import Celery
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "sportvid.settings")
 
 # set broker URL accordingly
-broker_url = f"redis://valkey:{os.getenv('VALKEY_PORT')}"
+valkey_host = os.getenv("VALKEY_HOST")
+valkey_port = os.getenv("VALKEY_PORT")
+valkey_passwd = os.getenv("VALKEY_PASSWD")
 
-app = Celery("sportvid", 
-             broker=broker_url
-) # type: ignore
+broker_url = f"redis://:{valkey_passwd}@{valkey_host}:{valkey_port}"
+
+app = Celery("sportvid", broker=broker_url) # type: ignore
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.

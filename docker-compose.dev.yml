@@ -86,9 +86,20 @@ services:
   valkey:
     container_name: valkey_dev
     image: valkey/valkey:8.1.1-alpine
-    command: /usr/local/bin/valkey-server --port ${VALKEY_PORT} --bind 0.0.0.0
+    env_file: 
+      - /opt/deploy/.env.dev
+    command:
+      - "/usr/local/bin/valkey-server"
+      - "--bind"
+      - "${VALKEY_INTERNAL_HOST}"
+      - "--port"
+      - "${VALKEY_INTERNAL_PORT}"
+      - "--requirepass"
+      - "${VALKEY_PASSWD}"
+      - "--protected-mode"
+      - "yes"
     ports:
-      - ${VALKEY_PORT}:6379  # remap valkey port to the one specified by cfg
+      - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT}  # remap valkey port
     networks:
       - dev
 
