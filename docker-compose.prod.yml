@@ -88,11 +88,18 @@ services:
     image: valkey/valkey:8.1.1-alpine
     env_file: 
       - /opt/deploy/.env.prod
-    volumes:
-      - ./backend/sportvid/valkey.conf:/usr/local/etc/valkey/valkey.conf
-    command: /usr/local/bin/valkey-server /usr/local/etc/valkey/valkey.conf
-    # ports:
-    #  - ${VALKEY_PORT}:6379  # remap valkey port to the one specified by cfg
+    command:
+      - "/usr/local/bin/valkey-server"
+      - "--bind"
+      - "${VALKEY_INTERNAL_HOST}"
+      - "--port"
+      - "${VALKEY_INTERNAL_PORT}"
+      - "--requirepass"
+      - "${VALKEY_PASSWD}"
+      - "--protected-mode"
+      - "yes"
+    ports:
+      - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT}  # remap valkey port
     networks:
       - prod
 
