@@ -128,6 +128,10 @@ class TrackingDataUpload(View):
                         {"name": "field_length", "value": video_db.field_length},
                         {"name": "field_width", "value": video_db.field_width}
                     ])
+                    if request.POST.get("team_id_ball"):
+                        analyser_params.append({"name": "team_id_ball", "value": request.POST.get("team_id_ball")})
+                    if request.POST.get("team_id_ref"):
+                        analyser_params.append({"name": "team_id_ref", "value": request.POST.get("team_id_ref")})
   
                 result = self.submit_analyse(
                     plugins=["posdata_convert"],

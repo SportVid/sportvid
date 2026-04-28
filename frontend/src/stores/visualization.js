@@ -16,18 +16,21 @@ export const useVisualizationStore = defineStore(
       return s.has(1) && s.has(2);
     });
 
+    // team_id semantics (matches posdata_convert): 0=inactive, 1=ball, 2=refs, ≥3=active teams.
     const teamColorMapping = ref({
-      0: "#808080", // grey
-      1: "#000000", // black
-      2: "#FF0000", // red
-      3: "#0000FF", // blue
-      4: "#008000", // green
-      5: "#FFFF00", // yellow
+      0: "#9E9E9E", // grey — inactive / spectator
+      1: "#000000", // black — ball (rendered as SVG icon; color used only for matchup labels)
+      2: "#FFD600", // yellow — referees
+      3: "#FF0000", // red — team A
+      4: "#0000FF", // blue — team B
+      5: "#004f00", // green
       6: "#800080", // purple
       7: "#FFA500", // orange
       8: "#FFC0CB", // pink
       9: "#A52A2A", // brown
       10: "#FFFFFF", // white
+      11: "#00FFFF", // cyan
+      12: "#808000", // olive
     });
     function getTeamColor(teamId) {
       return teamColorMapping.value[teamId] || "#808080";
@@ -37,10 +40,11 @@ export const useVisualizationStore = defineStore(
     }
 
     function getNextTeamId() {
+      // Active player teams start at id=3 (slots 0/1/2 reserved for inactive/ball/refs).
       const usedIds = Object.keys(teamColorMapping.value)
         .map(Number)
-        .filter((id) => id >= 2);
-      let id = 2;
+        .filter((id) => id >= 3);
+      let id = 3;
       while (usedIds.includes(id)) {
         id++;
       }
@@ -50,8 +54,8 @@ export const useVisualizationStore = defineStore(
     function addTeamColor(newColor) {
       const usedIds = Object.keys(this.teamColorMapping)
         .map(Number)
-        .filter((id) => id >= 2);
-      let id = 2;
+        .filter((id) => id >= 3);
+      let id = 3;
       while (usedIds.includes(id)) id++;
       this.teamColorMapping[id] = newColor;
       return id;
@@ -60,6 +64,7 @@ export const useVisualizationStore = defineStore(
     const kpiData = shallowRef({});
     const kpiNames = ref([]);
     const kpiFramerate = ref(null);
+    const kpiMetaTeamIds = ref({});
     const kpiDataLoaded = ref(false);
     const isLoadingKpi = ref(false);
 
@@ -104,6 +109,7 @@ export const useVisualizationStore = defineStore(
         kpiData.value = allFrames;
         kpiNames.value = metaData?.kpi_names ?? [];
         kpiFramerate.value = metaData?.framerate ?? null;
+        kpiMetaTeamIds.value = metaData?.team_ids ?? {};
         kpiDataLoaded.value = true;
       } catch (err) {
         console.error("loadKpiData failed:", err);
@@ -122,6 +128,7 @@ export const useVisualizationStore = defineStore(
       kpiData,
       kpiNames,
       kpiFramerate,
+      kpiMetaTeamIds,
       kpiDataLoaded,
       isLoadingKpi,
       loadKpiData,

@@ -99,7 +99,9 @@
                   <strong>{{ $t("modal.bounding_box.tooltip.box_id") }}: {{ position[5] }}</strong>
                 </div>
                 <v-divider class="my-1" />
-                <div>{{ $t("modal.bounding_box.tooltip.player_id") }}: {{ position[0] }}</div>
+                <div>
+                  {{ entityLabelKey(position[1]) }}: {{ topViewStore.getEntityName(position[0], position[1]) }}
+                </div>
                 <div>{{ $t("modal.bounding_box.tooltip.team_id") }}: {{ position[1] }}</div>
               </div>
             </v-tooltip>
@@ -109,7 +111,7 @@
                 color: visualizationStore.getTeamColor(position[1]),
               }"
             >
-              {{ position[0] }}
+              {{ topViewStore.getEntityNumber(position[0], position[1]) }}
             </div>
           </div>
 
@@ -336,11 +338,13 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useVisualizationStore } from "@/stores/visualization";
+import { useTopViewStore } from "@/stores/top_view";
 import { getTimecode } from "@/plugins/time";
 import ModalBBoxUpdate from "@/components/position-data/ModalBboxUpdate.vue";
 import { toRgb } from "@/plugins/helpers";
@@ -351,6 +355,15 @@ const videoStore = useVideoStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
 const visualizationStore = useVisualizationStore();
+const topViewStore = useTopViewStore();
+const { t } = useI18n();
+
+const entityLabelKey = (teamId) => {
+  const tid = Number(teamId);
+  if (tid === 1) return t("modal.bounding_box.tooltip.ball_id");
+  if (tid === 2) return t("modal.bounding_box.tooltip.ref_id");
+  return t("modal.bounding_box.tooltip.player_id");
+};
 
 const videoContainer = ref(null);
 const videoElement = ref(null);

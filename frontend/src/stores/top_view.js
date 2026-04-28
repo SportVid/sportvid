@@ -265,10 +265,44 @@ export const useTopViewStore = defineStore(
 
     // Precomputed metadata - populated once in setPositionData() to avoid
     // multiple components independently scanning all 135k+ frames.
-    const precomputedPlayerList = shallowRef([]); // [{playerId, teamId}] sorted, unique, no ball
-    const precomputedPlayerIdSet = shallowRef(new Set()); // Set of all player IDs (no ball)
+    // Kinds split by team_id: 0=inactive, 1=ball, 2=ref, ≥3=active player.
+    const precomputedPlayerList = shallowRef([]); // active players only (team_id ≥ 3)
+    const precomputedRefList = shallowRef([]);
+    const precomputedBallList = shallowRef([]);
+    const precomputedInactiveList = shallowRef([]);
+    const precomputedPlayerIdSet = shallowRef(new Set()); // active players only
     const precomputedGameSections = shallowRef(new Set()); // Set of game_section values (1, 2, ...)
     const precomputedHalftimeBoundaries = shallowRef({}); // {section: {first, last}} timestamps per section
+
+    // Toggle for entity kinds in the top-view overlay (refs/inactive default off).
+    const visibleEntityKinds = ref({ player: true, ref: false, ball: true, rest: false });
+    const toggleEntityKind = (kind) => {
+      visibleEntityKinds.value = { ...visibleEntityKinds.value, [kind]: !visibleEntityKinds.value[kind] };
+    };
+
+    // Lookup helpers: pick the right meta dict based on team_id semantics.
+    const _kindFromTeamId = (tid) => {
+      const n = Number(tid);
+      if (n === 1) return "ball";
+      if (n === 2) return "ref";
+      if (n === 0) return "rest";
+      return "player";
+    };
+    const getEntityName = (entityId, teamId) => {
+      const meta = metaDataTopView.value;
+      if (!meta) return String(entityId);
+      const kind = _kindFromTeamId(teamId);
+      const dictKey = kind === "ref" ? "ref_ids" : kind === "ball" ? "ball_ids" : "player_ids";
+      return meta?.[dictKey]?.[entityId]?.name ?? String(entityId);
+    };
+    const getEntityNumber = (entityId, teamId) => {
+      const meta = metaDataTopView.value;
+      if (!meta) return entityId;
+      const kind = _kindFromTeamId(teamId);
+      const dictKey = kind === "ref" ? "ref_ids" : kind === "ball" ? "ball_ids" : "player_ids";
+      const num = meta?.[dictKey]?.[entityId]?.number;
+      return num != null ? num : entityId;
+    };
 
     // Whether the current positionDataTopView is a CompactPositionData instance
     const _isCompact = ref(false);
@@ -316,27 +350,30 @@ export const useTopViewStore = defineStore(
           _isCompact.value = false;
         }
 
-        const teamIdsMap = {};
-        const playerIdsMap = {};
+        const storedMeta = bboxesStore.bboxMetaData ? JSON.parse(bboxesStore.bboxMetaData) : {};
         const playerMap = new Map();
+        const refMap = new Map();
+        const ballMap = new Map();
+        const inactiveMap = new Map();
         const sections = new Set();
         const boundaries = {};
         for (const [timeKey, boxes] of Object.entries(_bboxDataInterpolated)) {
           const t = Number(timeKey);
           for (const b of boxes) {
-            const playerId = b[0];
-            const teamId = b[1];
-            if (!(teamId in teamIdsMap)) {
-              teamIdsMap[teamId] = { id: teamId, name: teamId };
+            const tid = b[1];
+            if (tid === 1) {
+              ballMap.set(b[0], tid);
+              refMap.delete(b[0]); inactiveMap.delete(b[0]); playerMap.delete(b[0]);
+            } else if (tid === 2) {
+              refMap.set(b[0], tid);
+              ballMap.delete(b[0]); inactiveMap.delete(b[0]); playerMap.delete(b[0]);
+            } else if (tid === 0) {
+              if (!ballMap.has(b[0]) && !refMap.has(b[0]) && !playerMap.has(b[0]))
+                inactiveMap.set(b[0], tid);
+            } else {
+              playerMap.set(b[0], tid);
+              ballMap.delete(b[0]); refMap.delete(b[0]); inactiveMap.delete(b[0]);
             }
-            if (!(playerId in playerIdsMap)) {
-              playerIdsMap[playerId] = {
-                id: playerId,
-                name: String(playerId),
-                number: playerId,
-              };
-            }
-            if (teamId !== 1) playerMap.set(playerId, teamId);
             const gs = b[2];
             sections.add(gs);
             if (!boundaries[gs]) {
@@ -348,13 +385,19 @@ export const useTopViewStore = defineStore(
           }
         }
         metaDataTopView.value = {
-          team_ids: teamIdsMap,
-          player_ids: playerIdsMap,
+          team_ids: storedMeta.team_ids ?? {},
+          player_ids: storedMeta.player_ids ?? {},
+          ref_ids: storedMeta.ref_ids ?? {},
+          ball_ids: storedMeta.ball_ids ?? {},
         };
-        precomputedPlayerList.value = Array.from(playerMap, ([pid, tid]) => ({
-          playerId: pid,
-          teamId: tid,
-        })).sort((a, b) => a.playerId - b.playerId);
+        const _toList = (m) =>
+          Array.from(m, ([pid, tid]) => ({ playerId: pid, teamId: tid })).sort(
+            (a, b) => a.playerId - b.playerId
+          );
+        precomputedPlayerList.value = _toList(playerMap);
+        precomputedRefList.value = _toList(refMap);
+        precomputedBallList.value = _toList(ballMap);
+        precomputedInactiveList.value = _toList(inactiveMap);
         precomputedPlayerIdSet.value = new Set(playerMap.keys());
         precomputedGameSections.value = sections;
         precomputedHalftimeBoundaries.value = boundaries;
@@ -482,6 +525,9 @@ export const useTopViewStore = defineStore(
         positionDataTopView.value = posDataOrCompact;
         _isCompact.value = true;
         precomputedPlayerList.value = precomputed.playerList;
+        precomputedRefList.value = precomputed.refList ?? [];
+        precomputedBallList.value = precomputed.ballList ?? [];
+        precomputedInactiveList.value = precomputed.inactiveList ?? [];
         precomputedPlayerIdSet.value = precomputed.playerIdSet;
         precomputedGameSections.value = precomputed.gameSections;
         precomputedHalftimeBoundaries.value = precomputed.halftimeBoundaries;
@@ -499,11 +545,17 @@ export const useTopViewStore = defineStore(
           // we only keep the metadata, not the compact instance, to avoid double storage)
           const result = fromPosDataObject(posDataOrCompact);
           precomputedPlayerList.value = result.playerList;
+          precomputedRefList.value = result.refList;
+          precomputedBallList.value = result.ballList;
+          precomputedInactiveList.value = result.inactiveList;
           precomputedPlayerIdSet.value = result.playerIdSet;
           precomputedGameSections.value = result.gameSections;
           precomputedHalftimeBoundaries.value = result.halftimeBoundaries;
         } else {
           precomputedPlayerList.value = [];
+          precomputedRefList.value = [];
+          precomputedBallList.value = [];
+          precomputedInactiveList.value = [];
           precomputedPlayerIdSet.value = new Set();
           precomputedGameSections.value = new Set();
           precomputedHalftimeBoundaries.value = {};
@@ -537,9 +589,16 @@ export const useTopViewStore = defineStore(
       mirrorXY,
       viewMirrorXY,
       precomputedPlayerList,
+      precomputedRefList,
+      precomputedBallList,
+      precomputedInactiveList,
       precomputedPlayerIdSet,
       precomputedGameSections,
       precomputedHalftimeBoundaries,
+      visibleEntityKinds,
+      toggleEntityKind,
+      getEntityName,
+      getEntityNumber,
       currentFramePlayers,
       getSubsetObject,
       getFrameAt,

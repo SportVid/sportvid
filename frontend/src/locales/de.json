@@ -144,6 +144,12 @@
         "longitudinal": "Längsstreifen",
         "transverse": "Querstreifen"
       }
+    },
+    "entity_kind": {
+      "player": "Spieler",
+      "ref": "Schiris",
+      "ball": "Ball",
+      "rest": "Inaktiv"
     }
   },
   "visualization": {
@@ -798,6 +804,14 @@
           "bytetrack": "ByteTrack Plugin",
           "manual": "Manueller Upload"
         }
+      },
+      "entity_colors": {
+        "title": "Teamfarben ändern",
+        "special_entities": "Besondere Entitäten",
+        "teams": "Teams",
+        "entity_0": "Rest / Inaktiv",
+        "entity_1": "Ball",
+        "entity_2": "Schiedsrichter"
       }
     }
   }

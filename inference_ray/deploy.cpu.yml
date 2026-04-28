@@ -80,6 +80,8 @@ applications:
         ray_actor_options:
           num_cpus: 4
           runtime_env:
+            config:
+              setup_timeout_seconds: 1800
             uv:
               - git+https://github.com/Alexk1704/ByteTrack.git
               - torch>=2.6.0

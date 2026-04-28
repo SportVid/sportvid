@@ -86,7 +86,7 @@ function handleRunningDistance(id, msg) {
     if (!players) continue;
     for (var j = 0; j < players.length; j++) {
       var p = players[j];
-      if (p[1] === 1) continue;
+      if (p[1] === 1 || p[1] === 2) continue;
       if (!(p[0] in allPlayers)) {
         allPlayers[p[0]] = { player_id: p[0], team_id: p[1], distance: 0 };
       }
@@ -110,7 +110,7 @@ function handleRunningDistance(id, msg) {
 
       for (var c = 0; c < curr.length; c++) {
         var cp = curr[c];
-        if (cp[1] === 1) continue;
+        if (cp[1] === 1 || cp[1] === 2) continue;
         var pp = prevMap[cp[0]];
         if (!pp) continue;
         if (!isInAnyZone(cp[3], cp[4], zones)) continue;
@@ -171,6 +171,7 @@ function handleHeatmapPoints(id, msg) {
     if (!arr) continue;
     for (var j = 0; j < arr.length; j++) {
       var pos = arr[j];
+      if (pos[1] === 1 || pos[1] === 2) continue; // skip ball and ref
       if (!pidSet[pos[0]]) continue;
       var xCrop = (pos[3] - cropPct.x[0]) / (cropPct.x[1] - cropPct.x[0]);
       var yCrop = (pos[4] - cropPct.y[0]) / (cropPct.y[1] - cropPct.y[0]);
@@ -301,7 +302,7 @@ function handleExportRunningDistanceCSV(id, msg) {
     if (!players) continue;
     for (var j = 0; j < players.length; j++) {
       var p = players[j];
-      if (p[1] === 1) continue;
+      if (p[1] === 1 || p[1] === 2) continue;
       var teamOk = !selectedTeam.length || selectedTeam.indexOf(p[1]) !== -1;
       if (!teamOk) continue;
       if (!(p[0] in distMap)) {
@@ -323,7 +324,7 @@ function handleExportRunningDistanceCSV(id, msg) {
 
       for (var c = 0; c < curr.length; c++) {
         var cp = curr[c];
-        if (cp[1] === 1) continue;
+        if (cp[1] === 1 || cp[1] === 2) continue;
         var pp = prevMap[cp[0]];
         if (!pp) continue;
         if (!(cp[0] in distMap)) continue;
@@ -456,6 +457,7 @@ function handleKpiAggregation(id, msg) {
       var equiv_dist_inc = players[j][7];
       var cent_dist = players[j][9];
 
+      if (tid === 1 || tid === 2) continue; // skip ball and ref
       if (!pidSet[pid]) continue;
 
       if (!playerData[pid]) {

@@ -172,7 +172,7 @@
       "view_player_id": "View player ids",
       "toggle_entities": "Toggle entities",
       "video_sync": "Sychronise with video",
-      "team_colors": "Change team colors",
+      "entity_colors": "Change entity colors",
       "offset": "Set offset",
       "mirror_xy": "Mirror XY coordinates",
       "area_size": "Area size",
@@ -192,7 +192,13 @@
         "select": "Select position data"
       }
     },
-    "fps_deviation": "Downsampling & interpolation introduces a maximum frame-by-frame deviation of up to {interpErr}% compared to the original frame rate."
+    "fps_deviation": "Downsampling & interpolation introduces a maximum frame-by-frame deviation of up to {interpErr}% compared to the original frame rate.",
+    "entity_kind": {
+      "player": "Players",
+      "ref": "Referees",
+      "ball": "Balls",
+      "rest": "Rest"
+    }
   },
   "visualization": {
     "title": "Visualize",
@@ -1042,6 +1048,7 @@
         "delimiter": "Select the delimiter used in the csv file",
         "origin": "Select the origin (0/0) of the coordinate system",
         "team_id_ball": "Enter the team id/ group name of the ball (optional)",
+        "team_id_ref": "Enter the team id/ group name of the referees (optional)",
         "fps": {
           "title": "Target FPS (downsampling to value between 1 & FPS of the dataset)",
           "tooltip": "Higher FPS values produce more accurate results (identical positions are preserved perfectly), but calculations will take longer."
@@ -1085,8 +1092,12 @@
       "delete": {
         "success": "Position data successfully deleted"
       },
-      "team_colors": {
-        "title": "Change team colors"
+      "entity_colors": {
+        "title": "Change entity colors",
+        "other_entities": "Other entities",
+        "entity_0": "Rest",
+        "entity_1": "Ball",
+        "entity_2": "Referee"
       },
       "offset": {
         "title": "Set offset",
@@ -1097,6 +1108,8 @@
       "tooltip": {
         "box_id": "Box-ID",
         "player_id": "Player-ID",
+        "ref_id": "Referee-ID",
+        "ball_id": "Ball-ID",
         "team_id": "Team-ID"
       },
       "edit": {
@@ -1119,6 +1132,13 @@
         "current_team_id": "Current Team-ID",
         "new_player_id": "New Player-ID",
         "new_team_id": "New Team-ID",
+        "team": {
+          "rest": "0 (Rest)",
+          "ball": "1 (Ball)",
+          "referee": "2 (Referee)",
+          "team": "{id} (Team)",
+          "new_team": "{id} (New Team)"
+        },
         "new_team_id_picker": "Color picker",
         "single_success": "Bounding Box successfully updated",
         "all_success": "Bounding Boxes successfully updated"

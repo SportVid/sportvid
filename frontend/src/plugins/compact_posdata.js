@@ -186,8 +186,14 @@ export function fromPosDataObject(posDataObj) {
   const xCoords = new Float32Array(totalPlayers);
   const yCoords = new Float32Array(totalPlayers);
 
-  // Metadata extraction (same pass as filling arrays)
-  const playerMap = new Map(); // playerId -> teamId
+  // Metadata extraction split by entity kind. team_id semantics:
+  //   0 = inactive, 1 = ball, 2 = ref, ≥3 = active player team
+  // playerMap holds active players only (used by KPI/heatmap selection);
+  // separate maps for ball/ref/inactive feed the top-view toggle UI.
+  const playerMap = new Map();   // active players (team_id ≥ 3)
+  const refMap = new Map();
+  const ballMap = new Map();
+  const inactiveMap = new Map();
   const sectionsSet = new Set();
   const boundaries = {};
 
@@ -207,8 +213,12 @@ export function fromPosDataObject(posDataObj) {
       yCoords[offset] = p[4];
       offset++;
 
-      // Metadata
-      if (p[1] !== 1) playerMap.set(p[0], p[1]);
+      const tid = p[1];
+      if (tid === 1) ballMap.set(p[0], tid);
+      else if (tid === 2) refMap.set(p[0], tid);
+      else if (tid === 0) inactiveMap.set(p[0], tid);
+      else playerMap.set(p[0], tid);
+
       const gs = p[2];
       sectionsSet.add(gs);
       if (!boundaries[gs]) {
@@ -225,14 +235,17 @@ export function fromPosDataObject(posDataObj) {
     timestamps, frameOffsets, playerIds, teamIds, gameSections, xCoords, yCoords
   );
 
-  const playerList = Array.from(playerMap, ([pid, tid]) => ({
-    playerId: pid,
-    teamId: tid,
-  })).sort((a, b) => a.playerId - b.playerId);
+  const _toList = (map) =>
+    Array.from(map, ([pid, tid]) => ({ playerId: pid, teamId: tid })).sort(
+      (a, b) => a.playerId - b.playerId
+    );
 
   return {
     compact,
-    playerList,
+    playerList: _toList(playerMap),
+    refList: _toList(refMap),
+    ballList: _toList(ballMap),
+    inactiveList: _toList(inactiveMap),
     playerIdSet: new Set(playerMap.keys()),
     gameSections: sectionsSet,
     halftimeBoundaries: boundaries,

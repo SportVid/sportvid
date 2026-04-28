@@ -149,7 +149,12 @@ class ByteTrack(
 
                 results, img_info = self.track(video_decoder, predictor, args)
 
+                # New entity-classification scheme (see posdata_convert): team_id=1 ball, =2 refs,
+                # =0 inactive, ≥3 active teams. ByteTrack only knows "person" detections — assign
+                # all to team_id=3 (single team). A future classification plugin will reassign.
+                DEFAULT_TEAM_ID = 3
                 bboxes_dict = defaultdict(list)
+                unique_player_ids = set()
                 for i, frame_info in enumerate(results):
                     frame_time = round((i/args.fps)*1000.)
                     for id, score, box in zip(
@@ -162,36 +167,38 @@ class ByteTrack(
                         y_norm = int(box[1]) / img_info["height"]
                         w_norm = int(box[2]) / img_info["width"]
                         h_norm = int(box[3]) / img_info["height"]
-                        
-                        # NOTE: old code used a custom data type, we now serialize as JSON
-                        # bbox = BboxData(...) 
-                        # bbox = {
-                        #     'x': x_norm,
-                        #     'y': y_norm,
-                        #     'w': w_norm,
-                        #     'h': h_norm,
-                        #     'top_x': x_norm + (w_norm / 2),
-                        #     'top_y': y_norm + h_norm,
-                        #     'player_id': id,
-                        #     'team_id': "",
-                        #     'game_section': "",
-                        #     'det_score': score
-                        # }
 
-                        # NOTE: now using a compressed version of results
                         bbox = [
-                            id, 0, 0,
-                            x_norm + (w_norm / 2), y_norm + h_norm, 
+                            id, DEFAULT_TEAM_ID, 0,
+                            x_norm + (w_norm / 2), y_norm + h_norm,
                             f'{i}-{id}',
-                            x_norm, y_norm, w_norm, h_norm, 
+                            x_norm, y_norm, w_norm, h_norm,
                             score
                         ]
                         bboxes_dict[frame_time].append(bbox)
-                    
+                        unique_player_ids.add(id)
+
+                # New schema: separate dicts per entity kind. ByteTrack populates only player_ids
+                # (with team_id=3); ref_ids/ball_ids stay empty until a classification plugin runs.
+                team_id_meta = {
+                    DEFAULT_TEAM_ID: {"id": DEFAULT_TEAM_ID, "name": "Team A"},
+                }
+                player_id_meta = {
+                    pid: {"id": pid, "name": str(pid), "number": pid, "team_id": DEFAULT_TEAM_ID}
+                    for pid in sorted(unique_player_ids)
+                }
+                meta_dict = {
+                    "team_ids": team_id_meta,
+                    "player_ids": player_id_meta,
+                    "ref_ids": {},
+                    "ball_ids": {},
+                }
+
                 with data_manager.create_data("BboxesData") as output_data:
                     output_data.bboxes = json.dumps(bboxes_dict)
+                    output_data.meta_data = json.dumps(meta_dict)
                     self.update_callbacks(callbacks, progress=1.0)
-                
+
                 return {"tracklets": output_data}
 
     def track(

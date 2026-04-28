@@ -30,8 +30,16 @@
         variant="underlined"
       />
 
-      <div v-if="parameter.field == 'select_calibration'" :key="parameter.name" :data-tour="parameter.dataTour || undefined">
-        <div v-if="!parameter.dlt" class="d-flex ga-2 mb-6" data-tour="dlt-calibration-create-select">
+      <div
+        v-if="parameter.field == 'select_calibration'"
+        :key="parameter.name"
+        :data-tour="parameter.dataTour || undefined"
+      >
+        <div
+          v-if="!parameter.dlt"
+          class="d-flex ga-2 mb-6"
+          data-tour="dlt-calibration-create-select"
+        >
           <v-btn
             variant="outlined"
             prepend-icon="mdi-plus"
@@ -399,7 +407,11 @@
         persistent-hint
       />
 
-      <div v-if="parameter.field == 'slider'" :key="parameter.name" :data-tour="parameter.dataTour || undefined">
+      <div
+        v-if="parameter.field == 'slider'"
+        :key="parameter.name"
+        :data-tour="parameter.dataTour || undefined"
+      >
         <v-row v-if="parameter.hint_left && parameter.hint_right">
           <v-col cols="3" style="display: flex; justify-content: flex-end">
             {{ parameter.hint_left }}
@@ -579,25 +591,30 @@ const scalar_timelines = computed(() => {
 });
 
 const positionDataTeams = computed(() => {
-  const teams = new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId));
+  const meta = topViewStore.metaDataTopView;
+  const items = [];
 
-  if (teams.size === 0) {
-    return;
+  // Use precomputed lists as source of truth — they are rebuilt from actual bbox data
+  // by transformBBoxToPositionDataTopView and are always up-to-date after edits.
+  if (topViewStore.precomputedBallList.length > 0) {
+    items.push({ id: 1, name: t("position_data.entity_kind.ball") });
+  }
+  if (topViewStore.precomputedRefList.length > 0) {
+    items.push({ id: 2, name: t("position_data.entity_kind.ref") });
   }
 
-  const sortedTeams = [...teams].sort((a, b) => {
-    if (a === 1) return -1;
-    if (b === 1) return 1;
-    return a - b;
-  });
+  const playerTeamIds = [...new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId))].sort(
+    (a, b) => a - b
+  );
+  for (const team_id of playerTeamIds) {
+    items.push({ id: team_id, name: meta?.team_ids?.[team_id]?.name ?? String(team_id) });
+  }
 
-  const meta = topViewStore.metaDataTopView;
-  const teamItems = sortedTeams.map((team_id) => {
-    const teamName = meta?.team_ids?.[team_id]?.name;
-    return { id: team_id, name: teamName };
-  });
+  if (topViewStore.precomputedInactiveList.length > 0) {
+    items.push({ id: 0, name: t("position_data.entity_kind.rest") });
+  }
 
-  return teamItems;
+  return items.length > 0 ? items : undefined;
 });
 
 const isPositionDataTeamSelectAll = ref(false);
@@ -623,19 +640,23 @@ const togglePositionDataAttributeSelectAll = (parameter) => {
 };
 
 const kpiTeams = computed(() => {
-  const kpiData = visualizationStore.kpiData;
-  if (!kpiData || Object.keys(kpiData).length === 0) return [];
+  if (!visualizationStore.kpiDataLoaded) return [];
 
-  const teams = new Set(
-    Object.values(kpiData)
-      .flat()
-      .map((entry) => entry[1])
+  // Use the same source of truth as positionDataTeams — precomputedPlayerList reflects
+  // the current loaded data and only contains actual player teams (tid >= 3).
+  const playerTeamIds = [...new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId))].sort(
+    (a, b) => a - b
   );
-  const sortedTeams = [...teams].sort((a, b) => a - b);
+
+  const kpiMeta = visualizationStore.kpiMetaTeamIds;
   const meta = topViewStore.metaDataTopView;
-  return sortedTeams.map((team_id) => ({
+  return playerTeamIds.map((team_id) => ({
     id: team_id,
-    name: meta?.team_ids?.[team_id]?.name ?? String(team_id),
+    name:
+      kpiMeta?.[team_id]?.name ??
+      kpiMeta?.[String(team_id)]?.name ??
+      meta?.team_ids?.[team_id]?.name ??
+      String(team_id),
   }));
 });
 
