@@ -146,6 +146,7 @@ function buildRawTimeSeries() {
       const equiv_dist_inc = p[7];
       const cent_dist = p[9];
 
+      if (tid === 1 || tid === 2) continue; // skip ball and ref
       if (!props.selectedPlayerIds.has(pid)) continue;
 
       const pp = posMap[pid];

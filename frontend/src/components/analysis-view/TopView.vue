@@ -467,20 +467,20 @@
             <span class="chart-legend-sep">|</span>
             <div
               v-for="p in players"
-              :key="p.playerId"
+              :key="`${p.teamId}_${p.playerId}`"
               class="player-dot"
               :style="{
-                backgroundColor: includedPlayers.has(p.playerId)
-                  ? toRgb(overlayPlayerColors[p.playerId], 0)
-                  : toRgb(overlayPlayerColors[p.playerId], 0.6),
-                color: includedPlayers.has(p.playerId) ? '#fff' : '#222',
-                borderColor: includedPlayers.has(p.playerId)
-                  ? toRgb(overlayPlayerColors[p.playerId], 0)
-                  : toRgb(overlayPlayerColors[p.playerId], 0.6),
+                backgroundColor: includedPlayers.has(`${p.teamId}_${p.playerId}`)
+                  ? toRgb(overlayPlayerColors[`${p.teamId}_${p.playerId}`], 0)
+                  : toRgb(overlayPlayerColors[`${p.teamId}_${p.playerId}`], 0.6),
+                color: includedPlayers.has(`${p.teamId}_${p.playerId}`) ? '#fff' : '#222',
+                borderColor: includedPlayers.has(`${p.teamId}_${p.playerId}`)
+                  ? toRgb(overlayPlayerColors[`${p.teamId}_${p.playerId}`], 0)
+                  : toRgb(overlayPlayerColors[`${p.teamId}_${p.playerId}`], 0.6),
               }"
-              @click="togglePlayersForKPIs(p.playerId)"
+              @click="togglePlayersForKPIs(`${p.teamId}_${p.playerId}`)"
             >
-              {{ overlayGetPlayerNumber(p.playerId, p.teamId) }}
+              {{ overlayGetEntityLabel(p.playerId, p.teamId) }}
             </div>
           </div>
         </div>
@@ -660,10 +660,11 @@ onBeforeUnmount(() => {
 const includedPlayers = ref(new Set());
 const kpiExcludedByClick = ref(new Set());
 const _buildAllEntitySet = () => {
-  const ids = new Set(topViewStore.precomputedPlayerIdSet);
-  for (const p of topViewStore.precomputedRefList) ids.add(p.playerId);
-  for (const p of topViewStore.precomputedBallList) ids.add(p.playerId);
-  for (const p of topViewStore.precomputedInactiveList) ids.add(p.playerId);
+  const ids = new Set();
+  for (const p of topViewStore.precomputedPlayerList) ids.add(`${p.teamId}_${p.playerId}`);
+  for (const p of topViewStore.precomputedRefList) ids.add(`${p.teamId}_${p.playerId}`);
+  for (const p of topViewStore.precomputedBallList) ids.add(`${p.teamId}_${p.playerId}`);
+  for (const p of topViewStore.precomputedInactiveList) ids.add(`${p.teamId}_${p.playerId}`);
   return ids;
 };
 watch(
@@ -728,12 +729,17 @@ const overlayTeamGroups = computed(() => {
 const overlayPlayerColors = computed(() => {
   const map = {};
   for (const p of overlayPlayerOptions.value) {
-    map[p.playerId] = visualizationStore.getTeamColor(p.teamId);
+    map[`${p.teamId}_${p.playerId}`] = visualizationStore.getTeamColor(p.teamId);
   }
   return map;
 });
 
 const overlayGetPlayerNumber = (playerId, teamId) => {
+  return topViewStore.getEntityNumber(playerId, teamId);
+};
+
+const overlayGetEntityLabel = (playerId, teamId) => {
+  if (Number(teamId) === 1 || Number(teamId) === 2) return playerId;
   return topViewStore.getEntityNumber(playerId, teamId);
 };
 
@@ -744,18 +750,18 @@ const overlayGetTeamName = (teamId) => {
 };
 
 const overlayIsTeamFullySelected = (teamId) => {
-  const teamPlayerIds = (overlayTeamGroups.value[teamId] || []).map((p) => p.playerId);
-  return teamPlayerIds.length > 0 && teamPlayerIds.every((pid) => includedPlayers.value.has(pid));
+  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) => `${p.teamId}_${p.playerId}`);
+  return teamKeys.length > 0 && teamKeys.every((key) => includedPlayers.value.has(key));
 };
 
 const overlayToggleTeam = (teamId) => {
-  const teamPlayerIds = (overlayTeamGroups.value[teamId] || []).map((p) => p.playerId);
-  const allSelected = teamPlayerIds.every((pid) => includedPlayers.value.has(pid));
+  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) => `${p.teamId}_${p.playerId}`);
+  const allSelected = teamKeys.every((key) => includedPlayers.value.has(key));
   const newSet = new Set(includedPlayers.value);
   if (allSelected) {
-    teamPlayerIds.forEach((pid) => newSet.delete(pid));
+    teamKeys.forEach((key) => newSet.delete(key));
   } else {
-    teamPlayerIds.forEach((pid) => newSet.add(pid));
+    teamKeys.forEach((key) => newSet.add(key));
   }
   includedPlayers.value = newSet;
 };
@@ -815,8 +821,8 @@ const convexHullForCurrentFrame = computed(() => {
     .filter(
       (position) =>
         position[1] >= 3 &&
-        includedPlayers.value.has(position[0]) &&
-        !kpiExcludedByClick.value.has(position[0])
+        includedPlayers.value.has(`${position[1]}_${position[0]}`) &&
+        !kpiExcludedByClick.value.has(`${position[1]}_${position[0]}`)
     )
     .forEach((position) => {
       const transformed = transformCoordinateToCrop(position[3], position[4], cropPct);
@@ -879,8 +885,8 @@ const voronoiForCurrentFrame = computed(() => {
     .filter(
       (player) =>
         player[1] >= 3 &&
-        includedPlayers.value.has(player[0]) &&
-        !kpiExcludedByClick.value.has(player[0])
+        includedPlayers.value.has(`${player[1]}_${player[0]}`) &&
+        !kpiExcludedByClick.value.has(`${player[1]}_${player[0]}`)
     )
     .map((player) => {
       const transformed = transformCoordinateToCrop(player[3], player[4], cropPct);
@@ -1050,7 +1056,7 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
 
     if (tid === 1) {
       if (!visible.ball) continue;
-      if (!includedPlayers.value.has(pos[0])) continue;
+      if (!includedPlayers.value.has(`${tid}_${pos[0]}`)) continue;
       // Ball – sport-specific SVG icon
       const ballSize = 8;
       const ballImg = getBallImage(sport.title);
@@ -1067,7 +1073,7 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
       }
     } else if (tid === 2) {
       if (!visible.ref) continue;
-      if (!includedPlayers.value.has(pos[0])) continue;
+      if (!includedPlayers.value.has(`${tid}_${pos[0]}`)) continue;
       // Referee – yellow triangle
       const r = 6;
       ctx.beginPath();
@@ -1082,7 +1088,7 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
       ctx.stroke();
     } else if (tid === 0) {
       if (!visible.rest) continue;
-      if (!includedPlayers.value.has(pos[0])) continue;
+      if (!includedPlayers.value.has(`${tid}_${pos[0]}`)) continue;
       // Inactive / spectator — dimmed grey
       ctx.beginPath();
       ctx.arc(px, py, 5, 0, Math.PI * 2);
@@ -1090,7 +1096,7 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
       ctx.fillStyle = "#9E9E9E";
       ctx.fill();
       ctx.globalAlpha = 1;
-    } else if (visible.player && includedPlayers.value.has(pos[0])) {
+    } else if (visible.player && includedPlayers.value.has(`${tid}_${pos[0]}`)) {
       // Player dot (only if not excluded)
       ctx.beginPath();
       ctx.arc(px, py, 6, 0, Math.PI * 2);
@@ -1098,7 +1104,7 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
       ctx.fill();
 
       // Store for hit testing (KPI toggle)
-      if (!offscreenCanvas) _playerHitTargets.push({ id: pos[0], x: px, y: py });
+      if (!offscreenCanvas) _playerHitTargets.push({ id: `${tid}_${pos[0]}`, x: px, y: py });
 
       // Player ID label
       if (topViewStore.showPlayerId) {

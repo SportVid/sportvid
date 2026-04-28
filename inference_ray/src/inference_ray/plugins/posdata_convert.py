@@ -436,14 +436,14 @@ class PosDataConvert(
             # ---- Per-kind entity_id mapping (each kind gets its own 1..N namespace).
             # Frame data carries (entity_id, team_id); team_id (1=ball, 2=ref, ≥3=player) selects which dict to look up.
             kind_to_dict = {'player': "player_ids", 'ref': "ref_ids", 'ball': "ball_ids"}
-            new_pid_col = pd.Series(index=df.index, dtype='float64')
+            full_pid_map = {}
             for kind, dict_key in kind_to_dict.items():
                 mask = df['entity_kind'] == kind
                 if not mask.any():
                     continue
                 origs = df.loc[mask, 'player_id'].unique()
                 kind_map = {orig: new_id for new_id, orig in enumerate(origs, start=1)}
-                new_pid_col.loc[mask] = df.loc[mask, 'player_id'].map(kind_map)
+                full_pid_map.update(kind_map)
                 for orig_pid, new_id in kind_map.items():
                     new_team_id = int(df.loc[mask & (df['player_id'] == orig_pid), 'team_id'].iloc[0])
                     entry = {"id": orig_pid}
@@ -454,7 +454,7 @@ class PosDataConvert(
                     elif kind == 'ref':
                         entry["name"] = _n(player_name_map.get(orig_pid), orig_pid)
                     self.meta_dict[dict_key][new_id] = entry
-            df["player_id"] = new_pid_col.astype('int16')
+            df["player_id"] = df["player_id"].map(full_pid_map).astype('int16')
 
             # entity_kind is no longer needed in the per-frame payload (kind is derivable from team_id).
             df = df.drop('entity_kind', axis=1)
