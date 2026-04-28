@@ -86,9 +86,13 @@ services:
   valkey:
     container_name: valkey_prod
     image: valkey/valkey:8.1.1-alpine
-    command: /usr/local/bin/valkey-server --port ${VALKEY_PORT} --bind 0.0.0.0
-    ports:
-      - ${VALKEY_PORT}:6379  # remap valkey port to the one specified by cfg
+    env_file: 
+      - /opt/deploy/.env.prod
+    volumes:
+      - ./backend/sportvid/valkey.conf:/usr/local/etc/valkey/valkey.conf
+    command: /usr/local/bin/valkey-server /usr/local/etc/valkey/valkey.conf
+    # ports:
+    #  - ${VALKEY_PORT}:6379  # remap valkey port to the one specified by cfg
     networks:
       - prod
 
