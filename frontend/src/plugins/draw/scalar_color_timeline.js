@@ -53,7 +53,7 @@ export class ScalarColorTimeline extends Timeline {
       width: renderWidth,
       height: this.pHeight,
       // PIXI.SCALE_MODES.NEAREST,
-      scaleMode: PIXI.linear,
+      scaleMode: 'linear',
 
       resolution: 1,
     });
