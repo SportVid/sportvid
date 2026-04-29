@@ -123,7 +123,7 @@
 
       <v-menu v-if="!loggedIn" location="bottom center">
         <template #activator="{ props }">
-          <v-avatar v-bind="props" size="20" class="ml-2 mr-1">
+          <v-avatar v-bind="props" size="20" class="ml-2 mr-1" style="cursor: pointer">
             <v-img
               :src="
                 languageStore.languages.find((lang) => lang.code === languageStore.currentLanguage)
@@ -133,15 +133,28 @@
             />
           </v-avatar>
         </template>
-        <v-list density="compact" class="py-0 mt-2" width="100px">
-          <v-list-item
-            v-for="lang in languageStore.languages"
-            :key="lang.code"
-            @click="languageStore.setLanguage(lang.code)"
+        <v-card class="pa-2 mt-2">
+          <v-btn-toggle
+            :model-value="languageStore.currentLanguage"
+            @update:model-value="languageStore.setLanguage($event)"
+            color="primary"
+            variant="outlined"
+            divided
+            mandatory
+            density="compact"
           >
-            <v-list-item-title class="text-center">{{ lang.label }}</v-list-item-title>
-          </v-list-item>
-        </v-list>
+            <v-btn
+              v-for="lang in languageStore.languages"
+              :key="lang.code"
+              :value="lang.code"
+              size="small"
+            >
+              <v-avatar size="18">
+                <v-img :src="lang.flag" contain />
+              </v-avatar>
+            </v-btn>
+          </v-btn-toggle>
+        </v-card>
       </v-menu>
 
       <UserMenu />
