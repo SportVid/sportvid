@@ -39,7 +39,7 @@
                   <div>{{ $t("video_view.video_id") }} {{ item.id }}</div>
                   <div>{{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}</div>
                   <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
-                  <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
+                  <!-- <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div> -->
 
                   <!-- <v-card-actions class="actions mt-n6 mb-n8"> -->
                   <v-card-actions class="actions mt-2 mb-n2">
