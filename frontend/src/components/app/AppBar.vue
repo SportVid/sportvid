@@ -144,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
@@ -246,6 +246,15 @@ const showModalBatchPlugin = ref(false);
 const selectedVideosIds = computed(() => videoStore.selectedVideosIds);
 
 const showModalTutorial = ref(false);
+watch(
+  () => tutorialStore.openTutorialModal,
+  (val) => {
+    if (val) {
+      showModalTutorial.value = true;
+      tutorialStore.openTutorialModal = false;
+    }
+  }
+);
 </script>
 
 <style scoped>
