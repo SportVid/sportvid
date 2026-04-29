@@ -7,7 +7,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "sportvid.settings")
 
 # set broker URL accordingly
 valkey_host = os.getenv("VALKEY_CLIENT_HOST")  # "valkey"
-valkey_port = os.getenv("VALKEY_INTERNAL_PORT")  # "6380"
+valkey_port = os.getenv("VALKEY_INTERNAL_PORT")  # "6379"
 valkey_passwd = os.getenv("VALKEY_PASSWD")
 
 broker_url = f"redis://:{valkey_passwd}@{valkey_host}:{valkey_port}/0"
