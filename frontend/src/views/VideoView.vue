@@ -41,7 +41,8 @@
                   <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
                   <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
 
-                  <v-card-actions class="actions mt-n6 mb-n8">
+                  <!-- <v-card-actions class="actions mt-n6 mb-n8"> -->
+                  <v-card-actions class="actions mt-2 mb-n2">
                     <v-btn
                       size="small"
                       variant="outlined"
@@ -67,11 +68,12 @@
                       </v-icon>
                       {{ $t("button.delete") }}
                     </v-btn>
-                    <v-checkbox
+
+                    <!-- <v-checkbox
                       v-model="videoStore.selectedVideos[item.id]"
                       color="primary"
                       class="pt-5 ml-n1"
-                    />
+                    /> -->
                   </v-card-actions>
                 </v-card-text>
                 <v-progress-linear v-model="videosProgress[item.id]" />
