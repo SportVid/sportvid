@@ -35,10 +35,10 @@
         </span>
       </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalShortcut = true">
+      <!-- <v-btn v-if="analysisView" @click="showModalShortcut = true">
         <app-bar-icon>mdi-label-multiple-outline</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
-      </v-btn>
+      </v-btn> -->
 
       <v-btn v-if="analysisView" @click="showModalExport = true">
         <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
