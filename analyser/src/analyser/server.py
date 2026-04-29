@@ -443,6 +443,7 @@ def parse_args():
     parser.add_argument("--no_cache", action="store_true", help="disable cache")
     parser.add_argument("--cache_valkey_host", help="valkey cache host")
     parser.add_argument("--cache_valkey_port", type=int, help="valkey cache port")
+    parser.add_argument("--cache_valkey_password", help="valkey cache password")
     parser.add_argument("--inference_ray_host", help="inference ray host")
     parser.add_argument("--inference_ray_port", type=int, help="inference ray port")
     parser.add_argument(
@@ -507,6 +508,13 @@ def main():
         if "cache" not in config["data"]:
             config["data"]["cache"] = {"type": "valkey", "params": {}}
         config["data"]["cache"]["params"]["port"] = args.cache_valkey_port
+
+    if args.cache_valkey_password:
+        if "data" not in config:
+            config["data"] = {}
+        if "cache" not in config["data"]:
+            config["data"]["cache"] = {"type": "valkey", "params": {}}
+        config["data"]["cache"]["params"]["password"] = args.cache_valkey_password
 
     if args.inference_ray_host:
         if "inference" not in config:
