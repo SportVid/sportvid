@@ -4,8 +4,9 @@ data:
       type: valkey
       params:
         db: 1
-        host: valkey
-        port: ${VALKEY_PORT}
+        host: ${VALKEY_CLIENT_HOST}
+        port: ${VALKEY_INTERNAL_PORT}
+        password: ${VALKEY_PASSWD}
         tag: analyser
 inference:
   type: ray
