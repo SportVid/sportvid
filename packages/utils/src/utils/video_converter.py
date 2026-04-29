@@ -3,6 +3,8 @@ import ffmpeg
 
 def convert_to_hls(input_path, file_ext, out_path):
     """ fmpeg -i in.mp4 -codec: copy -start_number 0 -hls_time 10 -hls_list_size 0 -f hls out.m3u8 """
+    """Start HLS conversion and return the running subprocess (Popen object).
+    The caller is responsible for waiting on it and handling termination."""
     input_stream = ffmpeg.input(input_path, f=file_ext)
     output_stream = ffmpeg.output(
         input_stream, 
@@ -34,4 +36,5 @@ def convert_to_fmp4(input_path, file_ext, out_path):
         hls_flags='single_file+independent_segments',
         hls_segment_filename='stream.m4s',
     )
-    ffmpeg.run(stream, overwrite_output=True)
+    return ffmpeg.run_async(stream, pipe_stderr=True)
+    # ffmpeg.run(stream, overwrite_output=True)

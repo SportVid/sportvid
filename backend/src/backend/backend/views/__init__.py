@@ -15,6 +15,7 @@ from .calibration_assets import *
 from .bounding_boxes import *
 from .tracking_data import *
 from .tracking_data_chunks import *
+from .kpi_data_chunks import *
 
 from .analyser_api import *
 

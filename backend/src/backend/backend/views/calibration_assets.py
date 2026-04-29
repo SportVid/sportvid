@@ -43,7 +43,6 @@ class CalibrationAssetsCreate(View):
                 for obj in data.get("object_data"):
                     data_db.object_data.create(
                         name=obj.get("name"),
-                        set=obj.get("set"),
                         active=obj.get("active"),
                         comp_area_coords_rel=obj.get("compAreaCoordsRel"),
                         video_coords_rel=obj.get("videoCoordsRel")
@@ -69,7 +68,6 @@ class CalibrationAssetsChange(View):
                 for obj in data.get("object_data"):
                     calibration_assets.object_data.create(
                         name=obj.get("name"),
-                        set=obj.get("set"),
                         active=obj.get("active"),
                         comp_area_coords_rel=obj.get("compAreaCoordsRel"),
                         video_coords_rel=obj.get("videoCoordsRel")

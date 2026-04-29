@@ -49,15 +49,12 @@ export class HistTimeline extends Timeline {
     renderGraph() {
         const renderWidth = this.pResolution;
 
-        const brt = new PIXI.BaseRenderTexture({
+        PIXI.RenderTexture.create({
             width: renderWidth,
             height: this.pHeight,
-            // PIXI.SCALE_MODES.NEAREST,
-            scaleMode: PIXI.SCALE_MODES.LINEAR,
-
-            resolution: 1
+            scaleMode: 'linear',
+            resolution: 1,
         });
-        new PIXI.RenderTexture(brt);
 
         // const sprite = new PIXI.Sprite(rt);
 
@@ -74,7 +71,7 @@ export class HistTimeline extends Timeline {
         });
 
         const data = new Uint8Array(flatdata.map((value) => { return scalarToRGB(value, this.pColormapInverse, this.pColormap) }).flat())
-        const bt = new PIXI.Texture(new PIXI.BaseTexture(new PIXI.BufferResource(data, { width: width, height: height })));
+        const bt = new PIXI.Texture({ source: new PIXI.BufferImageSource({ resource: data, width, height, format: 'rgba8unorm' }) });
         // console.log(bt)
 
         const sprite = new PIXI.Sprite(bt);

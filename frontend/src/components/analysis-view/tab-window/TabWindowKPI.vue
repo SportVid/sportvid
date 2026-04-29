@@ -1,10 +1,14 @@
 <template>
-  <v-row v-if="videoStore.isLoading" class="loading-card">
-    <div class="spinner">
-      <i class="mdi mdi-loading mdi-spin" />
+  <div v-if="!hasPositionData && posdataWorkerStore.isLoading" class="kpi-loading-card">
+    <div class="kpi-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
+    <div class="kpi-loading-text">
+      {{
+        posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100
+          ? `${posdataWorkerStore.loadProgress}%`
+          : ""
+      }}
     </div>
-    <div class="loading-text">{{ $t("loading_screen") }}</div>
-  </v-row>
+  </div>
 
   <v-row
     v-else-if="!hasPositionData"
@@ -18,6 +22,10 @@
     "
     v-html="$t('visualization.kpi.posdata_not_selected')"
   />
+
+  <div v-else-if="!hasKpiData && visualizationStore.isLoadingKpi" class="kpi-loading-card">
+    <div class="kpi-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
+  </div>
 
   <v-row
     v-else-if="!hasKpiData"
@@ -33,8 +41,8 @@
   />
 
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
-    <v-row align="center" class="flex-nowrap">
-      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px">
+    <v-row align="center" class="flex-nowrap" data-tour="kpi-controls-row">
+      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px" data-tour="kpi-settings">
         <v-btn-toggle
           v-model="viewMode"
           color="primary"
@@ -251,8 +259,9 @@
       </v-col>
     </v-row>
 
+    <div v-if="viewMode === 'table'" data-tour="kpi-table-view">
     <div
-      v-if="viewMode === 'table' && groupMode === 'player'"
+      v-if="groupMode === 'player'"
       class="team-tables d-flex flex-wrap justify-space-around"
     >
       <v-card
@@ -338,12 +347,15 @@
           <template #header.metabolic_work="{ column }">
             <span v-html="column.title" />
           </template>
+          <template #header.centroid_distance_max="{ column }">
+            <span v-html="column.title" />
+          </template>
         </v-data-table>
       </v-card>
     </div>
 
     <div
-      v-else-if="viewMode === 'table' && groupMode === 'team'"
+      v-else
       class="team-tables d-flex flex-wrap justify-space-around"
     >
       <v-card
@@ -398,8 +410,9 @@
         </v-data-table>
       </v-card>
     </div>
+    </div>
 
-    <div v-else-if="viewMode === 'chart'" class="px-2 mt-2">
+    <div v-else-if="viewMode === 'chart'" class="px-2 mt-2" data-tour="kpi-chart-view">
       <KpiChart
         ref="kpiChartRef"
         :selectedPlayerIds="selectedPlayerIds"
@@ -455,23 +468,29 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, toRaw, onBeforeUnmount } from "vue";
+// viewMode is driven by tabStore.kpiViewMode so the tutorial can switch views externally
 import { useVisualizationStore } from "@/stores/visualization";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
-import VisualizationTimeSelector from "../visualization/VisualizationTimeSelector.vue";
-import KpiChart from "../kpi/KpiChart.vue";
-import ZoneSelectorPicker from "../kpi/ZoneSelectorPicker.vue";
+import { usePosdataWorkerStore } from "@/stores/posdata_worker";
+import { useTabStore } from "@/stores/tabs";
+import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
+import KpiChart from "@/components/kpi/KpiChart.vue";
+import ZoneSelectorPicker from "@/components/kpi/ZoneSelectorPicker.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
+import { debounce } from "lodash";
 
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
 const positionDataStore = usePositionDataStore();
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
+const posdataWorkerStore = usePosdataWorkerStore();
+const tabStore = useTabStore();
 
 const { t } = useI18n();
 
@@ -487,7 +506,10 @@ const splitWindowedLabel = (optionId) => {
   return { before: msg.slice(0, idx), after: msg.slice(idx + 1) };
 };
 
-const viewMode = ref("table");
+const viewMode = computed({
+  get: () => tabStore.kpiViewMode,
+  set: (val) => { tabStore.kpiViewMode = val; },
+});
 const groupMode = ref("player");
 
 // Initialize with all 25 pitch zones selected (full pitch)
@@ -536,6 +558,27 @@ const KPI_CONFIG = {
       { id: "metabolic_work_cumulative", kpi: "metabolic_work", mode: "cumulative" },
     ],
     table: [{ id: "metabolic_work_cumulative", kpi: "metabolic_work", mode: "cumulative" }],
+  },
+  equivalent_distance: {
+    labelKey: "visualization.kpi.kpi_selection.group_equivalent_distance",
+    chartWidth: "310px",
+    chart: [
+      { id: "equivalent_distance_frame", kpi: "equivalent_distance", mode: "per_frame" },
+      { id: "equivalent_distance_interval", kpi: "equivalent_distance", mode: "windowed" },
+      { id: "equivalent_distance_cumulative", kpi: "equivalent_distance", mode: "cumulative" },
+    ],
+    table: [
+      { id: "equivalent_distance_cumulative", kpi: "equivalent_distance", mode: "cumulative" },
+    ],
+  },
+  centroid_distance: {
+    labelKey: "visualization.kpi.kpi_selection.group_centroid_distance",
+    chartWidth: "290px",
+    chart: [
+      { id: "centroid_distance_frame", kpi: "centroid_distance", mode: "per_frame" },
+      { id: "centroid_distance_interval", kpi: "centroid_distance", mode: "windowed" },
+    ],
+    table: [{ id: "centroid_distance_max", kpi: "centroid_distance_max", mode: "table_max" }],
   },
 };
 
@@ -653,9 +696,18 @@ const playerHeaders = computed(() => {
     cols.push({ title: t("visualization.kpi.kpi_label.velocity_max"), key: "velocity_max" });
   }
   if (selectedKpis.value.has("metabolic_work_cumulative")) {
+    cols.push({ title: t("visualization.kpi.kpi_label.metabolic_work"), key: "metabolic_work" });
+  }
+  if (selectedKpis.value.has("equivalent_distance_cumulative")) {
     cols.push({
-      title: t("visualization.kpi.kpi_label.metabolic_work"),
-      key: "metabolic_work",
+      title: t("visualization.kpi.kpi_label.equivalent_distance"),
+      key: "equivalent_distance",
+    });
+  }
+  if (selectedKpis.value.has("centroid_distance_max")) {
+    cols.push({
+      title: t("visualization.kpi.kpi_label.centroid_distance_max"),
+      key: "centroid_distance_max",
     });
   }
   return cols;
@@ -667,22 +719,14 @@ const teamHeaders = computed(() => [
   { title: t("visualization.kpi.team_view.average"), key: "avg" },
 ]);
 
-const playerOptions = ref([]);
+const playerOptions = computed(() => topViewStore.precomputedPlayerList);
 const selectedPlayerIds = ref(new Set());
 watch(
-  () => topViewStore.positionDataTopView,
-  (newVal) => {
-    const all = Object.values(newVal)
-      .flat()
-      .filter((p) => p[1] !== 1);
-
-    selectedPlayerIds.value = new Set(all.map((p) => p[0]).sort((a, b) => a - b));
-    playerOptions.value = all
-      .map((p) => ({ playerId: p[0], teamId: p[1] }))
-      .filter((v, i, a) => a.findIndex((x) => x.playerId === v.playerId) === i)
-      .sort((a, b) => a.playerId - b.playerId);
+  playerOptions,
+  (list) => {
+    selectedPlayerIds.value = new Set(list.map((p) => p.playerId));
   },
-  { immediate: true, deep: true }
+  { immediate: true }
 );
 const playerColors = computed(() => {
   const map = {};
@@ -735,77 +779,44 @@ const isInAnyZone = (x, y, zones) => {
   return false;
 };
 
-const kpiItems = computed(() => {
-  const rawKpiData = visualizationStore.kpiData;
-  if (!rawKpiData || typeof rawKpiData !== "object" || !Object.keys(rawKpiData).length) return [];
-
+const kpiItems = ref([]);
+const _triggerKpiCalc = debounce(async () => {
+  const rawKpiData = toRaw(visualizationStore.kpiData);
+  if (!rawKpiData || typeof rawKpiData !== "object" || !Object.keys(rawKpiData).length) {
+    kpiItems.value = [];
+    return;
+  }
   const startMs = selectedStartFrame.value;
   const endMs = selectedEndFrame.value;
-  const zones = selectedZones.value;
-  const posData = topViewStore.positionDataTopView;
-
-  const frameKeys = Object.keys(rawKpiData)
-    .map(Number)
-    .filter((t) => t >= startMs && t <= endMs)
-    .sort((a, b) => a - b);
-
-  if (!frameKeys.length) return [];
-
-  const playerData = {};
-  for (const t of frameKeys) {
-    const players = rawKpiData[t] || [];
-
-    // Build position lookup for zone filtering
-    const posPlayers = posData[t] || [];
-    const posMap = {};
-    for (const p of posPlayers) posMap[p[0]] = p;
-
-    for (const [pid, tid, dist, vel, metpow] of players) {
-      if (!selectedPlayerIds.value.has(pid)) continue;
-      if (!playerData[pid]) {
-        playerData[pid] = { tid, prevDist: null, totalDist: 0, velocities: [], metpows: [] };
-      }
-      const data = playerData[pid];
-
-      // Zone check via position data
-      const pp = posMap[pid];
-      const inZone = pp ? isInAnyZone(pp[3], pp[4], zones) : true;
-
-      // Accumulate incremental distance only when in zone
-      if (dist != null) {
-        if (data.prevDist !== null && inZone) {
-          const inc = dist - data.prevDist;
-          if (inc > 0) data.totalDist += inc;
-        }
-        data.prevDist = dist;
-      }
-
-      if (inZone) {
-        if (vel != null) data.velocities.push(vel);
-        if (metpow != null) data.metpows.push(metpow);
-      }
-    }
+  const posData = topViewStore.getSubsetObject(startMs, endMs);
+  try {
+    const result = await posdataWorkerStore.calcKpiAggregation(
+      rawKpiData,
+      posData,
+      selectedPlayerIds.value,
+      startMs,
+      endMs,
+      toRaw(selectedZones.value),
+      visualizationStore.kpiFramerate || 25
+    );
+    kpiItems.value = result;
+  } catch (err) {
+    console.error("Worker KPI aggregation failed:", err);
+    kpiItems.value = [];
   }
-
-  const dt = 1 / visualizationStore.kpiFramerate;
-
-  return Object.entries(playerData).map(([pid, data]) => {
-    const velocity_max =
-      data.velocities.length > 0 ? parseFloat(Math.max(...data.velocities).toFixed(2)) : null;
-    const metabolic_work =
-      data.metpows.length > 0
-        ? parseFloat((data.metpows.reduce((a, b) => a + b, 0) * dt).toFixed(1))
-        : null;
-
-    return {
-      player_id: typeof pid === "string" && !isNaN(pid) ? parseInt(pid) : pid,
-      team_id: data.tid,
-      distance: data.totalDist > 0 ? parseFloat(data.totalDist.toFixed(1)) : null,
-      velocity_max,
-      metabolic_work,
-    };
-  });
-});
+}, 150);
+watch(
+  [
+    selectedPlayerIds,
+    selectedStartFrame,
+    selectedEndFrame,
+    selectedZones,
+    () => visualizationStore.kpiData,
+  ],
+  () => _triggerKpiCalc(),
+  { immediate: true }
+);
+onBeforeUnmount(() => _triggerKpiCalc.cancel());
 
 const runningDistanceTeamItems = computed(() => {
   const grouped = {};
@@ -820,14 +831,19 @@ const runningDistanceTeamItems = computed(() => {
 
   playerOptions.value.forEach((p) => {
     if (!selectedPlayerIds.value.has(p.playerId)) return;
+    const kpiItem = kpiMap[p.playerId];
     grouped[p.teamId].push(
-      kpiMap[p.playerId] ?? {
-        player_id: p.playerId,
-        team_id: p.teamId,
-        distance: null,
-        velocity_max: null,
-        metabolic_work: null,
-      }
+      kpiItem
+        ? { ...kpiItem, team_id: p.teamId }
+        : {
+            player_id: p.playerId,
+            team_id: p.teamId,
+            distance: null,
+            velocity_max: null,
+            metabolic_work: null,
+            equivalent_distance: null,
+            centroid_distance_max: null,
+          }
     );
   });
 
@@ -869,6 +885,26 @@ const runningDistanceTeamAggregated = computed(() => {
       rows.push({ label: t("visualization.kpi.kpi_label.metabolic_work"), total, avg });
     }
 
+    if (selectedKpis.value.has("equivalent_distance_cumulative")) {
+      const vals = players.map((p) => p.equivalent_distance).filter((v) => v != null);
+      const total = vals.length > 0 ? parseFloat(vals.reduce((a, b) => a + b, 0).toFixed(1)) : "-";
+      const avg =
+        vals.length > 0
+          ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
+          : "-";
+      rows.push({ label: t("visualization.kpi.kpi_label.equivalent_distance"), total, avg });
+    }
+
+    if (selectedKpis.value.has("centroid_distance_max")) {
+      const vals = players.map((p) => p.centroid_distance_max).filter((v) => v != null);
+      const total = vals.length > 0 ? parseFloat(Math.max(...vals).toFixed(2)) : "-";
+      const avg =
+        vals.length > 0
+          ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2))
+          : "-";
+      rows.push({ label: t("visualization.kpi.kpi_label.centroid_distance_max"), total, avg });
+    }
+
     result.push({ team_id: teamId, rows });
   }
   return result;
@@ -906,36 +942,43 @@ const getColTotal = (players, colKey) => {
   if (!players || !players.length) return "-";
   const vals = players.map((p) => p[colKey]).filter((v) => v != null);
   if (!vals.length) return "-";
-  if (colKey === "velocity_max") {
+  if (colKey === "velocity_max" || colKey === "centroid_distance_max") {
     return parseFloat(Math.max(...vals).toFixed(2));
   }
   return parseFloat(vals.reduce((a, b) => a + b, 0).toFixed(1));
 };
 
 const findFirstFrameWithHalftime = (half) => {
-  let first = null;
-  for (const [timeKey, players] of Object.entries(topViewStore.positionDataTopView)) {
-    const t = Number(timeKey);
-    if (players.some((p) => p[2] === half)) {
-      if (first === null || t < first) first = t;
-    }
-  }
-  return first ?? 0;
+  const b = topViewStore.precomputedHalftimeBoundaries[half];
+  return b ? b.first : 0;
 };
 
 const findLastFrameWithHalftime = (half) => {
-  let last = null;
-  for (const [timeKey, players] of Object.entries(topViewStore.positionDataTopView)) {
-    const t = Number(timeKey);
-    if (players.some((p) => p[2] === half)) {
-      if (last === null || t > last) last = t;
-    }
-  }
-  return last ?? 0;
+  const b = topViewStore.precomputedHalftimeBoundaries[half];
+  return b ? b.last : 0;
 };
 </script>
 
 <style scoped>
+.kpi-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 25vh;
+}
+
+.kpi-spinner {
+  font-size: 48px;
+  color: rgb(var(--v-theme-primary));
+}
+
+.kpi-loading-text {
+  margin-top: 10px;
+  font-size: 18px;
+  color: rgb(var(--v-theme-primary));
+}
+
 .menu-item {
   cursor: pointer;
 }
@@ -1042,23 +1085,5 @@ const findLastFrameWithHalftime = (half) => {
   font-size: 18px;
   margin: 0 2px;
   user-select: none;
-}
-
-.loading-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-}
-
-.spinner {
-  font-size: 48px;
-  color: #ac1414;
-}
-
-.loading-text {
-  margin-top: 10px;
-  font-size: 18px;
 }
 </style>

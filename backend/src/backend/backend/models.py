@@ -101,7 +101,7 @@ class Video(models.Model):
     total_number_of_teams = models.IntegerField(blank=True, null=True)
     age_group = models.CharField(max_length=1024, blank=True, null=True)
     sport = models.CharField(max_length=1024, blank=True, null=True)
-
+    task_id = models.CharField(max_length=256, blank=True, null=True)
     asset_dir = models.CharField(max_length=1024, blank=True, null=True)
     manifest_path = models.CharField(max_length=1024, blank=True, null=True)
     media_path = models.CharField(max_length=1024, blank=True, null=True)
@@ -162,7 +162,8 @@ class TrackingData(models.Model):
     meta_ext = models.CharField(default="", max_length=256)
     date = models.DateTimeField(auto_now_add=True)
     file_type = models.CharField(default="", max_length=256)
-    
+    delimiter = models.CharField(default=";", max_length=10)
+
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         result = {
             "name": self.name,
@@ -172,7 +173,8 @@ class TrackingData(models.Model):
             "ext": self.ext,
             "meta_ext": self.meta_ext,
             "date": self.date,
-            "file_type": self.file_type
+            "file_type": self.file_type,
+            "delimiter": self.delimiter,
         }
         if include_refs_hashes:
             result["video_id"] = self.video.id.hex
@@ -764,7 +766,6 @@ class PointCorrespondence(models.Model):
         related_name='object_data'
     )
     name = models.CharField(max_length=1024)
-    set = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
     comp_area_coords_rel = models.JSONField(default=list)
     video_coords_rel = models.JSONField(default=list)
@@ -773,7 +774,6 @@ class PointCorrespondence(models.Model):
         return {
             "id": self.id.hex,
             "name": self.name,
-            "set": self.set,
             "active": self.active,
             "compAreaCoordsRel": self.comp_area_coords_rel,
             "videoCoordsRel": self.video_coords_rel

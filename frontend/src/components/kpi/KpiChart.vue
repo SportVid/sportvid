@@ -43,10 +43,17 @@ const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
 
 const kpiLabel = computed(() => {
   if (props.selectedKpi === "running_distance") return t("visualization.kpi.kpi_label.distance");
-  if (props.selectedKpi === "velocity") return t("visualization.kpi.kpi_label.velocity");
+  if (props.selectedKpi === "velocity") {
+    if (props.chartMode === "windowed") return t("visualization.kpi.kpi_label.velocity_max");
+    return t("visualization.kpi.kpi_label.velocity");
+  }
   if (props.selectedKpi === "velocity_max") return t("visualization.kpi.kpi_label.velocity_max");
-  if (props.selectedKpi === "metabolic_work")
-    return t("visualization.kpi.kpi_label.metabolic_work");
+  if (props.selectedKpi === "metabolic_work") return t("visualization.kpi.kpi_label.metabolic_work");
+  if (props.selectedKpi === "equivalent_distance") return t("visualization.kpi.kpi_label.equivalent_distance");
+  if (props.selectedKpi === "centroid_distance") {
+    if (props.chartMode === "windowed") return t("visualization.kpi.kpi_label.centroid_distance_max");
+    return t("visualization.kpi.kpi_label.centroid_distance");
+  }
   return props.selectedKpi;
 });
 
@@ -56,6 +63,8 @@ const kpiUnit = computed(() => {
     velocity_max: "m/s",
     velocity: "m/s",
     metabolic_work: "J/kg",
+    equivalent_distance: "m",
+    centroid_distance: "m",
   };
   return units[props.selectedKpi] || "";
 });
@@ -110,7 +119,6 @@ function buildRawTimeSeries() {
   const start = selectedStart.value;
   const end = selectedEnd.value;
   const zones = props.selectedZones;
-  const posData = topViewStore.positionDataTopView;
   const dt = 1 / (playerStore.videoFPS || 25);
 
   const frameKeys = Object.keys(rawKpiData)
@@ -121,15 +129,24 @@ function buildRawTimeSeries() {
   if (frameKeys.length < 2) return new Map();
 
   const playerSeries = new Map();
-  const playerPrevDist = new Map();
 
   for (const t of frameKeys) {
     const players = rawKpiData[t] || [];
-    const posPlayers = posData[t] || [];
+    const posPlayers = topViewStore.getFrameAt(t);
     const posMap = {};
     for (const p of posPlayers) posMap[p[0]] = p;
 
-    for (const [pid, tid, dist, vel, metpow] of players) {
+    for (const p of players) {
+      // [pid, tid, dist_inc, dist_cum, vel, metpow, metpow_cum, equiv_dist_inc, equiv_dist_cum, cent_dist]
+      const pid = p[0];
+      const tid = p[1];
+      const dist_inc = p[2];
+      const vel = p[4];
+      const metpow = p[5];
+      const equiv_dist_inc = p[7];
+      const cent_dist = p[9];
+
+      if (tid === 1 || tid === 2) continue; // skip ball and ref
       if (!props.selectedPlayerIds.has(pid)) continue;
 
       const pp = posMap[pid];
@@ -141,16 +158,9 @@ function buildRawTimeSeries() {
       const series = playerSeries.get(pid);
 
       if (props.selectedKpi === "running_distance") {
-        if (dist != null) {
-          const prevDist = playerPrevDist.get(pid);
-          let inc = 0;
-          if (prevDist !== undefined && inZone) {
-            inc = dist - prevDist;
-            if (inc < 0) inc = 0;
-          }
-          playerPrevDist.set(pid, dist);
+        if (dist_inc != null) {
           series.times.push(t);
-          series.values.push(inc);
+          series.values.push(inZone && dist_inc > 0 ? dist_inc : 0);
         }
       } else if (props.selectedKpi === "velocity_max" || props.selectedKpi === "velocity") {
         if (vel != null && inZone) {
@@ -161,6 +171,16 @@ function buildRawTimeSeries() {
         if (metpow != null && inZone) {
           series.times.push(t);
           series.values.push(metpow * dt);
+        }
+      } else if (props.selectedKpi === "equivalent_distance") {
+        if (equiv_dist_inc != null) {
+          series.times.push(t);
+          series.values.push(inZone && equiv_dist_inc > 0 ? equiv_dist_inc : 0);
+        }
+      } else if (props.selectedKpi === "centroid_distance") {
+        if (cent_dist != null) {
+          series.times.push(t);
+          series.values.push(cent_dist);
         }
       }
     }
@@ -175,7 +195,7 @@ function buildRawTimeSeries() {
  * - velocity_max: keep per-frame values as-is (velocity profile over time)
  */
 function toCumulative(rawMap) {
-  if (props.selectedKpi === "velocity_max" || props.selectedKpi === "velocity") return rawMap;
+  if (props.selectedKpi === "velocity_max" || props.selectedKpi === "velocity" || props.selectedKpi === "centroid_distance") return rawMap;
 
   const result = new Map();
   for (const [pid, series] of rawMap) {
@@ -195,9 +215,7 @@ function toCumulative(rawMap) {
  * sums incremental distances per interval, assigns that sum to every frame in the interval.
  */
 function toWindowed(rawMap, windowSize) {
-  const allTimes = Object.keys(topViewStore.positionDataTopView)
-    .map(Number)
-    .sort((a, b) => a - b);
+  const allTimes = topViewStore.sortedFrameKeys;
   const start = selectedStart.value;
   const end = selectedEnd.value;
   const fullTimeRange = allTimes.filter((t) => t >= start && t <= end);
@@ -222,7 +240,7 @@ function toWindowed(rawMap, windowSize) {
     for (const t of fullTimeRange) {
       const idx = Math.floor((t - rangeStart) / windowSize);
       const v = valLookup.get(t) || 0;
-      if (props.selectedKpi === "velocity") {
+      if (props.selectedKpi === "velocity" || props.selectedKpi === "centroid_distance") {
         intervalSums.set(idx, Math.max(intervalSums.get(idx) ?? 0, v));
       } else {
         intervalSums.set(idx, (intervalSums.get(idx) || 0) + v);
@@ -247,7 +265,21 @@ function toWindowed(rawMap, windowSize) {
   return result;
 }
 
-const chartData = computed(() => {
+const MAX_CHART_POINTS = 3000;
+
+function strideDownsample(times, values) {
+  if (times.length <= MAX_CHART_POINTS) return { times, values };
+  const stride = Math.ceil(times.length / MAX_CHART_POINTS);
+  const t = [];
+  const v = [];
+  for (let i = 0; i < times.length; i += stride) {
+    t.push(times[i]);
+    v.push(values[i]);
+  }
+  return { times: t, values: v };
+}
+
+function buildChartTraces() {
   const rawMap = buildRawTimeSeries();
   const seriesMap =
     props.chartMode === "windowed"
@@ -257,7 +289,6 @@ const chartData = computed(() => {
       : toCumulative(rawMap);
 
   if (props.groupMode === "team") {
-    // Aggregate per team using time-keyed maps for correct alignment
     const teamMap = new Map();
     for (const [, series] of seriesMap) {
       const tid = series.team_id;
@@ -269,10 +300,8 @@ const chartData = computed(() => {
         const t = series.times[i];
         const v = series.values[i];
         if (props.selectedKpi === "velocity_max") {
-          // Take max across players
           teamData.timeValues.set(t, Math.max(teamData.timeValues.get(t) ?? 0, v));
         } else {
-          // Sum across players
           teamData.timeValues.set(t, (teamData.timeValues.get(t) ?? 0) + v);
         }
       }
@@ -281,10 +310,12 @@ const chartData = computed(() => {
     const traces = [];
     for (const [teamId, team] of teamMap) {
       const sortedTimes = [...team.timeValues.keys()].sort((a, b) => a - b);
+      const allValues = sortedTimes.map((t) => parseFloat((team.timeValues.get(t) || 0).toFixed(2)));
+      const { times, values } = strideDownsample(sortedTimes, allValues);
       const color = toRgb(visualizationStore.getTeamColor(teamId), 0);
       traces.push({
-        x: sortedTimes,
-        y: sortedTimes.map((t) => parseFloat((team.timeValues.get(t) || 0).toFixed(2))),
+        x: times,
+        y: values,
         type: "scatter",
         mode: "lines",
         name: getTeamName(teamId),
@@ -294,13 +325,14 @@ const chartData = computed(() => {
     }
     return traces;
   } else {
-    // Per player
     const traces = [];
     for (const [playerId, series] of seriesMap) {
+      const allValues = series.values.map((v) => parseFloat(v.toFixed(2)));
+      const { times, values } = strideDownsample(series.times, allValues);
       const color = toRgb(props.playerColors[playerId] || "#888888", 0);
       traces.push({
-        x: series.times,
-        y: series.values.map((v) => parseFloat(v.toFixed(2))),
+        x: times,
+        y: values,
         type: "scatter",
         mode: "lines",
         name: `#${getPlayerNumber(playerId)}`,
@@ -311,7 +343,9 @@ const chartData = computed(() => {
     }
     return traces;
   }
-});
+}
+
+const chartData = computed(() => buildChartTraces());
 
 const chartLayout = computed(() => ({
   xaxis: {
@@ -453,13 +487,9 @@ function animLoop() {
   animFrameId = requestAnimationFrame(animLoop);
 }
 
-watch(
-  [chartData, chartLayout],
-  () => {
-    nextTick(() => updatePlot());
-  },
-  { deep: true }
-);
+watch([chartData, chartLayout], () => {
+  nextTick(() => updatePlot());
+});
 
 watch(
   () => [selectedStart.value, selectedEnd.value],

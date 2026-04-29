@@ -63,7 +63,7 @@ import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useTimelineStore } from "@/stores/timeline";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
-import Parameters from "../Parameters.vue";
+import Parameters from "@/components/app/app-bar/Parameters.vue";
 
 const props = defineProps({
   timeline: {
@@ -101,9 +101,7 @@ const pluginRunResultStore = usePluginRunResultStore();
 
 async function downloadExport() {
   const timeline = timelineStore.timelines[props.timeline];
-  console.log("ExportTimeline", timeline);
   const result = pluginRunResultStore.get(timeline.plugin_run_result_id);
-  console.log(result);
 
   if (result.type === "SCALAR") {
     let csv = "time,data\n";

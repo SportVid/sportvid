@@ -13,12 +13,15 @@
 
       <v-card-text>
         <v-row>
-          <v-col cols="4" class="ml-n2 mr-2">
+          <v-col cols="4" class="ml-n2 mr-2" data-tour="export-tab-panel">
             <v-tabs direction="vertical" slider-color="primary" v-model="tab">
               <v-tab
                 v-for="exportFormat in exportFormatsSorted"
                 :key="exportFormat.name"
                 :value="exportFormat.name"
+                :data-tour="
+                  exportFormat.format === 'kpi_aggregated_csv' ? 'export_select' : undefined
+                "
               >
                 <v-icon>{{ exportFormat.icon }}</v-icon>
                 <span class="text-button ml-1">{{ exportFormat.name }}</span>
@@ -28,7 +31,7 @@
 
           <v-divider vertical />
 
-          <v-col cols="8">
+          <v-col cols="8" data-tour="export-details">
             <v-tabs-window v-model="tab">
               <v-tabs-window-item
                 v-for="exportFormat in exportFormatsSorted"
@@ -112,9 +115,7 @@ watch(
 
 const tab = ref(null);
 
-const allFrameKeys = Object.keys(topViewStore.positionDataTopView)
-  .map(Number)
-  .sort((a, b) => a - b);
+const allFrameKeys = topViewStore.sortedFrameKeys;
 
 const exportFormats = ref([
   {

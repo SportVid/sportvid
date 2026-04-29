@@ -1,7 +1,7 @@
 <template>
   <v-app-bar>
     <template #prepend>
-      <img src="@/assets/logo_tib_dshs.png" height="50" class="ml-1 mr-2" />
+      <img src="@/assets/logo_dshs_marburg.png" height="50" class="ml-1 mr-2" />
       <v-app-bar-title class="text-h5 text-primary">
         {{ $t("plattform.title") }}
       </v-app-bar-title>
@@ -20,35 +20,43 @@
         <span class="text-primary">{{ $t("app_bar.video_view") }}</span>
       </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalPlugin = true" data-tour="modal-plugin-open">
-        <app-bar-icon>mdi-plus</app-bar-icon>
-        <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
-      </v-btn>
+      <div v-if="analysisView" class="d-flex align-center" data-tour="analysis-appbar-actions">
+        <v-btn @click="showModalPlugin = true" data-tour="modal-plugin-open">
+          <app-bar-icon>mdi-puzzle-outline</app-bar-icon>
+          <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
+        </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalHistory = true">
-        <app-bar-icon>mdi-history</app-bar-icon>
-        <v-badge v-if="numRunningPlugins > 0" color="accent" :content="numRunningPlugins" floating>
-          <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
-        </v-badge>
-        <span v-else>
-          <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
-        </span>
-      </v-btn>
+        <v-btn @click="showModalHistory = true" data-tour="modal-history-open">
+          <app-bar-icon>mdi-history</app-bar-icon>
+          <v-badge
+            v-if="numRunningPlugins > 0"
+            color="accent"
+            :content="numRunningPlugins"
+            floating
+          >
+            <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
+          </v-badge>
+          <span v-else>
+            <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
+          </span>
+        </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalShortcut = true">
-        <app-bar-icon>mdi-label-multiple-outline</app-bar-icon>
-        <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
-      </v-btn>
+        <v-btn @click="showModalShortcut = true">
+          <app-bar-icon>mdi-label-multiple-outline</app-bar-icon>
+          <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
+        </v-btn>
 
-      <v-btn v-if="analysisView" @click="showModalExport = true">
-        <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
-        <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
-      </v-btn>
+        <v-btn @click="showModalExport = true" data-tour="modal-export-open">
+          <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
+          <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
+        </v-btn>
+      </div>
 
       <v-btn
         v-if="videoView && loggedIn"
         @click="showModalVideoUpload = true"
         :disabled="videoUploadStore.isUploading"
+        data-tour="modal-video-upload-open"
       >
         <app-bar-icon>mdi-plus</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.video_upload_menu") }}</span>
@@ -66,7 +74,13 @@
 
       <v-divider vertical inset class="mx-2" />
 
-      <v-btn v-if="loggedIn" @click="showModalTutorial = true" icon density="compact" class="mx-3">
+      <v-btn
+        v-if="loggedIn"
+        @click="showModalTutorial = true"
+        icon
+        density="compact"
+        class="ml-2 mr-1"
+      >
         <app-bar-icon>mdi-school</app-bar-icon>
         <v-badge
           v-if="tutorialStore.isTutorialRunning"
@@ -103,7 +117,11 @@
         </v-tooltip>
       </v-btn>
 
-      <v-menu location="bottom center">
+      <v-btn v-if="!loggedIn" @click="themeStore.toggle()" icon density="compact" class="mx-2">
+        <app-bar-icon>mdi-theme-light-dark</app-bar-icon>
+      </v-btn>
+
+      <v-menu v-if="!loggedIn" location="bottom center">
         <template #activator="{ props }">
           <v-avatar v-bind="props" size="20" class="ml-2 mr-1">
             <v-img
@@ -154,12 +172,13 @@ import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useLanguageStore } from "@/stores/languages";
 import { useVideoUploadStore } from "@/stores/video_upload";
-import ModalHistory from "@/components/ModalHistory.vue";
-import ModalPlugin from "@/components/ModalPlugin.vue";
-import ModalShortcut from "@/components/ModalShortcut.vue";
-import ModalExport from "@/components/ModalExport.vue";
+import { useThemeStore } from "@/stores/theme";
+import ModalHistory from "@/components/app/app-bar/ModalHistory.vue";
+import ModalPlugin from "@/components/app/app-bar/ModalPlugin.vue";
+import ModalShortcut from "@/components/app/app-bar/ModalShortcut.vue";
+import ModalExport from "@/components/app/app-bar/ModalExport.vue";
 import UserMenu from "@/components/user/UserMenu.vue";
-import ModalTutorial from "../ModalTutorial.vue";
+import ModalTutorial from "@/components/app/app-bar/ModalTutorial.vue";
 import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 
 const route = useRoute();
@@ -172,6 +191,7 @@ const pluginRunStore = usePluginRunStore();
 const tutorialStore = useTutorialStore();
 const languageStore = useLanguageStore();
 const videoUploadStore = useVideoUploadStore();
+const themeStore = useThemeStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
 
@@ -232,6 +252,8 @@ const pluginName = (type) => {
     thumbnail: "modal.plugin.thumbnail.plugin_name",
     bytetrack: "modal.plugin.bytetrack.plugin_name",
     calibration_static_dlt: "modal.plugin.calibration_static_dlt.plugin_name",
+    posdata_convert: "modal.plugin.posdata_convert.plugin_name",
+    kpi_computation: "modal.plugin.kpi_computation.plugin_name",
   };
   return t(typeMap[type] || type);
 };

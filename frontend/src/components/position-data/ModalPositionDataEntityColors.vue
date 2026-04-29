@@ -3,7 +3,7 @@
     <v-card>
       <v-toolbar color="primary">
         <v-toolbar-title class="text-h6">
-          {{ $t("modal.position_data.team_colors.title") }}
+          {{ $t("modal.position_data.entity_colors.title") }}
         </v-toolbar-title>
 
         <template #append>
@@ -13,7 +13,7 @@
 
       <v-card-text style="overflow-y: auto">
         <v-row>
-          <v-col cols="6" v-for="(color, teamId) in teamColors" :key="teamId" class="py-2 mt-2">
+          <v-col cols="6" v-for="(color, teamId) in activeTeamColors" :key="teamId" class="py-2">
             <v-card class="pa-2">
               <div class="mb-2 d-flex justify-center">
                 {{ getTeamName(teamId) }}
@@ -25,6 +25,29 @@
           </v-col>
         </v-row>
 
+        <!-- Special entities: ball, referee, rest — collapsible -->
+        <v-expansion-panels class="mt-4">
+          <v-expansion-panel>
+            <v-expansion-panel-title>
+              {{ $t("modal.position_data.entity_colors.other_entities") }}
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <v-row class="mt-1">
+                <v-col cols="6" v-for="id in specialEntityIds" :key="id" class="py-2">
+                  <v-card class="pa-2">
+                    <div class="mb-2 d-flex justify-center">
+                      {{ $t(`modal.position_data.entity_colors.entity_${id}`) }}
+                    </div>
+                    <div class="mb-2 d-flex justify-center">
+                      <v-color-picker v-model="teamColors[id]" :modes="['hex', 'rgb']" />
+                    </div>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+
         <v-btn class="mt-6" @click="saveTeamColors">
           {{ $t("button.save") }}
         </v-btn>
@@ -34,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVisualizationStore } from "@/stores/visualization";
 
@@ -70,11 +93,22 @@ watch(
   }
 );
 
+// Special entity ids: 0=rest, 1=ball, 2=referee
+const specialEntityIds = [0, 1, 2];
+
 const teamColors = ref({});
-Object.values(topViewStore.positionDataTopView).forEach((entries) => {
-  entries.forEach((p) => {
-    if (p[1] !== 1) teamColors.value[p[1]] = visualizationStore.getTeamColor(p[1]);
-  });
+// Initialize special entities
+for (const id of specialEntityIds) {
+  teamColors.value[id] = visualizationStore.getTeamColor(id);
+}
+// Initialize active teams
+for (const p of topViewStore.precomputedPlayerList) {
+  teamColors.value[p.teamId] = visualizationStore.getTeamColor(p.teamId);
+}
+
+// Only team_id >= 3 entries for the "teams" section
+const activeTeamColors = computed(() => {
+  return Object.fromEntries(Object.entries(teamColors.value).filter(([id]) => Number(id) >= 3));
 });
 
 function saveTeamColors() {

@@ -39,6 +39,9 @@ self.onmessage = function (e) {
       case "EXPORT_RUNNING_DISTANCE_CSV":
         handleExportRunningDistanceCSV(id, msg);
         break;
+      case "CALC_KPI_AGGREGATION":
+        handleKpiAggregation(id, msg);
+        break;
       default:
         self.postMessage({ type: "ERROR", id: id, error: "Unknown command: " + type });
     }
@@ -83,7 +86,7 @@ function handleRunningDistance(id, msg) {
     if (!players) continue;
     for (var j = 0; j < players.length; j++) {
       var p = players[j];
-      if (p[1] === 1) continue;
+      if (p[1] === 1 || p[1] === 2) continue;
       if (!(p[0] in allPlayers)) {
         allPlayers[p[0]] = { player_id: p[0], team_id: p[1], distance: 0 };
       }
@@ -107,7 +110,7 @@ function handleRunningDistance(id, msg) {
 
       for (var c = 0; c < curr.length; c++) {
         var cp = curr[c];
-        if (cp[1] === 1) continue;
+        if (cp[1] === 1 || cp[1] === 2) continue;
         var pp = prevMap[cp[0]];
         if (!pp) continue;
         if (!isInAnyZone(cp[3], cp[4], zones)) continue;
@@ -168,6 +171,7 @@ function handleHeatmapPoints(id, msg) {
     if (!arr) continue;
     for (var j = 0; j < arr.length; j++) {
       var pos = arr[j];
+      if (pos[1] === 1 || pos[1] === 2) continue; // skip ball and ref
       if (!pidSet[pos[0]]) continue;
       var xCrop = (pos[3] - cropPct.x[0]) / (cropPct.x[1] - cropPct.x[0]);
       var yCrop = (pos[4] - cropPct.y[0]) / (cropPct.y[1] - cropPct.y[0]);
@@ -298,7 +302,7 @@ function handleExportRunningDistanceCSV(id, msg) {
     if (!players) continue;
     for (var j = 0; j < players.length; j++) {
       var p = players[j];
-      if (p[1] === 1) continue;
+      if (p[1] === 1 || p[1] === 2) continue;
       var teamOk = !selectedTeam.length || selectedTeam.indexOf(p[1]) !== -1;
       if (!teamOk) continue;
       if (!(p[0] in distMap)) {
@@ -320,7 +324,7 @@ function handleExportRunningDistanceCSV(id, msg) {
 
       for (var c = 0; c < curr.length; c++) {
         var cp = curr[c];
-        if (cp[1] === 1) continue;
+        if (cp[1] === 1 || cp[1] === 2) continue;
         var pp = prevMap[cp[0]];
         if (!pp) continue;
         if (!(cp[0] in distMap)) continue;
@@ -396,4 +400,130 @@ function handleExportRunningDistanceCSV(id, msg) {
   }
 
   self.postMessage({ type: "EXPORT_RESULT", id: id, data: csvHeader + "\n" + rows.join("\n") });
+}
+
+// ---------------------------------------------------------------------------
+// KPI Aggregation
+// ---------------------------------------------------------------------------
+
+function handleKpiAggregation(id, msg) {
+  var kpiData = msg.kpiData;
+  var posData = msg.posData;
+  var playerIds = msg.playerIds;
+  var startMs = msg.startMs;
+  var endMs = msg.endMs;
+  var zones = msg.zones || [];
+  var kpiFramerate = msg.kpiFramerate || 25;
+
+  var pidSet = {};
+  for (var i = 0; i < playerIds.length; i++) {
+    pidSet[playerIds[i]] = true;
+  }
+
+  var frameKeys = Object.keys(kpiData).map(Number);
+  var filtered = [];
+  for (var fi = 0; fi < frameKeys.length; fi++) {
+    if (frameKeys[fi] >= startMs && frameKeys[fi] <= endMs) {
+      filtered.push(frameKeys[fi]);
+    }
+  }
+  filtered.sort(function (a, b) { return a - b; });
+
+  if (!filtered.length) {
+    self.postMessage({ type: "KPI_AGGREGATION_RESULT", id: id, data: [] });
+    return;
+  }
+
+  var playerData = {};
+
+  for (var ki = 0; ki < filtered.length; ki++) {
+    var t = filtered[ki];
+    var players = kpiData[t] || [];
+
+    // Build position lookup for zone filtering
+    var posPlayers = posData[t] || [];
+    var posMap = {};
+    for (var pi = 0; pi < posPlayers.length; pi++) {
+      posMap[posPlayers[pi][0]] = posPlayers[pi];
+    }
+
+    for (var j = 0; j < players.length; j++) {
+      var pid = players[j][0];
+      var tid = players[j][1];
+      // New format: [pid, tid, dist_inc, dist_cum, vel, metpow, metpow_cum, equiv_dist_inc, equiv_dist_cum, cent_dist]
+      var dist_inc = players[j][2];
+      var vel = players[j][4];
+      var metpow = players[j][5];
+      var equiv_dist_inc = players[j][7];
+      var cent_dist = players[j][9];
+
+      if (tid === 1 || tid === 2) continue; // skip ball and ref
+      if (!pidSet[pid]) continue;
+
+      if (!playerData[pid]) {
+        playerData[pid] = { tid: tid, totalDist: 0, velocities: [], metpows: [], totalEquivDist: 0, centDistances: [] };
+      }
+      var data = playerData[pid];
+
+      // Zone check via position data
+      var pp = posMap[pid];
+      var inZone = pp ? isInAnyZone(pp[3], pp[4], zones) : true;
+
+      if (inZone) {
+        if (dist_inc != null && dist_inc === dist_inc && dist_inc > 0) data.totalDist += dist_inc;
+        if (equiv_dist_inc != null && equiv_dist_inc === equiv_dist_inc && equiv_dist_inc > 0) data.totalEquivDist += equiv_dist_inc;
+        if (vel != null && vel === vel) data.velocities.push(vel);
+        if (metpow != null && metpow === metpow) data.metpows.push(metpow);
+        if (cent_dist != null && cent_dist === cent_dist) data.centDistances.push(cent_dist);
+      }
+    }
+  }
+
+  var dt = 1 / kpiFramerate;
+  var result = [];
+  var pids = Object.keys(playerData);
+
+  for (var ri = 0; ri < pids.length; ri++) {
+    var rpid = pids[ri];
+    var d = playerData[rpid];
+
+    var velocity_max = null;
+    if (d.velocities.length > 0) {
+      var maxVel = d.velocities[0];
+      for (var vi = 1; vi < d.velocities.length; vi++) {
+        if (d.velocities[vi] > maxVel) maxVel = d.velocities[vi];
+      }
+      velocity_max = parseFloat(maxVel.toFixed(2));
+    }
+
+    var metabolic_work = null;
+    if (d.metpows.length > 0) {
+      var sum = 0;
+      for (var mi = 0; mi < d.metpows.length; mi++) sum += d.metpows[mi];
+      metabolic_work = parseFloat((sum * dt).toFixed(1));
+    }
+
+    var centroid_distance_max = null;
+    if (d.centDistances.length > 0) {
+      var maxCent = d.centDistances[0];
+      for (var ci = 1; ci < d.centDistances.length; ci++) {
+        if (d.centDistances[ci] > maxCent) maxCent = d.centDistances[ci];
+      }
+      centroid_distance_max = parseFloat(maxCent.toFixed(2));
+    }
+
+    var parsedPid = typeof rpid === "string" && !isNaN(rpid) ? parseInt(rpid) : rpid;
+
+    result.push({
+      player_id: parsedPid,
+      team_id: d.tid,
+      distance: d.totalDist > 0 ? parseFloat(d.totalDist.toFixed(1)) : null,
+      velocity_max: velocity_max,
+      metabolic_work: metabolic_work,
+      equivalent_distance: d.totalEquivDist > 0 ? parseFloat((d.totalEquivDist / kpiFramerate).toFixed(1)) : null,
+      centroid_distance_max: centroid_distance_max,
+    });
+  }
+
+  self.postMessage({ type: "KPI_AGGREGATION_RESULT", id: id, data: result });
 }

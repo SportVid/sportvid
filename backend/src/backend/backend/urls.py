@@ -64,6 +64,8 @@ urlpatterns = [
         views.PluginRunDelete.as_view(), name="plugin_run_delete"),
     path("plugin/run/result/list",
         views.PluginRunResultList.as_view(), name="plugin_run_list"),
+    path("plugin/run/result/kpi/chunk",
+        views.PluginRunResultKpiChunk.as_view(), name="plugin_run_result_kpi_chunk"),
     # ---------- CLUSTER
     path("cluster/timeline/item/create",
         views.ClusterTimelineItemCreate.as_view(),

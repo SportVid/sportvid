@@ -47,8 +47,9 @@ class BboxData(Data):
 class BboxesData(Data):
     type: str = field(default="BboxesData")
     # bboxes: List[BboxData] = field(default_factory=list)
-    # bboxes: Dict[int, List[BboxesData]] = field(default_factory=dict)                      
+    # bboxes: Dict[int, List[BboxesData]] = field(default_factory=dict)
     bboxes: str = None  # JSON str representation
+    meta_data: str = None  # JSON str representation
 
     def load(self) -> None:
         super().load()
@@ -56,6 +57,7 @@ class BboxesData(Data):
         data = self.load_dict("bboxes_data.yml")
         # self.bboxes = [BboxData(**x) for x in data.get("bboxes")]
         self.bboxes = data.get("bboxes")
+        self.meta_data = data.get("meta_data")
 
     def save(self) -> None:
         super().save()
@@ -66,7 +68,8 @@ class BboxesData(Data):
             "bboxes_data.yml",
             {
                 # "bboxes": [box.to_dict() for box in self.bboxes]
-                "bboxes": self.bboxes
+                "bboxes": self.bboxes,
+                "meta_data": self.meta_data,
             },
         )
 
@@ -74,5 +77,6 @@ class BboxesData(Data):
         return {
             **super().to_dict(),
             # "bboxes": [box.to_dict() for box in self.bboxes]
-            "bboxes": self.bboxes
+            "bboxes": self.bboxes,
+            "meta_data": self.meta_data,
         }

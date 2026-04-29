@@ -1,36 +1,36 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, shallowRef, computed } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
-import { usePluginRunStore } from "@/stores/plugin_run";
-import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { usePlayerStore } from "@/stores/player";
+import axios from "../plugins/axios";
+import config from "../../app.config";
 
 export const useVisualizationStore = defineStore(
   "visualization",
   () => {
     const topViewStore = useTopViewStore();
-    const pluginRunStore = usePluginRunStore();
-    const pluginRunResultStore = usePluginRunResultStore();
     const playerStore = usePlayerStore();
 
     const halftimesExist = computed(() => {
-      const allPositions = Object.values(topViewStore.positionDataTopView).flat();
-      const gameSections = new Set(allPositions.map((p) => p[2]));
-      return gameSections.has(1) && gameSections.has(2);
+      const s = topViewStore.precomputedGameSections;
+      return s.has(1) && s.has(2);
     });
 
+    // team_id semantics (matches posdata_convert): 0=inactive, 1=ball, 2=refs, ≥3=active teams.
     const teamColorMapping = ref({
-      0: "#808080", // grey
-      1: "#000000", // black
-      2: "#FF0000", // red
-      3: "#0000FF", // blue
-      4: "#008000", // green
-      5: "#FFFF00", // yellow
+      0: "#9E9E9E", // grey — inactive / spectator
+      1: "#000000", // black — ball (rendered as SVG icon; color used only for matchup labels)
+      2: "#FFD600", // yellow — referees
+      3: "#FF0000", // red — team A
+      4: "#0000FF", // blue — team B
+      5: "#004f00", // green
       6: "#800080", // purple
       7: "#FFA500", // orange
       8: "#FFC0CB", // pink
       9: "#A52A2A", // brown
       10: "#FFFFFF", // white
+      11: "#00FFFF", // cyan
+      12: "#808000", // olive
     });
     function getTeamColor(teamId) {
       return teamColorMapping.value[teamId] || "#808080";
@@ -40,10 +40,11 @@ export const useVisualizationStore = defineStore(
     }
 
     function getNextTeamId() {
+      // Active player teams start at id=3 (slots 0/1/2 reserved for inactive/ball/refs).
       const usedIds = Object.keys(teamColorMapping.value)
         .map(Number)
-        .filter((id) => id >= 2);
-      let id = 2;
+        .filter((id) => id >= 3);
+      let id = 3;
       while (usedIds.includes(id)) {
         id++;
       }
@@ -53,48 +54,67 @@ export const useVisualizationStore = defineStore(
     function addTeamColor(newColor) {
       const usedIds = Object.keys(this.teamColorMapping)
         .map(Number)
-        .filter((id) => id >= 2);
-      let id = 2;
+        .filter((id) => id >= 3);
+      let id = 3;
       while (usedIds.includes(id)) id++;
       this.teamColorMapping[id] = newColor;
       return id;
     }
 
-    const kpiData = ref({});
+    const kpiData = shallowRef({});
     const kpiNames = ref([]);
     const kpiFramerate = ref(null);
+    const kpiMetaTeamIds = ref({});
     const kpiDataLoaded = ref(false);
+    const isLoadingKpi = ref(false);
 
     const loadKpiData = async (trackingDataId) => {
-      let hasValidData = false;
+      kpiDataLoaded.value = false;
+      isLoadingKpi.value = true;
+      kpiData.value = {};
 
       try {
-        const _kpiData = pluginRunStore
-          .forVideo(playerStore.videoId)
-          .filter((e) => e.type === "kpi_computation" && e.status === "DONE")
-          .map((e) => {
-            const results = pluginRunResultStore.forPluginRun(e.id);
-            return { ...e, results: JSON.parse(JSON.stringify(results)) };
-          })
-          .filter((e) => e.results?.[0]?.data?.tracking_data_id === trackingDataId);
+        let offset = 0;
+        const limit = 5000;
+        let total = null;
+        let metaData = null;
+        const allFrames = {};
 
-        if (!_kpiData.length || !_kpiData[0]?.results?.length) {
-          return (kpiData.value = {});
+        while (total === null || offset < total) {
+          const res = await axios.get(`${config.API_LOCATION}/plugin/run/result/kpi/chunk`, {
+            params: {
+              tracking_data_id: trackingDataId,
+              video_id: playerStore.videoId,
+              offset,
+              limit,
+            },
+          });
+
+          if (res.data.status === "error" && res.data.type === "not_found") {
+            // No KPI data for this tracking_data_id
+            return;
+          }
+
+          if (res.data.status !== "ok") throw new Error("KPI chunk load failed");
+
+          Object.assign(allFrames, res.data.frames);
+          total = res.data.total;
+          if (res.data.meta_data) metaData = res.data.meta_data;
+
+          offset += limit;
         }
 
-        hasValidData = true;
+        if (total === 0) return;
 
-        console.log("Loaded KPI data:", _kpiData);
-
-        kpiData.value = _kpiData[0]?.results[0]?.data?.kpis;
-        kpiNames.value = _kpiData[0]?.results[0]?.data?.meta_data?.kpi_names;
-        kpiFramerate.value = _kpiData[0]?.results[0]?.data?.meta_data?.framerate;
+        kpiData.value = allFrames;
+        kpiNames.value = metaData?.kpi_names ?? [];
+        kpiFramerate.value = metaData?.framerate ?? null;
+        kpiMetaTeamIds.value = metaData?.team_ids ?? {};
+        kpiDataLoaded.value = true;
+      } catch (err) {
+        console.error("loadKpiData failed:", err);
       } finally {
-        if (hasValidData) {
-          kpiDataLoaded.value = true;
-        } else {
-          kpiDataLoaded.value = false;
-        }
+        isLoadingKpi.value = false;
       }
     };
 
@@ -108,6 +128,9 @@ export const useVisualizationStore = defineStore(
       kpiData,
       kpiNames,
       kpiFramerate,
+      kpiMetaTeamIds,
+      kpiDataLoaded,
+      isLoadingKpi,
       loadKpiData,
     };
   },
