@@ -54,7 +54,7 @@
         <span class="text-primary">{{ $t("app_bar.video_upload_menu") }}</span>
       </v-btn>
 
-      <v-btn
+      <!-- <v-btn
         v-if="videoView && loggedIn"
         @click="showModalBatchPlugin = true"
         :videoIds="selectedVideosIds"
@@ -62,7 +62,7 @@
       >
         <app-bar-icon>mdi-plus</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.batch_plugin_menu") }}</span>
-      </v-btn>
+      </v-btn> -->
 
       <v-divider vertical inset class="mx-2" />
 
