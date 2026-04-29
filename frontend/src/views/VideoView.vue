@@ -13,7 +13,7 @@
               :data-tour="item.processing ? 'video-processing' : undefined"
               width="370"
             >
-              <v-card-title class="video-overview-title mt-2 mb-2">
+              <v-card-title class="video-overview-title mt-2 mb-n2">
                 {{ item.name }}
               </v-card-title>
               <div v-if="item.processing">
@@ -42,32 +42,29 @@
                   <!-- <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div> -->
 
                   <!-- <v-card-actions class="actions mt-n6 mb-n8"> -->
-                  <v-card-actions class="actions mt-2 mb-n2">
-                    <v-btn
-                      size="small"
-                      variant="outlined"
-                      class="ml-n2"
-                      @click="showVideo(item.id)"
-                    >
-                      <v-icon class="mr-1">
-                        {{ "mdi-movie-search-outline" }}
-                      </v-icon>
-                      {{ $t("button.analyse") }}
-                    </v-btn>
+                  <v-card-actions class="actions mt-2 mb-n2 justify-center" style="gap: 16px">
+                    <v-tooltip :text="$t('button.analyse')" location="top">
+                      <template #activator="{ props }">
+                        <v-btn variant="outlined" v-bind="props" @click="showVideo(item.id)">
+                          <v-icon>mdi-movie-search-outline</v-icon>
+                        </v-btn>
+                      </template>
+                    </v-tooltip>
 
                     <ModalVideoRename :video="item.id" />
 
-                    <v-btn
-                      size="small"
-                      color="red"
-                      variant="outlined"
-                      @click="deleteVideo(item.id)"
-                    >
-                      <v-icon class="mr-1">
-                        {{ "mdi-trash-can-outline" }}
-                      </v-icon>
-                      {{ $t("button.delete") }}
-                    </v-btn>
+                    <v-tooltip :text="$t('button.delete')" location="top">
+                      <template #activator="{ props }">
+                        <v-btn
+                          color="red"
+                          variant="outlined"
+                          v-bind="props"
+                          @click="deleteVideo(item.id)"
+                        >
+                          <v-icon>mdi-trash-can-outline</v-icon>
+                        </v-btn>
+                      </template>
+                    </v-tooltip>
 
                     <!-- <v-checkbox
                       v-model="videoStore.selectedVideos[item.id]"
@@ -318,9 +315,6 @@ watch(
   margin: 8px;
 }
 
-.actions > .v-btn:not(:first-child) {
-  margin-left: 1px !important;
-}
 .welcome-video {
   margin-left: auto;
   margin-right: auto;
