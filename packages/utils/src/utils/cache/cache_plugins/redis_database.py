@@ -6,8 +6,12 @@ from typing import Any, List, Iterator
 
 from utils.cache import CacheManager, Cache
 
-default_config = {"db": 0, "host": "valkey", "port": 6379, "tag": "data"}
-
+default_config = {
+    "db": 0, 
+    "host": "valkey",
+    "port": 6380, 
+    "tag": "data"
+}
 
 class Batcher:
     def __init__(self, iterable, n=1):
@@ -29,6 +33,7 @@ class ValkeyCache(Cache, config=default_config, version="0.1"):
             host=self.config.get("host"),
             port=self.config.get("port"),
             db=self.config.get("db"),
+            password=self.config.get("password")
         )
 
     def set(self, id: str, data: Any) -> bool:
