@@ -1,7 +1,7 @@
 <template>
   <v-app-bar>
     <template #prepend>
-      <img src="@/assets/logo_tib_dshs.png" height="50" class="ml-1 mr-2" />
+      <img src="@/assets/logo_dshs_marburg.png" height="50" class="ml-1 mr-2" />
       <v-app-bar-title class="text-h5 text-primary">
         {{ $t("plattform.title") }}
       </v-app-bar-title>
