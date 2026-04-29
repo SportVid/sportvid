@@ -1847,6 +1847,8 @@ export const useTutorialStore = defineStore("tutorial", () => {
 
   const tour = ref(null);
 
+  const openTutorialModal = ref(false);
+
   return {
     tutorials,
     availableTutorials,
@@ -1862,6 +1864,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     nextStepText,
     totalSteps,
     uploadFormReady,
+    openTutorialModal,
     startTutorial,
     stopTutorial,
     tour,
