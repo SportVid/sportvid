@@ -178,3 +178,4 @@ test_env/
 
 # SportVid Models
 models/
+.data/

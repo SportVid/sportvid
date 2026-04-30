@@ -55,6 +55,7 @@ class PluginRunResultList(View):
             #     print(f"\t {x.id.hex}")
 
             add_results = request.GET.get("add_results", True)
+            # TODO: this should be include_types (see code logic)
             exclude_types = request.GET.getlist("exclude_types[]")
             if add_results:
                 # print("A", flush=True)
