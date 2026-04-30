@@ -176,5 +176,9 @@ CLAUDE.md
 tests/
 test_env/
 
-# SportVid Models
+# SportVid models
 models/
+
+# Data dirs
+.data
+data/
