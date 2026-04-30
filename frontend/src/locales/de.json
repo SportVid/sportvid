@@ -3,24 +3,31 @@
     "title": "SportVid"
   },
   "welcome": {
-    "text": "Willkommen auf der SportVid-Plattform für wissenschaftliche Videoanalyse und Sportwissenschaft.",
+    "text": "Willkommen auf der SportVid-Videoplattform für wissenschaftliche Videoanalyse und Sportwissenschaft.",
     "demo_title": "Videodemonstration",
     "demo_text": "Wir bereiten derzeit ein Video vor, das die Funktionen von SportVid demonstriert und erklärt, wie man es nutzt, um den Einstieg zu erleichtern. Die Veröffentlichung ist spätestens für 2027 geplant.",
-    "login_title": "Noch kein Account?",
-    "login_text": "Falls Sie noch keinen Account haben, können Sie oben rechts einen erstellen („Login“ → „Registrieren“) oder einen per E-Mail an {'xyz@123.de'} mit einer kurzen Beschreibung Ihres Anwendungszwecks anfordern.",
-    "format_title": "Unterstützte Videoformate",
-    "format_text": "Bitte beachten Sie, dass SportVid derzeit nur die Analyse von MP4-Videodateien unterstützt, um lange Verarbeitungszeiten durch serverseitiges Transkodieren zu vermeiden."
+    "login_title": "Noch kein Konto?",
+    "login_text": "Falls Sie noch kein Konto besitzen, können Sie oben rechts einen erstellen (\"Anmelden\" → \"Registrieren\") oder einen per E-Mail an {'y.paul@dshs-koeln.de'} mit einer kurzen Beschreibung Ihres Anwendungszwecks anfordern.",
+    "format_title": "Unterstützte Videodateiformate",
+    "format_text": "Bitte beachten Sie, dass SportVid derzeit nur die Analyse von <b>MP4</b>-Videodateien unterstützt, um lange Verarbeitungszeiten durch serverseitiges Transkodieren zu vermeiden."
   },
   "terms_of_use": {
     "title": "Nutzungsbedingungen",
-    "text": "Durch die Nutzung von SportVid erklären Sie sich mit den folgenden Bedingungen einverstanden: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Zustimmung zur Verwendung hochgeladener und eingereichter Videos und Daten zu wissenschaftlichen Forschungszwecken.</li><li>Zustimmung, dass andere Benutzer nach Videos suchen dürfen.</li><li>...</li></ol>",
+    "text": "<strong>1. Einleitung</strong><br>Diese Nutzungsbedingungen (\"Bedingungen\") regeln den Zugang und die Nutzung des Videoanalyseportals (\"Portal\") von SportVid. Durch die Nutzung des Portals stimmen Sie den folgenden Nutzungsbedingungen zu.<br><br><strong>2. Rechte zum Hochladen</strong><br>2.1. Durch das Hochladen von Inhalten (\"Inhalte\") auf das Portal gewähren Sie SportVid das nicht-exklusive Recht, die Inhalte zu speichern, zu verarbeiten, zu analysieren und zu nutzen, um die Dienste des Portals bereitzustellen.<br>2.2. Sie bestätigen, dass Sie die erforderlichen Rechte zum Hochladen der Inhalte besitzen, einschließlich Urheberrechte, Markenrechte und sonstige Rechte, die für die Nutzung der Inhalte erforderlich sind.<br><br><strong>3. Verarbeitung und Analyse</strong><br>3.1. SportVid verarbeitet und analysiert die Inhalte, um die Dienste des Portals bereitzustellen, einschließlich der Analyse von Nutzungsdaten und der Optimierung der Inhalte.<br>3.2. Durch die Nutzung des Portals stimmen Sie zu, dass SportVid die Inhalte verarbeiten und analysieren darf, um die Dienste des Portals bereitzustellen.<br><br><strong>4. Datenschutz</strong><br>4.1. SportVid behandelt Ihre persönlichen Daten vertraulich und gemäß den Datenschutzbestimmungen.<br>4.2. Durch die Nutzung des Portals stimmen Sie zu, dass SportVid Ihre persönlichen Daten verarbeiten darf, um die Dienste des Portals bereitzustellen.<br><br><strong>5. Haftung</strong><br>5.1. SportVid haftet nicht für Schäden, die durch die Nutzung des Portals entstehen, einschließlich der Verletzung von Rechten Dritter.<br>5.2. Durch die Nutzung des Portals stimmen Sie zu, dass SportVid nicht für Schäden haftbar gemacht werden kann, die durch die Nutzung des Portals entstehen.<br><br><strong>6. Änderungen</strong><br>6.1. SportVid kann diese Nutzungsbedingungen jederzeit ändern.<br>6.2. Durch die weitere Nutzung des Portals nach Änderungen der Nutzungsbedingungen stimmen Sie den geänderten Nutzungsbedingungen zu.<br><br><strong>7. Schlussbestimmungen</strong><br>7.1. Diese Nutzungsbedingungen regeln das gesamte Vertragsverhältnis zwischen Ihnen und SportVid.<br>7.2. Durch die Nutzung des Portals bestätigen Sie, dass Sie diese Nutzungsbedingungen gelesen, verstanden und akzeptiert haben.",
+    "last_updated": "<em>Zuletzt aktualisiert: 4. Februar 2026</em>",
     "confirmation": "Stimmen Sie den {title} zu?"
+  },
+  "guidelines": {
+    "title": "Richtlinien",
+    "tutorial_hint_loggedin": "Interaktive Schritt-für-Schritt-Anleitungen sind für alle wichtigen Arbeitsabläufe verfügbar.",
+    "tutorial_hint_btn": "Anleitungen öffnen",
+    "tutorial_hint_loggedout": "Interaktive Schritt-für-Schritt-Anleitungen sind für alle wichtigen Arbeitsabläufe verfügbar. Melden Sie sich an und klicken Sie auf das <i class=\"mdi mdi-school\" style=\"font-size:18px; vertical-align:middle;\"></i>-Symbol oben rechts, um zu beginnen.",
+    "text": "<ol><li><strong>Erste Schritte</strong><ol><li>Registrieren Sie sich oder melden Sie sich in Ihrem SportVid-Konto an.</li><li>Laden Sie ein Spiel- oder Trainingsvideo hoch (MP4-Format).</li></ol></li><li><strong>Positionsdaten ermitteln</strong><ol><li>Führen Sie das <strong>ByteTrack-Plugin</strong> aus, um Spieler und Ball im Video automatisch zu erkennen und Bounding-Box-Tracks zu erzeugen.</li><li>Verwenden Sie das <strong>DLT+RANSAC-Plugin</strong>, um durch Annotation von Landmarken auf dem Spielfeld eine Homographiematrix für die Draufsichtprojektion zu berechnen.</li><li>Nach der Kalibrierung können Positionsdaten in der Draufsicht angezeigt werden.</li><li>Alternativ können Sie Positionsdaten manuell hochladen, sofern diese bereits in einem unterstützten Format vorliegen.</li></ol></li><li><strong>KPI-Berechnung</strong><ol><li>Führen Sie das <strong>KPI-Berechnungs-Plugin</strong> auf vorhandenen Positionsdaten aus, um Metriken wie zurückgelegte Distanz, Geschwindigkeit und Beschleunigung pro Spieler zu berechnen.</li><li>Wählen Sie die Positionsdatenquelle und konfigurieren Sie optional erweiterte Optionen (z.B. Zeitintervalle, Spielerfilter), bevor Sie das Plugin starten.</li></ol></li><li><strong>Visualisierungen</strong><ol><li><strong>Draufsicht:</strong> Zeigt Spielerpositionen in einer 2D-Feldansicht, synchronisiert mit dem Video. Verwenden Sie die Anzeigeeinstellungen, um Spielerbeschriftungen, Spuren und Teamfarben ein- oder auszublenden.</li><li><strong>Heatmap:</strong> Zeigt die räumliche Aktivitätsdichte pro Spieler oder Team über einen auswählbaren Zeitraum.</li><li><strong>KPI-Diagramme:</strong> Vergleichen Sie Spielermetriken als Tabelle oder Diagramm. Filtern Sie nach Spieler, Team oder Zeitintervall.</li></ol></li><li><strong>Exportieren</strong><ol><li>Verwenden Sie die Exportschaltfläche in der App-Leiste, um CSV-Dateien mit rohen oder aggregierten Positionsdaten herunterzuladen (z.B. gesamtes Spiel, 1. Halbzeit, 2. Halbzeit).</li><li>In der Draufsicht, der Heatmap und den KPI-Ansichten können Sie Bildschirmfotos oder Videoexporte speichern.</li></ol></li></ol>"
   },
   "user": {
     "name": "Benutzername",
     "password": "Passwort",
-    "email": "E-Mail",
-    "joined": "Vor {n_days} Tagen beigetreten",
+    "email": "E-Mail-Adresse",
     "login": {
       "title": "Anmelden",
       "text": "Noch kein Konto?",
@@ -40,7 +47,8 @@
         "min": "Mindestens 5 Zeichen.",
         "max": "Maximal 50 Zeichen."
       }
-    }
+    },
+    "delete": {}
   },
   "button": {
     "to_timeline": "Zur Zeitleiste",
@@ -58,10 +66,17 @@
     "duplicate": "Duplizieren",
     "visualize": "Visualisieren",
     "save": "Speichern",
+    "import": "Importieren",
     "run_batch_plugin": "Batch-Plugin ausführen",
     "run_plugin": "Plugin ausführen",
+    "delete_plugin_runs": "Alle Plugin-Ausführungen löschen",
     "upload_video": "Neues Video hochladen",
-    "exit": "Beenden"
+    "settings": "Einstellungen",
+    "continue": "Weiter",
+    "admin_panel": "Admin-Oberfläche",
+    "exit": "Beenden",
+    "add": "Hinzufügen",
+    "cancel_and_delete": "Abbrechen & Löschen"
   },
   "field": {
     "required": "Dieses Feld ist erforderlich."
@@ -69,66 +84,108 @@
   "app_bar": {
     "home": "Startseite",
     "video_view": "Videos",
-    "plugin_menu": "Plugin ausführen",
+    "plugin_menu": "Plugins",
     "history_menu": "Verlauf",
     "shortcut_menu": "Kurzbefehle",
-    "export_menu": "Exportieren",
+    "export_menu": "Export",
     "user_menu": "Anmelden",
     "batch_plugin_menu": "Batch-Plugin ausführen",
     "video_upload_menu": "Neues Video hochladen"
   },
   "video_view": {
+    "video_processing": "Video wird verarbeitet",
     "video_id": "Video-ID:",
     "length": "Länge:",
     "uploaded": "Hochgeladen:",
     "timelines": "Zeitleisten:"
   },
   "analysis_view": {
-    "tabs": {
-      "calibration": "Kalibrierung",
-      "position_data": "Positionsdaten"
-    },
-    "analysis_tabs": {
-      "calibration": "Kalibrierung",
-      "position_data": "Positionsdaten"
-    },
     "visualization_tabs": {
       "select": "Visualisierung auswählen",
-      "timeline": "Timeline",
+      "timeline": "Zeitleiste",
       "events": "Ereignisse",
       "heatmap": "Heatmap",
-      "running_distance": "Laufdistanz"
+      "kpi": "KPIs"
+    }
+  },
+  "sports": {
+    "soccer": {
+      "title": "Fußball",
+      "areas": {
+        "full": "Gesamtes Spielfeld",
+        "half_left": "Linke Hälfte",
+        "half_right": "Rechte Hälfte",
+        "box_to_box": "16er bis 16er",
+        "double_box_left": "Doppelter 16er Links",
+        "double_box_right": "Doppelter 16er Rechts"
+      }
     },
-    "sports": {
-      "soccer": "Fußball",
-      "handball": "Handball",
-      "basketball": "Basketball",
-      "climbing": "Klettern"
+    "handball": {
+      "title": "Handball",
+      "areas": {
+        "full": "Gesamtes Spielfeld",
+        "half_left": "Linke Hälfte",
+        "half_right": "Rechte Hälfte"
+      }
+    },
+    "basketball": {
+      "title": "Basketball",
+      "areas": {
+        "full": "Gesamtes Spielfeld",
+        "half_left": "Linke Hälfte",
+        "half_right": "Rechte Hälfte"
+      }
+    },
+    "climbing": {
+      "title": "Klettern",
+      "areas": {
+        "full": "Gesamter Bereich"
+      }
     }
   },
   "calibration_asset": {
-    "not_selected": "Kein Kalibrierungs-Asset ausgewählt.<br>Bitte erstellen Sie ein neues Kalibrierungs-Asset oder wählen Sie ein bestehendes aus.",
-    "title": "Kalibrierungs-Asset",
-    "save": "Kalibrierungs-Asset speichern",
-    "select": "Kalibrierungs-Asset auswählen",
-    "create": "Neues Kalibrierungs-Asset erstellen",
-    "update": "Kalibrierungs-Asset aktualisieren",
+    "not_selected": "Kein Kalibrierungsobjekt ausgewählt.<br>Bitte erstellen Sie ein neues Kalibrierungsobjekt oder wählen Sie ein bestehendes aus.",
+    "title": "Kalibrierungsobjekt",
+    "save": "Kalibrierungsobjekt speichern",
+    "select": "Kalibrierungsobjekt auswählen",
+    "create": "Neues Kalibrierungsobjekt erstellen",
+    "update": "Kalibrierungsobjekt aktualisieren",
+    "object_types": {
+      "marker": "Marker",
+      "segment": "Segment"
+    },
     "marker": {
       "title": "Marker",
       "view_vid_marker": "Video-Marker anzeigen",
-      "add_ref_marker": "Referenzmarker hinzufügen",
-      "delete_ref_marker": "Referenzmarker löschen"
+      "add_custom_marker": "Eigenen Marker hinzufügen",
+      "delete_custom_marker": "Eigenen Marker löschen"
     },
+    "segments": {
+      "title": "Segmente",
+      "view_vid_segments": "Video-Segmente anzeigen"
+    },
+    "time-conflict": "Video-Marker wurden bei {time} gesetzt. Das Hinzufügen eines neuen Markers zu einem anderen Zeitstempel überschreibt die vorhandenen.",
     "go_to_marker_time": "Zurück zu {time}"
   },
   "position_data": {
-    "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das Bytetrack-Plugin aus oder laden Sie die Positionsdaten manuell hoch.",
+    "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das ByteTrack-Plugin aus oder laden Sie Positionsdaten manuell hoch.",
     "display_settings": {
       "title": "Anzeigeeinstellungen",
       "view_bounding_box": "Bounding-Boxen anzeigen",
+      "view_player_id": "Spieler-IDs anzeigen",
+      "toggle_entities": "Entitäten umschalten",
       "video_sync": "Mit Video synchronisieren",
+      "entity_colors": "Entitätsfarben ändern",
+      "offset": "Versatz festlegen",
+      "mirror_xy": "XY-Koordinaten spiegeln",
+      "area_size": "Feldgröße",
+      "set_grid": {
+        "title": "Raster festlegen",
+        "longitudinal": "Längsstreifen",
+        "transverse": "Querstreifen"
+      },
       "view_kpis": {
-        "title": "Leistungsindikator anzeigen",
+        "title": "KPIs anzeigen",
         "space_control": "Raumkontrolle",
         "eps": "Effektiver Spielraum"
       },
@@ -136,12 +193,14 @@
         "title": "Positionsdaten",
         "upload": "Positionsdaten hochladen",
         "select": "Positionsdaten auswählen"
-      },
-      "set_grid": {
-        "title": "Raster",
-        "longitudinal": "Längsstreifen",
-        "transverse": "Querstreifen"
       }
+    },
+    "fps_deviation": "Reduzierung der Abtastrate & Interpolation führt zu einer maximalen Frame-für-Frame-Abweichung von bis zu {interpErr}% im Vergleich zur ursprünglichen Bildrate.",
+    "entity_kind": {
+      "player": "Spieler",
+      "ref": "Schiedsrichter",
+      "ball": "Bälle",
+      "rest": "Inaktiv"
     }
   },
   "visualization": {
@@ -165,47 +224,88 @@
         "yTitle": "Y-Achsendaten auswählen:",
         "ySelect": "Nicht ausgewählt"
       }
-    }
-  },
-  "data": {
-    "options": {
-      "title": "Optionen",
-      "time_selection": {
-        "title": "Zeitauswahl",
-        "full_match": "Gesamtes Spiel auswählen",
-        "first_half": "Erste Halbzeit auswählen",
-        "second_half": "Zweite Halbzeit auswählen"
-      },
+    },
+    "time_selection": {
+      "sync_start": "Startzeit mit Videozeit synchronisieren",
+      "sync_end": "Endzeit mit Videozeit synchronisieren",
+      "full_match": "Gesamtes Spiel auswählen",
+      "full_video": "Gesamtes Video auswählen",
+      "first_half": "Erste Halbzeit auswählen",
+      "second_half": "Zweite Halbzeit auswählen"
+    },
+    "timeline": {
+      "not_available": "Keine Zeitleiste verfügbar.<br>Bitte führen Sie ein Plugin aus, das eine Zeitleiste erstellt.",
+      "options": {
+        "title": "Optionen",
+        "create": "Zeitleiste erstellen",
+        "import": "Zeitleiste importieren"
+      }
+    },
+    "heatmap": {
+      "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das ByteTrack-Plugin aus oder laden Sie Positionsdaten manuell hoch.",
+      "area_size": "Feldgröße"
+    },
+    "kpi": {
+      "posdata_not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das ByteTrack-Plugin aus oder laden Sie Positionsdaten manuell hoch.",
+      "kpi_not_selected": "Keine KPI-Daten verfügbar.<br>Bitte führen Sie das KPI-Berechnungs-Plugin aus, um KPIs auf Basis der ausgewählten Positionsdaten zu berechnen.",
       "kpi_selection": {
-        "title": "KPI-Auswahl",
-        "running_distance": "Laufdistanz",
-        "running_distance_cumulative": "Laufdistanz (kumulativ)",
-        "running_distance_interval": "Laufdistanz (pro {frames} Frames)",
-        "interval_frames": "Intervall (Frames)",
-        "velocity_max": "Maximale Geschwindigkeit",
-        "velocity_mean": "Mittlere Geschwindigkeit",
-        "metabolic_work": "Metabolische Leistung"
+        "title": "KPI",
+        "group_distance": "Distanz",
+        "group_velocity": "Geschwindigkeit",
+        "group_metabolic_work": "Metabolische Arbeit",
+        "group_equivalent_distance": "Äquivalente Distanz",
+        "group_centroid_distance": "Zentroiddistanz",
+        "running_distance_cumulative": "Laufdistanz [m] (kumulativ)",
+        "running_distance_frame": "Laufdistanz [m] (pro Frame)",
+        "running_distance_interval": "Laufdistanz [m] (pro {frames} Frames)",
+        "velocity_max": "V<sub>max</sub> [m⋅s<sup>-1</sup>]",
+        "velocity_frame": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "velocity_interval": "V<sub>max</sub> [m⋅s<sup>-1</sup>] (pro {frames} Frames)",
+        "metabolic_work_cumulative": "Met. Arbeit [J⋅kg<sup>-1</sup>] (kumulativ)",
+        "metabolic_work_frame": "Met. Arbeit [J⋅kg<sup>-1</sup>] (pro Frame)",
+        "metabolic_work_interval": "Met. Arbeit [J⋅kg<sup>-1</sup>] (pro {frames} Frames)",
+        "equivalent_distance_cumulative": "Äquiv. Distanz [m] (kumulativ)",
+        "equivalent_distance_frame": "Äquiv. Distanz [m] (pro Frame)",
+        "equivalent_distance_interval": "Äquiv. Distanz [m] (pro {frames} Frames)",
+        "centroid_distance_max": "Zentroiddist.<sub>max</sub> [m]",
+        "centroid_distance_frame": "Zentroiddistanz [m] (pro Frame)",
+        "centroid_distance_interval": "Zentroiddistanz<sub>max</sub> [m] (pro {frames} Frames)",
+        "distance_covered": "Distanz [m]",
+        "cumulative_distance_covered": "Distanz [m] (kumulativ)",
+        "velocity": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "metabolic_power": "Metabolische Leistung [W⋅kg<sup>-1</sup>]",
+        "cumulative_metabolic_power": "Met. Arbeit [J⋅kg<sup>-1</sup>] (kumulativ)",
+        "equivalent_distance": "Äquiv. Distanz [m]",
+        "cumulative_equivalent_distance": "Äquiv. Distanz [m] (kumulativ)",
+        "centroid_distance": "Zentroiddistanz [m]"
       },
-      "chart_mode": {
-        "cumulative": "Kumulativ",
-        "windowed": "Pro Sekunde"
-      },
-      "team_view": {
-        "total_distance": "Gesamtdistanz",
-        "avg_distance": "Durchschn. Distanz",
-        "player_count": "Spieler"
+      "zone_selection": {
+        "title": "Zone",
+        "full_size": "Gesamtfläche",
+        "all_data": "Alle Daten",
+        "clear": "Löschen",
+        "selected": "Zone(n)"
       },
       "player_view": {
+        "player_id": "Spieler",
         "best": "Bester Wert",
         "total": "Gesamt"
       },
-      "view": {
-        "chart_placeholder": "Diagrammansicht kommt bald."
+      "team_view": {
+        "kpi": "KPI",
+        "total": "Gesamt",
+        "average": "Durchschnitt"
+      },
+      "kpi_label": {
+        "distance": "Distanz [m]",
+        "velocity": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "velocity_max": "V<sub>max</sub> [m⋅s<sup>-1</sup>]",
+        "metabolic_work": "Met. Arbeit [J⋅kg<sup>-1</sup>]",
+        "equivalent_distance": "Äquiv. Distanz [m]",
+        "centroid_distance": "Zentroiddistanz [m]",
+        "centroid_distance_max": "Zentroiddist.<sub>max</sub> [m]"
       }
     }
-  },
-  "timelines": {
-    "title": "Zeitleisten"
   },
   "timelineSegment": {
     "title": "Titel",
@@ -223,9 +323,156 @@
     "mergeright": "Rechtes Segment zusammenführen",
     "color": "Farbe"
   },
+  "tutorials": {
+    "upload_video": {
+      "video_view": "Hier werden alle Ihre hochgeladenen Videos aufgelistet. Nach dem Hochladen klicken Sie auf ein Video, um es in der Analyseansicht zu öffnen.",
+      "open_modal": "Klicken Sie hier, um das Video-Upload-Fenster zu öffnen.",
+      "fill_form": "Im Video-Upload-Fenster können Sie eine Videodatei von Ihrem Computer auswählen und die erforderlichen Informationen zum Video eingeben. Achten Sie auf genaue Angaben zu Sportart, Liga, Altersgruppe und Feldmaßen, um die besten Analyseergebnisse zu erzielen.",
+      "upload_video": "Alle Pflichtfelder sind ausgefüllt – klicken Sie die Schaltfläche, um den Upload zu starten.",
+      "video_processing": "Ihr Video wird derzeit verarbeitet. Dies kann je nach Videolänge und Serverauslastung einige Zeit in Anspruch nehmen. Sobald die Verarbeitung abgeschlossen ist, steht es für die Analyse bereit."
+    },
+    "analyse_video": {
+      "video_view": "Hier werden alle Ihre hochgeladenen Videos aufgelistet. Klicken Sie auf die Schaltfläche \"Analysieren\" bei einem Video, um es in der Analyseansicht zu öffnen.",
+      "video_player": "Dies ist der Videoplayer. Sie können Ihr Video hier abspielen, pausieren und vorspulen. Alle Visualisierungen können mit der aktuellen Wiedergabeposition synchronisiert werden.",
+      "top_view": "Dies ist die 2D-Spielfeldansicht. Es zeigt Positionsdaten, die auf ein 2D-Spielfeld projiziert werden - Spieler, Pfade und Teamzuordnungen. Verwenden Sie die Steuerungen, um auszuwählen, welche Daten angezeigt werden sollen.",
+      "visualization_tabs": "Diese Tabs bieten verschiedene Möglichkeiten, Ihre Daten zu erkunden: Zeitleiste für annotierte Ereignisse, Ereignisse für eine strukturierte Ereignisliste, Heatmap für räumliche Dichte und KPI für berechnete Metriken.",
+      "appbar_actions": "Die Symbolleiste bietet schnellen Zugriff auf die wichtigsten Werkzeuge: Plugins ausführen, den Ausführungsverlauf einsehen, Annotationskürzel verwalten und Daten exportieren."
+    },
+    "run_plugin": {
+      "open_modal": "Klicken Sie hier, um die Plugin-Oberfläche zu öffnen. Plugins sind Werkzeuge, die Ihr Video verarbeiten und Daten erzeugen – z.B. Spieler-Tracking oder Kamerakalibrierung.",
+      "plugin_panel": "Die Plugin-Oberfläche zeigt alle verfügbaren Plugins, nach Kategorien gruppiert. Jedes Plugin kann individuell konfiguriert werden. Führen Sie z.B. ByteTrack zur Spielererkennung aus, DLT+RANSAC zur Berechnung der Homographie mithilfe Ihres Kalibrierungsobjekts oder das KPI-Berechnungs-Plugin, um Leistungsmetriken auf Basis der Positionsdaten zu berechnen.",
+      "plugin_select": "Um ein Plugin auszuwählen, klicken Sie es einfach in der Liste an. Wählen Sie für dieses Tutorial das Plugin 'KPI-Berechnung'.",
+      "plugin_details": "Nach der Auswahl eines Plugins sehen Sie dessen Beschreibung und Konfigurationsoptionen. Je nach Plugin müssen Sie möglicherweise unterschiedliche Eingaben bereitstellen, wie das Auswählen von Dateien oder das Angeben von Run-IDs. Erweiterte Optionen ermöglichen eine Feinabstimmung des Plugin-Verhaltens; wenn Sie unsicher sind, sind die Standardeinstellungen ein guter Ausgangspunkt."
+    },
+    "check_history": {
+      "open_modal": "Klicken Sie hier, um den Plugin-Ausführungsverlauf zu öffnen. Hier können Sie den Status aller Ihrer Plugin-Ausführungen einsehen – ob sie in der Warteschlange stehen, laufen, abgeschlossen sind oder ob Fehler aufgetreten sind.",
+      "history_table": "Diese Tabelle listet alle Plugin-Ausführungen für das aktuelle Video auf. Jede Zeile zeigt den Plugin-Namen, das Ausführungsdatum, den Fortschritt und den aktuellen Status. So können Sie laufende Ausführungen verfolgen oder vergangene Ergebnisse überprüfen.",
+      "delete_panel": "Erweitern Sie diesen Abschnitt, um Plugin-Ausführungen zu löschen. Sie können alle Ausführungen für Ihr Konto, alle Ausführungen für das aktuelle Video, alle Ausführungen eines bestimmten Plugin-Typs für das aktuelle Video oder einzelne Ausführungen manuell auswählen und entfernen. Dies ist nützlich, um alte oder fehlgeschlagene Ausführungen zu bereinigen."
+    },
+    "export": {
+      "open_modal": "Klicken Sie hier, um die Export-Oberfläche zu öffnen. Wichtig: Exportoptionen, die auf berechneten Daten basieren – wie KPIs oder Positionsdaten – funktionieren nur, wenn diese Daten bereits generiert wurden.",
+      "export_panel": "Auf der linken Seite sind alle verfügbaren Exportformate aufgelistet. Sie können rohe Positionsdaten, berechnete KPIs (regulär oder aggregiert), zusammengeführte oder individuelle CSV-Dateien oder Annotationsformate wie ELAN exportieren. Wählen Sie das Format, das Ihren Anforderungen entspricht.",
+      "export_select": "Um ein Exportformat auszuwählen, klicken Sie es einfach in der Liste an. Wählen Sie für dieses Tutorial 'KPI (aggregiert)'.",
+      "export_details": "Nach der Auswahl eines Formats sehen Sie dessen Konfigurationsoptionen. Je nach Format müssen Sie möglicherweise Teams, Zeitbereiche, bestimmte Metriken oder andere Parameter auswählen. Nach der Konfiguration klicken Sie auf die Exportschaltfläche, um die Datei herunterzuladen. Denken Sie daran: Wenn die erforderlichen Daten noch nicht berechnet wurden, sind die Dropdown-Menüs leer und der Export ist nicht möglich."
+    },
+    "dlt_ransac": {
+      "open_modal": "Klicken Sie hier, um die Plugin-Oberfläche zu öffnen.",
+      "select_plugin": "Wählen Sie das Plugin 'DLT+RANSAC aus annotierten Landmarken' aus der Liste.",
+      "plugin_overview": "Das DLT+RANSAC-Plugin berechnet eine statische Kamerakalibrierung, indem annotierte Landmarkpunkte aus der Spielfeldansicht auf ihre entsprechenden Positionen im Video abgebildet werden. Diese Kalibrierung ist notwendig, um Pixelkoordinaten in reale Spielfeldkoordinaten umzuwandeln und so eine genaue Positionsdatenerzeugung zu ermöglichen.<br><br>Um das Plugin ausführen zu können, benötigen Sie zunächst ein Kalibrierungsobjekt – eine Menge von Referenzpunkten, die in der Spielfeldansicht definiert sind.",
+      "create_select": "Falls Sie noch kein Kalibrierungsobjekt haben, klicken Sie auf <em>Erstellen</em>, um eines anzulegen. Verwenden Sie <em>Auswählen</em>, um ein vorhandenes Asset zu laden.",
+      "create_modal": "Wählen Sie den Kalibrierungstyp: <em>Marker</em> verwendet einzelne Landmarkpunkte (z.B. Eckfahnen, Elfmeterpunkte), <em>Segment</em> verwendet Liniensegmente. Wählen Sie den Typ, der Ihrem Setup entspricht, und klicken Sie dann auf <em>Erstellen</em>.",
+      "calibration_asset_btn": "Über diese Schaltfläche können Sie ein neues Kalibrierungsobjekt erstellen, das aktuelle speichern, ein vorhandenes aktualisieren oder zu einem anderen gespeicherten Asset wechseln.",
+      "object_btn": "Diese Schaltfläche zeigt Ihren aktuellen Kalibrierungstyp (<em>Marker</em> oder <em>Segmente</em>). Klicken Sie darauf, um die Video-Marker-Überlagerung ein- oder auszublenden – diese hebt Referenzlandmarken in der Spielfeldansicht hervor. Im <em>Marker</em>-Modus können Sie auch benutzerdefinierte Marker hinzufügen oder vorhandene entfernen.",
+      "object_info": "Klicken Sie mit der linken Maustaste auf einen Marker in der Spielfeldansicht, um eine vergrößerte Video-Überlagerung zu öffnen, in der Sie ihn präzise auf die entsprechende Videoposition setzen können. Klicken Sie mit der rechten Maustaste auf einen Marker, um ihn zu deaktivieren und die Videozuordnung zu entfernen.<br><br>Sobald alle Marker gesetzt sind, speichern Sie das Asset über die Schaltfläche <em>Kalibrierungsobjekt</em> und kehren dann zur Plugin-Oberfläche zurück, um DLT+RANSAC mit dem gespeicherten Asset auszuführen."
+    },
+    "posdata_bytetrack": {
+      "open_modal": "Klicken Sie hier, um die Plugin-Oberfläche zu öffnen.",
+      "select_plugin": "Wählen Sie das Plugin 'ByteTrack' aus der Liste.",
+      "plugin_overview": "Das ByteTrack-Plugin führt direkt im Video eine Objektverfolgung durch. Es erkennt und verfolgt Spieler und den Ball Frame für Frame und erzeugt Bounding Boxes für jedes erkannte Objekt.<br><br>Die Tracking-Ergebnisse können später zusammen mit einer Kamerakalibrierung (DLT+RANSAC) verwendet werden, um reale Positionsdaten zu berechnen, die wiederum die KPI-Berechnung ermöglichen.",
+      "fps": "Legen Sie die Bilder pro Sekunde (FPS) für das Tracking fest. Der Wert ist auf die Bildrate Ihres Videos voreingestellt, was die empfohlene Wahl ist. Damit wird sichergestellt, dass jedes Frame analysiert wird und keine Bewegung verloren geht.<br><br>Sie können den Wert frei anpassen: Ein <em>niedrigerer</em> FPS-Wert beschleunigt die Verarbeitung, kann jedoch dazu führen, dass der Tracker schnell bewegliche Objekte zwischen Frames verliert. Ein <em>höherer</em> FPS-Wert als die native Bildrate des Videos bringt keinen Vorteil, da keine zusätzlichen Informationen verfügbar sind.",
+      "run_plugin": "Klicken Sie auf 'Plugin ausführen', um das ByteTrack-Tracking zu starten. Der Fortschritt kann in der Verlaufsübersicht verfolgt werden. Nach Abschluss können die Tracking-Ergebnisse über das KPI-Berechnungs-Plugin zur Positionsdatenerzeugung verwendet werden."
+    },
+    "posdata_manual": {
+      "upload_open": "Klicken Sie auf die Upload-Schaltfläche, um den Dialog zum Hochladen von Positionsdaten zu öffnen.",
+      "upload_modal": "Füllen Sie die erforderlichen Felder aus: Geben Sie den Daten einen Namen, wählen Sie das Format und fügen Sie die entsprechende Datei hinzu. Je nach Format werden möglicherweise zusätzliche Felder wie Trennzeichen oder Koordinatenursprung angezeigt.",
+      "format_select": "Wählen Sie das Format, das Ihrer Positionsdatei entspricht. Verschiedene Anbieter verwenden unterschiedliche Konventionen – die Auswahl des richtigen Formats gewährleistet, dass die Daten korrekt geparst und konvertiert werden.",
+      "upload": "Sobald alle Felder ausgefüllt sind, klicken Sie auf 'Hochladen'. Das System führt anschließend automatisch das <em>Posdata Convert</em>-Plugin aus, um die Daten in das interne Format zu normalisieren und für Visualisierung und KPI-Berechnung verfügbar zu machen."
+    },
+    "kpi_computation": {
+      "open_modal": "Klicken Sie hier, um die Plugin-Oberfläche zu öffnen.",
+      "select_plugin": "Wählen Sie das Plugin 'KPI-Berechnung' aus der Liste.",
+      "plugin_overview": "Das KPI-Berechnungs-Plugin berechnet Leistungsmetriken wie zurückgelegte Distanz, Geschwindigkeit, metabolische Leistung, äquivalente Distanz und Zentroiddistanz auf Basis von Spieler-Positionsdaten.<br><br>Stellen Sie vor dem Ausführen dieses Plugins sicher, dass Positionsdaten verfügbar sind. Sie können diese entweder durch Ausführen von <em>ByteTrack</em> (Objektverfolgung) und <em>DLT+RANSAC</em> (Kamerakalibrierung) erhalten oder Positionsdaten manuell hochladen.",
+      "format_select": "Wählen Sie das Datenformat, das Ihrer Positionsdatenquelle entspricht. Die Auswahl von 'SportVid (ByteTrack)' aktiviert die ByteTrack-Run- und Kalibrierungs-Selektoren unten. Alle anderen Formate verwenden eine extern hochgeladene Positionsdatendatei.",
+      "tracking_data": "Wählen Sie die Positionsdaten aus, die für die Berechnung verwendet werden sollen. Dieses Dropdown listet die Positionsdateien auf, die für dieses Video hochgeladen oder generiert wurden.<br><br>Wenn Sie 'SportVid (ByteTrack)' als Format ausgewählt haben, sehen Sie stattdessen einen ByteTrack-Run- und Kalibrierungsobjekt-Selektor. Wählen Sie den entsprechenden Run und das während des Trackings verwendete Kalibrierungsobjekt.",
+      "advanced_options": "Das Feld 'Erweiterte Optionen' ermöglicht Ihnen die Konfiguration eines optionalen <em>Glättungsfilters</em> für die Positionsdaten vor der KPI-Berechnung. Sie können zwischen einem 'Butterworth-Tiefpassfilter' und einem 'Savitzky-Golay-Tiefpassfilter' wählen und deren Hyperparameter anpassen. Wenn Sie unsicher sind, ist 'Keiner' als Standard eine gute Wahl.",
+      "run_plugin": "Klicken Sie auf 'Plugin ausführen', um die KPI-Berechnung zu starten. Der Fortschritt kann in der Verlaufsübersicht verfolgt werden. Nach Abschluss erscheinen die KPI-Ergebnisse im KPI-Tab der Analyseansicht."
+    },
+    "top_view": {
+      "pitch_overview": "Die Draufsicht zeigt Ihre Positionsdaten, die auf eine 2D-Fläche projiziert sind – dies kann ein Fußballfeld, ein Handballfeld, ein Basketballfeld, eine Kletterwand oder ein anderes definiertes Spielfeld sein. Jede verfolgte Entität erscheint als farbiger Punkt, nach Team oder Zuordnung gruppiert und eingefärbt.",
+      "controls": "Wenn die Draufsicht nicht mit dem Videoplayer synchronisiert ist, können Sie die Wiedergabe unabhängig steuern. Verwenden Sie die <em>Wiedergabeschaltfläche</em>, um zu starten oder zu pausieren, und den <em>Schieberegler</em> unten, um zu einer beliebigen Position zu navigieren. Die Zeitanzeige neben der Download-Schaltfläche zeigt die aktuelle Position innerhalb des Positionsdatensatzes.",
+      "display_settings_open": "Klicken Sie auf <em>Anzeigeeinstellungen</em>, um das Anpassungsmenü zu öffnen.",
+      "display_settings": "Das Menü Anzeigeeinstellungen ermöglicht Ihnen, alles an der Darstellung der Draufsicht anzupassen:<br><br><strong>Wiedergabe:</strong> Synchronisierung mit dem Videoplayer ein- oder ausschalten oder einen Zeitversatz festlegen, um Positionsdaten und Video auszurichten.<br><br><strong>Sichtbarkeit:</strong> Bounding Boxes (falls verfügbar), Spieler-IDs auf den Punkten ein- oder ausblenden oder einzelne Spieler und Teams ein- oder ausblenden. Sie können auch Teamfarben anpassen.<br><br><strong>KPI-Überlagerungen</strong> (Untermenü \"KPIs anzeigen\"): Berechnete Metriken wie <em>Raumkontrolle</em> (Voronoi-basiert) oder <em>Effektiver Spielraum</em> (konvexe Hülle) direkt auf dem Spielfeld überlagern.<br><br><strong>Bereich & Raster:</strong> Zwischen verschiedenen vordefinierten Feldgrößen wechseln oder Längs- und Querlinien des Rasters konfigurieren.<br><br><strong>Positionsdaten:</strong> Eine neue Positionsdatei hochladen oder zu einem anderen bereits geladenen Datensatz wechseln.",
+      "download": "Klicken Sie auf die Download-Schaltfläche, um einen Screenshot des aktuellen Draufsicht-Frames als Bilddatei zu speichern."
+    },
+    "heatmap": {
+      "tab_switch": "Der Tab <em>Heatmap</em> visualisiert die räumliche Verteilung der Spielerpositionen über die Zeit.",
+      "pitch_overview": "Dies ist das Spielfeld. Die Heatmap oder Bewegungsspur wird direkt darüber gerendert. Der angezeigte Bereich kann angepasst werden – z.B. können Sie hereinzoomen, um nur eine Spielfeldhälfte anzuzeigen.",
+      "player_legend": "Unterhalb des Spielfelds können Sie auswählen, welche Spieler in der Visualisierung berücksichtigt werden sollen. Klicken Sie auf einen einzelnen Spielerpunkt, um ihn ein- oder auszublenden. Klicken Sie auf einen Teamnamen, um das gesamte Team auf einmal aus- oder abzuwählen.",
+      "settings": "Die Symbolleiste oberhalb des Spielfelds bietet mehrere Steuerungsmöglichkeiten:<br><br><strong>Feldgröße:</strong> Wechseln Sie zwischen dem gesamten Spielfeld und Teilbereichen wie einer Hälfte oder einem Strafraum.<br><strong>Anzeigemodus:</strong> Wechseln Sie zwischen einer klassischen <em>Heatmap</em> (Dichte-Überlagerung) und einer <em>Bewegungsspur</em> (individuelle Punktpfade).<br><strong>Speichern:</strong> Exportieren Sie einen hochauflösenden Screenshot der aktuellen Visualisierung.<br><strong>Zeitsynchronisierung:</strong> Synchronisieren Sie schnell den Start oder das Ende des Zeitfensters mit der aktuellen Videoposition oder wechseln Sie direkt zum gesamten Spiel, zur ersten oder zweiten Halbzeit.",
+      "time_selector": "Der Zeitbereichsselektor (rechts) und das Synchronisierungsmenü (links) wirken zusammen, um die Heatmap auf einen beliebigen Zeitraum zu filtern.<br><br>Ziehen Sie den linken oder rechten Griff am Bereichsselektor, um Start- und Endzeit festzulegen. Das Synchronisierungsmenü ermöglicht es Ihnen, einen Griff auf die <em>aktuelle Videoposition</em> für eine frameakkurate Auswahl einzurasten oder sofort zum <em>gesamten Spiel</em>, zur <em>ersten Halbzeit</em> oder zur <em>zweiten Halbzeit</em> zu springen."
+    },
+    "kpi_visualization": {
+      "tab_switch": "Der Tab <em>KPI</em> bietet zwei ergänzende Ansichten Ihrer berechneten Metriken. Lassen Sie uns beide erkunden.",
+      "table_view": "Die <strong>Tabellenansicht</strong> zeigt aggregierte Statistiken pro Spieler oder pro Team. Jedes Team erhält eine eigene Karte mit einer Datentabelle. Verwenden Sie die Spielerpunkte oben auf jeder Karte, um zu filtern, welche Spieler einbezogen werden. Wechseln Sie zwischen <em>Spieler-</em> und <em>Teamgruppierung</em> mithilfe der Symbolleiste.",
+      "chart_view": "Die <strong>Diagrammansicht</strong> zeigt KPI-Werte als Zeitreihe über das Spiel. Sie können mehrere Metriken gleichzeitig darstellen (z.B. zurückgelegte Distanz pro Frame neben der metabolischen Leistung). Verwenden Sie die Spielerauswahl-Legende unten, um einzelne Spieler oder ganze Teams ein- oder auszublenden.",
+      "settings": "Die Symbolleiste gibt Ihnen vollständige Kontrolle darüber, was angezeigt wird:<br><br><strong>Tabelle / Diagramm-Umschalter:</strong> Wechseln Sie zwischen der Tabellenzusammenfassung und dem Zeitreihendiagramm.<br><strong>Spieler- / Teamgruppierung:</strong> Gruppieren Sie Ergebnisse nach individuellem Spieler oder aggregieren Sie nach Team.<br><strong>KPI-Auswahl:</strong> Wählen Sie aus, welche Metriken angezeigt werden sollen. Im Diagrammmodus können Sie auch fensterbasierte Varianten auswählen (gleitendes Fenster über N Frames).<br><strong>Zonenauswahl:</strong> Schränken Sie die Analyse auf bestimmte Spielfeldzonen ein.<br><strong>Download:</strong> Exportieren Sie das aktuelle Diagramm als Bild (nur Diagrammmodus).<br><strong>Zeitsynchronisierung:</strong> Rasten Sie das Zeitfenster auf die Videoposition ein oder springen Sie zu einer vordefinierten Halbzeit.",
+      "time_selector": "Der Zeitbereichsselektor (rechts) und das Synchronisierungsmenü (links) wirken zusammen, um alle KPI-Daten auf einen beliebigen Zeitraum zu filtern.<br><br>Ziehen Sie den linken oder rechten Griff, um Start- und Endzeit festzulegen. Verwenden Sie das Synchronisierungsmenü, um einen Griff auf die <em>aktuelle Videoposition</em> für eine frameakkurate Auswahl einzurasten oder sofort zum <em>gesamten Spiel</em>, zur <em>ersten Halbzeit</em> oder zur <em>zweiten Halbzeit</em> zu springen."
+    },
+    "position_data_generation": {
+      "video_select": "Wählen Sie ein Video aus der Liste, um die Analyseansicht zu öffnen.",
+      "choose_path": "Wie möchten Sie Positionsdaten bereitstellen?",
+      "choose_manual": "Manueller Upload",
+      "choose_bytetrack": "ByteTrack (Automatisch)",
+      "manual_upload": "Verwenden Sie die Upload-Schaltfläche, um Ihre Positionsdatei zu importieren. Das Tutorial <em>Positionsdaten (Manuell)</em> bietet eine ausführliche Schritt-für-Schritt-Anleitung.",
+      "open_plugin_panel": "Öffnen Sie die Plugin-Oberfläche.",
+      "select_dlt": "Wählen Sie <em>DLT+RANSAC aus annotierten Landmarken</em> aus der Liste.",
+      "dlt_details": "Konfigurieren und führen Sie das DLT+RANSAC-Plugin hier aus. Wenn Sie noch kein Kalibrierungsobjekt haben, erstellen Sie zunächst eines – das Tutorial <em>DLT+RANSAC</em> führt Sie Schritt für Schritt durch diesen Prozess.",
+      "select_bytetrack": "Wählen Sie nun <em>ByteTrack</em> aus der Liste.",
+      "run_bytetrack": "Stellen Sie den FPS-Wert auf die Bildrate Ihres Videos ein und klicken Sie dann auf <em>Plugin ausführen</em>, um Positionsdaten zu generieren."
+    }
+  },
   "modal": {
     "error": {
       "title": "Fehler"
+    },
+    "admin": {
+      "delete_account": {
+        "title": "Konto löschen",
+        "confirmation": "Sind Sie sicher, dass Sie das Konto von Benutzer '{username}' löschen möchten?<br>Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "update_account": {
+        "title": "Konto bearbeiten",
+        "email": "E-Mail-Adresse",
+        "role": "Rolle",
+        "max_storage_size": "Max. Speichergröße",
+        "max_video_size": "Max. Videogröße",
+        "max_file_size": "Max. Dateigröße",
+        "roles": {
+          "user": "Benutzer",
+          "admin": "Admin"
+        }
+      }
+    },
+    "settings": {
+      "title": "Konto-Einstellungen",
+      "information": "Informationen",
+      "security": "Sicherheit",
+      "username": "Benutzername",
+      "joined": "Beigetreten",
+      "email": "E-Mail-Adresse",
+      "password": "Passwort",
+      "password_current": "Aktuelles Passwort",
+      "password_new": "Neues Passwort",
+      "rules": {
+        "min": "Mindestens 5 Zeichen.",
+        "uppercase": "Mindestens ein Großbuchstabe.",
+        "lowercase": "Mindestens ein Kleinbuchstabe.",
+        "number": "Mindestens eine Zahl.",
+        "special": "Mindestens ein Sonderzeichen."
+      },
+      "delete_account": "Konto löschen",
+      "success": "Passwort erfolgreich geändert",
+      "settings_success": "Konto erfolgreich aktualisiert",
+      "password_both_required": "Aktuelles und neues Passwort müssen beide ausgefüllt sein",
+      "invalid_current_password": "Ungültiges aktuelles Passwort",
+      "password_min": "Neues Passwort muss mindestens {min} Zeichen lang sein",
+      "password_invalid": "Passwort erfüllt die Anforderungen nicht",
+      "no_changes": "Keine Änderungen zum Speichern",
+      "update_failed": "Aktualisierung fehlgeschlagen"
+    },
+    "delete_account": {
+      "title": "Konto löschen",
+      "success": "Konto erfolgreich gelöscht"
     },
     "video": {
       "rename": {
@@ -235,43 +482,54 @@
       },
       "upload": {
         "title": "Neues Video hochladen",
-        "videos_uploaded": "Hochgeladene Videos: {numVideos} von {allowance}",
-        "upload_denied": "Sie haben die maximale Anzahl an Videos hochgeladen, die Ihnen erlaubt ist. Wenn Sie mehr benötigen, kontaktieren Sie bitte abc@xyz.de.",
+        "upload_denied": "Sie haben den für das Hochladen von Videos und Dateien verfügbaren maximalen Speicher erreicht. Wenn Sie mehr benötigen, wenden Sie sich bitte an y.paul@dshs-koeln.de.",
         "validate": {
           "file_required": "Bitte wählen Sie eine Datei mit einer maximalen Dateigröße von {maxSize} aus",
-          "file_exceeds": "Datei überschreitet die maximale Dateigröße von {maxSize}",
+          "file_exceeds": "Datei überschreitet Ihre maximale Dateigröße von {maxSize}",
           "file_format_invalid": "Datei liegt nicht im .mp4-Format vor."
         },
         "hint": "Maximale Dateigröße: {maxSize}",
-        "file": "Wählen Sie eine Videodatei [mp4]",
+        "file": "Videodatei auswählen [mp4]",
         "video_title": "Videotitel",
         "success": "Video erfolgreich hochgeladen",
         "division": "Division auswählen",
-        "position": "Aktuelle Position auswählen",
+        "position": "Aktuelle Platzierung auswählen",
         "age_group": "Altersgruppe auswählen",
         "total_teams": "Gesamtzahl der Teams auswählen",
         "out_of": "von",
-        "sport": "Sportart"
+        "sport": "Sportart",
+        "field_length": "Feldlänge [m]",
+        "field_width": "Feldbreite [m]",
+        "field_warning": "Falls keine Maße angegeben werden, werden Standardmaße von {defaultLength}x{defaultWidth} m verwendet. Dies kann die Genauigkeit der Analyse beeinflussen.",
+        "divisions": {
+          "liga_1": "Liga 1",
+          "liga_2": "Liga 2",
+          "liga_3": "Liga 3",
+          "liga_4": "Liga 4",
+          "liga_5": "Liga 5",
+          "liga_6": "Liga 6",
+          "liga_7": "Liga 7",
+          "liga_8": "Liga 8",
+          "liga_9": "Liga 9",
+          "liga_10": "Liga 10",
+          "other": "Sonstiges"
+        },
+        "age_groups": {
+          "men": "Herren",
+          "u19_male": "U19 Junioren (männlich)",
+          "u17_male": "U17 Junioren (männlich)",
+          "women": "Damen",
+          "u19_female": "U19 Juniorinnen (weiblich)",
+          "u17_female": "U17 Juniorinnen (weiblich)",
+          "other": "Sonstiges"
+        }
       },
       "delete": {
         "success": "Video erfolgreich gelöscht"
       }
     },
-    "delete_account": {
-      "success": "Account erfolgreich gelöscht"
-    },
-    "settings": {
-      "settings_success": "Konto erfolgreich aktualisiert",
-      "email_success": "E-Mail erfolgreich aktualisiert",
-      "password_changed": "Passwort erfolgreich geändert",
-      "invalid_current_password": "Ungültiges aktuelles Passwort",
-      "password_both_required": "Aktuelles und neues Passwort müssen beide ausgefüllt sein",
-      "password_min": "Neues Passwort muss mindestens {min} Zeichen lang sein",
-      "no_changes": "Keine Änderungen zum Speichern",
-      "update_failed": "Aktualisierung fehlgeschlagen"
-    },
     "export": {
-      "title": "Ergebnisse exportieren",
+      "title": "Export",
       "merged_csv": {
         "export_name": "Zusammengeführte CSV",
         "timeline_merge": "Annotationen zusammenführen",
@@ -339,9 +597,9 @@
       "groups": {
         "audio": "Audioanalyse",
         "aggregation": "Zeitleistenaggregation",
-        "color": "Farb-Analyse",
+        "color": "Farbanalyse",
         "face": "Gesichtsanalyse",
-        "identification": "Konzept-Erkennung",
+        "identification": "Konzepterkennung",
         "shot": "Shot-Analyse",
         "tracking": "Spieler- und Objektverfolgung"
       },
@@ -353,23 +611,25 @@
         "queued": "EINGEREIHT",
         "waiting": "WARTEND"
       },
-      "timeline_name": "Zeitleiste",
+      "advanced_options": "Erweiterte Optionen",
+      "timeline_name": "Zeitleistenname",
       "shot_timeline_name": "Schnittgrenzen aus Zeitleiste",
       "shot_timeline_hint": "Annotationen werden basierend auf den Schnittgrenzen der ausgewählten Zeitleiste erstellt.",
       "scalar_timeline_name": "Skalare Zeitleiste auswählen",
       "scalar_timeline_hint": "Die skalaren Werte der ausgewählten Zeitleisten werden aggregiert.",
-      "position_data_name": "Mannschaft auswählen",
-      "position_data_hint": "Exportiert die Daten für eine der Mannschaften oder für beide.",
-      "position_data_team_name": "Gruppen auswählen",
-      "position_data_team_hint": "Exportiert die ausgewählten Gruppen.",
+      "position_data_team_name": "Mannschaften auswählen",
+      "position_data_team_hint": "Exportiert die ausgewählten Mannschaften.",
       "position_data_attribute_name": "Zusätzliche Attribute",
-      "position_data_attribute_hint": "Zeitstempel (ms), Spieler-ID, X und Y sind immer enthalten. Optional weitere Attribute hinzufügen.",
-      "running_distance_team_name": "Teams auswählen",
-      "running_distance_team_hint": "Exportiert die ausgewählten Teams.",
-      "running_distance_attribute_name": "Zusätzliche Attribute",
-      "running_distance_attribute_hint": "Spieler-ID und Distanz sind immer enthalten. Optional weitere Attribute hinzufügen.",
-      "running_distance_start_frame_name": "Startframe auswählen",
-      "running_distance_end_frame_name": "Endframe auswählen",
+      "position_data_attribute_hint": "Zeitstempel (ms), Spieler-ID sowie X/Y-Koordinaten sind immer enthalten. Optional weitere Attribute hinzufügen.",
+      "kpi_team_name": "Teams auswählen",
+      "kpi_team_hint": "Exportiert die ausgewählten Teams.",
+      "kpi_names_name": "KPIs auswählen",
+      "kpi_names_hint": "Auswählen, welche KPIs enthalten sein sollen (mind. 1 erforderlich).",
+      "kpi_attribute_name": "Zusätzliche Attribute",
+      "kpi_attribute_hint": "Zeitstempel (ms) und Spieler-ID sind immer enthalten. Optional weitere Attribute hinzufügen.",
+      "kpi_aggregated_attribute_hint": "Spieler-ID ist immer enthalten. Optional weitere Attribute hinzufügen.",
+      "kpi_start_frame_name": "Startframe auswählen",
+      "kpi_end_frame_name": "Endframe auswählen",
       "fps": "Bilder pro Sekunde (FPS)",
       "normalize": "Ergebnisse normalisieren?",
       "aggregation": {
@@ -391,10 +651,33 @@
       },
       "calibration_static_dlt": {
         "plugin_name": "DLT+RANSAC aus annotierten Landmarken",
-        "plugin_description": "Dieses Plugin führt eine statische Kalibrierung des Videos mittels Direct Linear Transformation (DLT) + RANSAC durch. Es nutzt die annotierten Marker-Korrespondenzen eines Kalibrierungs-Assets, um die Homographiematrix zu schätzen.",
+        "plugin_description": "Dieses Plugin führt eine statische Kalibrierung des Videos mittels Direct Linear Transformation (DLT) + RANSAC durch. Es nutzt die annotierten Marker-Korrespondenzen eines Kalibrierungsobjekts, um die Homographiematrix zu schätzen.",
         "timeline_name": "Calibration Static DLT",
-        "calibration_id": "Kalibrierungs-Asset auswählen",
-        "calibration_id_hint": "Wählen Sie ein Kalibrierungs-Asset zur Verwendung bei der Kalibrierung aus."
+        "calibration_id": "Kalibrierungsobjekt auswählen",
+        "calibration_id_hint": "Wählen Sie ein Kalibrierungsobjekt zur Verwendung bei der Kalibrierung aus."
+      },
+      "posdata_convert": {
+        "plugin_name": "Positionsdaten konvertieren"
+      },
+      "kpi_computation": {
+        "plugin_name": "KPI-Berechnung",
+        "plugin_description": "Dieses Plugin berechnet ausgewählte Leistungskennzahlen (KPIs) auf Basis der Positionsdaten. Die Berechnung erfolgt mithilfe des <a href=\"https://floodlight.readthedocs.io/en/latest/index.html\">floodlight</a>-Pakets. Verfügbare KPIs: <br><br> <em>Zurückgelegte Distanz, Geschwindigkeit, Metabolische Leistung, Äquivalente Distanz & Distanz zum Team-Zentroid.</em>",
+        "tracking_data_id": "Positionsdaten auswählen",
+        "tracking_data_id_hint": "Wählen Sie einen Positionsdatensatz für die Berechnung aus.",
+        "bytetrack_run_id": "ByteTrack-Run auswählen",
+        "bytetrack_run_id_hint": "Wählen Sie einen abgeschlossenen ByteTrack-Run für die Berechnung aus.",
+        "bytetrack_run_none": "Keine abgeschlossenen ByteTrack-Runs gefunden.",
+        "calibration_id": "Kalibrierung auswählen",
+        "calibration_id_hint": "Wählen Sie das Kalibrierungsobjekt, das zur Abbildung von Videopositionen auf Draufsicht-Koordinaten verwendet wurde.",
+        "format": "Datenanbieter auswählen",
+        "filter_type": "Glättungsfilter",
+        "filter_none": "Keiner",
+        "filter_butterworth": "Butterworth-Tiefpassfilter",
+        "filter_savgol": "Savitzky-Golay-Tiefpassfilter",
+        "order": "Ordnung (Butterworth)",
+        "Wn": "Grenzfrequenz Wn (Butterworth)",
+        "window_length": "Fensterlänge (Savitzky-Golay)",
+        "poly_order": "Polynomordnung (Savitzky-Golay)"
       },
       "audio_waveform": {
         "plugin_name": "Audio-Wellenform",
@@ -404,7 +687,7 @@
       },
       "audio_rms": {
         "plugin_name": "Audio-Lautstärke (Root Mean Square)",
-        "plugin_description": "Dieses Plugin berechnet die Audio-Lautstärke, indem der Root Mean Square (RMS) des Audiosignals ermittelt wird. Es könnte beispielsweise Szenen mit Stille oder plötzlichen Lautstärkeänderungen in einem Film aufzeigen.",
+        "plugin_description": "Dieses Plugin berechnet die Audio-Lautstärke, indem der Root Mean Square (RMS) des Audiosignals ermittelt wird. Es kann beispielsweise Szenen mit Stille oder plötzlichen Lautstärkeänderungen in einem Film aufzeigen.",
         "timeline_name": "RMS-Lautstärke"
       },
       "whisper": {
@@ -413,26 +696,26 @@
       },
       "audio_frequency": {
         "plugin_name": "Audio-Spektrogramm",
-        "plugin_description": "Dieses Plugin berechnet das Spektrogramm des Audiosignals, das rhythmische Muster (z. B. Musik), Stimmen oder andere Klangmuster sichtbar machen kann.",
+        "plugin_description": "Dieses Plugin berechnet das Spektrogramm des Audiosignals, das rhythmische Muster (z.B. Musik), Stimmen oder andere Klangmuster sichtbar machen kann.",
         "timeline_name": "Audio-Spektrogramm",
         "sr": "Abtastrate",
         "n_fft": "Länge des FFT-Fensters (Fast Fourier Transform)"
       },
       "blip": {
         "plugin_name": "Visuelle Fragebeantwortung (InstructBLIP)",
-        "plugin_description": "Dieses Plugin verwendet das große Vision-Language-Modell <a href=\"https://arxiv.org/abs/2305.06500\">InstructBLIP</a>, das GPT-4 ähnlich ist, um Fragen zum Video zu beantworten. Es kann für verschiedene Zwecke genutzt werden, zum Beispiel um automatisch Konzepte im Video zu finden. Hier einige Beispiele: <br><br> <em>Zeigt dieses Bild ein Auto? Bitte antworten Sie mit Ja oder Nein!<br> Zeigt dieses Bild mindestens drei Personen? Bitte antworten Sie mit Ja oder Nein!<br> Wurde dieses Foto in einem Restaurant aufgenommen? Bitte antworten Sie mit Ja oder Nein!</em>",
+        "plugin_description": "Dieses Plugin verwendet das große Vision-Language-Modell <a href=\"https://arxiv.org/abs/2305.06500\">InstructBLIP</a>, das GPT-4 ähnlich ist, um Fragen zum Video zu beantworten. Es kann für verschiedene Zwecke genutzt werden, zum Beispiel um automatisch Konzepte im Video zu finden. Hier einige Beispiele: <br><br> <em>Zeigt dieses Bild ein Auto? Bitte antworten Sie mit Ja oder Nein! <br> Zeigt dieses Bild mindestens drei Personen? Bitte antworten Sie mit Ja oder Nein! <br> Wurde dieses Foto in einem Restaurant aufgenommen? Bitte antworten Sie mit Ja oder Nein!</em>",
         "timeline_name": "InstructBLIP Visual QA",
         "search_term": "Frage"
       },
       "clip": {
         "plugin_name": "Einzelobjekt-Klassifikation (CLIP)",
-        "plugin_description": "Dieses Plugin verwendet <a href=\"https://openai.com/research/clip\">OpenAI's CLIP (Contrastive Language-Image Pretraining) Modell</a>, das es ermöglicht, den Videoinhalt nach beliebigen visuellen Konzepten anhand einer textuellen Beschreibung zu durchsuchen. Die Beschreibung sollte das interessierende Konzept in einfachen, eindeutigen Worten darlegen. Hier ein Beispiel: <em>Ein Foto von einem Auto.</em> <br><br> CLIP funktioniert gut für eine Vielzahl von Konzepten (z. B. Objekte, Orte, Ereignisse, Tageszeiten, Wetterbedingungen usw.), die anhand eines einzelnen Videoframes identifiziert werden können. Um Konzepte zu identifizieren, die zeitlichen Kontext erfordern, wie menschliche Aktionen, empfehlen wir die Verwendung des Plugins \"Action Recognition\". <br><br> Bitte beachten Sie, dass das Plugin beim ersten Einsatz mehr Zeit benötigt. Nach dem ersten Einsatz werden die Ergebnisse deutlich schneller berechnet.",
+        "plugin_description": "Dieses Plugin verwendet <a href=\"https://openai.com/research/clip\">OpenAI's CLIP (Contrastive Language-Image Pretraining) Modell</a>, das es ermöglicht, den Videoinhalt nach beliebigen visuellen Konzepten anhand einer textuellen Beschreibung zu durchsuchen. Die Beschreibung sollte das interessierende Konzept in einfachen, eindeutigen Worten darlegen. Hier ein Beispiel: <em>Ein Foto von einem Auto.</em> <br><br> CLIP funktioniert gut für eine Vielzahl von Konzepten (z.B. Objekte, Orte, Ereignisse, Tageszeiten, Wetterbedingungen usw.), die anhand eines einzelnen Videoframes identifiziert werden können. Um Konzepte zu identifizieren, die zeitlichen Kontext erfordern, wie menschliche Aktionen, empfehlen wir die Verwendung des Plugins \"Action Recognition\". <br><br> Bitte beachten Sie, dass das Plugin beim ersten Einsatz mehr Zeit benötigt. Nach dem ersten Einsatz werden die Ergebnisse deutlich schneller berechnet.",
         "timeline_name": "Objektklassifikation",
         "search_term": "Konzeptbeschreibung"
       },
       "clip_ontology": {
         "plugin_name": "Mehrfachobjekt-Klassifikation (CLIP)",
-        "plugin_description": "Dieses Plugin verwendet <a href=\"https://openai.com/research/clip\">OpenAI's CLIP (Contrastive Language-Image Pretraining) Modell</a>, das es ermöglicht, den Videoinhalt nach einer Reihe beliebiger visueller Konzepte anhand einer CSV-Datei zu durchsuchen, in der der Konzeptname und eine zugehörige Beschreibung enthalten sind. Die Beschreibung sollte das interessierende Konzept in einfachen, eindeutigen Worten darlegen. Hier ein Beispiel: <br><br> \"tag\",\"ein Foto, aufgenommen bei Tageslicht\" <br> \"nacht\",\"ein Foto, aufgenommen während der Nacht\" <br><br> Es funktioniert gut für zahlreiche Konzepte (z. B. Objekte, Orte, Ereignisse, Tageszeiten, Wetterbedingungen usw.), die anhand eines einzelnen Frames identifiziert werden können. Um Konzepte zu identifizieren, die zeitlichen Kontext erfordern, wie menschliche Aktionen, empfehlen wir die Verwendung des Plugins \"Action Recognition\". <br><br> Bitte beachten Sie, dass das Plugin beim ersten Einsatz mehr Zeit benötigt. Danach werden die Ergebnisse wesentlich schneller berechnet.",
+        "plugin_description": "Dieses Plugin verwendet <a href=\"https://openai.com/research/clip\">OpenAI's CLIP (Contrastive Language-Image Pretraining) Modell</a>, das es ermöglicht, den Videoinhalt nach einer Reihe beliebiger visueller Konzepte anhand einer CSV-Datei zu durchsuchen, in der der Konzeptname und eine zugehörige Beschreibung enthalten sind. Die Beschreibung sollte das interessierende Konzept in einfachen, eindeutigen Worten darlegen. Hier ein Beispiel: <br><br> \"tag\",\"ein Foto, aufgenommen bei Tageslicht\" <br> \"nacht\",\"ein Foto, aufgenommen während der Nacht\" <br><br> Es funktioniert gut für zahlreiche Konzepte (z.B. Objekte, Orte, Ereignisse, Tageszeiten, Wetterbedingungen usw.), die anhand eines einzelnen Frames identifiziert werden können. Um Konzepte zu identifizieren, die zeitlichen Kontext erfordern, wie menschliche Aktionen, empfehlen wir die Verwendung des Plugins \"Action Recognition\". <br><br> Bitte beachten Sie, dass das Plugin beim ersten Einsatz mehr Zeit benötigt. Danach werden die Ergebnisse wesentlich schneller berechnet.",
         "timeline_name": "Objektklassifikation",
         "concepts": "Konzeptlexikon",
         "concepts_hint": "CSV-Datei mit Zeitleistenname und einer Beschreibung für jedes Konzept in einer Zeile"
@@ -448,11 +731,11 @@
         "plugin_description": "Dieses Plugin verwendet einen Clustering-Algorithmus (k-Means), um die Top-k dominanten Farben im Video zu bestimmen. Die Anzahl der dominanten Farben kann über den untenstehenden Schieberegler ausgewählt werden.",
         "timeline_name": "Dominante Farbe(n)",
         "slider": "Anzahl der dominanten Farbe(n)",
-        "buttongroup": "Zeige dominante Farbe(n) in:",
+        "buttongroup": "Dominante Farbe(n) anzeigen in:",
         "singletimeline": "Einzelzeitleiste",
         "multipletimelines": "Einzelne Zeitleisten",
         "max_resolution": "Maximale Bildauflösung",
-        "max_iter": "Maximale Anzahl Iterationen für k-Means Clustering"
+        "max_iter": "Maximale Anzahl Iterationen für k-Means-Clustering"
       },
       "color_brightness_analysis": {
         "plugin_name": "Videohelligkeit",
@@ -464,8 +747,8 @@
         "timeline_name": "Gesichter"
       },
       "face_clustering": {
-        "plugin_name": "Gesichtsklusterung",
-        "clustering_method_name": "Wählen Sie eine Clustermethode",
+        "plugin_name": "Gesichtsclusterung",
+        "clustering_method_name": "Clustermethode auswählen",
         "plugin_description": "Dieses Plugin führt automatisch einen Clustering-Algorithmus aus, um die dominanten Gesichter (Personen) im Video zu ermitteln. Die Auswahl des Schwellwerts für die Clusterbildung ist entscheidend, um gute Ergebnisse zu erzielen. Nach Durchführung der Clusterung sollte idealerweise jeder resultierende Cluster, der im Tab \"Gesichter\" sichtbar ist, nur Bilder derselben Person enthalten. Falls dies nicht der Fall ist, muss der Schwellwert gesenkt werden, sodass weniger Bilder in demselben Cluster gruppiert werden. <br><br>Beachten Sie, dass nach der Clusterung die Cluster manuell angepasst werden können und ein Personenkonstellationsdiagramm im Tab \"Gesichter\" erstellt werden kann. Zudem können Sie eine Zeitleiste für eine bestimmte Person erstellen, um zu sehen, wann diese im Video sichtbar ist.",
         "threshold": {
           "hint_left": "Mehr Cluster, höhere Clusterreinheit",
@@ -493,9 +776,9 @@
       },
       "face_identification": {
         "plugin_name": "Gesichtserkennung mithilfe eines Beispielbildes",
-        "plugin_description": "Dieses Plugin führt eine Gesichtserkennung basierend auf einem hochgeladenen Beispielbild der interessierenden Person durch. Bitte beachten Sie, dass das Bild als JPG-Datei hochgeladen werden muss und ausschließlich die Person enthalten sollte, an der Sie interessiert sind. Das Plugin könnte fehlschlagen, falls das Gesicht im hochgeladenen Foto nicht erkannt wird. Stellen Sie also bitte sicher, dass das Gesicht klar und vollständig sichtbar ist. <br><br> Um die Hauptcharaktere im Video automatisch zu identifizieren, empfehlen wir die Verwendung des Plugins „Face Clustering“.",
+        "plugin_description": "Dieses Plugin führt eine Gesichtserkennung basierend auf einem hochgeladenen Beispielbild der interessierenden Person durch. Bitte beachten Sie, dass das Bild als JPG-Datei hochgeladen werden muss und ausschließlich die Person enthalten sollte, an der Sie interessiert sind. Das Plugin könnte fehlschlagen, falls das Gesicht im hochgeladenen Foto nicht erkannt wird. Stellen Sie also sicher, dass das Gesicht klar und vollständig sichtbar ist. <br><br> Um die Hauptcharaktere im Video automatisch zu identifizieren, empfehlen wir die Verwendung des Plugins \"Face Clustering\".",
         "timeline_name": "Gesichtserkennung",
-        "query_images": "Wählen Sie ein Abfragebild (JPG-Format)",
+        "query_images": "Abfragebild auswählen (JPG-Format)",
         "query_images_hint": "*Das Bild sollte ausschließlich die Person enthalten, nach der Sie suchen möchten, in guter Auflösung und Qualität."
       },
       "ocr": {
@@ -504,14 +787,14 @@
         "search_term": "Suchbegriff"
       },
       "facesize": {
-        "plugin_name": "Gesichtgrößenanalyse",
+        "plugin_name": "Gesichtsgrößenanalyse",
         "timeline_name": "Gesichtsgröße"
       },
       "place_clustering": {
         "plugin_name": "Ortsclusterung",
         "plugin_description": "Dieses Plugin führt automatisch einen Clustering-Algorithmus aus, um die dominanten Orte im Video zu bestimmen. Die Auswahl des Schwellwerts für das Clustering ist entscheidend, um gute Ergebnisse zu erzielen. Nach Durchführung des Clusterings sollte idealerweise jeder resultierende Cluster, der im Tab \"Orte\" sichtbar ist, nur Bilder desselben Ortes enthalten. Falls dies nicht der Fall ist, muss der Schwellwert gesenkt werden, sodass weniger Bilder in demselben Cluster gruppiert werden. <br><br>Beachten Sie, dass nach dem Clustering die Cluster manuell angepasst werden können und ein Konstellationsdiagramm erstellt werden kann. Zudem können Sie eine Zeitleiste für einen bestimmten Ort erstellen, um zu sehen, wann dieser im Video sichtbar ist.",
-        "encoder_name": "Wählen Sie einen Bildencoder",
-        "clustering_method_name": "Wählen Sie eine Clustermethode",
+        "encoder_name": "Bildencoder auswählen",
+        "clustering_method_name": "Clustermethode auswählen",
         "threshold": {
           "hint_left": "Mehr Cluster, höhere Clusterreinheit",
           "hint_right": "Weniger Cluster, niedrigere Clusterreinheit"
@@ -525,7 +808,7 @@
         "plugin_name": "Ortsidentifikation"
       },
       "places_classification": {
-        "plugin_name": "Orterkennung",
+        "plugin_name": "Ortserkennung",
         "plugin_description": "Dieses Plugin verwendet ein Modell, das auf dem <a href=\"http://places2.csail.mit.edu/\">Places365-Datensatz</a> trainiert wurde, um Orte im Video auf drei Hierarchieebenen mit 3, 16 und 365 Ortskategorien zu identifizieren. Die erste Hierarchieebene umfasst die Orte: innen, außen (natürlich) und außen (künstlich). Die Mengen an Ortskategorien der weiteren Ebenen finden Sie <a href=\"https://docs.google.com/spreadsheets/d/1H7ADoEIGgbF_eXh9kcJjCs5j_r3VJwke4nebhkdzksg/edit#gid=142478777\">hier</a>.",
         "timeline_name": "Orte"
       },
@@ -536,20 +819,20 @@
       },
       "shot_density": {
         "plugin_name": "Shot-Dichte",
-        "plugin_description": "Dieses Plugin prognostiziert die Dichte der Schnitte in einem Video. Dadurch können Sie zwischen langsamen und schnelllebigen Szenen unterscheiden. Die Berechnung erfolgt auf Basis einer ausgewählten Zeitleiste, z. B. der Zeitleiste, die vom Plugin \"Schnittgrenzenerkennung\" erstellt wurde.",
+        "plugin_description": "Dieses Plugin prognostiziert die Dichte der Schnitte in einem Video. Dadurch können Sie zwischen langsamen und schnelllebigen Szenen unterscheiden. Die Berechnung erfolgt auf Basis einer ausgewählten Zeitleiste, z.B. der Zeitleiste, die vom Plugin \"Schnittgrenzenerkennung\" erstellt wurde.",
         "timeline_name": "Shot-Dichte",
         "input_timeline": "Zeitleiste auswählen",
         "kernel": "Gauß",
         "bandwidth": "Bandbreite"
       },
       "shot_scalar_annotation": {
-        "plugin_name": "Skalare Shot-Anmerkung",
+        "plugin_name": "Skalare Shot-Annotation",
         "plugin_description": "Dieses Plugin annotiert Schnitte basierend auf einer ausgewählten Schnittzeitleiste mit dem Durchschnittswert einer Zeitleiste mit skalaren Werten. Es kann hauptsächlich dazu verwendet werden, Informationen, die in TIB-AV-A erstellt wurden, in <a href=\"https://archive.mpi.nl/tla/elan\">ELAN</a> zu importieren.",
-        "timeline_name": "Skalare Shot-Anmerkung"
+        "timeline_name": "Skalare Shot-Annotation"
       },
       "shot_type_classification": {
         "plugin_name": "Klassifikation der Shot-Größe",
-        "plugin_description": "Dieses Plugin prognostiziert die Shot-Größen im Video basierend auf einem Deep-Learning-Modell. Es unterscheidet zwischen fünf Shot-Größen: Extreme Nahaufnahme, Nahaufnahme, Halbtotale, Totale und Weitaufnahme. <br><br>Durch Auswahl einer Zeitleiste, die Schnitte enthält – z. B. der vom Plugin \"Schnittgrenzenerkennung\" erstellten Zeitleiste – wird jeder Schnitt automatisch mit seiner dominanten Shot-Größe beschriftet.",
+        "plugin_description": "Dieses Plugin prognostiziert die Shot-Größen im Video basierend auf einem Deep-Learning-Modell. Es unterscheidet zwischen fünf Shot-Größen: Extreme Nahaufnahme, Nahaufnahme, Halbtotale, Totale und Weitaufnahme. <br><br>Durch Auswahl einer Zeitleiste, die Schnitte enthält – z.B. der vom Plugin \"Schnittgrenzenerkennung\" erstellten Zeitleiste – wird jeder Schnitt automatisch mit seiner dominanten Shot-Größe beschriftet.",
         "timeline_name": "Shot-Größen"
       },
       "thumbnail": {
@@ -564,12 +847,11 @@
     },
     "shortcut": {
       "title": "Kurzbefehle",
-      "search": "Kurzbefehl suchen",
+      "search": "Suchen",
       "annotation": "Annotation",
       "shortcut": "Kurzbefehl"
     },
     "timeline": {
-      "options": "Optionen",
       "export_result": {
         "title": "Zeitleistendaten exportieren",
         "csv": {
@@ -577,21 +859,18 @@
           "text": "Zeitleiste als CSV exportieren."
         }
       },
-      "menu": {
-        "title": "Optionen"
-      },
       "create": {
         "title": "Zeitleiste erstellen",
         "name": "Zeitleistenname"
       },
       "import": {
         "title": "Zeitleiste importieren",
-        "file": "Wählen Sie eine ELAN-Datei zum Importieren [eaf]"
+        "file": "ELAN-Datei zum Importieren auswählen [eaf]"
       },
       "duplicate": {
         "title": "Zeitleiste duplizieren",
         "name": "Zeitleistenname",
-        "includeannotations": "Mit Anmerkungen duplizieren?"
+        "includeannotations": "Mit Annotationen duplizieren?"
       },
       "rename": {
         "title": "Zeitleiste umbenennen",
@@ -619,44 +898,255 @@
       "plugin_name": "Plugin-Name",
       "date": "Datum",
       "progress": "Fortschritt",
-      "status": "Status"
+      "status": "Status",
+      "delete": {
+        "title": "Plugin-Durchläufe löschen",
+        "all": "Alle Plugin-Durchläufe löschen",
+        "plugin": "Plugin-bezogene Durchläufe löschen",
+        "video": "Video-bezogene Durchläufe löschen",
+        "selected": "Einzelne Durchläufe löschen",
+        "success": {
+          "all": "Alle Plugin-Durchläufe erfolgreich gelöscht",
+          "selected": "Ausgewählte Plugin-Durchläufe erfolgreich gelöscht"
+        },
+        "confirm": "Plugin-Durchläufe löschen? Dies kann nicht rückgängig gemacht werden.",
+        "select_plugin": "Plugin auswählen",
+        "select_individual": "Einzelne Durchläufe auswählen"
+      }
+    },
+    "tutorial": {
+      "title": "Anleitungen",
+      "show_steps": "Schritte anzeigen",
+      "show_missing_requirements": "Fehlende Voraussetzungen anzeigen",
+      "step": "Schritt",
+      "groups": {
+        "basics": "Grundlagen",
+        "position_data": "Positionsdaten",
+        "analysis": "Analyse",
+        "pipelines": "Pipelines"
+      },
+      "missing_requirements": {
+        "title": "Fehlende Voraussetzungen",
+        "video_uploaded": "Sie müssen zuerst ein Video hochladen.",
+        "analysis_view_opened": "Sie müssen die Analyseansicht für ein beliebiges Video öffnen.",
+        "position_data_selected": "Sie müssen zuerst Positionsdaten auswählen."
+      },
+      "upload_video": {
+        "name": "Video hochladen",
+        "description": "Videos hochladen und verwalten"
+      },
+      "analyse_video": {
+        "name": "Video analysieren",
+        "description": "Videos auswählen und analysieren"
+      },
+      "run_plugin": {
+        "name": "Plugin ausführen",
+        "description": "Plugin-Oberfläche öffnen und Plugins ausführen"
+      },
+      "check_history": {
+        "name": "Verlauf prüfen",
+        "description": "Plugin-Ausführungen ansehen und verwalten"
+      },
+      "export": {
+        "name": "Exportieren",
+        "description": "Zeitleisten, Positionsdaten und KPIs exportieren"
+      },
+      "dlt_ransac": {
+        "name": "DLT+RANSAC",
+        "description": "Kalibrierungsobjekts erstellen, bearbeiten und speichern"
+      },
+      "posdata_bytetrack": {
+        "name": "Positionsdaten (ByteTrack)",
+        "description": "Positionsdaten mit dem ByteTrack-Plugin generieren"
+      },
+      "posdata_manual": {
+        "name": "Positionsdaten (Manuell)",
+        "description": "Positionsdaten manuell hochladen"
+      },
+      "kpi_computation": {
+        "name": "KPI-Berechnung",
+        "description": "Leistungskennzahlen berechnen"
+      },
+      "top_view": {
+        "name": "Draufsicht-Visualisierung",
+        "description": "Positionsdaten in der Draufsicht visualisieren"
+      },
+      "heatmap": {
+        "name": "Heatmap-Visualisierung",
+        "description": "Positionsdaten als Heatmap visualisieren"
+      },
+      "kpi_visualization": {
+        "name": "KPI-Visualisierung",
+        "description": "KPIs in Zeitleisten und Draufsicht visualisieren"
+      },
+      "position_data_generation": {
+        "name": "Positionsdatengenerierung",
+        "description": "Kamera kalibrieren, Homographie berechnen, Spieler tracken"
+      }
     },
     "calibration_asset": {
+      "object_types": {
+        "marker": "Marker",
+        "segment": "Segmente"
+      },
+      "required": "{current} / {required} gesetzt (mindestens {required} {type} erforderlich).",
       "create": {
-        "title": "Kalibrierungs-Asset erstellen",
-        "template": "Sportart auswählen"
+        "title": "Kalibrierungsobjekt erstellen",
+        "sport": "Sportart auswählen",
+        "object_type": "Objekttyp auswählen"
       },
       "select": {
-        "title": "Kalibrierungs-Asset auswählen"
+        "title": "Kalibrierungsobjekt auswählen"
       },
       "save": {
-        "title": "Kalibrierungs-Asset speichern",
-        "name": "Name des Kalibrierungs-Assets",
-        "template": "Sportart auswählen",
-        "success": "Kalibrierungs-Asset erfolgreich gespeichert"
+        "title": "Kalibrierungsobjekt speichern",
+        "name": "Name des Kalibrierungsobjekts",
+        "success": "Kalibrierungsobjekt erfolgreich gespeichert"
       },
       "update": {
-        "title": "Kalibrierungs-Asset aktualisieren",
-        "success": "Kalibrierungs-Asset erfolgreich aktualisiert"
+        "title": "Kalibrierungsobjekt aktualisieren",
+        "success": "Kalibrierungsobjekt erfolgreich aktualisiert"
       },
       "delete": {
-        "success": "Kalibrierungs-Asset erfolgreich gelöscht"
+        "success": "Kalibrierungsobjekt erfolgreich gelöscht"
+      },
+      "video_marker": {
+        "warning": "Achtung: Video-Marker wurden bei {time} gesetzt. Das Hinzufügen eines neuen Markers überschreibt die vorhandenen."
       }
     },
     "position_data": {
       "upload": {
         "title": "Positionsdaten hochladen",
         "name": "Dateiname",
-        "file": "Wählen Sie eine Datei",
+        "format": "Datenanbieter auswählen",
+        "file": "Positionsdatei auswählen",
+        "meta_data": "Metadatendatei auswählen",
+        "hint": "Maximale Dateigröße: {maxSize}",
+        "delimiter": "Trennzeichen der CSV-Datei auswählen",
+        "origin": "Ursprung (0/0) des Koordinatensystems auswählen",
+        "team_id_ball": "Team-ID / Gruppenname des Balls eingeben (optional)",
+        "team_id_ref": "Team-ID / Gruppenname der Schiedsrichter eingeben (optional)",
+        "fps": {
+          "title": "Ziel-FPS (Reduzierung der Abtastrate auf Wert zwischen 1 und FPS des Datensatzes)",
+          "tooltip": "Höhere FPS-Werte liefern genauere Ergebnisse (identische Positionen werden perfekt beibehalten), die Berechnungen dauern jedoch länger."
+        },
+        "delimiters": {
+          "comma": "Komma",
+          "semicolon": "Semikolon",
+          "tab": "Tabulator",
+          "space": "Leerzeichen",
+          "pipe": "Pipe"
+        },
+        "origins": {
+          "kickoff": "Anstoßpunkt",
+          "bottom_left": "Unten-Links"
+        },
+        "upload_denied": "Sie haben den für das Hochladen von Videos und Dateien verfügbaren maximalen Speicher erreicht. Wenn Sie mehr benötigen, wenden Sie sich bitte an y.paul@dshs-koeln.de.",
+        "validate": {
+          "file_required": "Bitte wählen Sie eine Datei mit einer maximalen Dateigröße von {maxSize} aus",
+          "file_exceeds": "Datei überschreitet Ihre maximale Dateigröße von {maxSize}",
+          "file_format_invalid": "Datei liegt nicht im .mp4-Format vor."
+        },
         "success": "Positionsdaten erfolgreich hochgeladen"
       },
       "select": {
         "title": "Positionsdaten auswählen",
         "modes": {
-          "bytetrack": "ByteTrack Plugin",
-          "manual": "Manueller Upload"
-        }
+          "bytetrack": "ByteTrack-Plugin",
+          "manual": "Manuelles Hochladen"
+        },
+        "asset": "Kalibrierungsobjekt auswählen",
+        "bytetrack": "ByteTrack-Plugin auswählen",
+        "sport": "Sportart auswählen",
+        "area_size": "Feldgröße auswählen",
+        "uploaded_position_data": "Hochgeladene Positionsdaten auswählen"
+      },
+      "rename": {
+        "title": "Positionsdaten umbenennen",
+        "name": "Name des Kalibrierungsobjekts",
+        "success": "Positionsdaten erfolgreich umbenannt"
+      },
+      "delete": {
+        "success": "Positionsdaten erfolgreich gelöscht"
+      },
+      "entity_colors": {
+        "title": "Entitätsfarben ändern",
+        "other_entities": "Weitere Entitäten",
+        "entity_0": "Inaktiv",
+        "entity_1": "Ball",
+        "entity_2": "Schiedsrichter"
+      },
+      "offset": {
+        "title": "Versatz festlegen",
+        "label": "Versatzwert (ms)"
+      }
+    },
+    "bounding_box": {
+      "tooltip": {
+        "box_id": "Box-ID",
+        "player_id": "Spieler-ID",
+        "ref_id": "Schiedsrichter-ID",
+        "ball_id": "Ball-ID",
+        "team_id": "Team-ID"
+      },
+      "edit": {
+        "title": "Bounding Box bearbeiten",
+        "modes": {
+          "bbox": "Einzelne Box",
+          "info_bbox": "Nur auf diese Bounding Box anwenden",
+          "all_player": "Alle Spieler-Boxen",
+          "info_all_player": "Auf alle Bounding Boxes mit derselben Spieler-ID anwenden",
+          "all_team": "Alle Team-Boxen",
+          "info_all_team": "Auf alle Bounding Boxes mit derselben Team-ID anwenden"
+        },
+        "rules": {
+          "player_min": "Mindestwert ist 1",
+          "player_max": "Höchstwert ist 999",
+          "player_duplicate": "Diese Spieler-ID gehört einem anderen Spieler im aktuellen Frame"
+        },
+        "current_box_id": "Aktuelle Box-ID",
+        "current_player_id": "Aktuelle Spieler-ID",
+        "current_team_id": "Aktuelle Team-ID",
+        "new_player_id": "Neue Spieler-ID",
+        "new_team_id": "Neue Team-ID",
+        "team": {
+          "rest": "0 (Inaktiv)",
+          "ball": "1 (Ball)",
+          "referee": "2 (Schiedsrichter)",
+          "team": "{id} (Team)",
+          "new_team": "{id} (Neues Team)"
+        },
+        "new_team_id_picker": "Farbauswahl",
+        "single_success": "Bounding Box erfolgreich aktualisiert",
+        "all_success": "Bounding Boxes erfolgreich aktualisiert"
+      },
+      "delete": {
+        "single_success": "Bounding Box erfolgreich gelöscht",
+        "all_success": "Bounding Boxes erfolgreich gelöscht"
       }
     }
-  }
+  },
+  "admin_panel": {
+    "title": "Admin-Oberfläche",
+    "search": "Suchen",
+    "role": {
+      "label": "Rolle",
+      "all": "Alle",
+      "admin": "Admin",
+      "user": "Benutzer"
+    },
+    "user": {
+      "id": "ID",
+      "username": "Benutzername",
+      "email": "E-Mail",
+      "role": "Rolle",
+      "used_storage_size": "Genutzter Speicher",
+      "max_storage_size": "Max. Speichergröße",
+      "max_video_size": "Max. Videogröße",
+      "max_file_size": "Max. Dateigröße",
+      "date_joined": "Beigetreten",
+      "actions": "Aktionen"
+    }
+  },
+  "loading_screen": "Wird geladen ..."
 }

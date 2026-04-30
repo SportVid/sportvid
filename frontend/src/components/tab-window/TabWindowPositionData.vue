@@ -148,31 +148,81 @@
             </v-list-item-title>
           </v-list-item>
 
-          <v-list-item class="menu-item" @click="playerStore.toggleSliderSync">
+          <v-list-item class="menu-item" @click="showModalToggleEntities = true">
             <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("position_data.display_settings.video_sync") }}
-              <tab-window-icon
-                :class="{
-                  'text-disabled': !playerStore.isSynced,
-                  'text-red': playerStore.isSynced,
-                }"
+              {{ $t("position_data.display_settings.toggle_entities") }}
+            </v-list-item-title>
+          </v-list-item>
+
+          <v-list-item class="menu-item" @click="showModalPositionDataEntityColors = true">
+            <v-list-item-title class="d-flex justify-space-between">
+              {{ $t("position_data.display_settings.entity_colors") }}
+            </v-list-item-title>
+          </v-list-item>
+
+          <v-menu location="end" open-on-hover>
+            <template #activator="{ props }">
+              <v-list-item v-bind="props" class="menu-item">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.view_kpis.title") }}
+                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+            <v-list class="py-0" density="compact" width="180px">
+              <v-list-item class="menu-item" @click="topViewStore.viewSpaceControl">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.view_kpis.space_control") }}
+                  <tab-window-icon
+                    :class="{
+                      'text-disabled': !topViewStore.showSpaceControl,
+                      'text-red': topViewStore.showSpaceControl,
+                    }"
+                  >
+                    mdi-check
+                  </tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+              <v-list-item class="menu-item" @click="topViewStore.viewEffectivePlayingSpace">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.view_kpis.eps") }}
+                  <tab-window-icon
+                    :class="{
+                      'text-disabled': !topViewStore.showEffectivePlayingSpace,
+                      'text-red': topViewStore.showEffectivePlayingSpace,
+                    }"
+                  >
+                    mdi-check
+                  </tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+
+          <v-divider />
+
+          <v-menu location="end" open-on-hover>
+            <template #activator="{ props }">
+              <v-list-item v-bind="props" class="menu-item">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.area_size") }}
+                  <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+            <v-list class="py-0" density="compact">
+              <v-list-item
+                v-for="(areaData, areaSize) in topViewStore.currentSport.areas"
+                :key="areaSize"
+                class="menu-item"
+                @click="topViewStore.onSportChange(topViewStore.currentSport.title, areaSize)"
               >
-                mdi-check
-              </tab-window-icon>
-            </v-list-item-title>
-          </v-list-item>
-
-          <v-list-item class="menu-item" @click="showModalPositionDataTeamColors = true">
-            <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("position_data.display_settings.team_colors") }}
-            </v-list-item-title>
-          </v-list-item>
-
-          <v-list-item class="menu-item" @click="showModalPositionDataOffset = true">
-            <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("position_data.display_settings.offset") }}
-            </v-list-item-title>
-          </v-list-item>
+                <v-list-item-title class="my-0">
+                  {{ $t(areaData.titleKey) }}
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
 
           <v-menu location="end" open-on-hover>
             <template #activator="{ props }">

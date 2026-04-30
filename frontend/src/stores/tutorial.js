@@ -34,8 +34,14 @@ export const useTutorialStore = defineStore("tutorial", () => {
       tutorial.requirements.forEach((req) => {
         switch (req) {
           case "video-uploaded":
-            if (videoStore.all.length === 0) missing.push(tutorialRequirements[req]);
+            if (videoStore.all.length === 0) missing.push(tutorialRequirements.value[req]);
             break;
+          case "analysis-view-opened":
+            if (route.name !== "AnalysisView") missing.push(tutorialRequirements.value[req]);
+            break;
+          case "position-data-selected":
+            if (topViewStore.sortedFrameKeys.length === 0)
+              missing.push(tutorialRequirements.value[req]);
         }
       });
     }
@@ -46,7 +52,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     };
   }
 
-  const tutorials = [
+  const tutorials = computed(() => [
     {
       id: "position-data-generation",
       name: t("modal.tutorial.position_data_generation.name"),
@@ -87,9 +93,9 @@ export const useTutorialStore = defineStore("tutorial", () => {
       disabled: true,
       requirements: ["video-uploaded"],
     },
-  ];
+  ]);
   const availableTutorials = computed(() =>
-    tutorials.map((t) => {
+    tutorials.value.map((t) => {
       const result = evaluateRequirements(t);
       return {
         ...t,
@@ -99,8 +105,8 @@ export const useTutorialStore = defineStore("tutorial", () => {
     })
   );
 
-  const tutorialSteps = {
-    "position-data-generation": {
+  const tutorialSteps = computed(() => ({
+    "upload-video": {
       steps: [
         {
           id: "video-select",
@@ -257,14 +263,35 @@ export const useTutorialStore = defineStore("tutorial", () => {
         },
       ],
     },
-  };
+  }));
 
-  const tutorialRequirements = {
+  const tutorialRequirements = computed(() => ({
     "video-uploaded": {
       id: "video-uploaded",
       text: t("modal.tutorial.missing_requirements.video_uploaded"),
     },
-  };
+    "analysis-view-opened": {
+      id: "analysis-view-opened",
+      text: t("modal.tutorial.missing_requirements.analysis_view_opened"),
+    },
+    "position-data-selected": {
+      id: "position-data-selected",
+      text: t("modal.tutorial.missing_requirements.position_data_selected"),
+    },
+  }));
+
+  function createNoOverlayHandler() {
+    return {
+      show() {
+        const overlay = document.querySelector(".shepherd-modal-overlay-container");
+        if (overlay) overlay.style.display = "none";
+      },
+      hide() {
+        const overlay = document.querySelector(".shepherd-modal-overlay-container");
+        if (overlay) overlay.style.display = "";
+      },
+    };
+  }
 
   function createClickToNextStepHandler(currentStepIndex, forbiddenStepIds = []) {
     let targetEl = null;

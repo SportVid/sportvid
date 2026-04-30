@@ -229,7 +229,7 @@ const video = ref({
 });
 
 const sportOptions = computed(() =>
-  topViewStore.sports.map((s) => ({ title: s.title, value: s.key }))
+  topViewStore.sports.map((s) => ({ title: t(`sports.${s.key}.title`), value: s.key }))
 );
 const analysers = ref([
   {

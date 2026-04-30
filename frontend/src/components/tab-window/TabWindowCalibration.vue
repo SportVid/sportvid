@@ -631,8 +631,16 @@
             }}
           </v-btn>
         </template>
-        <v-list class="py-0" density="compact" width="220px">
-          <v-list-item class="menu-item" @click="calibrationAssetStore.toggleVideoAsset">
+        <v-list class="py-0" density="compact" width="200px">
+          <v-list-item
+            class="menu-item"
+            @click="
+              () => {
+                calibrationAssetStore.toggleVideoAsset();
+                showMarkerTypeMenu = false;
+              }
+            "
+          >
             <v-list-item-title class="d-flex justify-space-between">
               {{
                 calibrationAssetStore.calibrationAssetType === "marker"
