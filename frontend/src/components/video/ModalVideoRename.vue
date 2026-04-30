@@ -1,10 +1,13 @@
 <template>
   <v-dialog v-model="dialog" width="700">
     <template #activator="{ props }">
-      <v-btn size="small" v-bind="props" variant="outlined">
-        <v-icon class="mr-1">{{ "mdi-pencil" }}</v-icon>
-        {{ $t("button.rename") }}
-      </v-btn>
+      <v-tooltip :text="$t('button.rename')" location="top">
+        <template #activator="{ props: tooltipProps }">
+          <v-btn v-bind="{ ...props, ...tooltipProps }" variant="outlined">
+            <v-icon>mdi-pencil</v-icon>
+          </v-btn>
+        </template>
+      </v-tooltip>
     </template>
 
     <v-card>
