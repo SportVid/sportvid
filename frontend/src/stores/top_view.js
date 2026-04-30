@@ -31,6 +31,7 @@ export const useTopViewStore = defineStore(
       areas: {
         full: {
           title: t("sports.soccer.areas.full"),
+          titleKey: "sports.soccer.areas.full",
           image: require("../assets/top-view/pitch_soccer_full.png"),
           templateCrop: { x: [0, 1], y: [0, 1] },
           widthRel: 2100 / 2260,
@@ -38,6 +39,7 @@ export const useTopViewStore = defineStore(
         },
         halfLeft: {
           title: t("sports.soccer.areas.half_left"),
+          titleKey: "sports.soccer.areas.half_left",
           image: require("../assets/top-view/pitch_soccer_half.png"),
           templateCrop: { x: [0, 0.5], y: [0, 1] },
           widthRel: 1050 / 1210,
@@ -45,6 +47,7 @@ export const useTopViewStore = defineStore(
         },
         halfRight: {
           title: t("sports.soccer.areas.half_right"),
+          titleKey: "sports.soccer.areas.half_right",
           image: require("../assets/top-view/pitch_soccer_half.png"),
           templateCrop: { x: [0.5, 1], y: [0, 1] },
           widthRel: 1050 / 1210,
@@ -52,6 +55,7 @@ export const useTopViewStore = defineStore(
         },
         boxToBox: {
           title: t("sports.soccer.areas.box_to_box"),
+          titleKey: "sports.soccer.areas.box_to_box",
           image: require("../assets/top-view/pitch_soccer_box_to_box.png"),
           templateCrop: { x: [0.1575, 0.8425], y: [0, 1] },
           widthRel: 1440 / 1600,
@@ -59,6 +63,7 @@ export const useTopViewStore = defineStore(
         },
         doubleBoxLeft: {
           title: t("sports.soccer.areas.double_box_left"),
+          titleKey: "sports.soccer.areas.double_box_left",
           image: require("../assets/top-view/pitch_soccer_double_box.png"),
           templateCrop: { x: [0, 0.315], y: [0.2025, 0.7975] },
           widthRel: 660 / 820,
@@ -66,6 +71,7 @@ export const useTopViewStore = defineStore(
         },
         doubleBoxRight: {
           title: t("sports.soccer.areas.double_box_right"),
+          titleKey: "sports.soccer.areas.double_box_right",
           image: require("../assets/top-view/pitch_soccer_double_box.png"),
           templateCrop: { x: [0.685, 1], y: [0.2025, 0.7975] },
           widthRel: 660 / 820,
@@ -81,6 +87,7 @@ export const useTopViewStore = defineStore(
         areas: {
           full: {
             title: t("sports.soccer.areas.full"),
+            titleKey: "sports.soccer.areas.full",
             image: require("../assets/top-view/pitch_soccer_full.png"),
             templateCrop: { x: [0, 1], y: [0, 1] },
             widthRel: 2100 / 2260,
@@ -88,6 +95,7 @@ export const useTopViewStore = defineStore(
           },
           halfLeft: {
             title: t("sports.soccer.areas.half_left"),
+            titleKey: "sports.soccer.areas.half_left",
             image: require("../assets/top-view/pitch_soccer_half.png"),
             templateCrop: { x: [0, 0.5], y: [0, 1] },
             widthRel: 1050 / 1210,
@@ -95,6 +103,7 @@ export const useTopViewStore = defineStore(
           },
           halfRight: {
             title: t("sports.soccer.areas.half_right"),
+            titleKey: "sports.soccer.areas.half_right",
             image: require("../assets/top-view/pitch_soccer_half.png"),
             templateCrop: { x: [0.5, 1], y: [0, 1] },
             widthRel: 1050 / 1210,
@@ -102,6 +111,7 @@ export const useTopViewStore = defineStore(
           },
           boxToBox: {
             title: t("sports.soccer.areas.box_to_box"),
+            titleKey: "sports.soccer.areas.box_to_box",
             image: require("../assets/top-view/pitch_soccer_box_to_box.png"),
             templateCrop: { x: [0.1575, 0.8425], y: [0, 1] },
             widthRel: 1440 / 1600,
@@ -109,6 +119,7 @@ export const useTopViewStore = defineStore(
           },
           doubleBoxLeft: {
             title: t("sports.soccer.areas.double_box_left"),
+            titleKey: "sports.soccer.areas.double_box_left",
             image: require("../assets/top-view/pitch_soccer_double_box.png"),
             templateCrop: { x: [0, 0.315], y: [0.2025, 0.7975] },
             widthRel: 660 / 820,
@@ -116,6 +127,7 @@ export const useTopViewStore = defineStore(
           },
           doubleBoxRight: {
             title: t("sports.soccer.areas.double_box_right"),
+            titleKey: "sports.soccer.areas.double_box_right",
             image: require("../assets/top-view/pitch_soccer_double_box.png"),
             templateCrop: { x: [0.685, 1], y: [0.2025, 0.7975] },
             widthRel: 660 / 820,
@@ -130,6 +142,7 @@ export const useTopViewStore = defineStore(
         areas: {
           full: {
             title: t("sports.handball.areas.full"),
+            titleKey: "sports.handball.areas.full",
             image: require("../assets/top-view/court_handball_full.png"),
             templateCrop: { x: [0, 1], y: [0, 1] },
             widthRel: 2400 / 2879,
@@ -137,6 +150,7 @@ export const useTopViewStore = defineStore(
           },
           halfLeft: {
             title: t("sports.handball.areas.half_left"),
+            titleKey: "sports.handball.areas.half_left",
             image: require("../assets/top-view/court_handball_half_left.png"),
             templateCrop: { x: [0, 0.5], y: [0, 1] },
             widthRel: 1200 / 1680,
@@ -144,6 +158,7 @@ export const useTopViewStore = defineStore(
           },
           halfRight: {
             title: t("sports.handball.areas.half_right"),
+            titleKey: "sports.handball.areas.half_right",
             image: require("../assets/top-view/court_handball_half_right.png"),
             templateCrop: { x: [0.5, 1], y: [0, 1] },
             widthRel: 1200 / 1680,
@@ -158,6 +173,7 @@ export const useTopViewStore = defineStore(
         areas: {
           full: {
             title: t("sports.basketball.areas.full"),
+            titleKey: "sports.basketball.areas.full",
             image: require("../assets/top-view/court_basketball_full.png"),
             templateCrop: { x: [0, 1], y: [0, 1] },
             widthRel: 1719 / 2199,
@@ -165,6 +181,7 @@ export const useTopViewStore = defineStore(
           },
           halfLeft: {
             title: t("sports.basketball.areas.half_left"),
+            titleKey: "sports.basketball.areas.half_left",
             image: require("../assets/top-view/court_basketball_half_left.png"),
             templateCrop: { x: [0, 0.5], y: [0, 1] },
             widthRel: 861 / 1340,
@@ -172,6 +189,7 @@ export const useTopViewStore = defineStore(
           },
           halfRight: {
             title: t("sports.basketball.areas.half_right"),
+            titleKey: "sports.basketball.areas.half_right",
             image: require("../assets/top-view/court_basketball_half_right.png"),
             templateCrop: { x: [0.5, 1], y: [0, 1] },
             widthRel: 861 / 1340,
@@ -186,6 +204,7 @@ export const useTopViewStore = defineStore(
         areas: {
           full: {
             title: t("sports.climbing.areas.full"),
+            titleKey: "sports.climbing.areas.full",
             image: require("../assets/top-view/area_climbing_full.png"),
             templateCrop: { x: [0, 1], y: [0, 1] },
             widthRel: 1600 / 1760,

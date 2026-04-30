@@ -56,7 +56,7 @@
                     <v-select
                       v-model="selectedPlugin"
                       :items="pluginTypes"
-                      label="Select plugin"
+                      :label="$t('modal.history.delete.select_plugin')"
                       item-title="type"
                       item-value="id"
                       variant="solo-filled"
@@ -86,7 +86,7 @@
                     <v-select
                       v-model="selectedIds"
                       :items="props.pluginRuns"
-                      label="Select individual plugin runs"
+                      :label="$t('modal.history.delete.select_individual')"
                       item-title="type"
                       item-value="id"
                       multiple

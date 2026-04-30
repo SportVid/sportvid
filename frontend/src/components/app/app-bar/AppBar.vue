@@ -210,7 +210,7 @@ const loggedIn = computed(() => userStore.loggedIn);
 
 const videoView = computed(() => route.name === "VideoView");
 const analysisView = computed(() => route.name === "AnalysisView");
-const termsOfUseView = computed(() => route.name === "TermsOfUseView");
+const termsOfUseView = computed(() => route.name === "termsOfUseView");
 const guidelinesView = computed(() => route.name === "GuidelinesView");
 
 const showModalPlugin = ref(false);

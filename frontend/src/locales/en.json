@@ -84,7 +84,7 @@
   "app_bar": {
     "home": "Home",
     "video_view": "Videos",
-    "plugin_menu": "Run Plugin",
+    "plugin_menu": "Plugins",
     "history_menu": "History",
     "shortcut_menu": "Shortcuts",
     "export_menu": "Export",
@@ -530,7 +530,7 @@
       }
     },
     "export": {
-      "title": "Export Results",
+      "title": "Export",
       "merged_csv": {
         "export_name": "Merged CSV",
         "timeline_merge": "Merge annotations",
@@ -933,7 +933,9 @@
           "all": "All plugin runs successfully deleted",
           "selected": "Selected plugin runs successfully deleted"
         },
-        "confirm": "Delete plugin runs? This cannot be undone."
+        "confirm": "Delete plugin runs? This cannot be undone.",
+        "select_plugin": "Select plugin",
+        "select_individual": "Select individual plugin runs"
       }
     },
     "tutorial": {
@@ -941,10 +943,6 @@
       "show_steps": "Show Steps",
       "show_missing_requirements": "Show missing requirements",
       "step": "Step",
-      "tabs": {
-        "pipelines": "Pipelines",
-        "singles": "Single Steps"
-      },
       "groups": {
         "basics": "Basics",
         "position_data": "Position Data",
