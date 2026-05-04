@@ -15,8 +15,8 @@ service Analyser {
   rpc get_plugin_status(GetPluginStatusRequest)
       returns (GetPluginStatusResponse);
   rpc run_pipeline(RunPipelineRequest) returns (RunPipelineResponse);
-  rpc get_pipeline_status(GetPieplineStatusRequest)
-      returns (GetPieplineStatusResponse);
+  rpc get_pipeline_status(GetPipelineStatusRequest)
+      returns (GetPipelineStatusResponse);
 }
 
 enum DataType {
@@ -56,6 +56,7 @@ enum PluginDataType {
   TRACKING_DATA = 19;
   POS_DATA = 20;
   FL_DATA = 21;
+  KPI_DATA = 22;
 }
 
 message PluginInfoData {

@@ -49,18 +49,21 @@ class PluginRunResultList(View):
 
                 query_dict["plugin_run"] = plugin_run_db
 
-            analyses = PluginRunResult.objects.filter(**query_dict)
+            analyses = PluginRunResult.objects.filter(**query_dict).select_related("plugin_run")
             # print("PluginRunResultList")
             # for x in analyses:
             #     print(f"\t {x.id.hex}")
 
             add_results = request.GET.get("add_results", True)
+            exclude_types = request.GET.getlist("exclude_types[]")
             if add_results:
                 # print("A", flush=True)
 
                 entries = []
                 for x in analyses:
-                    # print("B", flush=True)
+                    if exclude_types and PluginRunResult.TYPE.get(x.type) in exclude_types:
+                        entries.append({**x.to_dict()})
+                        continue
                     cache_path = os.path.join(settings.DATA_CACHE_ROOT, f"{x.id}.json")
                     # print("C", flush=True)
                     # print(cache_path, flush=True)
@@ -70,7 +73,7 @@ class PluginRunResultList(View):
                             with open(cache_path, "r") as f:
                                 entries.append(json.load(f))
                                 cached = True
-                    except Exception:
+                    except Exception as e:
                         logger.exception(f"Cache couldn't read {e}")
                     if cached:
                         continue
@@ -86,7 +89,7 @@ class PluginRunResultList(View):
                         try:
                             with open(cache_path, "w") as f:
                                 json.dump(result_dict, f)
-                        except Exception:
+                        except Exception as e:
                             logger.exception(f"Cache couldn't write {e}")
 
                         entries.append(result_dict)

@@ -220,7 +220,7 @@ watch(
 );
 
 const deleteReferenceObject = (id) => {
-  calibrationAssetStore.deleteReferenceObject(id);
+  calibrationAssetStore.deleteCustomMarker(id);
   dialog.value = false;
 };
 </script>

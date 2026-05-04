@@ -520,13 +520,13 @@ def main():
         if "inference" not in config:
             config["inference"] = {
                 "type": "ray",
-                "params": {"host": "inference_ray", "status_port": 52365, "port": 8000},
+                "params": {"host": "inference_ray", "status_port": 52365, "port": 8001},
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
                 "host": "inference_ray",
                 "status_port": 52365,
-                "port": 8000,
+                "port": 8001,
             }
         config["inference"]["params"]["host"] = args.inference_ray_host
 
@@ -534,13 +534,13 @@ def main():
         if "inference" not in config:
             config["inference"] = {
                 "type": "ray",
-                "params": {"host": "inference_ray", "status_port": 52365, "port": 8000},
+                "params": {"host": "inference_ray", "status_port": 52365, "port": 8001},
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
                 "host": "inference_ray",
                 "status_port": 52365,
-                "port": 8000,
+                "port": 8001,
             }
         config["inference"]["params"]["status_port"] = args.inference_ray_status_port
 
@@ -548,13 +548,13 @@ def main():
         if "inference" not in config:
             config["inference"] = {
                 "type": "ray",
-                "params": {"host": "inference_ray", "status_port": 52365, "port": 8000},
+                "params": {"host": "inference_ray", "status_port": 52365, "port": 8001},
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
                 "host": "inference_ray",
                 "status_port": 52365,
-                "port": 8000,
+                "port": 8001,
             }
         config["inference"]["params"]["port"] = args.inference_ray_port
     # print(config, flush=True)

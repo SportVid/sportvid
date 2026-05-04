@@ -20,7 +20,9 @@ default_parameters = {
     "fps": -1,
     "origin": "kickoff",
     "field_length": 105.,
-    "field_width": 68.
+    "field_width": 68.,
+    "team_id_ball": "ball",
+    "team_id_ref": "",
 }
 
 requires = {
@@ -52,10 +54,18 @@ class PosDataConvert(
 ):
     def __init__(self, config=None, **kwargs):
         super().__init__(config, **kwargs)
-        
-        from collections import defaultdict
-        self.meta_dict = defaultdict(team_ids={}, player_ids={})
+
+        self.meta_dict = self._fresh_meta_dict()
         self.py_dict = {}
+
+    @staticmethod
+    def _fresh_meta_dict():
+        return {
+            "team_ids": {},
+            "player_ids": {},
+            "ref_ids": {},
+            "ball_ids": {},
+        }
 
     def parse_knx(self, t_data, parameters):
         import pandas as pd
@@ -82,7 +92,21 @@ class PosDataConvert(
         
         df["pos_x"] = df["pos_x"].apply(lambda x: round(x, ndigits=2))
         df["pos_y"] = df["pos_y"].apply(lambda x: round(x, ndigits=2))
-        
+
+        # Tag entity kind via user-supplied team_name aliases (defaults: ball="ball", ref="").
+        ball_alias = (parameters.get("team_id_ball") or "").strip().lower()
+        ref_alias = (parameters.get("team_id_ref") or "").strip().lower()
+        def _kind(tname):
+            if not isinstance(tname, str):
+                return "player"
+            tn = tname.strip().lower()
+            if ball_alias and tn == ball_alias:
+                return "ball"
+            if ref_alias and tn == ref_alias:
+                return "ref"
+            return "player"
+        df["entity_kind"] = df["team_name"].apply(_kind)
+
         return df, parameters["field_length"], parameters["field_width"]
         
     def parse_dfl(self, t_data, m_data):
@@ -176,11 +200,26 @@ class PosDataConvert(
                 pnumber = player_el.get("ShirtNumber", "")
                 player_name_lookup[pid] = pname
                 player_number_lookup[pid] = int(pnumber) if pnumber.isdigit() else pname
-        
+
+        ref_name_lookup = {}
+        for ref_el in root.findall("./MatchInformation/Referees/Referee"):
+            pid = ref_el.get("PersonId")
+            pname = ref_el.get("Shortname") or pid
+            ref_name_lookup[pid] = pname
+
         # Map names and numbers into DataFrame
         df["team_name"] = df["team_id"].map(team_name_lookup)
         df["player_name"] = df["player_id"].map(player_name_lookup)
         df["player_number"] = df["player_id"].map(player_number_lookup)
+
+        # Tag entity kind: ball (TeamId=='BALL'), ref (PersonId in referees), else player.
+        ref_ids = set(ref_name_lookup.keys())
+        df["entity_kind"] = "player"
+        df.loc[df["team_id"] == "BALL", "entity_kind"] = "ball"
+        df.loc[df["player_id"].isin(ref_ids), "entity_kind"] = "ref"
+        # Refs lack a team_name (their FrameSet TeamId is typically empty); use shortname for display.
+        ref_mask = df["entity_kind"] == "ref"
+        df.loc[ref_mask, "player_name"] = df.loc[ref_mask, "player_id"].map(ref_name_lookup)
 
         self.meta_dict.update({
             "kickoff_time": int(datetime.fromisoformat(root.findall("./MatchInformation/General")[0].attrib["KickoffTime"]).timestamp()*1000),
@@ -205,9 +244,10 @@ class PosDataConvert(
         import pandas as pd
         pd.set_option('future.no_silent_downcasting', True)
         
-        from collections import defaultdict
-        from pandas.api.types import is_numeric_dtype
-        
+        # Reset instance state to prevent data leaking between calls
+        self.meta_dict = self._fresh_meta_dict()
+        self.py_dict = {}
+
         if "format" not in parameters:
             raise ValueError("'format' is required for plugin execution.")
         
@@ -248,7 +288,7 @@ class PosDataConvert(
                 df = df.drop('player_name', axis=1)
             if 'player_number' in df.columns:
                 for pid, pnum in df[['player_id', 'player_number']].drop_duplicates().values:
-                    player_number_map[pid] = pnum
+                    player_number_map[pid] = int(pnum) if pd.notna(pnum) else None
                 df = df.drop('player_number', axis=1)
             if 'team_name' in df.columns:
                 for tid, tname in df[['team_id', 'team_name']].drop_duplicates().values:
@@ -269,10 +309,11 @@ class PosDataConvert(
                 df["pos_y"] = (MAX_Y - df["pos_y"]) / PITCH_SIZE_Y  # inverted Y-axis, images start at top left corner
         
             # ---- FPS filtering: checks if specified fps parameter is in an applicable range
-            unique_timestamps = df[df.columns[0]].unique()  # all unique timestamps, in order of appearance
+            unique_timestamps = np.sort(df[df.columns[0]].unique())
             diffs = unique_timestamps[1:] - unique_timestamps[:-1]
-            freq = np.median(diffs)
+            freq = np.median(diffs)  # compute median frame time to determine original fps, more robust to outliers than mean
             origin_fps = int(np.rint(1000./freq))
+            logging.info(f"posdata_convert: freq={freq:.4f}ms, origin_fps={origin_fps}, requested_fps={parameters['fps']}")
             actual_fps = origin_fps
             
             step_size = 0
@@ -295,12 +336,12 @@ class PosDataConvert(
                     df_players = df.groupby(
                         'player_id', group_keys=False
                     ).apply(
-                        lambda x: x.to_numpy(),  # type: ignore
+                        lambda x: x[['pos_x', 'pos_y']].to_numpy(),  # type: ignore
                         include_groups=False
                     )
                     actualp, subsampled = None, None
                     for player_id in df["player_id"].unique():
-                        actualp = np.array(df_players[player_id][:,3:], dtype=np.float32)  # [[x,y]]
+                        actualp = np.array(df_players[player_id], dtype=np.float32)  # [[x,y]]
                         ap_idx = np.arange(actualp.shape[0])
                         subs_idx = ap_idx[::step_size]
                         N = actualp.shape[0]; M = actualp.shape[1]
@@ -352,39 +393,71 @@ class PosDataConvert(
                     selected_timestamps = unique_timestamps[::step_size]
                     df = df[df[df.columns[0]].isin(selected_timestamps)]
 
-            unique_teams = list(df["team_id"].unique())
-            if parameters["format"] == "kinexon":
-                ball_name = parameters["team_id_ball"]
-                # reverse lookup: find team_id whose team_name matches the ball parameter
-                ball_id = next((tid for tid, tname in team_name_map.items() if tname == ball_name), ball_name)
-            elif parameters["format"] == "dfl":
-                ball_id = 'BALL'
-                self.meta_dict["kickoff_time"] = int( # type: ignore
-                    self.meta_dict["kickoff_time"] - unique_timestamps.min()) 
-            
-            # ---- map team ids (build full mapping first, then apply at once to avoid category collisions)
-            team_id_mapping = {ball_id: 1}
-            self.meta_dict["team_ids"].update({ 1 : {"id": ball_id, "name": team_name_map.get(ball_id) or str(ball_id)}})
-            next_id = 2
-            for team_label in unique_teams:
-                if team_label == ball_id:
+            if parameters["format"] == "dfl":
+                self.meta_dict["kickoff_time"] = int(  # type: ignore
+                    self.meta_dict["kickoff_time"] - unique_timestamps.min())
+
+            _n = lambda v, f: v if pd.notna(v) else str(f)
+
+            # entity_kind tagging is set in parse_knx/parse_dfl. Default everything to 'player' if missing.
+            if 'entity_kind' not in df.columns:
+                df['entity_kind'] = 'player'
+
+            # ---- New team_id scheme: 1=ball, 2=refs, 3+=teams (sorted by player count desc)
+            ball_orig = df.loc[df['entity_kind'] == 'ball', 'team_id'].unique().tolist()
+            ref_orig = df.loc[df['entity_kind'] == 'ref', 'team_id'].unique().tolist()
+            player_team_counts = (
+                df.loc[df['entity_kind'] == 'player']
+                .groupby('team_id', observed=True)['player_id'].nunique()
+                .sort_values(ascending=False)
+            )
+            teams_sorted = player_team_counts.index.tolist()
+
+            team_id_mapping = {}
+            for tid in ball_orig:
+                team_id_mapping[tid] = 1
+            if ball_orig:
+                self.meta_dict["team_ids"][1] = {"id": ball_orig[0], "name": "Ball"}
+            for tid in ref_orig:
+                team_id_mapping[tid] = 2
+            if ref_orig:
+                self.meta_dict["team_ids"][2] = {
+                    "id": ref_orig[0] if ref_orig[0] else "_refs",
+                    "name": "Referees",
+                }
+            for new_tid, orig_tid in enumerate(teams_sorted, start=3):
+                team_id_mapping[orig_tid] = new_tid
+                self.meta_dict["team_ids"][new_tid] = {
+                    "id": orig_tid,
+                    "name": _n(team_name_map.get(orig_tid), orig_tid),
+                }
+            df["team_id"] = df["team_id"].map(team_id_mapping).astype('int16')
+
+            # ---- Per-kind entity_id mapping (each kind gets its own 1..N namespace).
+            # Frame data carries (entity_id, team_id); team_id (1=ball, 2=ref, ≥3=player) selects which dict to look up.
+            kind_to_dict = {'player': "player_ids", 'ref': "ref_ids", 'ball': "ball_ids"}
+            full_pid_map = {}
+            for kind, dict_key in kind_to_dict.items():
+                mask = df['entity_kind'] == kind
+                if not mask.any():
                     continue
-                team_id_mapping[team_label] = next_id
-                self.meta_dict["team_ids"].update({ next_id : {"id": team_label, "name": team_name_map.get(team_label) or str(team_label)}})
-                next_id += 1
-            df["team_id"] = df["team_id"].map(team_id_mapping).astype('category')
-            
-            # ---- map player ids
-            unique_players = df["player_id"].unique()
-            player_id_mapping = {}
-            for i, player_label in enumerate(unique_players, start=1):
-                player_id_mapping[player_label] = i
-                self.meta_dict["player_ids"].update({ i : {
-                    "id": player_label,
-                    "name": player_name_map.get(player_label) or str(player_label),
-                    "number": player_number_map.get(player_label, player_label)
-                }})
-            df["player_id"] = df["player_id"].map(player_id_mapping).astype('category')
+                origs = df.loc[mask, 'player_id'].unique()
+                kind_map = {orig: new_id for new_id, orig in enumerate(origs, start=1)}
+                full_pid_map.update(kind_map)
+                for orig_pid, new_id in kind_map.items():
+                    new_team_id = int(df.loc[mask & (df['player_id'] == orig_pid), 'team_id'].iloc[0])
+                    entry = {"id": orig_pid}
+                    if kind == 'player':
+                        entry["name"] = _n(player_name_map.get(orig_pid), orig_pid)
+                        entry["number"] = player_number_map.get(orig_pid, orig_pid)
+                        entry["team_id"] = new_team_id
+                    elif kind == 'ref':
+                        entry["name"] = _n(player_name_map.get(orig_pid), orig_pid)
+                    self.meta_dict[dict_key][new_id] = entry
+            df["player_id"] = df["player_id"].map(full_pid_map).astype('int16')
+
+            # entity_kind is no longer needed in the per-frame payload (kind is derivable from team_id).
+            df = df.drop('entity_kind', axis=1)
 
             # --- old dict conversion
             # grouped_data = df.groupby(
@@ -401,6 +474,7 @@ class PosDataConvert(
             #     py_dict[corrected_series[i]] = py_dict.pop(k)
             
             # --- new dict conversion
+            df = df.dropna(subset=['pos_x', 'pos_y'])
             grouped_data = {}
             for timestamp, group in df.groupby('timestamp', group_keys=False):
                 grouped_data[timestamp] = [list(row[1:]) for row in group.itertuples(index=False)]
@@ -433,4 +507,3 @@ class PosDataConvert(
             self.update_callbacks(callbacks, progress=1.0)
         
         return {"pos_data": pos_data}
-        

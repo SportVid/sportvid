@@ -1,11 +1,11 @@
 proxy_location: EveryNode
 http_options:
   host: 0.0.0.0
-  port: 8000  # TODO: using ${BACKEND_PORT} fails to create inference server...
+  port: 8000
 logging_config:
-  encoding: TEXT        # or JSON
-  log_level: WARNING    # DEBUG, INFO, WARNING, ERROR, CRITICAL
-  logs_dir: null        # or a custom path; null = default
+  encoding: TEXT # or JSON
+  log_level: WARNING # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logs_dir: null # or a custom path; null = default
   enable_access_log: false
 
 applications:

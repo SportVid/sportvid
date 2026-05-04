@@ -46,9 +46,22 @@ class CalibrationStaticDlt(Task):
     ):
         # get point correspondences from database and pass them as plugin parameters
         data_db = CalibrationAssets.objects.get(id=parameters.get("calibration_id"))
+        point_correspondences = [
+            p for p in data_db.object_data.all()
+            if (
+                p.video_coords_rel
+                and p.video_coords_rel[0].get("x") is not None
+                and p.video_coords_rel[0].get("y") is not None
+                and p.comp_area_coords_rel
+                and p.comp_area_coords_rel[0].get("x") is not None
+                and p.comp_area_coords_rel[0].get("y") is not None
+            )
+        ]
 
-        point_correspondences = data_db.object_data.all()
-        # logging.error(point_correspondences)
+        if len(point_correspondences) == 0:
+            raise Exception("No point correspondences fetched")
+        if len(point_correspondences) < 4:
+            raise Exception("Not enough valid point correspondences (min 4 required)")
         
         # convert point correspondences
         point_correspondences_dict = []
@@ -63,8 +76,6 @@ class CalibrationStaticDlt(Task):
                     "y": point.video_coords_rel[0]["y"]
                 }
             })
-        if len(point_correspondences_dict) == 0:
-            raise Exception("No point correspondences fetched")
         # all parameters are serialized based on strings when calling run_analyser
         plugin_parameters = {
             "point_correspondences": json.dumps(point_correspondences_dict),

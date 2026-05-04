@@ -101,7 +101,7 @@ class Video(models.Model):
     total_number_of_teams = models.IntegerField(blank=True, null=True)
     age_group = models.CharField(blank=True, null=True)
     sport = models.CharField(max_length=64, blank=True, null=True)
-
+    task_id = models.CharField(max_length=256, blank=True, null=True)
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {
@@ -156,7 +156,8 @@ class TrackingData(models.Model):
     meta_ext = models.CharField(default="", max_length=256)
     date = models.DateTimeField(auto_now_add=True)
     file_type = models.CharField(default="", max_length=256)
-    
+    delimiter = models.CharField(default=";", max_length=10)
+
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         result = {
             "name": self.name,
@@ -166,7 +167,8 @@ class TrackingData(models.Model):
             "ext": self.ext,
             "meta_ext": self.meta_ext,
             "date": self.date,
-            "file_type": self.file_type
+            "file_type": self.file_type,
+            "delimiter": self.delimiter,
         }
         if include_refs_hashes:
             result["video_id"] = self.video.id.hex
@@ -258,6 +260,7 @@ class PluginRunResult(models.Model):
     TYPE_BBOXES = "B"
     TYPE_POS = "P"
     TYPE_FL = "FL"
+    TYPE_KPI = "KPI"
     TYPE = {
         TYPE_VIDEO: "VIDEO",
         TYPE_IMAGES: "IMAGES",
@@ -270,10 +273,11 @@ class PluginRunResult(models.Model):
         TYPE_IMAGE_EMBEDDINGS: "IMAGE_EMBEDDINGS",
         TYPE_BBOXES: "BBOXES",
         TYPE_POS: "POS",
-        TYPE_FL: "FL"
+        TYPE_FL: "FL",
+        TYPE_KPI: "KPI",
     }
     type = models.CharField(
-        max_length=2,
+        max_length=3,
         choices=[(k, v) for k, v in TYPE.items()],
         default=TYPE_SCALAR,
     )
@@ -756,7 +760,6 @@ class PointCorrespondence(models.Model):
         related_name='object_data'
     )
     name = models.CharField(max_length=1024)
-    set = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
     comp_area_coords_rel = models.JSONField(default=list)
     video_coords_rel = models.JSONField(default=list)
@@ -765,7 +768,6 @@ class PointCorrespondence(models.Model):
         return {
             "id": self.id.hex,
             "name": self.name,
-            "set": self.set,
             "active": self.active,
             "compAreaCoordsRel": self.comp_area_coords_rel,
             "videoCoordsRel": self.video_coords_rel

@@ -60,24 +60,6 @@
 
         <v-row class="mt-2">
           <v-col cols="12">
-            <div class="text-h6">{{ $t("modal.settings.language") }}</div>
-          </v-col>
-          <v-col cols="12" md="6" class="mt-n4">
-            <v-select
-              v-model="selectedLanguage"
-              :items="languageStore.languages"
-              item-title="label"
-              item-value="code"
-              density="compact"
-              variant="outlined"
-            />
-          </v-col>
-        </v-row>
-
-        <v-divider class="my-2" />
-
-        <v-row class="mt-2">
-          <v-col cols="12">
             <div class="text-h6">{{ $t("modal.settings.security") }}</div>
           </v-col>
           <v-col cols="12" md="12" class="mt-n4">
@@ -144,11 +126,9 @@ import { ref, watch, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useUserStore } from "@/stores/user";
-import { useLanguageStore } from "@/stores/languages";
 import ModalUserDelete from "@/components/user/ModalUserDelete.vue";
 
 const userStore = useUserStore();
-const languageStore = useLanguageStore();
 const router = useRouter();
 const { t } = useI18n();
 
@@ -210,17 +190,6 @@ watch(
   }
 );
 
-const selectedLanguage = ref(languageStore.currentLanguage);
-const hasLanguageChanged = () => selectedLanguage.value !== languageStore.currentLanguage;
-watch(
-  () => languageStore.currentLanguage,
-  (val) => {
-    if (dialog.value) {
-      selectedLanguage.value = val;
-    }
-  }
-);
-
 const currentPassword = ref(null);
 const newPassword = ref(null);
 const checkLength = (value) => {
@@ -245,7 +214,6 @@ watch(
   (value) => {
     if (value) {
       dialog.value = true;
-      selectedLanguage.value = languageStore.currentLanguage;
       emailLocal.value = userStore.email;
       usernameLocal.value = userStore.username;
       joinedLocal.value = formatDate(userStore.dateJoined);
@@ -258,12 +226,11 @@ const generalServerError = ref(null);
 
 const canSave = computed(() => {
   const emailChanged = hasEmailChanged();
-  const languageChanged = hasLanguageChanged();
   const pwdCurrentVal = currentPassword.value;
   const pwdNewVal = newPassword.value;
   const pwdAny = !!pwdCurrentVal || !!pwdNewVal;
 
-  if (!emailChanged && !languageChanged && !pwdAny) return false;
+  if (!emailChanged && !pwdAny) return false;
 
   if (emailChanged) {
     if (checkLength(emailLocal.value) !== true) return false;
@@ -305,11 +272,6 @@ const saveSettings = async () => {
   }
 
   if (Object.keys(params).length === 0) {
-    if (hasLanguageChanged()) {
-      languageStore.setLanguage(selectedLanguage.value);
-      showSettingsSnackbar.value = true;
-      return;
-    }
     generalServerError.value = t("modal.settings.no_changes");
     return;
   }

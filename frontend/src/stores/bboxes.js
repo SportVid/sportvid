@@ -16,6 +16,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
   const calibrationAssetStore = useCalibrationAssetStore();
 
   const bboxDataActive = ref({});
+  const bboxMetaData = ref(null);
   const bboxDataInterpolated = ref({});
   const bboxDataTopView = ref({});
   const bboxDataLoaded = ref(false);
@@ -29,13 +30,15 @@ export const useBboxesStore = defineStore("bboxes", () => {
     bboxPluginRunId.value = pluginRunId;
 
     try {
-      const _bboxData = pluginRunStore
-        .forVideo(playerStore.videoId)
-        .filter((e) => e.type === "bytetrack" && e.status === "DONE" && e.id === pluginRunId)
-        .map((e) => {
-          e.results = pluginRunResultStore.forPluginRun(e.id);
-          return e;
-        });
+      const _bboxData = await Promise.all(
+        pluginRunStore
+          .forVideo(playerStore.videoId)
+          .filter((e) => e.type === "bytetrack" && e.status === "DONE" && e.id === pluginRunId)
+          .map(async (e) => ({
+            ...e,
+            results: await pluginRunResultStore.forPluginRunWithData(e.id, playerStore.videoId),
+          }))
+      );
 
       if (!_bboxData.length || !_bboxData[0]?.results?.length) {
         return [];
@@ -44,6 +47,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
       hasValidData = true;
 
       bboxDataActive.value = _bboxData[0]?.results[0]?.data?.bboxes;
+      bboxMetaData.value = _bboxData[0]?.results[0]?.data?.meta_data ?? null;
     } finally {
       if (hasValidData) {
         bboxDataLoaded.value = true;
@@ -56,7 +60,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
   function interpolateBboxData(bboxData, VideoFPS, bboxDataFPS) {
     const factor = VideoFPS / bboxDataFPS;
     if (factor == 1) return bboxData;
-    const bboxDatainterpolated = [];
+    const _bboxDatainterpolated = [];
 
     // Group bboxes by image_id
     const bboxMap = new Map();
@@ -85,7 +89,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
 
           if (next) {
             const alpha = srcFrame - prevFrame;
-            bboxDatainterpolated.push({
+            _bboxDatainterpolated.push({
               x: prev.x + (next.x - prev.x) * alpha,
               y: prev.y + (next.y - prev.y) * alpha,
               w: prev.w + (next.w - prev.w) * alpha,
@@ -100,12 +104,12 @@ export const useBboxesStore = defineStore("bboxes", () => {
         });
       } else if (bboxMap.has(prevFrame)) {
         bboxMap.get(prevFrame).forEach((bbox) => {
-          bboxDatainterpolated.push({ ...bbox, image_id: frame, time: frame / VideoFPS });
+          _bboxDatainterpolated.push({ ...bbox, image_id: frame, time: frame / VideoFPS });
         });
       }
     }
 
-    return bboxDatainterpolated;
+    return _bboxDatainterpolated;
   }
 
   const updateBboxData = async (bboxData) => {
@@ -145,8 +149,8 @@ export const useBboxesStore = defineStore("bboxes", () => {
         `${config.API_LOCATION}/position_data/bboxes/edit`,
         params.value
       );
-      console.log("res", res);
       if (res.data.status === "ok") {
+        bboxMetaData.value = res.data.entry.meta_data ?? null;
         topViewStore.transformBBoxToPositionDataTopView(
           calibrationAssetStore.calibrationAssetId,
           bboxPluginRunId.value,
@@ -194,6 +198,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
         params.value
       );
       if (res.data.status === "ok") {
+        bboxMetaData.value = res.data.entry.meta_data ?? null;
         topViewStore.transformBBoxToPositionDataTopView(
           calibrationAssetStore.calibrationAssetId,
           bboxPluginRunId.value,
@@ -227,6 +232,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
     deleteBboxData,
     interpolateBboxData,
     bboxDataActive,
+    bboxMetaData,
     bboxDataLoaded,
     bboxDataInterpolated,
     bboxPluginRunId,

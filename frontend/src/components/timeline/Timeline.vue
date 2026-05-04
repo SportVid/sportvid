@@ -2,22 +2,22 @@
   <div style="width: 100%; min-height: 100px">
     <v-row>
       <v-col cols="3" style="margin: 0px; padding: 0px; padding-right: 10px">
-        <div style="margin-top: 2px; margin-bottom: 4px">
+        <div style="margin-top: 4px; margin-bottom: 4px">
           <v-menu location="bottom">
             <template #activator="{ props }">
               <v-btn v-bind="props" style="height: 40px; width: 100%">
                 <v-icon left>mdi-cog</v-icon>
-                {{ $t("modal.timeline.options") }}
+                {{ $t("visualization.timeline.options.title") }}
               </v-btn>
             </template>
             <v-list class="py-0" density="compact" width="220">
               <v-list-item class="menu-item" @click="showModalTimelineCreate = true">
                 <v-icon size="small" class="mt-n1">mdi-plus</v-icon>
-                {{ $t("modal.timeline.create.title") }}
+                {{ $t("visualization.timeline.options.create") }}
               </v-list-item>
               <v-list-item class="menu-item" @click="showModalTimelineImport = true">
                 <v-icon size="small" class="mt-n1">mdi-import</v-icon>
-                {{ $t("modal.timeline.import.title") }}
+                {{ $t("visualization.timeline.options.import") }}
               </v-list-item>
             </v-list>
           </v-menu>
@@ -952,7 +952,11 @@ onMounted(async () => {
 
   // Component was unmounted while PIXI was initializing
   if (!isMounted.value) {
-    try { app.value?.destroy(true); } catch (e) { /* not fully initialized */ }
+    try {
+      app.value?.destroy(true);
+    } catch (e) {
+      /* not fully initialized */
+    }
     app.value = null;
     return;
   }

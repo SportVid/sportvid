@@ -13,12 +13,15 @@
 
       <v-card-text>
         <v-row>
-          <v-col cols="4" class="ml-n2 mr-2">
+          <v-col cols="4" class="ml-n2 mr-2" data-tour="export-tab-panel">
             <v-tabs direction="vertical" slider-color="primary" v-model="tab">
               <v-tab
                 v-for="exportFormat in exportFormatsSorted"
                 :key="exportFormat.name"
                 :value="exportFormat.name"
+                :data-tour="
+                  exportFormat.format === 'kpi_aggregated_csv' ? 'export_select' : undefined
+                "
               >
                 <v-icon>{{ exportFormat.icon }}</v-icon>
                 <span class="text-button ml-1">{{ exportFormat.name }}</span>
@@ -28,7 +31,7 @@
 
           <v-divider vertical />
 
-          <v-col cols="8">
+          <v-col cols="8" data-tour="export-details">
             <v-tabs-window v-model="tab">
               <v-tabs-window-item
                 v-for="exportFormat in exportFormatsSorted"
@@ -46,7 +49,7 @@
                   </v-card-text>
                 </v-card>
 
-                <v-row class="mt-n4 mb-1 mr-1">
+                <v-row class="mt-2 mb-1 mr-1">
                   <v-spacer />
                   <v-btn
                     @click="
@@ -112,9 +115,7 @@ watch(
 
 const tab = ref(null);
 
-const allFrameKeys = Object.keys(topViewStore.positionDataTopView)
-  .map(Number)
-  .sort((a, b) => a - b);
+const allFrameKeys = topViewStore.sortedFrameKeys;
 
 const exportFormats = ref([
   // {
@@ -223,40 +224,103 @@ const exportFormats = ref([
         text: t("modal.plugin.position_data_attribute_name"),
         hint: t("modal.plugin.position_data_attribute_hint"),
       },
+      {
+        field: "select_kpi_frame",
+        name: "kpi_start_frame",
+        value: allFrameKeys[0],
+        items: allFrameKeys.slice(0, -1),
+        text: t("modal.plugin.kpi_start_frame_name"),
+      },
+      {
+        field: "select_kpi_frame",
+        name: "kpi_end_frame",
+        value: allFrameKeys[allFrameKeys.length - 1],
+        items: allFrameKeys.slice(1),
+        text: t("modal.plugin.kpi_end_frame_name"),
+      },
     ],
   },
   {
-    name: t("modal.export.running_distance.export_name"),
+    name: t("modal.export.kpi.export_name"),
     icon: "mdi-file",
-    format: "running_distance_csv",
+    format: "kpi_csv",
     parameters: [
       {
-        field: "select_running_distance_team",
-        name: "running_distance_team",
-        value: null,
-        text: t("modal.plugin.running_distance_team_name"),
-        hint: t("modal.plugin.running_distance_team_hint"),
-      },
-      {
-        field: "select_running_distance_attribute",
-        name: "running_distance_attribute",
+        field: "select_kpi_team",
+        name: "kpi_team",
         value: [],
-        text: t("modal.plugin.running_distance_attribute_name"),
-        hint: t("modal.plugin.running_distance_attribute_hint"),
+        text: t("modal.plugin.kpi_team_name"),
+        hint: t("modal.plugin.kpi_team_hint"),
       },
       {
-        field: "select_running_distance_frame",
-        name: "running_distance_start_frame",
+        field: "select_kpi_names",
+        name: "kpi_names",
+        value: [],
+        text: t("modal.plugin.kpi_names_name"),
+        hint: t("modal.plugin.kpi_names_hint"),
+      },
+      {
+        field: "select_kpi_attribute",
+        name: "kpi_attribute",
+        value: [],
+        text: t("modal.plugin.kpi_attribute_name"),
+        hint: t("modal.plugin.kpi_attribute_hint"),
+      },
+      {
+        field: "select_kpi_frame",
+        name: "kpi_start_frame",
         value: allFrameKeys[0],
         items: allFrameKeys.slice(0, -1),
-        text: t("modal.plugin.running_distance_start_frame_name"),
+        text: t("modal.plugin.kpi_start_frame_name"),
       },
       {
-        field: "select_running_distance_frame",
-        name: "running_distance_end_frame",
+        field: "select_kpi_frame",
+        name: "kpi_end_frame",
         value: allFrameKeys[allFrameKeys.length - 1],
         items: allFrameKeys.slice(1),
-        text: t("modal.plugin.running_distance_end_frame_name"),
+        text: t("modal.plugin.kpi_end_frame_name"),
+      },
+    ],
+  },
+  {
+    name: t("modal.export.kpi_aggregated.export_name"),
+    icon: "mdi-file",
+    format: "kpi_aggregated_csv",
+    parameters: [
+      {
+        field: "select_kpi_team",
+        name: "kpi_team",
+        value: [],
+        text: t("modal.plugin.kpi_team_name"),
+        hint: t("modal.plugin.kpi_team_hint"),
+      },
+      {
+        field: "select_kpi_names_aggregated",
+        name: "kpi_names",
+        value: [],
+        text: t("modal.plugin.kpi_names_name"),
+        hint: t("modal.plugin.kpi_names_hint"),
+      },
+      {
+        field: "select_kpi_attribute",
+        name: "kpi_attribute",
+        value: [],
+        text: t("modal.plugin.kpi_attribute_name"),
+        hint: t("modal.plugin.kpi_aggregated_attribute_hint"),
+      },
+      {
+        field: "select_kpi_frame",
+        name: "kpi_start_frame",
+        value: allFrameKeys[0],
+        items: allFrameKeys.slice(0, -1),
+        text: t("modal.plugin.kpi_start_frame_name"),
+      },
+      {
+        field: "select_kpi_frame",
+        name: "kpi_end_frame",
+        value: allFrameKeys[allFrameKeys.length - 1],
+        items: allFrameKeys.slice(1),
+        text: t("modal.plugin.kpi_end_frame_name"),
       },
     ],
   },
@@ -275,8 +339,9 @@ const downloadExport = async (format, parameters, videoId) => {
     } else if (
       e.name === "position_data_team" ||
       e.name === "position_data_attribute" ||
-      e.name === "running_distance_team" ||
-      e.name === "running_distance_attribute"
+      e.name === "kpi_team" ||
+      e.name === "kpi_names" ||
+      e.name === "kpi_attribute"
     ) {
       return { name: e.name, value: [...e.value] };
     } else {
@@ -293,17 +358,17 @@ const isExportDisabled = (exportFormat) => {
   if (!selectParams.length) return false;
 
   const emptyRequired = selectParams.some((p) => {
-    if (p.name === "running_distance_start_frame" || p.name === "running_distance_end_frame") {
+    if (p.name === "kpi_start_frame" || p.name === "kpi_end_frame") {
       return false;
     }
-    if (p.name === "position_data_attribute" || p.name === "running_distance_attribute") {
+    if (p.name === "position_data_attribute" || p.name === "kpi_attribute") {
       return false;
     }
     return !p.value || (Array.isArray(p.value) && p.value.length === 0);
   });
 
-  const startParam = selectParams.find((p) => p.name === "running_distance_start_frame");
-  const endParam = selectParams.find((p) => p.name === "running_distance_end_frame");
+  const startParam = selectParams.find((p) => p.name === "kpi_start_frame");
+  const endParam = selectParams.find((p) => p.name === "kpi_end_frame");
   const invalidFrames =
     startParam && endParam && startParam.value != null && endParam.value != null
       ? startParam.value >= endParam.value

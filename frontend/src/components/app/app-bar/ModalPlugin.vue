@@ -13,7 +13,7 @@
 
       <v-card-text style="overflow: hidden">
         <v-row>
-          <v-col cols="3" class="ml-n3">
+          <v-col cols="3" class="ml-n3" data-tour="plugin-panel">
             <v-text-field
               v-model="searchPlugin"
               :label="$t('modal.plugin.search')"
@@ -41,26 +41,12 @@
                   {{ item.icon }}
                 </v-icon>
               </template>
-              <template #item="{ item, props: itemProps }">
-                <v-list-item
-                  v-bind="itemProps"
-                  :data-tour="
-                    item.id === 703
-                      ? 'plugin-kpi-computation'
-                      : item.id === 701
-                      ? 'plugin-bytetrack'
-                      : item.id === 702
-                      ? 'plugin-calibration-dlt'
-                      : undefined
-                  "
-                />
-              </template>
             </v-treeview>
           </v-col>
 
           <v-divider vertical />
 
-          <v-col cols="9">
+          <v-col cols="9" data-tour="plugin-details">
             <div
               v-if="!selected"
               class="text-h4 text-grey font-weight-light"
@@ -84,10 +70,12 @@
 
                 <v-expansion-panels
                   v-if="selected.optional_parameters && selected.optional_parameters.length > 0"
+                  class="mt-4"
+                  data-tour="kpi-advanced-options"
                 >
                   <v-expansion-panel>
                     <v-expansion-panel-title expand-icon="mdi-menu-down">
-                      Advanced Options
+                      {{ $t("modal.plugin.advanced_options") }}
                     </v-expansion-panel-title>
 
                     <v-expansion-panel-text>
@@ -105,6 +93,7 @@
                 @click="
                   runPlugin(selected.plugin, selected.parameters, selected.optional_parameters)
                 "
+                data-tour="kpi-run-plugin"
               >
                 {{ $t("button.run_plugin") }}
               </v-btn>
@@ -125,11 +114,13 @@ import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePlayerStore } from "@/stores/player";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import { usePositionDataStore } from "@/stores/position_data";
 import Parameters from "./Parameters.vue";
 import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
+const positionDataStore = usePositionDataStore();
 const tutorialStore = useTutorialStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 
@@ -1020,6 +1011,7 @@ const plugins = ref([
             step: 1,
             name: "fps",
             text: t("modal.plugin.fps"),
+            dataTour: "bytetrack-fps",
           },
         ],
         optional_parameters: [],
@@ -1042,10 +1034,160 @@ const plugins = ref([
         ],
         optional_parameters: [],
       },
+      {
+        name: t("modal.plugin.kpi_computation.plugin_name"),
+        description: t("modal.plugin.kpi_computation.plugin_description"),
+        icon: "mdi-chart-line",
+        plugin: "kpi_computation",
+        id: 703,
+        parameters: [
+          {
+            field: "select_options",
+            name: "format",
+            value: "kinexon",
+            items: [
+              ...positionDataStore.provider.map((p) => ({ title: p.name, value: p.id })),
+              { title: "SportVid (ByteTrack)", value: "sportvid" },
+            ],
+            text: t("modal.plugin.kpi_computation.format"),
+            dataTour: "kpi-format",
+          },
+          {
+            field: "select_tracking_data",
+            name: "tracking_data_id",
+            value: "",
+            text: t("modal.plugin.kpi_computation.tracking_data_id"),
+            hint: t("modal.plugin.kpi_computation.tracking_data_id_hint"),
+            format_filter: "kinexon",
+            dataTour: "kpi-tracking-data",
+          },
+          {
+            field: "select_bytetrack_run",
+            name: "bytetrack_run_id",
+            value: "",
+            text: t("modal.plugin.kpi_computation.bytetrack_run_id"),
+            hint: t("modal.plugin.kpi_computation.bytetrack_run_id_hint"),
+            hidden: true,
+            dataTour: "kpi-bytetrack-run",
+          },
+          {
+            field: "select_calibration",
+            name: "calibration_id",
+            value: "",
+            text: t("modal.plugin.kpi_computation.calibration_id"),
+            hint: t("modal.plugin.kpi_computation.calibration_id_hint"),
+            hidden: true,
+            dlt: true,
+            dataTour: "kpi-calibration",
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "select_options",
+            name: "filter_type",
+            value: "",
+            items: [
+              { title: t("modal.plugin.kpi_computation.filter_none"), value: "" },
+              {
+                title: t("modal.plugin.kpi_computation.filter_butterworth"),
+                value: "butterworth_lowpass",
+              },
+              { title: t("modal.plugin.kpi_computation.filter_savgol"), value: "savgol_lowpass" },
+            ],
+            text: t("modal.plugin.kpi_computation.filter_type"),
+            dataTour: "kpi-filter-type",
+          },
+          {
+            field: "slider",
+            name: "order",
+            value: 3,
+            min: 1,
+            max: 10,
+            step: 1,
+            text: t("modal.plugin.kpi_computation.order"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            name: "Wn",
+            value: 1.0,
+            min: 0.01,
+            max: 10.0,
+            step: 0.01,
+            text: t("modal.plugin.kpi_computation.Wn"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            name: "window_length",
+            value: 5,
+            min: 3,
+            max: 51,
+            step: 2,
+            text: t("modal.plugin.kpi_computation.window_length"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            name: "poly_order",
+            value: 3,
+            min: 1,
+            max: 10,
+            step: 1,
+            text: t("modal.plugin.kpi_computation.poly_order"),
+            hidden: true,
+          },
+        ],
+      },
     ],
   },
   // TODO: add extra view for all calibration plugins
 ]);
+
+// Toggle visibility of filter hyperparameters for kpi_computation based on selected filter_type
+const kpiOptionalParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 703);
+  return plugin?.optional_parameters || [];
+});
+
+watch(
+  () => kpiOptionalParams.value.find((p) => p.name === "filter_type")?.value,
+  (filterType) => {
+    for (const p of kpiOptionalParams.value) {
+      if (p.name === "order" || p.name === "Wn") {
+        p.hidden = filterType !== "butterworth_lowpass";
+      } else if (p.name === "window_length" || p.name === "poly_order") {
+        p.hidden = filterType !== "savgol_lowpass";
+      }
+    }
+  },
+  { immediate: true }
+);
+
+// Toggle tracking_data_id / bytetrack_run_id visibility based on format
+const kpiParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 703);
+  return plugin?.parameters || [];
+});
+
+watch(
+  () => kpiParams.value.find((p) => p.name === "format")?.value,
+  (fmt) => {
+    const trackingParam = kpiParams.value.find((p) => p.name === "tracking_data_id");
+    const bytetrackParam = kpiParams.value.find((p) => p.name === "bytetrack_run_id");
+    const calibrationParam = kpiParams.value.find((p) => p.name === "calibration_id");
+    if (trackingParam) {
+      trackingParam.hidden = fmt === "sportvid";
+      trackingParam.format_filter = fmt !== "sportvid" ? fmt : null;
+      trackingParam.value = "";
+    }
+    if (bytetrackParam) bytetrackParam.hidden = fmt !== "sportvid";
+    if (calibrationParam) calibrationParam.hidden = fmt !== "sportvid";
+  },
+  { immediate: true }
+);
 
 const pluginsSorted = computed(() => {
   return plugins.value.slice(0).sort((a, b) => a.name.localeCompare(b.name));
@@ -1122,6 +1264,26 @@ watch(
   (stepId) => {
     if (stepId === "modal-plugin-select") {
       opened.value = [7];
+    }
+  }
+);
+watch(
+  () => tutorialStore.tutorialActivePluginId,
+  (pluginId) => {
+    if (pluginId !== null) {
+      const groupId = Math.floor(pluginId / 100);
+      if (!opened.value.includes(groupId)) {
+        opened.value = [...opened.value, groupId];
+      }
+      activeNode.value = [pluginId];
+    }
+  }
+);
+watch(
+  () => tutorialStore.tutorialPluginGroupOpen,
+  (groupId) => {
+    if (groupId !== null && !opened.value.includes(groupId)) {
+      opened.value = [...opened.value, groupId];
     }
   }
 );

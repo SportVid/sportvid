@@ -12,7 +12,7 @@
           </template>
         </v-toolbar>
 
-        <v-card-text class="pt-4 scrollable-content">
+        <v-card-text class="pt-4 scrollable-content" data-tour="modal-video-upload">
           <v-form v-if="canUpload">
             <div class="text-center d-flex justify-center mb-2">
               <div class="storage-bar-container">
@@ -116,6 +116,8 @@
             <v-select
               v-model="video.division"
               :items="divisions"
+              item-title="title"
+              item-value="value"
               :label="$t('modal.video.upload.division')"
               density="compact"
               variant="outlined"
@@ -137,7 +139,7 @@
               <v-col cols="5">
                 <v-select
                   v-model="video.totalNumberofTeams"
-                  :items="positions"
+                  :items="totalTeamsOptions"
                   :label="$t('modal.video.upload.total_teams')"
                   density="compact"
                   variant="outlined"
@@ -148,6 +150,8 @@
             <v-select
               v-model="video.ageGroup"
               :items="ageGroups"
+              item-title="title"
+              item-value="value"
               :label="$t('modal.video.upload.age_group')"
               density="compact"
               variant="outlined"
@@ -179,7 +183,12 @@
               </template>
             </v-checkbox>
 
-            <v-btn class="mr-4 mt-n4" :disabled="disabled" @click="uploadVideo">
+            <v-btn
+              class="mr-4 mt-n4"
+              :disabled="disabled"
+              @click="uploadVideo"
+              data-tour="upload-video"
+            >
               {{ $t("button.upload") }}
             </v-btn>
           </v-form>
@@ -201,10 +210,12 @@ import { useI18n } from "vue-i18n";
 import { useVideoUploadStore } from "@/stores/video_upload";
 import { useUserStore } from "@/stores/user";
 import { useTopViewStore } from "@/stores/top_view";
+import { useTutorialStore } from "@/stores/tutorial";
 
 const videoUploadStore = useVideoUploadStore();
 const userStore = useUserStore();
 const topViewStore = useTopViewStore();
+const tutorialStore = useTutorialStore();
 
 const props = defineProps({
   modelValue: {
@@ -263,25 +274,28 @@ watch(
   }
 );
 
-const divisions = ref([
-  "1. Bundesliga",
-  "2. Bundesliga",
-  "3. Liga",
-  "Regionalliga",
-  "Oberliga",
-  "Landesliga",
-  "Bezirksliga",
-  "Kreisliga",
-]);
+const DIVISION_KEYS = ["liga_1", "liga_2", "liga_3", "liga_4", "liga_5", "liga_6", "liga_7", "liga_8", "liga_9", "liga_10", "other"];
+const divisions = computed(() =>
+  DIVISION_KEYS.map((key) => ({ title: t(`modal.video.upload.divisions.${key}`), value: key }))
+);
 const positions = ref(Array.from({ length: 20 }, (_, i) => String(i + 1)));
-const ageGroups = ref([
-  "Herren",
-  "U19 Junioren",
-  "U17 Junioren",
-  "Damen",
-  "U19 Juniorinnen",
-  "U17 Juniorinnen",
-]);
+const totalTeamsOptions = computed(() => {
+  const pos = Number(video.value.currentPosition);
+  if (!pos || pos < 1) return positions.value;
+  return positions.value.filter((p) => Number(p) >= pos);
+});
+watch(
+  () => video.value.currentPosition,
+  (pos) => {
+    if (pos && video.value.totalNumberofTeams && Number(video.value.totalNumberofTeams) < Number(pos)) {
+      video.value.totalNumberofTeams = pos;
+    }
+  }
+);
+const AGE_GROUP_KEYS = ["men", "u19_male", "u17_male", "women", "u19_female", "u17_female", "other"];
+const ageGroups = computed(() =>
+  AGE_GROUP_KEYS.map((key) => ({ title: t(`modal.video.upload.age_groups.${key}`), value: key }))
+);
 
 const isUploading = computed(() => videoUploadStore.isUploading);
 const uploadingProgress = computed(() => videoUploadStore.progress);
@@ -309,6 +323,12 @@ const disabled = computed(() => {
     !v.totalNumberofTeams ||
     !v.ageGroup
   );
+});
+
+watch(disabled, (val) => {
+  if (tutorialStore.isTutorialRunning && tutorialStore.currentTutorialId === "upload-video") {
+    tutorialStore.uploadFormReady = !val;
+  }
 });
 
 const sizeInWords = (size) => {

@@ -1,5 +1,6 @@
 import os
 import json
+import math
 import logging
 
 from django.views import View
@@ -87,7 +88,14 @@ class TrackingDataPosDataChunk(View):
                     sorted_keys = sorted(pos_data.keys(), key=lambda k: int(k))
                     total = len(sorted_keys)
                     chunk_keys = sorted_keys[offset: offset + limit]
-                    chunk_frames = {k: pos_data[k] for k in chunk_keys}
+                    chunk_frames = {
+                        k: [
+                            p for p in pos_data[k]
+                            if not (isinstance(p[3], float) and math.isnan(p[3]))
+                            and not (isinstance(p[4], float) and math.isnan(p[4]))
+                        ]
+                        for k in chunk_keys
+                    }
 
                     response = {
                         "status": "ok",

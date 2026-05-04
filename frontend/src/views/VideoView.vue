@@ -10,6 +10,7 @@
               :loading="item.loading"
               :key="item.id"
               :class="item.processing ? 'processing-card' : ''"
+              :data-tour="item.processing ? 'video-processing' : undefined"
               width="370"
             >
               <v-card-title class="video-overview-title mt-2 mb-n2">
@@ -21,6 +22,16 @@
                   <div class="mt-4">
                     {{ $t("video_view.video_processing") }}
                   </div>
+                  <v-btn
+                    size="small"
+                    color="red"
+                    variant="outlined"
+                    class="mt-4"
+                    @click="deleteVideo(item.id)"
+                  >
+                    <v-icon class="mr-1">mdi-trash-can-outline</v-icon>
+                    {{ $t("button.cancel_and_delete") }}
+                  </v-btn>
                 </v-card-text>
               </div>
               <div v-else>

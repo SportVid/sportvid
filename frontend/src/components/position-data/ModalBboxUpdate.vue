@@ -275,45 +275,50 @@ const BboxUpdateModes = ref([
 ]);
 
 const playerOptions = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
-  return [...new Set(all.map((p) => p[0]))].sort((a, b) => a - b);
+  return topViewStore.precomputedPlayerList.map((p) => p.playerId);
 });
 const playerColors = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
   const map = {};
-  all.forEach((p) => {
-    map[p[0]] = visualizationStore.getTeamColor(p[1]);
-  });
+  for (const p of topViewStore.precomputedPlayerList) {
+    map[p.playerId] = visualizationStore.getTeamColor(p.teamId);
+  }
   return map;
 });
-// const teamOptions = computed(() => {
-//   const all = Object.values(topViewStore.positionDataTopView).flat();
-//   return [...new Set(all.map((p) => p[1]))].sort((a, b) => a - b);
-// });
 const teamOptions = computed(() => {
-  const all = Object.values(topViewStore.positionDataTopView).flat();
-  const existing = [...new Set(all.map((p) => p[1]))].sort((a, b) => a - b);
+  const existing = [...new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId))]
+    .filter((id) => id >= 3)
+    .sort((a, b) => a - b);
 
-  let nextId = 2;
+  let nextId = 3;
   while (existing.includes(nextId) && nextId <= 10) {
     nextId++;
   }
 
-  const options = existing.map((id) => ({
-    id,
-    label: String(id),
-    isNew: false,
-  }));
+  const options = [
+    { id: 0, label: t("modal.bounding_box.edit.team.rest"), isNew: false },
+    { id: 1, label: t("modal.bounding_box.edit.team.ball"), isNew: false },
+    { id: 2, label: t("modal.bounding_box.edit.team.referee"), isNew: false },
+    ...existing.map((id) => ({
+      id,
+      label: t("modal.bounding_box.edit.team.team", { id: id }),
+      isNew: false,
+    })),
+  ];
 
-  if (nextId <= 10) {
-    options.push({ id: nextId, label: `New (${nextId})`, isNew: true });
+  if (nextId <= 12) {
+    options.push({
+      id: nextId,
+      label: t("modal.bounding_box.edit.team.new_team", { id: nextId }),
+      isNew: true,
+    });
   }
 
   return options;
 });
 
 const checkPlayerId = (value) => {
-  const playerIds = topViewStore.positionDataTopView[playerStore.currentTime].map((p) => p[0]);
+  const frame = topViewStore.getFrameAt(playerStore.currentTime);
+  const playerIds = frame.map((p) => p[0]);
 
   if (!value) {
     return t("field.required");

@@ -25,7 +25,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Corner-top-left",
         id: "1",
-        set: true,
         active: false,
         compAreaCoordsRel: [{ x: 0, y: 0, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -33,7 +32,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Corner-top-right",
         id: "2",
-        set: true,
         active: false,
         compAreaCoordsRel: [{ x: 1, y: 0, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -41,7 +39,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Corner-bottom-left",
         id: "3",
-        set: true,
         active: false,
         compAreaCoordsRel: [{ x: 0, y: 1, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -49,7 +46,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Corner-bottom-right",
         id: "4",
-        set: true,
         active: false,
         compAreaCoordsRel: [{ x: 1, y: 1, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -57,7 +53,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Midline-top",
         id: "5",
-        set: false,
         active: false,
         compAreaCoordsRel: [{ x: 0.5, y: 0, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -65,7 +60,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Midline-bottom",
         id: "6",
-        set: false,
         active: false,
         compAreaCoordsRel: [{ x: 0.5, y: 1, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -73,7 +67,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Kick-off",
         id: "7",
-        set: true,
         active: false,
         compAreaCoordsRel: [{ x: 0.5, y: 0.5, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -81,7 +74,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Kick-off-circle-top",
         id: "8",
-        set: false,
         active: false,
         compAreaCoordsRel: [{ x: 0.5, y: 0.3675, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -89,7 +81,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Kick-off-circle-bottom",
         id: "9",
-        set: false,
         active: false,
         compAreaCoordsRel: [{ x: 0.5, y: 0.6325, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -97,7 +88,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Penalty-left",
         id: "10",
-        set: false,
         active: false,
         compAreaCoordsRel: [{ x: 0.105, y: 0.5, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -105,7 +95,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Penalty-area-left-corner-top",
         id: "11",
-        set: false,
         active: false,
         compAreaCoordsRel: [{ x: 0.1575, y: 0.2025, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -113,65 +102,141 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Penalty-area-left-corner-bottom",
         id: "12",
-        set: false,
         active: false,
         compAreaCoordsRel: [{ x: 0.1575, y: 0.7975, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
-        name: "Penalty-right",
+        name: "Goal-line-left-penalty-area-top",
         id: "13",
-        set: false,
+        active: false,
+        compAreaCoordsRel: [{ x: 0, y: 0.2025, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Goal-line-left-penalty-area-bottom",
+        id: "14",
+        active: false,
+        compAreaCoordsRel: [{ x: 0, y: 0.7975, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Penalty-arc-left-top",
+        id: "15",
+        active: false,
+        compAreaCoordsRel: [{ x: 0.1575, y: 0.395, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Penalty-arc-left-bottom",
+        id: "16",
+        active: false,
+        compAreaCoordsRel: [{ x: 0.1575, y: 0.605, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Penalty-right",
+        id: "17",
         active: false,
         compAreaCoordsRel: [{ x: 0.895, y: 0.5, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
         name: "Penalty-area-right-corner-top",
-        id: "14",
-        set: false,
+        id: "18",
         active: false,
         compAreaCoordsRel: [{ x: 0.8425, y: 0.2025, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
         name: "Penalty-area-right-corner-bottom",
-        id: "15",
-        set: false,
+        id: "19",
         active: false,
         compAreaCoordsRel: [{ x: 0.8425, y: 0.7975, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
+        name: "Goal-line-right-penalty-area-top",
+        id: "20",
+        active: false,
+        compAreaCoordsRel: [{ x: 1, y: 0.2025, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Goal-line-right-penalty-area-bottom",
+        id: "21",
+        active: false,
+        compAreaCoordsRel: [{ x: 1, y: 0.7975, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Penalty-arc-right-top",
+        id: "22",
+        active: false,
+        compAreaCoordsRel: [{ x: 0.8425, y: 0.395, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Penalty-arc-right-bottom",
+        id: "23",
+        active: false,
+        compAreaCoordsRel: [{ x: 0.8425, y: 0.605, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
         name: "Goal-area-left-corner-top",
-        id: "16",
-        set: false,
+        id: "24",
         active: false,
         compAreaCoordsRel: [{ x: 0.05, y: 0.365, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
         name: "Goal-area-left-corner-bottom",
-        id: "17",
-        set: false,
+        id: "25",
         active: false,
         compAreaCoordsRel: [{ x: 0.05, y: 0.635, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
+        name: "Goal-line-left-goal-area-top",
+        id: "26",
+        active: false,
+        compAreaCoordsRel: [{ x: 0, y: 0.365, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Goal-line-left-goal-area-bottom",
+        id: "27",
+        active: false,
+        compAreaCoordsRel: [{ x: 0, y: 0.635, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
         name: "Goal-area-right-corner-top",
-        id: "18",
-        set: false,
+        id: "28",
         active: false,
         compAreaCoordsRel: [{ x: 0.95, y: 0.365, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
       },
       {
         name: "Goal-area-right-corner-bottom",
-        id: "19",
-        set: false,
+        id: "29",
         active: false,
         compAreaCoordsRel: [{ x: 0.95, y: 0.635, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Goal-line-right-goal-area-top",
+        id: "30",
+        active: false,
+        compAreaCoordsRel: [{ x: 1, y: 0.365, z: 0 }],
+        videoCoordsRel: [{ x: null, y: null, z: null }],
+      },
+      {
+        name: "Goal-line-right-goal-area-bottom",
+        id: "31",
+        active: false,
+        compAreaCoordsRel: [{ x: 1, y: 0.635, z: 0 }],
         videoCoordsRel: [{ x: null, y: null, z: null }],
       },
     ]);
@@ -179,7 +244,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Sideline-top-left",
         id: "1",
-        set: true,
         active: false,
         compAreaCoordsRel: [
           { x: 0, y: 0, z: 0 },
@@ -193,7 +257,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Sideline-top-right",
         id: "2",
-        set: true,
         active: false,
         compAreaCoordsRel: [
           { x: 0.5, y: 0, z: 0 },
@@ -207,7 +270,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Sideline-bottom-left",
         id: "3",
-        set: true,
         active: false,
         compAreaCoordsRel: [
           { x: 0, y: 1, z: 0 },
@@ -221,7 +283,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Sideline-bottom-right",
         id: "4",
-        set: true,
         active: false,
         compAreaCoordsRel: [
           { x: 0.5, y: 1, z: 0 },
@@ -235,7 +296,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Sideline-left",
         id: "5",
-        set: true,
         active: false,
         compAreaCoordsRel: [
           { x: 0, y: 0, z: 0 },
@@ -249,7 +309,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Sideline-right",
         id: "6",
-        set: true,
         active: false,
         compAreaCoordsRel: [
           { x: 1, y: 0, z: 0 },
@@ -263,7 +322,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Midline",
         id: "7",
-        set: true,
         active: false,
         compAreaCoordsRel: [
           { x: 0.5, y: 0, z: 0 },
@@ -277,7 +335,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Kick-off-circle-left",
         id: "8",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.5, y: 0.36, z: 0 },
@@ -294,7 +351,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Kick-off-circle-right",
         id: "9",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.5, y: 0.36, z: 0 },
@@ -311,7 +367,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Penalty-area-left-top",
         id: "10",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0, y: 0.2025, z: 0 },
@@ -325,7 +380,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Penalty-area-left-bottom",
         id: "11",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0, y: 0.7975, z: 0 },
@@ -339,7 +393,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Penalty-area-left-main",
         id: "12",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.1575, y: 0.2025, z: 0 },
@@ -352,8 +405,6 @@ export const useCalibrationAssetStore = defineStore(
       },
       {
         name: "Penalty-area-left-circle",
-        id: "13",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.1575, y: 0.39, z: 0 },
@@ -370,7 +421,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Penalty-area-right-top",
         id: "14",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.8425, y: 0.2025, z: 0 },
@@ -384,7 +434,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Penalty-area-right-bottom",
         id: "15",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.8425, y: 0.7975, z: 0 },
@@ -398,7 +447,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Penalty-area-right-main",
         id: "16",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.8425, y: 0.2025, z: 0 },
@@ -412,7 +460,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Penalty-area-right-circle",
         id: "17",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.8425, y: 0.39, z: 0 },
@@ -429,7 +476,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Goal-area-left-top",
         id: "18",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0, y: 0.365, z: 0 },
@@ -443,7 +489,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Goal-area-left-bottom",
         id: "19",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0, y: 0.635, z: 0 },
@@ -457,7 +502,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Goal-area-left-main",
         id: "20",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.05, y: 0.365, z: 0 },
@@ -471,7 +515,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Goal-area-right-top",
         id: "21",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.95, y: 0.365, z: 0 },
@@ -485,7 +528,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Goal-area-right-bottom",
         id: "22",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.95, y: 0.635, z: 0 },
@@ -499,7 +541,6 @@ export const useCalibrationAssetStore = defineStore(
       {
         name: "Goal-area-right-main",
         id: "23",
-        set: false,
         active: false,
         compAreaCoordsRel: [
           { x: 0.95, y: 0.365, z: 0 },
@@ -515,18 +556,85 @@ export const useCalibrationAssetStore = defineStore(
       return calibrationAssetType.value === "marker" ? markerTemplate.value : segmentTemplate.value;
     });
 
-    const allAssetObjectsValid = computed(() =>
-      calibrationAssetObjects.value.every(
-        (m) => m.videoCoordsRel.x !== null && m.videoCoordsRel.y !== null
-      )
+    const PALETTE = [
+      // Tableau 20 (industry standard for categorical data viz)
+      "#4E79A7",
+      "#F28E2B",
+      "#E15759",
+      "#76B7B2",
+      "#59A14F",
+      "#EDC948",
+      "#B07AA1",
+      "#FF9DA7",
+      "#9C755F",
+      "#BAB0AC",
+      "#A0CBE8",
+      "#FFBE7D",
+      "#FF9D9A",
+      "#86BCB6",
+      "#8CD17D",
+      "#F1CE63",
+      "#D4A6C8",
+      "#FABFD2",
+      "#D7B5A6",
+      "#79706E",
+      // ColorBrewer Set1 + Set2
+      "#e41a1c",
+      "#377eb8",
+      "#4daf4a",
+      "#984ea3",
+      "#ff7f00",
+      "#a65628",
+      "#f781bf",
+      "#66c2a5",
+      "#fc8d62",
+      "#8da0cb",
+      "#e78ac3",
+      "#a6d854",
+      "#ffd92f",
+      "#e5c494",
+      // D3 category10 extras + ColorBrewer Dark2
+      "#1b9e77",
+      "#d95f02",
+      "#7570b3",
+      "#e7298a",
+      "#66a61e",
+      "#e6ab02",
+      "#a6761d",
+      "#393b79",
+      "#637939",
+      "#8c6d31",
+      "#843c39",
+      "#7b4173",
+      "#5254a3",
+      "#636363",
+      "#f0027f",
+      "#bf5b17",
+      "#386cb0",
+      "#beaed4",
+      "#7fc97f",
+      "#fdc086",
+    ];
+    const objectColorMap = computed(() => {
+      const map = {};
+      calibrationAssetObjects.value.forEach((obj, i) => {
+        map[obj.id] = PALETTE[i % PALETTE.length];
+      });
+      return map;
+    });
+
+    const allAssetObjectsValid = computed(
+      () =>
+        calibrationAssetObjects.value.filter((object) =>
+          object.videoCoordsRel.some((p) => p.x !== null && p.y !== null)
+        ).length >= 4
     );
 
-    const isAddingReferenceObject = ref(false);
+    const isAddingCustomMarker = ref(false);
 
     const filteredReferenceObjects = computed(() => {
-      return calibrationAssetObjects.value.filter(
-        (object) =>
-          object.compAreaCoordsRel.every((p) => p.x !== null && p.y !== null) && object.set
+      return calibrationAssetObjects.value.filter((object) =>
+        object.videoCoordsRel.some((p) => p.x !== null && p.y !== null)
       );
     });
 
@@ -534,7 +642,7 @@ export const useCalibrationAssetStore = defineStore(
       calibrationAssetObjects.value.some((object) => object.active)
     );
 
-    const toggleReferenceObject = (event, id) => {
+    const toggleObject = (event, id) => {
       event.stopPropagation();
 
       calibrationAssetObjects.value = calibrationAssetObjects.value.map((object) => ({
@@ -542,9 +650,9 @@ export const useCalibrationAssetStore = defineStore(
         active: object.id === id ? !object.active : false,
       }));
     };
-    const addReferenceObject = () => {
-      if (!isAddingReferenceObject.value) {
-        isAddingReferenceObject.value = true;
+    const addCustomMarker = () => {
+      if (!isAddingCustomMarker.value) {
+        isAddingCustomMarker.value = true;
 
         const customObjectCount = calibrationAssetObjects.value.filter((m) =>
           m.name.startsWith("Custom-object")
@@ -552,7 +660,6 @@ export const useCalibrationAssetStore = defineStore(
         const newObject = {
           name: `Custom-object-${customObjectCount + 1}`,
           id: calibrationAssetObjects.value.length + 1,
-          set: true,
           active: false,
           compAreaCoordsRel: [{ x: null, y: null, z: null }],
           videoCoordsRel: [{ x: null, y: null, z: null }],
@@ -561,12 +668,8 @@ export const useCalibrationAssetStore = defineStore(
         calibrationAssetObjects.value.push(newObject);
       }
     };
-    const addTemplateReferenceObject = (m) => {
-      m.set = true;
-      calibrationAssetObjects.value.push(m);
-    };
-    const setReferenceObject = (event) => {
-      if (isAddingReferenceObject.value) {
+    const placeCustomMarker = (event) => {
+      if (isAddingCustomMarker.value) {
         const lastObject = calibrationAssetObjects.value[calibrationAssetObjects.value.length - 1];
         if (lastObject) {
           lastObject.compAreaCoordsRel = [
@@ -587,11 +690,24 @@ export const useCalibrationAssetStore = defineStore(
           ];
         }
 
-        isAddingReferenceObject.value = false;
+        isAddingCustomMarker.value = false;
       }
     };
-    const deleteReferenceObject = (id) => {
+    const deleteCustomMarker = (id) => {
       calibrationAssetObjects.value = calibrationAssetObjects.value.filter((m) => m.id !== id);
+    };
+    const placeCustomMarkerByCoords = (relX, relY) => {
+      const lastObject = calibrationAssetObjects.value[calibrationAssetObjects.value.length - 1];
+      if (lastObject) {
+        lastObject.compAreaCoordsRel = [{ x: relX, y: relY, z: 0 }];
+      }
+      isAddingCustomMarker.value = false;
+    };
+    const unmapObject = (id) => {
+      const obj = calibrationAssetObjects.value.find((o) => o.id === id);
+      if (!obj) return;
+      obj.videoCoordsRel = obj.videoCoordsRel.map(() => ({ x: null, y: null, z: null }));
+      isAssetEdited.value = true;
     };
 
     const timeChangeConflict = ref(false);
@@ -631,13 +747,11 @@ export const useCalibrationAssetStore = defineStore(
     const calibrationAssetDeleteSuccess = ref(false);
     const createCalibrationAsset = ({ sport, objectType }) => {
       calibrationAssetType.value = objectType;
-      calibrationAssetObjects.value = JSON.parse(
-        JSON.stringify(currentTemplate.value.filter((m) => m.set))
-      );
+      calibrationAssetObjects.value = JSON.parse(JSON.stringify(currentTemplate.value));
       topViewStore.onSportChange(sport);
 
       calibrationAssetId.value = null;
-      videoObject.value = [];
+      calibrationMatrixPersisted.value = [];
     };
     const loadCalibrationAssetsList = async () => {
       try {
@@ -658,10 +772,10 @@ export const useCalibrationAssetStore = defineStore(
       if (calibrationAsset) {
         calibrationAssetType.value = calibrationAsset.object_type;
         calibrationAssetObjects.value = calibrationAsset.object_data;
-        videoObject.value = calibrationAssetObjects.value.map((m) => m.videoCoordsRel);
         topViewStore.onSportChange(calibrationAsset.sport);
 
         calibrationAssetId.value = id;
+        calibrationMatrixPersisted.value = [];
       }
     };
     const saveCalibrationAsset = async (name, sport, objectType) => {
@@ -674,6 +788,7 @@ export const useCalibrationAssetStore = defineStore(
         object_data: [...calibrationAssetObjects.value],
         video_id: playerStore.videoId,
       };
+
       try {
         const res = await axios.post(`${config.API_LOCATION}/calibration_assets/create`, params);
         if (res.data.status === "ok") {
@@ -758,12 +873,12 @@ export const useCalibrationAssetStore = defineStore(
 
       return { x: X / W, y: Y / W };
     }
-    const videoObject = ref([]);
+    const videoObject = computed(() => calibrationAssetObjects.value.map((m) => m.videoCoordsRel));
     const topViewObjectProjection = computed(() => {
       if (!calibrationMatrix.value) return [];
-      return videoObject.value.map((pointList) =>
-        pointList.map((p) => applyHomography(calibrationMatrix.value, p))
-      );
+      return videoObject.value
+        .filter((pointList) => pointList.some((p) => p.x !== null && p.y !== null))
+        .map((pointList) => pointList.map((p) => applyHomography(calibrationMatrix.value, p)));
     });
     const videoObjectReprojection = computed(() => {
       if (!calibrationMatrixInv.value) return [];
@@ -780,13 +895,14 @@ export const useCalibrationAssetStore = defineStore(
       allAssetObjectsValid,
       filteredReferenceObjects,
       filteredVideoObject,
-      toggleReferenceObject,
+      toggleObject,
       isAnyReferenceObjectActive,
-      isAddingReferenceObject,
-      addReferenceObject,
-      addTemplateReferenceObject,
-      setReferenceObject,
-      deleteReferenceObject,
+      isAddingCustomMarker,
+      addCustomMarker,
+      placeCustomMarker,
+      deleteCustomMarker,
+      unmapObject,
+      placeCustomMarkerByCoords,
       setVideoObject,
       showVideoAsset,
       previousShowVideoAsset,
@@ -807,6 +923,7 @@ export const useCalibrationAssetStore = defineStore(
       topViewObjectProjection,
       videoObjectReprojection,
       applyHomography,
+      objectColorMap,
       calibrationMode,
       calibrationAssetSaveSuccess,
       calibrationAssetUpdateSuccess,
@@ -824,7 +941,6 @@ export const useCalibrationAssetStore = defineStore(
         "calibrationMode",
         "calibrationAssetType",
         "calibrationAssetObjects",
-        "videoObject",
         "calibrationMatrixPersisted",
       ],
       storage: sessionStorage,

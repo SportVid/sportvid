@@ -93,7 +93,9 @@
                           <v-icon>mdi-delete</v-icon>
                         </v-btn>
                       </template>
-                      {{ data.name }}
+                      <v-list-item-title>
+                        {{ data.name }}
+                      </v-list-item-title>
 
                       <ModalPositionDataRename
                         v-if="showModalPositionDataRename"
@@ -153,14 +155,17 @@ import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
 import ModalPositionDataRename from "./ModalPositionDataRename.vue";
+import { useVisualizationStore } from "@/stores/visualization";
 
-const { t } = useI18n();
+// Use global scope to avoid parent scope warning in dialogs/teleports
+const { t } = useI18n({ useScope: "global" });
 
 const playerStore = usePlayerStore();
 const pluginRunStore = usePluginRunStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const positionDataStore = usePositionDataStore();
 const topViewStore = useTopViewStore();
+const visualizationStore = useVisualizationStore();
 
 const props = defineProps({
   modelValue: {
@@ -230,9 +235,7 @@ const bytetrackRuns = computed(() => {
 const isButtonDisabled = computed(() => {
   if (selectedMode.value === "bytetrack") {
     return (
-      selectedCalibrationAsset.value === null ||
-      selectedBytetrack.value === null ||
-      !areaSize.value
+      selectedCalibrationAsset.value === null || selectedBytetrack.value === null || !areaSize.value
     );
   } else if (selectedMode.value === "manual") {
     return !selectedPositionData.value || !areaSize.value;
@@ -240,23 +243,23 @@ const isButtonDisabled = computed(() => {
   return true;
 });
 
-const confirmSelection = (
+const confirmSelection = async (
   calibrationAssetId,
   bytetrackPluginId,
   positionDataId,
   areaSize
 ) => {
   if (selectedMode.value === "bytetrack") {
-    topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
-    const keys = Object.keys(topViewStore.positionDataTopView)
-      .map(Number)
-      .sort((a, b) => a - b);
+    await topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
+    const keys = topViewStore.sortedFrameKeys;
     if (keys.length > 0) {
       positionDataStore.setSelectedTimeRangeStart(keys[0]);
       positionDataStore.setSelectedTimeRangeEnd(keys[keys.length - 1]);
     }
+    visualizationStore.loadKpiData(bytetrackPluginId);
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
+    visualizationStore.loadKpiData(positionDataId);
   }
 
   topViewStore.onSportChange(topViewStore.currentSport.title, areaSize);

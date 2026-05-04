@@ -12,17 +12,20 @@ export const useTabStore = defineStore(
       // { id: "timeline", name: t("analysis_view.visualization_tabs.timeline") },
       // { id: "events", name: t("analysis_view.visualization_tabs.events") },
       { id: "heatmap", name: t("analysis_view.visualization_tabs.heatmap") },
-      { id: "running_distance", name: t("analysis_view.visualization_tabs.running_distance") },
+      { id: "kpi", name: t("analysis_view.visualization_tabs.kpi") },
     ]);
+
+    const kpiViewMode = ref("table");
 
     return {
       visualizationTabId,
       visualizationTabs,
+      kpiViewMode,
     };
   },
   {
     persist: {
-      pick: ["visualizationTabId"],
+      pick: ["visualizationTabId", "kpiViewMode"],
       storage: sessionStorage,
     },
   }

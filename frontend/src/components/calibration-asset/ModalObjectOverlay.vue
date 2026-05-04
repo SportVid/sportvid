@@ -45,7 +45,7 @@
             :cx="m.videoCoordsRel[0].x * videoStore.videoSize.width"
             :cy="m.videoCoordsRel[0].y * videoStore.videoSize.height"
             r="8"
-            fill="red"
+            :fill="calibrationAssetStore.objectColorMap[m.id] ?? 'red'"
             fill-opacity="0.8"
           />
 
@@ -57,7 +57,7 @@
             :x2="m.videoCoordsRel[1].x * videoStore.videoSize.width"
             :y2="m.videoCoordsRel[1].y * videoStore.videoSize.height"
             stroke-width="8"
-            stroke="red"
+            :stroke="calibrationAssetStore.objectColorMap[m.id] ?? 'red'"
             stroke-opacity="0.8"
           />
 
@@ -77,7 +77,7 @@
                 return d;
               })()
             "
-            stroke="red"
+            :stroke="calibrationAssetStore.objectColorMap[m.id] ?? 'red'"
             stroke-width="8"
             stroke-opacity="0.8"
             fill="none"
@@ -168,13 +168,6 @@ const finishSegment = () => {
     currentSegmentPoints.value = [];
   }
 };
-watch(
-  () => currentSegmentPoints.value,
-  (nww) => {
-    console.log("segemtnpoints", nww);
-  },
-  { deep: true }
-);
 
 const updateVideoSize = () => {
   nextTick(() => {
