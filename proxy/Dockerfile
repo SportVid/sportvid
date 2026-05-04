@@ -1,4 +1,4 @@
-FROM nginx:1.28.0-alpine
+FROM node:24.15.0-bookworm-slim
 
 # remove default website
 RUN rm -rf /usr/share/nginx/html/*
