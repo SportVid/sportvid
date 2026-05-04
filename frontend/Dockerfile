@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:24.15.0-bookworm-slim
 
 WORKDIR /app/frontend
 
