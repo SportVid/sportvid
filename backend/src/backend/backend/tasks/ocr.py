@@ -1,28 +1,22 @@
+from django.db import transaction
+from django.conf import settings
 from typing import Dict, List
-import imageio.v3 as iio
 
-from data import DataManager
 from backend.models import (
     PluginRun,
-    PluginRunResult,
     Video,
     Timeline,
-    TibavaUser,
+    SportVidUser,
     Annotation,
     AnnotationCategory,
-    PluginRun,
-    PluginRunResult,
     TimelineSegmentAnnotation,
     TimelineSegment
 )
 from backend.plugin_manager import PluginManager
-
-from ..utils.analyser_client import TaskAnalyserClient
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-from django.db import transaction
-
-from django.conf import settings
+from data import DataManager
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 @PluginManager.export_parser("ocr_video_detector_onnx")
@@ -49,12 +43,11 @@ class OCRTask(Task):
         self,
         parameters: Dict,
         video: Video = None,
-        user: TibavaUser = None,
+        user: SportVidUser = None,
         plugin_run: PluginRun = None,
         **kwargs
     ):
-        # Debug
-        # parameters["fps"] = 0.1
+        # parameters["fps"] = 0.1  # debug
 
         # check whether we compare by input embedding or input image
         manager = DataManager(self.config["output_path"])

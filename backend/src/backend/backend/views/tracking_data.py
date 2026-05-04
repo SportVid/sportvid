@@ -1,15 +1,11 @@
-import os
-import shutil
-import sys
 import json
 import uuid
 import logging
-import traceback
-import tempfile
-import logging
+from django.views import View
+from django.http import JsonResponse
+from django.conf import settings
 from pathlib import Path
 
-from urllib.parse import urlparse
 from backend.plugin_manager import PluginManager
 from backend.utils import (
     download_file,
@@ -18,9 +14,6 @@ from backend.utils import (
 )
 from backend.models import TrackingData, Video
 
-from django.views import View
-from django.http import JsonResponse
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 

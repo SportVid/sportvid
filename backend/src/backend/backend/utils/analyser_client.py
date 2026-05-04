@@ -1,15 +1,12 @@
 import time
 import logging
-
 import grpc
 
 from analyser.client import AnalyserClient
-
-from interface import analyser_pb2
-from interface import analyser_pb2_grpc
-
 from backend.models import PluginRun
 from backend.utils import RetryOnRpcErrorClientInterceptor, ExponentialBackoff
+from interface import analyser_pb2
+from interface import analyser_pb2_grpc
 
 
 logger = logging.getLogger(__name__)
@@ -156,7 +153,7 @@ class TaskAnalyserClient(AnalyserClient):
 
                 return None
             if result is None:
-                logger.error(f"GRPC error: not valid return Code")
+                logger.error(f"GRPC error: not a valid return Ccode")
                 if plugin_run_db:
                     plugin_run_db.status = PluginRun.STATUS_ERROR
                     plugin_run_db.save()
@@ -171,7 +168,7 @@ class TaskAnalyserClient(AnalyserClient):
                 plugin_run_db.save()
 
             if result.status == analyser_pb2.GetPluginStatusResponse.UNKNOWN:
-                logger.error("Job is unknown by the analyser")
+                logger.error("Job is unknown for the analyser")
                 return
             elif result.status == analyser_pb2.GetPluginStatusResponse.WAITING:
                 pass

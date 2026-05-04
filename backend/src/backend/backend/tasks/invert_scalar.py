@@ -1,6 +1,7 @@
 import logging
+from django.db import transaction
+from django.conf import settings
 from typing import Dict, List
-
 
 from backend.models import (
     PluginRun,
@@ -9,14 +10,10 @@ from backend.models import (
     Timeline,
 )
 from backend.plugin_manager import PluginManager
-
-from ..utils.analyser_client import TaskAnalyserClient
-from data import DataManager, ListData
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-
-from django.db import transaction
-from django.conf import settings
+from data import DataManager, ListData
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 logger = logging.getLogger(__name__)

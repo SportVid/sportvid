@@ -4,18 +4,17 @@ import shutil
 import tarfile
 import logging
 import imageio
-
 from pathlib import Path
 from celery import shared_task
 
 from backend.utils import media_dir_to_file, media_path_to_file
-from utils.video_converter import convert_to_hls, convert_to_fmp4
-from utils.helper import remove_file, remove_dir
 from backend.models import Video
 from backend.plugin_manager import PluginManager
+from utils.video_converter import convert_to_hls, convert_to_fmp4
+from utils.helper import remove_file, remove_dir
+
 
 logger = logging.getLogger(__name__)
-
 _POLL_INTERVAL = 2.0  # seconds between cancellation checks
 
 

@@ -1,11 +1,9 @@
 import logging
-
 from typing import Dict, List
-
-from ..utils.analyser_client import TaskAnalyserClient
 
 from backend.models import PluginRun, PluginRunResult, Video, Timeline, TrackingData
 from backend.utils import media_path_to_file
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 logger = logging.getLogger(__name__)
@@ -37,15 +35,10 @@ class Task:
         downloads: List = None,
         plugin_run: PluginRun = None,
     ) -> str:
-
-        if parameters is None:
-            parameters = {}
-        if inputs is None:
-            inputs = {}
-        if outputs is None:
-            outputs = []
-        if downloads is None:
-            downloads = []
+        if parameters is None: parameters = {}
+        if inputs is None: inputs = {}
+        if outputs is None: outputs = []
+        if downloads is None: downloads = []
 
         job_id = client.run_plugin(
             analyser,
@@ -73,8 +66,6 @@ class Task:
         download_data = {}
         for output in result.outputs:
             if output.name in downloads:
-
                 data = client.download_data(output.id)
                 download_data[output.name] = data
-
         return result_ids, download_data

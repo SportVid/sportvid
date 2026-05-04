@@ -1,7 +1,5 @@
 import json
 import logging
-import traceback
-
 from django.views import View
 from django.http import JsonResponse
 
@@ -16,22 +14,20 @@ class TimelineList(View):
         try:
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"})
+            
             video_id = request.GET.get("video_id")
             if video_id:
                 video_db = Video.objects.get(id=video_id)
                 timelines = Timeline.objects.filter(video=video_db)
             else:
                 timelines = Timeline.objects.all()
+            
             timelines = (
                 timelines.select_related("video")
                 .select_related("plugin_run_result")
                 .prefetch_related("timelinesegment_set")
             )
 
-            # print("TimelineList")
-            # for x in timelines:
-            #     if x.plugin_run_result:
-            #         print(f"\t {x.id.hex} {x.plugin_run_result.id.hex}")
             entries = []
             for timeline in timelines:
                 result = timeline.to_dict()
@@ -48,8 +44,9 @@ class TimelineListAll(View):
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"})
             
-            timelines = (Timeline.objects.filter(video__owner=request.user)
-                                         .prefetch_related('plugin_run_result'))
+            timelines = (
+                Timeline.objects.filter(
+                    video__owner=request.user).prefetch_related('plugin_run_result'))
             add_results_type = request.GET.get("add_results_type", False)
 
             entries = []

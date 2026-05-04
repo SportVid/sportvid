@@ -1,10 +1,10 @@
 import json
-from django.core.management.base import BaseCommand, CommandError
-from backend.models import Video
-
-from backend.plugin_manager import PluginManager
 from multiprocessing import Pool
 from contextlib import nullcontext
+from django.core.management.base import BaseCommand, CommandError
+
+from backend.models import Video
+from backend.plugin_manager import PluginManager
 
 
 def job(args):
@@ -32,11 +32,8 @@ def job(args):
     return {"video_id": video_id, "plugin": plugin, **result}
 
 
-# ee1b9286b87344de95c2b4556526e9ab aa06ebb887254815ad3871feae38ce32 1e0af16722f74da2b01325f7c01732c0 9be743f95269496ba7d189a88f2e8fc5 5e426e6bdc4943dd8e7d99312dc9dd70 fd276ddff9aa48d5b5ebdcb446599b60
-
-
 class Command(BaseCommand):
-    help = "Closes the specified poll for voting"
+    help = "..."
 
     def add_arguments(self, parser):
         parser.add_argument("--video_ids", nargs="+", type=str)

@@ -172,6 +172,10 @@ CLAUDE.md
 # Editor
 .vscode/
 
+# Copilot
+.github
+github/
+
 # Tests
 tests/
 test_env/
@@ -182,3 +186,8 @@ models/
 # Data dirs
 .data
 data/
+
+# Project specific things
+README.md
+*.yml
+Dockerfile

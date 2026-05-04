@@ -1,10 +1,12 @@
-from django.core.management.base import BaseCommand, CommandError
-from backend.models import TibavaUser , Video
-from backend.views import VideoExport
 import os
+from django.core.management.base import BaseCommand, CommandError
+
+from backend.models import SportVidUser, Video
+from backend.views import VideoExport
+
 
 class Command(BaseCommand):
-    help = "Closes the specified poll for voting"
+    help = "..."
 
     def add_arguments(self, parser):
         parser.add_argument("--video_ids", nargs="+")
@@ -16,7 +18,7 @@ class Command(BaseCommand):
         if options["user_ids"]:
             for user_id in options["user_ids"]:
                 print(user_id)
-                user = TibavaUser.objects.get(id=user_id)
+                user = SportVidUser.objects.get(id=user_id)
                 video_dbs.extend(Video.objects.filter(owner=user))
         if options["video_ids"]:
             for video_id in options["video_ids"]:

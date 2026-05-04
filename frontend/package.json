@@ -9,7 +9,7 @@
   "dependencies": {
     "@he-tree/vue": "^2.9.4",
     "@mdi/font": "^7.4.47",
-    "axios": "^1.8.4",
+    "axios": "^1.15.0",
     "core-js": "^3.41.0",
     "d3": "^7.9.0",
     "d3-cloud": "^1.2.7",

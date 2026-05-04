@@ -1,19 +1,17 @@
 import logging
 import os
 import uuid
-
 from random import random
-
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
-from backend.utils.color import rgb_to_hex, random_rgb
 
-from data import DataManager
 from backend.utils import media_path_to_file
-from .managers import TibavaUserManager
+from backend.utils.color import rgb_to_hex, random_rgb
+from data import DataManager
+from .managers import SportVidUserManager
 
 
 logger = logging.getLogger(__name__)
@@ -39,13 +37,13 @@ def receiver_with_multiple_senders(signal, senders, **kwargs):
     return decorator
 
 
-class TibavaUser(AbstractUser):
+class SportVidUser(AbstractUser):
     role=models.CharField(max_length=256, default="user")
     max_storage_size = models.BigIntegerField(default=100 * 1024 * 1024 * 1024) # GB
     used_storage_size = models.BigIntegerField(default=0)
     max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB, 500MB: 500*1024*1024
     max_file_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB
-    objects = TibavaUserManager()
+    objects = SportVidManager()
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {

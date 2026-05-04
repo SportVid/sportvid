@@ -1,7 +1,6 @@
 import json
 import logging
 import uuid
-
 from django.views import View
 from django.http import JsonResponse
 

@@ -1,21 +1,22 @@
 import json
 import logging
 import traceback
-
-
 from django.views import View
 from django.http import JsonResponse
-from numpy import isin
 
-from backend.models import AnnotationShortcut, Shortcut, Video, Annotation
+from backend.models import (
+    AnnotationShortcut, 
+    Shortcut, 
+    Video, 
+    Annotation
+)
+
 
 logger = logging.getLogger(__name__)
 
 
-# from django.core.exceptions import BadRequest
-class AnnotationShortcutCreate(View):
+class AnnotationShortcutCreate(View): #TODO: ?
     def post(self, request):
-
         return JsonResponse({"status": "error"})
 
         try:
@@ -56,7 +57,6 @@ class AnnotationShortcutCreate(View):
             return JsonResponse({"status": "error"})
 
 
-# from django.core.exceptions import BadRequest
 class AnnotationShortcutUpdate(View):
     def delete_shortcut(self, annotation_shortcut, user, annotation, video=None):
         AnnotationShortcut.objects.filter(annotation=annotation).delete()
@@ -87,7 +87,6 @@ class AnnotationShortcutUpdate(View):
         try:
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"})
-            # decode data
             try:
                 body = request.body.decode("utf-8")
             except (UnicodeDecodeError, AttributeError):

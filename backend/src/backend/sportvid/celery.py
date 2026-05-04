@@ -3,9 +3,8 @@ import os
 from celery import Celery
 
 # set the default Django settings module for the 'celery' program.
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "tibava.settings")
-# NOTE: previous broker 'redis://backend_redis:6380'
-app = Celery("tibava", broker="redis://valkey:6380")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "sportvid.settings")
+app = Celery("sportvid", broker="redis://valkey:6380")
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
@@ -19,4 +18,4 @@ app.autodiscover_tasks()
 
 @app.task(bind=True)
 def debug_task(self):
-    print(f"Request: {self.request!r}")
+    print(f"request: {self.request!r}")

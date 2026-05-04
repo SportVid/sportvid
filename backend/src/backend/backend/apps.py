@@ -15,7 +15,7 @@ class BackendConfig(AppConfig):
         if 'backend_pluginrun' not in connection.introspection.table_names():
             return
         # import here otherwise django complains
-        from tibava.celery import app
+        from sportvid.celery import app
         from backend.models import PluginRun
 
         # set unfinished tasks to ERROR on startup

@@ -1,15 +1,11 @@
 import logging
 import os
-import traceback
 import uuid
 import xml.etree.ElementTree as ET
-
-
 from django.views import View
 from django.http import JsonResponse
 from django.conf import settings
 
-# from django.core.exceptions import BadRequest
 from backend.utils import download_file
 from backend.models import Timeline, TimelineSegment, TimelineSegmentAnnotation, Video, Annotation
 
@@ -21,7 +17,6 @@ def time_to_string(sec, loc="en"):
     sec, sec_frac = divmod(sec, 1)
     min, sec = divmod(sec, 60)
     hours, min = divmod(min, 60)
-
     sec_frac = round(1000 * sec_frac)
     hours = int(hours)
     min = int(min)
@@ -45,7 +40,6 @@ class TimelineImportEAF(View):
 
             upload_id = uuid.uuid4().hex
             video_id = request.POST.get("video_id")
-            print(video_id)
             try:
                 video_db = Video.objects.get(id=video_id)
             except Video.DoesNotExist:
@@ -65,7 +59,6 @@ class TimelineImportEAF(View):
                     logger.error("TimelineImportEAF::download_failed")
                     return JsonResponse(download_result)
 
-                print(download_result, flush=True)
                 timelines = self.import_timelines_from_eaf(download_result["path"])
                 for timeline in timelines:
                     timeline_db = Timeline.objects.create(
@@ -100,26 +93,21 @@ class TimelineImportEAF(View):
             logger.exception("Failed to import EAF timeline")
             return JsonResponse({"status": "error"})
 
+
     def import_timelines_from_eaf(self, xmlfile):
         # create element tree object
         tree = ET.parse(xmlfile)
-
         # get root element
         root = tree.getroot()
-
         # get time spans
         timeslots = {}
         for timeslot in root.findall("TIME_ORDER/TIME_SLOT"):
             timeslots[timeslot.attrib["TIME_SLOT_ID"]] = timeslot.attrib
-
-        logger.debug(timeslots)
-
         # findall timelines
         timelines = []
         annotations = 0
         for timeline in root.findall("TIER"):
             timeline_segments = []
-
             for annotation in timeline.findall("ANNOTATION/ALIGNABLE_ANNOTATION"):
                 start_time = timeslots[annotation.attrib["TIME_SLOT_REF1"]]["TIME_VALUE"]
                 end_time = timeslots[annotation.attrib["TIME_SLOT_REF2"]]["TIME_VALUE"]
@@ -130,7 +118,7 @@ class TimelineImportEAF(View):
                     )
                     annotations += 1
             timelines.append({"name": timeline.attrib["TIER_ID"], "segments": timeline_segments})
-
         logger.debug(timelines)
         logger.info(f"{len(timelines)} timelines with {annotations} annotations found!")
+        
         return timelines
