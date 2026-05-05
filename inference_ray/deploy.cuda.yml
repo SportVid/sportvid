@@ -163,7 +163,7 @@ applications:
             uv:
               - numpy
               - pandas
-              - lxml
+              - floodlight==1.1.0
 
   - name: thumbnail_generator
     route_prefix: /thumbnail_generator
