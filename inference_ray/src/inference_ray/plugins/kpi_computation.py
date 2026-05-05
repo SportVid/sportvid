@@ -55,6 +55,7 @@ class KpiComputation(
         import json
         import numpy as np
 
+        import floodlight.io.kinexon as knx
         import floodlight.io.dfl as dfl
         from floodlight.transforms.filter import butterworth_lowpass, savgol_lowpass
         from floodlight.models.kinematics import DistanceModel, VelocityModel
@@ -110,6 +111,19 @@ class KpiComputation(
                             tmp.write(t_data.read())
                             tmp_path = tmp.name
                         try:
+                            # NOTE: knx reader returns lists for pos_data and teamsheets (different from DFL reader below, returning same-named variables as dicts)
+                            pos_data = knx.read_position_data_csv(tmp_path, delimiter=parameters.get("delimiter", ";")) # pos_data is List[XY]
+                            teamsheets = knx.read_teamsheets_from_csv(tmp_path, delimiter=parameters.get("delimiter", ";")) # teamsheets is List[Teamsheet]
+                            csv_data = pd.read_csv(tmp_path, delimiter=parameters.get("delimiter", ";"))
+                            group_id_map = csv_data[["number", "group id"]].drop_duplicates(subset=["number"])
+                            for idx, i in enumerate(teamsheets):
+                                teamsheets[idx].teamsheet = pd.merge(
+                                    i.teamsheet.astype({"number": int}),
+                                    group_id_map,
+                                    on=["number"]
+                                )
+                            # ------------- alternative version using core API
+                            """
                             from floodlight.core.xy import XY as _XY
                             from floodlight.core.teamsheet import Teamsheet as _Teamsheet
 
@@ -149,7 +163,7 @@ class KpiComputation(
                                 for xi, p_num in enumerate(players):
                                     ts_rows.append({"xID": xi, "number": p_num, "group id": gid})
                                 teamsheets.append(_Teamsheet(teamsheet=pd.DataFrame(ts_rows)))
-
+                            """
                         finally:
                             os.unlink(tmp_path)
 

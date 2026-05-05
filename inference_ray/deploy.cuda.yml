@@ -138,6 +138,33 @@ applications:
               - pandas
               - lxml
 
+  - name: kpi_computation
+    route_prefix: /kpi_computation
+    import_path: inference_ray.main:app_builder
+    args:
+      model: kpi_computation
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        max_ongoing_requests: 4
+        autoscaling_config:
+          min_replicas: 0
+          initial_replicas: 0
+          max_replicas: 4
+          target_num_ongoing_requests_per_replica: 2
+          metrics_interval_s: 10
+          look_back_period_s: 30
+          upscale_delay_s: 15
+          downscale_delay_s: 60
+        ray_actor_options:
+          num_cpus: 4
+          runtime_env:
+            uv:
+              - numpy
+              - pandas
+              - lxml
+
   - name: thumbnail_generator
     route_prefix: /thumbnail_generator
     import_path: inference_ray.main:app_builder
