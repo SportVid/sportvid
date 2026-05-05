@@ -7,7 +7,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('backend', '0045_alter_pluginrunresult_type'),
-        ('backend', '0045_video_sport'),
     ]
 
     operations = [

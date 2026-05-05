@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0047_remove_pointcorrespondence_set'),
+        ('backend', '0048_remove_pointcorrespondence_set'),
     ]
 
     operations = [
