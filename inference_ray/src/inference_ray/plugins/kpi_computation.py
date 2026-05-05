@@ -55,7 +55,6 @@ class KpiComputation(
         import json
         import numpy as np
 
-        import floodlight.io.kinexon as knx
         import floodlight.io.dfl as dfl
         from floodlight.transforms.filter import butterworth_lowpass, savgol_lowpass
         from floodlight.models.kinematics import DistanceModel, VelocityModel
@@ -111,17 +110,46 @@ class KpiComputation(
                             tmp.write(t_data.read())
                             tmp_path = tmp.name
                         try:
-                            # NOTE: knx reader returns lists for pos_data and teamsheets (different from DFL reader below, returning same-named variables as dicts)
-                            pos_data = knx.read_position_data_csv(tmp_path, delimiter=parameters.get("delimiter", ";")) # pos_data is List[XY]
-                            teamsheets = knx.read_teamsheets_from_csv(tmp_path, delimiter=parameters.get("delimiter", ";")) # teamsheets is List[Teamsheet]
-                            csv_data = pd.read_csv(tmp_path, delimiter=parameters.get("delimiter", ";"))
-                            group_id_map = csv_data[["number", "group id"]].drop_duplicates(subset=["number"])
-                            for idx, i in enumerate(teamsheets):
-                                teamsheets[idx].teamsheet = pd.merge(
-                                    i.teamsheet.astype({"number": int}),
-                                    group_id_map,
-                                    on=["number"]
-                                )
+                            from floodlight.core.xy import XY as _XY
+                            from floodlight.core.teamsheet import Teamsheet as _Teamsheet
+
+                            delim = parameters.get("delimiter", ";")
+                            csv_data = pd.read_csv(tmp_path, delimiter=delim)
+
+                            ts_vals = np.sort(csv_data["ts in ms"].unique())
+                            if len(ts_vals) > 1:
+                                median_diff = float(np.median(np.diff(ts_vals)))
+                                framerate_raw = int(round(1000.0 / median_diff)) if median_diff > 0 else 25
+                            else:
+                                framerate_raw = 25
+
+                            ts_to_frame = {ts: fi for fi, ts in enumerate(ts_vals)}
+                            n_frames_raw = len(ts_vals)
+
+                            groups = sorted(csv_data["group id"].unique())
+                            pos_data = []
+                            teamsheets = []
+
+                            for gid in groups:
+                                group_df = csv_data[csv_data["group id"] == gid].copy()
+                                players = sorted(group_df["number"].astype(int).unique())
+                                n_players = len(players)
+                                player_col_idx = {p: i for i, p in enumerate(players)}
+
+                                xy_arr = np.full((n_frames_raw, 2 * n_players), np.nan)
+                                for _, row in group_df.iterrows():
+                                    fi = ts_to_frame[row["ts in ms"]]
+                                    p_idx = player_col_idx[int(row["number"])]
+                                    xy_arr[fi, 2 * p_idx] = float(row["x in m"])
+                                    xy_arr[fi, 2 * p_idx + 1] = float(row["y in m"])
+
+                                pos_data.append(_XY(xy=xy_arr, framerate=framerate_raw))
+
+                                ts_rows = []
+                                for xi, p_num in enumerate(players):
+                                    ts_rows.append({"xID": xi, "number": p_num, "group id": gid})
+                                teamsheets.append(_Teamsheet(teamsheet=pd.DataFrame(ts_rows)))
+
                         finally:
                             os.unlink(tmp_path)
 
