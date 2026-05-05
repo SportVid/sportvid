@@ -18,11 +18,12 @@ services:
     container_name: inference_ray_prod
     build:
       context: .
+    init: true
+    shm_size: "8g" # TODO: should be 30% of total available memory?
     environment:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
       - NVIDIA_VISIBLE_DEVICES=all
-      - BACKEND_PORT=${BACKEND_PORT} # TODO: not working ???
     env_file:
       - /opt/deploy/.env.prod
     volumes:
@@ -63,12 +64,12 @@ services:
     env_file:
       - /opt/deploy/.env.prod
     volumes:
-      - ./inference_ray:/app/inference_ray
-      - ./analyser:/app/analyser
-      - ./packages:/app/packages
       - ${DATA_PATH}/analyser:/data/
       - ${DATA_PATH}/media/:/media/
       - ${DATA_PATH}/cache/:/cache/
+      - ./inference_ray:/app/inference_ray
+      - ./analyser:/app/analyser
+      - ./packages:/app/packages
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
     working_dir: /app/
@@ -110,13 +111,13 @@ services:
     env_file:
       - /opt/deploy/.env.prod
     volumes:
+      - ${DATA_PATH}/media/:/media
+      - ${DATA_PATH}/predictions:/predictions
+      - ${DATA_PATH}/backend_cache:/cache
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
       - ./packages:/app/packages
       - ./backend/:/app/backend
-      - ${DATA_PATH}/media/:/media
-      - ${DATA_PATH}/predictions:/predictions
-      - ${DATA_PATH}/backend_cache:/cache
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
     tmpfs:
@@ -137,7 +138,7 @@ services:
       - "sportvid"
       - "worker"
       - "--loglevel"
-      - "INFO"
+      - "${LOG_LEVEL:-INFO}"
     networks:
       - shared
       - prod
@@ -157,13 +158,13 @@ services:
     env_file:
       - /opt/deploy/.env.prod
     volumes:
+      - ${DATA_PATH}/media/:/media
+      - ${DATA_PATH}/predictions:/predictions
+      - ${DATA_PATH}/backend_cache:/cache
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
       - ./packages:/app/packages
       - ./backend/:/app/backend
-      - ${DATA_PATH}/media/:/media
-      - ${DATA_PATH}/predictions:/predictions
-      - ${DATA_PATH}/backend_cache:/cache
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
     tmpfs:
@@ -183,10 +184,11 @@ services:
       - "sportvid.wsgi"
       - "--capture-output"
       - "--log-level"
-      - "${LOG_LEVEL}"
+      - "${LOG_LEVEL:-INFO}"
       - "--timeout"
-      - "1800" # TODO: fix later
-      - "--workers=${GUNICORN_WORKERS}"
+      - "${GUNICORN_TIMEOUT:-1800}"
+      - "--workers"
+      - "${GUNICORN_WORKERS:-16}"
     depends_on:
       # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
       # postgres:
