@@ -943,10 +943,6 @@
       "show_steps": "Show Steps",
       "show_missing_requirements": "Show missing requirements",
       "step": "Step",
-      "tabs": {
-        "pipelines": "Pipelines",
-        "singles": "Single Steps"
-      },
       "groups": {
         "basics": "Basics",
         "position_data": "Position Data",

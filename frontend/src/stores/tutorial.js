@@ -43,11 +43,9 @@ export const useTutorialStore = defineStore("tutorial", () => {
           case "analysis-view-opened":
             if (route.name !== "AnalysisView") missing.push(tutorialRequirements.value[req]);
             break;
-          case "analysis-view-opened":
-            if (route.name !== "AnalysisView") missing.push(tutorialRequirements[req]);
-            break;
           case "position-data-selected":
-            if (topViewStore.sortedFrameKeys.length === 0) missing.push(tutorialRequirements[req]);
+            if (topViewStore.sortedFrameKeys.length === 0)
+              missing.push(tutorialRequirements.value[req]);
         }
       });
     }
@@ -188,7 +186,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     })
   );
 
-  const tutorialSteps = {
+  const tutorialSteps = computed(() => ({
     "upload-video": {
       steps: [
         {
@@ -1861,9 +1859,9 @@ export const useTutorialStore = defineStore("tutorial", () => {
         },
       ],
     },
-  };
+  }));
 
-  const tutorialRequirements = {
+  const tutorialRequirements = computed(() => ({
     "video-uploaded": {
       id: "video-uploaded",
       text: t("modal.tutorial.missing_requirements.video_uploaded"),
@@ -1876,7 +1874,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
       id: "position-data-selected",
       text: t("modal.tutorial.missing_requirements.position_data_selected"),
     },
-  };
+  }));
 
   function createNoOverlayHandler() {
     return {
@@ -2005,6 +2003,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     nextStepText,
     totalSteps,
     uploadFormReady,
+    openTutorialModal,
     startTutorial,
     stopTutorial,
     tour,

@@ -41,6 +41,20 @@
                   {{ item.icon }}
                 </v-icon>
               </template>
+              <template #item="{ item, props: itemProps }">
+                <v-list-item
+                  v-bind="itemProps"
+                  :data-tour="
+                    item.id === 703
+                      ? 'plugin-kpi-computation'
+                      : item.id === 701
+                      ? 'plugin-bytetrack'
+                      : item.id === 702
+                      ? 'plugin-calibration-dlt'
+                      : undefined
+                  "
+                />
+              </template>
             </v-treeview>
           </v-col>
 
