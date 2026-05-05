@@ -1,5 +1,8 @@
 FROM nginx:1.28.0-alpine-slim
 
+# ensure nginx user:group exist
+RUN addgroup -S nginx || true && adduser -S -G nginx nginx || true
+
 # remove default website
 RUN rm -rf /usr/share/nginx/html/*
 
