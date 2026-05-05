@@ -183,9 +183,8 @@ services:
 
   frontend:
     container_name: frontend
-    image: frontend
-    # build:
-    #   context: ./frontend
+    build:
+      context: ./frontend
     ports:
       - 8080:8080
       - 80:80
