@@ -8,4 +8,7 @@ def convert_to_hls(input_path, file_ext, out_path):
     output_stream = ffmpeg.output(input_stream,
         filename=out_path,
         format='hls', start_number=0, hls_time=5, hls_list_size=0)
-    return ffmpeg.run_async(output_stream, pipe_stderr=True)
+    # Do NOT pipe stderr: piping without draining causes a pipe-buffer deadlock
+    # when ffmpeg's progress output fills the 64 KB OS buffer on a loaded server.
+    # Celery's container stderr captures ffmpeg output via Docker logs instead.
+    return ffmpeg.run_async(output_stream, pipe_stderr=False)

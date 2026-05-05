@@ -13,7 +13,6 @@ valkey_passwd = os.getenv("VALKEY_PASSWD")
 broker_url = f"redis://:{valkey_passwd}@{valkey_host}:{valkey_port}/0"
 
 app = Celery("sportvid", broker=broker_url) # type: ignore
-app = Celery("sportvid", broker=broker_url) # type: ignore
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
