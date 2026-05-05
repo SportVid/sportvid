@@ -4,10 +4,10 @@ secrets:
 
 volumes:
   assets:
-    external: true
     name: frontend-assets
 services:
   inference_ray:
+    container_name: inference_ray
     build:
       context: .
     init: true
@@ -16,8 +16,6 @@ services:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
       # - NVIDIA_VISIBLE_DEVICES=all
-    env_file:
-      - .env.dev
     volumes:
       - ${DATA_PATH}/analyser:/data/
       - ${DATA_PATH}/media/:/media/
@@ -28,6 +26,7 @@ services:
       - ./backend:/app/backend
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
+    working_dir: /app/
     # deploy:
     #   resources:
     #     reservations:
@@ -35,7 +34,6 @@ services:
     #         - driver: nvidia
     #           count: 1
     #           capabilities: [ gpu ]
-    working_dir: /app/
     command:
       - "uv"
       - "run"
@@ -46,7 +44,9 @@ services:
       - "/app/inference_ray/deploy.cuda.yml"
 
   analyser:
-    image: ghcr.io/astral-sh/uv:debian
+    container_name: analyser
+    build:
+      context: .
     volumes:
       - ${DATA_PATH}/analyser:/data/
       - ${DATA_PATH}/media/:/media/
@@ -60,13 +60,13 @@ services:
     command: uv run --package analyser analyser/src/analyser/server.py -v -c analyser/config.yml
 
   memcached:
+    container_name: memcached
     image: memcached:1.6.10-buster
     command: -I 32m
 
   valkey:
+    container_name: valkey
     image: valkey/valkey:8.1.1-alpine
-    env_file: 
-      - .env.dev
     command:
       - "/usr/local/bin/valkey-server"
       - "--bind"
@@ -81,18 +81,26 @@ services:
       - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT} # remap port
 
   postgres:
+    container_name: postgres
     image: postgres:14.17
+    environment:
+    - POSTGRES_USER
+    - POSTGRES_DB
+    - POSTGRES_PASSWORD
     volumes:
       - ${DATA_PATH}/shared/db/:/var/lib/postgresql/data
       - ./postgres:/docker-entrypoint-initdb.d  # init.sh is invoked automatically
-    env_file:
-      - .env.dev
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${PROD_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  
   celery:
+    container_name: celery
     build:
       context: .
-    env_file:
-      - /opt/deploy/.env.dev
     volumes:
       - ${DATA_PATH}/media/:/media
       - ${DATA_PATH}/predictions:/predictions
@@ -107,8 +115,6 @@ services:
       - /tmp
       - /var
     working_dir: /app/backend/src/backend/
-    environment:
-      - SPORTVID_BACKEND_CONFIG=/app/backend/config.json
     command:
       - "uv"
       - "run"
@@ -118,10 +124,11 @@ services:
       - "-A"
       - "sportvid"
       - "worker"
-      - "${LOG_LEVEL}"
-      - "INFO"
+      - "--loglevel"
+      - "${LOG_LEVEL:-INFO}"
 
   backend:
+    container_name: backend
     build:
       context: .
       args:
@@ -132,8 +139,6 @@ services:
       - django_settings
     environment:
       - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
-    env_file:
-      - .env.dev
     volumes:
       - ${DATA_PATH}/media/:/media
       - ${DATA_PATH}/predictions:/predictions
@@ -170,13 +175,14 @@ services:
     depends_on:
       # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
       # postgres:
-      #   condition: service_healthy
+      #  condition: service_healthy
       memcached:
         condition: service_started
       celery:
         condition: service_started
 
   frontend:
+    container_name: frontend
     build:
       context: ./frontend
     ports:
@@ -187,6 +193,4 @@ services:
       - ${DATA_PATH}/predictions/:/thumbnails
       - ${DATA_PATH}/media/:/media
       - assets:/assets
-    env_file:
-      - .env.dev
     working_dir: /app/frontend
