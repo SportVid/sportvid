@@ -8,11 +8,10 @@
     "data_output_path": "/predictions",
     "static_url": "/api/static/",
     "media_root": "/media/",
+    "media_url": "/media/",
     "upload_root": "/upload/",
     "upload_url": "/upload/",
-    "media_url": "/media/",
     "indexer_path": "/indexer",
-    "upload_url": "/upload/",
     "grpc_host": "analyser",
     "grpc_port": 50051,
     "annotation_max_length": 1000

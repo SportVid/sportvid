@@ -1,3 +1,10 @@
+secrets:
+  django_settings:
+    file: ${SPORTVID_BACKEND_CONFIG}
+
+volumes:
+  assets:
+    name: frontend-assets
 services:
   inference_ray:
     build:
@@ -8,11 +15,10 @@ services:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
       - NVIDIA_VISIBLE_DEVICES=all
-      - BACKEND_PORT=${BACKEND_PORT}
     volumes:
-      - ./data/analyser:/data/
-      - ./data/media/:/media/
-      - ./data/models/:/models/
+      - ${DATA_PATH}/analyser:/data/
+      - ${DATA_PATH}/media/:/media/
+      - ${DATA_PATH}/models/:/models/
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
       - ./packages:/app/packages
@@ -39,9 +45,9 @@ services:
   analyser:
     image: ghcr.io/astral-sh/uv:debian
     volumes:
-      - .data/analyser:/data/
-      - .data/media/:/media/
-      - .data/cache/:/cache/
+      - ${DATA_PATH}/analyser:/data/
+      - ${DATA_PATH}/media/:/media/
+      - ${DATA_PATH}/models/:/models/
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
       - ./packages:/app/packages
@@ -50,32 +56,38 @@ services:
     working_dir: /app/
     command: uv run --package analyser analyser/src/analyser/server.py -v -c analyser/config.yml
 
-  postgres:
-    image: postgres:14.17
-    volumes:
-      - ./data/db/:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=tibava
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-
   memcached:
     image: memcached:1.6.10-buster
     command: -I 32m
 
   valkey:
     image: valkey/valkey:8.1.1-alpine
-    command: /usr/local/bin/valkey-server --port 6380 --bind 0.0.0.0
+    command:
+      - "/usr/local/bin/valkey-server"
+      - "--bind"
+      - "${VALKEY_INTERNAL_HOST}"
+      - "--port"
+      - "${VALKEY_INTERNAL_PORT}"
+      # - "--requirepass"
+      # - "${VALKEY_PASSWD}"
+      # - "--protected-mode"
+      # - "yes"
     ports:
-      - "127.0.0.1:6380:6380"
+      - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT} # remap port
+
+  postgres:
+    image: postgres:14.17
+    volumes:
+      - ${DATA_PATH}/shared/db/:/var/lib/postgresql/data
+      - ./postgres:/docker-entrypoint-initdb.d  # init.sh is invoked automatically
 
   celery:
     build:
       context: .
     volumes:
-      - .data/media/:/media
-      - .data/predictions:/predictions
-      - .data/backend_cache:/cache
+      - ${DATA_PATH}/media/:/media
+      - ${DATA_PATH}/predictions:/predictions
+      - ${DATA_PATH}/backend_cache:/cache
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
       - ./packages:/app/packages
@@ -86,8 +98,6 @@ services:
       - /tmp
       - /var
     working_dir: /app/backend/src/backend/
-    environment:
-      - SPORTVID_BACKEND_CONFIG=/app/backend/config.json
     command:
       - "uv"
       - "run"
@@ -97,23 +107,23 @@ services:
       - "-A"
       - "sportvid"
       - "worker"
-      - "--loglevel"
-      - "INFO"
+      - "${LOG_LEVEL}"
 
   backend:
     build:
       context: .
       args:
-        - BACKEND_PORT=8000
+        - BACKEND_PORT=${BACKEND_PORT}
     ports:
-      - 8000:8000
+      - ${BACKEND_PORT}:${BACKEND_PORT}
+    secrets:
+      - django_settings
     environment:
       - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
-      - SPORTVID_BACKEND_CONFIG=/app/backend/config.json
     volumes:
-      - .data/media/:/media
-      - .data/predictions:/predictions
-      - .data/backend_cache:/cache
+      - ${DATA_PATH}/media/:/media
+      - ${DATA_PATH}/predictions:/predictions
+      - ${DATA_PATH}/backend_cache:/cache
       - ./inference_ray:/app/inference_ray
       - ./analyser:/app/analyser
       - ./packages:/app/packages
@@ -140,7 +150,8 @@ services:
       - "${LOG_LEVEL}"
       - "--timeout"
       - "1800"
-      - "--workers=${GUNICORN_WORKERS}"
+      - "--workers"
+      - "${GUNICORN_WORKERS}"
     # command: uv run --package backend python3 backend/src/backend/manage.py runserver 0.0.0.0:8000
     depends_on:
       # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
@@ -152,15 +163,14 @@ services:
         condition: service_started
 
   frontend:
-    image: frontend
+    build:
+      context: ./frontend
     ports:
       - 8080:8080
       - 80:80
-    build:
-      context: ./frontend
     volumes:
       - ./frontend/:/app/frontend
-      - .data/predictions/:/thumbnails
-      - .data/media/:/media
+      - ${DATA_PATH}/predictions/:/thumbnails
+      - ${DATA_PATH}/media/:/media
       - assets:/assets
     working_dir: /app/frontend

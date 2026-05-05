@@ -19,7 +19,6 @@ https://sportvid.github.io/
 2. **Prepare for deployment:**
     ```sh
     cd sportvid
-    sudo mkdir -p /mnt/data/prod/data && cd /mnt/data/prod/data
     sudo mkdir cache
     sudo mkdir analyser
     sudo mkdir media

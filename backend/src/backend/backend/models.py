@@ -43,7 +43,7 @@ class SportVidUser(AbstractUser):
     used_storage_size = models.BigIntegerField(default=0)
     max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB, 500MB: 500*1024*1024
     max_file_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB
-    objects = SportVidManager()
+    objects = SportVidUserManager()
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {

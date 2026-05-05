@@ -4,7 +4,7 @@ http_options:
   port: 8000
 logging_config:
   encoding: TEXT # or JSON
-  log_level: WARNING # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_level: INFO # DEBUG, INFO, WARNING, ERROR, CRITICAL
   logs_dir: null # or a custom path; null = default
   enable_access_log: false
 
@@ -20,9 +20,8 @@ applications:
     deployments:
       - name: Deployment
         max_ongoing_requests: 2 # 2 or 4 seems to be a reasonable upper bound for now
-        num_replicas: 1
         autoscaling_config:
-          min_replicas: 1
+          min_replicas: 0
           initial_replicas: 0
           max_replicas: 1
           target_num_ongoing_requests_per_replica: 4
@@ -70,7 +69,7 @@ applications:
       - name: Deployment
         max_ongoing_requests: 2
         autoscaling_config:
-          min_replicas: 1
+          min_replicas: 0
           initial_replicas: 0
           max_replicas: 1
           target_num_ongoing_requests_per_replica: 4
@@ -96,7 +95,7 @@ applications:
       - name: Deployment
         max_ongoing_requests: 2
         autoscaling_config:
-          min_replicas: 1
+          min_replicas: 0
           initial_replicas: 0
           max_replicas: 1
           target_num_ongoing_requests_per_replica: 4
@@ -123,7 +122,7 @@ applications:
       - name: Deployment
         max_ongoing_requests: 2
         autoscaling_config:
-          min_replicas: 1
+          min_replicas: 0
           initial_replicas: 0
           max_replicas: 1
           target_num_ongoing_requests_per_replica: 4
@@ -150,7 +149,7 @@ applications:
       - name: Deployment
         max_ongoing_requests: 2
         autoscaling_config:
-          min_replicas: 1
+          min_replicas: 0
           initial_replicas: 0
           max_replicas: 1
           target_num_ongoing_requests_per_replica: 4
