@@ -7,7 +7,7 @@
     "demo_title": "Videodemonstration",
     "demo_text": "Wir bereiten derzeit ein Video vor, das die Funktionen von SportVid demonstriert und erklärt, wie man es nutzt, um den Einstieg zu erleichtern. Die Veröffentlichung ist spätestens für 2027 geplant.",
     "login_title": "Noch kein Konto?",
-    "login_text": "Falls Sie noch kein Konto besitzen, können Sie oben rechts einen erstellen (\"Anmelden\" → \"Registrieren\") oder einen per E-Mail an {'y.paul@dshs-koeln.de'} mit einer kurzen Beschreibung Ihres Anwendungszwecks anfordern.",
+    "login_text": "Falls Sie noch kein Konto besitzen, können Sie oben rechts eines erstellen (\"Anmelden\" → \"Registrieren\") oder eines per E-Mail an {'y.paul@dshs-koeln.de'} mit einer kurzen Beschreibung Ihres Anwendungszwecks anfordern.",
     "format_title": "Unterstützte Videodateiformate",
     "format_text": "Bitte beachten Sie, dass SportVid derzeit nur die Analyse von <b>MP4</b>-Videodateien unterstützt, um lange Verarbeitungszeiten durch serverseitiges Transkodieren zu vermeiden."
   },
