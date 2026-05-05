@@ -46,22 +46,33 @@ prepare() {
     original_dir=$(pwd)
 
     echo "Executing environment '$ENVIRONMENT' on branch '$BRANCH'"
-    
-    if ! cd /git/sportvid; then
-        echo "Failed to change directory to /git/sportvid"
+
+    # ensure we're in a git repo
+    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        echo "Not inside a git repository; aborting."
         safe_exit 1
         return 1
     fi
-    
-    if ! git checkout "$BRANCH"; then
+
+    # make sure the correct branch is checked out
+    if ! git checkout -f "$BRANCH"; then
         echo "Failed to checkout branch: $BRANCH"
         cd "$original_dir" || true
         safe_exit 1
         return 1
     fi
+
+    # update from remote and discard local drift
+    if ! git fetch origin; then
+        echo "Failed to fetch from origin"
+        cd "$original_dir" || true
+        safe_exit 1
+        return 1
+    fi
     
-    if ! git pull origin "$BRANCH"; then
-        echo "Failed to pull from origin: $BRANCH"
+    # resets to remote state in case of local changes
+    if ! git reset --hard "origin/$BRANCH"; then
+        echo "Failed to reset to origin/$BRANCH"
         cd "$original_dir" || true
         safe_exit 1
         return 1
@@ -132,17 +143,16 @@ case $COMMAND in
             exec_docker
         fi
         ;;
-    # NOTE: obsolete since frontend container executes 'npm run build' and copies the file into the shared volume.
-    # "frontend-install")
-    #     DOCKER_CMD="exec frontend npm install"
-    #     echo "Installing npm packages..."
-    #     exec_docker
-	#     ;;
-    # "frontend-build")
-	#     DOCKER_CMD="exec frontend npm run build"
-    #     echo "Building the frontend..."
-	#     exec_docker
-    #     ;;
+    "frontend-install")
+        DOCKER_CMD="exec frontend npm install"
+        echo "Installing npm packages..."
+        exec_docker
+	    ;;
+    "frontend-build")
+	    DOCKER_CMD="exec frontend npm run build"
+        echo "Building the frontend..."
+	    exec_docker
+        ;;
     *)
         echo "Unknown command: $COMMAND"
         safe_exit 1
