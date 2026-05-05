@@ -260,7 +260,7 @@ class PluginRunResult(models.Model):
     TYPE_BBOXES = "B"
     TYPE_POS = "P"
     TYPE_FL = "FL"
-    TYPE_KPI = "KPI"
+    TYPE_KPI = "KI"
     TYPE = {
         TYPE_VIDEO: "VIDEO",
         TYPE_IMAGES: "IMAGES",
