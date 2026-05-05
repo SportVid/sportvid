@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0046_merge_20260330_1748'),
+        ('backend', '0047_video_sport'),
     ]
 
     operations = [

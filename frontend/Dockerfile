@@ -1,15 +1,10 @@
-FROM node:24.15.0-bookworm-slim
+FROM nginx:1.28.0-alpine-slim
 
+RUN apk add --update npm git
+RUN npm install -g npm@11.13.0 \
+    && sed -i '/^globalignorefile=/d;/^python=/d' /usr/local/lib/node_modules/npm/npmrc
+COPY ./default.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
 WORKDIR /app/frontend
 
-COPY package*.json ./
-
-RUN npm install
-# RUN npm install -g npm@11.3.0
-# RUN apk add --update npm git
-
-COPY . .
-
-RUN npm run build
-
-# CMD ["nginx", "-g", "daemon off;"]
+CMD ["nginx", "-g", "daemon off;"]

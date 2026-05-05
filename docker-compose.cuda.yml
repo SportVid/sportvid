@@ -2,9 +2,9 @@ secrets:
   django_settings:
     file: ${SPORTVID_BACKEND_CONFIG}
 
-volumes:
-  assets:
-    name: frontend-assets
+# volumes:
+#   assets:
+#     name: frontend-assets
 services:
   inference_ray:
     container_name: inference_ray
@@ -125,7 +125,7 @@ services:
       - "sportvid"
       - "worker"
       - "--loglevel"
-      - "${LOG_LEVEL:-INFO}"
+      - "${LOG_LEVEL:-DEBUG}"
 
   backend:
     container_name: backend
@@ -183,8 +183,9 @@ services:
 
   frontend:
     container_name: frontend
-    build:
-      context: ./frontend
+    image: frontend
+    # build:
+    #   context: ./frontend
     ports:
       - 8080:8080
       - 80:80
@@ -192,5 +193,5 @@ services:
       - ./frontend/:/app/frontend
       - ${DATA_PATH}/predictions/:/thumbnails
       - ${DATA_PATH}/media/:/media
-      - assets:/assets
+      # - assets:/assets
     working_dir: /app/frontend

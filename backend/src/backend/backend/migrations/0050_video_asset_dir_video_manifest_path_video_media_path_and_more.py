@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0048_trackingdata_delimiter'),
+        ('backend', '0049_trackingdata_delimiter'),
     ]
 
     operations = [

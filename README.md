@@ -30,9 +30,17 @@ https://sportvid.github.io/
     rm -rf models.tar.gz
     ```
 3. **Build and start:**
+    Prepare:
     ```sh
     uv sync
+    ```
+    Start (only CPU):
+    ```sh
     sudo docker compose up --build
+    ```
+    GPU version (if NVIDIA GPU available):
+    ```sh
+    sudo docker compose -f docker-compose.cuda.yml up --build
     ```
 4. **Apply database migrations and build frontend packages:**
     ```sh
@@ -56,4 +64,13 @@ https://sportvid.github.io/
     ```sh
     sudo docker compose exec inference_ray bash
     ray status
+    ```
+7. **Clean up data:**
+    ```sh
+    sudo rm -rf ./data/predictions/* \
+        ./data/backend_cache/* \
+	    ./data/cache/* \
+	    ./data/analyser/* \
+	    ./data/media/* \
+	    ./data/tmp/*
     ```

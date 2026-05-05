@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0049_video_asset_dir_video_manifest_path_video_media_path_and_more'),
+        ('backend', '0050_video_asset_dir_video_manifest_path_video_media_path_and_more'),
     ]
 
     operations = [
