@@ -1,7 +1,7 @@
 <template>
   <v-app-bar>
     <template #prepend>
-      <img src="@/assets/logo_tib_dshs.png" height="50" class="ml-1 mr-2" />
+      <img src="@/assets/logo_dshs_marburg.png" height="50" class="ml-1 mr-2" />
       <v-app-bar-title class="text-h5 text-primary">
         {{ $t("plattform.title") }}
       </v-app-bar-title>
@@ -41,10 +41,10 @@
           </span>
         </v-btn>
 
-        <v-btn @click="showModalShortcut = true">
+        <!-- <v-btn @click="showModalShortcut = true">
           <app-bar-icon>mdi-label-multiple-outline</app-bar-icon>
           <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
-        </v-btn>
+        </v-btn> -->
 
         <v-btn @click="showModalExport = true" data-tour="modal-export-open">
           <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
@@ -62,7 +62,7 @@
         <span class="text-primary">{{ $t("app_bar.video_upload_menu") }}</span>
       </v-btn>
 
-      <v-btn
+      <!-- <v-btn
         v-if="videoView && loggedIn"
         @click="showModalBatchPlugin = true"
         :videoIds="selectedVideosIds"
@@ -70,7 +70,7 @@
       >
         <app-bar-icon>mdi-plus</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.batch_plugin_menu") }}</span>
-      </v-btn>
+      </v-btn> -->
 
       <v-divider vertical inset class="mx-2" />
 
@@ -123,7 +123,7 @@
 
       <v-menu v-if="!loggedIn" location="bottom center">
         <template #activator="{ props }">
-          <v-avatar v-bind="props" size="20" class="ml-2 mr-1">
+          <v-avatar v-bind="props" size="20" class="ml-2 mr-1" style="cursor: pointer">
             <v-img
               :src="
                 languageStore.languages.find((lang) => lang.code === languageStore.currentLanguage)
@@ -133,15 +133,28 @@
             />
           </v-avatar>
         </template>
-        <v-list density="compact" class="py-0 mt-2" width="100px">
-          <v-list-item
-            v-for="lang in languageStore.languages"
-            :key="lang.code"
-            @click="languageStore.setLanguage(lang.code)"
+        <v-card class="pa-2 mt-2">
+          <v-btn-toggle
+            :model-value="languageStore.currentLanguage"
+            @update:model-value="languageStore.setLanguage($event)"
+            color="primary"
+            variant="outlined"
+            divided
+            mandatory
+            density="compact"
           >
-            <v-list-item-title class="text-center">{{ lang.label }}</v-list-item-title>
-          </v-list-item>
-        </v-list>
+            <v-btn
+              v-for="lang in languageStore.languages"
+              :key="lang.code"
+              :value="lang.code"
+              size="small"
+            >
+              <v-avatar size="18">
+                <v-img :src="lang.flag" contain />
+              </v-avatar>
+            </v-btn>
+          </v-btn-toggle>
+        </v-card>
       </v-menu>
 
       <UserMenu />
@@ -162,7 +175,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
@@ -197,7 +210,7 @@ const loggedIn = computed(() => userStore.loggedIn);
 
 const videoView = computed(() => route.name === "VideoView");
 const analysisView = computed(() => route.name === "AnalysisView");
-const termsOfUseView = computed(() => route.name === "TermsOfUseView");
+const termsOfUseView = computed(() => route.name === "termsOfUseView");
 const guidelinesView = computed(() => route.name === "GuidelinesView");
 
 const showModalPlugin = ref(false);
@@ -268,6 +281,15 @@ const showModalBatchPlugin = ref(false);
 const selectedVideosIds = computed(() => videoStore.selectedVideosIds);
 
 const showModalTutorial = ref(false);
+watch(
+  () => tutorialStore.openTutorialModal,
+  (val) => {
+    if (val) {
+      showModalTutorial.value = true;
+      tutorialStore.openTutorialModal = false;
+    }
+  }
+);
 </script>
 
 <style scoped>

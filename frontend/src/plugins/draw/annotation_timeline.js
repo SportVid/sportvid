@@ -102,7 +102,7 @@ export class AnnotationTimeline extends Timeline {
             // console.log(a)
 
             let text = null;
-            const colorHex = PIXI.utils.string2hex(a.annotation.color);
+            const colorHex = new PIXI.Color(a.annotation.color).toNumber();
             // console.log(a.annotation.color)
             // console.log(hex2luminance(colorHex))
 
@@ -158,15 +158,12 @@ export class AnnotationTimeline extends Timeline {
     const renderWidth = this.pResolution;
     const r = renderWidth / (end - start);
 
-    const brt = new PIXI.RenderTexture({
+    const rt = PIXI.RenderTexture.create({
       width: renderWidth,
       height: this.pHeight,
-      // PIXI.SCALE_MODES.NEAREST,
-      scaleMode: PIXI.linear,
-
+      scaleMode: 'linear',
       resolution: 1,
     });
-    const rt = new PIXI.RenderTexture(brt);
 
     const sprite = new PIXI.Sprite(rt);
 
@@ -189,7 +186,7 @@ export class AnnotationTimeline extends Timeline {
         s.annotations.forEach((a, j) => {
           // if (width < 50) {
 
-          const color = PIXI.utils.string2hex(a.annotation.color);
+          const color = new PIXI.Color(a.annotation.color).toNumber();
 
           segmentRects.rect(x, j * blockHeight + this.pGap / 2, width, blockHeight - this.pGap);
           segmentRects.fill(color);

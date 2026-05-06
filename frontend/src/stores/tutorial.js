@@ -38,13 +38,14 @@ export const useTutorialStore = defineStore("tutorial", () => {
       tutorial.requirements.forEach((req) => {
         switch (req) {
           case "video-uploaded":
-            if (videoStore.all.length === 0) missing.push(tutorialRequirements[req]);
+            if (videoStore.all.length === 0) missing.push(tutorialRequirements.value[req]);
             break;
           case "analysis-view-opened":
-            if (route.name !== "AnalysisView") missing.push(tutorialRequirements[req]);
+            if (route.name !== "AnalysisView") missing.push(tutorialRequirements.value[req]);
             break;
           case "position-data-selected":
-            if (topViewStore.sortedFrameKeys.length === 0) missing.push(tutorialRequirements[req]);
+            if (topViewStore.sortedFrameKeys.length === 0)
+              missing.push(tutorialRequirements.value[req]);
         }
       });
     }
@@ -55,7 +56,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     };
   }
 
-  const tutorials = [
+  const tutorials = computed(() => [
     {
       id: "upload-video",
       group: "basics",
@@ -173,9 +174,9 @@ export const useTutorialStore = defineStore("tutorial", () => {
       disabled: false,
       requirements: ["video-uploaded"],
     },
-  ];
+  ]);
   const availableTutorials = computed(() =>
-    tutorials.map((t) => {
+    tutorials.value.map((t) => {
       const result = evaluateRequirements(t);
       return {
         ...t,
@@ -185,7 +186,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     })
   );
 
-  const tutorialSteps = {
+  const tutorialSteps = computed(() => ({
     "upload-video": {
       steps: [
         {
@@ -555,6 +556,10 @@ export const useTutorialStore = defineStore("tutorial", () => {
             });
           },
         },
+      ],
+    },
+    "check-history": {
+      steps: [
         {
           id: "export-select",
           text: t("tutorials.export.export_select"),
@@ -1601,7 +1606,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
             on: "bottom",
           },
           buttons: [],
-          when: createClickToNextStepHandler(3, []),
+          when: createClickToNextStepHandler(0, []),
         },
         // index 4
         {
@@ -1669,6 +1674,23 @@ export const useTutorialStore = defineStore("tutorial", () => {
             on: "right",
           },
           buttons: [],
+          when: createClickToNextStepHandler(0, []),
+        },
+        {
+          id: "posdata-manual-upload-modal",
+          text: t("tutorials.posdata_manual.upload_modal"),
+          attachTo: {
+            element: '[data-tour="posdata-manual-upload-modal"]',
+            on: "bottom",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
               tutorialPluginGroupOpen.value = 7;
@@ -1694,11 +1716,112 @@ export const useTutorialStore = defineStore("tutorial", () => {
             element: '[data-tour="plugin-details"]',
             on: "left",
           },
+          buttons: [],
+          when: createClickToNextStepHandler(0, []),
+        },
+        {
+          id: "kpi-select-plugin",
+          text: t("tutorials.kpi_computation.select_plugin"),
+          attachTo: {
+            element: '[data-tour="plugin-kpi-computation"]',
+            on: "right",
+          },
+          buttons: [],
+          beforeShowPromise: () => {
+            return new Promise((resolve) => {
+              tutorialPluginGroupOpen.value = 7;
+              const check = () => {
+                if (!isTutorialRunning.value) return;
+                const el = document.querySelector('[data-tour="plugin-kpi-computation"]');
+                if (el) {
+                  resolve();
+                } else {
+                  requestAnimationFrame(check);
+                }
+              };
+              check();
+            });
+          },
+          when: createClickToNextStepHandler(1, []),
+        },
+        {
+          id: "kpi-overview",
+          text: t("tutorials.kpi_computation.plugin_overview"),
+          attachTo: {
+            element: '[data-tour="plugin-details"]',
+            on: "left",
+          },
           buttons: [
             {
               text: "Done",
               action: () => {
                 stopTutorial();
+              },
+            },
+          ],
+          classes: "tutorial-final-step",
+        },
+      ],
+    },
+    "top-view": {
+      steps: [
+        {
+          id: "top-view-pitch",
+          text: t("tutorials.top_view.pitch_overview"),
+          attachTo: {
+            element: '[data-tour="top-view-pitch"]',
+            on: "right",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+        },
+        {
+          id: "top-view-controls",
+          text: t("tutorials.top_view.controls"),
+          attachTo: {
+            element: '[data-tour="top-view-controls-area"]',
+            on: "top",
+          },
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                tour.value.next();
+              },
+            },
+          ],
+        },
+        {
+          id: "top-view-display-settings-open",
+          text: t("tutorials.top_view.display_settings_open"),
+          attachTo: {
+            element: '[data-tour="top-view-display-settings-btn"]',
+            on: "top",
+          },
+          buttons: [],
+          when: createClickToNextStepHandler(2, ["top-view-download"]),
+        },
+        {
+          id: "top-view-display-settings",
+          text: t("tutorials.top_view.display_settings"),
+          attachTo: {
+            element: '[data-tour="top-view-display-settings-list"]',
+            on: "left",
+          },
+          when: createNoOverlayHandler(),
+          buttons: [
+            {
+              text: "Next",
+              action: () => {
+                const btn = document.querySelector('[data-tour="top-view-display-settings-btn"]');
+                if (btn) btn.click();
+                tour.value.next();
               },
             },
           ],
@@ -1716,13 +1839,29 @@ export const useTutorialStore = defineStore("tutorial", () => {
               check();
             });
           },
+        },
+        {
+          id: "top-view-download",
+          text: t("tutorials.top_view.download"),
+          attachTo: {
+            element: '[data-tour="top-view-download"]',
+            on: "top",
+          },
+          buttons: [
+            {
+              text: "Done",
+              action: () => {
+                stopTutorial();
+              },
+            },
+          ],
           classes: "tutorial-final-step",
         },
       ],
     },
-  };
+  }));
 
-  const tutorialRequirements = {
+  const tutorialRequirements = computed(() => ({
     "video-uploaded": {
       id: "video-uploaded",
       text: t("modal.tutorial.missing_requirements.video_uploaded"),
@@ -1735,7 +1874,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
       id: "position-data-selected",
       text: t("modal.tutorial.missing_requirements.position_data_selected"),
     },
-  };
+  }));
 
   function createNoOverlayHandler() {
     return {
@@ -1847,6 +1986,8 @@ export const useTutorialStore = defineStore("tutorial", () => {
 
   const tour = ref(null);
 
+  const openTutorialModal = ref(false);
+
   return {
     tutorials,
     availableTutorials,
@@ -1862,6 +2003,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     nextStepText,
     totalSteps,
     uploadFormReady,
+    openTutorialModal,
     startTutorial,
     stopTutorial,
     tour,

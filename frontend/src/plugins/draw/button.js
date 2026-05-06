@@ -17,8 +17,8 @@ export class Button extends PIXI.Container {
         this.pBoxHeight = this.pSprite.height + 2 * this.pMargin;
 
         this.pRect = new PIXI.Graphics();
-        this.pRect.beginFill(0xffffff);
-        this.pRect.drawRoundedRect(0, 0, this.pBoxWidth, this.pBoxHeight, 5);
+        this.pRect.roundRect(0, 0, this.pBoxWidth, this.pBoxHeight, 5);
+        this.pRect.fill(0xffffff);
         this.pRect.x = x;
         this.pRect.y = y;
 
@@ -54,8 +54,8 @@ export class Button extends PIXI.Container {
             return;
         }
         this.pRect.clear();
-        this.pRect.beginFill(0xeeeeee);
-        this.pRect.drawRoundedRect(0, 0, this.pBoxWidth, this.pBoxHeight, 5);
+        this.pRect.roundRect(0, 0, this.pBoxWidth, this.pBoxHeight, 5);
+        this.pRect.fill(0xeeeeee);
     };
     onButtonOut = () => {
         this.pIsOver = false;
@@ -63,8 +63,8 @@ export class Button extends PIXI.Container {
             return;
         }
         this.pRect.clear();
-        this.pRect.beginFill(0xffffff);
-        this.pRect.drawRoundedRect(0, 0, this.pBoxWidth, this.pBoxHeight, 5);
+        this.pRect.roundRect(0, 0, this.pBoxWidth, this.pBoxHeight, 5);
+        this.pRect.fill(0xffffff);
     };
     onButtonUp = () => {
         this.pIsDown = false;

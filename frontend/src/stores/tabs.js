@@ -9,8 +9,8 @@ export const useTabStore = defineStore(
 
     const visualizationTabId = ref("timeline");
     const visualizationTabs = computed(() => [
-      { id: "timeline", name: t("analysis_view.visualization_tabs.timeline") },
-      { id: "events", name: t("analysis_view.visualization_tabs.events") },
+      // { id: "timeline", name: t("analysis_view.visualization_tabs.timeline") },
+      // { id: "events", name: t("analysis_view.visualization_tabs.events") },
       { id: "heatmap", name: t("analysis_view.visualization_tabs.heatmap") },
       { id: "kpi", name: t("analysis_view.visualization_tabs.kpi") },
     ]);

@@ -13,7 +13,7 @@
               :data-tour="item.processing ? 'video-processing' : undefined"
               width="370"
             >
-              <v-card-title class="video-overview-title mt-2 mb-2">
+              <v-card-title class="video-overview-title mt-2 mb-n2">
                 {{ item.name }}
               </v-card-title>
               <div v-if="item.processing">
@@ -39,39 +39,38 @@
                   <div>{{ $t("video_view.video_id") }} {{ item.id }}</div>
                   <div>{{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}</div>
                   <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
-                  <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
+                  <!-- <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div> -->
 
-                  <v-card-actions class="actions mt-n6 mb-n8">
-                    <v-btn
-                      size="small"
-                      variant="outlined"
-                      class="ml-n2"
-                      @click="showVideo(item.id)"
-                    >
-                      <v-icon class="mr-1">
-                        {{ "mdi-movie-search-outline" }}
-                      </v-icon>
-                      {{ $t("button.analyse") }}
-                    </v-btn>
+                  <!-- <v-card-actions class="actions mt-n6 mb-n8"> -->
+                  <v-card-actions class="actions mt-2 mb-n2 justify-center" style="gap: 16px">
+                    <v-tooltip :text="$t('button.analyse')" location="top">
+                      <template #activator="{ props }">
+                        <v-btn variant="outlined" v-bind="props" @click="showVideo(item.id)">
+                          <v-icon>mdi-movie-search-outline</v-icon>
+                        </v-btn>
+                      </template>
+                    </v-tooltip>
 
                     <ModalVideoRename :video="item.id" />
 
-                    <v-btn
-                      size="small"
-                      color="red"
-                      variant="outlined"
-                      @click="deleteVideo(item.id)"
-                    >
-                      <v-icon class="mr-1">
-                        {{ "mdi-trash-can-outline" }}
-                      </v-icon>
-                      {{ $t("button.delete") }}
-                    </v-btn>
-                    <v-checkbox
+                    <v-tooltip :text="$t('button.delete')" location="top">
+                      <template #activator="{ props }">
+                        <v-btn
+                          color="red"
+                          variant="outlined"
+                          v-bind="props"
+                          @click="deleteVideo(item.id)"
+                        >
+                          <v-icon>mdi-trash-can-outline</v-icon>
+                        </v-btn>
+                      </template>
+                    </v-tooltip>
+
+                    <!-- <v-checkbox
                       v-model="videoStore.selectedVideos[item.id]"
                       color="primary"
                       class="pt-5 ml-n1"
-                    />
+                    /> -->
                   </v-card-actions>
                 </v-card-text>
                 <v-progress-linear v-model="videosProgress[item.id]" />
@@ -91,15 +90,26 @@
 
           <v-card-text>
             <p v-html="$t('welcome.text')" class="mb-4"></p>
-            <h2 class="text-h5 mb-2">{{ $t("welcome.demo_title") }}</h2>
+            <!-- <h2 class="text-h5 mb-2">{{ $t("welcome.demo_title") }}</h2> -->
             <p>
-              <video class="welcome-video" controls>
+              <!-- <video class="welcome-video" controls>
                 <source
                   src="https://tib.eu/cloud/s/sMmqWqWYict3Zpb/download/TIB-AV-A_Einfuehrung_2.mp4"
                   type="video/mp4"
                 />
-              </video>
+              </video> -->
+              <img
+                src="@/assets/logo_dshs_marburg.png"
+                style="
+                  width: 60%;
+                  height: auto;
+                  margin-left: auto;
+                  margin-right: auto;
+                  display: block;
+                "
+              />
             </p>
+
             <h2 class="text-h5 mb-1 mt-4">{{ $t("welcome.login_title") }}</h2>
             <p v-html="$t('welcome.login_text')" />
             <h2 class="text-h5 mb-1 mt-4">{{ $t("welcome.format_title") }}</h2>
@@ -305,9 +315,6 @@ watch(
   margin: 8px;
 }
 
-.actions > .v-btn:not(:first-child) {
-  margin-left: 1px !important;
-}
 .welcome-video {
   margin-left: auto;
   margin-right: auto;

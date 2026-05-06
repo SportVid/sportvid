@@ -118,93 +118,93 @@ const tab = ref(null);
 const allFrameKeys = topViewStore.sortedFrameKeys;
 
 const exportFormats = ref([
-  {
-    name: t("modal.export.merged_csv.export_name"),
-    icon: "mdi-file",
-    format: "merged_csv",
-    parameters: [
-      {
-        field: "checkbox",
-        name: "merge_timeline",
-        value: true,
-        text: t("modal.export.merged_csv.timeline_merge"),
-      },
-      {
-        field: "checkbox",
-        name: "use_timestamps",
-        value: true,
-        text: t("modal.export.merged_csv.use_timestamps"),
-      },
-      {
-        field: "checkbox",
-        name: "use_seconds",
-        value: true,
-        text: t("modal.export.merged_csv.use_seconds"),
-      },
-      {
-        field: "checkbox",
-        name: "include_category",
-        value: true,
-        text: t("modal.export.merged_csv.include_category"),
-      },
-      {
-        field: "checkbox",
-        name: "split_places",
-        value: true,
-        text: t("modal.export.merged_csv.split_places"),
-      },
-    ],
-  },
-  {
-    name: t("modal.export.individual_csv.export_name"),
-    icon: "mdi-file",
-    format: "individual_csv",
-    parameters: [
-      {
-        field: "checkbox",
-        name: "use_timestamps",
-        value: true,
-        text: t("modal.export.individual_csv.use_timestamps"),
-      },
-      {
-        field: "checkbox",
-        name: "use_seconds",
-        value: true,
-        text: t("modal.export.individual_csv.use_seconds"),
-      },
-      {
-        field: "checkbox",
-        name: "include_category",
-        value: true,
-        text: t("modal.export.individual_csv.include_category"),
-      },
-    ],
-  },
-  {
-    name: t("modal.export.elan.export_name"),
-    icon: "mdi-file",
-    format: "elan",
-    parameters: [
-      {
-        field: "select_timeline",
-        name: "shot_timeline_id",
-        value: null,
-        text: t("modal.plugin.shot_timeline_name"),
-        hint: t("modal.plugin.shot_timeline_hint"),
-      },
-      {
-        field: "buttongroup",
-        text: t("modal.plugin.aggregation.method"),
-        name: "aggregation",
-        value: 0,
-        buttons: [
-          t("modal.plugin.aggregation.max"),
-          t("modal.plugin.aggregation.min"),
-          t("modal.plugin.aggregation.mean"),
-        ],
-      },
-    ],
-  },
+  // {
+  //   name: t("modal.export.merged_csv.export_name"),
+  //   icon: "mdi-file",
+  //   format: "merged_csv",
+  //   parameters: [
+  //     {
+  //       field: "checkbox",
+  //       name: "merge_timeline",
+  //       value: true,
+  //       text: t("modal.export.merged_csv.timeline_merge"),
+  //     },
+  //     {
+  //       field: "checkbox",
+  //       name: "use_timestamps",
+  //       value: true,
+  //       text: t("modal.export.merged_csv.use_timestamps"),
+  //     },
+  //     {
+  //       field: "checkbox",
+  //       name: "use_seconds",
+  //       value: true,
+  //       text: t("modal.export.merged_csv.use_seconds"),
+  //     },
+  //     {
+  //       field: "checkbox",
+  //       name: "include_category",
+  //       value: true,
+  //       text: t("modal.export.merged_csv.include_category"),
+  //     },
+  //     {
+  //       field: "checkbox",
+  //       name: "split_places",
+  //       value: true,
+  //       text: t("modal.export.merged_csv.split_places"),
+  //     },
+  //   ],
+  // },
+  // {
+  //   name: t("modal.export.individual_csv.export_name"),
+  //   icon: "mdi-file",
+  //   format: "individual_csv",
+  //   parameters: [
+  //     {
+  //       field: "checkbox",
+  //       name: "use_timestamps",
+  //       value: true,
+  //       text: t("modal.export.individual_csv.use_timestamps"),
+  //     },
+  //     {
+  //       field: "checkbox",
+  //       name: "use_seconds",
+  //       value: true,
+  //       text: t("modal.export.individual_csv.use_seconds"),
+  //     },
+  //     {
+  //       field: "checkbox",
+  //       name: "include_category",
+  //       value: true,
+  //       text: t("modal.export.individual_csv.include_category"),
+  //     },
+  //   ],
+  // },
+  // {
+  //   name: t("modal.export.elan.export_name"),
+  //   icon: "mdi-file",
+  //   format: "elan",
+  //   parameters: [
+  //     {
+  //       field: "select_timeline",
+  //       name: "shot_timeline_id",
+  //       value: null,
+  //       text: t("modal.plugin.shot_timeline_name"),
+  //       hint: t("modal.plugin.shot_timeline_hint"),
+  //     },
+  //     {
+  //       field: "buttongroup",
+  //       text: t("modal.plugin.aggregation.method"),
+  //       name: "aggregation",
+  //       value: 0,
+  //       buttons: [
+  //         t("modal.plugin.aggregation.max"),
+  //         t("modal.plugin.aggregation.min"),
+  //         t("modal.plugin.aggregation.mean"),
+  //       ],
+  //     },
+  //   ],
+  // },
   {
     name: t("modal.export.position_data.export_name"),
     icon: "mdi-file",
