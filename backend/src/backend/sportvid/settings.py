@@ -33,10 +33,11 @@ LOGGING = {
             "formatter": "verbose",
         },
     },
-    # "root": {
-    #     "handlers": ["console"],
-    #     "level": "INFO",
-    # },
+    # NOTE: comment in "root" logger to see stack trace.
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
     "loggers": {
         "backend": {
             "handlers": ["console"], 
@@ -47,6 +48,11 @@ LOGGING = {
             "handlers": ["console"], 
             "level": "WARNING", 
             "propagate": False  # NOTE: True?
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
         },
     },
 }
