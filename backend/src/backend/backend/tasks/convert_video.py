@@ -44,7 +44,6 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
         logger.info(f"Starting HLS conversion for {video_id_hex} from {file_in} to {manifest_path}")
 
         conversion_args = {
-            "vid_fps" : fps,
             "format": "hls",
             "hls_playlist_type": "vod",
             "hls_segment_type": "fmp4",
@@ -54,7 +53,7 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
             "vcodec" : "libx264",
             "acodec" : "aac",
             "audio_bitrate" : "128k",
-            "gop": gop, # GOP size should match segment duration
+            "g": gop, # GOP size should match segment duration
             "keyint_min": gop, # same as GOP
             "sc_threshold": 0, # no unpredictable keyframe insertions
             "crf": 23, # constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
@@ -64,7 +63,7 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
         # TODO: After being successful with this approach, make it async!
         convert_to_hls(
             file_in,
-            original_ext.split(sep=".")[-1].lstrip("."),
+            # original_ext.split(sep=".")[-1].lstrip("."), # NOTE: usually we do not need to provide the file extension.
             manifest_path,
             asynchronous=False,
             **conversion_args
@@ -157,14 +156,14 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwa
             "vid_fps" : fps,
             "format": "hls",
             "hls_playlist_type": "vod",
-            "hls_segment_type": "hls",
+            "hls_segment_type": "mpegts",
             "hls_flags" : "independent_segments",
             # "hls_segment_filename" : "stream.m4s",
             "segment_time" : segment_time,
             "vcodec" : "libx264",
             "acodec" : "aac",
             "audio_bitrate" : "128k",
-            "gop": gop, # GOP size should match segment duration
+            "g": gop, # GOP size should match segment duration
             "keyint_min": gop, # same as GOP
             "sc_threshold": 0, # no unpredictable keyframe insertions
             "crf": 23, # constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
@@ -173,9 +172,10 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwa
         }
 
         ffmpeg_proc = convert_to_hls(
-            file_in, 
-            original_ext.split(sep='.')[-1].lstrip('.'), 
-            manifest_path, 
+            file_in,
+            # original_ext.split(sep=".")[-1].lstrip("."), # NOTE: usually we do not need to provide the file extension.
+            manifest_path,
+            asynchronous=True,
             **conversion_args
         )
         
