@@ -1,6 +1,7 @@
 import os
 import subprocess
 import shutil
+import time
 import tarfile
 import logging
 import imageio
@@ -10,16 +11,16 @@ from celery import shared_task
 from backend.utils import media_dir_to_file, media_path_to_file
 from backend.models import Video
 from backend.plugin_manager import PluginManager
-from utils.video_converter import convert_to_hls, convert_to_fmp4
+from utils.video_converter import convert_to_hls
 from utils.helper import remove_file, remove_dir
 
 
 logger = logging.getLogger(__name__)
 _POLL_INTERVAL = 2.0  # seconds between cancellation checks
 
-
 @shared_task(bind=True)
 def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
+    s = time.time()
     try:
         video_db = Video.objects.get(id=video_id_hex)
         
@@ -28,16 +29,47 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
         
         asset_dir = f"{output_dir}{video_id_hex}"
         os.makedirs(asset_dir, exist_ok=True)
-        
         manifest_path = f"{asset_dir}/stream.m3u8"
-        
-        logger.info(f"Starting conversion for {video_id_hex} from {file_in} to {manifest_path}")
 
-        convert_to_fmp4(
+        # extract metadata
+        with imageio.get_reader(str(file_in)) as reader:
+            meta = reader.get_meta_data()
+            fps = float(meta["fps"])
+            duration = float(meta["duration"]) * 1000.
+            size = meta['size']
+            
+        segment_time = 5
+        gop = fps * segment_time
+        
+        logger.info(f"Starting HLS conversion for {video_id_hex} from {file_in} to {manifest_path}")
+
+        conversion_args = {
+            "vid_fps" : fps,
+            "format": "hls",
+            "hls_playlist_type": "vod",
+            "hls_segment_type": "fmp4",
+            "hls_flags" : "single_file+independent_segments",
+            # "hls_segment_filename" : "stream.m4s",
+            "segment_time" : segment_time,
+            "vcodec" : "libx264",
+            "acodec" : "aac",
+            "audio_bitrate" : "128k",
+            "gop": gop, # GOP size should match segment duration
+            "keyint_min": gop, # same as GOP
+            "sc_threshold": 0, # no unpredictable keyframe insertions
+            "crf": 23, # constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
+            "preset" : "medium", # controls encoding speed --vs.-- compression trade-off ["ultrafast" - "veryslow"]
+            "pix_fmt": "yuv420p", # pixel format of the output
+        }
+        # TODO: After being successful with this approach, make it async!
+        convert_to_hls(
             file_in,
             original_ext.split(sep=".")[-1].lstrip("."),
-            manifest_path
+            manifest_path,
+            asynchronous=False,
+            **conversion_args
         )
+        
         media_candidates = list(asset_dir.glob("*.m4s")) + list(asset_dir.glob("*.mp4"))
         if not media_candidates:
             raise RuntimeError(f"No media file generated in {asset_dir}")
@@ -56,7 +88,6 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
         if size:
             video_db.width = size[0]
             video_db.height = size[1]
-
         video_db.status = Video.STATUS_DONE
 
         # new fields for video schema
@@ -84,7 +115,8 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
                 plugin_manager(plugin, video=video_db, user=video_db.owner)
             except Exception:
                 logger.exception(f"Failed to schedule plugin {plugin}")
-
+        e = time.time()
+        logger.info(f"HLS conversion took: {e-s}")
     except Exception:
         logger.exception("Video conversion failed")
         try:
@@ -94,30 +126,63 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
         except Exception:
             logger.exception("Failed to mark video as error")
 
-
-
 @shared_task(bind=True)
-def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
+def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwargs):
+    s = time.time()
     try:
         video_db = Video.objects.get(id=video_id_hex)
+        
         output_dir = media_dir_to_file(video_id_hex)
         file_in = media_path_to_file(video_id_hex, original_ext)
 
-        file_out = f"{output_dir}{video_id_hex}/{video_id_hex}.m3u8"
+        manifest_path = f"{output_dir}{video_id_hex}/{video_id_hex}.m3u8"
         os.makedirs(f"{output_dir}{video_id_hex}", exist_ok=True)
 
-        logger.info(f"Starting conversion for {video_id_hex} from {file_in} to {file_out}")
+        # extract metadata
+        with imageio.get_reader(str(file_in)) as reader:
+            meta = reader.get_meta_data()
+            fps = float(meta["fps"])
+            duration = float(meta["duration"]) * 1000.
+            size = meta['size']
+            
+        segment_time = 5
+        gop = fps * segment_time
 
-        ffmpeg_proc = convert_to_hls(file_in, original_ext.split(sep='.')[-1].lstrip('.'), file_out)
+        logger.info(f"Starting HLS conversion for {video_id_hex} from {file_in} to {manifest_path}")
 
-        # Poll ffmpeg completion; check for cancellation (video deleted) each interval
+        conversion_args = {
+            "vid_fps" : fps,
+            "format": "hls",
+            "hls_playlist_type": "vod",
+            "hls_segment_type": "hls",
+            "hls_flags" : "independent_segments",
+            # "hls_segment_filename" : "stream.m4s",
+            "segment_time" : segment_time,
+            "vcodec" : "libx264",
+            "acodec" : "aac",
+            "audio_bitrate" : "128k",
+            "gop": gop, # GOP size should match segment duration
+            "keyint_min": gop, # same as GOP
+            "sc_threshold": 0, # no unpredictable keyframe insertions
+            "crf": 23, # constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
+            "preset" : "medium", # controls encoding speed --vs.-- compression trade-off ["ultrafast" - "veryslow"]
+            "pix_fmt": "yuv420p", # pixel format of the output
+        }
+
+        ffmpeg_proc = convert_to_hls(
+            file_in, 
+            original_ext.split(sep='.')[-1].lstrip('.'), 
+            manifest_path, 
+            **conversion_args
+        )
+        
         while True:
-            try:
+            try: # poll for ffmpeg completion; check for cancellation (video deleted) each interval
                 ffmpeg_proc.wait(timeout=_POLL_INTERVAL)
-                break  # ffmpeg finished normally
+                break
             except subprocess.TimeoutExpired:
                 if not Video.objects.filter(id=video_id_hex).exists():
-                    logger.info(f"Video {video_id_hex} deleted during conversion, killing ffmpeg")
+                    logger.info(f"Video {video_id_hex} deleted during HLS conversion, killing ffmpeg.")
                     ffmpeg_proc.kill()
                     ffmpeg_proc.wait()
                     return
@@ -126,7 +191,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             stderr = ffmpeg_proc.stderr.read() if ffmpeg_proc.stderr else b""
             raise Exception(f"ffmpeg exited with code {ffmpeg_proc.returncode}: {stderr.decode(errors='replace')}")
 
-        # Guard: check if video was deleted while we were converting
+        # check if video was deleted while we were converting
         if not Video.objects.filter(id=video_id_hex).exists():
             logger.info(f"Video {video_id_hex} was deleted during conversion, aborting.")
             return
@@ -138,12 +203,6 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
 
         with tarfile.open(archive_path, 'w:gz') as tar:
             tar.add(hls_dir, arcname='.', recursive=True)
-
-        # extract metadata
-        reader = imageio.get_reader(str(file_in))
-        fps = reader.get_meta_data().get('fps')
-        duration = reader.get_meta_data().get('duration') * 1000.0
-        size = reader.get_meta_data().get('size')
 
         # update DB (use update_fields to avoid re-inserting a deleted record)
         Video.objects.filter(id=video_id_hex).update(
@@ -173,7 +232,8 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 plugin_manager(plugin, video=video_db, user=video_db.owner)
             except Exception:
                 logger.exception(f"Failed to schedule plugin {plugin}")
-
+        e = time.time()
+        logger.info(f"HLS conversion took: {e-s}")
     except Exception:
         logger.exception("Video conversion failed")
         try:

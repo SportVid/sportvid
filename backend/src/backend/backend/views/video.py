@@ -78,9 +78,6 @@ class VideoUpload(View):
                 path = Path(request.FILES["file"].name)
                 ext = "".join(path.suffixes)
                 
-                file_path = media_path_to_file(video_id, ext)
-                file_in = file_path
-
                 field_length = parse_number(request.POST.get("fieldLength"))
                 if not field_length: field_length = 105.
 
@@ -103,19 +100,16 @@ class VideoUpload(View):
                     sport=request.POST.get("sport"),
                     status=Video.STATUS_PROCESSING,
                 )
-
                 # schedule conversion & analysis asynchronously
-                analyers = []
-                try:
-                    analyers = request.POST.get("analyser").split(",")
-                except Exception:
-                    analyers = []
+                analyzers = []
+                try: analyzers = request.POST.get("analyser").split(",")
+                except Exception: analyzers = []
 
                 # pass original ext (e.g., .mp4) to the task
-                task = convert_video.apply_async((video_db.id.hex, ext, analyers))
-                # NOTE: previous logic, sync call.
-                # convert_video_to_fmp4.apply_async((video_db.id.hex, ext, analyers))
-                # convert_video_to_hls.apply_async((video_db.id.hex, ext, analyers))
+                task = convert_video_to_fmp4.apply_async((video_db.id.hex, ext, analyzers))
+                task = convert_video.apply_async((video_db.id.hex, ext, analyzers))
+                convert_video_to_fmp4.apply_async((video_db.id.hex, ext, analyzers))
+                convert_video_to_hls.apply_async((video_db.id.hex, ext, analyzers))
                 
                 video_db.task_id = task.id
                 video_db.save(update_fields=["task_id"])

@@ -15,7 +15,6 @@ def _resolve_video_source(video_object):
         return {"mode": "path", "path": str(video_object)}
     if hasattr(video_object, "read"):
         return {"mode": "fileobj", "fileobj": video_object}
-
     raise ValueError(f"Unsupported video source: {type(video_object)}")
 
 def parse_meta_av(video_object):
