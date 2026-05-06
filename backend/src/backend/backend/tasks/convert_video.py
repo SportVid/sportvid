@@ -129,6 +129,7 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
 @shared_task(bind=True)
 def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwargs):
     s = time.time()
+    
     try:
         video_db = Video.objects.get(id=video_id_hex)
         
@@ -137,6 +138,8 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwa
 
         manifest_path = f"{output_dir}{video_id_hex}/{video_id_hex}.m3u8"
         os.makedirs(f"{output_dir}{video_id_hex}", exist_ok=True)
+
+        logger.info(f'{output_dir}, {file_in}, {manifest_path}')
 
         # extract metadata
         with imageio.get_reader(str(file_in)) as reader:

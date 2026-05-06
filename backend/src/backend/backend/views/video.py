@@ -106,10 +106,9 @@ class VideoUpload(View):
                 except Exception: analyzers = []
 
                 # pass original ext (e.g., .mp4) to the task
-                task = convert_video_to_fmp4.apply_async((video_db.id.hex, ext, analyzers))
-                task = convert_video.apply_async((video_db.id.hex, ext, analyzers))
-                convert_video_to_fmp4.apply_async((video_db.id.hex, ext, analyzers))
-                convert_video_to_hls.apply_async((video_db.id.hex, ext, analyzers))
+                task = convert_video_to_hls.apply_async((video_db.id.hex, ext, analyzers))
+                # convert_video_to_hls((video_db.id.hex, ext, analyzers))
+                # task = convert_video_to_fmp4.apply_async((video_db.id.hex, ext, analyzers))
                 
                 video_db.task_id = task.id
                 video_db.save(update_fields=["task_id"])

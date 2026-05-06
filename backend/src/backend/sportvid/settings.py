@@ -8,15 +8,6 @@ import logging
 # build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# SECURE_SSL_REDIRECT = True
-# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-# CSRF_COOKIE_SECURE = True  # avoid transmitting CSRF cookie over HTTP
-# SESSION_COOKIE_SECURE = True
-
-# SECURE_HSTS_SECONDS = 31536000  # 1 year
-# SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-# SECURE_HSTS_PRELOAD = True
-
 ALLOWED_HOSTS = ["localhost"]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost",
@@ -26,7 +17,6 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
-
 
 LOGGING = {
     "version": 1,
@@ -178,6 +168,11 @@ config_lut = {
 }
 
 config_path = "/run/secrets/django_settings"
+
+# logging.error(f"SETTINGS FILE: {__file__}")
+# logging.error(f"SECRET EXISTS: {os.path.exists(config_path)}")
+# logging.error(f"MEDIA_ROOT BEFORE LOAD: {repr(globals().get('MEDIA_ROOT'))}")
+
 if os.path.exists(config_path):
     try:
         with open(config_path, "r") as f:
@@ -185,5 +180,8 @@ if os.path.exists(config_path):
             for k, v in config_lut.items():
                 if k in config:
                     globals()[v] = config[k]
+        logging.error(f"Successfully parsed django settings file: {config_path}")
     except Exception as e:
-        logging.error("Failed to load or parse django settings file: {e}")
+        logging.error(f"Failed to load or parse django settings file: {e}")
+
+# logging.error(f"MEDIA_ROOT AFTER LOAD: {repr(globals().get('MEDIA_ROOT'))}")
