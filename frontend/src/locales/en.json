@@ -1071,7 +1071,7 @@
         "validate": {
           "file_required": "Please select a file with a maximum file size of {maxSize}",
           "file_exceeds": "File exceeds your maximum file size of {maxSize}",
-          "file_format_invalid": "File is not in the .mp4 format."
+          "file_format_invalid": "File is not in the .csv or .xml format."
         },
         "success": "Position data successfully uploaded"
       },
