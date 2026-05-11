@@ -31,7 +31,12 @@ const props = defineProps({
   playerOptions: { type: Array, default: () => [] },
   playerColors: { type: Object, default: () => ({}) },
   selectedZones: { type: Array, default: () => [] },
+  velocityUnit: { type: String, default: "kmh" }, // 'kmh' | 'ms'
 });
+
+const velocityUnitHtml = computed(() =>
+  props.velocityUnit === "kmh" ? "km⋅h<sup>-1</sup>" : "m⋅s<sup>-1</sup>"
+);
 
 const plotContainer = ref(null);
 let plotInitialized = false;
@@ -44,10 +49,12 @@ const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
 const kpiLabel = computed(() => {
   if (props.selectedKpi === "running_distance") return t("visualization.kpi.kpi_label.distance");
   if (props.selectedKpi === "velocity") {
-    if (props.chartMode === "windowed") return t("visualization.kpi.kpi_label.velocity_max");
-    return t("visualization.kpi.kpi_label.velocity");
+    if (props.chartMode === "windowed")
+      return t("visualization.kpi.kpi_label.velocity_max_with_unit", { unit: velocityUnitHtml.value });
+    return t("visualization.kpi.kpi_label.velocity_with_unit", { unit: velocityUnitHtml.value });
   }
-  if (props.selectedKpi === "velocity_max") return t("visualization.kpi.kpi_label.velocity_max");
+  if (props.selectedKpi === "velocity_max")
+    return t("visualization.kpi.kpi_label.velocity_max_with_unit", { unit: velocityUnitHtml.value });
   if (props.selectedKpi === "metabolic_work") return t("visualization.kpi.kpi_label.metabolic_work");
   if (props.selectedKpi === "equivalent_distance") return t("visualization.kpi.kpi_label.equivalent_distance");
   if (props.selectedKpi === "centroid_distance") {
@@ -58,10 +65,11 @@ const kpiLabel = computed(() => {
 });
 
 const kpiUnit = computed(() => {
+  const velUnit = props.velocityUnit === "kmh" ? "km/h" : "m/s";
   const units = {
     running_distance: "m",
-    velocity_max: "m/s",
-    velocity: "m/s",
+    velocity_max: velUnit,
+    velocity: velUnit,
     metabolic_work: "J/kg",
     equivalent_distance: "m",
     centroid_distance: "m",
@@ -164,8 +172,9 @@ function buildRawTimeSeries() {
         }
       } else if (props.selectedKpi === "velocity_max" || props.selectedKpi === "velocity") {
         if (vel != null && inZone) {
+          const factor = props.velocityUnit === "kmh" ? 3.6 : 1.0;
           series.times.push(t);
-          series.values.push(vel);
+          series.values.push(vel * factor);
         }
       } else if (props.selectedKpi === "metabolic_work") {
         if (metpow != null && inZone) {

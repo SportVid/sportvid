@@ -102,12 +102,31 @@
                     </v-list-item>
                   </template>
                   <v-list class="py-0" density="compact" :width="group.chartWidth">
+                    <template v-if="group.key === 'velocity'">
+                      <v-list-item class="menu-item" @click.stop>
+                        <v-list-item-title class="d-flex align-center justify-space-between">
+                          <span>Unit</span>
+                          <v-btn-toggle
+                            v-model="velocityUnit"
+                            mandatory
+                            density="compact"
+                            color="primary"
+                            border
+                            style="height: 22px"
+                          >
+                            <v-btn value="ms" size="x-small" style="font-size: 11px; padding: 0 6px">m/s</v-btn>
+                            <v-btn value="kmh" size="x-small" style="font-size: 11px; padding: 0 6px">km/h</v-btn>
+                          </v-btn-toggle>
+                        </v-list-item-title>
+                      </v-list-item>
+                      <v-divider />
+                    </template>
                     <template v-for="option in group.options" :key="option.id">
                       <v-list-item class="menu-item" @click="toggleKpi(option)">
                         <v-list-item-title class="d-flex justify-space-between">
                           <template v-if="option.mode === 'windowed'">
                             <span class="d-flex align-center" style="gap: 2px">
-                              <span v-html="splitWindowedLabel(option.id).before" />
+                              <span v-html="splitWindowedLabel(group.key === 'velocity' ? option.id + '_short' : option.id).before" />
                               <input
                                 v-model.number="windowFrames"
                                 type="number"
@@ -118,12 +137,12 @@
                                 @keydown.stop
                                 @blur="onFrameInputBlur"
                               />
-                              <span v-html="splitWindowedLabel(option.id).after" />
+                              <span v-html="splitWindowedLabel(group.key === 'velocity' ? option.id + '_short' : option.id).after" />
                             </span>
                           </template>
                           <span
                             v-else
-                            v-html="$t(`visualization.kpi.kpi_selection.${option.id}`)"
+                            v-html="$t(`visualization.kpi.kpi_selection.${group.key === 'velocity' ? option.id + '_short' : option.id}`)"
                           />
                           <tab-window-icon
                             :class="{
@@ -145,9 +164,26 @@
             <template v-else>
               <template v-for="option in kpiOptions" :key="option.id">
                 <v-list-item class="menu-item" @click="toggleKpi(option)">
-                  <v-list-item-title class="d-flex justify-space-between">
-                    <span v-html="$t(`visualization.kpi.kpi_selection.${option.id}`)" />
+                  <v-list-item-title class="d-flex align-center">
+                    <span
+                      style="flex: 1; min-width: 0"
+                      v-html="$t(`visualization.kpi.kpi_selection.${option.kpi === 'velocity_max' ? option.id + '_short' : option.id}`)"
+                    />
+                    <v-btn-toggle
+                      v-if="option.kpi === 'velocity_max'"
+                      v-model="velocityUnit"
+                      mandatory
+                      density="compact"
+                      color="primary"
+                      border
+                      style="height: 18px; flex-shrink: 0; margin: 0 8px"
+                      @click.stop
+                    >
+                      <v-btn value="ms" size="x-small" style="font-size: 10px; padding: 0 4px">m/s</v-btn>
+                      <v-btn value="kmh" size="x-small" style="font-size: 10px; padding: 0 4px">km/h</v-btn>
+                    </v-btn-toggle>
                     <tab-window-icon
+                      style="flex-shrink: 0"
                       :class="{
                         'text-disabled': !isKpiSelected(option),
                         'text-red': isKpiSelected(option),
@@ -425,6 +461,7 @@
         :playerOptions="playerOptions"
         :playerColors="playerColors"
         :selectedZones="selectedZones"
+        :velocityUnit="velocityUnit"
       />
 
       <div class="chart-legend mt-2">
@@ -652,6 +689,13 @@ const chartMode = computed(() => selectedKpiOption.value?.mode);
 
 const kpiMenuOpen = ref(false);
 
+const velocityUnit = ref("kmh"); // 'kmh' | 'ms'
+const velocityFactor = computed(() => (velocityUnit.value === "kmh" ? 3.6 : 1.0));
+const velocityUnitHtml = computed(() =>
+  velocityUnit.value === "kmh" ? "km⋅h<sup>-1</sup>" : "m⋅s<sup>-1</sup>"
+);
+const hasVelocityKpi = computed(() => visualizationStore.kpiNames?.includes("velocity") ?? false);
+
 const isKpiSelected = (option) => {
   if (viewMode.value === "chart") {
     return selectedKpiId.value === option.id;
@@ -694,7 +738,10 @@ const playerHeaders = computed(() => {
     cols.push({ title: t("visualization.kpi.kpi_label.distance"), key: "distance" });
   }
   if (selectedKpis.value.has("velocity_max")) {
-    cols.push({ title: t("visualization.kpi.kpi_label.velocity_max"), key: "velocity_max" });
+    cols.push({
+      title: t("visualization.kpi.kpi_label.velocity_max_with_unit", { unit: velocityUnitHtml.value }),
+      key: "velocity_max",
+    });
   }
   if (selectedKpis.value.has("metabolic_work_cumulative")) {
     cols.push({ title: t("visualization.kpi.kpi_label.metabolic_work"), key: "metabolic_work" });
@@ -835,7 +882,14 @@ const runningDistanceTeamItems = computed(() => {
     const kpiItem = kpiMap[p.playerId];
     grouped[p.teamId].push(
       kpiItem
-        ? { ...kpiItem, team_id: p.teamId }
+        ? {
+            ...kpiItem,
+            velocity_max:
+              kpiItem.velocity_max != null
+                ? parseFloat((kpiItem.velocity_max * velocityFactor.value).toFixed(2))
+                : null,
+            team_id: p.teamId,
+          }
         : {
             player_id: p.playerId,
             team_id: p.teamId,
