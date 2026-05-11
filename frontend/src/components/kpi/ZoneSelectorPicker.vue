@@ -98,6 +98,7 @@ const props = defineProps({
   modelValue: { type: Array, default: () => [] },
   sport: { type: Object, required: true },
   areaSize: { type: String, default: "full" },
+  mirrorXY: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["update:modelValue"]);
@@ -211,8 +212,9 @@ function toggleCell(r, c) {
 }
 
 function toggleColBand(cols) {
+  const effectiveCols = props.mirrorXY ? cols.map((c) => N_COLS - 1 - c) : cols;
   const keys = [];
-  for (let r = 0; r < N_ROWS; r++) for (const c of cols) keys.push(cellKey(r, c));
+  for (let r = 0; r < N_ROWS; r++) for (const c of effectiveCols) keys.push(cellKey(r, c));
   const cur = new Set(selectedCellKeys.value);
   const allSel = keys.every((k) => cur.has(k));
   if (allSel) keys.forEach((k) => cur.delete(k));
@@ -221,8 +223,9 @@ function toggleColBand(cols) {
 }
 
 function toggleRowBand(rows) {
+  const effectiveRows = props.mirrorXY ? rows.map((r) => N_ROWS - 1 - r) : rows;
   const keys = [];
-  for (const r of rows) for (let c = 0; c < N_COLS; c++) keys.push(cellKey(r, c));
+  for (const r of effectiveRows) for (let c = 0; c < N_COLS; c++) keys.push(cellKey(r, c));
   const cur = new Set(selectedCellKeys.value);
   const allSel = keys.every((k) => cur.has(k));
   if (allSel) keys.forEach((k) => cur.delete(k));
@@ -232,16 +235,18 @@ function toggleRowBand(rows) {
 
 const isColBandSelected = (cols) => {
   if (isAllData.value) return true;
+  const effectiveCols = props.mirrorXY ? cols.map((c) => N_COLS - 1 - c) : cols;
   for (let r = 0; r < N_ROWS; r++)
-    for (const c of cols) if (!selectedCellKeys.value.has(cellKey(r, c))) return false;
-  return cols.length > 0;
+    for (const c of effectiveCols) if (!selectedCellKeys.value.has(cellKey(r, c))) return false;
+  return effectiveCols.length > 0;
 };
 
 const isRowBandSelected = (rows) => {
   if (isAllData.value) return true;
-  for (const r of rows)
+  const effectiveRows = props.mirrorXY ? rows.map((r) => N_ROWS - 1 - r) : rows;
+  for (const r of effectiveRows)
     for (let c = 0; c < N_COLS; c++) if (!selectedCellKeys.value.has(cellKey(r, c))) return false;
-  return rows.length > 0;
+  return effectiveRows.length > 0;
 };
 
 // ── Pitch image & area metrics ───────────────────────────────────────────────
@@ -306,6 +311,11 @@ function renderCanvas() {
   const ctx = canvas.getContext("2d");
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, w, h);
+
+  if (props.mirrorXY) {
+    ctx.translate(w, h);
+    ctx.scale(-1, -1);
+  }
 
   const { left: al, top: at, width: aw, height: ah } = am.value;
   if (!aw || !ah) return;
@@ -415,8 +425,12 @@ function getCell(event) {
   if (cx < al || cx > al + aw || cy < at || cy > at + ah) return null;
 
   // Find which cell boundary the click falls in
-  const xRel = (cx - al) / aw;
-  const yRel = (cy - at) / ah;
+  let xRel = (cx - al) / aw;
+  let yRel = (cy - at) / ah;
+  if (props.mirrorXY) {
+    xRel = 1 - xRel;
+    yRel = 1 - yRel;
+  }
   let c = N_COLS - 1;
   for (let j = 0; j < N_COLS; j++) {
     if (xRel < TRANS_BOUNDS_5[j + 1]) {
@@ -454,7 +468,7 @@ function onCanvasLeave() {
   hoveredCell.value = null;
 }
 
-watch([selectedCellKeys, hoveredCell, pitchSize, isAllData], () => renderCanvas());
+watch([selectedCellKeys, hoveredCell, pitchSize, isAllData, () => props.mirrorXY], () => renderCanvas());
 watch(
   () => props.areaSize,
   () => nextTick(() => measurePitch())

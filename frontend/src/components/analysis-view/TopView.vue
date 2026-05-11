@@ -827,11 +827,13 @@ const convexHullForCurrentFrame = computed(() => {
     .forEach((position) => {
       const transformed = transformCoordinateToCrop(position[3], position[4], cropPct);
 
+      const cx = topViewStore.mirrorXY ? 1 - transformed.x : transformed.x;
+      const cy = topViewStore.mirrorXY ? 1 - transformed.y : transformed.y;
       const top =
-        transformed.y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+        cy * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
         ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
       const left =
-        transformed.x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+        cx * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
         ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
       if (!teams[position[1]]) {
         teams[position[1]] = [];
@@ -891,11 +893,13 @@ const voronoiForCurrentFrame = computed(() => {
     .map((player) => {
       const transformed = transformCoordinateToCrop(player[3], player[4], cropPct);
 
+      const vx = topViewStore.mirrorXY ? 1 - transformed.x : transformed.x;
+      const vy = topViewStore.mirrorXY ? 1 - transformed.y : transformed.y;
       const top =
-        transformed.y * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
+        vy * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
         ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
       const left =
-        transformed.x * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
+        vx * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
         ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
       return { left, top, team_id: player[1] };
     });

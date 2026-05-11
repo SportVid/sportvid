@@ -173,6 +173,7 @@
             v-model="selectedZones"
             :sport="topViewStore.currentSport"
             :area-size="topViewStore.currentAreaSize"
+            :mirror-x-y="topViewStore.mirrorXY"
           />
         </v-menu>
 

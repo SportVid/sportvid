@@ -424,12 +424,15 @@ function renderHeatmap() {
   if (!heatmapInstance || !localSize.value.width || !localSize.value.height) return;
 
   const area = currentArea.value;
+  const mirror = topViewStore.mirrorXY;
   const points = selectedPositions.value.map((pos) => {
+    const xNorm = mirror ? 1 - pos[3] : pos[3];
+    const yNorm = mirror ? 1 - pos[4] : pos[4];
     const x =
-      pos[3] * (localSize.value.width * area.widthRel) +
+      xNorm * (localSize.value.width * area.widthRel) +
       ((1 - area.widthRel) / 2) * localSize.value.width;
     const y =
-      pos[4] * (localSize.value.height * area.heightRel) +
+      yNorm * (localSize.value.height * area.heightRel) +
       ((1 - area.heightRel) / 2) * localSize.value.height;
     return { x: Math.round(x), y: Math.round(y), value: 1 };
   });
@@ -448,6 +451,7 @@ function renderMovementToCanvas(canvas, targetW, targetH) {
   if (selectedPositions.value.length === 0) return;
 
   const area = currentArea.value;
+  const mirror = topViewStore.mirrorXY;
   const dotRadius = 6 * (targetW / localSize.value.width);
   const points = resampleApprox({ data: selectedPositions.value, targetSize: 5000 });
 
@@ -463,8 +467,10 @@ function renderMovementToCanvas(canvas, targetW, targetH) {
     ctx.globalAlpha = 0.7;
     ctx.beginPath();
     for (const pos of positions) {
-      const x = pos[3] * (targetW * area.widthRel) + ((1 - area.widthRel) / 2) * targetW;
-      const y = pos[4] * (targetH * area.heightRel) + ((1 - area.heightRel) / 2) * targetH;
+      const xNorm = mirror ? 1 - pos[3] : pos[3];
+      const yNorm = mirror ? 1 - pos[4] : pos[4];
+      const x = xNorm * (targetW * area.widthRel) + ((1 - area.widthRel) / 2) * targetW;
+      const y = yNorm * (targetH * area.heightRel) + ((1 - area.heightRel) / 2) * targetH;
       ctx.moveTo(x + dotRadius, y);
       ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
     }
@@ -479,7 +485,7 @@ function renderMovementCanvas() {
   renderMovementToCanvas(canvas, localSize.value.width, localSize.value.height);
 }
 
-watch([() => localSize.value.width, () => localSize.value.height], () => {
+watch([() => localSize.value.width, () => localSize.value.height, () => topViewStore.mirrorXY], () => {
   if (displayMode.value === "heatmap") {
     nextTick(() => {
       createHeatmap();
@@ -552,9 +558,10 @@ async function saveScreenshot() {
       blur: 0.7,
       gradient: { 0.2: "blue", 0.4: "cyan", 0.6: "lime", 0.8: "yellow", 1.0: "red" },
     });
+    const mirrorShot = topViewStore.mirrorXY;
     const points = selectedPositions.value.map((pos) => ({
-      x: Math.round(pos[3] * (targetW * area.widthRel) + ((1 - area.widthRel) / 2) * targetW),
-      y: Math.round(pos[4] * (targetH * area.heightRel) + ((1 - area.heightRel) / 2) * targetH),
+      x: Math.round((mirrorShot ? 1 - pos[3] : pos[3]) * (targetW * area.widthRel) + ((1 - area.widthRel) / 2) * targetW),
+      y: Math.round((mirrorShot ? 1 - pos[4] : pos[4]) * (targetH * area.heightRel) + ((1 - area.heightRel) / 2) * targetH),
       value: 1,
     }));
     hiResHeatmap.setData({ max: 10, data: points });

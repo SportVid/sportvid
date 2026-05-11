@@ -467,7 +467,7 @@ function handleKpiAggregation(id, msg) {
 
       // Zone check via position data
       var pp = posMap[pid];
-      var inZone = pp ? isInAnyZone(pp[3], pp[4], zones) : true;
+      var inZone = zones.length === 0 ? false : (pp ? isInAnyZone(pp[3], pp[4], zones) : false);
 
       if (inZone) {
         if (dist_inc != null && dist_inc === dist_inc && dist_inc > 0) data.totalDist += dist_inc;
