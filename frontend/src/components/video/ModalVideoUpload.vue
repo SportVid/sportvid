@@ -102,12 +102,20 @@
               icon="mdi-alert-circle-outline"
               style="font-size: 0.8rem"
             >
-              {{
-                $t("modal.video.upload.field_warning", {
-                  defaultLength: 105,
-                  defaultWidth: 68,
-                })
-              }}
+              <span v-if="!video.sport">
+                {{ $t("modal.video.upload.field_warning_no_sport") }}
+              </span>
+              <span v-else-if="sportDefaults">
+                {{
+                  $t("modal.video.upload.field_warning", {
+                    defaultLength: sportDefaults.length,
+                    defaultWidth: sportDefaults.width,
+                  })
+                }}
+              </span>
+              <span v-else>
+                {{ $t("modal.video.upload.field_warning_no_sport") }}
+              </span>
             </v-alert>
             <div v-else class="mt-n6" />
 
@@ -242,6 +250,16 @@ const video = ref({
 const sportOptions = computed(() =>
   topViewStore.sports.map((s) => ({ title: s.title, value: s.key }))
 );
+
+const SPORT_FIELD_DEFAULTS = {
+  soccer:     { length: 105, width: 68 },
+  handball:   { length: 40,  width: 20 },
+  basketball: { length: 28,  width: 15 },
+  climbing:   { length: 15,  width: 15 },
+};
+
+const sportDefaults = computed(() => SPORT_FIELD_DEFAULTS[video.value.sport] ?? null);
+
 const analysers = ref([
   {
     label: "Shot Detection",

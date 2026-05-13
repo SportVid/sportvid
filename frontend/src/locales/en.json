@@ -179,11 +179,12 @@
       "offset": "Set offset",
       "mirror_xy": "Mirror XY coordinates",
       "area_size": "Area size",
-      "set_grid": {
-        "title": "Set Grid",
+      "set_zones": {
+        "title": "Set Zones",
         "longitudinal": "Longitudinal",
         "transverse": "Transverse"
       },
+      "toggle_zones": "Toggle Zones",
       "view_kpis": {
         "title": "View KPIs",
         "space_control": "Space control",
@@ -354,7 +355,6 @@
       "history_table": "This table lists all plugin runs for the current video. Each row shows the plugin name, the date it was run, its progress, and its current status. You can use this to track ongoing runs or review past results.",
       "delete_panel": "Expand this section to delete plugin runs. You can delete all runs for your account, all runs for the current video, all runs of a specific plugin type for the current video, or select individual runs to remove. This is useful to clean up old or failed runs."
     },
-
     "export": {
       "open_modal": "Click here to open the export panel. Important: export options that rely on computed data — such as KPIs or position data — will only work if that data has already been generated.",
       "export_panel": "The left panel lists all available export formats. You can export raw position data, computed KPIs (regular or aggregated), merged or individual CSV files, or annotation formats like ELAN. Choose the format that fits your needs.",
@@ -507,6 +507,7 @@
         "field_length": "Field length [m]",
         "field_width": "Field width [m]",
         "field_warning": "If no dimensions are specified, default dimensions of {defaultLength}x{defaultWidth} m are used. This may affect the accuracy of the analysis.",
+        "field_warning_no_sport": "Please select a sport first so that the correct default field dimensions can be applied.",
         "divisions": {
           "liga_1": "League 1",
           "liga_2": "League 2",

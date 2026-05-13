@@ -32,6 +32,14 @@ from backend.tasks.convert_video import convert_video
 logger = logging.getLogger(__name__)
 
 
+SPORT_FIELD_DEFAULTS = {
+    "soccer":     (105.0, 68.0),
+    "handball":   (40.0,  20.0),
+    "basketball": (28.0,  15.0),
+    "climbing":   (15.0,  15.0),
+}
+
+
 def parse_number(val):
     try:
         return float(val.replace(',', '.')) if val else None
@@ -81,11 +89,14 @@ class VideoUpload(View):
                 file_path = media_path_to_file(video_id, ext)
                 file_in = file_path
 
+                sport = request.POST.get("sport", "")
+                default_length, default_width = SPORT_FIELD_DEFAULTS.get(sport, (105.0, 68.0))
+
                 field_length = parse_number(request.POST.get("fieldLength"))
-                if not field_length: field_length = 105.
+                if not field_length: field_length = default_length
 
                 field_width = parse_number(request.POST.get("fieldWidth"))
-                if not field_width: field_width = 68.
+                if not field_width: field_width = default_width
 
                 video_db = Video.objects.create(
                     name=request.POST.get("title"),

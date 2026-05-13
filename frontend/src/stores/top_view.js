@@ -404,6 +404,9 @@ export const useTopViewStore = defineStore(
       }
     }
 
+    const showSportZones = ref(false);
+    const toggleSportZones = () => { showSportZones.value = !showSportZones.value; };
+
     const gridConfig = {
       longitudinal: {
         options: [0, 3, 5],
@@ -602,6 +605,8 @@ export const useTopViewStore = defineStore(
       currentFramePlayers,
       getSubsetObject,
       getFrameAt,
+      showSportZones,
+      toggleSportZones,
       gridConfig,
       gridLongitudinal,
       gridTransverse,

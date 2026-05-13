@@ -139,11 +139,12 @@
         "upload": "Positionsdaten hochladen",
         "select": "Positionsdaten auswählen"
       },
-      "set_grid": {
+      "set_zones": {
         "title": "Raster",
         "longitudinal": "Längsstreifen",
         "transverse": "Querstreifen"
-      }
+      },
+      "set_zones": "Zonen"
     },
     "entity_kind": {
       "player": "Spieler",
@@ -337,6 +338,10 @@
         "total_teams": "Gesamtzahl der Teams auswählen",
         "out_of": "von",
         "sport": "Sportart",
+        "field_length": "Feldlänge [m]",
+        "field_width": "Feldbreite [m]",
+        "field_warning": "Wenn keine Abmessungen angegeben werden, werden die Standardabmessungen von {defaultLength}x{defaultWidth} m verwendet. Dies kann die Genauigkeit der Analyse beeinflussen.",
+        "field_warning_no_sport": "Bitte wähle zuerst eine Sportart aus, damit die korrekten Standard-Feldmaße angewendet werden können.",
         "divisions": {
           "liga_1": "Liga 1",
           "liga_2": "Liga 2",
@@ -817,6 +822,30 @@
         "entity_0": "Rest / Inaktiv",
         "entity_1": "Ball",
         "entity_2": "Schiedsrichter"
+      }
+    }
+  },
+  "sports": {
+    "handball": {
+      "zones": {
+        "top_wing": "Oberer Flügel",
+        "top_side": "Obere Seite",
+        "center": "Mitte",
+        "bottom_side": "Untere Seite",
+        "bottom_wing": "Unterer Flügel"
+      }
+    },
+    "basketball": {
+      "zones": {
+        "key": "Key",
+        "corner_top": "Corner Oben",
+        "corner_bottom": "Corner Unten",
+        "mid_top": "Midrange Oben",
+        "mid_center": "Midrange Mitte",
+        "mid_bottom": "Midrange Unten",
+        "three_top": "Dreipunkt Oben",
+        "three_center": "Dreipunkt Mitte",
+        "three_bottom": "Dreipunkt Unten"
       }
     }
   }

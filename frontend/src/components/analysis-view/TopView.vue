@@ -281,11 +281,12 @@
               </v-list>
             </v-menu>
 
-            <v-menu location="end" open-on-hover>
+            <!-- Soccer: full longitudinal/transverse grid picker -->
+            <v-menu v-if="topViewStore.currentSport.key === 'soccer'" location="end" open-on-hover>
               <template #activator="{ props }">
                 <v-list-item v-bind="props" class="menu-item">
                   <v-list-item-title class="d-flex justify-space-between">
-                    {{ $t("position_data.display_settings.set_grid.title") }}
+                    {{ $t("position_data.display_settings.set_zones.title") }}
                     <tab-window-icon>mdi-chevron-right</tab-window-icon>
                   </v-list-item-title>
                 </v-list-item>
@@ -293,7 +294,7 @@
               <v-list class="py-0" density="compact" width="220px">
                 <v-list-item class="menu-item" @click.stop>
                   <v-list-item-title class="d-flex justify-space-between align-center">
-                    {{ $t("position_data.display_settings.set_grid.longitudinal") }}
+                    {{ $t("position_data.display_settings.set_zones.longitudinal") }}
                     <v-btn-toggle
                       v-model="topViewStore.gridLongitudinal"
                       color="primary"
@@ -316,7 +317,7 @@
 
                 <v-list-item class="menu-item" @click.stop>
                   <v-list-item-title class="d-flex justify-space-between align-center">
-                    {{ $t("position_data.display_settings.set_grid.transverse") }}
+                    {{ $t("position_data.display_settings.set_zones.transverse") }}
                     <v-btn-toggle
                       v-model="topViewStore.gridTransverse"
                       color="primary"
@@ -338,6 +339,28 @@
                 </v-list-item>
               </v-list>
             </v-menu>
+
+            <!-- Handball / Basketball: single zone-overlay toggle -->
+            <v-list-item
+              v-else-if="
+                topViewStore.currentSport.key === 'handball' ||
+                topViewStore.currentSport.key === 'basketball'
+              "
+              class="menu-item"
+              @click="topViewStore.toggleSportZones"
+            >
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.toggle_zones") }}
+                <tab-window-icon
+                  :class="{
+                    'text-disabled': !topViewStore.showSportZones,
+                    'text-red': topViewStore.showSportZones,
+                  }"
+                >
+                  mdi-check
+                </tab-window-icon>
+              </v-list-item-title>
+            </v-list-item>
 
             <v-divider />
 
@@ -502,6 +525,7 @@ import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { getTimecode } from "@/plugins/time";
 import { toRgb } from "@/plugins/helpers";
 import { Delaunay } from "d3-delaunay";
+import { getSportZonePolygons, getSportFieldLines, BASKETBALL_ZONES } from "@/plugins/sport_zones";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
 import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
@@ -1045,6 +1069,50 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
     ctx.restore();
   }
 
+  // Draw sport-specific zone overlay (handball / basketball)
+  if (topViewStore.showSportZones) {
+    const sportKey = topViewStore.currentSport.key;
+    const toZonePx = ([nx, ny]) => {
+      const cx = topViewStore.mirrorXY ? 1 - nx : nx;
+      const cy = topViewStore.mirrorXY ? 1 - ny : ny;
+      return [
+        cx * (w * sport.widthRel) + ((1 - sport.widthRel) / 2) * w,
+        cy * (h * sport.heightRel) + ((1 - sport.heightRel) / 2) * h,
+      ];
+    };
+    ctx.save();
+    ctx.lineWidth = 1;
+    if (sportKey === "handball") {
+      ctx.strokeStyle = "rgba(128,128,128,1)";
+      for (const [p0, p1] of getSportFieldLines(sportKey)) {
+        const [x0, y0] = toZonePx(p0);
+        const [x1, y1] = toZonePx(p1);
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x1, y1);
+        ctx.stroke();
+      }
+    } else if (sportKey === "basketball") {
+      ctx.strokeStyle = "rgba(255,255,255,1)";
+      for (const zone of BASKETBALL_ZONES) {
+        const polys = getSportZonePolygons(sportKey, zone.id);
+        for (const poly of polys) {
+          if (poly.length < 2) continue;
+          const px0 = toZonePx(poly[0]);
+          ctx.beginPath();
+          ctx.moveTo(px0[0], px0[1]);
+          for (let i = 1; i < poly.length; i++) {
+            const pxi = toZonePx(poly[i]);
+            ctx.lineTo(pxi[0], pxi[1]);
+          }
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
   // Draw players, ball, refs, inactive — gated by topViewStore.visibleEntityKinds.
   const framePositions = topViewStore.currentFramePlayers;
   if (!framePositions || !framePositions.length) return;
@@ -1188,6 +1256,7 @@ watch(
     () => topViewStore.gridLongitudinal,
     () => topViewStore.gridTransverse,
     () => topViewStore.mirrorXY,
+    () => topViewStore.showSportZones,
     () => visualizationStore.teamColorMapping,
     () => topViewStore.visibleEntityKinds,
     includedPlayers,

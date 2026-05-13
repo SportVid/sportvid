@@ -521,6 +521,7 @@ import ZoneSelectorPicker from "@/components/kpi/ZoneSelectorPicker.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
 import { debounce } from "lodash";
+import { isInSportZone, allSportZones } from "@/plugins/sport_zones";
 
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
@@ -550,21 +551,24 @@ const viewMode = computed({
 });
 const groupMode = ref("player");
 
-// Initialize with all 25 pitch zones selected (full pitch)
+// Zone initialization based on current sport
 const LONG_BOUNDS = [0, 0.2025, 0.365, 0.635, 0.7955, 1];
 const TRANS_BOUNDS = [0, 0.1575, 0.33, 0.67, 0.8425, 1];
-const initialZones = [];
-for (let r = 0; r < 5; r++) {
-  for (let c = 0; c < 5; c++) {
-    initialZones.push({
-      x0: TRANS_BOUNDS[c],
-      y0: LONG_BOUNDS[r],
-      x1: TRANS_BOUNDS[c + 1],
-      y1: LONG_BOUNDS[r + 1],
-    });
-  }
+function _soccerAllZones() {
+  const zones = [];
+  for (let r = 0; r < 5; r++)
+    for (let c = 0; c < 5; c++)
+      zones.push({ x0: TRANS_BOUNDS[c], y0: LONG_BOUNDS[r], x1: TRANS_BOUNDS[c + 1], y1: LONG_BOUNDS[r + 1] });
+  return zones;
 }
-const selectedZones = ref(initialZones);
+function _defaultZonesForSport(sportKey) {
+  if (sportKey === 'handball' || sportKey === 'basketball') return allSportZones(sportKey);
+  return _soccerAllZones();
+}
+const selectedZones = ref(_defaultZonesForSport(topViewStore.currentSport?.key));
+watch(() => topViewStore.currentSport?.key, (newKey) => {
+  selectedZones.value = _defaultZonesForSport(newKey);
+});
 
 // Maps kpi_names (from kpi_computation meta_data) → display options per view mode.
 const KPI_CONFIG = {
@@ -822,6 +826,7 @@ const isTeamFullySelected = (teamId) => {
 const isInAnyZone = (x, y, zones) => {
   if (!zones || zones.length === 0) return false;
   for (const z of zones) {
+    if (z.sportZone) { if (isInSportZone(z.sportKey, z.zoneId, x, y)) return true; continue; }
     if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1) return true;
   }
   return false;
