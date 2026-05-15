@@ -171,9 +171,9 @@ cython_debug/
 .DS_Store
 
 # Allow CI/CD workflow files to be tracked
-!.github/
-!.github/workflows/
-!.github/workflows/*.yml
+# !.github/
+# !.github/workflows/
+# !.github/workflows/*.yml
 
 # Ignore GitHub Actions Runner
 /actions-runner/
