@@ -4,7 +4,7 @@ http_options:
   port: 8000
 logging_config:
   encoding: TEXT # or JSON
-  log_level: WARNING # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_level: INFO # DEBUG, INFO, WARNING, ERROR, CRITICAL
   logs_dir: null # or a custom path; null = default
   enable_access_log: false
 
@@ -19,18 +19,18 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 4 # 2 or 4 seems to be a reasonable upper bound for now
+        max_ongoing_requests: 2 # 2 or 4 seems to be a reasonable upper bound for now
         autoscaling_config:
-          min_replicas: 0 # 1 keeps one worker alive all the time (warm-start)
+          min_replicas: 0
           initial_replicas: 0
-          max_replicas: 8 # at most 2 GPUs worth of capacity are running for this service
-          target_num_ongoing_requests_per_replica: 2
-          metrics_interval_s: 10
-          look_back_period_s: 30
-          upscale_delay_s: 30
-          downscale_delay_s: 120
+          max_replicas: 1
+          target_num_ongoing_requests_per_replica: 4
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 30
         ray_actor_options:
-          num_gpus: 0.25
+          num_gpus: 0.8
           runtime_env:
             uv:
               - git+https://github.com/Alexk1704/ByteTrack.git
@@ -67,16 +67,16 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 4
+        max_ongoing_requests: 2
         autoscaling_config:
           min_replicas: 0
           initial_replicas: 0
-          max_replicas: 2
-          target_num_ongoing_requests_per_replica: 2
-          metrics_interval_s: 10
-          look_back_period_s: 30
-          upscale_delay_s: 15
-          downscale_delay_s: 60
+          max_replicas: 1
+          target_num_ongoing_requests_per_replica: 4
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 30
         ray_actor_options:
           num_cpus: 2
           runtime_env:
@@ -93,16 +93,16 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 4
+        max_ongoing_requests: 2
         autoscaling_config:
           min_replicas: 0
           initial_replicas: 0
-          max_replicas: 4
-          target_num_ongoing_requests_per_replica: 2
-          metrics_interval_s: 10
-          look_back_period_s: 30
-          upscale_delay_s: 15
-          downscale_delay_s: 60
+          max_replicas: 1
+          target_num_ongoing_requests_per_replica: 4
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 30
         ray_actor_options:
           num_cpus: 4
           runtime_env:
@@ -120,6 +120,33 @@ applications:
       params: {}
     deployments:
       - name: Deployment
+        max_ongoing_requests: 2
+        autoscaling_config:
+          min_replicas: 0
+          initial_replicas: 0
+          max_replicas: 1
+          target_num_ongoing_requests_per_replica: 4
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 30
+        ray_actor_options:
+          num_cpus: 4
+          runtime_env:
+            uv:
+              - numpy
+              - pandas
+              - lxml
+
+  - name: kpi_computation
+    route_prefix: /kpi_computation
+    import_path: inference_ray.main:app_builder
+    args:
+      model: kpi_computation
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
         max_ongoing_requests: 4
         autoscaling_config:
           min_replicas: 0
@@ -136,7 +163,7 @@ applications:
             uv:
               - numpy
               - pandas
-              - lxml
+              - floodlight==1.1.0
 
   - name: thumbnail_generator
     route_prefix: /thumbnail_generator
@@ -147,15 +174,15 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 4
+        max_ongoing_requests: 2
         autoscaling_config:
           min_replicas: 0
           initial_replicas: 0
-          max_replicas: 2
-          target_num_ongoing_requests_per_replica: 2
-          metrics_interval_s: 10
-          look_back_period_s: 30
-          upscale_delay_s: 15
-          downscale_delay_s: 60
+          max_replicas: 1
+          target_num_ongoing_requests_per_replica: 4
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 30
         ray_actor_options:
-          num_cpus: 1
+          num_cpus: 2

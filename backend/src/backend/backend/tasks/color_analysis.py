@@ -1,17 +1,14 @@
-from typing import Dict, List
 import logging
-from backend.models import PluginRun, PluginRunResult, Video, Timeline, TimelineSegment
-from backend.plugin_manager import PluginManager
-
-from data import DataManager
-
-from backend.utils.parser import Parser
-from backend.utils.task import Task
-
-
-from ..utils.analyser_client import TaskAnalyserClient
 from django.db import transaction
 from django.conf import settings
+from typing import Dict, List
+
+from backend.models import PluginRun, PluginRunResult, Video, Timeline
+from backend.plugin_manager import PluginManager
+from backend.utils.parser import Parser
+from backend.utils.task import Task
+from data import DataManager
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 @PluginManager.export_parser("color_analysis")

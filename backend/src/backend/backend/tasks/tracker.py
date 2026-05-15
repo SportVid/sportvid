@@ -1,7 +1,5 @@
-import logging
-from django.db import transaction
-from django.conf import settings
 from typing import Dict, List
+import logging
 
 from backend.models import (
     PluginRun,
@@ -9,22 +7,37 @@ from backend.models import (
     Video
 )
 from backend.plugin_manager import PluginManager
+
+from ..utils.analyser_client import TaskAnalyserClient
+from data import DataManager
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-from data import DataManager
-from ..utils.analyser_client import TaskAnalyserClient
+from django.db import transaction
+from django.conf import settings
 
 
-@PluginManager.export_parser("bytetrack")
-class ByteTrackParser(Parser):
+@PluginManager.export_parser("tracker")
+class TrackerParser(Parser):
     def __init__(self):
         self.valid_parameter = {
+            "tracker": {
+                "parser": str,
+                "default": "yolox"
+            },
+            "tracking_params": {
+                "parser": Dict,
+                "default": {
+                    "confidence_threshold" : 0.25,
+                    
+                }
+                
+            },
             "fps": {"parser": int, "default": 5}
         }
 
 
-@PluginManager.export_plugin("bytetrack")
-class ByteTrack(Task):
+@PluginManager.export_plugin("tracker")
+class Tracker(Task):
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",
@@ -40,6 +53,7 @@ class ByteTrack(Task):
         dry_run: bool = False,
         **kwargs
     ):
+
         manager = DataManager(self.config["output_path"])
         client = TaskAnalyserClient(
             host=self.config["analyser_host"],
@@ -49,10 +63,11 @@ class ByteTrack(Task):
         )
         video_id = self.upload_video(client, video)
 
-        bytetrack_result = self.run_analyser(
+        tracker_result = self.run_analyser(
             client,
-            "bytetrack",
+            "tracker",
             parameters={
+                # TODO
                 "fps": parameters.get("fps"),
             },
             inputs={"video": video_id},
@@ -69,13 +84,16 @@ class ByteTrack(Task):
             return {}
 
         with transaction.atomic():
-            with bytetrack_result[1]["tracklets"] as tracklets:
+            with tracker_result[1]["detections"] as detections:
+
+                # relevant db entry for frontend
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
-                    data_id=tracklets.id,
+                    data_id=detections.id,
                     name="bboxes",
                     type=PluginRunResult.TYPE_BBOXES,
                 )
+                # relevant for script-based calls
                 return {
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [plugin_run_result_db.id.hex],

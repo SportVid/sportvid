@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0030_tibavauser_max_file_size_alter_tibavauser_allowance_and_more'),
+        ('backend', '0030_sportviduser_max_file_size_alter_sportviduser_allowance_and_more'),
     ]
 
     operations = [

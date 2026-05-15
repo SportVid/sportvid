@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0038_rename_allowance_tibavauser_video_allowance_and_more'),
+        ('backend', '0038_rename_allowance_sportviduser_video_allowance_and_more'),
     ]
 
     operations = [

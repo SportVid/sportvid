@@ -1,4 +1,4 @@
-FROM nginx:1.28.0-alpine
+FROM nginx:1.28.0-alpine-slim
 
 RUN apk add --update npm git
 RUN npm install -g npm@11.13.0

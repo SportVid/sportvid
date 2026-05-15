@@ -1,5 +1,6 @@
 import logging
 import sys
+import os
 import argparse
 import time
 import uuid
@@ -426,7 +427,10 @@ class Server:
 
 def read_config(path):
     with open(path, "r") as f:
-        return yaml.safe_load(f)
+        raw_cfg_str = f.read()
+        expanded_cfg_str = os.path.expandvars(raw_cfg_str)
+        return yaml.safe_load(expanded_cfg_str)
+
 
 
 def parse_args():

@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0041_remove_tibavauser_file_allowance_and_more'),
+        ('backend', '0041_remove_sportviduser_file_allowance_and_more'),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             old_name='storage_size',
             new_name='max_storage_size',
         ),

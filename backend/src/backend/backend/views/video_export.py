@@ -6,32 +6,26 @@ import sys
 import io
 import csv
 import base64
+import zipfile
+import pandas as pd
+import numpy as np
 from dataclasses import dataclass
-
-from typing import List, Tuple
-
 from django.views import View
 from django.http import JsonResponse
 from django.conf import settings
-
-from pympi.Elan import Eaf, to_eaf
+from enum import Enum
 from io import StringIO
-import pandas as pd
-
-import zipfile
+from typing import List, Tuple
+from pympi.Elan import Eaf, to_eaf
 
 from backend.utils.color import get_closest_color
 from backend.models import (
     Video,
-    Annotation,
     Timeline,
     TimelineSegment,
     PluginRunResult,
-    PluginRun,
 )
-from enum import Enum
 from data import DataManager, Shot
-import numpy as np
 
 
 logger = logging.getLogger(__name__)
@@ -106,7 +100,6 @@ class VideoExport(View):
                         times.append(TimeExport(start=shot.start, end=shot.end))
             else:
                 # this is some old stuff
-
                 timeline_db = Timeline.objects.filter(
                     type=Timeline.TYPE_ANNOTATION, video=video
                 ).first()

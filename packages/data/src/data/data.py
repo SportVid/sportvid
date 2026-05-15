@@ -1,9 +1,8 @@
-import zipfile
 import logging
 import yaml
-from dataclasses import dataclass, field, fields, asdict
-from typing import Callable, Optional, Dict
-
+from dataclasses import dataclass, field, fields
+from typing import Optional, Dict
+from pathlib import Path
 import uuid
 
 from .fs_handler import FSHandler
@@ -24,6 +23,9 @@ class Data:
     def _register_fs_handler(self, fs: FSHandler) -> None:
         self.fs = fs
 
+    def _register_data_dir(self, data_dir: str) -> None:
+        self.data_dir = data_dir
+
     def __enter__(self):
         if hasattr(self, "fs") and self.fs:
             self.fs.open(self)
@@ -36,17 +38,36 @@ class Data:
     def check_fs(self):
         return hasattr(self, "fs") and self.fs is not None
 
+    def check_data_dir(self):
+        return hasattr(self, "data_dir") and self.data_dir is not None
+
+    def data_path(self) -> Path:
+        assert self.check_data_dir(), "No data_dir registered"
+        return Path(self.data_dir) / self.id
+
+    def file_path(self, filename: str) -> Path:
+        return self.data_path() / filename
+
     def load(self) -> None:
         data = self.load_dict("meta.yml")
         for x in fields(Data):
-            setattr(self, x.name, data.get(x.name, x.default))
+            default_value = x.default if x.default is not None else None
+            setattr(self, x.name, data.get(x.name, default_value))
 
     def load_dict(self, filename: str) -> Dict:
-        assert self.check_fs(), "No filesystem handler installed"
+        if self.check_fs():
+            with self.fs.open_file(filename, "r") as f:
+                decoded_data = f.read().decode("utf-8")
+                return yaml.safe_load(decoded_data) or {}
 
-        with self.fs.open_file(filename, "r") as f:
-            decoded_data = f.read().decode("utf-8")
-            return yaml.safe_load(decoded_data)
+        if self.check_data_dir():
+            path = self.file_path(filename)
+            if not path.exists():
+                logging.warning(f"Metadata file not found: {path}")
+                return {}
+            return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+        raise AssertionError("No filesystem handler or data_dir registered")
 
     def save(self) -> None:
         data_dict = {}
@@ -55,12 +76,31 @@ class Data:
         self.save_dict("meta.yml", data_dict)
 
     def save_dict(self, filename: str, data: Dict) -> None:
-        assert self.check_fs(), "No filesystem handler installed"
-        assert self.fs.mode == "w", "Data package is open read only"
+        if self.check_fs():
+            assert self.fs.mode == "w", "Data package is open read only"
+            with self.fs.open_file(filename, "w") as f:
+                f.write(yaml.safe_dump(data).encode())
+            return
 
-        with self.fs.open_file(filename, "w") as f:
+        if self.check_data_dir():
+            self.data_path().mkdir(parents=True, exist_ok=True)
+            self.file_path(filename).write_text(
+                yaml.safe_dump(data),
+                encoding="utf-8",
+            )
+            return
 
-            f.write(yaml.safe_dump(data).encode())
+        raise AssertionError("No filesystem handler or data_dir registered")
+
+    def open_file(self, filename: str, mode: str = "rb", encoding: str | None = None):
+        if self.check_fs():
+            return self.fs.open_file(filename, mode)
+
+        if self.check_data_dir():
+            self.data_path().mkdir(parents=True, exist_ok=True)
+            return open(self.file_path(filename), mode, encoding=encoding)
+
+        raise AssertionError("No filesystem handler or data_dir registered")
 
     def to_dict(self) -> dict:
         data_dict = {}

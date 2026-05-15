@@ -1,6 +1,7 @@
 import logging
+from django.db import transaction
+from django.conf import settings
 from typing import Dict, List
-
 from celery import shared_task
 
 from backend.models import (
@@ -9,26 +10,21 @@ from backend.models import (
     PluginRun,
     PluginRunResult,
     Video,
-    TibavaUser,
+    SportVidUser,
     Timeline,
     TimelineSegment,
     TimelineSegmentAnnotation,
 )
 from backend.plugin_manager import PluginManager
-from backend.utils import media_path_to_file
-
-from ..utils.analyser_client import TaskAnalyserClient
-from data import Shot, ShotsData
-
-from data import DataManager
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-from django.db import transaction
-from django.conf import settings
+
+from data import Shot, ShotsData
+from data import DataManager
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 logger = logging.getLogger(__name__)
-
 LABEL_LUT = {
     "p_ECU": "Extreme Close-Up",
     "p_CU": "Close-Up",
@@ -41,7 +37,6 @@ LABEL_LUT = {
 @PluginManager.export_parser("shot_type_classification")
 class ShotTypeClassifierParser(Parser):
     def __init__(self):
-
         self.valid_parameter = {
             "timeline": {"parser": str, "default": "Camera Setting"},
             "fps": {"parser": float, "default": 2.0},
@@ -62,13 +57,13 @@ class ShotTypeClassifier(Task):
         self,
         parameters: Dict,
         video: Video = None,
-        user: TibavaUser = None,
+        user: SportVidUser = None,
         plugin_run: PluginRun = None,
         dry_run: bool = False,
         **kwargs,
     ):
-        # Debug
-        parameters["fps"] = 0.1
+        # parameters["fps"] = 0.1  # debug
+        
         manager = DataManager(self.config["output_path"])
         client = TaskAnalyserClient(
             host=self.config["analyser_host"],

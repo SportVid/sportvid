@@ -6,25 +6,25 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0040_tibavauser_role'),
+        ('backend', '0040_sportviduser_role'),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='file_allowance',
         ),
         migrations.RemoveField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='video_allowance',
         ),
         migrations.AddField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='storage_size',
             field=models.BigIntegerField(default=107374182400),
         ),
         migrations.AddField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='used_storage_size',
             field=models.BigIntegerField(default=0),
         ),

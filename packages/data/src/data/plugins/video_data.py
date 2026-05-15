@@ -8,7 +8,6 @@ from collections.abc import Iterable
 from utils import VideoDecoder
 
 
-
 @DataManager.export("VideoData", analyser_pb2.VIDEO_DATA)
 @dataclass(kw_only=True)
 class VideoData(Data):

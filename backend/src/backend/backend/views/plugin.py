@@ -1,13 +1,7 @@
-import uuid
 import logging
-import traceback
-
-
 from django.views import View
 from django.http import HttpResponse, JsonResponse
 from django.conf import settings
-
-# from django.core.exceptions import BadRequest
 
 from backend.models import Video, PluginRun
 from backend.plugin_manager import PluginManager

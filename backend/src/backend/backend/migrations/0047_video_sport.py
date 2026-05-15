@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0044_rename_template_calibrationassets_sport'),
+        ('backend', '0046_merge_20260330_1748'),
     ]
 
     operations = [

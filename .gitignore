@@ -172,6 +172,10 @@ CLAUDE.md
 # Editor
 .vscode/
 
+# Copilot
+.github
+github/
+
 # Tests
 tests/
 test_env/
@@ -179,6 +183,11 @@ test_env/
 # SportVid models
 models/
 
-# Data directories
+# Data dirs
 .data
 data/
+
+# Project specific things
+README.md
+*.yml
+Dockerfile

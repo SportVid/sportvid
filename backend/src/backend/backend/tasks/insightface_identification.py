@@ -1,18 +1,15 @@
-from typing import Dict, List
 import imageio.v3 as iio
 import logging
+from django.db import transaction
+from django.conf import settings
+from typing import Dict, List
 
-from data import DataManager
-from backend.models import PluginRun, PluginRunResult, Video, Timeline, TibavaUser
+from backend.models import PluginRun, PluginRunResult, Video, Timeline, SportVidUser
 from backend.plugin_manager import PluginManager
-
-from ..utils.analyser_client import TaskAnalyserClient
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-from data import ImageEmbedding, ImageEmbeddings
-from django.db import transaction
-
-from django.conf import settings
+from data import DataManager
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 @PluginManager.export_parser("insightface_identification")
@@ -41,14 +38,11 @@ class InsightfaceIdentification(Task):
         self,
         parameters: Dict,
         video: Video = None,
-        user: TibavaUser = None,
+        user: SportVidUser = None,
         plugin_run: PluginRun = None,
         dry_run: bool = False,
         **kwargs
     ):
-        # Debug
-        # parameters["fps"] = 0.1
-
         # check whether we compare by input embedding or input image
         manager = DataManager(self.config["output_path"])
         client = TaskAnalyserClient(

@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0037_alter_tibavauser_max_file_size'),
+        ('backend', '0037_alter_sportviduser_max_file_size'),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             old_name='allowance',
             new_name='video_allowance',
         ),
         migrations.AddField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='file_allowance',
             field=models.IntegerField(default=40),
         ),
