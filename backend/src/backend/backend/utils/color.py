@@ -57,7 +57,7 @@ def get_closest_color(color):
         ]
     )
     color_index = np.argmin(np.abs(np.sum(np.subtract(color_dict, color), axis=1)))
-    result = [
+    return [
         "Black",
         "White",
         "Red",
@@ -75,9 +75,3 @@ def get_closest_color(color):
         "Teal",
         "Navy"
     ][color_index]
-    # print(
-    #     f"rgb({255*color[0]},{255*color[1]},{255*color[2]})",
-    #     result,
-    # )
-    return result
-

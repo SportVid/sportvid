@@ -1,14 +1,11 @@
 import os
 import shutil
-
-from pathlib import Path
-import PIL
-import requests
-from urllib.parse import unquote
-
 import cgi
 import mimetypes
 import logging
+import requests
+from pathlib import Path
+from urllib.parse import unquote
 
 
 logger = logging.getLogger(__name__)
@@ -37,19 +34,19 @@ def download_file(file, output_dir, output_name=None, max_size=None, extensions=
             return {"status": "error", "type": "file_too_large"}
 
         os.makedirs(output_dir, exist_ok=True)
+
         # ---->
-        # with open(os.path.join(output_dir, output_path), "wb") as f:
-        #    for i, chunk in enumerate(file.chunks()):
-        #        f.write(chunk)
-                
-        # ----> atomic move
-        input_path = getattr(file, 'temporary_file_path', None) and file.temporary_file_path()
-        if input_path and os.path.exists(input_path):
-            shutil.move(input_path, str(output_path))
-        else:
-            with open(output_path, "wb") as f:
-                for chunk in file.chunks():
-                    f.write(chunk)
+        with open(os.path.join(output_dir, output_path), "wb") as f:
+            for chunk in file.chunks():
+                f.write(chunk)
+        # ----> NOTE: atomic move
+        # input_path = getattr(file, 'temporary_file_path', None) and file.temporary_file_path()
+        # if input_path and os.path.exists(input_path):
+        #    shutil.move(input_path, str(output_path))
+        # else:
+        #    with open(output_path, "wb") as f:
+        #        for chunk in file.chunks():
+        #            f.write(chunk)
 
         return {"status": "ok", "path": Path(output_path), "origin": file.name}
     except Exception:
@@ -76,7 +73,6 @@ def download_url(url, output_dir, output_name=None, max_size=None, extensions=No
                     }
 
         elif response.headers.get("Content-Type") != None:
-
             ext = mimetypes.guess_extension(response.headers.get("Content-Type"))
             if ext is None:
                 return {"status": "error", "type": "downloading_error"}
@@ -100,7 +96,6 @@ def download_url(url, output_dir, output_name=None, max_size=None, extensions=No
         with open(output_path, "wb") as f:
             for chunk in response.iter_content(1024):
                 size += 1024
-
                 if size > max_size:
                     return {"status": "error", "type": "file_too_large"}
                 f.write(chunk)

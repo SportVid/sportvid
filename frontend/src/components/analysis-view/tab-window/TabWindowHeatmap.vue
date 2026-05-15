@@ -1,0 +1,680 @@
+<template>
+  <div
+    v-if="!hasPositionData && posdataWorkerStore.isLoading"
+    class="heatmap-loading-card"
+  >
+    <div class="heatmap-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
+    <div class="heatmap-loading-text">
+      {{ posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100 ? `${posdataWorkerStore.loadProgress}%` : "" }}
+    </div>
+  </div>
+
+  <v-row
+    v-else-if="!hasPositionData"
+    class="text-h6 text-grey font-weight-light mx-16 px-10"
+    style="
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.5;
+      height: 25vh;
+    "
+    v-html="$t('visualization.heatmap.not_selected')"
+  />
+
+  <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
+    <v-row align="center" data-tour="heatmap-controls-row">
+      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px" data-tour="heatmap-settings">
+        <v-menu location="bottom">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" style="height: 40px" class="ml-2 mt-n2" size="small">
+              {{ $t("visualization.heatmap.area_size") }}
+            </v-btn>
+          </template>
+          <v-list class="py-0" density="compact">
+            <v-list-item
+              v-for="(areaData, areaSize) in topViewStore.currentSport.areas"
+              :key="areaSize"
+              class="menu-item"
+              @click="topViewStore.onSportChange(topViewStore.currentSport.title, areaSize)"
+            >
+              <v-list-item-title class="my-0">
+                {{ areaData.title }}
+              </v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+
+        <v-btn-toggle
+          v-model="displayMode"
+          color="primary"
+          border
+          mandatory
+          elevation="2"
+          style="height: 40px"
+          class="mt-n2"
+        >
+          <v-btn value="heatmap" size="small">
+            <v-icon>mdi-blur</v-icon>
+          </v-btn>
+          <v-btn value="movement" size="small">
+            <v-icon>mdi-map-marker-path</v-icon>
+          </v-btn>
+        </v-btn-toggle>
+
+        <v-btn style="height: 40px" size="small" class="mt-n2" @click="saveScreenshot">
+          <v-icon>mdi-download</v-icon>
+        </v-btn>
+
+        <v-menu location="bottom">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" style="height: 40px" size="small" class="mt-n2">
+              <v-icon>mdi-timer-sync-outline</v-icon>
+            </v-btn>
+          </template>
+          <v-list class="py-0" density="compact" width="250px">
+            <v-list-item
+              class="menu-item"
+              @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
+            >
+              <v-list-item-title>
+                {{ $t("visualization.time_selection.sync_start") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item
+              class="menu-item"
+              @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
+            >
+              <v-list-item-title>
+                {{ $t("visualization.time_selection.sync_end") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-divider />
+
+            <v-list-item
+              class="menu-item"
+              @click="
+                positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
+                positionDataStore.setSelectedTimeRangeEnd(allFrameKeys[allFrameKeys.length - 1]);
+              "
+            >
+              <v-list-item-title>
+                {{ $t("visualization.time_selection.full_match") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item
+              class="menu-item"
+              :disabled="!visualizationStore.halftimesExist"
+              @click="selectHalftime(1)"
+            >
+              <v-list-item-title>
+                {{ $t("visualization.time_selection.first_half") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item
+              class="menu-item"
+              :disabled="!visualizationStore.halftimesExist"
+              @click="selectHalftime(2)"
+            >
+              <v-list-item-title>
+                {{ $t("visualization.time_selection.second_half") }}
+              </v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </v-col>
+      <v-col class="mt-2" data-tour="heatmap-time-selector">
+        <VisualizationTimeSelector class="ml-n1" />
+      </v-col>
+    </v-row>
+
+    <v-row class="mt-2" justify="center">
+      <div class="top-view-wrapper" data-tour="heatmap-pitch">
+        <img
+          ref="topViewElement"
+          class="visualizer-image"
+          :src="topViewStore.currentSport.areaImage"
+          @load="onImageLoad"
+          :style="{
+            height: videoStore.videoSize.height + 'px',
+            maxWidth: '100%',
+          }"
+        />
+
+        <div
+          v-if="displayMode === 'heatmap'"
+          ref="heatmapContainer"
+          :style="{
+            position: 'absolute',
+            top: '0px',
+            left: '0px',
+            width: localSize.width + 'px',
+            height: localSize.height + 'px',
+          }"
+        ></div>
+
+        <canvas
+          v-if="displayMode === 'movement'"
+          ref="movementCanvas"
+          :width="localSize.width"
+          :height="localSize.height"
+          :style="{
+            position: 'absolute',
+            top: '0px',
+            left: '0px',
+            width: localSize.width + 'px',
+            height: localSize.height + 'px',
+          }"
+        />
+      </div>
+    </v-row>
+
+    <div class="chart-legend mt-6" data-tour="heatmap-player-legend">
+      <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
+        <div
+          class="team-dot"
+          :style="{
+            backgroundColor: isTeamFullySelected(teamId)
+              ? toRgb(visualizationStore.getTeamColor(teamId), 0)
+              : 'transparent',
+            color: isTeamFullySelected(teamId)
+              ? '#fff'
+              : toRgb(visualizationStore.getTeamColor(teamId), 0),
+            borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
+          }"
+          @click="toggleTeam(teamId)"
+        >
+          {{ getTeamName(teamId) }}
+        </div>
+        <span class="chart-legend-sep">|</span>
+        <div
+          v-for="p in players"
+          :key="p.playerId"
+          class="player-dot"
+          :style="{
+            backgroundColor: selectedPlayerIds.includes(p.playerId)
+              ? toRgb(playerColors[p.playerId], 0)
+              : toRgb(playerColors[p.playerId], 0.6),
+            color: selectedPlayerIds.includes(p.playerId) ? '#fff' : '#222',
+            borderColor: selectedPlayerIds.includes(p.playerId)
+              ? toRgb(playerColors[p.playerId], 0)
+              : toRgb(playerColors[p.playerId], 0.6),
+          }"
+          @click="togglePlayerId(p.playerId)"
+        >
+          {{ getPlayerNumber(p.playerId) }}
+        </div>
+      </div>
+    </div>
+  </v-card>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, toRaw } from "vue";
+import { useTopViewStore } from "@/stores/top_view";
+import { useVideoStore } from "@/stores/video";
+import { usePlayerStore } from "@/stores/player";
+import { usePositionDataStore } from "@/stores/position_data";
+import { useVisualizationStore } from "@/stores/visualization";
+import { usePosdataWorkerStore } from "@/stores/posdata_worker";
+import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
+import h337 from "heatmap.js";
+import { toRgb } from "@/plugins/helpers";
+import { resampleApprox } from "@/plugins/draw/utils";
+import { debounce } from "lodash";
+
+const topViewStore = useTopViewStore();
+const videoStore = useVideoStore();
+const visualizationStore = useVisualizationStore();
+const playerStore = usePlayerStore();
+const positionDataStore = usePositionDataStore();
+const posdataWorkerStore = usePosdataWorkerStore();
+
+const currentArea = computed(
+  () => topViewStore.currentSport.areas?.[topViewStore.currentAreaSize] ?? {}
+);
+
+const displayMode = ref("heatmap");
+
+const localSize = ref({ width: 0, height: 0 });
+const topViewElement = ref(null);
+
+const measureImage = () => {
+  if (topViewElement.value) {
+    const rect = topViewElement.value.getBoundingClientRect();
+    localSize.value = { width: rect.width, height: rect.height };
+  }
+};
+
+const onImageLoad = () => {
+  nextTick(() => measureImage());
+};
+
+const resizeObserver = new ResizeObserver(() => {
+  measureImage();
+});
+
+onMounted(() => {
+  window.addEventListener("resize", measureImage);
+  if (topViewElement.value) {
+    resizeObserver.observe(topViewElement.value);
+  }
+  nextTick(() => {
+    measureImage();
+    if (displayMode.value === "heatmap" && heatmapContainer.value) {
+      createHeatmap();
+    }
+  });
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", measureImage);
+  if (topViewElement.value) {
+    resizeObserver.unobserve(topViewElement.value);
+  }
+  triggerHeatmapCalc.cancel();
+});
+
+const allFrameKeys = computed(() => topViewStore.sortedFrameKeys);
+
+const selectHalftime = (half) => {
+  const b = topViewStore.precomputedHalftimeBoundaries[half];
+  if (b) {
+    positionDataStore.setSelectedTimeRangeStart(b.first);
+    positionDataStore.setSelectedTimeRangeEnd(b.last);
+  }
+};
+
+const selectedPlayerIds = ref([]);
+
+const playerOptions = computed(() => topViewStore.precomputedPlayerList);
+
+const playerColors = computed(() => {
+  const map = {};
+  for (const p of playerOptions.value) {
+    map[p.playerId] = visualizationStore.getTeamColor(p.teamId);
+  }
+  return map;
+});
+
+const teamGroups = computed(() => {
+  const groups = {};
+  for (const p of playerOptions.value) {
+    if (!groups[p.teamId]) groups[p.teamId] = [];
+    groups[p.teamId].push(p);
+  }
+  return groups;
+});
+
+function togglePlayerId(playerId) {
+  if (selectedPlayerIds.value.includes(playerId)) {
+    selectedPlayerIds.value = selectedPlayerIds.value.filter((id) => id !== playerId);
+  } else {
+    selectedPlayerIds.value = [...selectedPlayerIds.value, playerId];
+  }
+}
+
+const toggleTeam = (teamId) => {
+  const teamPlayerIds = (teamGroups.value[teamId] || []).map((p) => p.playerId);
+  const allSelected = teamPlayerIds.every((pid) => selectedPlayerIds.value.includes(pid));
+  if (allSelected) {
+    selectedPlayerIds.value = selectedPlayerIds.value.filter((id) => !teamPlayerIds.includes(id));
+  } else {
+    const newIds = [...selectedPlayerIds.value];
+    teamPlayerIds.forEach((pid) => {
+      if (!newIds.includes(pid)) newIds.push(pid);
+    });
+    selectedPlayerIds.value = newIds;
+  }
+};
+
+const isTeamFullySelected = (teamId) => {
+  const teamPlayerIds = (teamGroups.value[teamId] || []).map((p) => p.playerId);
+  return (
+    teamPlayerIds.length > 0 && teamPlayerIds.every((pid) => selectedPlayerIds.value.includes(pid))
+  );
+};
+
+const getPlayerNumber = (playerId) => {
+  const meta = topViewStore.metaDataTopView;
+  const num = meta?.player_ids?.[playerId]?.number;
+  return num != null ? num : playerId;
+};
+
+const getTeamName = (teamId) => {
+  const meta = topViewStore.metaDataTopView;
+  if (meta?.team_ids?.[teamId]?.name) return meta.team_ids[teamId].name;
+  return teamId;
+};
+
+const selectedPositions = ref([]);
+
+const triggerHeatmapCalc = debounce(async () => {
+  if (!topViewStore.positionDataTopView || selectedPlayerIds.value.length === 0) {
+    selectedPositions.value = [];
+    return;
+  }
+  const rawCrop = toRaw(currentArea.value.templateCrop);
+  const cropPct = rawCrop
+    ? { x: [rawCrop.x[0], rawCrop.x[1]], y: [rawCrop.y[0], rawCrop.y[1]] }
+    : { x: [0, 1], y: [0, 1] };
+  try {
+    const start = positionDataStore.selectedTimeRange.start;
+    const end = positionDataStore.selectedTimeRange.end;
+    const posData = topViewStore.getSubsetObject(start, end);
+    const result = await posdataWorkerStore.calcHeatmapPoints(
+      posData,
+      selectedPlayerIds.value,
+      start,
+      end,
+      cropPct
+    );
+    selectedPositions.value = result;
+  } catch (err) {
+    console.error("Worker heatmap calc failed:", err);
+    selectedPositions.value = [];
+  }
+}, 200);
+
+watch(
+  [
+    selectedPlayerIds,
+    () => positionDataStore.selectedTimeRange.start,
+    () => positionDataStore.selectedTimeRange.end,
+    () => currentArea.value.templateCrop,
+    () => topViewStore.positionDataTopView,
+  ],
+  () => triggerHeatmapCalc(),
+  { immediate: true }
+);
+
+const movementCanvas = ref(null);
+const heatmapContainer = ref(null);
+let heatmapInstance = null;
+
+function createHeatmap() {
+  if (!heatmapContainer.value) return;
+  if (heatmapContainer.value.offsetWidth === 0 || heatmapContainer.value.offsetHeight === 0) return;
+
+  heatmapContainer.value.innerHTML = "";
+
+  heatmapInstance = h337.create({
+    container: heatmapContainer.value,
+    radius: 18,
+    maxOpacity: 0.7,
+    minOpacity: 0,
+    blur: 0.7,
+    gradient: {
+      0.2: "blue",
+      0.4: "cyan",
+      0.6: "lime",
+      0.8: "yellow",
+      1.0: "red",
+    },
+  });
+
+  heatmapContainer.value.style.position = "absolute";
+}
+
+function renderHeatmap() {
+  if (!heatmapInstance || !localSize.value.width || !localSize.value.height) return;
+
+  const area = currentArea.value;
+  const points = selectedPositions.value.map((pos) => {
+    const x =
+      pos[3] * (localSize.value.width * area.widthRel) +
+      ((1 - area.widthRel) / 2) * localSize.value.width;
+    const y =
+      pos[4] * (localSize.value.height * area.heightRel) +
+      ((1 - area.heightRel) / 2) * localSize.value.height;
+    return { x: Math.round(x), y: Math.round(y), value: 1 };
+  });
+
+  heatmapInstance.setData({
+    max: 10,
+    data: points,
+  });
+}
+
+function renderMovementToCanvas(canvas, targetW, targetH) {
+  if (!canvas || !targetW || !targetH) return;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, targetW, targetH);
+
+  if (selectedPositions.value.length === 0) return;
+
+  const area = currentArea.value;
+  const dotRadius = 6 * (targetW / localSize.value.width);
+  const points = resampleApprox({ data: selectedPositions.value, targetSize: 5000 });
+
+  const byTeam = {};
+  for (const pos of points) {
+    const teamId = pos[1];
+    if (!byTeam[teamId]) byTeam[teamId] = [];
+    byTeam[teamId].push(pos);
+  }
+
+  for (const [teamId, positions] of Object.entries(byTeam)) {
+    ctx.fillStyle = visualizationStore.getTeamColor(teamId);
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    for (const pos of positions) {
+      const x = pos[3] * (targetW * area.widthRel) + ((1 - area.widthRel) / 2) * targetW;
+      const y = pos[4] * (targetH * area.heightRel) + ((1 - area.heightRel) / 2) * targetH;
+      ctx.moveTo(x + dotRadius, y);
+      ctx.arc(x, y, dotRadius, 0, Math.PI * 2);
+    }
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function renderMovementCanvas() {
+  const canvas = movementCanvas.value;
+  if (!canvas || !localSize.value.width || !localSize.value.height) return;
+  renderMovementToCanvas(canvas, localSize.value.width, localSize.value.height);
+}
+
+watch([() => localSize.value.width, () => localSize.value.height], () => {
+  if (displayMode.value === "heatmap") {
+    nextTick(() => {
+      createHeatmap();
+      nextTick(() => renderHeatmap());
+    });
+  } else if (displayMode.value === "movement") {
+    nextTick(() => renderMovementCanvas());
+  }
+});
+
+watch(selectedPositions, () => {
+  if (displayMode.value === "heatmap") {
+    if (!heatmapInstance) createHeatmap();
+    renderHeatmap();
+  } else if (displayMode.value === "movement") {
+    nextTick(() => renderMovementCanvas());
+  }
+});
+
+watch(
+  () => topViewStore.currentAreaSize,
+  () => {
+    if (displayMode.value === "heatmap") {
+      nextTick(() => {
+        createHeatmap();
+        nextTick(() => renderHeatmap());
+      });
+    } else if (displayMode.value === "movement") {
+      nextTick(() => renderMovementCanvas());
+    }
+  }
+);
+
+watch(displayMode, (mode) => {
+  if (mode === "heatmap") {
+    nextTick(() => {
+      createHeatmap();
+      nextTick(() => renderHeatmap());
+    });
+  } else if (mode === "movement") {
+    nextTick(() => renderMovementCanvas());
+  }
+});
+
+const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
+
+async function saveScreenshot() {
+  const img = topViewElement.value;
+  if (!img || !localSize.value.width || !localSize.value.height) return;
+  const scale = 4;
+  const targetW = localSize.value.width * scale;
+  const targetH = localSize.value.height * scale;
+
+  const finalCanvas = document.createElement("canvas");
+  finalCanvas.width = targetW;
+  finalCanvas.height = targetH;
+  const ctx = finalCanvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, targetW, targetH);
+
+  if (displayMode.value === "heatmap" && selectedPositions.value.length > 0) {
+    const tempContainer = document.createElement("div");
+    tempContainer.style.cssText = `position:fixed;left:${-(targetW + 10)}px;top:0;width:${targetW}px;height:${targetH}px;overflow:hidden;`;
+    document.body.appendChild(tempContainer);
+    const area = currentArea.value;
+    const hiResHeatmap = h337.create({
+      container: tempContainer,
+      radius: 18 * scale,
+      maxOpacity: 0.7,
+      minOpacity: 0,
+      blur: 0.7,
+      gradient: { 0.2: "blue", 0.4: "cyan", 0.6: "lime", 0.8: "yellow", 1.0: "red" },
+    });
+    const points = selectedPositions.value.map((pos) => ({
+      x: Math.round(pos[3] * (targetW * area.widthRel) + ((1 - area.widthRel) / 2) * targetW),
+      y: Math.round(pos[4] * (targetH * area.heightRel) + ((1 - area.heightRel) / 2) * targetH),
+      value: 1,
+    }));
+    hiResHeatmap.setData({ max: 10, data: points });
+    const heatmapCanvas = tempContainer.querySelector("canvas");
+    if (heatmapCanvas) ctx.drawImage(heatmapCanvas, 0, 0);
+    document.body.removeChild(tempContainer);
+  } else if (displayMode.value === "movement") {
+    const offscreen = document.createElement("canvas");
+    offscreen.width = targetW;
+    offscreen.height = targetH;
+    renderMovementToCanvas(offscreen, targetW, targetH);
+    ctx.drawImage(offscreen, 0, 0);
+  }
+
+  finalCanvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.download = "heatmap.png";
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+}
+</script>
+
+<style scoped>
+.heatmap-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 25vh;
+}
+
+.heatmap-spinner {
+  font-size: 48px;
+  color: rgb(var(--v-theme-primary));
+}
+
+.heatmap-loading-text {
+  margin-top: 10px;
+  font-size: 18px;
+  color: rgb(var(--v-theme-primary));
+}
+
+.visualizer-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.menu-item {
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background-color: #f0f0f0;
+}
+
+.menu-item .v-list-item-title {
+  font-size: 12px;
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: center;
+  column-gap: 40px;
+  row-gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chart-legend-team {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.team-dot {
+  height: 28px;
+  border-radius: 14px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.7rem;
+  cursor: pointer;
+  border: 2px solid;
+  transition: background 0.2s, border 0.2s, color 0.2s;
+  user-select: none;
+  white-space: nowrap;
+}
+.team-dot:hover {
+  opacity: 0.8;
+}
+
+.chart-legend-sep {
+  color: #ccc;
+  font-size: 18px;
+  margin: 0 2px;
+  user-select: none;
+}
+
+.player-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  border: 2px solid;
+  transition: background 0.2s, border 0.2s;
+  user-select: none;
+}
+
+.top-view-wrapper {
+  position: relative;
+  overflow: hidden;
+}
+</style>

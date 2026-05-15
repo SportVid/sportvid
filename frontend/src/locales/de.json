@@ -61,7 +61,8 @@
     "run_batch_plugin": "Batch-Plugin ausführen",
     "run_plugin": "Plugin ausführen",
     "upload_video": "Neues Video hochladen",
-    "exit": "Beenden"
+    "exit": "Beenden",
+    "cancel_and_delete": "Abbrechen & Löschen"
   },
   "field": {
     "required": "Dieses Feld ist erforderlich."
@@ -127,6 +128,7 @@
       "title": "Anzeigeeinstellungen",
       "view_bounding_box": "Bounding-Boxen anzeigen",
       "video_sync": "Mit Video synchronisieren",
+      "mirror_xy": "XY-Koordinaten spiegeln",
       "view_kpis": {
         "title": "Leistungsindikator anzeigen",
         "space_control": "Raumkontrolle",
@@ -142,6 +144,12 @@
         "longitudinal": "Längsstreifen",
         "transverse": "Querstreifen"
       }
+    },
+    "entity_kind": {
+      "player": "Spieler",
+      "ref": "Schiris",
+      "ball": "Ball",
+      "rest": "Inaktiv"
     }
   },
   "visualization": {
@@ -165,6 +173,76 @@
         "yTitle": "Y-Achsendaten auswählen:",
         "ySelect": "Nicht ausgewählt"
       }
+    },
+    "time_selection": {
+      "sync_start": "Startzeit mit Videozeit synchronisieren",
+      "sync_end": "Endzeit mit Videozeit synchronisieren",
+      "full_match": "Gesamtes Spiel auswählen",
+      "full_video": "Gesamtes Video auswählen",
+      "first_half": "Erste Halbzeit auswählen",
+      "second_half": "Zweite Halbzeit auswählen"
+    },
+    "kpi": {
+      "posdata_not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führe das Bytetrack-Plugin aus oder lade Positionsdaten manuell hoch.",
+      "kpi_not_selected": "Keine KPI-Daten verfügbar.<br>Bitte führe das KPI-Berechnungs-Plugin aus, um KPIs auf Basis der ausgewählten Positionsdaten zu berechnen.",
+      "kpi_selection": {
+        "title": "KPI",
+        "group_distance": "Distanz",
+        "group_velocity": "Geschwindigkeit",
+        "group_metabolic_work": "Metabolische Arbeit",
+        "group_equivalent_distance": "Äquivalente Distanz",
+        "group_centroid_distance": "Zentroiddistanz",
+        "running_distance_cumulative": "Laufdistanz [m] (kumulativ)",
+        "running_distance_frame": "Laufdistanz [m] (pro Frame)",
+        "running_distance_interval": "Laufdistanz [m] (pro {frames} Frames)",
+        "velocity_max": "V<sub>max</sub> [m⋅s<sup>-1</sup>]",
+        "velocity_frame": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "velocity_interval": "V<sub>max</sub> [m⋅s<sup>-1</sup>] (pro {frames} Frames)",
+        "metabolic_work_cumulative": "Met. Arbeit [J⋅kg<sup>-1</sup>] (kumulativ)",
+        "metabolic_work_frame": "Met. Arbeit [J⋅kg<sup>-1</sup>] (pro Frame)",
+        "metabolic_work_interval": "Met. Arbeit [J⋅kg<sup>-1</sup>] (pro {frames} Frames)",
+        "equivalent_distance_cumulative": "Äquiv. Distanz [m] (kumulativ)",
+        "equivalent_distance_frame": "Äquiv. Distanz [m] (pro Frame)",
+        "equivalent_distance_interval": "Äquiv. Distanz [m] (pro {frames} Frames)",
+        "centroid_distance_max": "Zentroiddist.<sub>max</sub> [m]",
+        "centroid_distance_frame": "Zentroiddistanz [m] (pro Frame)",
+        "centroid_distance_interval": "Zentroiddistanz<sub>max</sub> [m] (pro {frames} Frames)",
+        "distance_covered": "Distanz [m]",
+        "cumulative_distance_covered": "Distanz [m] (kumulativ)",
+        "velocity": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "metabolic_power": "Metabolische Leistung [W⋅kg<sup>-1</sup>]",
+        "cumulative_metabolic_power": "Met. Arbeit [J⋅kg<sup>-1</sup>] (kumulativ)",
+        "equivalent_distance": "Äquiv. Distanz [m]",
+        "cumulative_equivalent_distance": "Äquiv. Distanz [m] (kumulativ)",
+        "centroid_distance": "Zentroiddistanz [m]"
+      },
+      "zone_selection": {
+        "title": "Zone",
+        "full_size": "Gesamtfläche",
+        "all_data": "Alle Daten",
+        "clear": "Löschen",
+        "selected": "Zone(n)"
+      },
+      "player_view": {
+        "player_id": "Spieler-ID",
+        "distance": "Distanz [m]",
+        "best": "Bester Wert",
+        "total": "Gesamt"
+      },
+      "team_view": {
+        "kpi": "KPI",
+        "total": "Gesamt",
+        "average": "Durchschnitt"
+      },
+      "kpi_label": {
+        "distance": "Distanz [m]",
+        "velocity": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "velocity_max": "V<sub>max</sub> [m⋅s<sup>-1</sup>]",
+        "metabolic_work": "Met. Arbeit [J⋅kg<sup>-1</sup>]",
+        "equivalent_distance": "Äquiv. Distanz [m]",
+        "centroid_distance": "Zentroiddistanz [m]",
+        "centroid_distance_max": "Zentroiddist.<sub>max</sub> [m]"
+      }
     }
   },
   "data": {
@@ -182,18 +260,20 @@
         "running_distance_cumulative": "Laufdistanz (kumulativ)",
         "running_distance_interval": "Laufdistanz (pro {frames} Frames)",
         "interval_frames": "Intervall (Frames)",
-        "velocity_max": "Maximale Geschwindigkeit",
-        "velocity_mean": "Mittlere Geschwindigkeit",
-        "metabolic_work": "Metabolische Leistung"
+        "velocity_max": "Maximale Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "velocity_mean": "Mittlere Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "metabolic_work": "Metabolische Arbeit [J⋅kg<sup>-1</sup>]",
+        "velocity": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "metabolic_power": "Metabolische Leistung [W⋅kg<sup>-1</sup>]"
       },
       "chart_mode": {
         "cumulative": "Kumulativ",
         "windowed": "Pro Sekunde"
       },
       "team_view": {
-        "total_distance": "Gesamtdistanz",
-        "avg_distance": "Durchschn. Distanz",
-        "player_count": "Spieler"
+        "kpi": "KPI",
+        "total": "Gesamt",
+        "average": "Durchschnitt"
       },
       "player_view": {
         "best": "Bester Wert",
@@ -251,7 +331,29 @@
         "age_group": "Altersgruppe auswählen",
         "total_teams": "Gesamtzahl der Teams auswählen",
         "out_of": "von",
-        "sport": "Sportart"
+        "sport": "Sportart",
+        "divisions": {
+          "liga_1": "Liga 1",
+          "liga_2": "Liga 2",
+          "liga_3": "Liga 3",
+          "liga_4": "Liga 4",
+          "liga_5": "Liga 5",
+          "liga_6": "Liga 6",
+          "liga_7": "Liga 7",
+          "liga_8": "Liga 8",
+          "liga_9": "Liga 9",
+          "liga_10": "Liga 10",
+          "other": "Sonstiges"
+        },
+        "age_groups": {
+          "men": "Herren",
+          "u19_male": "U19 Junioren",
+          "u17_male": "U17 Junioren",
+          "women": "Damen",
+          "u19_female": "U19 Juniorinnen",
+          "u17_female": "U17 Juniorinnen",
+          "other": "Sonstiges"
+        }
       },
       "delete": {
         "success": "Video erfolgreich gelöscht"
@@ -268,7 +370,10 @@
       "password_both_required": "Aktuelles und neues Passwort müssen beide ausgefüllt sein",
       "password_min": "Neues Passwort muss mindestens {min} Zeichen lang sein",
       "no_changes": "Keine Änderungen zum Speichern",
-      "update_failed": "Aktualisierung fehlgeschlagen"
+      "update_failed": "Aktualisierung fehlgeschlagen",
+      "theme": "Design",
+      "theme_light": "Hell",
+      "theme_dark": "Dunkel"
     },
     "export": {
       "title": "Ergebnisse exportieren",
@@ -310,20 +415,43 @@
         },
         "file_name": "positionsdaten"
       },
-      "running_distance": {
-        "export_name": "Laufdistanz",
+      "kpi": {
+        "export_name": "KPI",
         "teams": {
           "all": "Alle auswählen"
         },
+        "kpi_names": {
+          "all": "Alle auswählen",
+          "distance_covered": "distance",
+          "velocity": "velocity",
+          "metabolic_power": "metabolic_work"
+        },
         "attributes": {
           "all": "Alle auswählen",
-          "player_id": "Spieler-ID",
           "player_name": "Spielername",
           "team_id": "Team-ID",
-          "team_name": "Teamname",
-          "distance": "Distanz"
+          "team_name": "Teamname"
         },
-        "file_name": "laufdistanz"
+        "file_name": "kpi_daten"
+      },
+      "kpi_aggregated": {
+        "export_name": "KPI (aggregiert)",
+        "teams": {
+          "all": "Alle auswählen"
+        },
+        "kpi_names": {
+          "all": "Alle auswählen",
+          "distance_covered": "distance",
+          "velocity": "velocity",
+          "metabolic_power": "metabolic_work"
+        },
+        "attributes": {
+          "all": "Alle auswählen",
+          "player_name": "Spielername",
+          "team_id": "Team-ID",
+          "team_name": "Teamname"
+        },
+        "file_name": "kpi_aggregiert_daten"
       },
       "json": {
         "export_name": "JSON"
@@ -364,12 +492,14 @@
       "position_data_team_hint": "Exportiert die ausgewählten Gruppen.",
       "position_data_attribute_name": "Zusätzliche Attribute",
       "position_data_attribute_hint": "Zeitstempel (ms), Spieler-ID, X und Y sind immer enthalten. Optional weitere Attribute hinzufügen.",
-      "running_distance_team_name": "Teams auswählen",
-      "running_distance_team_hint": "Exportiert die ausgewählten Teams.",
-      "running_distance_attribute_name": "Zusätzliche Attribute",
-      "running_distance_attribute_hint": "Spieler-ID und Distanz sind immer enthalten. Optional weitere Attribute hinzufügen.",
-      "running_distance_start_frame_name": "Startframe auswählen",
-      "running_distance_end_frame_name": "Endframe auswählen",
+      "kpi_team_name": "Teams auswählen",
+      "kpi_team_hint": "Exportiert die ausgewählten Teams.",
+      "kpi_names_name": "KPIs auswählen",
+      "kpi_names_hint": "Auswählen, welche KPIs enthalten sein sollen (min. 1 erforderlich).",
+      "kpi_attribute_name": "Zusätzliche Attribute",
+      "kpi_attribute_hint": "Zeitstempel (ms) und Spieler-ID sind immer enthalten. Optional weitere Attribute hinzufügen.",
+      "kpi_start_frame_name": "Startframe auswählen",
+      "kpi_end_frame_name": "Endframe auswählen",
       "fps": "Bilder pro Sekunde (FPS)",
       "normalize": "Ergebnisse normalisieren?",
       "aggregation": {
@@ -395,6 +525,24 @@
         "timeline_name": "Calibration Static DLT",
         "calibration_id": "Kalibrierungs-Asset auswählen",
         "calibration_id_hint": "Wählen Sie ein Kalibrierungs-Asset zur Verwendung bei der Kalibrierung aus."
+      },
+      "posdata_convert": {
+        "plugin_name": "Positionsdaten konvertieren"
+      },
+      "kpi_computation": {
+        "plugin_name": "KPI-Berechnung",
+        "plugin_description": "Dieses Plugin berechnet ausgewählte Key Performance Indicators (KPIs) auf Basis der Positionsdaten. Die Berechnung erfolgt mithilfe des <a href=\"https://floodlight.readthedocs.io/en/latest/index.html\">floodlight</a>-Pakets. Verfügbare KPIs: <br><br> <em>Zurückgelegte Distanz, Geschwindigkeit & Metabolische Leistung</em>",
+        "tracking_data_id": "Positionsdaten auswählen",
+        "tracking_data_id_hint": "Wählen Sie einen Positionsdatensatz für die Berechnung aus.",
+        "format": "Datenanbieter auswählen",
+        "filter_type": "Glättungsfilter",
+        "filter_none": "Keiner",
+        "filter_butterworth": "Butterworth-Tiefpassfilter",
+        "filter_savgol": "Savitzky-Golay-Tiefpassfilter",
+        "order": "Ordnung (Butterworth)",
+        "Wn": "Grenzfrequenz Wn (Butterworth)",
+        "window_length": "Fensterlänge (Savitzky-Golay)",
+        "poly_order": "Polynomordnung (Savitzky-Golay)"
       },
       "audio_waveform": {
         "plugin_name": "Audio-Wellenform",
@@ -656,6 +804,14 @@
           "bytetrack": "ByteTrack Plugin",
           "manual": "Manueller Upload"
         }
+      },
+      "entity_colors": {
+        "title": "Teamfarben ändern",
+        "special_entities": "Besondere Entitäten",
+        "teams": "Teams",
+        "entity_0": "Rest / Inaktiv",
+        "entity_1": "Ball",
+        "entity_2": "Schiedsrichter"
       }
     }
   }

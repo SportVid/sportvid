@@ -5,18 +5,14 @@ import argparse
 import logging
 import hashlib
 import mimetypes
-from typing import Iterator, Any
-
 import grpc
 import json
-
-from interface import analyser_pb2
-from interface import analyser_pb2_grpc
-
-from data import DataManager
-
 import time
 import msgpack
+
+
+from data import DataManager
+from interface import analyser_pb2, analyser_pb2_grpc
 
 
 def parse_args():
@@ -58,17 +54,13 @@ class AnalyserClient:
 
     def list_plugins(self):
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
-
         response = stub.list_plugins(analyser_pb2.ListPluginsRequest())
-
         return response
 
     def upload_data(self, data):
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
 
         def generate_requests(data, chunk_size=128 * 1024):
-            # data_manager.save(data)
-            # data = data_manager.load(data.id)
             """Lazy function (generator) to read a file piece by piece.
             Default chunk size: 1k"""
             for x in self.manager.dump_to_stream(data.id):
@@ -91,7 +83,8 @@ class AnalyserClient:
         mimetype = mimetypes.guess_type(path)
         logging.error(mimetype)
         
-        if re.match(r"video/*", mimetype[0]) or re.match(r'application/x-tar', mimetype[0]):
+        if re.match(r"video/*", mimetype[0]) or (
+            re.match(r'application/x-tar', mimetype[0])):
             data_type = analyser_pb2.VIDEO_DATA
         if re.match(r"audio/*", mimetype[0]):
             data_type = analyser_pb2.AUDIO_DATA
@@ -130,24 +123,18 @@ class AnalyserClient:
         try_count = 3
         while try_count > 0:
             generator = RequestGenerator(path)
-
             response = stub.upload_file(generator())
-
             if response.hash == generator.hash() and response.success:
                 print(response.id)
                 return response.id
-
             logging.warning("Retry to upload the data again ...")
             try_count -= 1
-
         logging.error("Error while copying data ...")
         return None
 
     def check_data(self, data_id):
         run_request = analyser_pb2.CheckDataRequest(id=data_id)
-
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
-
         response = stub.check_data(run_request)
         return response.exists
 
@@ -163,19 +150,13 @@ class AnalyserClient:
             x = run_request.parameters.add()
             x.name = i.get("name")
             x.value = str(i.get("value"))
-            if isinstance(i.get("value"), float):
-                x.type = analyser_pb2.FLOAT_TYPE
-            if isinstance(i.get("value"), int):
-                x.type = analyser_pb2.INT_TYPE
-            if isinstance(i.get("value"), str):
-                x.type = analyser_pb2.STRING_TYPE
-            if isinstance(i.get("value"), bool):
-                x.type = analyser_pb2.BOOL_TYPE
+            if isinstance(i.get("value"), float): x.type = analyser_pb2.FLOAT_TYPE
+            if isinstance(i.get("value"), int): x.type = analyser_pb2.INT_TYPE
+            if isinstance(i.get("value"), str): x.type = analyser_pb2.STRING_TYPE
+            if isinstance(i.get("value"), bool): x.type = analyser_pb2.BOOL_TYPE
 
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
-
         response = stub.run_plugin(run_request)
-
         if response.success:
             return response.id
 
@@ -184,11 +165,8 @@ class AnalyserClient:
 
     def get_plugin_status(self, job_id):
         get_plugin_request = analyser_pb2.GetPluginStatusRequest(id=job_id)
-
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
-
         response = stub.get_plugin_status(get_plugin_request)
-
         return response
 
     def get_plugin_results(self, job_id, timeout=None):
@@ -216,9 +194,7 @@ class AnalyserClient:
 
     def download_data(self, data_id, output_path: str = None):
         download_data_request = analyser_pb2.DownloadDataRequest(id=data_id)
-
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
-
         response = stub.download_data(download_data_request)
         if output_path is None:
             manager = self.manager
@@ -229,14 +205,11 @@ class AnalyserClient:
 
     def download_data_to_blob(self, data_id, output_path):
         download_data_request = analyser_pb2.DownloadDataRequest(id=data_id)
-
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
-
         response = stub.download_data(download_data_request)
         with open(os.path.join(output_path, f"{data_id}.bin"), "wb") as f:
             for x in response:
                 f.write(msgpack.packb({"d": x.SerializeToString()}))
-
         return os.path.join(output_path, f"{data_id}.bin")
 
 
@@ -244,10 +217,8 @@ def main():
     args = parse_args()
 
     level = logging.ERROR
-    if args.debug:
-        level = logging.DEBUG
-    elif args.verbose:
-        level = logging.INFO
+    if args.debug: level = logging.DEBUG
+    elif args.verbose: level = logging.INFO
 
     logging.basicConfig(
         format="%(asctime)s %(levelname)s: %(message)s",
@@ -258,18 +229,14 @@ def main():
 
     if args.task == "list_plugins":
         result = client.list_plugins()
-
     if args.task == "upload_file":
         result = client.upload_file(args.path)
-
     if args.task == "run_plugin":
         result = client.run_plugin(
             args.plugin, json.loads(args.inputs), json.loads(args.parameters)
         )
-
     if args.task == "get_plugin_status":
         result = client.get_plugin_status(args.id)
-
     if args.task == "download_data":
         result = client.download_data(args.id, args.path)
 

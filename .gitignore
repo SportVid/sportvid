@@ -165,4 +165,29 @@ cython_debug/
 
 .DS_Store
 
+# Claude
+CLAUDE.md
 .claude/
+
+# Editor
+.vscode/
+
+# Copilot
+.github
+github/
+
+# Tests
+tests/
+test_env/
+
+# SportVid models
+models/
+
+# Data dirs
+.data
+data/
+
+# Project specific things
+README.md
+*.yml
+Dockerfile

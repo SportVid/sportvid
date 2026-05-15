@@ -1,13 +1,10 @@
 import logging
-
+from django.db import transaction
+from django.conf import settings
 from typing import Dict, List, Callable
 
-from data import DataManager, Data
-
-from ..utils.analyser_client import TaskAnalyserClient
-
 from backend.models import (
-    PluginRun, 
+    PluginRun,
     PluginRunResult,
     TrackingData
 )
@@ -15,11 +12,8 @@ from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_file
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-
-from django.db import transaction
-from django.conf import settings
-
-from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from data import DataManager, Data
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 @PluginManager.export_parser("floodlight_convert")
@@ -56,26 +50,10 @@ class FloodlightConvert(Task):
             plugin_run_db=plugin_run,
             manager=manager,
         )
-        # obtain ref. object from DB to position data table
         tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
 
-        # TODO: should we rather transfer binaries instead of using the FSHandler?
-        # ---
-        # tdb_fp = media_path_to_file(tracking_data_db.file.hex, tracking_data_db.ext)
-        # NOTE: trying to use upload_data() from analyser client
-        # need to create data object in advance...
-        
-        # tracking_data_ = manager.create_data("TrackingData") # file is already uploaded as a media file
-        # with tracking_data_: # actually create the data
-            # import os
-            # TODO: how to create the file properly, write it as a binary?
-            # tracking_data_.load_file_as_bytes(tdb_fp, ext=tracking_data_db.ext)  
-        # logging.error(tracking_data_)
-        # data_id = client.upload_data(tracking_data_)
-        
-        tracking_data_ = self.upload_td(client, tracking_data_db.file.hex, tracking_data_db.ext)  # uses the FSHandler, file is zipped before transfer
-        # ---
-    
+        tracking_data_ = self.upload_td(client, tracking_data_db.file.hex, tracking_data_db.ext)
+
         input_dict = {"tracking_data": tracking_data_}
         if tracking_data_db.meta_ext != "":
             meta_data_ = self.upload_td(client, tracking_data_db.meta_file.hex, tracking_data_db.meta_ext)
@@ -88,13 +66,13 @@ class FloodlightConvert(Task):
             parameters={
                 "format": parameters.get("format"),
                 "delimiter": parameters.get("delimiter"),
-                "tracking_data_id": parameters.get("tracking_data_id")
+                "tracking_data_id": parameters.get("tracking_data_id"),
             },
             inputs={**input_dict},
-            outputs=["fl_data"],   # outputs the reference (id)
-            downloads=["fl_data"]  # actually transfers "real" data
+            outputs=["kpi_data"],
+            downloads=["kpi_data"],
         )
-        
+
         if plugin_run is not None:
             plugin_run.progress = 0.6
             plugin_run.save()
@@ -105,22 +83,20 @@ class FloodlightConvert(Task):
         if dry_run or plugin_run is None:
             logging.warning("dry_run or plugin_run is None")
             return {}
-        
+
         # --------> OUTPUT
-        # TODO: define correct output type
         with transaction.atomic():
-            with result[1]["fl_data"] as fl_data:
-                # saves analyser results to the database (PluginRunResult)
+            with result[1]["kpi_data"] as kpi_data:
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
-                    data_id=fl_data.id,
-                    name="fl_data",
-                    type=PluginRunResult.TYPE_FL,
+                    data_id=kpi_data.id,
+                    name="kpi_data",
+                    type=PluginRunResult.TYPE_KPI,
                 )
-        # output results to the backend
+
         return {
             "plugin_run": plugin_run.id.hex,
             "plugin_run_results": [plugin_run_result_db.id.hex],
-            "data": {"fl_data": fl_data.id},
-            "tracking_data_id": parameters.get("tracking_data_id")
+            "data": {"kpi_data": kpi_data.id},
+            "tracking_data_id": parameters.get("tracking_data_id"),
         }

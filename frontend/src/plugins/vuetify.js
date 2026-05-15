@@ -17,13 +17,33 @@ export const vuetify = createVuetify({
   directives,
   theme: {
     defaultTheme: "light",
-    options: { customProperties: true },
     themes: {
       light: {
+        dark: false,
         colors: {
           primary: "#1D3557",
           secondary: "#457B9D",
           accent: "#E63946",
+          error: "#ff0000",
+          success: "#2E7D32",
+          warning: "#E65100",
+          info: "#0277BD",
+          background: "#FFFFFF",
+          surface: "#F5F5F5",
+        },
+      },
+      dark: {
+        dark: true,
+        colors: {
+          primary: "#90CAF9",
+          secondary: "#80DEEA",
+          accent: "#E63946",
+          error: "#ff0000",
+          success: "#81C784",
+          warning: "#FFB74D",
+          info: "#4FC3F7",
+          background: "#121212",
+          surface: "#3b3b3f",
         },
       },
     },

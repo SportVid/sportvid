@@ -1,27 +1,20 @@
-import logging
 import os
-
+import logging
+from django.db import transaction
+from django.conf import settings
 from typing import Dict, List, Callable
-
-from data import DataManager, Data
-
-from ..utils.analyser_client import TaskAnalyserClient
 
 from backend.models import (
     PluginRun, 
     PluginRunResult,
-    Video,
     TrackingData
 )
 from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_file
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-
-from django.db import transaction
-from django.conf import settings
-
-from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from data import DataManager, Data
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 @PluginManager.export_parser("posdata_convert")
@@ -35,7 +28,8 @@ class PosDataConvertParser(Parser):
             "origin": {"parser": str, "required": False, "default": "kickoff"},
             "field_length": {"parser": float, "required": False, "default": 105.0},
             "field_width": {"parser": float, "required": False, "default": 68.0},
-            "team_id_ball": {"parser": str, "required": False, "default": "ball"}
+            "team_id_ball": {"parser": str, "required": False, "default": "ball"},
+            "team_id_ref": {"parser": str, "required": False, "default": ""},
         }
 
 
@@ -90,7 +84,8 @@ class PosDataConvert(Task):
                 "origin": parameters.get("origin"),
                 "field_length": parameters.get("field_length"),
                 "field_width" : parameters.get("field_width"),
-                "team_id_ball": parameters.get("team_id_ball")
+                "team_id_ball": parameters.get("team_id_ball"),
+                "team_id_ref": parameters.get("team_id_ref"),
             },
             inputs={**input_dict},
             outputs=["pos_data"],   # this only outputs the reference (id)

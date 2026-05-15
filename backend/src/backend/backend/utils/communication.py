@@ -1,12 +1,9 @@
 import logging
 import time
 import abc
-
+import grpc
 from random import randint
 from typing import Optional, Tuple
-
-import grpc
-
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +50,11 @@ class RetryOnRpcErrorClientInterceptor(grpc.UnaryUnaryClientInterceptor, grpc.St
 
             if isinstance(response, grpc.RpcError):
 
-                # Return if it was last attempt
+                # return if it was last attempt
                 if try_i == (self.max_attempts - 1):
                     return response
 
-                # If status code is not in retryable status codes
+                # if status code is not in retryable status codes
                 if self.status_for_retry and response.code() not in self.status_for_retry:
                     return response
 

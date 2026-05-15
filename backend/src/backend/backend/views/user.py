@@ -1,17 +1,15 @@
-from django.http import JsonResponse
-from django.contrib import auth
-from django.views.decorators.http import require_http_methods
-
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.db import transaction
 import logging
 import json
-
-from django.views import View
+from django.contrib import auth
 from django.contrib.auth import update_session_auth_hash
+from django.db import transaction
+from django.http import JsonResponse
+from django.views import View
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from backend.models import (
-    TibavaUser,
+    SportVidUser,
     Video,
     TrackingData,
     PluginRun,
@@ -24,17 +22,19 @@ from backend.models import (
     CalibrationAssets,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
-# def get_csrf_token(request):
-#     token = get_token(request)
-#     return JsonResponse({"token": token})
+"""
+def get_csrf_token(request):
+    token = get_token(request)
+    return JsonResponse({"token": token})
+"""
 
 
 @ensure_csrf_cookie
 def get_csrf_token(request):
-    # token = get_token(request)
     return JsonResponse({"status": "ok"})
 
 
@@ -153,7 +153,7 @@ def register(request):
         logger.warning("User already exists. Abort.")
         return JsonResponse({"status": "error", "message": "User already exists"})
 
-    # TODO Add EMail register here
+    # TODO: add email register here
     user = auth.get_user_model().objects.create_user(username, email, password)
     user = auth.authenticate(username=username, password=password)
     logger.info('New user registered')
@@ -223,8 +223,8 @@ def user_update(request):
                     return JsonResponse({"status": "error", "message": "User ID missing for admin update"})
 
                 try:
-                    user = TibavaUser.objects.get(id=user_id)
-                except TibavaUser.DoesNotExist:
+                    user = SportVidUser.objects.get(id=user_id)
+                except SportVidUser.DoesNotExist:
                     return JsonResponse({"status": "error", "message": "User not found"})
 
                 fields_to_update = ["email", "role", "max_storage_size", "max_video_size", "max_file_size"]
@@ -259,6 +259,7 @@ def user_update(request):
         logger.exception("Failed to update user")
         return JsonResponse({"status": "error"})
 
+
 @require_http_methods(["POST"])
 def user_delete(request):
     if not request.user.is_authenticated:
@@ -286,8 +287,8 @@ def user_delete(request):
             return JsonResponse({"status": "error"})
 
         try:
-            user = TibavaUser.objects.get(id=user_id)
-        except TibavaUser.DoesNotExist:
+            user = SportVidUser.objects.get(id=user_id)
+        except SportVidUser.DoesNotExist:
             return JsonResponse({"status": "error", "message": "User not found"})
     
     else: 
@@ -306,7 +307,7 @@ def user_delete(request):
             uid = user.id
             username = user.username
 
-            # 1) Explicitly delete plugin run results for user's videos
+            # 1) explicitly delete plugin run results for user's videos
             try:
                 prrs = PluginRunResult.objects.filter(plugin_run__video__owner=user)
                 for prr in prrs:
@@ -317,19 +318,19 @@ def user_delete(request):
             except Exception:
                 logger.exception("Failed to enumerate PluginRunResults for user_delete")
 
-            # 2) Delete plugin runs
+            # 2) delete plugin runs
             try:
                 PluginRun.objects.filter(video__owner=user).delete()
             except Exception:
                 logger.exception("Failed to delete PluginRuns for user_delete")
 
-            # 3) Delete timelines (and related timeline segments/annotations)
+            # 3) delete timelines (and related timeline segments/annotations)
             try:
                 Timeline.objects.filter(video__owner=user).delete()
             except Exception:
                 logger.exception("Failed to delete Timelines for user_delete")
 
-            # 4) Delete annotations, categories, shortcuts and calibration assets
+            # 4) delete annotations, categories, shortcuts and calibration assets
             try:
                 Annotation.objects.filter(owner=user).delete()
                 AnnotationCategory.objects.filter(owner=user).delete()
@@ -340,19 +341,19 @@ def user_delete(request):
             except Exception:
                 logger.exception("Failed to delete annotation-related objects for user_delete")
 
-            # 5) Delete tracking data (post_delete will remove files)
+            # 5) delete tracking data (post_delete will remove files)
             try:
                 TrackingData.objects.filter(owner=user).delete()
             except Exception:
                 logger.exception("Failed to delete TrackingData for user_delete")
 
-            # 6) Delete videos (this will cascade and trigger post_delete for files)
+            # 6) delete videos (this will cascade and trigger post_delete for files)
             try:
                 Video.objects.filter(owner=user).delete()
             except Exception:
                 logger.exception("Failed to delete Videos for user_delete")
 
-            # Finally delete user and log out
+            # 7) finally delete user and log out
             user.delete()
             if update_type == "user":
                 auth.logout(request)
@@ -369,13 +370,11 @@ def logout(request):
     auth.logout(request)
     return JsonResponse({"status": "ok"})
 
+
 @require_http_methods(["GET"])
 def user_list(request):
     if request.user.role != "admin":
         return JsonResponse({"status": "error", "error": "not_authorized"})
-
-    users = TibavaUser.objects.all()
-    
+    users = SportVidUser.objects.all()
     data = [u.to_dict() for u in users]
-
     return JsonResponse({"status": "ok", "data": data})

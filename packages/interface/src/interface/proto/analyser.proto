@@ -1,9 +1,11 @@
 syntax = "proto3";
 option java_multiple_files = true;
 
+// --------------------------------------------------------------------------------------------
 // python -m grpc_tools.protoc -I=proto --python_out=. --grpc_python_out=. proto/analyser.proto
+// --------------------------------------------------------------------------------------------
 
-package tibava.analyser;
+package sportvid.analyser;
 
 service Analyser {
   rpc list_plugins(ListPluginsRequest) returns (ListPluginsReply);
@@ -11,12 +13,18 @@ service Analyser {
   rpc upload_file(stream UploadFileRequest) returns (UploadFileResponse);
   rpc download_data(DownloadDataRequest) returns (stream DownloadDataResponse);
   rpc check_data(CheckDataRequest) returns (CheckDataResponse);
+
+  // New structured video-asset transport
+  rpc upload_video_asset(stream UploadVideoAssetRequest) returns (UploadVideoAssetResponse);
+  rpc download_video_asset(DownloadVideoAssetRequest) returns (stream DownloadVideoAssetResponse);
+  rpc check_video_asset(CheckVideoAssetRequest) returns (CheckVideoAssetResponse);
+
   rpc run_plugin(RunPluginRequest) returns (RunPluginResponse);
   rpc get_plugin_status(GetPluginStatusRequest)
       returns (GetPluginStatusResponse);
   rpc run_pipeline(RunPipelineRequest) returns (RunPipelineResponse);
-  rpc get_pipeline_status(GetPieplineStatusRequest)
-      returns (GetPieplineStatusResponse);
+  rpc get_pipeline_status(GetPipelineStatusRequest)
+      returns (GetPipelineStatusResponse);
 }
 
 enum DataType {
@@ -56,6 +64,8 @@ enum PluginDataType {
   TRACKING_DATA = 19;
   POS_DATA = 20;
   FL_DATA = 21;
+  KPI_DATA = 22;
+  VIDEO_ASSET_DATA = 23;
 }
 
 message PluginInfoData {
@@ -78,6 +88,10 @@ message PluginInfo {
 
 message ListPluginsRequest {}
 message ListPluginsReply { repeated PluginInfo plugins = 1; }
+
+// -----------------------------------------------------------------------------
+// Legacy blob/file transport
+// -----------------------------------------------------------------------------
 
 message UploadDataRequest {
   bytes data_encoded = 1;
@@ -122,7 +136,58 @@ message CheckDataResponse {
   string hash = 2;
 }
 
+// -----------------------------------------------------------------------------
+// New structured video asset transport
+// -----------------------------------------------------------------------------
+
+message UploadVideoAssetRequest {
+  string id = 1;
+  PluginDataType type = 2;            // should be VIDEO_ASSET_DATA
+  string manifest_text = 3;           // only set on header chunk
+  string media_filename = 4;          // e.g. stream.m4s
+  string manifest_filename = 5;       // e.g. stream.m3u8
+  bytes data_encoded = 6;             // media bytes
+  bool is_header = 7;                 // first message
+  bool eof = 8;                       // last message
+  string hash = 9;                    // optional final/full hash from client
+}
+
+message UploadVideoAssetResponse {
+  string id = 1;
+  bool success = 2;
+  string hash = 3;
+}
+
+message DownloadVideoAssetRequest {
+  string id = 1;
+}
+
+message DownloadVideoAssetResponse {
+  string id = 1;
+  PluginDataType type = 2;            // VIDEO_ASSET_DATA
+  string manifest_text = 3;           // only set on header chunk
+  string media_filename = 4;
+  string manifest_filename = 5;
+  bytes data_encoded = 6;
+  bool is_header = 7;
+  bool eof = 8;
+  string hash = 9;                    // optional server-side hash
+}
+
+message CheckVideoAssetRequest {
+  string id = 1;
+}
+
+message CheckVideoAssetResponse {
+  bool exists = 1;
+  string hash = 2;
+  string manifest_filename = 3;
+  string media_filename = 4;
+}
+
+// -----------------------------------------------------------------------------
 // Plugin
+// -----------------------------------------------------------------------------
 
 message PluginParameter {
   string name = 1;
@@ -157,7 +222,9 @@ message GetPluginStatusResponse {
   float progress = 3;
 }
 
-// PIPELINE
+// -----------------------------------------------------------------------------
+// Pipeline
+// -----------------------------------------------------------------------------
 
 message RunPipelineData {
   string symbol = 1;
@@ -192,7 +259,9 @@ message GetPipelineStatusResponse {
 
   enum Status {
     UNKNOWN = 0;
-    ERROR = 1;
+    ERROR = 1;// -----------------------------------------------------------------------------
+// Plugin
+// -----------------------------------------------------------------------------
     DONE = 2;
     RUNNING = 3;
     WAITING = 4;

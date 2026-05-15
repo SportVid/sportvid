@@ -35,49 +35,64 @@ class AnalyserStub(object):
             channel: A grpc.Channel.
         """
         self.list_plugins = channel.unary_unary(
-                '/tibava.analyser.Analyser/list_plugins',
+                '/sportvid.analyser.Analyser/list_plugins',
                 request_serializer=analyser__pb2.ListPluginsRequest.SerializeToString,
                 response_deserializer=analyser__pb2.ListPluginsReply.FromString,
                 _registered_method=True)
         self.upload_data = channel.stream_unary(
-                '/tibava.analyser.Analyser/upload_data',
+                '/sportvid.analyser.Analyser/upload_data',
                 request_serializer=analyser__pb2.UploadDataRequest.SerializeToString,
                 response_deserializer=analyser__pb2.UploadDataResponse.FromString,
                 _registered_method=True)
         self.upload_file = channel.stream_unary(
-                '/tibava.analyser.Analyser/upload_file',
+                '/sportvid.analyser.Analyser/upload_file',
                 request_serializer=analyser__pb2.UploadFileRequest.SerializeToString,
                 response_deserializer=analyser__pb2.UploadFileResponse.FromString,
                 _registered_method=True)
         self.download_data = channel.unary_stream(
-                '/tibava.analyser.Analyser/download_data',
+                '/sportvid.analyser.Analyser/download_data',
                 request_serializer=analyser__pb2.DownloadDataRequest.SerializeToString,
                 response_deserializer=analyser__pb2.DownloadDataResponse.FromString,
                 _registered_method=True)
         self.check_data = channel.unary_unary(
-                '/tibava.analyser.Analyser/check_data',
+                '/sportvid.analyser.Analyser/check_data',
                 request_serializer=analyser__pb2.CheckDataRequest.SerializeToString,
                 response_deserializer=analyser__pb2.CheckDataResponse.FromString,
                 _registered_method=True)
+        self.upload_video_asset = channel.stream_unary(
+                '/sportvid.analyser.Analyser/upload_video_asset',
+                request_serializer=analyser__pb2.UploadVideoAssetRequest.SerializeToString,
+                response_deserializer=analyser__pb2.UploadVideoAssetResponse.FromString,
+                _registered_method=True)
+        self.download_video_asset = channel.unary_stream(
+                '/sportvid.analyser.Analyser/download_video_asset',
+                request_serializer=analyser__pb2.DownloadVideoAssetRequest.SerializeToString,
+                response_deserializer=analyser__pb2.DownloadVideoAssetResponse.FromString,
+                _registered_method=True)
+        self.check_video_asset = channel.unary_unary(
+                '/sportvid.analyser.Analyser/check_video_asset',
+                request_serializer=analyser__pb2.CheckVideoAssetRequest.SerializeToString,
+                response_deserializer=analyser__pb2.CheckVideoAssetResponse.FromString,
+                _registered_method=True)
         self.run_plugin = channel.unary_unary(
-                '/tibava.analyser.Analyser/run_plugin',
+                '/sportvid.analyser.Analyser/run_plugin',
                 request_serializer=analyser__pb2.RunPluginRequest.SerializeToString,
                 response_deserializer=analyser__pb2.RunPluginResponse.FromString,
                 _registered_method=True)
         self.get_plugin_status = channel.unary_unary(
-                '/tibava.analyser.Analyser/get_plugin_status',
+                '/sportvid.analyser.Analyser/get_plugin_status',
                 request_serializer=analyser__pb2.GetPluginStatusRequest.SerializeToString,
                 response_deserializer=analyser__pb2.GetPluginStatusResponse.FromString,
                 _registered_method=True)
         self.run_pipeline = channel.unary_unary(
-                '/tibava.analyser.Analyser/run_pipeline',
+                '/sportvid.analyser.Analyser/run_pipeline',
                 request_serializer=analyser__pb2.RunPipelineRequest.SerializeToString,
                 response_deserializer=analyser__pb2.RunPipelineResponse.FromString,
                 _registered_method=True)
         self.get_pipeline_status = channel.unary_unary(
-                '/tibava.analyser.Analyser/get_pipeline_status',
-                request_serializer=analyser__pb2.GetPieplineStatusRequest.SerializeToString,
-                response_deserializer=analyser__pb2.GetPieplineStatusResponse.FromString,
+                '/sportvid.analyser.Analyser/get_pipeline_status',
+                request_serializer=analyser__pb2.GetPipelineStatusRequest.SerializeToString,
+                response_deserializer=analyser__pb2.GetPipelineStatusResponse.FromString,
                 _registered_method=True)
 
 
@@ -109,6 +124,25 @@ class AnalyserServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def check_data(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def upload_video_asset(self, request_iterator, context):
+        """New structured video-asset transport
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def download_video_asset(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def check_video_asset(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -166,6 +200,21 @@ def add_AnalyserServicer_to_server(servicer, server):
                     request_deserializer=analyser__pb2.CheckDataRequest.FromString,
                     response_serializer=analyser__pb2.CheckDataResponse.SerializeToString,
             ),
+            'upload_video_asset': grpc.stream_unary_rpc_method_handler(
+                    servicer.upload_video_asset,
+                    request_deserializer=analyser__pb2.UploadVideoAssetRequest.FromString,
+                    response_serializer=analyser__pb2.UploadVideoAssetResponse.SerializeToString,
+            ),
+            'download_video_asset': grpc.unary_stream_rpc_method_handler(
+                    servicer.download_video_asset,
+                    request_deserializer=analyser__pb2.DownloadVideoAssetRequest.FromString,
+                    response_serializer=analyser__pb2.DownloadVideoAssetResponse.SerializeToString,
+            ),
+            'check_video_asset': grpc.unary_unary_rpc_method_handler(
+                    servicer.check_video_asset,
+                    request_deserializer=analyser__pb2.CheckVideoAssetRequest.FromString,
+                    response_serializer=analyser__pb2.CheckVideoAssetResponse.SerializeToString,
+            ),
             'run_plugin': grpc.unary_unary_rpc_method_handler(
                     servicer.run_plugin,
                     request_deserializer=analyser__pb2.RunPluginRequest.FromString,
@@ -183,14 +232,14 @@ def add_AnalyserServicer_to_server(servicer, server):
             ),
             'get_pipeline_status': grpc.unary_unary_rpc_method_handler(
                     servicer.get_pipeline_status,
-                    request_deserializer=analyser__pb2.GetPieplineStatusRequest.FromString,
-                    response_serializer=analyser__pb2.GetPieplineStatusResponse.SerializeToString,
+                    request_deserializer=analyser__pb2.GetPipelineStatusRequest.FromString,
+                    response_serializer=analyser__pb2.GetPipelineStatusResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'tibava.analyser.Analyser', rpc_method_handlers)
+            'sportvid.analyser.Analyser', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('tibava.analyser.Analyser', rpc_method_handlers)
+    server.add_registered_method_handlers('sportvid.analyser.Analyser', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -211,7 +260,7 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/list_plugins',
+            '/sportvid.analyser.Analyser/list_plugins',
             analyser__pb2.ListPluginsRequest.SerializeToString,
             analyser__pb2.ListPluginsReply.FromString,
             options,
@@ -238,7 +287,7 @@ class Analyser(object):
         return grpc.experimental.stream_unary(
             request_iterator,
             target,
-            '/tibava.analyser.Analyser/upload_data',
+            '/sportvid.analyser.Analyser/upload_data',
             analyser__pb2.UploadDataRequest.SerializeToString,
             analyser__pb2.UploadDataResponse.FromString,
             options,
@@ -265,7 +314,7 @@ class Analyser(object):
         return grpc.experimental.stream_unary(
             request_iterator,
             target,
-            '/tibava.analyser.Analyser/upload_file',
+            '/sportvid.analyser.Analyser/upload_file',
             analyser__pb2.UploadFileRequest.SerializeToString,
             analyser__pb2.UploadFileResponse.FromString,
             options,
@@ -292,7 +341,7 @@ class Analyser(object):
         return grpc.experimental.unary_stream(
             request,
             target,
-            '/tibava.analyser.Analyser/download_data',
+            '/sportvid.analyser.Analyser/download_data',
             analyser__pb2.DownloadDataRequest.SerializeToString,
             analyser__pb2.DownloadDataResponse.FromString,
             options,
@@ -319,9 +368,90 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/check_data',
+            '/sportvid.analyser.Analyser/check_data',
             analyser__pb2.CheckDataRequest.SerializeToString,
             analyser__pb2.CheckDataResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def upload_video_asset(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_unary(
+            request_iterator,
+            target,
+            '/sportvid.analyser.Analyser/upload_video_asset',
+            analyser__pb2.UploadVideoAssetRequest.SerializeToString,
+            analyser__pb2.UploadVideoAssetResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def download_video_asset(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/sportvid.analyser.Analyser/download_video_asset',
+            analyser__pb2.DownloadVideoAssetRequest.SerializeToString,
+            analyser__pb2.DownloadVideoAssetResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def check_video_asset(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/sportvid.analyser.Analyser/check_video_asset',
+            analyser__pb2.CheckVideoAssetRequest.SerializeToString,
+            analyser__pb2.CheckVideoAssetResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -346,7 +476,7 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/run_plugin',
+            '/sportvid.analyser.Analyser/run_plugin',
             analyser__pb2.RunPluginRequest.SerializeToString,
             analyser__pb2.RunPluginResponse.FromString,
             options,
@@ -373,7 +503,7 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/get_plugin_status',
+            '/sportvid.analyser.Analyser/get_plugin_status',
             analyser__pb2.GetPluginStatusRequest.SerializeToString,
             analyser__pb2.GetPluginStatusResponse.FromString,
             options,
@@ -400,7 +530,7 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/run_pipeline',
+            '/sportvid.analyser.Analyser/run_pipeline',
             analyser__pb2.RunPipelineRequest.SerializeToString,
             analyser__pb2.RunPipelineResponse.FromString,
             options,
@@ -427,9 +557,9 @@ class Analyser(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/tibava.analyser.Analyser/get_pipeline_status',
-            analyser__pb2.GetPieplineStatusRequest.SerializeToString,
-            analyser__pb2.GetPieplineStatusResponse.FromString,
+            '/sportvid.analyser.Analyser/get_pipeline_status',
+            analyser__pb2.GetPipelineStatusRequest.SerializeToString,
+            analyser__pb2.GetPipelineStatusResponse.FromString,
             options,
             channel_credentials,
             insecure,

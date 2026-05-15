@@ -36,7 +36,7 @@ export function getMin(arr) {
 }
 
 export function hex2luminance(string) {
-  const rgb = PIXI.utils.hex2rgb(string);
+  const rgb = new PIXI.Color(string).toArray();
   return Math.sqrt(
     0.299 * Math.pow(rgb[0], 2) + 0.587 * Math.pow(rgb[1], 2) + 0.114 * Math.pow(rgb[2], 2)
   );

@@ -12,14 +12,14 @@ export class TimelineHeader extends PIXI.Container {
         const gap = 4;
 
         this.pRect = new PIXI.Graphics();
-        this.pRect.beginFill(fill);
-        this.pRect.drawRoundedRect(0, 0, width, height, 5);
+        this.pRect.roundRect(0, 0, width, height, 5);
+        this.pRect.fill(fill);
         this.pRect.x = x;
         this.pRect.y = y;
 
         this.pMask = new PIXI.Graphics();
-        this.pMask.beginFill(0xffffff);
-        this.pMask.drawRoundedRect(0, 0, width, height, 5);
+        this.pMask.roundRect(0, 0, width, height, 5);
+        this.pMask.fill(0xffffff);
         this.pRect.mask = this.pMask;
         this.pRect.addChild(this.pMask);
 
@@ -32,11 +32,10 @@ export class TimelineHeader extends PIXI.Container {
         this.pRect.filters = [shadow];
 
         this.addChild(this.pRect);
-        this.pText = new PIXI.Text(timeline.name, {
+        this.pText = new PIXI.Text({ text: timeline.name, style: {
             fill: 0x000000,
             fontSize: 16,
-            // fontWeight: 'bold',
-        });
+        }});
         this.pText.x = gap;
         this.pText.y = gap;
         this.pText.mask = this.pMask;

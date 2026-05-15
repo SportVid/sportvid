@@ -16,7 +16,47 @@
       <v-avatar size="large" :style="{ backgroundColor: '#457B9D80' }">
         <span class="text-white text-h5">{{ initials }}</span>
       </v-avatar>
-      <v-btn color="primary" variant="tonal" block class="mt-6" @click="userStore.openSettings()">
+      <div class="d-flex justify-center ga-3 mt-6">
+        <v-btn-toggle
+          v-model="selectedLanguage"
+          @update:model-value="languageStore.setLanguage(selectedLanguage)"
+          color="primary"
+          variant="outlined"
+          divided
+          mandatory
+          density="compact"
+        >
+          <v-btn
+            v-for="lang in languageStore.languages"
+            :key="lang.code"
+            :value="lang.code"
+            size="small"
+          >
+            <v-avatar size="18">
+              <v-img :src="lang.flag" contain />
+            </v-avatar>
+          </v-btn>
+        </v-btn-toggle>
+
+        <v-btn-toggle
+          :model-value="themeStore.isDark ? 'dark' : 'light'"
+          @update:model-value="
+            (v) => {
+              if (v !== undefined && (v === 'dark') !== themeStore.isDark) themeStore.toggle();
+            }
+          "
+          color="primary"
+          variant="outlined"
+          divided
+          mandatory
+          density="compact"
+        >
+          <v-btn value="light" size="small"><v-icon>mdi-weather-sunny</v-icon></v-btn>
+          <v-btn value="dark" size="small"><v-icon>mdi-weather-night</v-icon></v-btn>
+        </v-btn-toggle>
+      </div>
+
+      <v-btn color="primary" variant="tonal" block class="mt-4" @click="userStore.openSettings()">
         {{ t("button.settings") }}
       </v-btn>
       <v-btn
@@ -34,13 +74,19 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useUserStore } from "@/stores/user";
+import { useLanguageStore } from "@/stores/languages";
+import { useThemeStore } from "@/stores/theme";
 const router = useRouter();
 const { t } = useI18n();
 const userStore = useUserStore();
+const languageStore = useLanguageStore();
+const themeStore = useThemeStore();
+
+const selectedLanguage = ref(languageStore.currentLanguage);
 
 const username = computed(() => userStore.username);
 const initials = computed(() => username.value.slice(0, 2));

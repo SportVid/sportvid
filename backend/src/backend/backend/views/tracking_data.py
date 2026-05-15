@@ -1,15 +1,11 @@
-import os
-import shutil
-import sys
 import json
 import uuid
 import logging
-import traceback
-import tempfile
-import logging
+from django.views import View
+from django.http import JsonResponse
+from django.conf import settings
 from pathlib import Path
 
-from urllib.parse import urlparse
 from backend.plugin_manager import PluginManager
 from backend.utils import (
     download_file,
@@ -18,9 +14,6 @@ from backend.utils import (
 )
 from backend.models import TrackingData, Video
 
-from django.views import View
-from django.http import JsonResponse
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +69,8 @@ class TrackingDataUpload(View):
                     "ext": td_ext,
                     "file_type": request.POST.get("format"),
                     "owner": request.user,
-                    "video": video_db
+                    "video": video_db,
+                    "delimiter": request.POST.get("delimiter", ";"),
                 }
             
                 meta_ext = ""
@@ -127,6 +121,10 @@ class TrackingDataUpload(View):
                         {"name": "field_length", "value": video_db.field_length},
                         {"name": "field_width", "value": video_db.field_width}
                     ])
+                    if request.POST.get("team_id_ball"):
+                        analyser_params.append({"name": "team_id_ball", "value": request.POST.get("team_id_ball")})
+                    if request.POST.get("team_id_ref"):
+                        analyser_params.append({"name": "team_id_ref", "value": request.POST.get("team_id_ref")})
   
                 result = self.submit_analyse(
                     plugins=["posdata_convert"],

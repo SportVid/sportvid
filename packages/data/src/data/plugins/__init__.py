@@ -22,3 +22,5 @@ from .video_temporal_embedding import VideoTemporalEmbeddings, VideoTemporalEmbe
 from .tracking_data import TrackingData
 from .position_data import PositionData
 from .floodlight_data import FloodlightData
+from .kpi_data import KpiData
+from .video_asset_data import VideoAssetData

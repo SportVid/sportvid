@@ -1,29 +1,14 @@
-import os
-import shutil
-import sys
 import json
-from typing import Dict
-import uuid
 import logging
-import traceback
-import tempfile
-from pathlib import Path
-
-from urllib.parse import urlparse
-import imageio
-
-import wand.image as wimage
-
-from backend.utils import download_url, download_file, media_url_to_file
-
 from django.views import View
 from django.http import HttpResponse, JsonResponse
 from django.conf import settings
-import time
+from typing import Dict
 
-# from django.core.exceptions import BadRequest
-
-from backend.models import AnnotationCategory, Annotation, TimelineSegment, TimelineSegmentAnnotation, Timeline
+from backend.models import (
+    AnnotationCategory, Annotation, 
+    TimelineSegment, TimelineSegmentAnnotation, Timeline
+)
 
 
 logger = logging.getLogger(__name__)
@@ -58,7 +43,7 @@ class TimelineSegmentAnnotate(View):
             except TimelineSegment.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
 
-            # TODO check if it is the same video
+            # TODO: check if it is the same video
             video_db = segment_dbs[0].timeline.video
 
             # delete all existing annotation for this segment
@@ -73,7 +58,7 @@ class TimelineSegmentAnnotate(View):
             if "annotations" in data and isinstance(data.get("annotations"), (list, set)):
                 for annotation in data.get("annotations"):
                     # check if there is a category with this name for this video
-                    # TODO check name and color in dict
+                    # TODO: check name and color in dict
                     annotation_category_db = None
                     if "category" in annotation and isinstance(annotation.get("category"), Dict):
                         category = annotation.get("category")
@@ -91,7 +76,7 @@ class TimelineSegmentAnnotate(View):
                             annotation_category_added.append(annotation_category_db.to_dict())
 
                     # check if there is a existing annotation with this name and category for this video
-                    # TODO check name and color in dict
+                    # TODO: check name and color in dict
                     query_dict = {"video": video_db, "name": annotation.get("name"), "owner": request.user}
                     if annotation_category_db:
                         query_dict["category"] = annotation_category_db
@@ -108,21 +93,6 @@ class TimelineSegmentAnnotate(View):
                         )
                         if created:
                             timeline_segment_annotation_added.append(timeline_segment_annotation_db.to_dict())
-            # query_args = {}
-
-            # query_args["timeline__video__owner"] = request.user
-
-            # if "timeline_id" in request.GET:
-            #     query_args["timeline__id"] = request.GET.get("timeline_id")
-
-            # if "video_id" in request.GET:
-            #     query_args["timeline__video__id"] = request.GET.get("video_id")
-
-            # timeline_segments = TimelineSegment.objects.filter(**query_args)
-
-            # entries = []
-            # for segment in timeline_segments:
-            #     entries.append(segment.to_dict())
             return JsonResponse(
                 {
                     "status": "ok",
@@ -168,16 +138,13 @@ class TimelineSegmentAnnotateRange(View):
             except Timeline.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
 
-            # TODO check if it is the same video
+            # TODO: check if it is the same video
             video_db = timeline_db.video
 
             # first find everything between
             timeline_segment_dbs = TimelineSegment.objects.filter(
                 timeline=timeline_db, start__gte=data.get("start"), end__lte=data.get("end")
             )
-            # for x in timeline_segment_dbs:
-            #     print(x.to_dict())
-            # print(timeline_segment_dbs)
             timeline_segment_ids = [x.id for x in timeline_segment_dbs]
 
             # left segment
@@ -196,12 +163,12 @@ class TimelineSegmentAnnotateRange(View):
             timeline_segment_deleted.extend([x.id.hex for x in right_timeline_segment_dbs])
             timeline_segment_deleted = list(set(timeline_segment_deleted))
 
-            # clone new sgements
+            # clone new segments
             timeline_segment_added = []
             timeline_segment_annotation_added = []
             annotation_added = []
             annotation_category_added = []
-            # Move everything to the left and right
+            # move everything to the left and right
             if len(left_timeline_segment_dbs) == 1 and len(right_timeline_segment_dbs) == 1:
                 if left_timeline_segment_dbs[0].id == right_timeline_segment_dbs[0].id:
                     right_timeline_segment_db = left_timeline_segment_dbs[0].clone()["timeline_segment_added"][0]
@@ -241,7 +208,7 @@ class TimelineSegmentAnnotateRange(View):
             if "annotations" in data and isinstance(data.get("annotations"), (list, set)):
                 for annotation in data.get("annotations"):
                     # check if there is a category with this name for this video
-                    # TODO check name and color in dict
+                    # TODO: check name and color in dict
                     annotation_category_db = None
                     if "category" in annotation and isinstance(annotation.get("category"), Dict):
                         category = annotation.get("category")
@@ -259,7 +226,7 @@ class TimelineSegmentAnnotateRange(View):
                             annotation_category_added.append(annotation_category_db.to_dict())
 
                     # check if there is a existing annotation with this name and category for this video
-                    # TODO check name and color in dict
+                    # TODO: check name and color in dict
                     query_dict = {"video": video_db, "name": annotation.get("name"), "owner": request.user}
                     if annotation_category_db:
                         query_dict["category"] = annotation_category_db
@@ -298,19 +265,17 @@ class TimelineSegmentGet(View):
         try:
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"})
-
             query_args = {}
-
             query_args["timeline__video__owner"] = request.user
-
+            
             if "timeline_id" in request.GET:
                 query_args["timeline__id"] = request.GET.get("timeline_id")
-
             if "video_id" in request.GET:
                 query_args["timeline__video__id"] = request.GET.get("video_id")
-
-            timeline_segments = TimelineSegment.objects.filter(**query_args).order_by("start")
-
+            
+            timeline_segments = TimelineSegment.objects.filter(
+                **query_args).order_by("start")
+            
             entries = []
             for segment in timeline_segments:
                 entries.append(segment.to_dict())
@@ -327,18 +292,18 @@ class TimelineSegmentList(View):
                 return JsonResponse({"status": "error"})
 
             query_args = {}
-
             query_args["timeline__video__owner"] = request.user
 
             if "timeline_id" in request.GET:
                 query_args["timeline__id"] = request.GET.get("timeline_id")
-
             if "video_id" in request.GET:
                 query_args["timeline__video__id"] = request.GET.get("video_id")
 
             timeline_segments = (
-                TimelineSegment.objects.filter(**query_args).select_related("timeline").prefetch_related("annotations")
+                TimelineSegment.objects.filter(
+                    **query_args).select_related("timeline").prefetch_related("annotations")
             )
+            
             entries = []
             for segment in timeline_segments:
                 entries.append(segment.to_dict())
@@ -510,24 +475,3 @@ class TimelineSegmentSplit(View):
         except Exception:
             logger.exception("Failed to split timeline segment")
             return JsonResponse({"status": "error"})
-
-
-# class TimelineSegmentDelete(View):
-#     def post(self, request):
-#         try:
-#             try:
-#                 body = request.body.decode("utf-8")
-#             except (UnicodeDecodeError, AttributeError):
-#                 body = request.body
-
-#             try:
-#                 data = json.loads(body)
-#             except Exception as e:
-#                 return JsonResponse({"status": "error"})
-#             count, _ = Timeline.objects.filter(id=data.get("id")).delete()
-#             if count:
-#                 return JsonResponse({"status": "ok"})
-#             return JsonResponse({"status": "error"})
-#         except Exception as e:
-#             logger.error(traceback.format_exc())
-#             return JsonResponse({"status": "error"})

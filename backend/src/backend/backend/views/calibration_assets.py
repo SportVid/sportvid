@@ -1,13 +1,12 @@
 import json
 import logging
-
 from django.views import View
 from django.http import JsonResponse
 
 from backend.models import Video
 from backend.models import CalibrationAssets
-
 from backend.utils.decode_auth import decode_and_authenticate
+
 
 logger = logging.getLogger(__name__)
 
@@ -38,18 +37,18 @@ class CalibrationAssetsCreate(View):
 
             # create new entry
             data_db = CalibrationAssets.objects.create(**create_args)
-            # Create marker data points if provided
+            # create marker data points if provided
             if "object_data" in data:
                 for obj in data.get("object_data"):
                     data_db.object_data.create(
                         name=obj.get("name"),
-                        set=obj.get("set"),
                         active=obj.get("active"),
                         comp_area_coords_rel=obj.get("compAreaCoordsRel"),
                         video_coords_rel=obj.get("videoCoordsRel")
                     )
 
         return JsonResponse({"status": "ok", "entry": data_db.to_dict()})
+
 
 class CalibrationAssetsChange(View):
     @decode_and_authenticate(require_name=True)
@@ -63,13 +62,12 @@ class CalibrationAssetsChange(View):
             if "object_type" in data:
                 calibration_assets.object_type = data.get("object_type")
             if "object_data" in data:
-                # Clear existing marker data
+                # clear existing marker data
                 calibration_assets.object_data.all().delete()
-                # Create new marker data points
+                # create new marker data points
                 for obj in data.get("object_data"):
                     calibration_assets.object_data.create(
                         name=obj.get("name"),
-                        set=obj.get("set"),
                         active=obj.get("active"),
                         comp_area_coords_rel=obj.get("compAreaCoordsRel"),
                         video_coords_rel=obj.get("videoCoordsRel")
@@ -83,6 +81,7 @@ class CalibrationAssetsChange(View):
         except Exception:
             logger.exception(f'Failed to {__class__.__name__}')
             return JsonResponse({"status": "error"})
+
 
 class CalibrationAssetsDelete(View):
     @decode_and_authenticate(require_name=False)
@@ -104,17 +103,14 @@ class CalibrationAssetsDelete(View):
 class CalibrationAssetsList(View):
     def get(self, request):
         try:
-
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"})
 
             query_args = {}
-
             query_args["owner"] = request.user
 
             if "video_id" in request.GET:
                 query_args["video__id"] = request.GET.get("video_id")
-
             query_results = CalibrationAssets.objects.filter(**query_args)
 
             entries = []

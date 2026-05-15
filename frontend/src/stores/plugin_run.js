@@ -114,7 +114,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
             .filter(
               (e) =>
                 e.status === "DONE" &&
-                !currentPluginRunStatus.find((t) => t.id === e.id)?.status === "DONE"
+                currentPluginRunStatus.find((t) => t.id === e.id)?.status !== "DONE"
             )
             .map((e) => e.id),
         };
@@ -141,9 +141,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
               timelineSegmentAnnotationStore.fetchForVideo({ videoId: video_id }),
               clusterTimelineItemStore.fetchAll(video_id),
             ]);
-            console.log("plugin_run: plugin run result fetch done!");
             timelineStore.fetchForVideo({ videoId: video_id });
-            console.log("plugin_run: timeline fetch done!");
           });
         }
       }

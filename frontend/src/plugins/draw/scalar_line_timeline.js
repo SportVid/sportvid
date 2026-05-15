@@ -86,30 +86,23 @@ export class ScalarLineTimeline extends Timeline {
     const rt = new PIXI.RenderTexture({
       width: renderWidth,
       height: this.pHeight,
-      scaleMode: PIXI.SCALE_MODES.LINEAR,
+      scaleMode: 'linear',
       resolution: 1,
     });
 
     const sprite = new PIXI.Sprite(rt);
 
-    // Create graphics with new stroke style syntax
-    const path = new PIXI.Graphics().lineStyle({
-      width: 1,
-      color: 0xae1313,
-      alpha: 1,
-    });
+    const path = new PIXI.Graphics();
 
     const targetSize = this.pOversampling * this.pResolution;
     const y = resampleApprox({ data: this.pData.y, targetSize: targetSize });
     const times = resampleApprox({ data: this.pData.time, targetSize: targetSize });
 
-    // Start the path
     path.moveTo(0, this.pHeight - y[0] * this.pHeight);
-
-    // Draw the line
     times.forEach((t, i) => {
       path.lineTo(r * t, this.pHeight - y[i] * this.pHeight);
     });
+    path.stroke({ width: 1, color: 0xae1313, alpha: 1 });
 
     try {
       this.pRenderer.render({

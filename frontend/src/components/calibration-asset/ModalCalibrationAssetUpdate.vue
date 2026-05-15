@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="dialog" width="800px">
+  <v-dialog v-model="dialog" width="600px">
     <v-card>
       <v-toolbar color="primary">
         <v-toolbar-title class="text-h6">
@@ -11,25 +11,40 @@
         </template>
       </v-toolbar>
 
-      <v-card-text class="d-flex align-center">
-        <v-text-field
-          v-model="name"
-          :label="$t('modal.calibration_asset.save.name')"
-          prepend-icon="mdi-pencil"
-          variant="underlined"
-          class="mr-6"
-          style="width: 260px"
-        />
+      <v-card-text class="d-flex flex-column">
+        <div class="d-flex align-center">
+          <v-text-field
+            v-model="name"
+            :label="$t('modal.calibration_asset.save.name')"
+            prepend-icon="mdi-pencil"
+            variant="underlined"
+            class="mr-6"
+            style="width: 260px"
+          />
 
-        <v-btn
-          @click="updateCalibrationAsset(name, topViewStore.currentSport.title, objectType)"
-          :disabled="
-            !name || !calibrationAssetStore.allAssetObjectsValid
-          "
-          size="small"
+          <v-btn
+            @click="updateCalibrationAsset(name, topViewStore.currentSport.title, objectType)"
+            :disabled="!name || !calibrationAssetStore.allAssetObjectsValid"
+            size="small"
+          >
+            {{ $t("button.update") }}
+          </v-btn>
+        </div>
+
+        <div
+          v-if="!calibrationAssetStore.allAssetObjectsValid"
+          class="text-caption text-error text-center"
         >
-          {{ $t("button.update") }}
-        </v-btn>
+          {{
+            $t("modal.calibration_asset.required", {
+              current: calibrationAssetStore.filteredReferenceObjects.length,
+              required: 4,
+              type: $t(
+                `modal.calibration_asset.object_types.${calibrationAssetStore.calibrationAssetType}`
+              ),
+            })
+          }}
+        </div>
       </v-card-text>
     </v-card>
   </v-dialog>

@@ -12,6 +12,9 @@ from django.views import View
 from django.http import JsonResponse
 from django.conf import settings
 
+from celery.app.control import Control
+from sportvid.celery import app as celery_app
+
 from backend.plugin_manager import PluginManager
 from backend.utils import (
     download_file,
@@ -23,7 +26,7 @@ from backend.models import Video
 
 from utils.video_converter import convert_to_hls
 from utils.helper import remove_file, remove_dir
-from backend.tasks.convert_video import convert_video
+from backend.tasks.convert_video import convert_video_to_hls, convert_video_to_fmp4
 
 
 logger = logging.getLogger(__name__)
@@ -95,9 +98,18 @@ class VideoUpload(View):
                     sport=request.POST.get("sport"),
                     status=Video.STATUS_PROCESSING,
                 )
-                
+                # schedule conversion & analysis asynchronously
+                analyzers = []
+                try: analyzers = request.POST.get("analyser").split(",")
+                except Exception: analyzers = []
+
                 # pass original ext (e.g., .mp4) to the task
-                convert_video.apply_async((video_db.id.hex, ext, analyzers))
+                task = convert_video_to_hls.apply_async((video_db.id.hex, ext, analyzers))
+                # convert_video_to_hls((video_db.id.hex, ext, analyzers))
+                # task = convert_video_to_fmp4.apply_async((video_db.id.hex, ext, analyzers))
+                
+                video_db.task_id = task.id
+                video_db.save(update_fields=["task_id"])
 
                 request.user.used_storage_size += request.FILES["file"].size
                 request.user.save()
@@ -221,11 +233,28 @@ class VideoDelete(View):
             video = Video.objects.filter(id=data.get("id"), owner=request.user).first()
             if not video:
                 return JsonResponse({"status": "error"}, status=500)
-            
+
+            # Revoke the conversion task if still running.
+            # terminate=False: just mark as revoked; the task polls the DB and
+            # exits cleanly when it sees the video is gone (avoids SIGTERM/SIGKILL
+            # causing Celery's pool to enter a restart cascade).
+            if video.task_id:
+                celery_app.control.revoke(video.task_id, terminate=False)
+
             file_size = video.file_size
+            video_id_hex = video.id.hex
             count, _ = Video.objects.filter(id=video.id, owner=request.user).delete()
 
             if count:
+                # Clean up files on disk
+                try:
+                    output_dir = media_dir_to_file(video_id_hex)
+                    remove_dir(f"{output_dir}{video_id_hex}")
+                    for ext in (video.ext, ".mp4", ".mkv", ".ogv"):
+                        remove_file(media_path_to_file(video_id_hex, ext))
+                except Exception:
+                    logger.exception("Failed to clean up video files after delete")
+
                 request.user.used_storage_size = max(0, request.user.used_storage_size - file_size)
                 request.user.save()
                 return JsonResponse({"status": "ok"})

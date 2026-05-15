@@ -3,13 +3,13 @@
     <div class="zone-picker">
       <div class="zone-picker-header">
         <v-btn size="small" variant="tonal" color="primary" @click="selectAll">
-          {{ $t("visualization.running_distance.zone_selection.full_size") }}
+          {{ $t("visualization.kpi.zone_selection.full_size") }}
         </v-btn>
         <v-btn size="small" variant="tonal" color="primary" @click="toggleAllData">
-          {{ $t("visualization.running_distance.zone_selection.all_data") }}
+          {{ $t("visualization.kpi.zone_selection.all_data") }}
         </v-btn>
         <v-btn size="small" variant="tonal" color="primary" @click="clearAll">
-          {{ $t("visualization.running_distance.zone_selection.clear") }}
+          {{ $t("visualization.kpi.zone_selection.clear") }}
         </v-btn>
       </div>
 

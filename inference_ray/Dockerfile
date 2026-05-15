@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:debian
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app/analyser/inference/
 
@@ -6,15 +6,12 @@ COPY ./src/ /app/analyser/inference/
 COPY ./deploy.yml /app/analyser/deploy.yml
 
 RUN mkdir -p /data
-# switch to non-root user
+
+# switch to a non-root user
 RUN useradd appuser 
 RUN chown -R appuser /data
 USER appuser
 
 ENV PYTHONPATH="/app/"
 
-# run the binary
-# CMD ["python3", "/app/src/main.py", "-v"]
-
-# run ray serve
 # CMD ["serve", "run", "/app/analyser/deploy.yml"]

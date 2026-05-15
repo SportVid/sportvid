@@ -20,7 +20,15 @@ export const usePluginRunResultStore = defineStore("pluginRunResult", () => {
       .map((id) => pluginRunResults[id])
       .filter((e) => e.plugin_run_id === pluginRunId);
 
-  const fetchForVideo = async ({ addResults = false, videoId = null, pluginRunId = null }) => {
+  const forPluginRunWithData = async (pluginRunId, videoId = null) => {
+    const existing = forPluginRun(pluginRunId);
+    if (existing.length === 0 || existing.some((r) => r.data === undefined)) {
+      await fetchForVideo({ videoId, pluginRunId, addResults: true });
+    }
+    return forPluginRun(pluginRunId);
+  };
+
+  const fetchForVideo = async ({ addResults = false, videoId = null, pluginRunId = null, excludeTypes = [] }) => {
     if (isLoading.value) return;
 
     isLoading.value = true;
@@ -39,6 +47,10 @@ export const usePluginRunResultStore = defineStore("pluginRunResult", () => {
 
     if (pluginRunId) {
       params.plugin_run_id = pluginRunId;
+    }
+
+    if (excludeTypes.length > 0) {
+      params.exclude_types = excludeTypes;
     }
     try {
       const res = await axios.get(`${config.API_LOCATION}/plugin/run/result/list`, { params });
@@ -73,6 +85,9 @@ export const usePluginRunResultStore = defineStore("pluginRunResult", () => {
       if (!(e.id in pluginRunResults)) {
         pluginRunResults[e.id] = e;
         pluginRunResultList.value.push(e.id);
+      } else if (e.data !== undefined && pluginRunResults[e.id].data === undefined) {
+        // Update when data is now available but wasn't before (lazy load)
+        pluginRunResults[e.id] = e;
       }
     });
   };
@@ -85,6 +100,7 @@ export const usePluginRunResultStore = defineStore("pluginRunResult", () => {
     all,
     forPlugin,
     forPluginRun,
+    forPluginRunWithData,
     fetchForVideo,
     clearStore,
     deleteForPluginRuns,

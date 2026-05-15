@@ -31,7 +31,7 @@
 
 <script>
 import { computed, defineComponent } from "vue";
-import ClusterItemCard from "@/components/tibava/ClusterItemCard.vue";
+import ClusterItemCard from "@/components/sportvid/ClusterItemCard.vue";
 
 export default defineComponent({
   components: {

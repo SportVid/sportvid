@@ -4,8 +4,6 @@ import { throttle } from "lodash";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { usePlayerStore } from "@/stores/player";
-import { usePluginRunStore } from "@/stores/plugin_run";
-import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useTopViewStore } from "./top_view";
 import { useBboxesStore } from "./bboxes";
 import { useVisualizationStore } from "@/stores/visualization";
@@ -15,8 +13,6 @@ export const usePositionDataStore = defineStore(
   "position_data",
   () => {
     const playerStore = usePlayerStore();
-    const pluginRunStore = usePluginRunStore();
-    const pluginRunResultStore = usePluginRunResultStore();
     const topViewStore = useTopViewStore();
     const bboxesStore = useBboxesStore();
     const visualizationStore = useVisualizationStore();
@@ -62,39 +58,31 @@ export const usePositionDataStore = defineStore(
       // 1. Try in-memory cache (instant, no network)
       const cached = workerStore.getCached(id);
       if (cached) {
-        topViewStore.positionDataTopView = cached.posData;
-        topViewStore.metaDataTopView = cached.metaData;
+        topViewStore.setPositionData(cached.compact, cached.metaData, {
+          playerList: cached.playerList,
+          refList: cached.refList,
+          ballList: cached.ballList,
+          inactiveList: cached.inactiveList,
+          playerIdSet: cached.playerIdSet,
+          gameSections: cached.gameSections,
+          halftimeBoundaries: cached.halftimeBoundaries,
+        });
         setTimeRangeToFullMatch();
         return;
       }
 
-      // 2. Try existing plugin run results (already in memory from fetchForVideo)
-      const _positionData = pluginRunStore
-        .forVideo(playerStore.videoId)
-        .filter((e) => e.type === "posdata_convert" && e.status === "DONE")
-        .map((e) => {
-          const results = pluginRunResultStore.forPluginRun(e.id);
-          return { ...e, results: JSON.parse(JSON.stringify(results)) };
-        })
-        .filter((e) => e.results?.[0]?.data?.tracking_data_id === id);
-
-      const posData = _positionData[0]?.results[0]?.data?.pos_data;
-      const metaData = _positionData[0]?.results[0]?.data?.meta_data;
-
-      if (posData) {
-        topViewStore.positionDataTopView = posData;
-        topViewStore.metaDataTopView = metaData || {};
-        // Store in in-memory cache for future accesses
-        workerStore.cacheData(id, posData, metaData || {});
-        setTimeRangeToFullMatch();
-        return;
-      }
-
-      // 3. Chunk-load from backend (progressive, with progress bar)
+      // 2. Chunk-load from backend (progressive, with progress bar)
       const result = await workerStore.loadChunked(id, playerStore.videoId);
       if (result) {
-        topViewStore.positionDataTopView = result.posData;
-        topViewStore.metaDataTopView = result.metaData;
+        topViewStore.setPositionData(result.compact, result.metaData, {
+          playerList: result.playerList,
+          refList: result.refList,
+          ballList: result.ballList,
+          inactiveList: result.inactiveList,
+          playerIdSet: result.playerIdSet,
+          gameSections: result.gameSections,
+          halftimeBoundaries: result.halftimeBoundaries,
+        });
         setTimeRangeToFullMatch();
       }
     };
@@ -112,6 +100,7 @@ export const usePositionDataStore = defineStore(
         formData.append("delimiter", params.delimiter);
         formData.append("origin", params.origin);
         formData.append("team_id_ball", params.teamIdBall);
+        formData.append("team_id_ref", params.teamIdRef ?? "");
         formData.append("fps", params.fps);
 
         const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {
@@ -166,8 +155,7 @@ export const usePositionDataStore = defineStore(
             !positionDataList.value.find((d) => d.id === positionDataId.value)
           ) {
             positionDataId.value = null;
-            topViewStore.positionDataTopView = {};
-            topViewStore.metaDataTopView = {};
+            topViewStore.setPositionData(null, {});
           }
         }
       } catch (error) {
@@ -187,17 +175,18 @@ export const usePositionDataStore = defineStore(
     function calculateRunningDistances(selectedPlayerIds, startFrame, endFrame, zones = []) {
       const distancesByPlayerId = new Map();
 
-      const allTimes = Object.keys(topViewStore.positionDataTopView).map(Number);
+      // Use pre-sorted frame keys instead of creating new 135k-element array
+      const allTimes = topViewStore.sortedFrameKeys;
 
       const timeRange = allTimes.filter((t) => t >= startFrame && t <= endFrame);
 
       const allPlayersSet = new Map();
 
-      for (const frame of allTimes) {
-        const players = topViewStore.positionDataTopView[frame];
-        if (!players) continue;
+      for (let ti = 0; ti < allTimes.length; ti++) {
+        const players = topViewStore.getFrameAt(allTimes[ti]);
+        if (!players || !players.length) continue;
         for (const p of players) {
-          if (p[1] === 1) continue;
+          if (p[1] < 3) continue;
           if (
             (visualizationStore.showAggregatedFirst && p[2] !== 1) ||
             (visualizationStore.showAggregatedSecond && p[2] !== 2)
@@ -219,14 +208,18 @@ export const usePositionDataStore = defineStore(
           const tPrev = timeRange[i - 1];
           const tCurr = timeRange[i];
 
-          const playersPrev = topViewStore.positionDataTopView[tPrev];
-          const playersCurr = topViewStore.positionDataTopView[tCurr];
+          const playersPrev = topViewStore.getFrameAt(tPrev);
+          const playersCurr = topViewStore.getFrameAt(tCurr);
           if (!playersPrev || !playersCurr) continue;
+
+          // Build Map lookup for prev frame instead of O(n) .find() per player
+          const prevMap = new Map();
+          for (const p of playersPrev) prevMap.set(p[0], p);
 
           for (const currPlayer of playersCurr) {
             if (currPlayer[1] === 1) continue;
 
-            const prevPlayer = playersPrev.find((p) => p[0] === currPlayer[0]);
+            const prevPlayer = prevMap.get(currPlayer[0]);
             if (!prevPlayer) continue;
             if (!isInAnyZone(currPlayer[3], currPlayer[4], zones)) continue;
 
@@ -312,10 +305,11 @@ export const usePositionDataStore = defineStore(
     async function restoreFromCache() {
       const id = positionDataId.value;
       if (!id) return;
-      if (Object.keys(topViewStore.positionDataTopView).length > 0) return;
+      if (topViewStore.sortedFrameKeys.length > 0) return;
       isRestoringPosData.value = true;
       try {
         await loadPositionData(id);
+        await visualizationStore.loadKpiData(id);
       } finally {
         isRestoringPosData.value = false;
       }

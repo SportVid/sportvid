@@ -1,7 +1,7 @@
 import os
 import json
+import math
 import logging
-
 from django.views import View
 from django.http import JsonResponse
 from django.conf import settings
@@ -9,10 +9,14 @@ from django.conf import settings
 from backend.models import PluginRun, PluginRunResult, Video
 from data import DataManager
 
+
 logger = logging.getLogger(__name__)
 
-# Module-level in-memory cache: result.id -> parsed data dict
-# Avoids re-reading the JSON file on every chunk request.
+
+"""
+Module-level in-memory cache: result.id -> parsed data dict.
+Avoids re-reading the JSON file on every chunk request.
+"""
 _result_data_cache = {}
 
 
@@ -63,7 +67,7 @@ class TrackingDataPosDataChunk(View):
                     {"status": "error", "type": "video_not_found"}, status=404
                 )
 
-            # Find posdata_convert plugin runs for this video
+            # find posdata_convert plugin runs for this video
             plugin_runs = PluginRun.objects.filter(
                 video=video_db,
                 type="posdata_convert",
@@ -87,7 +91,14 @@ class TrackingDataPosDataChunk(View):
                     sorted_keys = sorted(pos_data.keys(), key=lambda k: int(k))
                     total = len(sorted_keys)
                     chunk_keys = sorted_keys[offset: offset + limit]
-                    chunk_frames = {k: pos_data[k] for k in chunk_keys}
+                    chunk_frames = {
+                        k: [
+                            p for p in pos_data[k]
+                            if not (isinstance(p[3], float) and math.isnan(p[3]))
+                            and not (isinstance(p[4], float) and math.isnan(p[4]))
+                        ]
+                        for k in chunk_keys
+                    }
 
                     response = {
                         "status": "ok",
@@ -108,9 +119,10 @@ class TrackingDataPosDataChunk(View):
             logger.exception("TrackingDataPosDataChunk::failed")
             return JsonResponse({"status": "error"}, status=500)
 
+
     @staticmethod
     def _load_result_data(result, data_manager):
-        """Load result data, with an in-memory cache keyed by result.id."""
+        """ Load result data, with an in-memory cache keyed by result.id. """
         result_id = str(result.id)
 
         if result_id in _result_data_cache:
@@ -118,7 +130,7 @@ class TrackingDataPosDataChunk(View):
 
         data = None
 
-        # Try file cache first
+        # try file cache first
         cache_path = os.path.join(
             settings.DATA_CACHE_ROOT, f"{result.id}.json"
         )
@@ -130,7 +142,7 @@ class TrackingDataPosDataChunk(View):
         except Exception:
             pass
 
-        # Fall back to DataManager
+        # fallback to DataManager
         if data is None:
             try:
                 data_obj = data_manager.load(result.data_id)

@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AlterField(
-            model_name='tibavauser',
+            model_name='sportviduser',
             name='max_video_size',
             field=models.BigIntegerField(default=52428800),
         ),
