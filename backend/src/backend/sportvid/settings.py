@@ -27,7 +27,12 @@ if ENVIRONMENT == 'prod':
         "https://sportvid.dshs-koeln.de"
     ]
 elif ENVIRONMENT == 'dev':
-    CORS_ALLOW_ALL_ORIGINS = True  # only use for debugging purpose
+    # NOTE: only should be used for debugging purposes 
+    # CORS_ALLOW_ALL_ORIGINS = True  
+    CORS_ALLOWED_ORIGINS = [
+        "https://www.dev.sportvid.dshs-koeln.de",
+        "https://dev.sportvid.dshs-koeln.de"
+    ]
 
 CORS_ALLOW_CREDENTIALS = True  # include cookies in cross-sitze HTTP requests
 

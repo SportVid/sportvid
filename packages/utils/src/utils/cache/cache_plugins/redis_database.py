@@ -9,7 +9,7 @@ from utils.cache import CacheManager, Cache
 default_config = {
     "db": 0, 
     "host": "valkey",
-    "port": 6380, 
+    "port": 6379, 
     "tag": "data"
 }
 
