@@ -20,21 +20,27 @@ from django.conf import settings
 class TrackerParser(Parser):
     def __init__(self):
         self.valid_parameter = {
-            "tracker": {
+            "detector": {
                 "parser": str,
                 "default": "yolox"
             },
-            "tracking_params": {
+            "detector_params": {
                 "parser": Dict,
                 "default": {
                     "confidence_threshold" : 0.25,
-                    
                 }
-                
             },
-            "fps": {"parser": int, "default": 5}
+            "tracker": {
+                "parser": str,
+                "default": "bytetrack"
+            },
+            "tracker_params": {
+                "parser": Dict,
+                "default": {
+                    "fps": {"parser": int, "default": 5}
+                }
+            }
         }
-
 
 @PluginManager.export_plugin("tracker")
 class Tracker(Task):
@@ -53,7 +59,6 @@ class Tracker(Task):
         dry_run: bool = False,
         **kwargs
     ):
-
         manager = DataManager(self.config["output_path"])
         client = TaskAnalyserClient(
             host=self.config["analyser_host"],
@@ -68,7 +73,8 @@ class Tracker(Task):
             "tracker",
             parameters={
                 # TODO
-                "fps": parameters.get("fps"),
+                "detector_params": parameters.get("detector_params", {}),
+                "tracker_params": parameters.get("tracker_params", {})
             },
             inputs={"video": video_id},
             outputs=["tracklets"],
