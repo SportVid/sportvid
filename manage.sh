@@ -1,29 +1,6 @@
 #!/bin/bash
 
-ENVIRONMENT=$1
-COMMAND=$2
-
-case $ENVIRONMENT in
-    "prod"|"production")
-        ENV_FILE="/opt/deploy/.env.prod"
-        DOCKER_FILE="-f docker-compose.$ENVIRONMENT.yml"
-        BRANCH="deploy-prod"
-        ;;
-    "dev"|"development")
-        ENV_FILE="/opt/deploy/.env.dev"
-        DOCKER_FILE="-f docker-compose.$ENVIRONMENT.yml"
-        BRANCH="deploy-dev"
-        ;;
-    "shared")
-        ENV_FILE="/opt/deploy/.env.db"
-        DOCKER_FILE="-f docker-compose.proxy.yml -f docker-compose.db.yml"
-        BRANCH="deploy-prod"
-        ;;
-    *)
-        echo "Usage: $0 {prod|dev|shared} {build|up|down|restart|logs|shell|migrate}"
-        exit 1
-        ;;
-esac
+set -u
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     SCRIPT_IS_SOURCED=false
@@ -31,130 +8,165 @@ else
     SCRIPT_IS_SOURCED=true
 fi
 
+usage() {
+    echo "Usage: $0 {prod|production|dev|development|shared} {build|rebuild|up|down|restart|logs|shell|migrate|frontend-install|frontend-build|wipe}"
+}
+
 safe_exit() {
     local exit_code=${1:-1}
     if [[ "$SCRIPT_IS_SOURCED" == "true" ]]; then
         echo "Error occurred. Cannot exit when sourced. Returning instead."
-        return $exit_code
+        return "$exit_code"
     else
-        exit $exit_code
+        exit "$exit_code"
     fi
 }
 
-prepare() {
-    local original_dir
-    original_dir=$(pwd)
-
-    echo "Executing environment '$ENVIRONMENT' on branch '$BRANCH'"
-
-    # ensure we're in a git repo
-    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        echo "Not inside a git repository; aborting."
-        safe_exit 1
-        return 1
-    fi
-
-    # make sure the correct branch is checked out
-    if ! git checkout -f "$BRANCH"; then
-        echo "Failed to checkout branch: $BRANCH"
-        cd "$original_dir" || true
-        safe_exit 1
-        return 1
-    fi
-
-    # update from remote and discard local drift
-    if ! git fetch origin; then
-        echo "Failed to fetch from origin"
-        cd "$original_dir" || true
-        safe_exit 1
-        return 1
-    fi
-    
-    # resets to remote state in case of local changes
-    if ! git reset --hard "origin/$BRANCH"; then
-        echo "Failed to reset to origin/$BRANCH"
-        cd "$original_dir" || true
-        safe_exit 1
-        return 1
-    fi
+die() {
+    echo "$1" >&2
+    safe_exit "${2:-1}"
 }
 
-exec_docker(){
-    local original_dir
-    original_dir=$(pwd)
-    prepare
+ENVIRONMENT="${1:-}"
+COMMAND="${2:-}"
 
-    if ! docker compose -p $ENVIRONMENT --env-file $ENV_FILE \
-        $DOCKER_FILE \
-        $DOCKER_CMD; then
-        echo "Running cmd '$DOCKER_CMD' failed..."
-        cd "$original_dir" || true
-        safe_exit 1
-        return 1
-    fi
-    
-    cd "$original_dir" || true
-    echo "Done!"
-}
+ENV_NAME=""
+ENV_FILE=""
+BRANCH=""
+DOCKER_FILES=()
 
-case $COMMAND in
-    "build")
-        DOCKER_CMD="up --build -d"
-        echo "Building..."
-        exec_docker
+case $ENVIRONMENT in
+    "prod"|"production")
+        ENV_NAME="prod"
+        ENV_FILE="/opt/deploy/.env.prod"
+        BRANCH="deploy-prod"
+        DOCKER_FILES=(-f "docker-compose.prod.yml")
         ;;
-    "rebuild")
-        DOCKER_CMD="up --build --force-recreate -d"
-        echo "Rebuilding (force recreate)..."
-        exec_docker
+    "dev"|"development")
+        ENV_NAME="dev"
+        ENV_FILE="/opt/deploy/.env.dev"
+        BRANCH="deploy-dev"
+        DOCKER_FILES=(-f "docker-compose.dev.yml")
         ;;
-    "up")
-        DOCKER_CMD="up -d"
-        echo "Up..."
-        exec_docker
-        ;;
-    "down")
-        DOCKER_CMD="down"
-        echo "Shutting down..."
-        exec_docker
-        ;;
-    "restart")
-        DOCKER_CMD="restart"
-        echo "Restarting..."
-        exec_docker
-        ;;
-    "logs")
-        DOCKER_CMD="logs -f"
-        echo "Logs..."
-        exec_docker
-        ;;
-    "shell")
-        DOCKER_CMD="exec backend bash"
-        exec_docker
-        ;;
-    "migrate")
-        if [[ "$ENVIRONMENT" == "shared" ]]; then
-            echo "Can not migrate shared environment, exiting..."
-            safe_exit 1
-            return 1
-        else
-            DOCKER_CMD="exec backend python3 backend/src/backend/manage.py migrate"
-	        echo "Migrating..."
-            exec_docker
-        fi
-        ;;
-    "frontend-install")
-        DOCKER_CMD="exec frontend npm install"
-        echo "Installing npm packages..."
-        exec_docker
-	    ;;
-    "frontend-build")
-	    DOCKER_CMD="exec frontend npm run build"
-        echo "Building the frontend..."
-	    exec_docker
+    "shared")
+        ENV_NAME="shared"
+        ENV_FILE="/opt/deploy/.env.db"
+        BRANCH="deploy-prod"
+        DOCKER_FILES=(-f "docker-compose.proxy.yml" -f "docker-compose.db.yml")
         ;;
     *)
-        echo "Unknown command: $COMMAND"
+        usage
         safe_exit 1
         ;;
 esac
+
+prepare() {
+    echo "Executing environment '$ENVIRONMENT' on branch '$BRANCH'"
+    # ensure we're in a git repo
+    git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "Not inside a git repository; aborting."
+    # make sure the correct branch is checked out
+    git checkout -f "$BRANCH" || die "Failed to checkout branch: $BRANCH"
+    # update from remote and discard local drift
+    git fetch origin || die "Failed to fetch from origin"
+    # resets to remote state in case of local changes
+    git reset --hard "origin/$BRANCH" || die "Failed to reset to origin/$BRANCH"
+}
+
+run_docker(){
+    local -a docker_cmd=("$@")
+
+    prepare || return $?    
+
+    docker compose \
+        -p "$ENV_NAME" \
+        --env-file "$ENV_FILE" \
+        "${DOCKER_FILES[@]}" \
+        "${docker_cmd[@]}" || die "Running docker compose command failed."
+
+    echo "Done!"
+}
+
+wipe_environment() {
+    local base
+    local d
+    local target
+
+    case "$ENVIRONMENT" in
+        prod|production|dev|development)
+            ;;
+        *)
+            die "Invalid environment for wipe: $ENVIRONMENT"
+            ;;
+    esac
+
+    base="/mnt/data/${ENV_NAME}/data"
+
+    [[ -d "$base" ]] || die "Refusing to wipe: base directory does not exist: $base"
+
+    for d in predictions backend_cache cache analyser media tmp; do
+        target="${base}/${d}"
+
+        if [[ -d "$target" ]]; then
+            sudo find "$target" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+        else
+            echo "Skipping missing directory: $target"
+        fi
+    done
+
+    echo "Wipe completed for '$ENV_NAME'."
+}
+
+main() {
+    case $COMMAND in
+        "build")
+            echo "Building..."
+            run_docker up --build -d
+            ;;
+        "rebuild")
+            echo "Rebuilding (force recreate)..."
+            run_docker up --build --force-recreate -d
+            ;;
+        "up")
+            echo "Up..."
+            run_docker up -d
+            ;;
+        "down")
+            echo "Shutting down..."
+            run_docker down
+            ;;
+        "restart")
+            echo "Restarting..."
+            run_docker restart
+            ;;
+        "logs")
+            echo "Logs..."
+            run_docker logs -f
+            ;;
+        "shell")
+            run_docker exec backend bash
+            ;;
+        "migrate")
+            if [[ "$ENVIRONMENT" == "shared" ]]; then   
+                die "Cannot migrate shared environment."
+            fi
+            echo "Migrating..."
+            run_docker exec backend python3 backend/src/backend/manage.py migrate
+            ;;
+        "frontend-install")
+            echo "Installing npm packages..."
+            run_docker exec frontend npm install
+            ;;
+        "frontend-build")
+            echo "Building the frontend..."
+            run_docker exec frontend npm run build
+            ;;
+        "wipe")
+            wipe_environment
+            ;;
+        *)
+            echo "Unknown command: $COMMAND"
+            usage
+            safe_exit 1
+            ;;
+    esac
+}
