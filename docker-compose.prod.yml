@@ -19,7 +19,7 @@ services:
     build:
       context: .
     init: true
-    shm_size: "8g" # TODO: should be 30% of total available memory?
+    shm_size: "12g" # TODO: should be 30% of total available memory?
     environment:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
@@ -42,9 +42,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              # TODO: GPU usage for prod/dev ???
-              # count: all
-              count: 2
+              count: 3
               capabilities: [gpu]
     command:
       - "uv"
