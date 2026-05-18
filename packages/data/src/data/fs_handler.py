@@ -69,10 +69,6 @@ class ArchiveFileWrapper:
         """Seek support"""
         return self.file_obj.seek(*args, **kwargs)
     
-    def seek(self, *args, **kwargs):
-        """Seek support"""
-        return self.file_obj.seek(*args, **kwargs)
-    
     def close(self):
         if self.tar_obj:
             self.tar_obj.close()
