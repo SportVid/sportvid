@@ -101,6 +101,8 @@ services:
     container_name: celery
     build:
       context: .
+    secrets:
+      - django_settings
     volumes:
       - ${DATA_PATH}/media/:/media
       - ${DATA_PATH}/predictions:/predictions
