@@ -108,6 +108,8 @@ services:
       context: .
     env_file:
       - /opt/deploy/.env.dev
+    secrets:
+      - django_settings
     volumes:
       - ${DATA_PATH}/media/:/media
       - ${DATA_PATH}/predictions:/predictions
