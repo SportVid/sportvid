@@ -195,7 +195,6 @@ class TimelineSegmentAnnoatationToggle(View):
         return JsonResponse({"status": "error", "type": "missing_values"})
 
     def post(self, request):
-        start = time.time()
         try:
             # decode data
             try:
@@ -239,9 +238,6 @@ class TimelineSegmentAnnoatationToggle(View):
                     )
                     timeline_segment_annotation_deleted.extend([x.id.hex for x in timeline_segment_annotation_db])
                     timeline_segment_annotation_db.delete()
-
-            end = time.time()
-            logger.debug(f"Timeline annotation toggle request took {end-start}s")
             return JsonResponse(
                 {
                     "status": "ok",
@@ -260,7 +256,6 @@ class TimelineSegmentAnnoatationToggle(View):
 class TimelineSegmentAnnoatationList(View):
     def get(self, request):
         try:
-            start = time.time()
             query_args = {}
 
             if "timeline_segment_id" in request.GET:
@@ -277,9 +272,7 @@ class TimelineSegmentAnnoatationList(View):
             entries = []
             for timeline_segment_annotation in query_results:
                 entries.append(timeline_segment_annotation.to_dict())
-            
-            end = time.time()
-            logger.debug(f"Getting TimelineSegmentAnnotationList took {end-start}s")
+
             return JsonResponse({"status": "ok", "entries": entries})
         except Exception:
             logger.exception('Failed to get timeline annotations')

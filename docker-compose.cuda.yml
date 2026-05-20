@@ -91,7 +91,7 @@ services:
       - ${DATA_PATH}/shared/db/:/var/lib/postgresql/data
       - ./postgres:/docker-entrypoint-initdb.d  # init.sh is invoked automatically
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${PROD_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -101,6 +101,8 @@ services:
     container_name: celery
     build:
       context: .
+    secrets:
+      - django_settings
     volumes:
       - ${DATA_PATH}/media/:/media
       - ${DATA_PATH}/predictions:/predictions
@@ -111,6 +113,9 @@ services:
       - ./backend/:/app/backend
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
+    depends_on:
+      - postgres
+      - valkey
     tmpfs:
       - /tmp
       - /var
@@ -166,11 +171,11 @@ services:
       - "sportvid.wsgi"
       - "--capture-output"
       - "--log-level"
-      - "${LOG_LEVEL}"
+      - "${LOG_LEVEL:-DEBUG}"
       - "--timeout"
       - "1800"
       - "--workers"
-      - "${GUNICORN_WORKERS}"
+      - "${GUNICORN_WORKERS:-4}"
     # command: uv run --package backend python3 backend/src/backend/manage.py runserver 0.0.0.0:8000
     depends_on:
       # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
