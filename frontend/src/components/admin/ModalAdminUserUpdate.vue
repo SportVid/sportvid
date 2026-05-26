@@ -147,6 +147,7 @@ const checkLength = (value) => {
 
 const roleOptions = [
   { label: t("modal.admin.update_account.roles.admin"), value: "admin" },
+  { label: t("modal.admin.update_account.roles.researcher"), value: "researcher" },
   { label: t("modal.admin.update_account.roles.user"), value: "user" },
 ];
 

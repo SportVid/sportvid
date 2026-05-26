@@ -82,7 +82,14 @@
     "video_id": "Video-ID:",
     "length": "Länge:",
     "uploaded": "Hochgeladen:",
-    "timelines": "Zeitleisten:"
+    "timelines": "Zeitleisten:",
+    "video_processing": "Video wird verarbeitet",
+    "filter_sport": "Sportart",
+    "filter_age_group": "Altersklasse",
+    "filter_all": "Alle",
+    "sort_date_newest": "Neueste zuerst",
+    "sort_date_oldest": "Älteste zuerst",
+    "filter_name": "Titel suchen..."
   },
   "analysis_view": {
     "tabs": {
@@ -138,11 +145,6 @@
         "title": "Positionsdaten",
         "upload": "Positionsdaten hochladen",
         "select": "Positionsdaten auswählen"
-      },
-      "set_zones": {
-        "title": "Raster",
-        "longitudinal": "Längsstreifen",
-        "transverse": "Querstreifen"
       },
       "set_zones": "Zonen"
     },
