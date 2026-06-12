@@ -33,7 +33,7 @@ def download_file(file, output_dir, output_name=None, max_size=None, extensions=
         if extensions is not None:
             if not check_extension(path, extensions):
                 return {"status": "error", "type": "wrong_file_extension"}
-        # TODO add parameter
+        # TODO: compute max_size dynamically, see if user is eligible to upload a video
         if max_size is not None:
             if file.size > max_size:
                 return {"status": "error", "type": "file_too_large"}
