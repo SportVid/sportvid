@@ -152,13 +152,15 @@ main() {
             echo "Migrating..."
             run_docker exec backend python3 backend/src/backend/manage.py migrate
             ;;
-        "frontend-install")
-            echo "Installing npm packages..."
-            run_docker exec frontend npm install
-            ;;
         "frontend-build")
-            echo "Building the frontend..."
-            run_docker exec frontend npm run build
+            echo "Building frontend packages..."
+            run_docker compose build frontend
+            run_docker compose up --no-deps frontend
+            ;;
+        "frontend-rebuild")
+            echo "Rebuilding frontend packages..."
+            run_docker compose build --no-cache frontend
+            run_docker compose up --no-deps frontend
             ;;
         "wipe")
             wipe_environment

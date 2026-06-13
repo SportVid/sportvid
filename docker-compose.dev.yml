@@ -210,7 +210,7 @@ services:
       # - ${DATA_PATH}/predictions/:/thumbnails
       # - ${DATA_PATH}/media/:/media
       - assets:/assets
-    command: sh -c 'mkdir -p /assets/dev && cp -r dist/* /assets/dev/'
+    command: sh -c 'rm -rf /assets/dev/* && mkdir -p /assets/dev && cp -r dist/* /assets/dev/'
     networks:
       - shared
       - dev
