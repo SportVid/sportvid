@@ -208,7 +208,7 @@ services:
       # - ${DATA_PATH}/predictions/:/thumbnails
       # - ${DATA_PATH}/media/:/media
       - assets:/assets
-    command: sh -c 'mkdir -p /assets/prod && cp -r dist/* /assets/prod/'
+    command: sh -c 'rm -rf /assets/prod/* && mkdir -p /assets/prod && cp -r dist/* /assets/prod/'
     networks:
       - shared
       - prod
