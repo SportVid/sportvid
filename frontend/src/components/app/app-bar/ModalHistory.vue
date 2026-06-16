@@ -12,7 +12,7 @@
       </v-toolbar>
 
       <v-card-text class="mt-2 scrollable-content">
-        <v-expansion-panels data-tour="history-delete-panel">
+        <v-expansion-panels v-if="props.canWrite" data-tour="history-delete-panel">
           <v-expansion-panel>
             <v-expansion-panel-title color="error">{{
               $t("modal.history.delete.title")
@@ -166,6 +166,10 @@ const props = defineProps({
   pluginRuns: {
     type: Array,
     default: () => [],
+  },
+  canWrite: {
+    type: Boolean,
+    default: true,
   },
 });
 
