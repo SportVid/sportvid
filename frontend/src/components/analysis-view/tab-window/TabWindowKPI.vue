@@ -102,12 +102,31 @@
                     </v-list-item>
                   </template>
                   <v-list class="py-0" density="compact" :width="group.chartWidth">
+                    <template v-if="group.key === 'velocity'">
+                      <v-list-item class="menu-item" @click.stop>
+                        <v-list-item-title class="d-flex align-center justify-space-between">
+                          <span>Unit</span>
+                          <v-btn-toggle
+                            v-model="velocityUnit"
+                            mandatory
+                            density="compact"
+                            color="primary"
+                            border
+                            style="height: 22px"
+                          >
+                            <v-btn value="ms" size="x-small" style="font-size: 11px; padding: 0 6px">m/s</v-btn>
+                            <v-btn value="kmh" size="x-small" style="font-size: 11px; padding: 0 6px">km/h</v-btn>
+                          </v-btn-toggle>
+                        </v-list-item-title>
+                      </v-list-item>
+                      <v-divider />
+                    </template>
                     <template v-for="option in group.options" :key="option.id">
                       <v-list-item class="menu-item" @click="toggleKpi(option)">
                         <v-list-item-title class="d-flex justify-space-between">
                           <template v-if="option.mode === 'windowed'">
                             <span class="d-flex align-center" style="gap: 2px">
-                              <span v-html="splitWindowedLabel(option.id).before" />
+                              <span v-html="splitWindowedLabel(group.key === 'velocity' ? option.id + '_short' : option.id).before" />
                               <input
                                 v-model.number="windowFrames"
                                 type="number"
@@ -118,12 +137,12 @@
                                 @keydown.stop
                                 @blur="onFrameInputBlur"
                               />
-                              <span v-html="splitWindowedLabel(option.id).after" />
+                              <span v-html="splitWindowedLabel(group.key === 'velocity' ? option.id + '_short' : option.id).after" />
                             </span>
                           </template>
                           <span
                             v-else
-                            v-html="$t(`visualization.kpi.kpi_selection.${option.id}`)"
+                            v-html="$t(`visualization.kpi.kpi_selection.${group.key === 'velocity' ? option.id + '_short' : option.id}`)"
                           />
                           <tab-window-icon
                             :class="{
@@ -145,9 +164,26 @@
             <template v-else>
               <template v-for="option in kpiOptions" :key="option.id">
                 <v-list-item class="menu-item" @click="toggleKpi(option)">
-                  <v-list-item-title class="d-flex justify-space-between">
-                    <span v-html="$t(`visualization.kpi.kpi_selection.${option.id}`)" />
+                  <v-list-item-title class="d-flex align-center">
+                    <span
+                      style="flex: 1; min-width: 0"
+                      v-html="$t(`visualization.kpi.kpi_selection.${option.kpi === 'velocity_max' ? option.id + '_short' : option.id}`)"
+                    />
+                    <v-btn-toggle
+                      v-if="option.kpi === 'velocity_max'"
+                      v-model="velocityUnit"
+                      mandatory
+                      density="compact"
+                      color="primary"
+                      border
+                      style="height: 18px; flex-shrink: 0; margin: 0 8px"
+                      @click.stop
+                    >
+                      <v-btn value="ms" size="x-small" style="font-size: 10px; padding: 0 4px">m/s</v-btn>
+                      <v-btn value="kmh" size="x-small" style="font-size: 10px; padding: 0 4px">km/h</v-btn>
+                    </v-btn-toggle>
                     <tab-window-icon
+                      style="flex-shrink: 0"
                       :class="{
                         'text-disabled': !isKpiSelected(option),
                         'text-red': isKpiSelected(option),
@@ -173,6 +209,7 @@
             v-model="selectedZones"
             :sport="topViewStore.currentSport"
             :area-size="topViewStore.currentAreaSize"
+            :mirror-x-y="topViewStore.mirrorXY"
           />
         </v-menu>
 
@@ -424,6 +461,7 @@
         :playerOptions="playerOptions"
         :playerColors="playerColors"
         :selectedZones="selectedZones"
+        :velocityUnit="velocityUnit"
       />
 
       <div class="chart-legend mt-2">
@@ -483,6 +521,7 @@ import ZoneSelectorPicker from "@/components/kpi/ZoneSelectorPicker.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
 import { debounce } from "lodash";
+import { isInSportZone, allSportZones } from "@/plugins/sport_zones";
 
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
@@ -512,21 +551,24 @@ const viewMode = computed({
 });
 const groupMode = ref("player");
 
-// Initialize with all 25 pitch zones selected (full pitch)
+// Zone initialization based on current sport
 const LONG_BOUNDS = [0, 0.2025, 0.365, 0.635, 0.7955, 1];
 const TRANS_BOUNDS = [0, 0.1575, 0.33, 0.67, 0.8425, 1];
-const initialZones = [];
-for (let r = 0; r < 5; r++) {
-  for (let c = 0; c < 5; c++) {
-    initialZones.push({
-      x0: TRANS_BOUNDS[c],
-      y0: LONG_BOUNDS[r],
-      x1: TRANS_BOUNDS[c + 1],
-      y1: LONG_BOUNDS[r + 1],
-    });
-  }
+function _soccerAllZones() {
+  const zones = [];
+  for (let r = 0; r < 5; r++)
+    for (let c = 0; c < 5; c++)
+      zones.push({ x0: TRANS_BOUNDS[c], y0: LONG_BOUNDS[r], x1: TRANS_BOUNDS[c + 1], y1: LONG_BOUNDS[r + 1] });
+  return zones;
 }
-const selectedZones = ref(initialZones);
+function _defaultZonesForSport(sportKey) {
+  if (sportKey === 'handball' || sportKey === 'basketball') return allSportZones(sportKey);
+  return _soccerAllZones();
+}
+const selectedZones = ref(_defaultZonesForSport(topViewStore.currentSport?.key));
+watch(() => topViewStore.currentSport?.key, (newKey) => {
+  selectedZones.value = _defaultZonesForSport(newKey);
+});
 
 // Maps kpi_names (from kpi_computation meta_data) → display options per view mode.
 const KPI_CONFIG = {
@@ -651,6 +693,13 @@ const chartMode = computed(() => selectedKpiOption.value?.mode);
 
 const kpiMenuOpen = ref(false);
 
+const velocityUnit = ref("kmh"); // 'kmh' | 'ms'
+const velocityFactor = computed(() => (velocityUnit.value === "kmh" ? 3.6 : 1.0));
+const velocityUnitHtml = computed(() =>
+  velocityUnit.value === "kmh" ? "km⋅h<sup>-1</sup>" : "m⋅s<sup>-1</sup>"
+);
+const hasVelocityKpi = computed(() => visualizationStore.kpiNames?.includes("velocity") ?? false);
+
 const isKpiSelected = (option) => {
   if (viewMode.value === "chart") {
     return selectedKpiId.value === option.id;
@@ -693,7 +742,10 @@ const playerHeaders = computed(() => {
     cols.push({ title: t("visualization.kpi.kpi_label.distance"), key: "distance" });
   }
   if (selectedKpis.value.has("velocity_max")) {
-    cols.push({ title: t("visualization.kpi.kpi_label.velocity_max"), key: "velocity_max" });
+    cols.push({
+      title: t("visualization.kpi.kpi_label.velocity_max_with_unit", { unit: velocityUnitHtml.value }),
+      key: "velocity_max",
+    });
   }
   if (selectedKpis.value.has("metabolic_work_cumulative")) {
     cols.push({ title: t("visualization.kpi.kpi_label.metabolic_work"), key: "metabolic_work" });
@@ -774,6 +826,7 @@ const isTeamFullySelected = (teamId) => {
 const isInAnyZone = (x, y, zones) => {
   if (!zones || zones.length === 0) return false;
   for (const z of zones) {
+    if (z.sportZone) { if (isInSportZone(z.sportKey, z.zoneId, x, y)) return true; continue; }
     if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1) return true;
   }
   return false;
@@ -834,7 +887,14 @@ const runningDistanceTeamItems = computed(() => {
     const kpiItem = kpiMap[p.playerId];
     grouped[p.teamId].push(
       kpiItem
-        ? { ...kpiItem, team_id: p.teamId }
+        ? {
+            ...kpiItem,
+            velocity_max:
+              kpiItem.velocity_max != null
+                ? parseFloat((kpiItem.velocity_max * velocityFactor.value).toFixed(2))
+                : null,
+            team_id: p.teamId,
+          }
         : {
             player_id: p.playerId,
             team_id: p.teamId,

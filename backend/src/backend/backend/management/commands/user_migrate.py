@@ -7,18 +7,24 @@ from django.conf import settings
 
 from backend.models import (
     SportVidUser,
+    Video,
+    AnnotationCategory,
+    Annotation,
+    Shortcut,
+    Timeline
 )
 from backend.plugin_manager import PluginManager
 
 
 class Command(BaseCommand):
-    help = "Closes the specified poll for voting"
+    help = "..."
 
     def add_arguments(self, parser):
         pass
 
     def handle(self, *args, **options):
-        for x in SportVidUser.objects.raw('SELECT "auth_user"."id", "auth_user"."password", "auth_user"."last_login", "auth_user"."is_superuser", "auth_user"."username", "auth_user"."first_name", "auth_user"."last_name", "auth_user"."email", "auth_user"."is_staff", "auth_user"."is_active", "auth_user"."date_joined" FROM "auth_user"'):
+        for x in SportVidUser.objects.raw(
+            'SELECT "auth_user"."id", "auth_user"."password", "auth_user"."last_login", "auth_user"."is_superuser", "auth_user"."username", "auth_user"."first_name", "auth_user"."last_name", "auth_user"."email", "auth_user"."is_staff", "auth_user"."is_active", "auth_user"."date_joined" FROM "auth_user"'):
             user = SportVidUser()
             user.id = x.id
             user.password = x.password
@@ -31,8 +37,5 @@ class Command(BaseCommand):
             user.is_staff = x.is_staff
             user.is_active = x.is_active
             user.date_joined = x.date_joined
-            # user.email = x.email
-            # user.allowance = 3
-            # user.max_video_size = 50 * 1024 * 1024
-            # user.date = x.date
+
             user.save()

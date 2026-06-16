@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-
 from django.views import View
 from django.http import JsonResponse
 from django.conf import settings
@@ -9,10 +8,14 @@ from django.conf import settings
 from backend.models import PluginRun, PluginRunResult, Video
 from data import DataManager
 
+
 logger = logging.getLogger(__name__)
 
-# Module-level in-memory cache: result.id -> parsed data dict
-# Avoids re-reading the JSON file on every chunk request.
+
+"""
+Module-level in-memory cache: result.id -> parsed data dict.
+Avoids re-reading the JSON file on every chunk request.
+"""
 _kpi_data_cache = {}
 
 
@@ -50,20 +53,17 @@ class PluginRunResultKpiChunk(View):
                 offset = max(0, int(request.GET.get("offset", 0)))
             except (ValueError, TypeError):
                 offset = 0
-
             try:
                 limit = min(10000, max(1, int(request.GET.get("limit", 5000))))
             except (ValueError, TypeError):
                 limit = 5000
-
             try:
                 video_db = Video.objects.get(id=video_id)
             except Video.DoesNotExist:
                 return JsonResponse(
                     {"status": "error", "type": "video_not_found"}, status=404
                 )
-
-            # Find kpi_computation plugin runs for this video
+            # find kpi_computation plugin runs for this video
             plugin_runs = PluginRun.objects.filter(
                 video=video_db,
                 type="kpi_computation",
@@ -112,15 +112,14 @@ class PluginRunResultKpiChunk(View):
 
     @staticmethod
     def _load_result_data(result, data_manager):
-        """Load result data, with an in-memory cache keyed by result.id."""
+        """ Load result data, with an in-memory cache keyed by result.id. """
         result_id = str(result.id)
 
         if result_id in _kpi_data_cache:
             return _kpi_data_cache[result_id]
 
         data = None
-
-        # Try file cache first
+        # try file cache first
         cache_path = os.path.join(
             settings.DATA_CACHE_ROOT, f"{result.id}.json"
         )
@@ -131,8 +130,7 @@ class PluginRunResultKpiChunk(View):
                 data = cached.get("data", {})
         except Exception:
             pass
-
-        # Fall back to DataManager
+        # fallback to DataManager
         if data is None:
             try:
                 data_obj = data_manager.load(result.data_id)

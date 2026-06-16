@@ -1,7 +1,7 @@
-from typing import Dict, List
 import logging
-
-from ..utils.analyser_client import TaskAnalyserClient
+from django.db import transaction
+from django.conf import settings
+from typing import Dict, List
 
 from backend.models import PluginRun, PluginRunResult, Video, Timeline
 from backend.plugin_manager import PluginManager
@@ -9,8 +9,7 @@ from backend.utils import media_path_to_file
 from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager
-from django.db import transaction
-from django.conf import settings
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 @PluginManager.export_parser("clip")

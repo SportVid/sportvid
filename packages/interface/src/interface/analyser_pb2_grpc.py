@@ -59,6 +59,21 @@ class AnalyserStub(object):
                 request_serializer=analyser__pb2.CheckDataRequest.SerializeToString,
                 response_deserializer=analyser__pb2.CheckDataResponse.FromString,
                 _registered_method=True)
+        self.upload_video_asset = channel.stream_unary(
+                '/sportvid.analyser.Analyser/upload_video_asset',
+                request_serializer=analyser__pb2.UploadVideoAssetRequest.SerializeToString,
+                response_deserializer=analyser__pb2.UploadVideoAssetResponse.FromString,
+                _registered_method=True)
+        self.download_video_asset = channel.unary_stream(
+                '/sportvid.analyser.Analyser/download_video_asset',
+                request_serializer=analyser__pb2.DownloadVideoAssetRequest.SerializeToString,
+                response_deserializer=analyser__pb2.DownloadVideoAssetResponse.FromString,
+                _registered_method=True)
+        self.check_video_asset = channel.unary_unary(
+                '/sportvid.analyser.Analyser/check_video_asset',
+                request_serializer=analyser__pb2.CheckVideoAssetRequest.SerializeToString,
+                response_deserializer=analyser__pb2.CheckVideoAssetResponse.FromString,
+                _registered_method=True)
         self.run_plugin = channel.unary_unary(
                 '/sportvid.analyser.Analyser/run_plugin',
                 request_serializer=analyser__pb2.RunPluginRequest.SerializeToString,
@@ -109,6 +124,25 @@ class AnalyserServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def check_data(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def upload_video_asset(self, request_iterator, context):
+        """New structured video-asset transport
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def download_video_asset(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def check_video_asset(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -165,6 +199,21 @@ def add_AnalyserServicer_to_server(servicer, server):
                     servicer.check_data,
                     request_deserializer=analyser__pb2.CheckDataRequest.FromString,
                     response_serializer=analyser__pb2.CheckDataResponse.SerializeToString,
+            ),
+            'upload_video_asset': grpc.stream_unary_rpc_method_handler(
+                    servicer.upload_video_asset,
+                    request_deserializer=analyser__pb2.UploadVideoAssetRequest.FromString,
+                    response_serializer=analyser__pb2.UploadVideoAssetResponse.SerializeToString,
+            ),
+            'download_video_asset': grpc.unary_stream_rpc_method_handler(
+                    servicer.download_video_asset,
+                    request_deserializer=analyser__pb2.DownloadVideoAssetRequest.FromString,
+                    response_serializer=analyser__pb2.DownloadVideoAssetResponse.SerializeToString,
+            ),
+            'check_video_asset': grpc.unary_unary_rpc_method_handler(
+                    servicer.check_video_asset,
+                    request_deserializer=analyser__pb2.CheckVideoAssetRequest.FromString,
+                    response_serializer=analyser__pb2.CheckVideoAssetResponse.SerializeToString,
             ),
             'run_plugin': grpc.unary_unary_rpc_method_handler(
                     servicer.run_plugin,
@@ -322,6 +371,87 @@ class Analyser(object):
             '/sportvid.analyser.Analyser/check_data',
             analyser__pb2.CheckDataRequest.SerializeToString,
             analyser__pb2.CheckDataResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def upload_video_asset(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_unary(
+            request_iterator,
+            target,
+            '/sportvid.analyser.Analyser/upload_video_asset',
+            analyser__pb2.UploadVideoAssetRequest.SerializeToString,
+            analyser__pb2.UploadVideoAssetResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def download_video_asset(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/sportvid.analyser.Analyser/download_video_asset',
+            analyser__pb2.DownloadVideoAssetRequest.SerializeToString,
+            analyser__pb2.DownloadVideoAssetResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def check_video_asset(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/sportvid.analyser.Analyser/check_video_asset',
+            analyser__pb2.CheckVideoAssetRequest.SerializeToString,
+            analyser__pb2.CheckVideoAssetResponse.FromString,
             options,
             channel_credentials,
             insecure,

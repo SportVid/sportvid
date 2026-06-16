@@ -76,13 +76,7 @@
                   ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                     topViewStore.topViewSize.width
                 "
-                :cy="
-                  o.compAreaCoordsRel[0].y *
-                    (topViewStore.topViewSize.height *
-                      topViewStore.currentSport.areas.full.heightRel) +
-                  ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                    topViewStore.topViewSize.height
-                "
+                :cy="toSvgY(o.compAreaCoordsRel[0].y)"
                 :disabled="calibrationAssetStore.isAddingCustomMarker"
                 :fill="objectColor(o)"
                 r="12"
@@ -106,13 +100,7 @@
                   ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                     topViewStore.topViewSize.width
                 "
-                :y1="
-                  o.compAreaCoordsRel[0].y *
-                    (topViewStore.topViewSize.height *
-                      topViewStore.currentSport.areas.full.heightRel) +
-                  ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                    topViewStore.topViewSize.height
-                "
+                :y1="toSvgY(o.compAreaCoordsRel[0].y)"
                 :x2="
                   o.compAreaCoordsRel[1].x *
                     (topViewStore.topViewSize.width *
@@ -120,13 +108,7 @@
                   ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                     topViewStore.topViewSize.width
                 "
-                :y2="
-                  o.compAreaCoordsRel[1].y *
-                    (topViewStore.topViewSize.height *
-                      topViewStore.currentSport.areas.full.heightRel) +
-                  ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                    topViewStore.topViewSize.height
-                "
+                :y2="toSvgY(o.compAreaCoordsRel[1].y)"
                 :disabled="calibrationAssetStore.isAddingCustomMarker"
                 :stroke="objectColor(o)"
                 stroke-width="12"
@@ -151,12 +133,7 @@
                             topViewStore.currentSport.areas.full.widthRel) +
                         ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                           topViewStore.topViewSize.width,
-                      y:
-                        p.y *
-                          (topViewStore.topViewSize.height *
-                            topViewStore.currentSport.areas.full.heightRel) +
-                        ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                          topViewStore.topViewSize.height,
+                      y: toSvgY(p.y),
                     });
 
                     const points = o.compAreaCoordsRel.map(toScreen);
@@ -217,13 +194,7 @@
                     ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                       topViewStore.topViewSize.width
                   "
-                  :cy="
-                    o.compAreaCoordsRel[0].y *
-                      (topViewStore.topViewSize.height *
-                        topViewStore.currentSport.areas.full.heightRel) +
-                    ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                      topViewStore.topViewSize.height
-                  "
+                  :cy="toSvgY(o.compAreaCoordsRel[0].y)"
                   r="12"
                   fill="none"
                   style="cursor: pointer; pointer-events: all"
@@ -240,14 +211,7 @@
                     ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                       topViewStore.topViewSize.width
                   "
-                  :y="
-                    o.compAreaCoordsRel[0].y *
-                      (topViewStore.topViewSize.height *
-                        topViewStore.currentSport.areas.full.heightRel) +
-                    ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                      topViewStore.topViewSize.height +
-                    6
-                  "
+                  :y="toSvgY(o.compAreaCoordsRel[0].y) + 6"
                   text-anchor="middle"
                   font-size="16"
                   fill="red"
@@ -266,13 +230,7 @@
                     ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                       topViewStore.topViewSize.width
                   "
-                  :y1="
-                    o.compAreaCoordsRel[0].y *
-                      (topViewStore.topViewSize.height *
-                        topViewStore.currentSport.areas.full.heightRel) +
-                    ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                      topViewStore.topViewSize.height
-                  "
+                  :y1="toSvgY(o.compAreaCoordsRel[0].y)"
                   :x2="
                     o.compAreaCoordsRel[1].x *
                       (topViewStore.topViewSize.width *
@@ -280,13 +238,7 @@
                     ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                       topViewStore.topViewSize.width
                   "
-                  :y2="
-                    o.compAreaCoordsRel[1].y *
-                      (topViewStore.topViewSize.height *
-                        topViewStore.currentSport.areas.full.heightRel) +
-                    ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                      topViewStore.topViewSize.height
-                  "
+                  :y2="toSvgY(o.compAreaCoordsRel[1].y)"
                   stroke-width="12"
                   fill="none"
                   style="cursor: pointer; pointer-events: all"
@@ -309,20 +261,7 @@
                         topViewStore.topViewSize.width) /
                     2
                   "
-                  :y="
-                    (o.compAreaCoordsRel[0].y *
-                      (topViewStore.topViewSize.height *
-                        topViewStore.currentSport.areas.full.heightRel) +
-                      ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                        topViewStore.topViewSize.height +
-                      o.compAreaCoordsRel[1].y *
-                        (topViewStore.topViewSize.height *
-                          topViewStore.currentSport.areas.full.heightRel) +
-                      ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                        topViewStore.topViewSize.height) /
-                      2 +
-                    5
-                  "
+                  :y="(toSvgY(o.compAreaCoordsRel[0].y) + toSvgY(o.compAreaCoordsRel[1].y)) / 2 + 5"
                   text-anchor="middle"
                   font-size="16"
                   fill="red"
@@ -343,12 +282,7 @@
                               topViewStore.currentSport.areas.full.widthRel) +
                           ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                             topViewStore.topViewSize.width,
-                        y:
-                          p.y *
-                            (topViewStore.topViewSize.height *
-                              topViewStore.currentSport.areas.full.heightRel) +
-                          ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                            topViewStore.topViewSize.height,
+                        y: toSvgY(p.y),
                       });
 
                       const points = o.compAreaCoordsRel.map(toScreen);
@@ -389,15 +323,7 @@
                     ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                       topViewStore.topViewSize.width
                   "
-                  :y="
-                    (isTopViewFullscreen ? topViewStore.topViewSize.top : 0) +
-                    o.compAreaCoordsRel[2].y *
-                      (topViewStore.topViewSize.height *
-                        topViewStore.currentSport.areas.full.heightRel) +
-                    ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                      topViewStore.topViewSize.height +
-                    6
-                  "
+                  :y="(isTopViewFullscreen ? topViewStore.topViewSize.top : 0) + toSvgY(o.compAreaCoordsRel[2].y) + 6"
                   text-anchor="middle"
                   font-size="16"
                   fill="red"
@@ -489,13 +415,7 @@
                   ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                     topViewStore.topViewSize.width
                 "
-                :cy="
-                  o[0].y *
-                    (topViewStore.topViewSize.height *
-                      topViewStore.currentSport.areas.full.heightRel) +
-                  ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                    topViewStore.topViewSize.height
-                "
+                :cy="toSvgY(o[0].y)"
                 fill="blue"
                 r="5"
                 style="pointer-events: none"
@@ -512,13 +432,7 @@
                   ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                     topViewStore.topViewSize.width
                 "
-                :y1="
-                  o[0].y *
-                    (topViewStore.topViewSize.height *
-                      topViewStore.currentSport.areas.full.heightRel) +
-                  ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                    topViewStore.topViewSize.height
-                "
+                :y1="toSvgY(o[0].y)"
                 :x2="
                   o[1].x *
                     (topViewStore.topViewSize.width *
@@ -526,13 +440,7 @@
                   ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                     topViewStore.topViewSize.width
                 "
-                :y2="
-                  o[1].y *
-                    (topViewStore.topViewSize.height *
-                      topViewStore.currentSport.areas.full.heightRel) +
-                  ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                    topViewStore.topViewSize.height
-                "
+                :y2="toSvgY(o[1].y)"
                 stroke="blue"
                 stroke-width="5"
                 style="pointer-events: none"
@@ -551,12 +459,7 @@
                             topViewStore.currentSport.areas.full.widthRel) +
                         ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) *
                           topViewStore.topViewSize.width,
-                      y:
-                        p.y *
-                          (topViewStore.topViewSize.height *
-                            topViewStore.currentSport.areas.full.heightRel) +
-                        ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) *
-                          topViewStore.topViewSize.height,
+                      y: toSvgY(p.y),
                     });
 
                     const points = o.map(toScreen);
@@ -927,7 +830,7 @@ const toSvgX = (relX) =>
   relX * (topViewStore.topViewSize.width * topViewStore.currentSport.areas.full.widthRel) +
   ((1 - topViewStore.currentSport.areas.full.widthRel) / 2) * topViewStore.topViewSize.width;
 const toSvgY = (relY) =>
-  relY * (topViewStore.topViewSize.height * topViewStore.currentSport.areas.full.heightRel) +
+  (1 - relY) * (topViewStore.topViewSize.height * topViewStore.currentSport.areas.full.heightRel) +
   ((1 - topViewStore.currentSport.areas.full.heightRel) / 2) * topViewStore.topViewSize.height;
 
 const fieldLength = computed(() => playerStore.video?.field_length ?? 105);
@@ -935,7 +838,7 @@ const fieldWidth = computed(() => playerStore.video?.field_width ?? 68);
 
 const relToMeters = (relX, relY) => ({
   x: (relX * fieldLength.value).toFixed(1),
-  y: ((1 - relY) * fieldWidth.value).toFixed(1),
+  y: (relY * fieldWidth.value).toFixed(1),
 });
 
 const overlayHoverPos = ref(null);
@@ -954,7 +857,7 @@ const manualY = ref(null);
 const confirmManualInput = () => {
   if (manualX.value === null || manualY.value === null) return;
   const relX = manualX.value / fieldLength.value;
-  const relY = 1 - manualY.value / fieldWidth.value;
+  const relY = manualY.value / fieldWidth.value;
   calibrationAssetStore.placeCustomMarkerByCoords(relX, relY);
   manualX.value = null;
   manualY.value = null;

@@ -1,26 +1,23 @@
-from typing import Dict, List
 import logging
+from django.db import transaction
+from django.conf import settings
+from typing import Dict, List
 
 from backend.models import (
     PluginRun,
     PluginRunResult,
-    Video,
-    SportVidUser,
+    Video
 )
 from backend.plugin_manager import PluginManager
-
-from ..utils.analyser_client import TaskAnalyserClient
-from data import DataManager
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-from django.db import transaction
-from django.conf import settings
+from data import DataManager
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 @PluginManager.export_parser("bytetrack")
 class ByteTrackParser(Parser):
     def __init__(self):
-
         self.valid_parameter = {
             "fps": {"parser": int, "default": 5}
         }
@@ -43,7 +40,6 @@ class ByteTrack(Task):
         dry_run: bool = False,
         **kwargs
     ):
-
         manager = DataManager(self.config["output_path"])
         client = TaskAnalyserClient(
             host=self.config["analyser_host"],
@@ -51,7 +47,6 @@ class ByteTrack(Task):
             plugin_run_db=plugin_run,
             manager=manager,
         )
-        # upload all data
         video_id = self.upload_video(client, video)
 
         bytetrack_result = self.run_analyser(
@@ -75,15 +70,12 @@ class ByteTrack(Task):
 
         with transaction.atomic():
             with bytetrack_result[1]["tracklets"] as tracklets:
-
-                # relevant db entry for frontend
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
                     data_id=tracklets.id,
                     name="bboxes",
                     type=PluginRunResult.TYPE_BBOXES,
                 )
-                # only elevant for script-based calls
                 return {
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [plugin_run_result_db.id.hex],

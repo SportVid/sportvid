@@ -1,9 +1,5 @@
 import json
 import logging
-import traceback
-from unicodedata import category
-
-
 from django.views import View
 from django.http import JsonResponse
 
@@ -13,14 +9,11 @@ from backend.models import Annotation, AnnotationCategory, Video
 logger = logging.getLogger(__name__)
 
 
-# from django.core.exceptions import BadRequest
 class AnnoatationCreate(View):
     def post(self, request):
         try:
-
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"})
-            # decode data
             try:
                 body = request.body.decode("utf-8")
             except (UnicodeDecodeError, AttributeError):
@@ -67,14 +60,11 @@ class AnnoatationCreate(View):
             return JsonResponse({"status": "error"})
 
 
-# from django.core.exceptions import BadRequest
 class AnnoatationChange(View):
     def post(self, request):
         try:
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"})
-
-            # decode data
             try:
                 body = request.body.decode("utf-8")
             except (UnicodeDecodeError, AttributeError):

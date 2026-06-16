@@ -10,6 +10,7 @@ logging_config:
 
 applications:
   # ---------- CRITICAL (GPU required)
+  # ---------- CRITICAL (GPU required)
   - name: bytetrack
     route_prefix: /bytetrack
     import_path: inference_ray.main:app_builder
@@ -58,6 +59,8 @@ applications:
               # - onnx-simplifier==0.3.5
   
   # ---------- LOW (CPU only)
+  
+  # ---------- LOW (CPU only)
   - name: calibration_static_dlt
     route_prefix: /calibration_static_dlt
     import_path: inference_ray.main:app_builder
@@ -86,8 +89,12 @@ applications:
   
   - name: floodlight_convert
     route_prefix: /floodlight_convert
+  
+  - name: floodlight_convert
+    route_prefix: /floodlight_convert
     import_path: inference_ray.main:app_builder
     args:
+      model: floodlight_convert
       model: floodlight_convert
       data_path: /data
       params: {}
@@ -105,6 +112,7 @@ applications:
           downscale_delay_s: 60
         ray_actor_options:
           num_cpus: 4
+          num_cpus: 4
           runtime_env:
             uv:
               - numpy
@@ -113,8 +121,15 @@ applications:
   
   - name: posdata_convert
     route_prefix: /posdata_convert
+              - numpy
+              - pandas
+              - floodlight==1.0.0
+  
+  - name: posdata_convert
+    route_prefix: /posdata_convert
     import_path: inference_ray.main:app_builder
     args:
+      model: posdata_convert
       model: posdata_convert
       data_path: /data
       params: {}
@@ -132,8 +147,15 @@ applications:
           downscale_delay_s: 60
         ray_actor_options:
           num_cpus: 4
+          num_cpus: 4
           runtime_env:
             uv:
+              - numpy
+              - pandas
+              - lxml
+
+  - name: kpi_computation
+    route_prefix: /kpi_computation
               - numpy
               - pandas
               - lxml
@@ -143,10 +165,12 @@ applications:
     import_path: inference_ray.main:app_builder
     args:
       model: kpi_computation
+      model: kpi_computation
       data_path: /data
       params: {}
     deployments:
       - name: Deployment
+        max_ongoing_requests: 4
         max_ongoing_requests: 4
         autoscaling_config:
           min_replicas: 0
@@ -157,10 +181,21 @@ applications:
           look_back_period_s: 30
           upscale_delay_s: 15
           downscale_delay_s: 60
+          initial_replicas: 0
+          max_replicas: 4
+          target_num_ongoing_requests_per_replica: 2
+          metrics_interval_s: 10
+          look_back_period_s: 30
+          upscale_delay_s: 15
+          downscale_delay_s: 60
         ray_actor_options:
+          num_cpus: 4
           num_cpus: 4
           runtime_env:
             uv:
+              - numpy
+              - pandas
+              - floodlight==1.1.0
               - numpy
               - pandas
               - floodlight==1.1.0

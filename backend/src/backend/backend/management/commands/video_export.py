@@ -1,10 +1,12 @@
+import os
 from django.core.management.base import BaseCommand, CommandError
+
 from backend.models import SportVidUser, Video
 from backend.views import VideoExport
-import os
+
 
 class Command(BaseCommand):
-    help = "Closes the specified poll for voting"
+    help = "..."
 
     def add_arguments(self, parser):
         parser.add_argument("--video_ids", nargs="+")

@@ -26,10 +26,18 @@ from backend.models import Video
 
 from utils.video_converter import convert_to_hls
 from utils.helper import remove_file, remove_dir
-from backend.tasks.convert_video import convert_video
+from backend.tasks.convert_video import convert_video_to_hls, convert_video_to_fmp4
 
 
 logger = logging.getLogger(__name__)
+
+
+SPORT_FIELD_DEFAULTS = {
+    "soccer":     (105.0, 68.0),
+    "handball":   (40.0,  20.0),
+    "basketball": (28.0,  15.0),
+    "climbing":   (15.0,  15.0),
+}
 
 
 def parse_number(val):
@@ -46,18 +54,12 @@ class VideoUpload(View):
             plugin_manager(plugin, **kwargs)
 
     def post(self, request):
+        if not request.user.is_authenticated:
+            logger.error("VideoUpload::not_authenticated")
+            return JsonResponse(
+                {"status": "error", "type": "not_authenticated"}, status=500
+            )
         try:
-            if not request.user.is_authenticated:
-                logger.error("VideoUpload::not_authenticated")
-                return JsonResponse(
-                    {"status": "error", "type": "not_authenticated"}, status=500
-                )
-
-            if request.method != "POST":
-                logger.error("VideoUpload::wrong_method")
-                return JsonResponse(
-                    {"status": "error", "type": "database_error"}, status=500
-                )
             video_id_uuid = uuid.uuid4()
             video_id = video_id_uuid.hex
 
@@ -79,13 +81,16 @@ class VideoUpload(View):
                 ext = "".join(path.suffixes)
                 
                 file_path = media_path_to_file(video_id, ext)
-                file_in = file_path
+                # file_path = download_result.get("path", "") # NOTE: check!
+
+                sport = request.POST.get("sport", "")
+                default_length, default_width = SPORT_FIELD_DEFAULTS.get(sport, (105.0, 68.0))
 
                 field_length = parse_number(request.POST.get("fieldLength"))
-                if not field_length: field_length = 105.
+                if not field_length: field_length = default_length
 
                 field_width = parse_number(request.POST.get("fieldWidth"))
-                if not field_width: field_width = 68.
+                if not field_width: field_width = default_width
 
                 video_db = Video.objects.create(
                     name=request.POST.get("title"),
@@ -103,16 +108,16 @@ class VideoUpload(View):
                     sport=request.POST.get("sport"),
                     status=Video.STATUS_PROCESSING,
                 )
-
                 # schedule conversion & analysis asynchronously
-                analyers = []
-                try:
-                    analyers = request.POST.get("analyser").split(",")
-                except Exception:
-                    analyers = []
+                analyzers = []
+                try: analyzers = request.POST.get("analyser").split(",")
+                except Exception: analyzers = []
 
                 # pass original ext (e.g., .mp4) to the task
-                task = convert_video.apply_async((video_db.id.hex, ext, analyers))
+                task = convert_video_to_hls.apply_async((video_db.id.hex, ext, analyzers))
+                # convert_video_to_hls((video_db.id.hex, ext, analyzers))
+                # task = convert_video_to_fmp4.apply_async((video_db.id.hex, ext, analyzers))
+                
                 video_db.task_id = task.id
                 video_db.save(update_fields=["task_id"])
 

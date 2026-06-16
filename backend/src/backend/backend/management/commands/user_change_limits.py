@@ -1,20 +1,18 @@
 import os
-import json
-from django.core.management.base import BaseCommand, CommandError
-from backend.models import Video
 import pathlib
 import imageio
 import shutil
 import uuid
+from django.core.management.base import BaseCommand, CommandError
 from django.contrib import auth
 from django.conf import settings
 
-
+from backend.models import Video
 from backend.plugin_manager import PluginManager
 
 
 class Command(BaseCommand):
-    help = "Closes the specified poll for voting"
+    help = "..."
 
     def add_arguments(self, parser):
         parser.add_argument("--user", type=str)
@@ -64,7 +62,4 @@ class Command(BaseCommand):
                     )
 
                     print(video_id_uuid.hex)
-
         self.stdout.write(self.style.SUCCESS(f"Videos added"))
-        # else:
-        #     options["video"]

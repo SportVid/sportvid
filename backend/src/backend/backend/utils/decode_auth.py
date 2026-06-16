@@ -1,9 +1,7 @@
 import json
 import logging
-
-from functools import wraps
-
 from django.http import JsonResponse
+from functools import wraps
 
 
 logger = logging.getLogger(__name__)

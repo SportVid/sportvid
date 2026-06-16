@@ -1,31 +1,17 @@
-import os
 import re
-import shutil
-import sys
 import json
 import uuid
 import logging
-import traceback
 import tempfile
-from pathlib import Path
 import tempfile
 import time
-
-from urllib.parse import urlparse
-import imageio
-
-import wand.image as wimage
-
-from backend.utils import download_url, download_file, media_url_to_file
-
 from django.views import View
 from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 
-# from django.core.exceptions import BadRequest
-
 from backend.models import Video, PluginRun
 from backend.plugin_manager import PluginManager
+from backend.utils import download_url, download_file, media_url_to_file
 
 
 logger = logging.getLogger(__name__)
@@ -44,7 +30,6 @@ class PluginRunNew(View):
 
             output_dir = tempfile.mkdtemp(dir="/tmp")
             parameters = []
-
             for k, v in request.FILES.items():
                 m = re.match(r"^file_(.*?)$", k)
                 if m:
@@ -55,7 +40,6 @@ class PluginRunNew(View):
                         file=v,
                         max_size=11 * 1024 * 1024 * 1024,
                     )
-
                     if download_result.get("status") == "ok":
                         parameters.append(
                             {
@@ -64,7 +48,6 @@ class PluginRunNew(View):
                                 "path": download_result.get("path"),
                             }
                         )
-                    print(download_result, flush=True)
             parameters.extend(json.loads(request.POST.get("parameters")))
             plugin = request.POST.get("plugin")
             if plugin is None:
@@ -179,7 +162,6 @@ class PluginRunDelete(View):
 
 class PluginRunList(View):
     def get(self, request):
-
         start = time.time()
         if not request.user.is_authenticated:
             logger.error("PluginRunNew::not_authenticated")
@@ -194,7 +176,6 @@ class PluginRunList(View):
                 )
             else:
                 analyses = PluginRun.objects.filter(video__owner=request.user)
-            # print(len(analyses), flush=True)
             add_results = request.GET.get("add_results")
 
             analyses = analyses.prefetch_related("video")

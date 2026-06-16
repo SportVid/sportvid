@@ -107,8 +107,19 @@ class KpiComputation(
             with inputs["tracking_data"] as input_data:
                 with input_data.open_file() as t_data:
                     if fmt == "kinexon":
+                        raw_bytes = t_data.read()
+                        if raw_bytes.startswith(b'\xef\xbb\xbf'):
+                            raw_bytes = raw_bytes[3:]
+                        delim = parameters.get("delimiter", ";").encode()
+                        header_end = raw_bytes.find(b'\n')
+                        if header_end != -1:
+                            header_bytes = raw_bytes[:header_end].rstrip(b'\r')
+                            body_bytes = raw_bytes[header_end:]
+                            cols = [c.strip() for c in header_bytes.split(delim)]
+                            cols.append(b'_dummy')
+                            raw_bytes = delim.join(cols) + b'\n' + body_bytes.lstrip(b'\n')
                         with tempfile.NamedTemporaryFile(mode='w+b', suffix='.csv', delete=False) as tmp:
-                            tmp.write(t_data.read())
+                            tmp.write(raw_bytes)
                             tmp_path = tmp.name
                         try:
                             # NOTE: knx reader returns lists for pos_data and teamsheets (different from DFL reader below, returning same-named variables as dicts)

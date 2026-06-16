@@ -1,11 +1,8 @@
 import logging
 import json
-
 from django.views import View
 from django.http import JsonResponse
 from django.conf import settings
-
-# from django.core.exceptions import BadRequest
 
 from backend.models import Video, VideoAnalysisState, Timeline, PluginRun
 
@@ -15,10 +12,8 @@ logger = logging.getLogger(__name__)
 
 class VideoAnalysisStateGet(View):
     def get(self, request):
-
         if not request.user.is_authenticated:
             return JsonResponse({"status": "error"}, status=500)
-
         try:
             video_db = Video.objects.get(id=request.GET.get("video_id"))
         except Video.DoesNotExist:
@@ -37,12 +32,12 @@ class VideoAnalysisStateSetSelectedShots(View):
     def post(self, request):
         if not request.user.is_authenticated:
             return JsonResponse({"status": "error"}, status=500)
-
+        
         try:
             body = request.body.decode("utf-8")
         except (UnicodeDecodeError, AttributeError):
             body = request.body
-
+        
         try:
             data = json.loads(body)
         except Exception as e:

@@ -7,7 +7,6 @@ class Archive:
         pass
 
     def __enter__(self):
-
         pass
 
     def __exit__(self):
@@ -31,9 +30,7 @@ class TarArchive(Archive):
                 yield info.name
 
     def read(self, name):
-        if self.f is None:
-            return None
-
+        if self.f is None: return None
         try:
             return self.f.extractfile(name).read()
         except KeyError:
@@ -54,16 +51,13 @@ class ZipArchive(Archive):
         return self
 
     def members(self):
-        if self.f is None:
-            return []
+        if self.f is None: return []
         else:
             for name in self.f.namelist():
                 yield name
 
     def read(self, name):
-        if self.f is None:
-            return None
-
+        if self.f is None: return None
         try:
             return self.f.open(name).read()
         except KeyError:

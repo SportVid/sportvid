@@ -1,6 +1,8 @@
-from typing import Dict
 import logging
 import json
+from django.db import transaction
+from django.conf import settings
+from typing import Dict
 
 from backend.models import (
     CalibrationAssets,
@@ -8,15 +10,11 @@ from backend.models import (
     Video,
 )
 from backend.plugin_manager import PluginManager
-
-from ..utils.analyser_client import TaskAnalyserClient
-from data import DataManager
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-from django.db import transaction
-from django.conf import settings
-import numpy as np
-import logging
+from data import DataManager
+from ..utils.analyser_client import TaskAnalyserClient
+
 
 @PluginManager.export_parser("calibration_static_dlt")
 class CalibrationStaticDltParser(Parser):
@@ -80,9 +78,7 @@ class CalibrationStaticDlt(Task):
         plugin_parameters = {
             "point_correspondences": json.dumps(point_correspondences_dict),
         }
-
         manager = DataManager(self.config["output_path"]) 
-        # TODO use DataManager and use point_correspondences as input instead of parameters
         client = TaskAnalyserClient(
             host=self.config["analyser_host"],
             port=self.config["analyser_port"],
@@ -97,16 +93,14 @@ class CalibrationStaticDlt(Task):
             downloads=["homography"],
         )
 
-        if result is None:
-            raise Exception
+        if result is None: raise Exception
 
         with transaction.atomic():
             with result[1]["homography"] as homography_data:
-                # update homography matrix in database
                 homography_matrix = homography_data.y.tolist()
                 data_db.homography_matrix = homography_matrix
                 data_db.save()
-                logging.info(f"Updated homography matrix {homography_matrix} for calibration asset {data_db.id}")
+                logging.debug(f"Updated homography matrix {homography_matrix} for calibration asset {data_db.id}")
 
         return {
             "plugin_run": plugin_run.id.hex,
