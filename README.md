@@ -8,8 +8,6 @@ https://sportvid.github.io/
 ### Requirements
     * [docker](https://docs.docker.com/get-docker/)
     * [docker-compose](https://docs.docker.com/compose/install/)
-    * [docker](https://docs.docker.com/get-docker/)
-    * [docker-compose](https://docs.docker.com/compose/install/)
 
 ### Setup process
 
@@ -30,13 +28,6 @@ https://sportvid.github.io/
     sudo mkdir tmp
     sudo mkdir predictions
     sudo mkdir backend_cache
-    cd sportvid
-    sudo mkdir cache
-    sudo mkdir analyser
-    sudo mkdir media
-    sudo mkdir tmp
-    sudo mkdir predictions
-    sudo mkdir backend_cache
     wget https://next.hessenbox.de/public.php/dav/files/JDnBxSKynARpwWm/?accept=zip -O models.tar.gz
     sudo tar -xf models.tar.gz --directory .
     rm -rf models.tar.gz
@@ -47,9 +38,6 @@ https://sportvid.github.io/
     Prepare:
     ```sh
     uv sync
-    ```
-    Start (only CPU):
-    ```sh
     ```
     Start (only CPU):
     ```sh
