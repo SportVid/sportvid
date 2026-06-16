@@ -8,8 +8,12 @@ https://sportvid.github.io/
 ### Requirements
     * [docker](https://docs.docker.com/get-docker/)
     * [docker-compose](https://docs.docker.com/compose/install/)
+    * [docker](https://docs.docker.com/get-docker/)
+    * [docker-compose](https://docs.docker.com/compose/install/)
 
 ### Setup process
+
+1. **Clone the repository:**
 
 1. **Clone the repository:**
     ```sh
@@ -17,7 +21,15 @@ https://sportvid.github.io/
     cd sportvid
     ```
 2. **Prepare for deployment:**
+2. **Prepare for deployment:**
     ```sh
+    cd sportvid
+    sudo mkdir cache
+    sudo mkdir analyser
+    sudo mkdir media
+    sudo mkdir tmp
+    sudo mkdir predictions
+    sudo mkdir backend_cache
     cd sportvid
     sudo mkdir cache
     sudo mkdir analyser
@@ -31,8 +43,13 @@ https://sportvid.github.io/
     ```
 3. **Build and start:**
     Prepare:
+3. **Build and start:**
+    Prepare:
     ```sh
     uv sync
+    ```
+    Start (only CPU):
+    ```sh
     ```
     Start (only CPU):
     ```sh
@@ -43,7 +60,13 @@ https://sportvid.github.io/
     sudo docker compose -f docker-compose.cuda.yml up --build
     ```
 4. **Apply database migrations and build frontend packages:**
+    GPU version (if NVIDIA GPU available):
     ```sh
+    sudo docker compose -f docker-compose.cuda.yml up --build
+    ```
+4. **Apply database migrations and build frontend packages:**
+    ```sh
+    docker compose exec backend python3 backend/src/backend/manage.py migrate
     docker compose exec backend python3 backend/src/backend/manage.py migrate
     sudo docker compose exec frontend npm install
     sudo docker compose exec frontend npm run build

@@ -1,6 +1,8 @@
-from typing import Dict
 import logging
 import numpy as np
+from django.db import transaction
+from django.conf import settings
+from typing import Dict
 
 from backend.models import (
     ClusterTimelineItem,
@@ -10,15 +12,11 @@ from backend.models import (
     SportVidUser,
     Timeline,
 )
-
 from backend.plugin_manager import PluginManager
-
-from ..utils.analyser_client import TaskAnalyserClient
-from data import DataManager, ImageEmbedding
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-from django.db import transaction
-from django.conf import settings
+from data import DataManager, ImageEmbedding
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 logger = logging.getLogger(__name__)

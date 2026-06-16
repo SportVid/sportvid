@@ -1,6 +1,7 @@
 import logging
+from django.db import transaction
+from django.conf import settings
 from typing import Dict, List
-
 
 from backend.models import (
     PluginRun,
@@ -9,14 +10,10 @@ from backend.models import (
     Timeline,
 )
 from backend.plugin_manager import PluginManager
-
-from ..utils.analyser_client import TaskAnalyserClient
-from data import DataManager, ListData
 from backend.utils.parser import Parser
 from backend.utils.task import Task
-
-from django.db import transaction
-from django.conf import settings
+from data import DataManager, ListData
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 logger = logging.getLogger(__name__)
@@ -60,18 +57,11 @@ class AggregateScalar(Task):
         )
 
         timelines = manager.create_data("ListData")
-
         with timelines:
             for timeline_id in parameters.get("timeline_ids"):
-                logger.debug(
-                    f"Get probabilities from scalar timeline with id: {timeline_id}"
-                )
-
                 timeline_db = Timeline.objects.get(id=timeline_id)
                 plugin_data_id = timeline_db.plugin_run_result.data_id
-
                 data = manager.load(plugin_data_id)
-
                 timelines.add_data(data)
 
         timelines_id = client.upload_data(timelines)
@@ -85,9 +75,7 @@ class AggregateScalar(Task):
             inputs={"timelines": timelines_id},
             downloads=["probs"],
         )
-
-        if result is None:
-            raise Exception
+        if result is None: raise Exception
 
         if dry_run or plugin_run is None:
             logging.warning("dry_run or plugin_run is None")
@@ -99,7 +87,7 @@ class AggregateScalar(Task):
                     plugin_run=plugin_run,
                     data_id=data.id,
                     name="aggregate_scalar",
-                    type=PluginRunResult.TYPE_SCALAR,  # S stands for SCALAR_DATA
+                    type=PluginRunResult.TYPE_SCALAR,
                 )
                 timeline_db = Timeline.objects.create(
                     video=video,

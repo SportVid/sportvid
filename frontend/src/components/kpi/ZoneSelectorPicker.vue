@@ -13,94 +13,344 @@
         </v-btn>
       </div>
 
-      <!-- 3×3 grid: [corner|top-3|corner] / [left-3|pitch|right-5] / [corner|bottom-5|corner] -->
-      <div class="zone-grid">
-        <!-- [0,0] corner -->
-        <div />
-
-        <!-- [0,1] top: 3-split transverse -->
-        <div class="top-bands" :style="{ paddingLeft: am.left + 'px' }">
-          <button
-            v-for="(band, j) in TRANS_BANDS_3"
-            :key="j"
-            class="zone-band-btn"
-            :class="{ 'zone-band-active': isColBandSelected(band.cols) }"
-            :style="{ width: (band.x1 - band.x0) * am.width + 'px' }"
-            @click="toggleColBand(band.cols)"
-          />
+      <!-- Handball: football-style grid with row/col band buttons -->
+      <template v-if="isHandball">
+        <div class="zone-grid zone-grid-handball">
+          <!-- [0,0] left: 3 row bands -->
+          <div class="side-bands" :style="{ paddingTop: am.top + 'px' }">
+            <button
+              v-for="(band, i) in HB_ROW_BANDS"
+              :key="i"
+              class="zone-band-btn"
+              :class="{ 'zone-band-active': isHbRowBandSelected(band.zoneIds) }"
+              :style="{ height: (band.y1 - band.y0) * am.height + 'px' }"
+              @click="toggleHbRowBand(band.zoneIds)"
+            />
+          </div>
+          <!-- [0,1] pitch image + canvas -->
+          <div style="position: relative; line-height: 0">
+            <img ref="pitchImg" :src="imgSrc" @load="onImgLoad" class="zone-pitch-img" />
+            <canvas
+              ref="zoneCanvas"
+              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%"
+              @click="onCanvasClick"
+              @mousemove="onCanvasMouseMove"
+              @mouseleave="onCanvasLeave"
+            />
+          </div>
+          <!-- [1,0] empty corner -->
+          <div />
+          <!-- [1,1] bottom: 4 col bands (2 per half) -->
+          <div class="top-bands" :style="{ paddingLeft: am.left + 'px' }">
+            <button
+              v-for="(band, j) in HB_COL_BANDS"
+              :key="j"
+              class="zone-band-btn"
+              :class="{ 'zone-band-active': isHbColBandSelected(band.half, band.zoneIds) }"
+              :style="{ width: (band.x1 - band.x0) * am.width + 'px' }"
+              @click="toggleHbColBand(band.half, band.zoneIds)"
+            />
+          </div>
         </div>
+      </template>
 
-        <!-- [0,2] corner -->
-        <div />
-
-        <!-- [1,0] left: 3-split longitudinal -->
-        <div class="side-bands" :style="{ paddingTop: am.top + 'px' }">
-          <button
-            v-for="(band, i) in LONG_BANDS_3"
-            :key="i"
-            class="zone-band-btn"
-            :class="{ 'zone-band-active': isRowBandSelected(band.rows) }"
-            :style="{ height: (band.y1 - band.y0) * am.height + 'px' }"
-            @click="toggleRowBand(band.rows)"
-          />
+      <!-- Basketball: handball-style grid with row/col band buttons -->
+      <template v-else-if="isBasketball">
+        <div class="zone-grid zone-grid-handball">
+          <!-- left: 5 row bands -->
+          <div class="side-bands" :style="{ paddingTop: am.top + 'px' }">
+            <button
+              v-for="(band, i) in BB_ROW_BANDS"
+              :key="i"
+              class="zone-band-btn"
+              :class="{ 'zone-band-active': isBbRowBandSelected(band.zoneIds) }"
+              :style="{ height: (band.y1 - band.y0) * am.height + 'px' }"
+              @click="toggleBbRowBand(band.zoneIds)"
+            />
+          </div>
+          <!-- pitch image + canvas -->
+          <div style="position: relative; line-height: 0">
+            <img ref="pitchImg" :src="imgSrc" @load="onImgLoad" class="zone-pitch-img" />
+            <canvas
+              ref="zoneCanvas"
+              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%"
+              @click="onCanvasClick"
+              @mousemove="onCanvasMouseMove"
+              @mouseleave="onCanvasLeave"
+            />
+          </div>
+          <!-- empty corner -->
+          <div />
+          <!-- bottom: 4 col bands (2 per half) -->
+          <div class="top-bands" :style="{ paddingLeft: am.left + 'px' }">
+            <button
+              v-for="(band, j) in BB_COL_BANDS"
+              :key="j"
+              class="zone-band-btn"
+              :class="{ 'zone-band-active': isBbColBandSelected(band.half, band.zoneIds) }"
+              :style="{ width: (band.x1 - band.x0) * am.width + 'px' }"
+              @click="toggleBbColBand(band.half, band.zoneIds)"
+            />
+          </div>
         </div>
+      </template>
 
-        <!-- [1,1] pitch image + canvas overlay -->
-        <div style="position: relative; line-height: 0">
-          <img ref="pitchImg" :src="imgSrc" @load="onImgLoad" class="zone-pitch-img" />
-          <canvas
-            ref="zoneCanvas"
-            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%"
-            @click="onCanvasClick"
-            @mousemove="onCanvasMouseMove"
-            @mouseleave="onCanvasLeave"
-          />
+      <!-- Soccer: 3×3 grid with band buttons -->
+      <template v-else>
+        <div class="zone-grid">
+          <!-- [0,0] corner -->
+          <div />
+
+          <!-- [0,1] top: 3-split transverse -->
+          <div class="top-bands" :style="{ paddingLeft: am.left + 'px' }">
+            <button
+              v-for="(band, j) in TRANS_BANDS_3"
+              :key="j"
+              class="zone-band-btn"
+              :class="{ 'zone-band-active': isColBandSelected(band.cols) }"
+              :style="{ width: (band.x1 - band.x0) * am.width + 'px' }"
+              @click="toggleColBand(band.cols)"
+            />
+          </div>
+
+          <!-- [0,2] corner -->
+          <div />
+
+          <!-- [1,0] left: 3-split longitudinal -->
+          <div class="side-bands" :style="{ paddingTop: am.top + 'px' }">
+            <button
+              v-for="(band, i) in LONG_BANDS_3"
+              :key="i"
+              class="zone-band-btn"
+              :class="{ 'zone-band-active': isRowBandSelected(band.rows) }"
+              :style="{ height: (band.y1 - band.y0) * am.height + 'px' }"
+              @click="toggleRowBand(band.rows)"
+            />
+          </div>
+
+          <!-- [1,1] pitch image + canvas overlay -->
+          <div style="position: relative; line-height: 0">
+            <img ref="pitchImg" :src="imgSrc" @load="onImgLoad" class="zone-pitch-img" />
+            <canvas
+              ref="zoneCanvas"
+              style="position: absolute; top: 0; left: 0; width: 100%; height: 100%"
+              @click="onCanvasClick"
+              @mousemove="onCanvasMouseMove"
+              @mouseleave="onCanvasLeave"
+            />
+          </div>
+
+          <!-- [1,2] right: 5-split longitudinal -->
+          <div class="side-bands" :style="{ paddingTop: am.top + 'px' }">
+            <button
+              v-for="(band, i) in LONG_BANDS_5"
+              :key="i"
+              class="zone-band-btn"
+              :class="{ 'zone-band-active': isRowBandSelected(band.rows) }"
+              :style="{ height: (band.y1 - band.y0) * am.height + 'px' }"
+              @click="toggleRowBand(band.rows)"
+            />
+          </div>
+
+          <!-- [2,0] corner -->
+          <div />
+
+          <!-- [2,1] bottom: 5-split transverse -->
+          <div class="top-bands" :style="{ paddingLeft: am.left + 'px' }">
+            <button
+              v-for="(band, j) in TRANS_BANDS_5"
+              :key="j"
+              class="zone-band-btn"
+              :class="{ 'zone-band-active': isColBandSelected(band.cols) }"
+              :style="{ width: (band.x1 - band.x0) * am.width + 'px' }"
+              @click="toggleColBand(band.cols)"
+            />
+          </div>
+
+          <!-- [2,2] corner -->
+          <div />
         </div>
-
-        <!-- [1,2] right: 5-split longitudinal -->
-        <div class="side-bands" :style="{ paddingTop: am.top + 'px' }">
-          <button
-            v-for="(band, i) in LONG_BANDS_5"
-            :key="i"
-            class="zone-band-btn"
-            :class="{ 'zone-band-active': isRowBandSelected(band.rows) }"
-            :style="{ height: (band.y1 - band.y0) * am.height + 'px' }"
-            @click="toggleRowBand(band.rows)"
-          />
-        </div>
-
-        <!-- [2,0] corner -->
-        <div />
-
-        <!-- [2,1] bottom: 5-split transverse -->
-        <div class="top-bands" :style="{ paddingLeft: am.left + 'px' }">
-          <button
-            v-for="(band, j) in TRANS_BANDS_5"
-            :key="j"
-            class="zone-band-btn"
-            :class="{ 'zone-band-active': isColBandSelected(band.cols) }"
-            :style="{ width: (band.x1 - band.x0) * am.width + 'px' }"
-            @click="toggleColBand(band.cols)"
-          />
-        </div>
-
-        <!-- [2,2] corner -->
-        <div />
-      </div>
+      </template>
     </div>
   </v-card>
 </template>
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from "vue";
+import { useI18n } from "vue-i18n";
+import {
+  HANDBALL_ZONES,
+  BASKETBALL_ZONES,
+  getSportZonePolygon,
+  isInSportZone,
+} from "@/plugins/sport_zones";
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
   sport: { type: Object, required: true },
   areaSize: { type: String, default: "full" },
+  mirrorXY: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["update:modelValue"]);
+const { t } = useI18n();
+
+// ── Sport-specific zone support ───────────────────────────────────────────────
+
+const isHandball = computed(() => props.sport?.key === 'handball');
+const isBasketball = computed(() => props.sport?.key === 'basketball');
+const isSportSpecific = computed(() => isHandball.value || isBasketball.value);
+
+const currentSportZones = computed(() =>
+  isHandball.value ? HANDBALL_ZONES : isBasketball.value ? BASKETBALL_ZONES : []
+);
+
+// ── Basketball zone selection (per-half, like handball) ──────────────────────
+
+// Row bands go top-to-bottom in canvas coordinates (y=0 = visual top, y=1 = visual bottom)
+const BB_ROW_BANDS = [
+  { y0: 0,    y1: 0.06, zoneIds: [2] },
+  { y0: 0.06, y1: 0.34, zoneIds: [5, 8] },
+  { y0: 0.34, y1: 0.66, zoneIds: [0, 4, 7] },
+  { y0: 0.66, y1: 0.94, zoneIds: [3, 6] },
+  { y0: 0.94, y1: 1,    zoneIds: [1] },
+];
+// Split at x=0.29 (3-point break mark); corners (1,2) belong to the outer (3pt) band
+const BB_COL_BANDS = [
+  { x0: 0,    x1: 0.29, half: 0, zoneIds: [0, 3, 4, 5] },
+  { x0: 0.29, x1: 0.5,  half: 0, zoneIds: [1, 2, 6, 7, 8] },
+  { x0: 0.5,  x1: 0.71, half: 1, zoneIds: [1, 2, 6, 7, 8] },
+  { x0: 0.71, x1: 1,    half: 1, zoneIds: [0, 3, 4, 5] },
+];
+
+const selectedBbKeys = computed(() => {
+  const set = new Set();
+  for (const z of props.modelValue) {
+    if (z.sportZone && z.sportKey === 'basketball' && z.half !== undefined)
+      set.add(`h${z.half}_z${z.zoneId}`);
+  }
+  return set;
+});
+
+const isBbZoneSelected = (half, zoneId) => selectedBbKeys.value.has(`h${half}_z${zoneId}`);
+
+function emitBbKeys(keySet) {
+  const zones = [];
+  for (const key of keySet) {
+    const m = key.match(/^h(\d)_z(\d+)$/);
+    if (m) zones.push({ sportZone: true, sportKey: 'basketball', zoneId: +m[2], half: +m[1] });
+  }
+  emit('update:modelValue', zones);
+}
+
+function toggleBbZone(half, zoneId) {
+  const cur = new Set(selectedBbKeys.value);
+  const key = `h${half}_z${zoneId}`;
+  if (cur.has(key)) cur.delete(key); else cur.add(key);
+  emitBbKeys(cur);
+}
+
+function toggleBbRowBand(zoneIds) {
+  const keys = [];
+  for (let h = 0; h < 2; h++) for (const z of zoneIds) keys.push(`h${h}_z${z}`);
+  const cur = new Set(selectedBbKeys.value);
+  const allSel = keys.every((k) => cur.has(k));
+  if (allSel) keys.forEach((k) => cur.delete(k)); else keys.forEach((k) => cur.add(k));
+  emitBbKeys(cur);
+}
+
+function toggleBbColBand(half, zoneIds) {
+  const keys = zoneIds.map((z) => `h${half}_z${z}`);
+  const cur = new Set(selectedBbKeys.value);
+  const allSel = keys.every((k) => cur.has(k));
+  if (allSel) keys.forEach((k) => cur.delete(k)); else keys.forEach((k) => cur.add(k));
+  emitBbKeys(cur);
+}
+
+const isBbRowBandSelected = (zoneIds) => {
+  if (isAllData.value) return true;
+  for (let h = 0; h < 2; h++) for (const z of zoneIds)
+    if (!selectedBbKeys.value.has(`h${h}_z${z}`)) return false;
+  return true;
+};
+
+const isBbColBandSelected = (half, zoneIds) => {
+  if (isAllData.value) return true;
+  return zoneIds.every((z) => selectedBbKeys.value.has(`h${half}_z${z}`));
+};
+
+// ── Handball zone selection (per-half, football-style) ───────────────────────
+
+// Structural band definitions matching sport_zones.js constants
+// HB_GOAL_YL=0.425, HB_GOAL_YH=0.575, HB_CORNER_X=0.2125
+const HB_ROW_BANDS = [
+  { y0: 0,     y1: 0.425, zoneIds: [0, 1] },
+  { y0: 0.425, y1: 0.575, zoneIds: [2] },
+  { y0: 0.575, y1: 1,     zoneIds: [3, 4] },
+];
+const HB_COL_BANDS = [
+  { x0: 0,      x1: 0.2125, half: 0, zoneIds: [0, 4] },
+  { x0: 0.2125, x1: 0.5,    half: 0, zoneIds: [1, 2, 3] },
+  { x0: 0.5,    x1: 0.7875, half: 1, zoneIds: [1, 2, 3] },
+  { x0: 0.7875, x1: 1,      half: 1, zoneIds: [0, 4] },
+];
+
+// Set of "h{half}_z{zoneId}" keys for selected handball zones
+const selectedHbKeys = computed(() => {
+  const set = new Set();
+  for (const z of props.modelValue) {
+    if (z.sportZone && z.sportKey === 'handball' && z.half !== undefined)
+      set.add(`h${z.half}_z${z.zoneId}`);
+  }
+  return set;
+});
+
+const isHbZoneSelected = (half, zoneId) => selectedHbKeys.value.has(`h${half}_z${zoneId}`);
+
+function emitHbKeys(keySet) {
+  const zones = [];
+  for (const key of keySet) {
+    const m = key.match(/^h(\d)_z(\d)$/);
+    if (m) zones.push({ sportZone: true, sportKey: 'handball', zoneId: +m[2], half: +m[1] });
+  }
+  emit('update:modelValue', zones);
+}
+
+function toggleHbZone(half, zoneId) {
+  const cur = new Set(selectedHbKeys.value);
+  const key = `h${half}_z${zoneId}`;
+  if (cur.has(key)) cur.delete(key); else cur.add(key);
+  emitHbKeys(cur);
+}
+
+function toggleHbRowBand(zoneIds) {
+  const keys = [];
+  for (let h = 0; h < 2; h++) for (const z of zoneIds) keys.push(`h${h}_z${z}`);
+  const cur = new Set(selectedHbKeys.value);
+  const allSel = keys.every((k) => cur.has(k));
+  if (allSel) keys.forEach((k) => cur.delete(k)); else keys.forEach((k) => cur.add(k));
+  emitHbKeys(cur);
+}
+
+function toggleHbColBand(half, zoneIds) {
+  const keys = zoneIds.map((z) => `h${half}_z${z}`);
+  const cur = new Set(selectedHbKeys.value);
+  const allSel = keys.every((k) => cur.has(k));
+  if (allSel) keys.forEach((k) => cur.delete(k)); else keys.forEach((k) => cur.add(k));
+  emitHbKeys(cur);
+}
+
+const isHbRowBandSelected = (zoneIds) => {
+  if (isAllData.value) return true;
+  for (let h = 0; h < 2; h++) for (const z of zoneIds)
+    if (!selectedHbKeys.value.has(`h${h}_z${z}`)) return false;
+  return true;
+};
+
+const isHbColBandSelected = (half, zoneIds) => {
+  if (isAllData.value) return true;
+  return zoneIds.every((z) => selectedHbKeys.value.has(`h${half}_z${z}`));
+};
 
 // ── "All Data" marker zone (passes everything, including outside pitch) ──────
 const ALL_DATA_ZONE = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity, allData: true };
@@ -196,6 +446,22 @@ function emitCells(keySet) {
 }
 
 const selectAll = () => {
+  if (isHandball.value) {
+    const zones = [];
+    for (let h = 0; h < 2; h++)
+      for (let i = 0; i < 5; i++)
+        zones.push({ sportZone: true, sportKey: 'handball', zoneId: i, half: h });
+    emit('update:modelValue', zones);
+    return;
+  }
+  if (isBasketball.value) {
+    const zones = [];
+    for (let h = 0; h < 2; h++)
+      for (const z of BASKETBALL_ZONES)
+        zones.push({ sportZone: true, sportKey: 'basketball', zoneId: z.id, half: h });
+    emit('update:modelValue', zones);
+    return;
+  }
   const all = new Set();
   for (let r = 0; r < N_ROWS; r++) for (let c = 0; c < N_COLS; c++) all.add(cellKey(r, c));
   emitCells(all);
@@ -211,8 +477,9 @@ function toggleCell(r, c) {
 }
 
 function toggleColBand(cols) {
+  const effectiveCols = props.mirrorXY ? cols.map((c) => N_COLS - 1 - c) : cols;
   const keys = [];
-  for (let r = 0; r < N_ROWS; r++) for (const c of cols) keys.push(cellKey(r, c));
+  for (let r = 0; r < N_ROWS; r++) for (const c of effectiveCols) keys.push(cellKey(r, c));
   const cur = new Set(selectedCellKeys.value);
   const allSel = keys.every((k) => cur.has(k));
   if (allSel) keys.forEach((k) => cur.delete(k));
@@ -221,8 +488,9 @@ function toggleColBand(cols) {
 }
 
 function toggleRowBand(rows) {
+  const effectiveRows = props.mirrorXY ? rows.map((r) => N_ROWS - 1 - r) : rows;
   const keys = [];
-  for (const r of rows) for (let c = 0; c < N_COLS; c++) keys.push(cellKey(r, c));
+  for (const r of effectiveRows) for (let c = 0; c < N_COLS; c++) keys.push(cellKey(r, c));
   const cur = new Set(selectedCellKeys.value);
   const allSel = keys.every((k) => cur.has(k));
   if (allSel) keys.forEach((k) => cur.delete(k));
@@ -232,16 +500,18 @@ function toggleRowBand(rows) {
 
 const isColBandSelected = (cols) => {
   if (isAllData.value) return true;
+  const effectiveCols = props.mirrorXY ? cols.map((c) => N_COLS - 1 - c) : cols;
   for (let r = 0; r < N_ROWS; r++)
-    for (const c of cols) if (!selectedCellKeys.value.has(cellKey(r, c))) return false;
-  return cols.length > 0;
+    for (const c of effectiveCols) if (!selectedCellKeys.value.has(cellKey(r, c))) return false;
+  return effectiveCols.length > 0;
 };
 
 const isRowBandSelected = (rows) => {
   if (isAllData.value) return true;
-  for (const r of rows)
+  const effectiveRows = props.mirrorXY ? rows.map((r) => N_ROWS - 1 - r) : rows;
+  for (const r of effectiveRows)
     for (let c = 0; c < N_COLS; c++) if (!selectedCellKeys.value.has(cellKey(r, c))) return false;
-  return rows.length > 0;
+  return effectiveRows.length > 0;
 };
 
 // ── Pitch image & area metrics ───────────────────────────────────────────────
@@ -293,6 +563,8 @@ onBeforeUnmount(() => resizeObserver.disconnect());
 // ── Canvas rendering ─────────────────────────────────────────────────────────
 
 const hoveredCell = ref(null);
+const hoveredBbZone = ref(null);  // basketball: { half, zoneId }
+const hoveredHbZone = ref(null);  // handball:   { half, zoneId }
 
 function renderCanvas() {
   const canvas = zoneCanvas.value;
@@ -307,8 +579,108 @@ function renderCanvas() {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, w, h);
 
+  if (props.mirrorXY) {
+    ctx.translate(w, h);
+    ctx.scale(-1, -1);
+  }
+
   const { left: al, top: at, width: aw, height: ah } = am.value;
   if (!aw || !ah) return;
+
+  const rgb = getComputedStyle(canvas).getPropertyValue("--v-theme-secondary").trim();
+  const fillColor = `rgba(${rgb},0.45)`;
+  const strokeColor = `rgba(${rgb},1)`;
+
+  // ── Handball zone rendering (per-half) ───────────────────────────────────
+  if (isHandball.value) {
+    const toCanvasPt = ([nx, ny]) => [al + nx * aw, at + ny * ah];
+    const drawPoly = (poly) => {
+      if (poly.length < 2) return;
+      const [x0, y0] = toCanvasPt(poly[0]);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      for (let i = 1; i < poly.length; i++) {
+        const [xi, yi] = toCanvasPt(poly[i]);
+        ctx.lineTo(xi, yi);
+      }
+      ctx.closePath();
+    };
+
+    if (isAllData.value) {
+      ctx.fillStyle = fillColor;
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, w, h);
+    } else {
+      for (let half = 0; half < 2; half++) {
+        for (const zone of currentSportZones.value) {
+          const poly = getSportZonePolygon('handball', zone.id, half);
+          const selected = isHbZoneSelected(half, zone.id);
+          drawPoly(poly);
+          if (selected) { ctx.fillStyle = fillColor; ctx.fill(); }
+          ctx.strokeStyle = selected ? strokeColor : 'rgba(80,80,80,0.35)';
+          ctx.lineWidth = selected ? 1.5 : 0.7;
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Hover highlight
+    if (hoveredHbZone.value !== null) {
+      const poly = getSportZonePolygon('handball', hoveredHbZone.value.zoneId, hoveredHbZone.value.half);
+      drawPoly(poly);
+      ctx.fillStyle = `rgba(${rgb},0.2)`;
+      ctx.fill();
+    }
+    return;
+  }
+
+  // ── Basketball zone rendering (per-half, like handball) ──────────────────
+  if (isBasketball.value) {
+    const toCanvasPt = ([nx, ny]) => [al + nx * aw, at + ny * ah];
+    const drawPoly = (poly) => {
+      if (poly.length < 2) return;
+      const [x0, y0] = toCanvasPt(poly[0]);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      for (let i = 1; i < poly.length; i++) {
+        const [xi, yi] = toCanvasPt(poly[i]);
+        ctx.lineTo(xi, yi);
+      }
+      ctx.closePath();
+    };
+
+    if (isAllData.value) {
+      ctx.fillStyle = fillColor;
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(0, 0, w, h);
+    } else {
+      for (let half = 0; half < 2; half++) {
+        for (const zone of BASKETBALL_ZONES) {
+          const poly = getSportZonePolygon('basketball', zone.id, half);
+          const selected = isBbZoneSelected(half, zone.id);
+          drawPoly(poly);
+          if (selected) { ctx.fillStyle = fillColor; ctx.fill(); }
+          ctx.strokeStyle = selected ? strokeColor : 'rgba(80,80,80,0.35)';
+          ctx.lineWidth = selected ? 1.5 : 0.7;
+          ctx.stroke();
+        }
+      }
+    }
+
+    if (hoveredBbZone.value !== null) {
+      const poly = getSportZonePolygon('basketball', hoveredBbZone.value.zoneId, hoveredBbZone.value.half);
+      drawPoly(poly);
+      ctx.fillStyle = `rgba(${rgb},0.2)`;
+      ctx.fill();
+    }
+    return;
+  }
+
+  // ── Soccer rectangular grid rendering ─────────────────────────────────────
 
   // Draw non-uniform grid lines (5-split boundaries)
   ctx.strokeStyle = "rgba(80,80,80,0.45)";
@@ -328,27 +700,19 @@ function renderCanvas() {
     ctx.stroke();
   }
 
-  // Draw selected cells or "all data" overlay
-  const rgb = getComputedStyle(canvas).getPropertyValue("--v-theme-secondary").trim();
-  const fillColor = `rgba(${rgb},0.5)`;
-  const strokeColor = `rgba(${rgb},1)`;
-
   if (isAllData.value) {
-    // All Data: fill entire image, one border around image
     ctx.fillStyle = fillColor;
     ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, w, h);
   } else if (selectedCellKeys.value.size === N_ROWS * N_COLS) {
-    // Full Size: fill pitch area, one border around pitch
     ctx.fillStyle = fillColor;
     ctx.fillRect(al, at, aw, ah);
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = 2;
     ctx.strokeRect(al, at, aw, ah);
   } else {
-    // Individual zones: fill each cell, draw contour around connected regions
     const sel = selectedCellKeys.value;
     for (const key of sel) {
       const [r, c] = key.split("_").map(Number);
@@ -359,7 +723,6 @@ function renderCanvas() {
       ctx.fillStyle = fillColor;
       ctx.fillRect(x, y, cw, ch);
     }
-    // Contour: only draw edges where neighbor is not selected
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
@@ -369,27 +732,14 @@ function renderCanvas() {
       const y = at + LONG_BOUNDS_5[r] * ah;
       const cw = (TRANS_BOUNDS_5[c + 1] - TRANS_BOUNDS_5[c]) * aw;
       const ch = (LONG_BOUNDS_5[r + 1] - LONG_BOUNDS_5[r]) * ah;
-      if (!sel.has(cellKey(r - 1, c))) {
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + cw, y);
-      }
-      if (!sel.has(cellKey(r + 1, c))) {
-        ctx.moveTo(x, y + ch);
-        ctx.lineTo(x + cw, y + ch);
-      }
-      if (!sel.has(cellKey(r, c - 1))) {
-        ctx.moveTo(x, y);
-        ctx.lineTo(x, y + ch);
-      }
-      if (!sel.has(cellKey(r, c + 1))) {
-        ctx.moveTo(x + cw, y);
-        ctx.lineTo(x + cw, y + ch);
-      }
+      if (!sel.has(cellKey(r - 1, c))) { ctx.moveTo(x, y); ctx.lineTo(x + cw, y); }
+      if (!sel.has(cellKey(r + 1, c))) { ctx.moveTo(x, y + ch); ctx.lineTo(x + cw, y + ch); }
+      if (!sel.has(cellKey(r, c - 1))) { ctx.moveTo(x, y); ctx.lineTo(x, y + ch); }
+      if (!sel.has(cellKey(r, c + 1))) { ctx.moveTo(x + cw, y); ctx.lineTo(x + cw, y + ch); }
     }
     ctx.stroke();
   }
 
-  // Draw hovered cell
   if (hoveredCell.value) {
     const { r, c } = hoveredCell.value;
     const x = al + TRANS_BOUNDS_5[c] * aw;
@@ -403,7 +753,7 @@ function renderCanvas() {
 
 // ── Canvas interaction ────────────────────────────────────────────────────────
 
-function getCell(event) {
+function _canvasNormCoords(event) {
   const canvas = zoneCanvas.value;
   if (!canvas) return null;
   const rect = canvas.getBoundingClientRect();
@@ -412,34 +762,85 @@ function getCell(event) {
   const cx = (event.clientX - rect.left) * scaleX;
   const cy = (event.clientY - rect.top) * scaleY;
   const { left: al, top: at, width: aw, height: ah } = am.value;
-  if (cx < al || cx > al + aw || cy < at || cy > at + ah) return null;
+  if (!aw || !ah) return null;
+  let xRel = (cx - al) / aw;
+  let yRel = (cy - at) / ah;
+  if (props.mirrorXY) { xRel = 1 - xRel; yRel = 1 - yRel; }
+  return { xRel, yRel, inArea: cx >= al && cx <= al + aw && cy >= at && cy <= at + ah };
+}
 
-  // Find which cell boundary the click falls in
-  const xRel = (cx - al) / aw;
-  const yRel = (cy - at) / ah;
+function getBbZoneAtPoint(xRel, yRel) {
+  const half = xRel <= 0.5 ? 0 : 1;
+  for (const zone of BASKETBALL_ZONES) {
+    if (isInSportZone('basketball', zone.id, xRel, yRel, half)) return { half, zoneId: zone.id };
+  }
+  return null;
+}
+
+function getHbZoneAtPoint(xRel, yRel) {
+  const half = xRel <= 0.5 ? 0 : 1;
+  for (const zone of currentSportZones.value) {
+    if (isInSportZone('handball', zone.id, xRel, yRel, half)) return { half, zoneId: zone.id };
+  }
+  return null;
+}
+
+function getCell(event) {
+  const coords = _canvasNormCoords(event);
+  if (!coords || !coords.inArea) return null;
+  const { xRel, yRel } = coords;
   let c = N_COLS - 1;
   for (let j = 0; j < N_COLS; j++) {
-    if (xRel < TRANS_BOUNDS_5[j + 1]) {
-      c = j;
-      break;
-    }
+    if (xRel < TRANS_BOUNDS_5[j + 1]) { c = j; break; }
   }
   let r = N_ROWS - 1;
   for (let i = 0; i < N_ROWS; i++) {
-    if (yRel < LONG_BOUNDS_5[i + 1]) {
-      r = i;
-      break;
-    }
+    if (yRel < LONG_BOUNDS_5[i + 1]) { r = i; break; }
   }
   return { r, c };
 }
 
 function onCanvasClick(event) {
+  const coords = _canvasNormCoords(event);
+  if (!coords) return;
+  if (isHandball.value) {
+    const z = getHbZoneAtPoint(coords.xRel, coords.yRel);
+    if (z !== null) toggleHbZone(z.half, z.zoneId);
+    return;
+  }
+  if (isBasketball.value) {
+    const z = getBbZoneAtPoint(coords.xRel, coords.yRel);
+    if (z !== null) toggleBbZone(z.half, z.zoneId);
+    return;
+  }
   const cell = getCell(event);
   if (cell) toggleCell(cell.r, cell.c);
 }
 
 function onCanvasMouseMove(event) {
+  const coords = _canvasNormCoords(event);
+  if (isHandball.value) {
+    const z = coords ? getHbZoneAtPoint(coords.xRel, coords.yRel) : null;
+    const prev = hoveredHbZone.value;
+    const changed = (z === null) !== (prev === null) ||
+      (z && prev && (z.half !== prev.half || z.zoneId !== prev.zoneId));
+    if (changed) {
+      hoveredHbZone.value = z;
+      if (zoneCanvas.value) zoneCanvas.value.style.cursor = z ? 'pointer' : 'default';
+    }
+    return;
+  }
+  if (isBasketball.value) {
+    const z = coords ? getBbZoneAtPoint(coords.xRel, coords.yRel) : null;
+    const prev = hoveredBbZone.value;
+    const changed = (z === null) !== (prev === null) ||
+      (z && prev && (z.half !== prev.half || z.zoneId !== prev.zoneId));
+    if (changed) {
+      hoveredBbZone.value = z;
+      if (zoneCanvas.value) zoneCanvas.value.style.cursor = z ? 'pointer' : 'default';
+    }
+    return;
+  }
   const cell = getCell(event);
   const cur = hoveredCell.value;
   const changed =
@@ -452,11 +853,21 @@ function onCanvasMouseMove(event) {
 
 function onCanvasLeave() {
   hoveredCell.value = null;
+  hoveredBbZone.value = null;
+  hoveredHbZone.value = null;
 }
 
-watch([selectedCellKeys, hoveredCell, pitchSize, isAllData], () => renderCanvas());
+watch(
+  [selectedCellKeys, hoveredCell, pitchSize, isAllData, () => props.mirrorXY,
+   selectedBbKeys, hoveredBbZone, selectedHbKeys, hoveredHbZone],
+  () => renderCanvas()
+);
 watch(
   () => props.areaSize,
+  () => nextTick(() => measurePitch())
+);
+watch(
+  () => props.sport?.key,
   () => nextTick(() => measurePitch())
 );
 </script>
@@ -478,6 +889,11 @@ watch(
   grid-template-columns: 14px auto 14px;
   grid-template-rows: 14px auto 14px;
   gap: 2px;
+}
+
+.zone-grid-handball {
+  grid-template-columns: 14px auto;
+  grid-template-rows: auto 14px;
 }
 
 .top-bands {
@@ -519,4 +935,5 @@ watch(
   background: rgba(var(--v-theme-secondary), 1) !important;
   border-color: rgba(var(--v-theme-secondary), 1) !important;
 }
+
 </style>

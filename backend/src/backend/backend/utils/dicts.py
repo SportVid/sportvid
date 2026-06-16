@@ -1,5 +1,6 @@
 import logging
 import json
+import hashlib
 
 
 logger = logging.getLogger(__name__)
@@ -44,9 +45,6 @@ def flat_dict(data_dict, parse_json=False):
             result_map[k] = []
         result_map[k] = v
     return result_map
-
-
-import hashlib
 
 
 def flat_dict(data_dict, parse_json=False):

@@ -249,7 +249,6 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
         reply = analyser_pb2.ListPluginsReply()
 
         # print(self.managers["plugin_manager"].plugin_status())
-
         for _, plugin_class in self.managers["plugin_manager"].plugins().items():
             reply.plugins.extend([analyser_pb2.PluginInfo(name=plugin_class._name)])
 
@@ -431,6 +430,7 @@ def read_config(path):
         expanded_cfg_str = os.path.expandvars(raw_cfg_str)
         return yaml.safe_load(expanded_cfg_str)
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="")
 
@@ -520,7 +520,11 @@ def main():
         if "inference" not in config:
             config["inference"] = {
                 "type": "ray",
-                "params": {"host": "inference_ray", "status_port": 52365, "port": 8001},
+                "params": {
+                    "host": "inference_ray", 
+                    "status_port": 52365, 
+                    "port": 8001,
+                },
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
@@ -534,7 +538,11 @@ def main():
         if "inference" not in config:
             config["inference"] = {
                 "type": "ray",
-                "params": {"host": "inference_ray", "status_port": 52365, "port": 8001},
+                "params": {
+                    "host": "inference_ray", 
+                    "status_port": 52365, 
+                    "port": 8001,
+                },
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
@@ -548,7 +556,11 @@ def main():
         if "inference" not in config:
             config["inference"] = {
                 "type": "ray",
-                "params": {"host": "inference_ray", "status_port": 52365, "port": 8001},
+                "params": {
+                    "host": "inference_ray", 
+                    "status_port": 52365, 
+                    "port": 8001,
+                },
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
@@ -557,7 +569,7 @@ def main():
                 "port": 8001,
             }
         config["inference"]["params"]["port"] = args.inference_ray_port
-    # print(config, flush=True)
+
     server = Server(config)
     server.run()
     return 0

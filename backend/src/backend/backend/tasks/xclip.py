@@ -1,22 +1,17 @@
-from typing import Dict, List
 import logging
-
-from ..utils.analyser_client import TaskAnalyserClient
+from django.db import transaction
+from django.conf import settings
+from typing import Dict, List
 
 from backend.models import PluginRun, PluginRunResult, Video, Timeline
 from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_file
-
 from backend.utils.parser import Parser
 from backend.utils.task import Task
 
 from data import DataManager
-from django.db import transaction
+from ..utils.analyser_client import TaskAnalyserClient
 
-from django.conf import settings
-
-# NOTE: Für Aktionserkennung (Clip für Videos)
-# Fine-tuning, wsl. bessere Optionen mit dedizierten Methoden
 
 @PluginManager.export_parser("x_clip")
 class XCLIPParser(Parser):

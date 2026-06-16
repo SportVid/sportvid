@@ -16,17 +16,17 @@
               <v-card-title class="video-overview-title mt-2 mb-n2">
                 {{ item.name }}
               </v-card-title>
-              <div v-if="item.processing">
-                <v-card-text class="d-flex flex-column align-center justify-center">
+              <div v-if="item.processing" class="card-body card-body-processing">
+                <v-card-text class="d-flex flex-column align-center py-3">
                   <i class="mdi mdi-loading mdi-spin" style="font-size: 40px" />
-                  <div class="mt-4">
+                  <div class="mt-2">
                     {{ $t("video_view.video_processing") }}
                   </div>
                   <v-btn
                     size="small"
                     color="red"
                     variant="outlined"
-                    class="mt-4"
+                    class="mt-3"
                     @click="deleteVideo(item.id)"
                   >
                     <v-icon class="mr-1">mdi-trash-can-outline</v-icon>
@@ -34,15 +34,14 @@
                   </v-btn>
                 </v-card-text>
               </div>
-              <div v-else>
+              <div v-else class="card-body">
                 <v-card-text>
                   <div>{{ $t("video_view.video_id") }} {{ item.id }}</div>
                   <div>{{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}</div>
                   <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
                   <!-- <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div> -->
 
-                  <!-- <v-card-actions class="actions mt-n6 mb-n8"> -->
-                  <v-card-actions class="actions mt-2 mb-n2 justify-center" style="gap: 16px">
+                  <v-card-actions class="actions mt-n6 mb-n8 justify-center" style="gap: 16px">
                     <v-tooltip :text="$t('button.analyse')" location="top">
                       <template #activator="{ props }">
                         <v-btn variant="outlined" v-bind="props" @click="showVideo(item.id)">
@@ -66,7 +65,7 @@
                       </template>
                     </v-tooltip>
 
-                    <!-- <v-checkbox
+                    <v-checkbox
                       v-model="videoStore.selectedVideos[item.id]"
                       color="primary"
                       class="pt-5 ml-n1"
@@ -326,5 +325,17 @@ watch(
 
 .processing-card {
   opacity: 0.6;
+}
+
+.card-body {
+  height: 174px;
+  overflow: hidden;
+}
+
+.card-body-processing {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 </style>

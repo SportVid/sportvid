@@ -1,35 +1,29 @@
-from typing import Dict, List
 import logging
+from django.db import transaction
+from django.conf import settings
+from typing import Dict, List
 
-from ..utils.analyser_client import TaskAnalyserClient
-
-from backend.models import PluginRun, PluginRunResult, Video, Timeline
-from backend.plugin_manager import PluginManager
-from backend.utils import media_path_to_file
-
-from backend.utils.parser import Parser
-from backend.utils.task import Task
-
-from data import DataManager
 from backend.models import (
     Annotation,
     AnnotationCategory,
     PluginRun,
-    PluginRunResult,
     TimelineSegmentAnnotation,
     Video,
     SportVidUser,
     Timeline,
     TimelineSegment,
 )
-from django.db import transaction
-from django.conf import settings
+from backend.plugin_manager import PluginManager
+from backend.utils import media_path_to_file
+from backend.utils.parser import Parser
+from backend.utils.task import Task
+from data import DataManager
+from ..utils.analyser_client import TaskAnalyserClient
 
 
 @PluginManager.export_parser("whisper")
 class WhisperParser(Parser):
     def __init__(self):
-
         self.valid_parameter = {}
 
 

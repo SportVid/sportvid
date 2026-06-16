@@ -1,18 +1,16 @@
 import logging
 import os
 import uuid
-
 from random import random
-
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
-from backend.utils.color import rgb_to_hex, random_rgb
 
-from data import DataManager
 from backend.utils import media_path_to_file
+from backend.utils.color import rgb_to_hex, random_rgb
+from data import DataManager
 from .managers import SportVidUserManager
 
 
@@ -96,12 +94,15 @@ class Video(models.Model):
 
     field_length = models.FloatField(blank=True, null=True)
     field_width = models.FloatField(blank=True, null=True)
-    division = models.CharField(blank=True, null=True)
+    division = models.CharField(max_length=1024, blank=True, null=True)
     current_position = models.IntegerField(blank=True, null=True)
     total_number_of_teams = models.IntegerField(blank=True, null=True)
-    age_group = models.CharField(blank=True, null=True)
-    sport = models.CharField(max_length=64, blank=True, null=True)
+    age_group = models.CharField(max_length=1024, blank=True, null=True)
+    sport = models.CharField(max_length=1024, blank=True, null=True)
     task_id = models.CharField(max_length=256, blank=True, null=True)
+    asset_dir = models.CharField(max_length=1024, blank=True, null=True)
+    manifest_path = models.CharField(max_length=1024, blank=True, null=True)
+    media_path = models.CharField(max_length=1024, blank=True, null=True)
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {
@@ -109,6 +110,9 @@ class Video(models.Model):
             "file": self.file.hex,
             "id": self.id.hex,
             "ext": self.ext,
+            "asset_dir": self.asset_dir,
+            "manifest_path": self.manifest_path,
+            "media_path": self.media_path,
             "date": self.date,
             "fps": self.fps,
             "duration": self.duration,

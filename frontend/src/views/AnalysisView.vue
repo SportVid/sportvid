@@ -675,6 +675,10 @@ onBeforeUnmount(() => {
   positionDataStore.selectedTimeRange = { start: 0, end: 0 };
   topViewStore.setPositionData(null, {});
   bboxesStore.bboxDataInterpolated = {};
+  calibrationAssetStore.resetCalibrationAsset();
+  topViewStore.gridLongitudinal = 0;
+  topViewStore.gridTransverse = 0;
+  topViewStore.showSportZones = false;
 });
 
 watch(

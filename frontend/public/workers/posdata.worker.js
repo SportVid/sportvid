@@ -10,10 +10,58 @@
  * so the main thread can match responses to promises.
  */
 
+// ── Sport-zone containment ───────────────────────────────────────────────────
+var _HB_GOAL_YL = 0.425, _HB_GOAL_YH = 0.575;
+function _hbLeft(id, px, py) {
+  switch (id) {
+    case 0: return py <  _HB_GOAL_YL && px < (_HB_GOAL_YL - py) / 2;
+    case 1: return py <  _HB_GOAL_YL && px >= (_HB_GOAL_YL - py) / 2;
+    case 2: return py >= _HB_GOAL_YL && py <= _HB_GOAL_YH;
+    case 3: return py >  _HB_GOAL_YH && px >= (py - _HB_GOAL_YH) / 2;
+    case 4: return py >  _HB_GOAL_YH && px < (py - _HB_GOAL_YH) / 2;
+    default: return false;
+  }
+}
+var _BB_BKT = 1.575/28, _BB_PX = 0.2025, _BB_PYL = 0.34, _BB_PYH = 0.66;
+var _BB_3PTX = 0.15, _BB_CYL = 0.06, _BB_CYH = 0.94;
+var _BB_R2 = (_BB_3PTX-_BB_BKT)*(_BB_3PTX-_BB_BKT)*784 + (_BB_CYH-0.5)*(_BB_CYH-0.5)*225;
+var _BB_SLOPE = (1 - _BB_PYH) / (0.5 - _BB_PX); // top diagonal slope
+function _bbLeft(id, px, py) {
+  var inKey = px < _BB_PX && py >= _BB_PYL && py <= _BB_PYH;
+  var inCT = py >= _BB_CYH && px <= _BB_3PTX;
+  var inCB = py <= _BB_CYL && px <= _BB_3PTX;
+  var dx = (px-_BB_BKT)*28, dy = (py-0.5)*15, inA = dx*dx+dy*dy < _BB_R2;
+  var abT = py > _BB_PYH + _BB_SLOPE*(px - _BB_PX);
+  var belB = py < _BB_PYL - _BB_SLOPE*(px - _BB_PX);
+  switch (id) {
+    case 0: return inKey;
+    case 1: return inCT;
+    case 2: return inCB;
+    case 3: return !inCT && inA && !inKey && abT;
+    case 4: return !inCT && !inCB && inA && !inKey && !abT && !belB;
+    case 5: return !inCB && inA && !inKey && belB;
+    case 6: return !inCT && !inA && abT;
+    case 7: return !inCT && !inCB && !inA && !abT && !belB;
+    case 8: return !inCB && !inA && belB;
+    default: return false;
+  }
+}
+function _inSportZone(z, x, y) {
+  var isLeft = x <= 0.5;
+  if (z.half === 0 && !isLeft) return false;
+  if (z.half === 1 &&  isLeft) return false;
+  var tx = isLeft ? x : 1 - x;
+  if (z.sportKey === 'handball')   return _hbLeft(z.zoneId, tx, y);
+  if (z.sportKey === 'basketball') return _bbLeft(z.zoneId, tx, y);
+  return false;
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 function isInAnyZone(x, y, zones) {
   if (!zones || zones.length === 0) return false;
   for (var zi = 0; zi < zones.length; zi++) {
     var z = zones[zi];
+    if (z.sportZone) { if (_inSportZone(z, x, y)) return true; continue; }
     if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1) return true;
   }
   return false;
@@ -467,7 +515,7 @@ function handleKpiAggregation(id, msg) {
 
       // Zone check via position data
       var pp = posMap[pid];
-      var inZone = pp ? isInAnyZone(pp[3], pp[4], zones) : true;
+      var inZone = zones.length === 0 ? false : (pp ? isInAnyZone(pp[3], pp[4], zones) : false);
 
       if (inZone) {
         if (dist_inc != null && dist_inc === dist_inc && dist_inc > 0) data.totalDist += dist_inc;

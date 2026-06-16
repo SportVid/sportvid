@@ -181,7 +181,21 @@ cython_debug/
 .claude/
 .vscode/
 
+# Copilot
+.github
+github/
+
+# Server-specific authentication files
 .proxy/auth/
 
+# SportVid models
+models/
+
+# Data dirs
 .data
 data/
+
+# Project specific things
+README.md
+*.yml
+Dockerfile

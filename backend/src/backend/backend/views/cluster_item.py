@@ -1,7 +1,5 @@
 import logging
 import json
-import time
-
 from django.views import View
 from django.http import JsonResponse
 

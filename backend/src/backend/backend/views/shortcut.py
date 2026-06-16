@@ -1,11 +1,7 @@
 import json
 import logging
-import traceback
-
-
 from django.views import View
 from django.http import JsonResponse
-# from django.core.exceptions import BadRequest
 
 from backend.models import Shortcut, Video
 
@@ -60,12 +56,9 @@ class ShortcutList(View):
                 return JsonResponse({"status": "error"})
 
             query_args = {}
-
             query_args["owner"] = request.user
-
             if "video_id" in request.GET:
                 query_args["video__id"] = request.GET.get("video_id")
-
             query_results = Shortcut.objects.filter(**query_args)
 
             entries = []

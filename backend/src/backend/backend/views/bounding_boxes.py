@@ -2,7 +2,6 @@ import os
 import json
 import logging
 from functools import wraps
-
 from django.conf import settings
 from django.db import transaction
 from django.views import View
@@ -10,22 +9,22 @@ from django.http import JsonResponse
 
 from backend.models import PluginRunResult
 from backend.utils.decode_auth import decode_and_authenticate
-
 from data import (
     DataManager, 
     BboxesData, 
     BboxData
 )
 
+
 logger = logging.getLogger(__name__)
 
 
 def _compute_meta_data(bbd_data):
-    """Rebuild meta_data after bbox edits/deletes.
-
-    New entity scheme: team_id 0=inactive, 1=ball, 2=refs, ≥3=teams. Each kind has its own
-    int-id namespace stored under player_ids / ref_ids / ball_ids. team_id=0 entries (inactive)
-    stay inside player_ids since they were tracked as person-detections.
+    """
+    Rebuild meta_data after bbox edits/deletes.
+    - New entity scheme: team_id 0=inactive, 1=ball, 2=refs, ≥3=teams. 
+    - Each kind has its own id namespace stored under player_ids / ref_ids / ball_ids. 
+    - team_id=0 entries (inactive) stay inside player_ids since they were tracked as person-detections.
     """
     BALL_TID, REF_TID = 1, 2
     # collect (entity_id, team_id) per kind
@@ -45,10 +44,8 @@ def _compute_meta_data(bbd_data):
                 players_by_team.setdefault(tid, set()).add(pid)
 
     team_id_meta = {}
-    if ball_ids:
-        team_id_meta[BALL_TID] = {"id": BALL_TID, "name": "Ball"}
-    if ref_ids:
-        team_id_meta[REF_TID] = {"id": REF_TID, "name": "Referees"}
+    if ball_ids: team_id_meta[BALL_TID] = {"id": BALL_TID, "name": "Ball"}
+    if ref_ids: team_id_meta[REF_TID] = {"id": REF_TID, "name": "Referees"}
     # active teams (team_id ≥ 3) sorted by player count desc, then by id for stability
     active_teams = sorted(
         ((tid, pids) for tid, pids in players_by_team.items() if tid >= 3),

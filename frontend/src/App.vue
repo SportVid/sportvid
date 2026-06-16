@@ -22,12 +22,19 @@ const themeStore = useThemeStore();
 const videoStore = useVideoStore();
 const userStore = useUserStore();
 
+const updateFavicon = (isDark) => {
+  const link = document.querySelector("link[rel='icon']");
+  if (link) link.href = isDark ? "/favicon_dshs_marburg_dark.png" : "/favicon_dshs_marburg_light.png";
+};
+
 theme.change(themeStore.isDark ? "dark" : "light");
+updateFavicon(themeStore.isDark);
 
 watch(
   () => themeStore.isDark,
   (isDark) => {
     theme.change(isDark ? "dark" : "light");
+    updateFavicon(isDark);
   }
 );
 

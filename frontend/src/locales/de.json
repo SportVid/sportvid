@@ -193,7 +193,13 @@
         "title": "Positionsdaten",
         "upload": "Positionsdaten hochladen",
         "select": "Positionsdaten auswählen"
-      }
+      },
+      "set_zones": {
+        "title": "Raster",
+        "longitudinal": "Längsstreifen",
+        "transverse": "Querstreifen"
+      },
+      "set_zones": "Zonen"
     },
     "fps_deviation": "Reduzierung der Abtastrate & Interpolation führt zu einer maximalen Frame-für-Frame-Abweichung von bis zu {interpErr}% im Vergleich zur ursprünglichen Bildrate.",
     "entity_kind": {
@@ -259,8 +265,11 @@
         "running_distance_frame": "Laufdistanz [m] (pro Frame)",
         "running_distance_interval": "Laufdistanz [m] (pro {frames} Frames)",
         "velocity_max": "V<sub>max</sub> [m⋅s<sup>-1</sup>]",
+        "velocity_max_short": "V<sub>max</sub> (kumulativ)",
         "velocity_frame": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
+        "velocity_frame_short": "Geschwindigkeit (pro Frame)",
         "velocity_interval": "V<sub>max</sub> [m⋅s<sup>-1</sup>] (pro {frames} Frames)",
+        "velocity_interval_short": "V<sub>max</sub> (pro {frames} Frames)",
         "metabolic_work_cumulative": "Met. Arbeit [J⋅kg<sup>-1</sup>] (kumulativ)",
         "metabolic_work_frame": "Met. Arbeit [J⋅kg<sup>-1</sup>] (pro Frame)",
         "metabolic_work_interval": "Met. Arbeit [J⋅kg<sup>-1</sup>] (pro {frames} Frames)",
@@ -300,6 +309,8 @@
         "distance": "Distanz [m]",
         "velocity": "Geschwindigkeit [m⋅s<sup>-1</sup>]",
         "velocity_max": "V<sub>max</sub> [m⋅s<sup>-1</sup>]",
+        "velocity_with_unit": "Geschwindigkeit [{unit}]",
+        "velocity_max_with_unit": "V<sub>max</sub> [{unit}]",
         "metabolic_work": "Met. Arbeit [J⋅kg<sup>-1</sup>]",
         "equivalent_distance": "Äquiv. Distanz [m]",
         "centroid_distance": "Zentroiddistanz [m]",
@@ -546,7 +557,8 @@
         "sport": "Sportart",
         "field_length": "Feldlänge [m]",
         "field_width": "Feldbreite [m]",
-        "field_warning": "Falls keine Maße angegeben werden, werden Standardmaße von {defaultLength}x{defaultWidth} m verwendet. Dies kann die Genauigkeit der Analyse beeinflussen.",
+        "field_warning": "Wenn keine Abmessungen angegeben werden, werden die Standardabmessungen von {defaultLength}x{defaultWidth} m verwendet. Dies kann die Genauigkeit der Analyse beeinflussen.",
+        "field_warning_no_sport": "Bitte wähle zuerst eine Sportart aus, damit die korrekten Standard-Feldmaße angewendet werden können.",
         "divisions": {
           "liga_1": "Liga 1",
           "liga_2": "Liga 2",
@@ -1144,78 +1156,31 @@
         "entity_0": "Inaktiv",
         "entity_1": "Ball",
         "entity_2": "Schiedsrichter"
-      },
-      "offset": {
-        "title": "Versatz festlegen",
-        "label": "Versatzwert (ms)"
-      }
-    },
-    "bounding_box": {
-      "tooltip": {
-        "box_id": "Box-ID",
-        "player_id": "Spieler-ID",
-        "ref_id": "Schiedsrichter-ID",
-        "ball_id": "Ball-ID",
-        "team_id": "Team-ID"
-      },
-      "edit": {
-        "title": "Bounding Box bearbeiten",
-        "modes": {
-          "bbox": "Einzelne Box",
-          "info_bbox": "Nur auf diese Bounding Box anwenden",
-          "all_player": "Alle Spieler-Boxen",
-          "info_all_player": "Auf alle Bounding Boxes mit derselben Spieler-ID anwenden",
-          "all_team": "Alle Team-Boxen",
-          "info_all_team": "Auf alle Bounding Boxes mit derselben Team-ID anwenden"
-        },
-        "rules": {
-          "player_min": "Mindestwert ist 1",
-          "player_max": "Höchstwert ist 999",
-          "player_duplicate": "Diese Spieler-ID gehört einem anderen Spieler im aktuellen Frame"
-        },
-        "current_box_id": "Aktuelle Box-ID",
-        "current_player_id": "Aktuelle Spieler-ID",
-        "current_team_id": "Aktuelle Team-ID",
-        "new_player_id": "Neue Spieler-ID",
-        "new_team_id": "Neue Team-ID",
-        "team": {
-          "rest": "0 (Inaktiv)",
-          "ball": "1 (Ball)",
-          "referee": "2 (Schiedsrichter)",
-          "team": "{id} (Team)",
-          "new_team": "{id} (Neues Team)"
-        },
-        "new_team_id_picker": "Farbauswahl",
-        "single_success": "Bounding Box erfolgreich aktualisiert",
-        "all_success": "Bounding Boxes erfolgreich aktualisiert"
-      },
-      "delete": {
-        "single_success": "Bounding Box erfolgreich gelöscht",
-        "all_success": "Bounding Boxes erfolgreich gelöscht"
       }
     }
   },
-  "admin_panel": {
-    "title": "Admin-Oberfläche",
-    "search": "Suchen",
-    "role": {
-      "label": "Rolle",
-      "all": "Alle",
-      "admin": "Admin",
-      "user": "Benutzer"
+  "sports": {
+    "handball": {
+      "zones": {
+        "top_wing": "Oberer Flügel",
+        "top_side": "Obere Seite",
+        "center": "Mitte",
+        "bottom_side": "Untere Seite",
+        "bottom_wing": "Unterer Flügel"
+      }
     },
-    "user": {
-      "id": "ID",
-      "username": "Benutzername",
-      "email": "E-Mail",
-      "role": "Rolle",
-      "used_storage_size": "Genutzter Speicher",
-      "max_storage_size": "Max. Speichergröße",
-      "max_video_size": "Max. Videogröße",
-      "max_file_size": "Max. Dateigröße",
-      "date_joined": "Beigetreten",
-      "actions": "Aktionen"
+    "basketball": {
+      "zones": {
+        "key": "Key",
+        "corner_top": "Corner Oben",
+        "corner_bottom": "Corner Unten",
+        "mid_top": "Midrange Oben",
+        "mid_center": "Midrange Mitte",
+        "mid_bottom": "Midrange Unten",
+        "three_top": "Dreipunkt Oben",
+        "three_center": "Dreipunkt Mitte",
+        "three_bottom": "Dreipunkt Unten"
+      }
     }
-  },
-  "loading_screen": "Wird geladen ..."
+  }
 }

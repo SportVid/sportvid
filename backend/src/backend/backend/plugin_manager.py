@@ -3,13 +3,17 @@ import traceback
 import sys
 import os
 import json
+from celery import shared_task
+from django.conf import settings
 from typing import List
 
-from celery import shared_task
-from backend.models import PluginRun, Video, SportVidUser, PluginRunResult
+from backend.models import (
+    PluginRun,
+    PluginRunResult,
+    Video, 
+    SportVidUser,
+)
 from data import DataManager
-
-from django.conf import settings
 
 
 logger = logging.getLogger(__name__)
@@ -51,11 +55,8 @@ class PluginManager:
         dry_run: bool = False,
         **kwargs,
     ):
-        if parameters is None:
-            parameters = []
-
-        if plugin not in self._plugins:
-            return {"status": False}
+        if parameters is None: parameters = []
+        if plugin not in self._plugins: return {"status": False}
 
         logger.info(
             f'User "{user.username}" has started plugin "{plugin}" with parameters {parameters}'
@@ -101,18 +102,16 @@ class PluginManager:
                     plugin_run.status = PluginRun.STATUS_DONE
                     plugin_run.save()
 
-                # Create cache files for all plugin run results.
+                # creates cached files for all plugin run results
                 manager = DataManager("/predictions/")
 
                 generate_plugin_run_result_cache(
                     manager, plugin_result.get("plugin_run_results", [])
                 )
-                if plugin_result:
-                    result["result"] = plugin_result
+                if plugin_result: result["result"] = plugin_result
 
             except Exception:
                 logger.exception(f"Failed to run plugin {plugin_run.type}")
-
                 if plugin_run is not None:
                     plugin_run.status = PluginRun.STATUS_ERROR
                     plugin_run.save()
@@ -144,14 +143,12 @@ def generate_plugin_run_result_cache(
                     cached = True
         except Exception:
             logger.exception("Cache reading failed")
-        if cached:
-            continue
-        # print(f"x {x}")
-        # TODO fix me
+        if cached: continue
+
+        # TODO: fix me!
         data = data_manager.load(x.data_id)
-        if data is None:
-            continue
-        # print(data)
+        if data is None: continue
+
         with data:
             result_dict = {**x.to_dict(), "data": data.to_dict()}
             try:
@@ -177,7 +174,6 @@ def run_plugin(self, args):
     plugin_run_db = None
     if not dry_run:
         plugin_run_db = PluginRun.objects.get(id=plugin_run)
-        # this job is already started in another jobqueue https://github.com/celery/celery/issues/4400
         if plugin_run_db.in_scheduler:
             logger.warning("Job was rescheduled and will be canceled")
             return
@@ -194,8 +190,6 @@ def run_plugin(self, args):
             dry_run=dry_run,
             **kwargs,
         )
-
-        # Create cache files for all plugin run results.
         manager = DataManager("/predictions/")
 
         generate_plugin_run_result_cache(
