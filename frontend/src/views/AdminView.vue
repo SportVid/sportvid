@@ -98,6 +98,7 @@ const roleFilter = ref(null);
 const roleOptions = computed(() => [
   { title: t("admin_panel.role.all"), value: null },
   { title: t("admin_panel.role.admin"), value: "admin" },
+  { title: t("admin_panel.role.researcher"), value: "researcher" },
   { title: t("admin_panel.role.user"), value: "user" },
 ]);
 const filteredUsers = computed(() => {

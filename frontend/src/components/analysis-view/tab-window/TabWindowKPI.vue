@@ -20,7 +20,7 @@
       line-height: 1.5;
       height: 25vh;
     "
-    v-html="$t('visualization.kpi.posdata_not_selected')"
+    v-html="kpiPosdataNotSelectedText"
   />
 
   <div v-else-if="!hasKpiData && visualizationStore.isLoadingKpi" class="kpi-loading-card">
@@ -37,7 +37,7 @@
       line-height: 1.5;
       height: 25vh;
     "
-    v-html="$t('visualization.kpi.kpi_not_selected')"
+    v-html="kpiNotSelectedText"
   />
 
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
@@ -515,6 +515,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { useTabStore } from "@/stores/tabs";
+import { useUserStore } from "@/stores/user";
 import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
 import KpiChart from "@/components/kpi/KpiChart.vue";
 import ZoneSelectorPicker from "@/components/kpi/ZoneSelectorPicker.vue";
@@ -530,8 +531,26 @@ const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 const posdataWorkerStore = usePosdataWorkerStore();
 const tabStore = useTabStore();
+const userStore = useUserStore();
 
 const { t } = useI18n();
+
+const canWrite = computed(() => {
+  if (userStore.role === "admin") return true;
+  const ownerUsername = playerStore.video?.owner_username;
+  if (!ownerUsername) return true;
+  return ownerUsername === userStore.username;
+});
+
+const kpiPosdataNotSelectedText = computed(() => {
+  const full = t("visualization.kpi.posdata_not_selected");
+  return canWrite.value ? full : full.split("<br>")[0];
+});
+
+const kpiNotSelectedText = computed(() => {
+  const full = t("visualization.kpi.kpi_not_selected");
+  return canWrite.value ? full : full.split("<br>")[0];
+});
 
 const kpiChartRef = ref(null);
 

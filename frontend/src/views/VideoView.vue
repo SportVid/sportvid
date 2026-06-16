@@ -1,6 +1,67 @@
 <template>
   <v-main>
     <v-container v-if="userStore.loggedIn" fluid data-tour="video-select">
+      <v-row class="mb-n2">
+        <v-col class="d-flex flex-wrap justify-center align-center pb-0" style="gap: 8px">
+          <v-text-field
+            v-model="filterName"
+            :label="$t('video_view.filter_name')"
+            density="compact"
+            variant="outlined"
+            color="primary"
+            base-color="primary"
+            hide-details
+            clearable
+            prepend-inner-icon="mdi-magnify"
+            style="max-width: 280px"
+          />
+          <v-select
+            v-model="filterSport"
+            :items="sportOptions"
+            :label="$t('video_view.filter_sport')"
+            density="compact"
+            variant="outlined"
+            color="primary"
+            base-color="primary"
+            hide-details
+            clearable
+            style="max-width: 240px"
+          />
+          <v-select
+            v-model="filterAgeGroup"
+            :items="ageGroupOptions"
+            :label="$t('video_view.filter_age_group')"
+            density="compact"
+            variant="outlined"
+            color="primary"
+            base-color="primary"
+            hide-details
+            clearable
+            style="max-width: 240px"
+          />
+          <v-btn
+            variant="outlined"
+            color="primary"
+            density="compact"
+            @click="toggleDateSort"
+            class="text-none"
+            style="height: 40px"
+          >
+            <v-icon size="18" class="mr-1">
+              {{
+                sortDateDir === "desc"
+                  ? "mdi-sort-calendar-descending"
+                  : "mdi-sort-calendar-ascending"
+              }}
+            </v-icon>
+            {{
+              sortDateDir === "desc"
+                ? $t("video_view.sort_date_newest")
+                : $t("video_view.sort_date_oldest")
+            }}
+          </v-btn>
+        </v-col>
+      </v-row>
       <v-row>
         <v-col>
           <v-container class="d-flex flex-wrap justify-center video-gallery pa-0" fluid>
@@ -14,7 +75,14 @@
               width="370"
             >
               <v-card-title class="video-overview-title mt-2 mb-n2">
-                {{ item.name }}
+                <span class="title-name">{{ item.name }}</span>
+                <v-chip
+                  v-if="item.owner_username && userStore.role === 'admin'"
+                  size="x-small"
+                  color="secondary"
+                  class="ml-2 flex-shrink-0"
+                  >{{ item.owner_username }}</v-chip
+                >
               </v-card-title>
               <div v-if="item.processing" class="card-body card-body-processing">
                 <v-card-text class="d-flex flex-column align-center py-3">
@@ -35,43 +103,48 @@
                 </v-card-text>
               </div>
               <div v-else class="card-body">
-                <v-card-text>
+                <v-card-text class="card-text-inner">
                   <div>{{ $t("video_view.video_id") }} {{ item.id }}</div>
                   <div>{{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}</div>
                   <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
-                  <!-- <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div> -->
-
-                  <v-card-actions class="actions mt-n6 mb-n8 justify-center" style="gap: 16px">
-                    <v-tooltip :text="$t('button.analyse')" location="top">
-                      <template #activator="{ props }">
-                        <v-btn variant="outlined" v-bind="props" @click="showVideo(item.id)">
-                          <v-icon>mdi-movie-search-outline</v-icon>
-                        </v-btn>
-                      </template>
-                    </v-tooltip>
-
-                    <ModalVideoRename :video="item.id" />
-
-                    <v-tooltip :text="$t('button.delete')" location="top">
-                      <template #activator="{ props }">
-                        <v-btn
-                          color="red"
-                          variant="outlined"
-                          v-bind="props"
-                          @click="deleteVideo(item.id)"
-                        >
-                          <v-icon>mdi-trash-can-outline</v-icon>
-                        </v-btn>
-                      </template>
-                    </v-tooltip>
-
-                    <v-checkbox
-                      v-model="videoStore.selectedVideos[item.id]"
-                      color="primary"
-                      class="pt-5 ml-n1"
-                    /> -->
-                  </v-card-actions>
+                  <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
                 </v-card-text>
+                <div
+                  :class="
+                    canWrite(item) ? 'card-actions-row' : 'card-actions-row card-actions-row-solo'
+                  "
+                >
+                  <v-tooltip :text="$t('button.analyse')" location="top">
+                    <template #activator="{ props }">
+                      <v-btn variant="outlined" v-bind="props" @click="showVideo(item.id)">
+                        <v-icon>mdi-movie-search-outline</v-icon>
+                      </v-btn>
+                    </template>
+                  </v-tooltip>
+
+                  <ModalVideoRename v-if="canWrite(item)" :video="item.id" />
+
+                  <v-tooltip v-if="canWrite(item)" :text="$t('button.delete')" location="top">
+                    <template #activator="{ props }">
+                      <v-btn
+                        color="red"
+                        variant="outlined"
+                        v-bind="props"
+                        @click="deleteVideo(item.id)"
+                      >
+                        <v-icon>mdi-trash-can-outline</v-icon>
+                      </v-btn>
+                    </template>
+                  </v-tooltip>
+
+                  <v-checkbox
+                    v-if="canWrite(item)"
+                    v-model="videoStore.selectedVideos[item.id]"
+                    color="primary"
+                    class="ml-n1"
+                    hide-details
+                  />
+                </div>
                 <v-progress-linear v-model="videosProgress[item.id]" />
               </div>
             </v-card>
@@ -159,7 +232,38 @@ const userStore = useUserStore();
 const pluginRunStore = usePluginRunStore();
 const timelineStore = useTimelineStore();
 
-const videos = computed(() => videoStore.all);
+const filterName = ref("");
+const filterSport = ref(null);
+const filterAgeGroup = ref(null);
+const sortDateDir = ref("desc");
+
+const toggleDateSort = () => {
+  sortDateDir.value = sortDateDir.value === "desc" ? "asc" : "desc";
+};
+
+const sportOptions = computed(() => {
+  const unique = [...new Set(videoStore.all.map((v) => v.sport).filter(Boolean))];
+  return unique.map((s) => ({ title: t(`sports.${s}.title`, s), value: s }));
+});
+
+const ageGroupOptions = computed(() => {
+  const unique = [...new Set(videoStore.all.map((v) => v.age_group).filter(Boolean))];
+  return unique.map((a) => ({ title: t(`modal.video.upload.age_groups.${a}`, a), value: a }));
+});
+
+const videos = computed(() => {
+  let list = videoStore.all;
+  if (filterName.value) {
+    const q = filterName.value.toLowerCase();
+    list = list.filter((v) => v.name?.toLowerCase().includes(q));
+  }
+  if (filterSport.value) list = list.filter((v) => v.sport === filterSport.value);
+  if (filterAgeGroup.value) list = list.filter((v) => v.age_group === filterAgeGroup.value);
+  return [...list].sort((a, b) => {
+    const diff = new Date(b.date) - new Date(a.date);
+    return sortDateDir.value === "desc" ? diff : -diff;
+  });
+});
 
 const videosProgress = computed(() => {
   const progress = {};
@@ -242,6 +346,11 @@ watch(
   { immediate: true }
 );
 
+const canWrite = (item) => {
+  if (userStore.role === "admin") return true;
+  return !item.owner_username || item.owner_username === userStore.username;
+};
+
 const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
 const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
 
@@ -303,11 +412,17 @@ watch(
 
 <style scoped>
 .video-overview-title {
-  display: block !important;
-  white-space: nowrap;
+  display: flex !important;
+  align-items: center;
   overflow: hidden;
   width: 100%;
+}
+
+.title-name {
+  white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .video-gallery > * {
@@ -330,6 +445,26 @@ watch(
 .card-body {
   height: 174px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-text-inner {
+  flex: 1;
+  padding-bottom: 4px !important;
+}
+
+.card-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 8px 6px;
+  flex-shrink: 0;
+}
+
+.card-actions-row-solo {
+  padding-bottom: 14px;
 }
 
 .card-body-processing {

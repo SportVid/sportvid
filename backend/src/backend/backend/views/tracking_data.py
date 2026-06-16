@@ -169,16 +169,16 @@ class TrackingDataList(View):
         try:
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"}, status=500)
-            entries = []
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
-            filters = {"owner": request.user}
+            can_see_all = request.user.role in ("admin", "researcher")
             video_id = request.GET.get("video_id")
             if video_id:
-                filters["video_id"] = video_id
-            entries = []
-            for tdata in TrackingData.objects.filter(**filters):
-                entries.append(tdata.to_dict())
+                if can_see_all:
+                    queryset = TrackingData.objects.filter(video_id=video_id)
+                else:
+                    queryset = TrackingData.objects.filter(video_id=video_id, owner=request.user)
+            else:
+                queryset = TrackingData.objects.filter(owner=request.user)
+            entries = [tdata.to_dict() for tdata in queryset]
             return JsonResponse({"status": "ok", "entries": entries})
         except Exception as e:
             logger.exception("Error listing tracking data")
