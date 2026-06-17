@@ -213,18 +213,15 @@ class Tracker(
 
         return {"tracklets": output_data}
     
-    @abstractmethod
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Anything that needs to be done before processing the input. """
         return inputs
         
-    @abstractmethod
     def process(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Processing logic of this class. """
         prep_inputs = self.preprocess(inputs, **kwargs)
         return prep_inputs
     
-    @abstractmethod
     def track(self, inputs: Dict[Any, Any], **kwargs):
         """ Return tracklets based on detection inputs. """
         return self.state
@@ -243,12 +240,9 @@ class Detector():
         import torch
         self.device = device if torch.cuda.is_available() else 'cpu'
         
-
-        
-        self.detector_params = 
+        self.detector_params = detector_params
         
         self.batch_size = batch_size
-        self.exp = get_exp(None, model_path)
         self.model_chkpt = kwargs.get("model_chkpt", None)
         self.w, self.h = image_size
         
@@ -263,7 +257,6 @@ class Detector():
             'shape' : input_shape
         })
         
-    @abstractmethod
     def process(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Processing logic of this class. """
         prep_inputs = self.preprocess(inputs, **kwargs)
