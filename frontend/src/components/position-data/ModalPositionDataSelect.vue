@@ -74,6 +74,7 @@
                     >
                       <template #append>
                         <v-btn
+                          v-if="canWrite"
                           size="x-small"
                           color="primary"
                           variant="plain"
@@ -84,6 +85,7 @@
                         </v-btn>
 
                         <v-btn
+                          v-if="canWrite"
                           size="x-small"
                           color="red"
                           variant="plain"
@@ -154,6 +156,7 @@ import { usePluginRunStore } from "@/stores/plugin_run";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
+import { useUserStore } from "@/stores/user";
 import ModalPositionDataRename from "./ModalPositionDataRename.vue";
 import { useVisualizationStore } from "@/stores/visualization";
 
@@ -166,6 +169,14 @@ const calibrationAssetStore = useCalibrationAssetStore();
 const positionDataStore = usePositionDataStore();
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
+const userStore = useUserStore();
+
+const canWrite = computed(() => {
+  if (userStore.role === "admin") return true;
+  const ownerUsername = playerStore.video?.owner_username;
+  if (!ownerUsername) return true;
+  return ownerUsername === userStore.username;
+});
 
 const props = defineProps({
   modelValue: {

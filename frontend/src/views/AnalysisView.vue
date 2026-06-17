@@ -680,14 +680,6 @@ onBeforeUnmount(() => {
   topViewStore.gridTransverse = 0;
   topViewStore.showSportZones = false;
 });
-
-watch(
-  () => topViewStore.metaDataTopView,
-  (neww) => {
-    console.log("metaDataTopView changed:", neww);
-  },
-  { immediate: true }
-);
 </script>
 
 <style scoped>

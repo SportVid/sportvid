@@ -19,7 +19,7 @@
       line-height: 1.5;
       height: 25vh;
     "
-    v-html="$t('visualization.heatmap.not_selected')"
+    v-html="heatmapNotSelectedText"
   />
 
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
@@ -215,24 +215,40 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, toRaw } from "vue";
+import { useI18n } from "vue-i18n";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
+import { useUserStore } from "@/stores/user";
 import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
 import h337 from "heatmap.js";
 import { toRgb } from "@/plugins/helpers";
 import { resampleApprox } from "@/plugins/draw/utils";
 import { debounce } from "lodash";
 
+const { t } = useI18n();
 const topViewStore = useTopViewStore();
 const videoStore = useVideoStore();
 const visualizationStore = useVisualizationStore();
 const playerStore = usePlayerStore();
 const positionDataStore = usePositionDataStore();
 const posdataWorkerStore = usePosdataWorkerStore();
+const userStore = useUserStore();
+
+const canWrite = computed(() => {
+  if (userStore.role === "admin") return true;
+  const ownerUsername = playerStore.video?.owner_username;
+  if (!ownerUsername) return true;
+  return ownerUsername === userStore.username;
+});
+
+const heatmapNotSelectedText = computed(() => {
+  const full = t("visualization.heatmap.not_selected");
+  return canWrite.value ? full : full.split("<br>")[0];
+});
 
 const currentArea = computed(
   () => topViewStore.currentSport.areas?.[topViewStore.currentAreaSize] ?? {}
