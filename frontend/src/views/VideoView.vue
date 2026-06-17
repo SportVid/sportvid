@@ -162,26 +162,15 @@
 
           <v-card-text>
             <p v-html="$t('welcome.text')" class="mb-4"></p>
-            <!-- <h2 class="text-h5 mb-2">{{ $t("welcome.demo_title") }}</h2> -->
+            <h2 class="text-h5 mb-2">{{ $t("welcome.demo_title") }}</h2>
             <p>
-              <!-- <video class="welcome-video" controls>
+              <video class="welcome-video" controls>
                 <source
                   src="https://tib.eu/cloud/s/sMmqWqWYict3Zpb/download/TIB-AV-A_Einfuehrung_2.mp4"
                   type="video/mp4"
                 />
-              </video> -->
-              <img
-                src="@/assets/logo_dshs_marburg.png"
-                style="
-                  width: 60%;
-                  height: auto;
-                  margin-left: auto;
-                  margin-right: auto;
-                  display: block;
-                "
-              />
+              </video>
             </p>
-
             <h2 class="text-h5 mb-1 mt-4">{{ $t("welcome.login_title") }}</h2>
             <p v-html="$t('welcome.login_text')" />
             <h2 class="text-h5 mb-1 mt-4">{{ $t("welcome.format_title") }}</h2>
