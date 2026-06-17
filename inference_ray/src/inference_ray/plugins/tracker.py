@@ -1,9 +1,12 @@
-from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+import logging
+import argparse
+from typing import Any, Callable, Dict, List, Tuple
 from data import (
     Data, DataManager, 
     VideoData,
     BboxesData
 )
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 from utils import VideoDecoder
 from .detector import (
     YoloX, 
@@ -15,8 +18,6 @@ from .tracker import (
     ByteTrack,
 )
 
-from typing import Any, Callable, Dict, List, Tuple
-import argparse
 
 default_config = {
     "data_dir": "/data/",
@@ -75,8 +76,6 @@ default_bytetrack_params = {
     "min_box_area": 0,          # min box area thresholds (px^2)
 }
 
-# TODO: dynamic checkpoint loading for default value!
-
 DETECTOR_MAP = {
     "yolox": YoloX,
     "yolov10": YoloUltralytics,
@@ -86,8 +85,21 @@ DETECTOR_MAP = {
     "rtdetr": RTDetr,
 }
 
+DETECTOR_PARAMS_MAP = {
+    "yolox": default_yolox_params,
+    "yolov10": default_yoloultra_params,
+    "yolov11": default_yoloultra_params,
+    "yolov26": default_yoloultra_params,
+    "rfdetr": default_rfdetr_params,
+    "rtdetr": default_rtdetr_params, 
+}
+
 TRACKER_MAP = {
     "bytetrack": ByteTrack
+}
+
+TRACKER_PARAMS_MAP = {
+    "bytetrack": default_bytetrack_params
 }
 
 requires = {
@@ -110,10 +122,12 @@ class Tracker(
     def __init__(self, config=None, **kwargs):
         super().__init__(config, **kwargs)
         
-        self.detector_cls = DETECTOR_MAP[config["detector"]]
-        self.tracking_cls = TRACKER_MAP[config["tracker"]]
+        self.detector_cls = DETECTOR_MAP[config["detector"]]()
+        self.tracking_cls = TRACKER_MAP[config["tracker"]]()
+        
+        self.detector_defaults = DETECTOR_PARAMS_MAP[config["detector"]]
+        self.tracker_defaults = TRACKER_PARAMS_MAP[config["tracker"]]
 
-    
     def call(
         self,
         inputs: Dict[str, Data],
@@ -123,6 +137,17 @@ class Tracker(
     ):
         import json
         from collections import defaultdict
+        
+        # passed parameters
+        args = argparse.Namespace(**parameters)
+        logging.debug(args)
+    
+        # TODO: dynamic checkpoint loading, load passed checkpoint.
+        # if no checkpoint has been passed use a default based on the detector/tracker setup.
+    
+        # TODO: initialize model & load via get_exp() with provided checkpoint file
+
+        # TODO: run detection/tracking with provided classes
     
         # ------> decode video and pass it to detector
         with inputs["video"] as input_data:
@@ -133,30 +158,11 @@ class Tracker(
                     extension=f".{input_data.ext}",
                     ref_id=input_data.id,
                 )
-        # ------> detection
-        """ NOTE: Old logic for both
-            args = argparse.Namespace(**parameters)
-            exp = get_exp(None, "yolox-x")
-            exp.num_classes = args.num_classes
-            exp.depth = args.depth
-            exp.width = args.width
+                # ------> detection
+                # TODO: 1) process by detector
 
-            self.device = "cuda" if torch.cuda.is_available() else "cpu"
-            model = exp.get_model().to(self.device)
-            checkpoint = torch.load(
-                default_config["model_file"], map_location="cpu"
-            )
-            model.load_state_dict(checkpoint["model"])
-            model.eval()
-            predictor = Predictor(model, exp, None, self.device, fp16=args.fp16)
-
-            results, img_info = self.track(video_decoder, predictor, args)
-        """
-        # ------> tracking
-                
-        # TODO: 1) process by detector
-        # TODO: 2) process detections by tracker
-        # TODO: 3) return correct struct
+                # ------> tracking
+                # TODO: 2) process detections by tracker
         
         # TODO: data schema below ... (team_id = 0 (inactive); 1 (ball); 2 (refs); >=3 (active teams)
         # team_id will be re-assigned by 'team_assignment' plugin at some point.
@@ -206,25 +212,13 @@ class Tracker(
         }
         """
 
+        # TODO: 3) return correct struct
         with data_manager.create_data("BboxesData") as output_data:
             output_data.bboxes = json.dumps(bboxes_dict)
             output_data.meta_data = json.dumps(meta_dict)
             self.update_callbacks(callbacks, progress=1.0)
 
         return {"tracklets": output_data}
-    
-    def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
-        """ Anything that needs to be done before processing the input. """
-        return inputs
-        
-    def process(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
-        """ Processing logic of this class. """
-        prep_inputs = self.preprocess(inputs, **kwargs)
-        return prep_inputs
-    
-    def track(self, inputs: Dict[Any, Any], **kwargs):
-        """ Return tracklets based on detection inputs. """
-        return self.state
 
 
 class Detector():
@@ -241,6 +235,8 @@ class Detector():
         self.device = device if torch.cuda.is_available() else 'cpu'
         
         self.detector_params = detector_params
+        
+        # TODO: use correct detector class to preprocess/process inputs.
         
         self.batch_size = batch_size
         self.model_chkpt = kwargs.get("model_chkpt", None)
