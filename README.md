@@ -10,15 +10,11 @@ https://sportvid.github.io/
     * [docker-compose](https://docs.docker.com/compose/install/)
 
 ### Setup process
-
-1. **Clone the repository:**
-
 1. **Clone the repository:**
     ```sh
     git clone https://github.com/SportVid/sportvid.git
     cd sportvid
     ```
-2. **Prepare for deployment:**
 2. **Prepare for deployment:**
     ```sh
     cd sportvid
@@ -32,8 +28,6 @@ https://sportvid.github.io/
     sudo tar -xf models.tar.gz --directory .
     rm -rf models.tar.gz
     ```
-3. **Build and start:**
-    Prepare:
 3. **Build and start:**
     Prepare:
     ```sh
@@ -54,7 +48,6 @@ https://sportvid.github.io/
     ```
 4. **Apply database migrations and build frontend packages:**
     ```sh
-    docker compose exec backend python3 backend/src/backend/manage.py migrate
     docker compose exec backend python3 backend/src/backend/manage.py migrate
     sudo docker compose exec frontend npm install
     sudo docker compose exec frontend npm run build
@@ -85,6 +78,6 @@ https://sportvid.github.io/
 	    ./data/tmp/*
     ```
 8. **(Server) Control via management shell script:**
-```sh
-./manage.sh <ENV> <CMD>
-```
+    ```sh
+    ./manage.sh <ENV> <CMD>
+    ```
