@@ -5,14 +5,13 @@ import logging
 import tempfile
 import tempfile
 import time
+from django.http import JsonResponse
 from django.views import View
-from django.http import HttpResponse, JsonResponse
-from django.conf import settings
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from backend.models import Video, PluginRun
 from backend.plugin_manager import PluginManager
 from backend.utils import download_url, download_file, media_url_to_file
-
 
 logger = logging.getLogger(__name__)
 
@@ -24,98 +23,158 @@ class PluginRunNew(View):
                 logger.error("PluginRunNew::not_authenticated")
                 return JsonResponse({"status": "error"})
 
-            if request.method != "POST":
-                logger.error("PluginRunNew::wrong_method")
-                return JsonResponse({"status": "error"})
-
             output_dir = tempfile.mkdtemp(dir="/tmp")
-            parameters = []
-            for k, v in request.FILES.items():
-                m = re.match(r"^file_(.*?)$", k)
-                if m:
-                    data_id_uuid = uuid.uuid4().hex
-                    download_result = download_file(
-                        output_dir=output_dir,
-                        output_name=data_id_uuid,
-                        file=v,
-                        max_size=11 * 1024 * 1024 * 1024,
-                    )
-                    if download_result.get("status") == "ok":
-                        parameters.append(
-                            {
-                                "name": m.group(1),
-                                "value": download_result.get("origin"),
-                                "path": download_result.get("path"),
-                            }
-                        )
-            parameters.extend(json.loads(request.POST.get("parameters")))
+
+            try:
+                raw_parameters = request.POST.get("parameters", "[]")
+                raw_parameters = json.loads(raw_parameters)
+            except json.JSONDecodeError:
+                return JsonResponse(
+                    {"status": "error", "type": "wrong_request_body", "errors": {"parameters": ["Invalid JSON."]}},
+                    status=400,
+                )
+
             plugin = request.POST.get("plugin")
-            if plugin is None:
-                return JsonResponse({"status": "error", "type": "missing_values"})
+            if not plugin:
+                return JsonResponse(
+                    {"status": "error", "type": "missing_values", "errors": {"plugin": ["This field is required."]}},
+                    status=400,
+                )
 
             video_id = request.POST.get("video_id")
-            if video_id is None:
-                return JsonResponse({"status": "error", "type": "missing_values"})
+            if not video_id:
+                return JsonResponse(
+                    {"status": "error", "type": "missing_values", "errors": {"video_id": ["This field is required."]}},
+                    status=400,
+                )
 
-            if not isinstance(parameters, list):
-                return JsonResponse({"status": "error", "type": "wrong_request_body"})
-            valid_parameters = []
-            for parameter in parameters:
-                if not isinstance(parameter, dict):
-                    return JsonResponse(
-                        {"status": "error", "type": "wrong_request_body"}
-                    )
-
-                if "name" not in parameter:
-                    return JsonResponse(
-                        {"status": "error", "type": "wrong_request_body"}
-                    )
-
-                if "value" not in parameter:
-                    return JsonResponse(
-                        {"status": "error", "type": "wrong_request_body"}
-                    )
-                if "path" in parameter:
-                    valid_parameters.append(
-                        {
-                            "name": parameter.get("name"),
-                            "value": parameter.get("value"),
-                            "path": parameter.get("path"),
-                        }
-                    )
-
-                else:
-                    valid_parameters.append(
-                        {"name": parameter.get("name"), "value": parameter.get("value")}
-                    )
+            if not isinstance(raw_parameters, list):
+                return JsonResponse(
+                    {"status": "error", "type": "wrong_request_body", "errors": {"parameters": ["Must be a list."]}},
+                    status=400,
+                )
 
             plugin_manager = PluginManager()
 
             if plugin not in plugin_manager:
-                logger.error(plugin)
-                return JsonResponse({"status": "error", "type": "not_exist"})
+                logger.error("PluginRunNew::unknown_plugin %s", plugin)
+                return JsonResponse({"status": "error", "type": "not_exist"}, status=404)
 
             try:
                 video_db = Video.objects.get(id=video_id)
             except Video.DoesNotExist:
-                return JsonResponse({"status": "error", "type": "not_exist"})
+                return JsonResponse(
+                    {"status": "error", "type": "not_exist", "errors": {"video_id": ["Video does not exist."]}},
+                    status=404,
+                )
 
-            user_db = request.user
+            serializer_cls = plugin_manager.get_serializer(plugin)
+            if serializer_cls is None:
+                logger.error("PluginRunNew::missing_serializer %s", plugin)
+                return JsonResponse(
+                    {
+                        "status": "error",
+                        "type": "server_error",
+                        "errors": {"plugin": [f"No serializer registered for plugin '{plugin}'."]},
+                    },
+                    status=500,
+                )
+
+            normalized_parameters = {}
+
+            for parameter in raw_parameters:
+                if not isinstance(parameter, dict):
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "type": "wrong_request_body",
+                            "errors": {"parameters": ["Each parameter must be an object."]},
+                        },
+                        status=400,
+                    )
+
+                name = parameter.get("name")
+                if not name:
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "type": "wrong_request_body",
+                            "errors": {"parameters": ["Each parameter needs a name."]},
+                        },
+                        status=400,
+                    )
+
+                if "value" not in parameter:
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "type": "wrong_request_body",
+                            "errors": {name: ["Missing 'value'."]},
+                        },
+                        status=400,
+                    )
+
+                normalized_parameters[name] = parameter["value"]
+
+            # ------------> file upload handling
+            for key, uploaded_file in request.FILES.items():
+                match = re.match(r"^file_(.*?)$", key)
+                if not match:
+                    continue
+
+                parameter_name = match.group(1)
+                data_id_uuid = uuid.uuid4().hex
+
+                download_result = download_file(
+                    output_dir=output_dir,
+                    output_name=data_id_uuid,
+                    file=uploaded_file,
+                    max_size=11 * 1024 * 1024 * 1024,
+                )
+
+                if download_result.get("status") != "ok":
+                    return JsonResponse(
+                        {
+                            "status": "error",
+                            "type": "file_upload_failed",
+                            "errors": {parameter_name: ["Could not store uploaded file."]},
+                        },
+                        status=400,
+                    )
+
+                normalized_parameters[parameter_name] = download_result.get("path")
+
+            # ------------> DRF serialization
+            serializer = serializer_cls(data=normalized_parameters)
+            try:
+                serializer.is_valid(raise_exception=True)
+            except DRFValidationError as exc:
+                return JsonResponse(
+                    {
+                        "status": "error",
+                        "type": "validation_error",
+                        "errors": exc.detail,
+                    },
+                    status=400,
+                )
+
+            validated_parameters = serializer.validated_data
             
-            result = plugin_manager(
+            result = plugin_manager.run(
                 plugin,
-                user=user_db,
+                user=request.user,
                 video=video_db,
                 run_async=True,
-                parameters=valid_parameters,
+                parameters=validated_parameters,
             )
 
             if result:
                 return JsonResponse({"status": "ok"})
-            return JsonResponse({"status": "error", "type": "plugin_not_started"})
+            return JsonResponse({"status": "error", "type": "plugin_not_started"}, status=500)
+        
         except Exception:
             logger.exception("Failed to create new plugin run")
-            return JsonResponse({"status": "error"})
+            return JsonResponse({"status": "error"}, status=500)
 
 
 class PluginRunDelete(View):
