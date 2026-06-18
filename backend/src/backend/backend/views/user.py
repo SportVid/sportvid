@@ -32,7 +32,6 @@ def get_csrf_token(request):
     return JsonResponse({"token": token})
 """
 
-
 @ensure_csrf_cookie
 def get_csrf_token(request):
     return JsonResponse({"status": "ok"})
@@ -40,9 +39,21 @@ def get_csrf_token(request):
 
 class UserGet(View):
     def post(self, request):
+        logger.debug(
+            "user.is_authenticated=%s session_key=%s sessionid=%s",
+            request.user.is_authenticated,
+            request.session.session_key,
+            request.COOKIES.get("sessionid"),
+        )
+        
         if not request.user.is_authenticated:
-            return JsonResponse({"status": "error", "error": {"type": "not_authenticated"}})
-
+            return JsonResponse(
+                {
+                    "status": "error", 
+                    "error": {"type": "not_authenticated"}
+                },
+                status=401
+            )
         try:
             user = request.user
             return JsonResponse(
@@ -168,8 +179,13 @@ def register(request):
 @require_http_methods(["POST"])
 def user_update(request):
     if not request.user.is_authenticated:
-        return JsonResponse({"status": "error", "error": {"type": "not_authenticated"}})
-
+        return JsonResponse(
+            {
+                "status": "error", 
+                "error": {"type": "not_authenticated"}
+            },
+            status=401
+        )
     try:
         body = request.body.decode("utf-8")
     except (UnicodeDecodeError, AttributeError):
@@ -263,8 +279,13 @@ def user_update(request):
 @require_http_methods(["POST"])
 def user_delete(request):
     if not request.user.is_authenticated:
-        return JsonResponse({"status": "error", "error": {"type": "not_authenticated"}})
-
+        return JsonResponse(
+            {
+                "status": "error", 
+                "error": {"type": "not_authenticated"}
+            },
+            status=401
+        )
     try:
         body = request.body.decode("utf-8")
     except (UnicodeDecodeError, AttributeError):
