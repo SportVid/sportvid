@@ -189,7 +189,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwa
         file_in = media_path_to_file(video_id_hex, original_ext)
 
         hls_dir = os.path.join(output_root, video_id_hex)
-        manifest_path = os.path.join(hls_dir, f'video_id_hex.m3u8')
+        manifest_path = os.path.join(hls_dir, f'{video_id_hex}.m3u8')
         os.makedirs(hls_dir, exist_ok=True)
         logger.debug(f'out={output_root}, hls_dir={hls_dir}, file_in={file_in}, manifest_path={manifest_path}')
 
