@@ -1,2 +1,3 @@
 from .tracker import TrackerExecutionSerializer
 from .bytetrack import ByteTrackSerializer
+from .calibration_static_dlt import CalibrationSerializer
