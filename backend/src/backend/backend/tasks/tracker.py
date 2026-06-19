@@ -16,25 +16,15 @@ from django.db import transaction
 from django.conf import settings
 
 
-@PluginManager.export_parser("tracker")
-class TrackerParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "tracker": {
-                "parser": str,
-                "default": "yolox"
-            },
-            "tracking_params": {
-                "parser": Dict,
-                "default": {
-                    "confidence_threshold" : 0.25,
-                    
-                }
-                
-            },
-            "fps": {"parser": int, "default": 5}
-        }
-
+""" TODO: Frontend should send params in this format:
+{
+    "detector": "yolox",
+    "tracker": "bytetrack",
+    "detector_params": {"model_chkpt": }
+    "tracker_params": {"fps": 5},
+    "weights": "checkpoint_name",
+}
+"""
 
 @PluginManager.export_plugin("tracker")
 class Tracker(Task):
@@ -53,7 +43,6 @@ class Tracker(Task):
         dry_run: bool = False,
         **kwargs
     ):
-
         manager = DataManager(self.config["output_path"])
         client = TaskAnalyserClient(
             host=self.config["analyser_host"],
@@ -67,8 +56,10 @@ class Tracker(Task):
             client,
             "tracker",
             parameters={
-                # TODO
-                "fps": parameters.get("fps"),
+                "detector": parameters["detector"],
+                "detector_params": parameters.get("detector_params", {}),
+                "tracker": parameters["tracker"],
+                "tracker_params": parameters.get("tracker_params", {}),
             },
             inputs={"video": video_id},
             outputs=["tracklets"],
@@ -97,5 +88,5 @@ class Tracker(Task):
                 return {
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [plugin_run_result_db.id.hex],
-                    "data": {"tracklets": bytetrack_result[1]["tracklets"].id}
+                    "data": {"tracklets": tracker_result[1]["tracklets"].id}
                 }

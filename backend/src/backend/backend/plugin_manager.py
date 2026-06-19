@@ -6,6 +6,7 @@ import json
 from celery import shared_task
 from django.conf import settings
 from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 from backend.models import (
     PluginRun,
@@ -134,7 +135,7 @@ class PluginManager:
         }
         
         if run_async:
-            run_plugin.apply_async(args=[task_payload])
+            run_plugin.apply_async((task_payload))
             return result
 
         try:
