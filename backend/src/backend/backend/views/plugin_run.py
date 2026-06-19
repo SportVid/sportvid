@@ -169,11 +169,13 @@ class PluginRunList(View):
 
         plugin_manager = PluginManager()
         try:
+            can_see_all = request.user.role in ("admin", "researcher")
             video_id = request.GET.get("video_id")
             if video_id:
-                analyses = PluginRun.objects.filter(
-                    video__id=video_id, video__owner=request.user
-                )
+                if can_see_all:
+                    analyses = PluginRun.objects.filter(video__id=video_id)
+                else:
+                    analyses = PluginRun.objects.filter(video__id=video_id, video__owner=request.user)
             else:
                 analyses = PluginRun.objects.filter(video__owner=request.user)
             add_results = request.GET.get("add_results")

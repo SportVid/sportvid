@@ -150,9 +150,18 @@ class VideoList(View):
         try:
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"}, status=500)
+
+            can_see_all = request.user.role in ("admin", "researcher")
+            queryset = Video.objects.all() if can_see_all else Video.objects.filter(owner=request.user)
+            if can_see_all:
+                queryset = queryset.select_related("owner")
+
             entries = []
-            for video in Video.objects.filter(owner=request.user):
-                entries.append(video.to_dict())
+            for video in queryset:
+                d = video.to_dict()
+                if can_see_all:
+                    d["owner_username"] = video.owner.username if video.owner else None
+                entries.append(d)
             return JsonResponse({"status": "ok", "entries": entries})
         except Exception as e:
             logger.exception("Error listing videos")
@@ -165,15 +174,22 @@ class VideoGet(View):
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"}, status=500)
 
+            can_see_all = request.user.role in ("admin", "researcher")
+            qs = Video.objects.filter(id=request.GET.get("id"))
+            if not can_see_all:
+                qs = qs.filter(owner=request.user)
+            if can_see_all:
+                qs = qs.select_related("owner")
             entries = []
-            for video in Video.objects.filter(id=request.GET.get("id"), owner=request.user):
+            for video in qs:
                 video_id_hex = video.id.hex if not video.file else video.file.hex
-                entries.append(
-                    {
-                        **video.to_dict(),
-                        "url": media_url_to_file(video_id_hex, video.ext),
-                    }
-                )
+                entry = {
+                    **video.to_dict(),
+                    "url": media_url_to_file(video_id_hex, video.ext),
+                }
+                if can_see_all:
+                    entry["owner_username"] = video.owner.username if video.owner else None
+                entries.append(entry)
             if len(entries) != 1:
                 return JsonResponse({"status": "error"}, status=500)
             return JsonResponse({"status": "ok", "entry": entries[0]})
@@ -217,6 +233,9 @@ class VideoRename(View):
                     {"status": "error", "type": "not_exist"}, status=500
                 )
 
+            if video_db.owner != request.user and request.user.role != "admin":
+                return JsonResponse({"status": "error", "type": "not_authorized"}, status=403)
+
             video_db.name = data.get("name")
             video_db.save()
             return JsonResponse({"status": "ok", "entry": video_db.to_dict()})
@@ -240,7 +259,11 @@ class VideoDelete(View):
             except Exception as e:
                 return JsonResponse({"status": "error"}, status=500)
             
-            video = Video.objects.filter(id=data.get("id"), owner=request.user).first()
+            is_admin = request.user.role == "admin"
+            if is_admin:
+                video = Video.objects.select_related("owner").filter(id=data.get("id")).first()
+            else:
+                video = Video.objects.select_related("owner").filter(id=data.get("id"), owner=request.user).first()
             if not video:
                 return JsonResponse({"status": "error"}, status=500)
 
@@ -252,8 +275,12 @@ class VideoDelete(View):
                 celery_app.control.revoke(video.task_id, terminate=False)
 
             file_size = video.file_size
+            video_owner = video.owner
             video_id_hex = video.id.hex
-            count, _ = Video.objects.filter(id=video.id, owner=request.user).delete()
+            if is_admin:
+                count, _ = Video.objects.filter(id=video.id).delete()
+            else:
+                count, _ = Video.objects.filter(id=video.id, owner=request.user).delete()
 
             if count:
                 # Clean up files on disk
@@ -265,8 +292,9 @@ class VideoDelete(View):
                 except Exception:
                     logger.exception("Failed to clean up video files after delete")
 
-                request.user.used_storage_size = max(0, request.user.used_storage_size - file_size)
-                request.user.save()
+                if video_owner:
+                    video_owner.used_storage_size = max(0, video_owner.used_storage_size - file_size)
+                    video_owner.save()
                 return JsonResponse({"status": "ok"})
 
             return JsonResponse({"status": "error"}, status=500)

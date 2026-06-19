@@ -21,7 +21,7 @@
       </v-btn>
 
       <div v-if="analysisView" class="d-flex align-center" data-tour="analysis-appbar-actions">
-        <v-btn @click="showModalPlugin = true" data-tour="modal-plugin-open">
+        <v-btn v-if="canWrite" @click="showModalPlugin = true" data-tour="modal-plugin-open">
           <app-bar-icon>mdi-puzzle-outline</app-bar-icon>
           <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
         </v-btn>
@@ -161,7 +161,7 @@
     </template>
 
     <ModalPlugin v-if="showModalPlugin" v-model="showModalPlugin" :videoIds="[videoId]" />
-    <ModalHistory v-if="showModalHistory" v-model="showModalHistory" :pluginRuns="pluginRuns" />
+    <ModalHistory v-if="showModalHistory" v-model="showModalHistory" :pluginRuns="pluginRuns" :canWrite="canWrite" />
     <ModalShortcut v-if="showModalShortcut" v-model="showModalShortcut" />
     <ModalExport v-if="showModalExport" v-model="showModalExport" />
     <ModalVideoUpload v-if="showModalVideoUpload" v-model="showModalVideoUpload" />
@@ -278,6 +278,13 @@ const showModalShortcut = ref(false);
 const showModalExport = ref(false);
 
 const showModalVideoUpload = ref(false);
+
+const canWrite = computed(() => {
+  if (userStore.role === "admin") return true;
+  const ownerUsername = playerStore.video?.owner_username;
+  if (!ownerUsername) return true;
+  return ownerUsername === userStore.username;
+});
 
 const showModalBatchPlugin = ref(false);
 const selectedVideosIds = computed(() => videoStore.selectedVideosIds);

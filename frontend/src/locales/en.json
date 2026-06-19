@@ -97,7 +97,13 @@
     "video_id": "Video ID:",
     "length": "Length:",
     "uploaded": "Uploaded:",
-    "timelines": "Timelines:"
+    "timelines": "Timelines:",
+    "filter_sport": "Sport",
+    "filter_age_group": "Age Group",
+    "filter_all": "All",
+    "sort_date_newest": "Newest first",
+    "sort_date_oldest": "Oldest first",
+    "filter_name": "Search title..."
   },
   "analysis_view": {
     "visualization_tabs": {
@@ -445,7 +451,8 @@
         "max_file_size": "Max. File Size",
         "roles": {
           "user": "User",
-          "admin": "Admin"
+          "admin": "Admin",
+          "researcher": "Researcher"
         }
       }
     },
@@ -1165,6 +1172,7 @@
       "label": "Role",
       "all": "All",
       "admin": "Admin",
+      "researcher": "Researcher",
       "user": "User"
     },
     "user": {

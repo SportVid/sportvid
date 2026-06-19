@@ -9,7 +9,7 @@
       line-height: 1.5;
       height: 25vh;
     "
-    v-html="$t('visualization.timeline.not_available')"
+    v-html="timelineNotAvailableText"
   />
 
   <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-n2">
@@ -69,13 +69,29 @@
 
 <script setup>
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
+import { useUserStore } from "@/stores/user";
 import Timeline from "@/components/timeline/Timeline.vue";
 import TimelineTimeSelector from "@/components/timeline/TimelineTimeSelector.vue";
 
+const { t } = useI18n();
 const playerStore = usePlayerStore();
+const userStore = useUserStore();
 
 const num_timelines = computed(() => playerStore.video?.num_timelines);
+
+const canWrite = computed(() => {
+  if (userStore.role === "admin") return true;
+  const ownerUsername = playerStore.video?.owner_username;
+  if (!ownerUsername) return true;
+  return ownerUsername === userStore.username;
+});
+
+const timelineNotAvailableText = computed(() => {
+  const full = t("visualization.timeline.not_available");
+  return canWrite.value ? full : full.split("<br>")[0];
+});
 </script>
 
 <style scoped>
