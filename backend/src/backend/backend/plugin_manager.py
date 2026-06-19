@@ -135,7 +135,7 @@ class PluginManager:
         }
         
         if run_async:
-            run_plugin.apply_async((task_payload))
+            run_plugin.apply_async(args=[task_payload])
             return result
 
         try:
