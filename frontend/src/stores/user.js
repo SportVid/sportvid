@@ -22,6 +22,20 @@ export const useUserStore = defineStore(
     const maxVideoSize = ref(null);
     const maxFileSize = ref(null);
     const csrfToken = ref(null);
+    const isReady = ref(false);
+
+    function clearUserState() {
+      userId.value = null;
+      username.value = null;
+      email.value = null;
+      role.value = null;
+      usedStorageSize.value = 0;
+      maxStorageSize.value = 0;
+      maxVideoSize.value = 0;
+      maxFileSize.value = 0;
+      dateJoined.value = null;
+      loggedIn.value = false;
+    }
 
     function getCookie(name) {
       let cookieValue = null;
@@ -64,6 +78,7 @@ export const useUserStore = defineStore(
 
       try {
         const res = await axios.post(`${config.API_LOCATION}/user/get`);
+
         if (res.data.status === "ok") {
           userId.value = res.data.data.id || null;
           username.value = res.data.data.username || null;
@@ -76,20 +91,14 @@ export const useUserStore = defineStore(
           dateJoined.value = res.data.data.date_joined || null;
           loggedIn.value = true;
         } else {
-          userId.value = null;
-          username.value = null;
-          email.value = null;
-          role.value = null;
-          usedStorageSize.value = 0;
-          maxStorageSize.value = 0;
-          maxVideoSize.value = 0;
-          maxFileSize.value = 0;
-          dateJoined.value = null;
+          clearUserState();
         }
       } catch (error) {
+        clearUserState();
         console.error("Error fetching user data:", error);
       } finally {
         isLoading.value = false;
+        isReady.value = true;
       }
     }
 
@@ -128,18 +137,10 @@ export const useUserStore = defineStore(
       try {
         const res = await axios.post(`${config.API_LOCATION}/user/logout`, { params });
         if (res.data.status === "ok") {
-          userId.value = null;
-          username.value = null;
-          email.value = null;
-          role.value = null;
-          usedStorageSize.value = 0;
-          maxStorageSize.value = 0;
-          maxVideoSize.value = 0;
-          maxFileSize.value = 0;
-          dateJoined.value = null;
-          loggedIn.value = false;
+          clearUserState();
           return true;
         }
+        return false;
       } finally {
         isLoading.value = false;
       }
@@ -192,17 +193,8 @@ export const useUserStore = defineStore(
       try {
         const res = await axios.post(`${config.API_LOCATION}/user/delete`, { params });
         if (res.data.status === "ok") {
-          userId.value = null;
-          username.value = null;
-          email.value = null;
-          role.value = null;
-          usedStorageSize.value = 0;
-          maxStorageSize.value = 0;
-          maxVideoSize.value = 0;
-          maxFileSize.value = 0;
-          dateJoined.value = null;
+          clearUserState();
           accountDeleted.value = true;
-          loggedIn.value = false;
         }
         return res.data || { status: "error", message: "Invalid message." };
       } finally {
@@ -223,6 +215,7 @@ export const useUserStore = defineStore(
       email,
       role,
       isLoading,
+      isReady,
       usedStorageSize,
       maxStorageSize,
       remainingStorageSize,
@@ -242,9 +235,10 @@ export const useUserStore = defineStore(
     };
   },
   {
-    persist: {
-      pick: ["loggedIn"],
-      storage: localStorage,
-    },
+    // persist: {
+    //   pick: ["loggedIn"],
+    //   storage: localStorage,
+    // },
+    persist: false
   }
 );

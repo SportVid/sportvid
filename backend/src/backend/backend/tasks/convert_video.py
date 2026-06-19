@@ -18,6 +18,7 @@ from utils.helper import remove_file, remove_dir
 
 logger = logging.getLogger(__name__)
 _POLL_INTERVAL = 2.0  # seconds between cancellation checks
+
 @shared_task
 # TODO: get cronjob with cleaning of orphaned videos working...
 def cleanup_upload_orphans(self):
@@ -39,16 +40,20 @@ def cleanup_upload_orphans(self):
 def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
     s = time.time()
     
-    archive_path = ""; hls_dir = ""
+    archive_path = None
+    hls_dir = None
+    video_db = None
+    
     try:
         video_db = Video.objects.get(id=video_id_hex)
         
-        output_dir = media_dir_to_file(video_id_hex)
+        output_root = media_dir_to_file(video_id_hex)
         file_in = media_path_to_file(video_id_hex, original_ext)
         
-        asset_dir = f"{output_dir}{video_id_hex}"
+        asset_dir = os.path.join(output_root, video_id_hex)
+        manifest_path = os.path.join(asset_dir, f'stream.m3u8')
         os.makedirs(asset_dir, exist_ok=True)
-        manifest_path = f"{asset_dir}/stream.m3u8"
+        logger.debug(f'out={output_root}, asset_dir={asset_dir}, file_in={file_in}, manifest_path={manifest_path}')
 
         # extract metadata
         with imageio.get_reader(str(file_in)) as reader:
@@ -58,7 +63,7 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
             size = meta['size']
             
         segment_time = 5
-        gop = fps * segment_time
+        gop = max(1, int(round(fps * segment_time)))
         
         logger.info(f"Starting HLS conversion for {video_id_hex} from {file_in} to {manifest_path}")
 
@@ -79,49 +84,67 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
             "preset" : "medium", # controls encoding speed --vs.-- compression trade-off ["ultrafast" - "veryslow"]
             "pix_fmt": "yuv420p", # pixel format of the output
         }
-        # TODO: After being successful with this approach, make it async!
+        
         convert_to_hls(
             file_in,
-            # original_ext.split(sep=".")[-1].lstrip("."), # NOTE: usually we do not need to provide the file extension.
+            # original_ext.split(sep=".")[-1].lstrip("."), # NOTE: we do not need to provide the file extension.
             manifest_path,
-            asynchronous=False,
+            asynchronous=False, # TODO
             **conversion_args
         )
         
+        # TODO: After being successful with this approach, make it async!
+        # NOTE: alternative solution to allow logging of ffmpeg conversion process.
+        """
+        while True:
+            if ffmpeg_proc.poll() is not None:
+                break
+            
+            if ffmpeg_proc.stderr: 
+                try:
+                    # reads stderr out chunk by chunk to prevent the Popen process from blocking when using pipe_stderr=True
+                    chunk = ffmpeg_proc.stderr.read1(4096).decode(errors="replace")
+                    if chunk:
+                        logger.debug(chunk.rstrip())
+                except Exception:
+                    pass
+                
+            if not Video.objects.filter(id=video_id_hex).exists():
+                logger.info("Video deleted during HLS conversion, killing ffmpeg.")
+                ffmpeg_proc.kill()
+                ffmpeg_proc.wait()
+                return
+            
+            time.sleep(_POLL_INTERVAL)
+        """
+        
+        # TODO: safe way to check if all the segments have been written to the asset dir?
         media_candidates = list(asset_dir.glob("*.m4s")) + list(asset_dir.glob("*.mp4"))
         if not media_candidates:
             raise RuntimeError(f"No media file generated in {asset_dir}")
         media_path = media_candidates[0]
 
         # extract metadata
-        reader = imageio.get_reader(str(file_in))
-        fps = reader.get_meta_data().get('fps')
-        duration = reader.get_meta_data().get('duration') * 1000.0
-        size = reader.get_meta_data().get('size')
+        reader      = imageio.get_reader(str(file_in))
+        fps         = reader.get_meta_data().get('fps')
+        duration    = reader.get_meta_data().get('duration') * 1000.0
+        size        = reader.get_meta_data().get('size')
 
-        # update DB
-        video_db.ext = ".video_asset"
-        video_db.fps = fps
-        video_db.duration = duration
-        if size:
-            video_db.width = size[0]
-            video_db.height = size[1]
-        video_db.status = Video.STATUS_DONE
+        # update DB (use update_fields to avoid re-inserting a deleted record)
+        Video.objects.filter(id=video_id_hex).update(
+            ext=".video_asset",
+            fps=fps,
+            duration=duration,
+            width=size[0] if size else None,
+            height=size[1] if size else None,
+            status=Video.STATUS_DONE,
+            asset_dir = str(asset_dir),
+            manifest_path = str(manifest_path),
+            media_path = str(media_path)
+        )
 
-        # new fields for video schema
-        video_db.asset_dir = str(asset_dir)
-        video_db.manifest_path = str(manifest_path)
-        video_db.media_path = str(media_path)
-
-        video_db.status = Video.STATUS_DONE
-        video_db.save()
-
-        # cleanup
-        try:
-            if remove_file(file_in):
-                logger.debug(f"{file_in} removed successfully!")
-        except Exception:
-            logger.exception("Failed to remove original file")
+        e = time.time()
+        logger.info(f"HLS conversion took: {e-s}")
 
         # run plugins (thumbnail + any analyzers)
         plugin_manager = PluginManager()
@@ -133,31 +156,42 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
                 plugin_manager(plugin, video=video_db, user=video_db.owner)
             except Exception:
                 logger.exception(f"Failed to schedule plugin {plugin}")
-        e = time.time()
-        logger.info(f"HLS conversion took: {e-s}")
+        
+        delete_source = True
+
     except Exception:
         logger.exception("Video conversion failed")
-        try:
-            video_db = Video.objects.get(id=video_id_hex)
-            video_db.status = Video.STATUS_ERROR
-            video_db.save()
-        except Exception:
-            logger.exception("Failed to mark video as error")
+        if video_db is not None:
+            Video.objects.filter(id=video_id_hex).update(status=Video.STATUS_ERROR)
+        safe_delete([archive_path, hls_dir])
+        delete_source = True
+    
+    finally:
+        if delete_source:  # cleanup routine
+            try:
+                remove_file(file_in)
+                logger.debug(f"{file_in} removed successfully!")
+            except Exception:
+                logger.exception("Failed to remove original file")
 
 @shared_task(bind=True)
 def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwargs):
     s = time.time()
     
+    archive_path = None
+    hls_dir = None
+    video_db = None
+    
     try:
         video_db = Video.objects.get(id=video_id_hex)
         
-        output_dir = media_dir_to_file(video_id_hex)
+        output_root = media_dir_to_file(video_id_hex)
         file_in = media_path_to_file(video_id_hex, original_ext)
 
-        manifest_path = f"{output_dir}{video_id_hex}/{video_id_hex}.m3u8"
-        os.makedirs(f"{output_dir}{video_id_hex}", exist_ok=True)
-
-        logger.info(f'{output_dir}, {file_in}, {manifest_path}')
+        hls_dir = os.path.join(output_root, video_id_hex)
+        manifest_path = os.path.join(hls_dir, f'{video_id_hex}.m3u8')
+        os.makedirs(hls_dir, exist_ok=True)
+        logger.debug(f'out={output_root}, hls_dir={hls_dir}, file_in={file_in}, manifest_path={manifest_path}')
 
         # extract metadata
         with imageio.get_reader(str(file_in)) as reader:
@@ -167,7 +201,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwa
             size = meta['size']
             
         segment_time = 5
-        gop = fps * segment_time
+        gop = max(1, int(round(fps * segment_time)))
 
         logger.info(f"Starting HLS conversion for {video_id_hex} from {file_in} to {manifest_path}")
 
@@ -191,13 +225,36 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwa
         }
 
         ffmpeg_proc = convert_to_hls(
-            file_in,
-            # original_ext.split(sep=".")[-1].lstrip("."), # NOTE: usually we do not need to provide the file extension.
-            manifest_path,
+            str(file_in),
+            # original_ext.split(sep=".")[-1].lstrip("."), # NOTE: we do not need to provide the file extension.
+            str(manifest_path),
             asynchronous=True,
             **conversion_args
         )
         
+        # NOTE: alternative solution to allow logging of ffmpeg conversion process.
+        """
+        while True:
+            if ffmpeg_proc.poll() is not None:
+                break
+            
+            if ffmpeg_proc.stderr: 
+                try:
+                    # reads stderr out chunk by chunk to prevent the Popen process from blocking when using pipe_stderr=True
+                    chunk = ffmpeg_proc.stderr.read1(4096).decode(errors="replace")
+                    if chunk:
+                        logger.debug(chunk.rstrip())
+                except Exception:
+                    pass
+                
+            if not Video.objects.filter(id=video_id_hex).exists():
+                logger.info("Video deleted during HLS conversion, killing ffmpeg.")
+                ffmpeg_proc.kill()
+                ffmpeg_proc.wait()
+                return
+            
+            time.sleep(_POLL_INTERVAL)
+        """
         while True:
             try: # poll for ffmpeg completion; check for cancellation (video deleted) each interval
                 ffmpeg_proc.wait(timeout=_POLL_INTERVAL)
@@ -210,19 +267,19 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwa
                     return
 
         if ffmpeg_proc.returncode != 0:
-            stderr = ffmpeg_proc.stderr.read() if ffmpeg_proc.stderr else b""
-            raise Exception(f"ffmpeg exited with code {ffmpeg_proc.returncode}: {stderr.decode(errors='replace')}")
+            stderr = ""
+            if ffmpeg_proc.stderr:
+                stderr = ffmpeg_proc.stderr.read().decode(errors="replace")
+            raise RuntimeError(f"ffmpeg exited with code {ffmpeg_proc.returncode}: {stderr}")
 
         # check if video was deleted while we were converting
         if not Video.objects.filter(id=video_id_hex).exists():
-            logger.info(f"Video {video_id_hex} was deleted during conversion, aborting.")
+            logger.info(f"Video {video_id_hex} deleted during conversion, aborting.")
             return
 
-        # create archive
+        # creates the archive to be transfered
         ext = '.tar.gz'
-        archive_path = Path(f"{output_dir}{video_id_hex}{ext}")
-        hls_dir = Path(f"{output_dir}{video_id_hex}/")
-
+        archive_path = Path(f"{output_root}{video_id_hex}{ext}")
         with tarfile.open(archive_path, 'w:gz') as tar:
             tar.add(hls_dir, arcname='.', recursive=True)
 
@@ -235,14 +292,9 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwa
             height=size[1],
             status=Video.STATUS_DONE,
         )
-        video_db.ext = ext
 
-        # cleanup
-        try:
-            if remove_file(file_in):
-                logger.debug(f"{file_in} removed successfully!")
-        except Exception:
-            logger.exception("Failed to remove original file")
+        e = time.time()
+        logger.info(f"HLS conversion took: {e-s}")
 
         # run plugins (thumbnail + any analyzers)
         plugin_manager = PluginManager()
@@ -254,18 +306,23 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwa
                 plugin_manager(plugin, video=video_db, user=video_db.owner)
             except Exception:
                 logger.exception(f"Failed to schedule plugin {plugin}")
-        e = time.time()
-        logger.info(f"HLS conversion took: {e-s}")
+        
+        delete_source = True
+   
     except Exception:
         logger.exception("Video conversion failed")
-        try:
-            video_db = Video.objects.get(id=video_id_hex)
-            video_db.status = Video.STATUS_ERROR
-            video_db.save()
-        except Exception:
-            logger.exception("Failed to mark video as error")
-        finally:
-            safe_delete([archive_path, hls_dir])
+        if video_db is not None:
+            Video.objects.filter(id=video_id_hex).update(status=Video.STATUS_ERROR)
+        safe_delete([archive_path, hls_dir])
+        delete_source = True
+
+    finally:
+        if delete_source:  # cleanup routine
+            try:
+                remove_file(file_in)
+                logger.debug(f"{file_in} removed successfully!")
+            except Exception:
+                logger.exception("Failed to remove original file")
 
 def safe_delete(file_path):
     if type(file_path) == type([]): 
