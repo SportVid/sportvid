@@ -40,7 +40,7 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
     output_stream = ffmpeg.overwrite_output(output_stream)
     
     if asynchronous:
-        return ffmpeg.run_async(output_stream, pipe_stderr=True)
+        return ffmpeg.run_async(output_stream, pipe_stderr=False) # NOTE: pipe_stderr=True for debug log output.
     else:
         return ffmpeg.run(output_stream)
     

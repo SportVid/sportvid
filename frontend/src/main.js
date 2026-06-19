@@ -14,20 +14,43 @@ import { useUserStore } from "@/stores/user";
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
 
-const app = createApp(App);
+async function bootstrap() {
+  const app = createApp(App);
 
-app.mixin({
-  async created() {
-    const userStore = useUserStore();
-    await userStore.getCSRFToken();
-    await userStore.getUserData();
-  },
-});
+  app.use(vuetify);
+  app.use(pinia);
+  app.use(router);
+  app.use(i18n);
+  app.use(auth);
 
-app.use(vuetify);
-app.use(pinia);
-app.use(router);
-app.use(i18n);
-app.use(auth);
+  const userStore = useUserStore(pinia);
+  await userStore.getCSRFToken();
+  await userStore.getUserData();
 
-app.mount("#app");
+  app.mount("#app");
+}
+bootstrap();
+
+// const app = createApp(App);
+
+// app.use(vuetify);
+// app.use(pinia);
+// app.use(router);
+// app.use(i18n);
+// app.use(auth);
+
+// const userStore = useUserStore(pinia);
+// await userStore.getCSRFToken();
+// await userStore.getUserData();
+
+// app.mixin({
+//   async created() {
+//     const userStore = useUserStore();
+//     await userStore.getCSRFToken();
+//     await userStore.getUserData();
+//   },
+// });
+
+// TODO: old client authentication state exists before backend confirms the session.
+
+// app.mount("#app");
