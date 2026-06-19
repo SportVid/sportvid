@@ -175,7 +175,7 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
                 logger.exception("Failed to remove original file")
 
 @shared_task(bind=True)
-def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None, **kwargs):
+def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
     s = time.time()
     
     archive_path = None
