@@ -16,6 +16,7 @@ class BackendConfig(AppConfig):
             return
         # import here otherwise django complains
         from sportvid.celery import app
+        from backend.models import PluginRun
         
         # import serializers for auto discovery
         import backend.serializers

@@ -26,7 +26,6 @@ class RTDetr(Detector):
             inference_params, finetune_params, device
         )
         
-        # Load model 
         from ultralytics import RTDETR
         self.model = RTDETR(model_path)
         self.model.to(device)
