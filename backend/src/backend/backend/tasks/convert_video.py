@@ -191,7 +191,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         hls_dir = os.path.join(output_root, video_id_hex)
         manifest_path = os.path.join(hls_dir, f'{video_id_hex}.m3u8')
         os.makedirs(hls_dir, exist_ok=True)
-        logger.debug(f'out={output_root}, hls_dir={hls_dir}, file_in={file_in}, manifest_path={manifest_path}')
+        logger.error(f'out={output_root}, hls_dir={hls_dir}, file_in={file_in}, manifest_path={manifest_path}')
 
         # extract metadata
         with imageio.get_reader(str(file_in)) as reader:
@@ -306,23 +306,15 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 plugin_manager(plugin, video=video_db, user=video_db.owner)
             except Exception:
                 logger.exception(f"Failed to schedule plugin {plugin}")
-        
-        delete_source = True
    
     except Exception:
         logger.exception("Video conversion failed")
         if video_db is not None:
             Video.objects.filter(id=video_id_hex).update(status=Video.STATUS_ERROR)
-        safe_delete([archive_path, hls_dir])
-        delete_source = True
 
     finally:
-        if delete_source:  # cleanup routine
-            try:
-                remove_file(file_in)
-                logger.debug(f"{file_in} removed successfully!")
-            except Exception:
-                logger.exception("Failed to remove original file")
+        safe_delete(file_in)
+
 
 def safe_delete(file_path):
     if type(file_path) == type([]): 
@@ -333,6 +325,6 @@ def safe_delete(file_path):
                     path.unlink(missing_ok=True)
                 elif path.is_dir():
                     shutil.rmtree(path, ignore_errors=True)
-                logger.debug(f"Deleted {file_path}")
+                logger.debug(f"Deleted {file_path} successfully!")
             except Exception as e:
                 logger.warning(f"Failed to delete {file_path}: {e}")

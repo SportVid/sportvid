@@ -159,8 +159,8 @@ main() {
             ;;
         "frontend-rebuild")
             echo "Rebuilding frontend packages..."
-            run_docker compose build --no-cache frontend
-            run_docker compose up --no-deps frontend
+            run_docker build --no-cache frontend
+            run_docker up --no-deps frontend
             ;;
         "wipe")
             wipe_environment
