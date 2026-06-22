@@ -193,6 +193,11 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         os.makedirs(hls_dir, exist_ok=True)
         logger.error(f'out={output_root}, hls_dir={hls_dir}, file_in={file_in}, manifest_path={manifest_path}')
 
+        logger.error(f"cwd={os.getcwd()}")
+        logger.error(f"file_in={file_in!r}")
+        logger.error(f"isabs={os.path.isabs(str(file_in))}")
+        logger.error(f"exists={os.path.exists(str(file_in))}")
+
         # extract metadata
         with imageio.get_reader(str(file_in)) as reader:
             meta = reader.get_meta_data()
