@@ -34,7 +34,7 @@ class KPIComputationSerializer(serializers.Serializer):
         required=False,
         default=5
     )
-    poly_order = serializers.IntegereField(
+    poly_order = serializers.IntegerField(
         required=False,
         default=3
     )
