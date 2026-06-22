@@ -5,8 +5,7 @@ import os
 import json
 from celery import shared_task
 from django.conf import settings
-from typing import Any, Dict, List, Optional, Type
-from typing import Any, Dict, List, Optional, Type
+from typing import List
 
 from backend.models import (
     PluginRun,
@@ -21,78 +20,37 @@ logger = logging.getLogger(__name__)
 
 
 class PluginManager:
-    _plugins: Dict[str, Type] = {}
-    _serializers: Dict[str, Type] = {}
+    _plugins = {}
+    _parser = {}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     @classmethod
-    def export_plugin(cls, name: str):
-        def export_helper(plugin_cls: Type):
-            if name in cls._plugins:
-                raise ValueError(f"Plugin '{name}' is already registered")
-            cls._plugins[name] = plugin_cls
-            return plugin_cls
+    def export_parser(cls, name):
+        def export_helper(parser):
+            cls._parser[name] = parser
+            return parser
+
         return export_helper
 
     @classmethod
-    def export_serializer(cls, name: str):
-        def export_helper(serializer_cls: Type):
-            if name in cls._serializers:
-                raise ValueError(f"Serializer for plugin '{name}' is already registered")
-            cls._serializers[name] = serializer_cls
-            return serializer_cls
-        return export_helper
-    
-    @classmethod
-    def export_parser(cls, name: str):
-        # TODO: remove; just temporary for migration
-        return cls.export_serializer(name)
+    def export_plugin(cls, name):
+        def export_helper(plugin):
+            cls._plugins[name] = plugin
+            return plugin
 
-    def __contains__(self, plugin: str) -> bool:
+        return export_helper
+
+    def __contains__(self, plugin):
         return plugin in self._plugins
 
-    @classmethod
-    def has_plugin(cls, plugin: str) -> bool:
-        return plugin in cls._plugins
-
-    @classmethod
-    def has_serializer(cls, plugin: str) -> bool:
-        return plugin in cls._serializers
-
-    @classmethod
-    def get_plugin(cls, plugin: str) -> Optional[Type]:
-        return cls._plugins.get(plugin)
-
-    @classmethod
-    def get_serializer(cls, plugin: str) -> Optional[Type]:
-        return cls._serializers.get(plugin)
-
-    @classmethod
-    def get_plugin_or_raise(cls, plugin: str) -> Type:
-        plugin_cls = cls.get_plugin(plugin)
-        if plugin_cls is None:
-            raise KeyError(f"Unknown plugin '{plugin}'")
-        return plugin_cls
-
-    @classmethod
-    def get_serializer_or_raise(cls, plugin: str) -> Type:
-        serializer_cls = cls.get_serializer(plugin)
-        if serializer_cls is None:
-            raise KeyError(f"No serializer registered for plugin '{plugin}'")
-        return serializer_cls
-
-    @classmethod
-    def list_plugins(cls) -> List[str]:
-        return sorted(cls._plugins.keys())
-
-    def run(
+    def __call__(
         self,
         plugin: str,
         video: Video,
         user: SportVidUser,
-        parameters: Optional[Dict[str, Any]] = None,
+        parameters: List = None,
         run_async: bool = True,
         dry_run: bool = False,
         **kwargs,
@@ -101,76 +59,65 @@ class PluginManager:
         if plugin not in self._plugins: return {"status": False}
 
         logger.info(
-            'User "%s" has started plugin "%s" with parameters %s',
-            user.username,
-            plugin,
-            parameters,
+            f'User "{user.username}" has started plugin "{plugin}" with parameters {parameters}'
         )
 
-        """ NOTE: old parsing logic        
         if plugin in self._parser:
             parameters = self._parser[plugin]()(parameters)
         else:
             parameters = {}
-        """
 
         result = {"status": True}
         plugin_run = None
-        
         if not dry_run:
             plugin_run = PluginRun.objects.create(
-                video=video,
-                type=plugin,
-                status=PluginRun.STATUS_QUEUED,
+                video=video, type=plugin, status=PluginRun.STATUS_QUEUED
             )
-        
-        task_payload = {
-            "plugin": plugin,
-            "parameters": dict(parameters),
-            "video": str(video.id),
-            "user": str(user.id),
-            "plugin_run": str(plugin_run.id) if plugin_run else None,
-            "dry_run": dry_run,
-            "kwargs": kwargs,
-        }
-        
         if run_async:
-            run_plugin.apply_async(args=[task_payload])
-            return result
-
-        try:
-            plugin_result = self._plugins[plugin]()(
-                parameters,
-                user=user,
-                video=video,
-                plugin_run=plugin_run,
-                dry_run=dry_run,
-                **kwargs,
+            run_plugin.apply_async(
+                (
+                    {
+                        "plugin": plugin,
+                        "parameters": parameters,
+                        "video": video.id,
+                        "user": user.id,
+                        "plugin_run": plugin_run.id if plugin_run else None,
+                        "dry_run": dry_run,
+                        "kwargs": kwargs,
+                    },
+                )
             )
-            if plugin_run is not None:
-                plugin_run.progress = 1.0
-                plugin_run.status = PluginRun.STATUS_DONE
-                plugin_run.save()
+        else:
+            try:
+                plugin_result = self._plugins[plugin]()(
+                    parameters,
+                    user=user,
+                    video=video,
+                    plugin_run=plugin_run,
+                    dry_run=dry_run,
+                    **kwargs,
+                )
+                if plugin_run is not None:
+                    plugin_run.progress = 1.0
+                    plugin_run.status = PluginRun.STATUS_DONE
+                    plugin_run.save()
 
-            # creates cached files for all plugin run results
-            manager = DataManager("/predictions/")
+                # creates cached files for all plugin run results
+                manager = DataManager("/predictions/")
 
-            generate_plugin_run_result_cache(
-                manager, plugin_result.get("plugin_run_results", [])
-            )
-            if plugin_result: result["result"] = plugin_result
+                generate_plugin_run_result_cache(
+                    manager, plugin_result.get("plugin_run_results", [])
+                )
+                if plugin_result: result["result"] = plugin_result
 
-        except Exception:
-            logger.exception(f"Failed to run plugin {plugin_run.type}")
-            if plugin_run is not None:
-                plugin_run.status = PluginRun.STATUS_ERROR
-                plugin_run.save()
-            result["status"] = False
-
+            except Exception:
+                logger.exception(f"Failed to run plugin {plugin_run.type}")
+                if plugin_run is not None:
+                    plugin_run.status = PluginRun.STATUS_ERROR
+                    plugin_run.save()
+                result["status"] = False
+                return result
         return result
-    
-    def __call__(self, *args, **kwargs):
-        return self.run(*args, **kwargs)
 
     def get_results(self, analyse):
         if not hasattr(analyse, "type"):
@@ -215,64 +162,24 @@ def generate_plugin_run_result_cache(
 @shared_task(bind=True)
 def run_plugin(self, args):
     plugin = args.get("plugin")
-    parameters = args.get("parameters") or {}
+    parameters = args.get("parameters")
     video = args.get("video")
     user = args.get("user")
     plugin_run = args.get("plugin_run")
     dry_run = args.get("dry_run")
-    kwargs = args.get("kwargs") or {}
+    kwargs = args.get("kwargs")
 
     video_db = Video.objects.get(id=video)
     user_db = SportVidUser.objects.get(id=user)
-    
     plugin_run_db = None
-    if not dry_run and plugin_run is not None:
+    if not dry_run:
         plugin_run_db = PluginRun.objects.get(id=plugin_run)
-        
         if plugin_run_db.in_scheduler:
             logger.warning("Job was rescheduled and will be canceled")
             return
-        
         plugin_run_db.in_scheduler = True
         plugin_run_db.save()
 
-    plugin_cls = PluginManager.get_plugin(plugin)
-    if plugin_cls is None:
-        logger.error("Plugin run failed: unknown plugin '%s'", plugin)
-        if plugin_run_db is not None:
-            plugin_run_db.status = PluginRun.STATUS_ERROR
-            plugin_run_db.save()
-        return
-    
-    try:
-        plugin_result = plugin_cls()(
-            parameters=parameters,
-            user=user_db,
-            video=video_db,
-            plugin_run=plugin_run_db,
-            dry_run=dry_run,
-            **kwargs,
-        )
-
-        manager = DataManager("/predictions/")
-        generate_plugin_run_result_cache(
-            manager,
-            plugin_result.get("plugin_run_results", []),
-        )
-
-        if plugin_run_db is not None:
-            plugin_run_db.progress = 1.0
-            plugin_run_db.status = PluginRun.STATUS_DONE
-            plugin_run_db.save()
-
-    except Exception:
-        logger.exception("Plugin run failed for %s", plugin)
-        if plugin_run_db is not None:
-            plugin_run_db.status = PluginRun.STATUS_ERROR
-            plugin_run_db.save()
-    
-
-    """ NOTE: old logic    
     plugin_manager = PluginManager()
     try:
         plugin_result = plugin_manager._plugins[plugin]()(
@@ -302,4 +209,3 @@ def run_plugin(self, args):
     if plugin_run_db is not None:
         plugin_run_db.status = PluginRun.STATUS_ERROR
         plugin_run_db.save()
-    """
