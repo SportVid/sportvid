@@ -34,7 +34,8 @@ default_yolox_params = {
     "fp16": False,
     "num_classes": 2, 
     "decode": True,             # whether to decode the model outputs into bounding boxes during inference. If False, raw model outputs will be returned.
-    "test_size": [576, 1024]
+    "test_size": [576, 1024],
+    "checkpoint": "yolox/yolox_l.pth"
 }
 
 default_yoloultra_params = {
@@ -48,6 +49,7 @@ default_yoloultra_params = {
     "max_det": 100,             # max amount of detections per frame
     "embed": None,              # specify layers from which to extract feature vectors or embeddings
     "verbose": False,
+    "checkpoint": "yolo_ultra/yolo11l.pt"
 }
 
 default_rfdetr_params = {
@@ -58,13 +60,15 @@ default_rfdetr_params = {
     "max_det": 100,
     "resolution": 672,          # has to be divisible by 56: [672,728,784,896,1008,1064,1120]
     "verbose": False,
+    "checkpoint": "detr/rf-detr-large.pth"
 }
 
 default_rtdetr_params = {
     "batch_size": 2,
     "conf": 0.25,
     "classes": [0, 32],         # default COCO: 0 - person, 32 - ball
-    "verbose": False,
+    "verbose": False, 
+    "checkpoint": "detr/rtdetr-x.pt"
 }
 
 default_bytetrack_params = {

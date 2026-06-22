@@ -33,54 +33,22 @@ class RFDetr(Detector):
         self.min_confidence = self.cfg.get('conf_thresh', 0.25)
         self.resolution = self.cfg.get('resolution', 672)
         
-        print(self.num_classes)
+        pretrain_weights = None
+        if model_path:
+            if str(model_path) != "" or str(model_path) != "None":
+                pretrain_weights = str(model_path)
+        self.model = RFDETRLarge(
+            device=device,
+            pretrain_weights=pretrain_weights
+        )
         
-        # variants = {
-        #     "nano": RFDETRNano,
-        #     "small": RFDETRSmall,
-        #     "medium": RFDETRMedium,
-        #     "base": RFDETRBase,
-        #     "large": RFDETRLarge
-        # }
-        # logging.info(f"Initializing RF-DETR {self.model_variant} on {self.device}")
-        # model_class = variants.get(self.model_variant.lower(), RFDETRBase)
-        # self.model = model_class(
-        #     pretrain_weights=model_path, # NOTE: uncommenting, auto-downloads checkpoint
-        #     resolution=self.resolution,
-        #     device=self.device
-        # ) # type: ignore
-        
-        self.model = RFDETRLarge()
-        logging.info(f"Reinit detection head for {self.num_classes} classes...")
-        self.model.model.model.reinitialize_detection_head(self.num_classes)
-        # https://huggingface.co/julianzu9612/RFDETR-Soccernet
-        # ---> load checkpoint
-        checkpoint = torch.load(str(model_path), map_location=self.device, weights_only=False)
-        
-        # ---> extract model state
-        if 'model' in checkpoint:
-            model_state = checkpoint['model']
-        elif 'model_state_dict' in checkpoint:
-            model_state = checkpoint['model_state_dict']
-        else:
-            model_state = checkpoint
-        
-        # ---> load state dict
-        self.model.model.model.load_state_dict(model_state)
-        
-        # ---> show checkpoint info
-        if 'best_mAP' in checkpoint:
-            logging.info(f"📊 Model mAP: {checkpoint['best_mAP']:.3f}")
-        if 'epoch' in checkpoint:
-            logging.info(f"🔄 Trained epochs: {checkpoint['epoch']}")
-
-        # Move to device and set eval mode
+        # move to device and set eval mode
         self.model.model.model.to(self.device)
         self.model.model.model.eval()
         
         logging.info(f"Model loaded successfully...")
         
-        if hasattr(self.model, 'optimize_for_inference'):
+        if self.mode == 'inference' and hasattr(self.model, 'optimize_for_inference'):
             self.model.optimize_for_inference(compile=False)
 
     @torch.no_grad()
@@ -126,3 +94,15 @@ class RFDetr(Detector):
             self.img_id += 1
             
         return batch_results
+
+    def run_finetune(self, inputs):
+        return {}
+
+    def reset_state(self):
+        super().reset_state()
+
+    def save_state(self, state_path):
+        super().save_state(state_path)
+    
+    def load_state(self, state_path):
+        return super().load_state(state_path)
