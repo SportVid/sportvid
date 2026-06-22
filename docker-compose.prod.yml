@@ -222,7 +222,6 @@ services:
     image: netdata/netdata:stable
     container_name: netdata
     pid: host
-    network_mode: host
     restart: unless-stopped
     cap_add:
       - SYS_PTRACE
