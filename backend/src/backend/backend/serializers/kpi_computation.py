@@ -7,10 +7,16 @@ class KPIComputationSerializer(serializers.Serializer):
     bytetrack_run_id = serializers.UUIDField(required=True)
     calibration_id = serializers.UUIDField(required=True)
     
-    format = serializers.ChoiceField(
+    # TODO: fix.
+    # format = serializers.ChoiceField(
+    #     required=True,
+    #     choices=["dfl", "kinexon", "sportvid"]
+    # )
+    
+    format = serializers.CharField(
         required=True,
-        choices=["dfl", "kinexon", "sportvid"]
     )
+    
     pos_meta = serializers.JSONField(
         required=False,
         allow_null=True, 
