@@ -10,7 +10,6 @@ from backend.plugin_manager import PluginManager
 
 from ..utils.analyser_client import TaskAnalyserClient
 from data import DataManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from django.db import transaction
 from django.conf import settings
