@@ -12,9 +12,9 @@ volumes:
   assets:
     external: true
     name: frontend-assets
-  netdata_config:
-  netdata_lib:
-  netdata_cache:
+  netdataconfig:
+  netdatalib:
+  netdatacache:
 
 services:
   inference_ray:
@@ -231,7 +231,7 @@ services:
     environment:
       - DO_NOT_TRACK=1
     volumes:
-      - ./netdataconfig/netdata:/etc/netdata
+      - netdataconfig:/etc/netdata
       - netdatalib:/var/lib/netdata
       - netdatacache:/var/cache/netdata
       - /:/host/root:ro,rslave
@@ -243,6 +243,7 @@ services:
       - /etc/os-release:/host/etc/os-release:ro
       - /var/log:/host/var/log:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /run/dbus:/run/dbus:ro
     networks:
       - prod
       - shared
