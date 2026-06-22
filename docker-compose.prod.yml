@@ -106,6 +106,8 @@ services:
     container_name: celery_prod
     build:
       context: .
+    secrets:
+      - django_settings
     env_file:
       - /opt/deploy/.env.prod
     volumes:
