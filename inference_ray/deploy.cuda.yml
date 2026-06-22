@@ -30,7 +30,7 @@ applications:
           upscale_delay_s: 30
           downscale_delay_s: 120
         ray_actor_options:
-          num_gpus: 0.25
+          num_gpus: 0.15
           runtime_env:
             uv:
               - git+https://github.com/Alexk1704/ByteTrack.git
@@ -104,7 +104,7 @@ applications:
           upscale_delay_s: 15
           downscale_delay_s: 60
         ray_actor_options:
-          num_cpus: 4
+          num_cpus: 2
           runtime_env:
             uv:
               - numpy
@@ -131,7 +131,7 @@ applications:
           upscale_delay_s: 15
           downscale_delay_s: 60
         ray_actor_options:
-          num_cpus: 4
+          num_cpus: 2
           runtime_env:
             uv:
               - numpy
@@ -158,7 +158,7 @@ applications:
           upscale_delay_s: 15
           downscale_delay_s: 60
         ray_actor_options:
-          num_cpus: 4
+          num_cpus: 2
           runtime_env:
             uv:
               - numpy

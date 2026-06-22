@@ -12,6 +12,9 @@ volumes:
   assets:
     external: true
     name: frontend-assets
+  netdata_config:
+  netdata_lib:
+  netdata_cache:
 
 services:
   inference_ray:
@@ -214,3 +217,33 @@ services:
     networks:
       - shared
       - prod
+
+  netdata:
+    image: netdata/netdata:stable
+    container_name: netdata
+    pid: host
+    network_mode: host
+    restart: unless-stopped
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      - DO_NOT_TRACK=1
+    volumes:
+      - ./netdataconfig/netdata:/etc/netdata
+      - netdatalib:/var/lib/netdata
+      - netdatacache:/var/cache/netdata
+      - /:/host/root:ro,rslave
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /var/log:/host/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - prod
+      - shared
