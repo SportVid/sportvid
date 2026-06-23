@@ -10,6 +10,7 @@ services:
     container_name: inference_ray
     build:
       context: .
+      dockerfile: inference_ray/Dockerfile.cuda
     init: true
     shm_size: "2g" # TODO: should be 30% of total available memory?
     environment:

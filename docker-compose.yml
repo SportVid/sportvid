@@ -10,6 +10,7 @@ services:
     container_name: inference_ray
     build:
       context: .
+      dockerfile: inference_ray/Dockerfile
     init: true
     shm_size: "2g" # TODO: should be 30% of total available memory?
     environment:
@@ -41,7 +42,7 @@ services:
       - "inference_ray"
       - "serve"
       - "run"
-      - "/app/inference_ray/deploy.cuda.yml"
+      - "/app/inference_ray/deploy.yml"
 
   analyser:
     container_name: analyser

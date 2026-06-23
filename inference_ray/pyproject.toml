@@ -16,7 +16,6 @@ dependencies = [
     "pip>=25.0.1",
     "protobuf>=5.29.3",
     "requests>=2.32.3",
-    "scikit-learn>=1.6.1",
     "torch>=2.6.0",
     "numpy==1.26.4",
     "pandas>=2.0.0",
@@ -38,12 +37,18 @@ dependencies = [
 
 [tool.uv]
 package = true
-no-build-isolation-package = [ "torch>=2.6.0" ]
+no-build-isolation-package = [ "torch" ]
 # pip-install-args = [
 #    "--no-build-isolation"
 # ]
+
+[project.optional-dependencies]
+tracking = [
+     "bytetrack",
+]
 
 [tool.uv.sources]
 interface = { workspace = true }
 data = { workspace = true }
 utils = { workspace = true }
+bytetrack = { path = "third_party/ByteTrack" }

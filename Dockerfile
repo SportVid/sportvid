@@ -1,15 +1,14 @@
-# Install uv
 FROM ghcr.io/astral-sh/uv:debian
 
 RUN apt-get update && apt-get install -y \
     wget \
-    ffmpeg
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-# Change the working directory to the `app` directory
 WORKDIR /app
 
-# Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
+ENV PATH="/app/.venv/bin:$PATH"
 
 COPY uv.lock /app/uv.lock
 COPY .python-version /app/.python-version
@@ -21,18 +20,13 @@ COPY backend/pyproject.toml /app/backend/pyproject.toml
 COPY analyser/pyproject.toml /app/analyser/pyproject.toml
 COPY inference_ray/pyproject.toml /app/inference_ray/pyproject.toml
 
-# Install dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-install-project --no-dev
+    uv sync --frozen --no-install-workspace --no-dev
 
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
 # COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked 
+    uv sync --frozen --no-dev
 
-# Place executables in the environment at the front of the path
-ENV PATH="/app/.venv/bin:$PATH"
-
-# Reset the entrypoint, don't invoke `uv`
 ENTRYPOINT []

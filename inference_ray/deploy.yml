@@ -29,29 +29,29 @@ applications:
           look_back_period_s: 15
           upscale_delay_s: 5
           downscale_delay_s: 30
-        ray_actor_options:
-          runtime_env:
-            uv:
-              - git+https://github.com/Alexk1704/ByteTrack.git
-              - torch>=2.6.0
-              - numpy==1.26.4
-              - opencv-python-headless>=4.11.0.86
-              - loguru
-              - scikit-image
-              - tqdm
-              - torchvision>=0.10.0
-              - Pillow
-              - thop
-              - ninja
-              - tabulate
-              - tensorboard
-              - lap
-              - motmetrics
-              - filterpy
-              - h5py
-              - cython_bbox
-              - gdown
-              - pycocotools
+        # ray_actor_options:
+          # runtime_env:
+            # uv:
+              # - git+https://github.com/Alexk1704/ByteTrack.git
+              # - torch>=2.6.0
+              # - numpy==1.26.4
+              # - opencv-python-headless>=4.11.0.86
+              # - loguru
+              # - scikit-image
+              # - tqdm
+              # - torchvision>=0.10.0
+              # - Pillow
+              # - thop
+              # - ninja
+              # - tabulate
+              # - tensorboard
+              # - lap
+              # - motmetrics
+              # - filterpy
+              # - h5py
+              # - cython_bbox
+              # - gdown
+              # - pycocotools
               # - onnx==1.13.0
               # - onnxruntime==1.13.1
               # - onnx-simplifier==0.3.5
@@ -134,22 +134,22 @@ applications:
               - pandas
               - lxml
 
-  - name: thumbnail_generator
-    route_prefix: /thumbnail_generator
-    import_path: inference_ray.main:app_builder
-    args:
-      model: thumbnail_generator
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        max_ongoing_requests: 2
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 1
-          target_num_ongoing_requests_per_replica: 4
-          metrics_interval_s: 5
-          look_back_period_s: 15
-          upscale_delay_s: 5
-          downscale_delay_s: 30
+  # - name: thumbnail_generator
+  #   route_prefix: /thumbnail_generator
+  #   import_path: inference_ray.main:app_builder
+  #   args:
+  #     model: thumbnail_generator
+  #     data_path: /data
+  #     params: {}
+  #   deployments:
+  #     - name: Deployment
+  #       max_ongoing_requests: 2
+  #       autoscaling_config:
+  #         min_replicas: 0
+  #         initial_replicas: 0
+  #         max_replicas: 1
+  #         target_num_ongoing_requests_per_replica: 4
+  #         metrics_interval_s: 5
+  #         look_back_period_s: 15
+  #         upscale_delay_s: 5
+  #         downscale_delay_s: 30
