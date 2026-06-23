@@ -72,7 +72,7 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
             "hls_playlist_type": "vod",
             "hls_segment_type": "fmp4",
             "hls_flags" : "single_file+independent_segments",
-            # "hls_segment_filename" : "stream.m4s",
+            "threads": 4, # TODO!
             "segment_time" : segment_time,
             "vcodec" : "libx264",
             "acodec" : "aac",
@@ -87,36 +87,10 @@ def convert_video_to_fmp4(self, video_id_hex, original_ext, analyzers=None):
         
         convert_to_hls(
             file_in,
-            # original_ext.split(sep=".")[-1].lstrip("."), # NOTE: we do not need to provide the file extension.
             manifest_path,
-            asynchronous=False, # TODO
+            asynchronous=False, # TODO: After being successful with this approach, make it async!
             **conversion_args
         )
-        
-        # TODO: After being successful with this approach, make it async!
-        # NOTE: alternative solution to allow logging of ffmpeg conversion process.
-        """
-        while True:
-            if ffmpeg_proc.poll() is not None:
-                break
-            
-            if ffmpeg_proc.stderr: 
-                try:
-                    # reads stderr out chunk by chunk to prevent the Popen process from blocking when using pipe_stderr=True
-                    chunk = ffmpeg_proc.stderr.read1(4096).decode(errors="replace")
-                    if chunk:
-                        logger.debug(chunk.rstrip())
-                except Exception:
-                    pass
-                
-            if not Video.objects.filter(id=video_id_hex).exists():
-                logger.info("Video deleted during HLS conversion, killing ffmpeg.")
-                ffmpeg_proc.kill()
-                ffmpeg_proc.wait()
-                return
-            
-            time.sleep(_POLL_INTERVAL)
-        """
         
         # TODO: safe way to check if all the segments have been written to the asset dir?
         media_candidates = list(asset_dir.glob("*.m4s")) + list(asset_dir.glob("*.mp4"))
@@ -208,10 +182,12 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         conversion_args = {
             "vid_fps" : fps,
             "format": "hls",
+            "threads": 4, # TODO: check thread count for HLS conversion. Queue 2-3 video uploads, check ffmpeg processes and CPU usage. 
+                            # ps -ef | grep ffmpeg
+                            # top -H -p <ffmpeg_pid>
             "hls_playlist_type": "vod",
             "hls_segment_type": "mpegts",
             "hls_flags" : "independent_segments",
-            # "hls_segment_filename" : "stream.m4s",
             "segment_time" : segment_time,
             "vcodec" : "libx264",
             "acodec" : "aac",
@@ -226,35 +202,10 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
 
         ffmpeg_proc = convert_to_hls(
             str(file_in),
-            # original_ext.split(sep=".")[-1].lstrip("."), # NOTE: we do not need to provide the file extension.
             str(manifest_path),
             asynchronous=True,
             **conversion_args
         )
-        
-        # NOTE: alternative solution to allow logging of ffmpeg conversion process.
-        """
-        while True:
-            if ffmpeg_proc.poll() is not None:
-                break
-            
-            if ffmpeg_proc.stderr: 
-                try:
-                    # reads stderr out chunk by chunk to prevent the Popen process from blocking when using pipe_stderr=True
-                    chunk = ffmpeg_proc.stderr.read1(4096).decode(errors="replace")
-                    if chunk:
-                        logger.debug(chunk.rstrip())
-                except Exception:
-                    pass
-                
-            if not Video.objects.filter(id=video_id_hex).exists():
-                logger.info("Video deleted during HLS conversion, killing ffmpeg.")
-                ffmpeg_proc.kill()
-                ffmpeg_proc.wait()
-                return
-            
-            time.sleep(_POLL_INTERVAL)
-        """
         while True:
             try: # poll for ffmpeg completion; check for cancellation (video deleted) each interval
                 ffmpeg_proc.wait(timeout=_POLL_INTERVAL)
@@ -298,7 +249,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
 
         # run plugins (thumbnail + any analyzers)
         plugin_manager = PluginManager()
-        plugins = ["thumbnail"]
+        plugins = [] # NOTE: add comma-separated plugin names
         if analyzers:
             plugins += analyzers
         for plugin in plugins:
@@ -306,23 +257,20 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 plugin_manager(plugin, video=video_db, user=video_db.owner)
             except Exception:
                 logger.exception(f"Failed to schedule plugin {plugin}")
-        
-        delete_source = True
-   
+
     except Exception:
         logger.exception("Video conversion failed")
         if video_db is not None:
             Video.objects.filter(id=video_id_hex).update(status=Video.STATUS_ERROR)
         safe_delete([archive_path, hls_dir])
-        delete_source = True
 
     finally:
-        if delete_source:  # cleanup routine
-            try:
-                remove_file(file_in)
-                logger.debug(f"{file_in} removed successfully!")
-            except Exception:
-                logger.exception("Failed to remove original file")
+        # NOTE: final cleanup.
+        try:
+            safe_delete(file_in)
+            logger.debug(f"{file_in} removed successfully!")
+        except Exception:
+            logger.exception("Failed to remove original file")
 
 def safe_delete(file_path):
     if type(file_path) == type([]): 
