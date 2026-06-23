@@ -1,0 +1,10 @@
+[project]
+name = "ByteTrack"
+description = "bytetrack package"
+readme = "README.md"
+requires-python = "==3.10.18"
+dynamic = ["authors", "version", "classifiers"]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "torch>=1.7", "numpy==1.26.4"]
+build-backend = "setuptools.build_meta"

@@ -17,6 +17,9 @@ class BackendConfig(AppConfig):
         # import here otherwise django complains
         from sportvid.celery import app
         from backend.models import PluginRun
+        
+        # import serializers for auto discovery
+        # import backend.serializers
 
         # set unfinished tasks to ERROR on startup
         inspect = app.control.inspect()

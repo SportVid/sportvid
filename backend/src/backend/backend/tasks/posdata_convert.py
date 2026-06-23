@@ -58,6 +58,9 @@ class PosDataConvert(Task):
             manager=manager,
         )
         
+        logging.error(parameters)
+        logging.error(type(parameters))
+        
         if parameters.get("format") not in ['dfl', 'kinexon']:
             raise ValueError("'format' has to be either one of ['dfl', 'kinexon'], other formats are not supported yet for conversion.")
         

@@ -13,6 +13,7 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
     
     output_kwargs = {
         "format": kwargs.get("format", "hls"),
+        "threads": kwargs.get("threads"),
         "start_number": 0,
         "hls_time": kwargs.get("hls_time", kwargs.get("segment_time", 5)),
         "hls_list_size": kwargs.get("hls_list_size", 0),
@@ -20,7 +21,6 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
         "hls_segment_type": kwargs.get("hls_segment_type", "mpegts"),
         "hls_flags": kwargs.get("hls_flags", "independent_segments"),
         "hls_segment_filename": kwargs.get("hls_segment_filename"),
-
         "vcodec": kwargs.get("vcodec"),
         "acodec": kwargs.get("acodec"),
         "audio_bitrate": kwargs.get("audio_bitrate"),
@@ -32,7 +32,6 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
         "pix_fmt": kwargs.get("pix_fmt"),
         "movflags": kwargs.get("movflags"),
     }
-      
     
     output_kwargs = {k: v for k, v in output_kwargs.items() if v is not None}
 
@@ -40,7 +39,7 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
     output_stream = ffmpeg.overwrite_output(output_stream)
     
     if asynchronous:
-        return ffmpeg.run_async(output_stream, pipe_stderr=False) # NOTE: pipe_stderr=True for debug log output.
+        return ffmpeg.run_async(output_stream, quiet=True, pipe_stderr=False) # NOTE: pipe_stderr=True for debug log output.
     else:
         return ffmpeg.run(output_stream)
     

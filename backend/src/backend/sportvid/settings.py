@@ -9,15 +9,21 @@ from celery.schedules import crontab
 # build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-ALLOWED_HOSTS = ["localhost"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost",
-    "https://localhost",
     "http://localhost:8080",
-    "https://localhost:8080",
+    "http://127.0.0.1:8080",
 ]
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+]
 CORS_ALLOW_CREDENTIALS = True
+
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 
 LOGGING = {
     "version": 1,

@@ -9,8 +9,8 @@ from backend.models import (
     Video
 )
 from backend.plugin_manager import PluginManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
+from backend.utils.parser import Parser
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
@@ -40,6 +40,9 @@ class ByteTrack(Task):
         dry_run: bool = False,
         **kwargs
     ):
+        
+        logging.error(parameters)
+        
         manager = DataManager(self.config["output_path"])
         client = TaskAnalyserClient(
             host=self.config["analyser_host"],

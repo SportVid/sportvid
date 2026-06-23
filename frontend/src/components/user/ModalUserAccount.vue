@@ -89,7 +89,7 @@ const themeStore = useThemeStore();
 const selectedLanguage = ref(languageStore.currentLanguage);
 
 const username = computed(() => userStore.username);
-const initials = computed(() => username.value.slice(0, 2));
+const initials = computed(() => (userStore.username ?? "").slice(0, 2).toUpperCase());
 
 const logout = async () => {
   const loggedOut = await userStore.logout();

@@ -19,7 +19,6 @@ from ..utils.analyser_client import TaskAnalyserClient
 @PluginManager.export_parser("calibration_static_dlt")
 class CalibrationStaticDltParser(Parser):
     def __init__(self):
-
         self.valid_parameter = {
             "calibration_id": {"parser": str, "required": True},
         }
