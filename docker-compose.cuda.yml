@@ -10,8 +10,11 @@ services:
     container_name: inference_ray
     build:
       context: .
+
     init: true
-    shm_size: "2g" # TODO: should be 30% of total available memory?
+    ports:
+      - "127.0.0.1:8265:8265"
+    shm_size: "4g" # TODO: should be 30% of total available memory?
     environment:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
@@ -34,14 +37,11 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [ gpu ]
-    command:
-      - "uv"
-      - "run"
-      - "--package"
-      - "inference_ray"
-      - "serve"
-      - "run"
-      - "/app/inference_ray/deploy.cuda.yml"
+    command: >
+      bash -c "
+      uv run --package inference_ray ray start --head --dashboard-host=0.0.0.0 --dashboard-port=8265 &&
+      uv run --package inference_ray serve run /app/inference_ray/deploy.cuda.yml
+      "
 
   analyser:
     container_name: analyser
@@ -176,7 +176,6 @@ services:
       - "1800"
       - "--workers"
       - "${GUNICORN_WORKERS:-4}"
-    # command: uv run --package backend python3 backend/src/backend/manage.py runserver 0.0.0.0:8000
     depends_on:
       # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
       # postgres:
