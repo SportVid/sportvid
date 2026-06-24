@@ -811,6 +811,11 @@ const transformCoordinateToCrop = (x, y, cropPct) => {
   return { x: xCrop, y: yCrop };
 };
 
+const mirrorCropRange = (cropPct) => ({
+  x: [1 - cropPct.x[1], 1 - cropPct.x[0]],
+  y: [1 - cropPct.y[1], 1 - cropPct.y[0]],
+});
+
 const computeConvexHull = (points) => {
   if (points.length < 3) return [];
   const sortedPoints = points.slice().sort((a, b) => a.left - b.left || a.top - b.top);
@@ -847,7 +852,8 @@ const convexHullForCurrentFrame = computed(() => {
   const framePositions = topViewStore.currentFramePlayers;
   if (!framePositions || !framePositions.length) return {};
 
-  const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop;
+  const _cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || { x: [0, 1], y: [0, 1] };
+  const cropPct = topViewStore.mirrorXY ? mirrorCropRange(_cropPct) : _cropPct;
 
   const teams = {};
   framePositions
@@ -911,10 +917,11 @@ const voronoiForCurrentFrame = computed(() => {
   const framePositions = topViewStore.currentFramePlayers;
   if (!framePositions || !framePositions.length) return [];
 
-  const cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
+  const _cropPctV = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
     x: [0, 1],
     y: [0, 1],
   };
+  const cropPct = topViewStore.mirrorXY ? mirrorCropRange(_cropPctV) : _cropPctV;
 
   const allPlayers = framePositions
     .filter(
@@ -993,10 +1000,11 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
   ctx.clearRect(0, 0, w, h);
 
   const sport = topViewStore.currentSport;
-  const cropPct = sport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
+  const _rawCrop = sport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
     x: [0, 1],
     y: [0, 1],
   };
+  const cropPct = topViewStore.mirrorXY ? mirrorCropRange(_rawCrop) : _rawCrop;
 
   // Pixel conversion helper
   const toPixel = (x, y) => {
