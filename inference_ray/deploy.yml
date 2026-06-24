@@ -19,16 +19,7 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 2 # 2 or 4 seems to be a reasonable upper bound for now
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 1
-          target_num_ongoing_requests_per_replica: 4
-          metrics_interval_s: 5
-          look_back_period_s: 15
-          upscale_delay_s: 5
-          downscale_delay_s: 30
+        num_replicas: 1
         ray_actor_options:
           runtime_env:
             uv:
@@ -66,16 +57,7 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 2
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 1
-          target_num_ongoing_requests_per_replica: 4
-          metrics_interval_s: 5
-          look_back_period_s: 15
-          upscale_delay_s: 5
-          downscale_delay_s: 30
+        num_replicas: 1
         ray_actor_options:
           runtime_env:
             uv:
@@ -91,16 +73,7 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 2
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 1
-          target_num_ongoing_requests_per_replica: 4
-          metrics_interval_s: 5
-          look_back_period_s: 15
-          upscale_delay_s: 5
-          downscale_delay_s: 30
+        num_replicas: 1
         ray_actor_options:
           runtime_env:
             uv:
@@ -117,16 +90,7 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 2
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 1
-          target_num_ongoing_requests_per_replica: 4
-          metrics_interval_s: 5
-          look_back_period_s: 15
-          upscale_delay_s: 5
-          downscale_delay_s: 30
+        num_replicas: 1
         ray_actor_options:
           runtime_env:
             uv:
@@ -134,22 +98,13 @@ applications:
               - pandas
               - lxml
 
-  - name: thumbnail_generator
-    route_prefix: /thumbnail_generator
-    import_path: inference_ray.main:app_builder
-    args:
-      model: thumbnail_generator
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        max_ongoing_requests: 2
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 1
-          target_num_ongoing_requests_per_replica: 4
-          metrics_interval_s: 5
-          look_back_period_s: 15
-          upscale_delay_s: 5
-          downscale_delay_s: 30
+  # - name: thumbnail_generator
+  #   route_prefix: /thumbnail_generator
+  #   import_path: inference_ray.main:app_builder
+  #   args:
+  #     model: thumbnail_generator
+  #     data_path: /data
+  #     params: {}
+  #   deployments:
+  #     - name: Deployment
+  #       num_replicas: 1
