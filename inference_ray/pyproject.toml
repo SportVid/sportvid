@@ -38,7 +38,7 @@ dependencies = [
 
 [tool.uv]
 package = true
-no-build-isolation-package = [ "torch>=2.6.0" ]
+no-build-isolation-package = [ "torch" ]
 # pip-install-args = [
 #    "--no-build-isolation"
 # ]
