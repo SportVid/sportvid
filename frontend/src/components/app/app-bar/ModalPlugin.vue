@@ -44,7 +44,15 @@
               <template #item="{ item, props: itemProps }">
                 <v-list-item
                   v-bind="itemProps"
-                  :data-tour="item.id === 703 ? 'plugin-kpi-computation' : item.id === 701 ? 'plugin-bytetrack' : item.id === 702 ? 'plugin-calibration-dlt' : undefined"
+                  :data-tour="
+                    item.id === 703
+                      ? 'plugin-kpi-computation'
+                      : item.id === 701
+                      ? 'plugin-bytetrack'
+                      : item.id === 702
+                      ? 'plugin-calibration-dlt'
+                      : undefined
+                  "
                 />
               </template>
             </v-treeview>
@@ -1013,7 +1021,7 @@ const plugins = ref([
             field: "slider",
             min: 1,
             max: 30,
-            value: playerStore.videoFPS,
+            value: Math.round(playerStore.videoFPS),
             step: 1,
             name: "fps",
             text: t("modal.plugin.fps"),
