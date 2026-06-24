@@ -10,8 +10,9 @@ services:
     container_name: inference_ray
     build:
       context: .
+      dockerfile: inference_ray/Dockerfile
     init: true
-    shm_size: "2g" # TODO: should be 30% of total available memory?
+    shm_size: "4g" # NOTE: should be 30% of available system memory.
     environment:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
