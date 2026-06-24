@@ -19,6 +19,8 @@ services:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
       - NVIDIA_VISIBLE_DEVICES=all
+    env_file:
+      - ./.env
     volumes:
       - ${DATA_PATH}/analyser:/data/
       - ${DATA_PATH}/media/:/media/
@@ -47,6 +49,8 @@ services:
     container_name: analyser
     build:
       context: .
+    env_file:
+      - ./.env
     volumes:
       - ${DATA_PATH}/analyser:/data/
       - ${DATA_PATH}/media/:/media/
@@ -67,6 +71,8 @@ services:
   valkey:
     container_name: valkey
     image: valkey/valkey:8.1.1-alpine
+    env_file:
+      - ./.env
     command:
       - "/usr/local/bin/valkey-server"
       - "--bind"
@@ -83,10 +89,8 @@ services:
   postgres:
     container_name: postgres
     image: postgres:14.17
-    environment:
-    - POSTGRES_USER
-    - POSTGRES_DB
-    - POSTGRES_PASSWORD
+    env_file:
+      - ./.env
     volumes:
       - ${DATA_PATH}/shared/db/:/var/lib/postgresql/data
       - ./postgres:/docker-entrypoint-initdb.d  # init.sh is invoked automatically
@@ -101,6 +105,8 @@ services:
     container_name: celery
     build:
       context: .
+    env_file:
+      - ./.env
     secrets:
       - django_settings
     volumes:
@@ -144,6 +150,8 @@ services:
       - django_settings
     environment:
       - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
+    env_file:
+      - ./.env
     volumes:
       - ${DATA_PATH}/media/:/media
       - ${DATA_PATH}/predictions:/predictions
