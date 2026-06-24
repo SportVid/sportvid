@@ -1,4 +1,4 @@
-FROM node:bookworm-slim
+FROM node:26.3.1-bookworm-slim
 
 WORKDIR /app/frontend
 
