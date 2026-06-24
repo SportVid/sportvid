@@ -6,6 +6,6 @@ class ByteTrackSerializer(serializers.Serializer):
     fps = serializers.IntegerField(
         required=False,
         default=5,
-        min_value=0,
+        min_value=1,
         max_value=30
     )

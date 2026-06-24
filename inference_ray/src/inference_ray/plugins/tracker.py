@@ -35,7 +35,8 @@ default_yolox_params = {
     "num_classes": 2, 
     "decode": True,             # whether to decode the model outputs into bounding boxes during inference. If False, raw model outputs will be returned.
     "test_size": [576, 1024],
-    "checkpoint": "yolox/yolox_l.pth"
+    "model_path": "yolox-x",
+    "model_checkpoint": "bytetrack/bytetrack_x_mot17.pth"
 }
 
 default_yoloultra_params = {
@@ -125,12 +126,13 @@ class Tracker(
 ):
     def __init__(self, config=None, **kwargs):
         super().__init__(config, **kwargs)
-        
-        self.detector_cls = DETECTOR_MAP[config["detector"]]()
-        self.tracking_cls = TRACKER_MAP[config["tracker"]]()
-        
+
+        # -------> Load defaults based on selection
         self.detector_defaults = DETECTOR_PARAMS_MAP[config["detector"]]
         self.tracker_defaults = TRACKER_PARAMS_MAP[config["tracker"]]
+        
+        self.detector_name = config["detector"]
+        self.tracker_name = config["tracker"]
 
     def call(
         self,
@@ -142,18 +144,16 @@ class Tracker(
         import json
         from collections import defaultdict
         
-        # passed parameters
-        args = argparse.Namespace(**parameters)
-        logging.debug(args)
-    
-        # TODO: dynamic checkpoint loading, load passed checkpoint.
-        # if no checkpoint has been passed use a default based on the detector/tracker setup.
-    
-        # TODO: initialize model & load via get_exp() with provided checkpoint file
-
-        # TODO: run detection/tracking with provided classes
-    
-        # ------> decode video and pass it to detector
+        # -------> Args check
+        logging.error(parameters)
+        # extend args by default values if they have not been passed to call().
+        for default_arg_k, default_arg_v in zip(self.detector_defaults, self.tracker_defaults):
+            logging.error(default_arg_k, default_arg_v)
+            if default_arg_k not in parameters:
+                parameters.update({default_arg_k : default_arg_v})
+        logging.error(parameters)
+        
+        # -------> decode video and pass it to detector
         with inputs["video"] as input_data:
             with input_data.open_video() as f_video:
                 video_decoder = VideoDecoder(
@@ -162,11 +162,21 @@ class Tracker(
                     extension=f".{input_data.ext}",
                     ref_id=input_data.id,
                 )
-                # ------> detection
-                # TODO: 1) process by detector
-
-                # ------> tracking
-                # TODO: 2) process detections by tracker
+                # -------> Detector
+                # ---> Instantiate objects
+                self.detector = DETECTOR_MAP[self.detector_name](
+                    model_path=parameters["model_path"],
+                    batch_size=len(video_decoder),
+                    image_size=video_decoder._size,
+                    detector_cfg=parameters,
+                    device="cuda",
+                    **parameters
+                )
+                preproced_outputs = self.detector.preprocess(video_decoder)
+                raw_outputs = self.detector.run_inference(preproced_outputs)
+                logging.error(type(raw_outputs))
+                
+                # -------> Tracker
         
         # TODO: data schema below ... (team_id = 0 (inactive); 1 (ball); 2 (refs); >=3 (active teams)
         # team_id will be re-assigned by 'team_assignment' plugin at some point.
