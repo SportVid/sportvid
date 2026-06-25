@@ -12,6 +12,8 @@ services:
       context: .
       dockerfile: inference_ray/Dockerfile
     init: true
+    ports:
+      - "127.0.0.1:8265:8265"
     shm_size: "4g" # NOTE: should be 30% of available system memory.
     environment:
       - HF_HOME=/models
@@ -37,14 +39,11 @@ services:
     #         - driver: nvidia
     #           count: 1
     #           capabilities: [ gpu ]
-    command:
-      - "uv"
-      - "run"
-      - "--package"
-      - "inference_ray"
-      - "serve"
-      - "run"
-      - "/app/inference_ray/deploy.yml"
+    command: >
+      bash -c "
+      uv run --package inference_ray ray start --head --dashboard-host=0.0.0.0 --dashboard-port=8265 &&
+      uv run --package inference_ray serve run /app/inference_ray/deploy.cuda.yml
+      "
 
   analyser:
     container_name: analyser
