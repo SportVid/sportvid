@@ -48,9 +48,13 @@ RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
 
 RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
     uv pip install -r /app/inference_ray/third_party/ByteTrack/requirements.txt
+# these were skipped during above requirements install, so add them manually!
+RUN uv pip install Cython
+RUN uv pip install gdown
+RUN uv pip install pycocotools
+RUN uv pip install cython_bbox
 
-RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
-    uv pip install /app/inference_ray/third_party/ByteTrack
+# RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
+#     uv pip install /app/inference_ray/third_party/ByteTrack
 
-RUN python -c "import yolox; print(yolox.__file__)"
-RUN python -c "from yolox.exp import get_exp; print(get_exp)"
+# RUN python -c "import cython_bbox; print('cython_bbox ok')"
