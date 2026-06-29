@@ -21,32 +21,33 @@ applications:
       - name: Deployment
         num_replicas: 1
         ray_actor_options:
-          num_gpus: 0.8
-          runtime_env:
-            uv:
-              - git+https://github.com/Alexk1704/ByteTrack.git
-              - torch>=2.6.0
-              - numpy==1.26.4
-              - opencv-python-headless>=4.11.0.86
-              - loguru
-              - scikit-image
-              - tqdm
-              - torchvision>=0.10.0
-              - Pillow
-              - thop
-              - ninja
-              - tabulate
-              - tensorboard
-              - lap
-              - motmetrics
-              - filterpy
-              - h5py
-              - cython_bbox
-              - gdown
-              - pycocotools
-              # - onnx==1.13.0
-              # - onnxruntime==1.13.1
-              # - onnx-simplifier==0.3.5
+          num_gpus: 0.25
+        runtime_env:
+            env_vars:
+              PYTHONPATH: "/app:/app/inference_ray/third_party/ByteTrack"
+            # uv:
+            #   - numpy==1.26.4
+            #   - opencv-python-headless==4.11.0.86
+            #   - loguru
+            #   - scikit-image
+            #   - tqdm
+            #   - Pillow
+            #   - thop
+            #   - ninja
+            #   - tabulate
+            #   - tensorboard
+            #   - lap
+            #   - motmetrics
+            #   - filterpy
+            #   - h5py
+            #   - cython
+            #   - cython-bbox
+            #   - pycocotools
+            #   - gdown
+            #   - ray[serve]
+            #   - onnx==1.13.0
+            #   - onnxruntime==1.13.1
+            #   - onnx-simplifier==0.3.5
   
   # ---------- LOW (CPU only)
   - name: calibration_static_dlt
@@ -59,13 +60,11 @@ applications:
     deployments:
       - name: Deployment
         num_replicas: 1
-        ray_actor_options:
-          num_cpus: 2
-          runtime_env:
-            uv:
-              - numpy==2.2.4
-              - opencv-python-headless==4.11.0.86
-  
+        runtime_env:
+          uv:
+            - numpy==2.2.4
+            - opencv-python-headless==4.11.0.86
+
   - name: floodlight_convert
     route_prefix: /floodlight_convert
     import_path: inference_ray.main:app_builder
@@ -76,13 +75,11 @@ applications:
     deployments:
       - name: Deployment
         num_replicas: 1
-        ray_actor_options:
-          num_cpus: 4
-          runtime_env:
-            uv:
-              - numpy
-              - pandas
-              - floodlight==1.0.0
+        runtime_env:
+          uv:
+            - numpy
+            - pandas
+            - floodlight==1.0.0
   
   - name: posdata_convert
     route_prefix: /posdata_convert
@@ -94,41 +91,8 @@ applications:
     deployments:
       - name: Deployment
         num_replicas: 1
-        ray_actor_options:
-          num_cpus: 4
-          runtime_env:
-            uv:
-              - numpy
-              - pandas
-              - lxml
-
-  - name: kpi_computation
-    route_prefix: /kpi_computation
-    import_path: inference_ray.main:app_builder
-    args:
-      model: kpi_computation
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        num_replicas: 1
-        ray_actor_options:
-          num_cpus: 4
-          runtime_env:
-            uv:
-              - numpy
-              - pandas
-              - floodlight==1.1.0
-
-  # - name: thumbnail_generator
-  #   route_prefix: /thumbnail_generator
-  #   import_path: inference_ray.main:app_builder
-  #   args:
-  #     model: thumbnail_generator
-  #     data_path: /data
-  #     params: {}
-  #   deployments:
-  #     - name: Deployment
-  #       num_replicas: 1
-  #       ray_actor_options:
-  #         num_cpus: 2
+        runtime_env:
+          uv:
+            - numpy
+            - pandas
+            - lxml

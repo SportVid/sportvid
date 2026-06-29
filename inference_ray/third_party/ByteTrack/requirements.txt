@@ -1,8 +1,10 @@
 numpy==1.26.4
-opencv-python-headless==4.11.0.86
+torch>=2.6.0
+opencv_python
 loguru
 scikit-image
 tqdm
+torchvision>=0.10.0
 Pillow
 thop
 ninja
@@ -12,11 +14,8 @@ lap
 motmetrics
 filterpy
 h5py
-cython
-cython_bbox
-pycocotools
-gdown
-ray[serve]
+
+# verified versions
 onnx==1.13.0
 onnxruntime==1.13.1
 onnx-simplifier==0.3.5

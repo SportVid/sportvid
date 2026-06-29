@@ -281,6 +281,10 @@ wheels = [
 ]
 
 [[package]]
+name = "bytetrack"
+source = { directory = "inference_ray/third_party/ByteTrack" }
+
+[[package]]
 name = "cachetools"
 version = "5.5.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1035,8 +1039,14 @@ dependencies = [
     { name = "valkey" },
 ]
 
+[package.optional-dependencies]
+tracking = [
+    { name = "bytetrack" },
+]
+
 [package.metadata]
 requires-dist = [
+    { name = "bytetrack", marker = "extra == 'tracking'", directory = "inference_ray/third_party/ByteTrack" },
     { name = "data", editable = "packages/data" },
     { name = "grpcio", specifier = ">=1.70.0" },
     { name = "grpcio-tools", specifier = "==1.70.0" },
@@ -1066,6 +1076,7 @@ requires-dist = [
     { name = "utils", editable = "packages/utils" },
     { name = "valkey", specifier = ">=6.1.0" },
 ]
+provides-extras = ["tracking"]
 
 [[package]]
 name = "interface"

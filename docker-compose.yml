@@ -11,6 +11,7 @@ services:
     build:
       context: .
       dockerfile: inference_ray/Dockerfile
+      dockerfile: inference_ray/Dockerfile
     init: true
     ports:
       - "127.0.0.1:8265:8265"
