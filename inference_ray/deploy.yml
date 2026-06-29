@@ -19,42 +19,35 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 2 # 2 or 4 seems to be a reasonable upper bound for now
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 1
-          target_num_ongoing_requests_per_replica: 4
-          metrics_interval_s: 5
-          look_back_period_s: 15
-          upscale_delay_s: 5
-          downscale_delay_s: 30
+        num_replicas: 1
         ray_actor_options:
-          runtime_env:
-            uv:
-              - git+https://github.com/Alexk1704/ByteTrack.git
-              - torch>=2.6.0
-              - numpy==1.26.4
-              - opencv-python-headless>=4.11.0.86
-              - loguru
-              - scikit-image
-              - tqdm
-              - torchvision>=0.10.0
-              - Pillow
-              - thop
-              - ninja
-              - tabulate
-              - tensorboard
-              - lap
-              - motmetrics
-              - filterpy
-              - h5py
-              - cython_bbox
-              - gdown
-              - pycocotools
-              # - onnx==1.13.0
-              # - onnxruntime==1.13.1
-              # - onnx-simplifier==0.3.5
+          num_cpus: 4
+        runtime_env:
+            env_vars:
+              PYTHONPATH: "/app:/app/inference_ray/third_party/ByteTrack"
+            # uv:
+            #   - numpy==1.26.4
+            #   - opencv-python-headless==4.11.0.86
+            #   - loguru
+            #   - scikit-image
+            #   - tqdm
+            #   - Pillow
+            #   - thop
+            #   - ninja
+            #   - tabulate
+            #   - tensorboard
+            #   - lap
+            #   - motmetrics
+            #   - filterpy
+            #   - h5py
+            #   - cython
+            #   - cython-bbox
+            #   - pycocotools
+            #   - gdown
+            #   - ray[serve]
+            #   - onnx==1.13.0
+            #   - onnxruntime==1.13.1
+            #   - onnx-simplifier==0.3.5
   
   # ---------- LOW (CPU only)
   - name: calibration_static_dlt
@@ -66,22 +59,14 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 2
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 1
-          target_num_ongoing_requests_per_replica: 4
-          metrics_interval_s: 5
-          look_back_period_s: 15
-          upscale_delay_s: 5
-          downscale_delay_s: 30
+        num_replicas: 1
         ray_actor_options:
-          runtime_env:
-            uv:
-              - numpy==2.2.4
-              - opencv-python-headless==4.11.0.86
-  
+          num_cpus: 4
+        runtime_env:
+          uv:
+            - numpy==2.2.4
+            - opencv-python-headless==4.11.0.86
+
   - name: floodlight_convert
     route_prefix: /floodlight_convert
     import_path: inference_ray.main:app_builder
@@ -91,22 +76,14 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 2
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 1
-          target_num_ongoing_requests_per_replica: 4
-          metrics_interval_s: 5
-          look_back_period_s: 15
-          upscale_delay_s: 5
-          downscale_delay_s: 30
+        num_replicas: 1
         ray_actor_options:
-          runtime_env:
-            uv:
-              - numpy
-              - pandas
-              - floodlight==1.0.0
+          num_cpus: 2
+        runtime_env:
+          uv:
+            - numpy
+            - pandas
+            - floodlight==1.0.0
   
   - name: posdata_convert
     route_prefix: /posdata_convert
@@ -117,39 +94,11 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 2
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 1
-          target_num_ongoing_requests_per_replica: 4
-          metrics_interval_s: 5
-          look_back_period_s: 15
-          upscale_delay_s: 5
-          downscale_delay_s: 30
+        num_replicas: 1
         ray_actor_options:
-          runtime_env:
-            uv:
-              - numpy
-              - pandas
-              - lxml
-
-  - name: thumbnail_generator
-    route_prefix: /thumbnail_generator
-    import_path: inference_ray.main:app_builder
-    args:
-      model: thumbnail_generator
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        max_ongoing_requests: 2
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 1
-          target_num_ongoing_requests_per_replica: 4
-          metrics_interval_s: 5
-          look_back_period_s: 15
-          upscale_delay_s: 5
-          downscale_delay_s: 30
+          num_cpus: 2
+        runtime_env:
+          uv:
+            - numpy
+            - pandas
+            - lxml

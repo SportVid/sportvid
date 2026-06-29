@@ -13,7 +13,10 @@ motmetrics
 filterpy
 h5py
 cython
-cython-bbox
+cython_bbox
 pycocotools
 gdown
 ray[serve]
+onnx==1.13.0
+onnxruntime==1.13.1
+onnx-simplifier==0.3.5

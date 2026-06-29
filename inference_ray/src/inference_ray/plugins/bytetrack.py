@@ -1,3 +1,6 @@
+import argparse
+import logging
+
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 from data import (
     Data, DataManager, 
@@ -6,9 +9,7 @@ from data import (
     BboxesData
 )
 from utils import VideoDecoder
-
 from typing import Any, Callable, Dict, List, Tuple
-import argparse
 
 """ByteTrack, see original repo: https://github.com/ifzhang/ByteTrack
 
