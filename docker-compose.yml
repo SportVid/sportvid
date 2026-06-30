@@ -85,6 +85,12 @@ services:
       # - "yes"
     ports:
       - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT} # remap port
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -h 127.0.0.1 -p ${VALKEY_INTERNAL_PORT} ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   postgres:
     container_name: postgres
@@ -120,8 +126,10 @@ services:
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
     depends_on:
-      - postgres
-      - valkey
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
     tmpfs:
       - /tmp
       - /var
@@ -184,15 +192,19 @@ services:
       - "1800"
       - "--workers"
       - "${GUNICORN_WORKERS:-4}"
-    # command: uv run --package backend python3 backend/src/backend/manage.py runserver 0.0.0.0:8000
     depends_on:
-      # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
-      # postgres:
-      #  condition: service_healthy
+      postgres:
+        condition: service_healthy
       memcached:
         condition: service_started
       celery:
         condition: service_started
+    # healthcheck:
+    #   test: ["CMD-SHELL", "curl --fail http://localhost:${BACKEND_PORT}/api/readyz/ || exit 1"]
+    #   interval: 30s
+    #   timeout: 5s
+    #   retries: 5
+    #   start_period: 90s
 
   frontend:
     container_name: frontend
@@ -210,3 +222,4 @@ services:
     depends_on:
       backend:
         condition: service_started
+
