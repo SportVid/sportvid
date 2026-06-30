@@ -206,3 +206,6 @@ services:
       - ${DATA_PATH}/media/:/media
       # - assets:/assets
     working_dir: /app/frontend
+    depends_on:
+      backend:
+        condition: service_started
