@@ -23,6 +23,7 @@ applications:
         autoscaling_config:
           max_ongoing_requests: 2
           initial_replicas: 0
+          min_replicas: 0
           max_replicas: 1
         ray_actor_options:
           num_cpus: 1.0
@@ -68,6 +69,7 @@ applications:
         autoscaling_config:
           max_ongoing_requests: 2
           initial_replicas: 0
+          min_replicas: 0
           max_replicas: 1
         ray_actor_options:
           num_cpus: 1.0
@@ -90,6 +92,7 @@ applications:
         autoscaling_config:
           max_ongoing_requests: 2
           initial_replicas: 0
+          min_replicas: 0
           max_replicas: 1
         ray_actor_options:
           num_cpus: 1.0
@@ -113,6 +116,7 @@ applications:
         autoscaling_config:
           max_ongoing_requests: 2
           initial_replicas: 0
+          min_replicas: 0
           max_replicas: 1
         ray_actor_options:
           num_cpus: 1.0
