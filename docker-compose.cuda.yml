@@ -19,6 +19,8 @@ services:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
       - NVIDIA_VISIBLE_DEVICES=all
+    env_file:
+      - ./.env
     volumes:
       - ${DATA_PATH}/analyser:/data/
       - ${DATA_PATH}/media/:/media/
@@ -47,6 +49,8 @@ services:
     container_name: analyser
     build:
       context: .
+    env_file:
+      - ./.env
     volumes:
       - ${DATA_PATH}/analyser:/data/
       - ${DATA_PATH}/media/:/media/
@@ -67,6 +71,8 @@ services:
   valkey:
     container_name: valkey
     image: valkey/valkey:8.1.1-alpine
+    env_file:
+      - ./.env
     command:
       - "/usr/local/bin/valkey-server"
       - "--bind"
@@ -79,14 +85,18 @@ services:
       # - "yes"
     ports:
       - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT} # remap port
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -h 127.0.0.1 -p ${VALKEY_INTERNAL_PORT} ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   postgres:
     container_name: postgres
     image: postgres:14.17
-    environment:
-    - POSTGRES_USER
-    - POSTGRES_DB
-    - POSTGRES_PASSWORD
+    env_file:
+      - ./.env
     volumes:
       - ${DATA_PATH}/shared/db/:/var/lib/postgresql/data
       - ./postgres:/docker-entrypoint-initdb.d  # init.sh is invoked automatically
@@ -101,6 +111,8 @@ services:
     container_name: celery
     build:
       context: .
+    env_file:
+      - ./.env
     secrets:
       - django_settings
     volumes:
@@ -114,8 +126,10 @@ services:
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
     depends_on:
-      - postgres
-      - valkey
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
     tmpfs:
       - /tmp
       - /var
@@ -144,6 +158,8 @@ services:
       - django_settings
     environment:
       - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
+    env_file:
+      - ./.env
     volumes:
       - ${DATA_PATH}/media/:/media
       - ${DATA_PATH}/predictions:/predictions
@@ -177,13 +193,18 @@ services:
       - "--workers"
       - "${GUNICORN_WORKERS:-4}"
     depends_on:
-      # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
-      # postgres:
-      #  condition: service_healthy
+      postgres:
+        condition: service_healthy
       memcached:
         condition: service_started
       celery:
         condition: service_started
+    # healthcheck:
+    #   test: ["CMD-SHELL", "curl --fail http://localhost:${BACKEND_PORT}/api/readyz/ || exit 1"]
+    #   interval: 30s
+    #   timeout: 5s
+    #   retries: 5
+    #   start_period: 90s
 
   frontend:
     container_name: frontend
@@ -198,3 +219,6 @@ services:
       - ${DATA_PATH}/media/:/media
       # - assets:/assets
     working_dir: /app/frontend
+    depends_on:
+      backend:
+        condition: service_started
