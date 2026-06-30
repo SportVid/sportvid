@@ -40,8 +40,14 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        num_replicas: 1
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
         ray_actor_options:
+          num_cpus: 1.0
           num_gpus: 0.5
         runtime_env:
             env_vars:
@@ -80,9 +86,15 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        num_replicas: 1
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
         ray_actor_options:
-          num_cpus: 4
+          num_cpus: 1.0
+          num_gpus: 0.0
         runtime_env:
           uv:
             - numpy==2.2.4
@@ -97,9 +109,15 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        num_replicas: 1
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
         ray_actor_options:
-          num_cpus: 2
+          num_cpus: 1.0
+          num_gpus: 0.0
         runtime_env:
           uv:
             - numpy
@@ -115,9 +133,15 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        num_replicas: 1
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
         ray_actor_options:
-          num_cpus: 2
+          num_cpus: 1.0
+          num_gpus: 0.0
         runtime_env:
           uv:
             - numpy

@@ -11,5 +11,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+from django.http import JsonResponse
+# from django.db import connection
 
-urlpatterns = [path("", include("backend.urls")), path("admin/", admin.site.urls)]
+def healthy(request):
+    return JsonResponse({"status": "ok"}, status=200)
+
+urlpatterns = [
+    path("", include("backend.urls")), 
+    path("admin/", admin.site.urls),
+    path("healthy/", healthy),
+]
