@@ -79,6 +79,30 @@ applications:
             - numpy==2.2.4
             - opencv-python-headless==4.11.0.86
 
+  - name: kpi_computation
+    route_prefix: /kpi_computation
+    import_path: inference_ray.main:app_builder
+    args:
+      model: kpi_computation
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0
+        ray_actor_options:
+        runtime_env:
+          uv:
+            - pandas
+            - floodlight==1.1.0
+
   - name: floodlight_convert
     route_prefix: /floodlight_convert
     import_path: inference_ray.main:app_builder
@@ -99,7 +123,6 @@ applications:
           num_gpus: 0.0
         runtime_env:
           uv:
-            - numpy
             - pandas
             - floodlight==1.0.0
   
@@ -123,6 +146,5 @@ applications:
           num_gpus: 0.0
         runtime_env:
           uv:
-            - numpy
             - pandas
             - lxml
