@@ -31,29 +31,6 @@ applications:
         runtime_env:
             env_vars:
               PYTHONPATH: "/app:/app/inference_ray/third_party/ByteTrack"
-            # uv:
-            #   - numpy==1.26.4
-            #   - opencv-python-headless==4.11.0.86
-            #   - loguru
-            #   - scikit-image
-            #   - tqdm
-            #   - Pillow
-            #   - thop
-            #   - ninja
-            #   - tabulate
-            #   - tensorboard
-            #   - lap
-            #   - motmetrics
-            #   - filterpy
-            #   - h5py
-            #   - cython
-            #   - cython-bbox
-            #   - pycocotools
-            #   - gdown
-            #   - ray[serve]
-            #   - onnx==1.13.0
-            #   - onnxruntime==1.13.1
-            #   - onnx-simplifier==0.3.5
   
   # ---------- LOW (CPU only)
   - name: calibration_static_dlt
@@ -74,10 +51,6 @@ applications:
         ray_actor_options:
           num_cpus: 1.0
           num_gpus: 0.0
-        runtime_env:
-          uv:
-            - numpy==2.2.4
-            - opencv-python-headless==4.11.0.86
 
   - name: kpi_computation
     route_prefix: /kpi_computation
@@ -100,7 +73,7 @@ applications:
         runtime_env:
           uv:
             - pandas
-            - floodlight==1.1.0
+            - floodlight==1.1.0  # 1.1.0
 
   - name: floodlight_convert
     route_prefix: /floodlight_convert
@@ -123,7 +96,7 @@ applications:
         runtime_env:
           uv:
             - pandas
-            - floodlight==1.0.0
+            - floodlight==1.1.0
   
   - name: posdata_convert
     route_prefix: /posdata_convert
