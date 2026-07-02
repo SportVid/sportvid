@@ -22,7 +22,7 @@ export const usePosdataWorkerStore = defineStore("posdataWorker", () => {
 
   function getWorker() {
     if (!worker) {
-      worker = new Worker("/workers/posdata.worker.js");
+      worker = new Worker(new URL("../workers/posdata.worker.js", import.meta.url));
       worker.onmessage = handleWorkerMessage;
       worker.onerror = (err) => console.error("PosData Worker error:", err);
     }
