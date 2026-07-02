@@ -31,6 +31,7 @@ https://sportvid.github.io/
     sudo chmod -R u+rwX ./data/
     ```
 3. **Build and start:**
+
     Prepare:
     ```sh
     uv sync
@@ -51,13 +52,14 @@ https://sportvid.github.io/
     ```sh
     sudo docker compose -f docker-compose.cuda.yml up --no-recreate
     ```
-4. **Apply database migrations and build frontend packages:**
+5. **Apply database migrations and build frontend packages:**
     ```sh
     docker compose exec backend python3 backend/src/backend/manage.py migrate
     sudo docker compose exec frontend npm install
     sudo docker compose exec frontend npm run build
     ```
-5. **Code reloading:** 
+6. **Code reloading:** 
+
     Hot reloading is enabled for `backend`. To display the frontend changes, run:
     ```sh
     sudo docker compose exec frontend npm run build
@@ -68,13 +70,14 @@ https://sportvid.github.io/
     ```
     The frontend instance is accessible via: `http://localhost/8080`.
 
-6. **Debugging:**
+8. **Debugging:**
+
     You can directly "move" into a container, e.g. the inference server instance to check the status of plugin execution:
     ```sh
     sudo docker compose exec inference_ray bash
     ray status
     ```
-7. **Clean up data:**
+10. **Clean up data:**
     ```sh
     sudo rm -rf ./data/predictions/* \
         ./data/backend_cache/* \
