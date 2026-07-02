@@ -21,6 +21,7 @@ services:
       - NVIDIA_VISIBLE_DEVICES=all
     env_file:
       - ./.env
+    user: "1000:1000"
     volumes:
       - ${DATA_PATH}/analyser:/data/
       - ${DATA_PATH}/media/:/media/

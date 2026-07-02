@@ -16,7 +16,6 @@ dependencies = [
     "pip>=25.0.1",
     "protobuf>=5.29.3",
     "requests>=2.32.3",
-    "torch==2.5.1+cu124",
     "numpy>=2.1.1", # NOTE: old version -> "numpy==1.26.4"
     "pandas>=2.0.0",
     "tqdm>=4.67.1",
@@ -28,19 +27,28 @@ dependencies = [
     "onnx>=1.17.0",
     "onnxruntime-gpu>=1.13.1",
     "onnx-simplifier>=0.3.5",
-    "open-clip-torch==2.24.0",
     "onnxruntime-gpu>=1.21.1",
     "qdrant-client>=1.13.2",
     "ray[serve,serve-grpc]",
     "scipy>=1.15.2",
     "scikit-learn>=1.6.1",
     "opencv-python-headless>=4.11.0.86",
-    "floodlight==1.1.0"
+    # "opencv_python", Should be redundant with opencv-python-headless
+    "floodlight==1.1.0",
+    "lap",
+    "motmetrics",
+    "filterpy",
+    "tabulate",
+    "ninja",
+    "thop",
+    "Pillow",
+    "loguru",
+    "scikit-image"
 ]
 
 [tool.uv]
 package = true
-no-build-isolation-package = [ "torch" ]
+# no-build-isolation-package = [ "torch" ]
 # pip-install-args = [
 #    "--no-build-isolation"
 # ]
@@ -55,9 +63,3 @@ interface = { workspace = true }
 data = { workspace = true }
 utils = { workspace = true }
 bytetrack = { path = "third_party/ByteTrack" }
-torch = { index = "pytorch-cu124" }
-
-[[tool.uv.index]]
-name = "pytorch-cu124"
-url = "https://download.pytorch.org/whl/cu124"
-explicit = true
