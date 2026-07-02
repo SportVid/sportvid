@@ -57,4 +57,7 @@ RUN uv pip install cython_bbox
 # RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
 #     uv pip install /app/inference_ray/third_party/ByteTrack
 
+# import smoke tests
+RUN python -c "import torch; print(torch.__version__); print(torch.version.cuda)"
 # RUN python -c "import cython_bbox; print('cython_bbox ok')"
+# RUN python -c "import floodlight; print('floodlight ok')"

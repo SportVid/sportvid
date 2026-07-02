@@ -73,7 +73,6 @@ applications:
         runtime_env:
           uv:
             - pandas
-            - floodlight==1.1.0
 
   - name: floodlight_convert
     route_prefix: /floodlight_convert
@@ -96,7 +95,6 @@ applications:
         runtime_env:
           uv:
             - pandas
-            - floodlight==1.1.0
   
   - name: posdata_convert
     route_prefix: /posdata_convert
