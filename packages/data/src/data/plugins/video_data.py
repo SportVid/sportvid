@@ -46,9 +46,7 @@ class VideoData(Data):
         assert self.check_fs(), "No fs register"
         return self.fs.open_file(f"video.{self.ext}", mode)
 
-
     def load_file_from_stream(self, data_stream: Iterable) -> None:
-
         assert self.check_fs(), "No fs register"
         assert self.fs.mode == "w", "Fs is not writeable"
 
@@ -61,7 +59,6 @@ class VideoData(Data):
             f.write(first_pkg.data_encoded)
             for x in data_stream:
                 f.write(x.data_encoded)
-
 
 class VideoIterator():
     def __init__(self, data: VideoData, fps:float=None):
