@@ -19,3 +19,4 @@ from .calibration_static_dlt import *
 from .posdata_convert import *
 from .floodlight_convert import *
 from .kpi_computation import *
+from .hls_convert import *

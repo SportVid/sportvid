@@ -32,6 +32,25 @@ applications:
             env_vars:
               PYTHONPATH: "/app:/app/inference_ray/third_party/ByteTrack"
   
+  - name: hls_convert
+    route_prefix: /hls_convert
+    import_path: inference_ray.main:app_builder
+    args:
+      model: hls_convert
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.1
+
   # ---------- LOW (CPU only)
   - name: calibration_static_dlt
     route_prefix: /calibration_static_dlt

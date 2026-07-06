@@ -80,9 +80,6 @@ class VideoUpload(View):
                 path = Path(request.FILES["file"].name)
                 ext = "".join(path.suffixes)
                 
-                file_path = media_path_to_file(video_id, ext)
-                # file_path = download_result.get("path", "") # NOTE: check!
-
                 sport = request.POST.get("sport", "")
                 default_length, default_width = SPORT_FIELD_DEFAULTS.get(sport, (105.0, 68.0))
 
@@ -108,18 +105,54 @@ class VideoUpload(View):
                     sport=request.POST.get("sport"),
                     status=Video.STATUS_PROCESSING,
                 )
+                
                 # schedule conversion & analysis asynchronously
                 analyzers = []
                 try: analyzers = request.POST.get("analyser").split(",")
                 except Exception: analyzers = []
+                
+                output_root = media_dir_to_file(video_db.id.hex)
+                file_in = media_path_to_file(video_db.id.hex, ext)
+                asset_dir = os.path.join(output_root, video_db.id.hex)
+                manifest_path = os.path.join(asset_dir, f'stream.m3u8')
+                os.makedirs(asset_dir, exist_ok=True)
+                logger.debug(f'out={output_root}, asset_dir={asset_dir}, file_in={file_in}, manifest_path={manifest_path}')
 
+                plugin_manager = PluginManager()
+                try:
+                    result = plugin_manager(
+                        "hls_convert", 
+                        video=video_db, 
+                        user=video_db.owner, 
+                        parameters=[
+                            {"name": "fmp4", "value": True},
+                            {"name": "segment_time", "value": 5},
+                            {"name": "output_root", "value": output_root},
+                            {"name": "file_in", "value": file_in},
+                            {"name": "asset_dir", "value": asset_dir},
+                            {"name": "manifest_path", "value": manifest_path},
+                        ]
+                    )
+                except Exception:
+                    logger.exception(f"Failed to schedule plugin 'hls_convert'")
+                
+                # NOTE: run automated plugins/analyzers
+                # plugins = []
+                # if analyzers:
+                #     plugins += analyzers
+                # for plugin in plugins:
+                #     try:
+                #         plugin_manager(plugin, video=video_db, user=video_db.owner)
+                #     except Exception:
+                #         logger.exception(f"Failed to schedule plugin {plugin}")
+                
                 # pass original ext (e.g., .mp4) to the task
-                task = convert_video_to_hls.apply_async((video_db.id.hex, ext, analyzers))
+                # task = convert_video_to_hls.apply_async((video_db.id.hex, ext, analyzers))
                 # convert_video_to_hls((video_db.id.hex, ext, analyzers))
                 # task = convert_video_to_fmp4.apply_async((video_db.id.hex, ext, analyzers))
                 
-                video_db.task_id = task.id
-                video_db.save(update_fields=["task_id"])
+                # video_db.task_id = task.id
+                # video_db.save(update_fields=["task_id"])
 
                 request.user.used_storage_size += request.FILES["file"].size
                 request.user.save()

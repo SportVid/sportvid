@@ -1,0 +1,77 @@
+import json
+import logging
+from django.db import transaction
+from django.conf import settings
+from typing import Dict, List
+
+from backend.models import PluginRun, Video, PluginRunResult
+from backend.plugin_manager import PluginManager
+from backend.utils.task import Task
+from data import DataManager
+from ..utils.analyser_client import TaskAnalyserClient
+
+
+@PluginManager.export_plugin("hls_convert")
+class HlsConverter(Task):
+    def __init__(self):
+        self.config = {
+            "output_path": "/predictions/",
+            "base_url": "/sportvid/thumbnails/",
+            "analyser_host": settings.GRPC_HOST,
+            "analyser_port": settings.GRPC_PORT,
+        }
+
+    def __call__(
+        self,
+        parameters: Dict,
+        video: Video = None,
+        plugin_run: PluginRun = None,
+        dry_run: bool = False,
+        **kwargs,
+    ):
+        manager = DataManager(self.config["output_path"])
+        client = TaskAnalyserClient(
+            host=self.config["analyser_host"],
+            port=self.config["analyser_port"],
+            plugin_run_db=plugin_run,
+            manager=manager,
+        )
+
+        video_id = self.upload_video(client, video)
+        
+        result = self.run_analyser(
+            client,
+            "hls_convert",
+            parameters=parameters,
+            inputs={"video": video_id},
+            downloads=["video"],
+        )
+        
+        if result is None: raise Exception
+
+        if dry_run or plugin_run is None:
+            logging.warning("dry_run or plugin_run is None")
+            return {}
+
+        # TODO: safe way to check if all the segments have been written to the asset dir?
+        # media_candidates = list(asset_dir.glob("*.m4s")) + list(asset_dir.glob("*.mp4"))
+        # if not media_candidates:
+        #     raise RuntimeError(f"No media file generated in {asset_dir}")
+        # media_path = media_candidates[0]
+
+        with transaction.atomic():
+            with result[1]["images"] as d:
+                d.extract_all(manager)  # extract thumbnails
+                plugin_run_result_db = PluginRunResult.objects.create(
+                    plugin_run=plugin_run,
+                    data_id=d.id,
+                    name="images",
+                    type=PluginRunResult.TYPE_IMAGES,
+                )
+                return {
+                    "plugin_run": plugin_run.id.hex,
+                    "plugin_run_results": [plugin_run_result_db.id.hex],
+                    "data": {
+                        # "images": result[1]["images"].id
+                    },
+                }

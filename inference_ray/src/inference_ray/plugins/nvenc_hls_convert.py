@@ -205,7 +205,7 @@ class HLSConverter(
             if completed.returncode != 0:
                 raise RuntimeError(f"ffmpeg exited with code {completed.returncode}: {completed.stderr}")
             return completed
-        
+
     def call(
         self,
         inputs: Dict[str, Data],
@@ -215,14 +215,22 @@ class HLSConverter(
     ) -> Dict[str, Data]: 
         
         with inputs["video"] as input_data, data_manager.create_data("VideoAssetData") as output_data:
+            # TODO: look for materialized file on the file storage;
+            # write data directly back into the corresponding media folder?! would be some work-around hack
+            # or actually write the file back and send via grpc as a plugin_run_result?!
+            # TODO: delete redundant data created by this plugin? Or use tempfile...?
             video_file = input_data.open_video()
+            logging.error(video_file)
+            logging.error(input_data.filename)
+            logging.error(input_data.ext)
+            logging.error(parameters)
+            logging.error(input_data.get_local_file_path())
             
             # TODO: actual conversion logic
             
-            # TODO: write directly into media path?!
-            # TODO: if not, delete redundant data created by this plugin
             
             self.update_callbacks(callbacks, progress=1.0)
+            # TODO: What to return?!
             
         
         

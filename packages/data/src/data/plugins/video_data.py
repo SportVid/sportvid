@@ -1,12 +1,12 @@
 import logging
-
+import shutil
 from ..manager import DataManager
 from ..data import Data
 from interface import analyser_pb2
 from dataclasses import dataclass, field, fields
 from collections.abc import Iterable
 from utils import VideoDecoder
-
+from contextlib import contextmanager
 
 @DataManager.export("VideoData", analyser_pb2.VIDEO_DATA)
 @dataclass(kw_only=True)
@@ -59,7 +59,14 @@ class VideoData(Data):
             f.write(first_pkg.data_encoded)
             for x in data_stream:
                 f.write(x.data_encoded)
-
+    
+    # NOTE: idea is to get the local file path so we can run ffmpeg on the file.    
+    @contextmanager
+    def get_local_path(self):
+        if not self.ext:
+            raise ValueError("VideoData.ext is not set")
+        yield from self.get_local_file_path(f"{self.file_name}.{self.ext}")
+    
 class VideoIterator():
     def __init__(self, data: VideoData, fps:float=None):
         self.data = data
