@@ -277,7 +277,10 @@ export const useTopViewStore = defineStore(
     // Toggle for entity kinds in the top-view overlay (refs/inactive default off).
     const visibleEntityKinds = ref({ player: true, ref: false, ball: true, rest: false });
     const toggleEntityKind = (kind) => {
-      visibleEntityKinds.value = { ...visibleEntityKinds.value, [kind]: !visibleEntityKinds.value[kind] };
+      visibleEntityKinds.value = {
+        ...visibleEntityKinds.value,
+        [kind]: !visibleEntityKinds.value[kind],
+      };
     };
 
     // Lookup helpers: pick the right meta dict based on team_id semantics.
@@ -342,7 +345,7 @@ export const useTopViewStore = defineStore(
                 { x: b[3], y: b[4] }
               );
               b[3] = x;
-              b[4] = y;
+              b[4] = 1 - y;
               return b;
             });
           }
@@ -363,16 +366,22 @@ export const useTopViewStore = defineStore(
             const tid = b[1];
             if (tid === 1) {
               ballMap.set(b[0], tid);
-              refMap.delete(b[0]); inactiveMap.delete(b[0]); playerMap.delete(b[0]);
+              refMap.delete(b[0]);
+              inactiveMap.delete(b[0]);
+              playerMap.delete(b[0]);
             } else if (tid === 2) {
               refMap.set(b[0], tid);
-              ballMap.delete(b[0]); inactiveMap.delete(b[0]); playerMap.delete(b[0]);
+              ballMap.delete(b[0]);
+              inactiveMap.delete(b[0]);
+              playerMap.delete(b[0]);
             } else if (tid === 0) {
               if (!ballMap.has(b[0]) && !refMap.has(b[0]) && !playerMap.has(b[0]))
                 inactiveMap.set(b[0], tid);
             } else {
               playerMap.set(b[0], tid);
-              ballMap.delete(b[0]); refMap.delete(b[0]); inactiveMap.delete(b[0]);
+              ballMap.delete(b[0]);
+              refMap.delete(b[0]);
+              inactiveMap.delete(b[0]);
             }
             const gs = b[2];
             sections.add(gs);
@@ -405,7 +414,9 @@ export const useTopViewStore = defineStore(
     }
 
     const showSportZones = ref(false);
-    const toggleSportZones = () => { showSportZones.value = !showSportZones.value; };
+    const toggleSportZones = () => {
+      showSportZones.value = !showSportZones.value;
+    };
 
     const gridConfig = {
       longitudinal: {
