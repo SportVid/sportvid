@@ -85,7 +85,7 @@
     "home": "Home",
     "video_view": "Videos",
     "plugin_menu": "Run Plugin",
-    "history_menu": "History",
+    "status_menu": "Status",
     "shortcut_menu": "Shortcuts",
     "export_menu": "Export",
     "user_menu": "Login",
@@ -356,9 +356,9 @@
       "plugin_select": "To select any plugin, just click it in the list. For this tutorial, select the 'KPI Computation' plugin.",
       "plugin_details": "After selecting a plugin, you see its description and configuration options. Depending on the plugin, you may need to provide different inputs such as selecting files or specifying run IDs. Advanced options allow you to fine-tune the plugin's behavior, but if you're not sure, the default settings are a good starting point."
     },
-    "check_history": {
+    "check_status": {
       "open_modal": "Click here to open the plugin run history. This is where you can see the status of all your plugin runs — whether they are queued, running, completed, or if any errors occurred.",
-      "history_table": "This table lists all plugin runs for the current video. Each row shows the plugin name, the date it was run, its progress, and its current status. You can use this to track ongoing runs or review past results.",
+      "status_table": "This table lists all plugin runs for the current video. Each row shows the plugin name, the date it was run, its progress, and its current status. You can use this to track ongoing runs or review past results.",
       "delete_panel": "Expand this section to delete plugin runs. You can delete all runs for your account, all runs for the current video, all runs of a specific plugin type for the current video, or select individual runs to remove. This is useful to clean up old or failed runs."
     },
     "export": {
@@ -382,7 +382,7 @@
       "select_plugin": "Select the 'ByteTrack' plugin from the list.",
       "plugin_overview": "The ByteTrack plugin performs object tracking directly on the video. It detects and tracks players and the ball frame by frame, generating bounding boxes for each detected object.<br><br>The tracking results can later be used together with a camera calibration (DLT+RANSAC) to compute real-world position data, which in turn enables KPI computation.",
       "fps": "Set the frames per second (FPS) used for tracking. The value is pre-set to your video's frame rate, which is the recommended choice. It ensures every frame is analyzed and no motion is missed.<br><br>You can freely adjust it: a <em>lower</em> FPS speeds up processing but may cause the tracker to lose fast-moving objects between frames. A <em>higher</em> FPS than the video's native rate has no benefit, as no additional information is available.",
-      "run_plugin": "Click 'Run Plugin' to start the ByteTrack tracking. The progress can be tracked in the History panel. Once completed, the tracking results can be used for position data generation via KPI Computation."
+      "run_plugin": "Click 'Run Plugin' to start the ByteTrack tracking. The progress can be tracked in the Status panel. Once completed, the tracking results can be used for position data generation via KPI Computation."
     },
     "posdata_manual": {
       "upload_open": "Click the upload button to open the position data upload dialog.",
@@ -397,7 +397,7 @@
       "format_select": "Select the data format that matches your position data source. Choosing 'SportVid (ByteTrack)' enables the ByteTrack run and calibration selectors below. All other formats use an externally uploaded position data file.",
       "tracking_data": "Select the position data to use for the computation. This dropdown lists the position data files that have been uploaded or generated for this video.<br><br>If you selected 'SportVid (ByteTrack)' as the format, you will instead see a ByteTrack run and calibration asset selector. Choose the corresponding run and the calibration asset used during tracking.",
       "advanced_options": "The 'Advanced Options' panel lets you configure an optional <em>smoothing filter</em> for the position data before computing KPIs. You can choose between a 'Butterworth lowpass' or a 'Savitzky-Golay lowpass' filter, and adjust their hyperparameters. If you are unsure, leaving this at 'None' is a good default.",
-      "run_plugin": "Click 'Run Plugin' to start the KPI computation. The progress can be tracked in the History panel. Once completed, KPI results will appear in the KPI tab of the analysis view."
+      "run_plugin": "Click 'Run Plugin' to start the KPI computation. The progress can be tracked in the Status panel. Once completed, KPI results will appear in the KPI tab of the analysis view."
     },
     "top_view": {
       "pitch_overview": "The top-view shows your position data projected onto a 2D area — this could be a soccer pitch, a handball court, a basketball court, a climbing wall, or any other defined playing field. Each tracked entity appears as a colored dot, grouped and colored by team or assignment.",
@@ -930,8 +930,29 @@
       "new_cluster": "New cluster",
       "move_existing": "Move to existing cluster"
     },
-    "history": {
-      "title": "History",
+    "status": {
+      "title": "Status",
+      "area": {
+        "posdata": "Position data",
+        "kpi": "KPIs"
+      },
+      "source": {
+        "bytetrack": "ByteTrack",
+        "dlt": "DLT calibration",
+        "upload": "Upload"
+      },
+      "variant": {
+        "auto": "Automatic:",
+        "manual": "Manual:",
+        "or": "or"
+      },
+      "state": {
+        "available": "Available",
+        "running": "Running",
+        "none": "Not available",
+        "error": "Error"
+      },
+      "kpi_requires_posdata": "Requires position data",
       "plugin_name": "Plugin Name",
       "date": "Date",
       "progress": "Progress",
@@ -982,8 +1003,8 @@
         "name": "Run a Plugin",
         "description": "Open plugin panel and run plugins"
       },
-      "check_history": {
-        "name": "Check History",
+      "check_status": {
+        "name": "Check Status",
         "description": "View and manage plugin runs"
       },
       "export": {
