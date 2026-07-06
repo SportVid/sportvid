@@ -23,7 +23,7 @@ requires = {
 }
 
 provides = {
-    "video_asset_data": VideoAssetData,
+    "video": VideoAssetData,
 }
 
 
@@ -38,14 +38,10 @@ class HLSConverter(
 ):
     def __init__(self, config=None, **kwargs):
         super().__init__(config, **kwargs)
-
-        self.meta_dict = self._fresh_meta_dict()
-        self.py_dict = {}
     
     def convert_video_to_hls(self, file_in, dir_out, fmp4=False, async_=False):
         import imageio
         import os
-        import shutil
         import subprocess
         
         os.makedirs(dir_out, exist_ok=True)
@@ -61,6 +57,33 @@ class HLSConverter(
         segment_time = 5
         gop = max(1, int(round(fps * segment_time)))
         
+        conversion_args = {
+            "format": "hls",
+            "threads": 1, # TODO: check thread count for HLS conversion. Queue 2-3 video uploads, check ffmpeg processes and CPU usage. 
+                # ps -ef | grep ffmpeg
+                # top -H -p <ffmpeg_pid>
+            "hls_playlist_type": "vod",
+            "segment_time" : segment_time,
+            # -------- input: hardware acceleration
+            "hwaccel": "cuda",
+            "hwaccel_output_format": "cuda",
+            # -------- output: video/audio options
+            "vcodec" : "h264_nvenc", # libx264
+            "acodec" : "aac",
+            "audio_bitrate" : "128k",
+            # -------- HLS stuff
+            "g": gop, # GOP size should match segment duration
+            "keyint_min": gop, # same as GOP
+            "sc_threshold": 0, # no unpredictable keyframe insertions
+            # "crf": 23,              # constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
+            # -------- NVENC tuning
+            "preset": "fast",       # controls encoding speed --vs.-- compression trade-off ["ultrafast" - "veryslow"]
+            "rc": "vbr",
+            "cq": 23,
+            # -------- output compat
+            # "pix_fmt": "yuv420p", # pixel format of the output
+        }
+        
         if fmp4:
             conversion_args.update({ 
                 "hls_segment_type": "fmp4",
@@ -71,69 +94,9 @@ class HLSConverter(
                 "hls_segment_type": "mpegts",
                 "hls_flags" : "independent_segments",
             })
-            
-                
-            conversion_args = {
-                "format": "hls",
-                "threads": 1, # TODO: check thread count for HLS conversion. Queue 2-3 video uploads, check ffmpeg processes and CPU usage. 
-                    # ps -ef | grep ffmpeg
-                    # top -H -p <ffmpeg_pid>
-                "hls_playlist_type": "vod",
-                "hls_segment_type": "fmp4",
-                "hls_flags" : "single_file+independent_segments",
-                "segment_time" : segment_time,
-                # -------- input: hardware acceleration
-                "hwaccel": "cuda",
-                "hwaccel_output_format": "cuda",
-                # -------- output: video/audio options
-                "vcodec" : "h264_nvenc", # libx264
-                "acodec" : "aac",
-                "audio_bitrate" : "128k",
-                # -------- HLS stuff
-                "g": gop, # GOP size should match segment duration
-                "keyint_min": gop, # same as GOP
-                "sc_threshold": 0, # no unpredictable keyframe insertions
-                # "crf": 23,              # constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
-                # -------- NVENC tuning
-                "preset": "fast",       # controls encoding speed --vs.-- compression trade-off ["ultrafast" - "veryslow"]
-                "rc": "vbr",
-                "cq": 23,
-                # -------- output compat
-                # "pix_fmt": "yuv420p", # pixel format of the output
-            }
-        else:
-            conversion_args = {
-                "vid_fps" : fps,
-                "format": "hls",
-                "threads": 1, # TODO: check thread count for HLS conversion. Queue 2-3 video uploads, check ffmpeg processes and CPU usage. 
-                                # ps -ef | grep ffmpeg
-                                # top -H -p <ffmpeg_pid>
-                "hls_playlist_type": "vod",
-                "hls_segment_type": "mpegts",
-                "hls_flags" : "independent_segments",
-                "segment_time" : segment_time,
-                # -------- input: hardware acceleration
-                "hwaccel": "cuda",
-                "hwaccel_output_format": "cuda",
-                # -------- output: video/audio options
-                "vcodec" : "h264_nvenc", # libx264
-                "acodec" : "aac",
-                "audio_bitrate" : "128k",
-                # -------- HLS stuff
-                "g": gop,               # GOP size should match segment duration
-                "keyint_min": gop,      # same as GOP
-                "sc_threshold": 0,      # no unpredictable keyframe insertions
-                # "crf": 23,              # constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
-                # -------- NVENC tuning
-                "preset": "fast",       # controls encoding speed --vs.-- compression trade-off ["ultrafast" - "veryslow"]
-                "rc": "vbr",
-                "cq": 23,
-                # -------- output compat
-                # "pix_fmt": "yuv420p", # pixel format of the output
-            }
-        
+
         if async_:
-            ffmpeg_proc = convert_to_hls(
+            ffmpeg_proc = self.convert_to_hls(
                 str(file_in),
                 str(manifest_path),
                 asynchronous=True,
@@ -170,6 +133,7 @@ class HLSConverter(
             $ fmpeg -i in.mp4 -codec: copy -start_number 0 -hls_time 10 -hls_list_size 0 -f hls out.m3u8
         """
         import ffmpeg
+        import subprocess
         
         input_stream = ffmpeg.input(
             file_in,
@@ -241,7 +205,6 @@ class HLSConverter(
             if completed.returncode != 0:
                 raise RuntimeError(f"ffmpeg exited with code {completed.returncode}: {completed.stderr}")
             return completed
-        
         
     def call(
         self,

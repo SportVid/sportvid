@@ -125,11 +125,11 @@ services:
       - ./backend/:/app/backend
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
-    depends_on:
-      postgres:
-        condition: service_healthy
-      valkey:
-        condition: service_healthy
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+    #   valkey:
+    #     condition: service_healthy
     tmpfs:
       - /tmp
       - /var
@@ -192,13 +192,13 @@ services:
       - "1800"
       - "--workers"
       - "${GUNICORN_WORKERS:-4}"
-    depends_on:
+    # depends_on:
       # postgres: # NOTE: circular dependency?
       #   condition: service_healthy
-      memcached:
-        condition: service_started
-      celery:
-        condition: service_started
+      # memcached:
+      #   condition: service_started
+      # celery:
+      #   condition: service_started
     # healthcheck:
     #   test: ["CMD-SHELL", "curl --fail http://localhost:${BACKEND_PORT}/api/readyz/ || exit 1"]
     #   interval: 30s
@@ -219,6 +219,6 @@ services:
       - ${DATA_PATH}/media/:/media
       # - assets:/assets
     working_dir: /app/frontend
-    depends_on:
-      backend:
-        condition: service_started
+    # depends_on:
+    #   backend:
+    #     condition: service_started
