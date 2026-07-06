@@ -193,8 +193,8 @@ services:
       - "--workers"
       - "${GUNICORN_WORKERS:-4}"
     depends_on:
-      postgres:
-        condition: service_healthy
+      # postgres: # NOTE: circular dependency?
+      #   condition: service_healthy
       memcached:
         condition: service_started
       celery:
