@@ -1,6 +1,5 @@
 FROM pytorch/pytorch:2.12.1-cuda12.6-cudnn9-runtime
-# FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
-# RUN rm -rf /usr/local/cuda/compat/*
+# base image works fine with nvidia-driver-570
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -51,6 +50,9 @@ RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
 # RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
 #     uv pip install -r /app/inference_ray/third_party/ByteTrack/requirements.txt
 
+# RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+#     uv pip install /app/inference_ray/third_party/ByteTrack
+
 # these were skipped during above requirements install, so add them manually!
 RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
     uv pip install Cython
@@ -61,10 +63,7 @@ RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
 RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
     uv pip install cython_bbox
 
-# RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
-#     uv pip install /app/inference_ray/third_party/ByteTrack
-
-# import smoke tests
+# import smoke tests:
 RUN python -c "import torch; print(torch.__version__); print(torch.version.cuda)"
 # RUN python -c "import cython_bbox; print('cython_bbox ok')"
 # RUN python -c "import floodlight; print('floodlight ok')"
