@@ -46,17 +46,19 @@ USER appuser
 RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
     uv sync --frozen --no-dev --project /app/inference_ray --extra tracking
 
-RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
-    uv pip install -r /app/inference_ray/third_party/ByteTrack/requirements.txt
+# RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
+#    uv pip install -r /app/inference_ray/third_party/ByteTrack/requirements.txt
+
+# RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
+#    uv pip install /app/inference_ray/third_party/ByteTrack
+
 # these were skipped during above requirements install, so add them manually!
 RUN uv pip install Cython
 RUN uv pip install gdown
 RUN uv pip install pycocotools
 RUN uv pip install cython_bbox
 
-# RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
-#     uv pip install /app/inference_ray/third_party/ByteTrack
-
-# import smoke tests
+# import smoke tests:
+RUN python -c "import torch; print(torch.__version__); print(torch.version.cuda)"
 # RUN /app/.venv/bin/python -c "import floodlight; print('floodlight ok')"
 # RUN /app/.venv/bin/python -c "import cython_bbox; print('cython_bbox ok')"
