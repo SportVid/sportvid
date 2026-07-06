@@ -14,7 +14,7 @@ services:
     init: true
     ports:
       - "127.0.0.1:8265:8265"
-    shm_size: "4g" # TODO: should be 30% of total available memory?
+    shm_size: "4g" # NOTE: should be 30% of available system memory.
     environment:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
@@ -193,8 +193,8 @@ services:
       - "--workers"
       - "${GUNICORN_WORKERS:-4}"
     depends_on:
-      postgres:
-        condition: service_healthy
+      # postgres: # NOTE: circular dependency?
+      #   condition: service_healthy
       memcached:
         condition: service_started
       celery:
