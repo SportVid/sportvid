@@ -9,15 +9,11 @@ class DetectorParamsSerializer(serializers.Serializer):
         min_value=0.0,
         max_value=1.0,
     )
-
+    # TODO: add all necessary options...
 
 class TrackerParamsSerializer(serializers.Serializer):
-    fps = serializers.IntegerField(
-        required=False,
-        default=5,
-        min_value=1,
-    )
-
+    # TODO: add all necessary options...
+    pass
 
 @PluginManager.export_serializer("tracker")
 class TrackerExecutionSerializer(serializers.Serializer):
@@ -26,10 +22,27 @@ class TrackerExecutionSerializer(serializers.Serializer):
         required=False,
         default="yolox",
     )
-    detector_params = DetectorParamsSerializer(required=False, default=dict)
     tracker = serializers.ChoiceField(
         choices=["bytetrack"],
         required=False,
         default="bytetrack",
     )
+        
+    detector_params = DetectorParamsSerializer(required=False, default=dict)
     tracker_params = TrackerParamsSerializer(required=False, default=dict)
+
+    def validate(self, data):
+        detector = data["detector"]
+        tracker = data["tracker"]
+        detector_params = data.get("detector_params", {})
+        tracker_params = data.get("tracker_params", {})
+
+        if detector == "yolox":
+            # optional extra rules for YOLOX
+            pass
+
+        if tracker == "bytetrack":
+            # optional extra rules for ByteTrack
+            pass
+
+        return data

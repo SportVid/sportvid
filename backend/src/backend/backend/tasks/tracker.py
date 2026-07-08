@@ -15,12 +15,14 @@ from django.db import transaction
 from django.conf import settings
 
 
-""" TODO: Frontend should send params in this format:
+""" TODO: Frontend should send params as a JSON body in this format:
     {
         "detector": "yolox",
         "tracker": "bytetrack",
-        "detector_params":  {"option1": "foo", "option2": "bar", ...}
-        "tracker_params":   {"option1" : "foo", "option2": "bar", ...}
+        "parameters" : { 
+            "detector_params":  {"option1": "foo", "option2": "bar", ...},
+            "tracker_params":   {"option1" : "foo", "option2": "bar", ...}
+        }
     }
 """
 
