@@ -37,8 +37,8 @@ def safe_delete(paths):
             logger.warning(f"Failed to delete {path}: {e}")
 
 @shared_task
-# TODO: get cronjob with cleaning of orphaned videos working...
-def cleanup_upload_orphans():
+# TODO: get a cronjob running that cleans up orphaned videos.
+def cleanup_upload_orphans(self):
     """ Delete files without DB Video record. """
     media_root = Path(settings.MEDIA_ROOT)
     db_files = set()
@@ -58,7 +58,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
     s = time.time()
     
     archive_path = None
-    hls_dir = None
+    asset_dir = None
     video_db = None
     
     fmp4 = True
@@ -71,7 +71,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         file_in = media_path_to_file(video_id_hex, original_ext)
         
         asset_dir = os.path.join(output_root, video_id_hex)
-        manifest_path = os.path.join(hls_dir, f'{video_id_hex}.m3u8')
+        manifest_path = os.path.join(asset_dir, f'{video_id_hex}.m3u8')
         os.makedirs(asset_dir, exist_ok=True)
         logger.debug(f'out={output_root}, asset_dir={asset_dir}, file_in={file_in}, manifest_path={manifest_path}')
 
@@ -167,7 +167,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         ext = '.tar.gz'
         archive_path = Path(f"{output_root}{video_id_hex}{ext}")
         with tarfile.open(archive_path, 'w:gz') as tar:
-            tar.add(hls_dir, arcname='.', recursive=True)
+            tar.add(asset_dir, arcname='.', recursive=True)
 
         # extract metadata
         reader      = imageio.get_reader(str(file_in))
@@ -177,7 +177,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
 
         # update DB (use update_fields to avoid re-inserting a deleted record)
         Video.objects.filter(id=video_id_hex).update(
-            ext=".video_asset",
+            ext=ext,
             fps=fps,
             duration=duration,
             width=size[0] if size else None,
@@ -206,7 +206,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         logger.exception("Video conversion failed")
         if video_db is not None:
             Video.objects.filter(id=video_id_hex).update(status=Video.STATUS_ERROR)
-        safe_delete([archive_path, hls_dir])
+        safe_delete([archive_path, asset_dir])
 
     finally:
         try: # NOTE: final cleanup.
@@ -214,128 +214,3 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             logger.debug(f"{file_in} removed successfully!")
         except Exception:
             logger.exception("Failed to remove original file")
-
-"""
-@shared_task(bind=True)
-def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
-    s = time.time()
-    
-    archive_path = None
-    hls_dir = None
-    video_db = None
-    
-    try:
-        video_db = Video.objects.get(id=video_id_hex)
-        
-        output_root = media_dir_to_file(video_id_hex)
-        file_in = media_path_to_file(video_id_hex, original_ext)
-
-        hls_dir = os.path.join(output_root, video_id_hex)
-        manifest_path = os.path.join(hls_dir, f'{video_id_hex}.m3u8')
-        os.makedirs(hls_dir, exist_ok=True)
-        logger.debug(f'out={output_root}, hls_dir={hls_dir}, file_in={file_in}, manifest_path={manifest_path}')
-
-        # extract metadata
-        with imageio.get_reader(str(file_in)) as reader:
-            meta = reader.get_meta_data()
-            fps = float(meta["fps"])
-            duration = float(meta["duration"]) * 1000.
-            size = meta['size']
-            
-        segment_time = 5
-        gop = max(1, int(round(fps * segment_time)))
-
-        logger.info(f"Starting HLS conversion for {video_id_hex} from {file_in} to {manifest_path}")
-
-        conversion_args = {
-            "vid_fps" : fps,
-            "format": "hls",
-            "threads": 4, # TODO: check thread count for HLS conversion. Queue 2-3 video uploads, check ffmpeg processes and CPU usage. 
-                            # ps -ef | grep ffmpeg
-                            # top -H -p <ffmpeg_pid>
-            "hls_playlist_type": "vod",
-            "hls_segment_type": "mpegts",
-            "hls_flags" : "independent_segments",
-            "segment_time" : segment_time,
-            "vcodec" : "libx264",
-            "acodec" : "aac",
-            "audio_bitrate" : "128k",
-            "g": gop, # GOP size should match segment duration
-            "keyint_min": gop, # same as GOP
-            "sc_threshold": 0, # no unpredictable keyframe insertions
-            "crf": 23, # constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
-            "preset" : "medium", # controls encoding speed --vs.-- compression trade-off ["ultrafast" - "veryslow"]
-            "pix_fmt": "yuv420p", # pixel format of the output
-        }
-
-        ffmpeg_proc = convert_to_hls(
-            str(file_in),
-            str(manifest_path),
-            asynchronous=True,
-            **conversion_args
-        )
-        while True:
-            try: # poll for ffmpeg completion; check for cancellation (video deleted) each interval
-                ffmpeg_proc.wait(timeout=_POLL_INTERVAL)
-                break
-            except subprocess.TimeoutExpired:
-                if not Video.objects.filter(id=video_id_hex).exists():
-                    logger.info(f"Video {video_id_hex} deleted during HLS conversion, killing ffmpeg.")
-                    ffmpeg_proc.kill()
-                    ffmpeg_proc.wait()
-                    return
-
-        if ffmpeg_proc.returncode != 0:
-            stderr = ""
-            if ffmpeg_proc.stderr:
-                stderr = ffmpeg_proc.stderr.read().decode(errors="replace")
-            raise RuntimeError(f"ffmpeg exited with code {ffmpeg_proc.returncode}: {stderr}")
-
-        # check if video was deleted while we were converting
-        if not Video.objects.filter(id=video_id_hex).exists():
-            logger.info(f"Video {video_id_hex} deleted during conversion, aborting.")
-            return
-
-        # creates the archive to be transfered
-        ext = '.tar.gz'
-        archive_path = Path(f"{output_root}{video_id_hex}{ext}")
-        with tarfile.open(archive_path, 'w:gz') as tar:
-            tar.add(hls_dir, arcname='.', recursive=True)
-
-        # update DB (use update_fields to avoid re-inserting a deleted record)
-        Video.objects.filter(id=video_id_hex).update(
-            ext=ext,
-            fps=fps,
-            duration=duration,
-            width=size[0],
-            height=size[1],
-            status=Video.STATUS_DONE,
-        )
-
-        e = time.time()
-        logger.info(f"HLS conversion took: {e-s}")
-
-        # NOTE: add comma-separated plugin names to run automatically on video upload.
-        # plugin_manager = PluginManager()
-        # plugins = [] 
-        # if analyzers:
-        #     plugins += analyzers
-        # for plugin in plugins:
-        #     try:
-        #         plugin_manager(plugin, video=video_db, user=video_db.owner)
-        #     except Exception:
-        #         logger.exception(f"Failed to schedule plugin {plugin}")
-
-    except Exception:
-        logger.exception("Video conversion failed")
-        if video_db is not None:
-            Video.objects.filter(id=video_id_hex).update(status=Video.STATUS_ERROR)
-        safe_delete([archive_path, hls_dir])
-
-    finally:
-        try: # NOTE: final cleanup.
-            safe_delete(file_in)
-            logger.debug(f"{file_in} removed successfully!")
-        except Exception:
-            logger.exception("Failed to remove original file")
-"""
