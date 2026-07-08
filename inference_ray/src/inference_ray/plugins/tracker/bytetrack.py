@@ -26,14 +26,18 @@ class ByteTrack():
     
     def __init__(
         self, 
-        tracker_params: Dict[Any, Any], 
-        device: str = "cuda", 
+        tracker_params: Dict [Any, Any],
         **kwargs
     ):
-        super().__init__(tracker_params, device, **kwargs)
+        import torch
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        self.state = list()
+        
+        self.tracker_params = tracker_params
         
         from yolox.tracker.byte_tracker import BYTETracker
-        self.tracker = BYTETracker(args=self.cfg_args_dict)
+        self.tracker = BYTETracker(args=self.tracker_params)
         
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Brings the detection into the correct format required by BYTE. """

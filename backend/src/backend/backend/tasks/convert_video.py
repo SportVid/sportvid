@@ -158,7 +158,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             raise RuntimeError(f"No HLS manifest generated in {asset_dir}")
         if not segment_candidates:
             raise RuntimeError(f"No HLS segments generated in {asset_dir}")
-        media_path = media_candidates[0]
+        segment_path = segment_candidates[0]
 
         # creates the archive to be transfered
         # TODO: Eventually we can remove putting everything into archives to send them around via gRPC.
@@ -185,7 +185,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             status=Video.STATUS_DONE,
             asset_dir = str(asset_dir),
             manifest_path = str(manifest_path),
-            media_path = str(media_path)
+            media_path = str(segment_path)
         )
 
         e = time.time()

@@ -16,13 +16,12 @@ from django.conf import settings
 
 
 """ TODO: Frontend should send params in this format:
-{
-    "detector": "yolox",
-    "tracker": "bytetrack",
-    "detector_params": {"model_chkpt": }
-    "tracker_params": {"fps": 5},
-    "weights": "checkpoint_name",
-}
+    {
+        "detector": "yolox",
+        "tracker": "bytetrack",
+        "detector_params":  {"option1": "foo", "option2": "bar", ...}
+        "tracker_params":   {"option1" : "foo", "option2": "bar", ...}
+    }
 """
 
 @PluginManager.export_plugin("tracker")

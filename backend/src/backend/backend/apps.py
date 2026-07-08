@@ -19,7 +19,7 @@ class BackendConfig(AppConfig):
         from backend.models import PluginRun
         
         # import serializers for auto discovery
-        # import backend.serializers
+        import backend.serializers
 
         # set unfinished tasks to ERROR on startup
         inspect = app.control.inspect()

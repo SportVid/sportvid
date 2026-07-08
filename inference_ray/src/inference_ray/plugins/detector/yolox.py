@@ -32,17 +32,24 @@ class YoloX():
         model_path: str,
         batch_size: int,
         image_size: tuple[int, int],
-        detector_cfg: Dict [Any, Any],
-        device: str = "cuda",
+        detector_params: Dict [Any, Any],
         **kwargs,
     ):
+        import torch
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        self.state = list()
+        
+        self.detector_params = detector_params
+        
         from yolox.exp import get_exp
+        self.exp = get_exp(None, model_path)
         
         self.batch_size = batch_size
-        self.exp = get_exp(None, model_path)
         self.model_chkpt = kwargs.get("model_chkpt", None)
+        self.w, self.h = image_size
 
-        self._init_inference(detector_cfg)
+        self._init_inference(detector_params)
         
         # ImageNet norm constants (used in preprocess)
         self.rgb_means = (0.485, 0.456, 0.406)
@@ -172,13 +179,13 @@ class YoloX():
 
         for pred, ratio in zip(raw_outputs, inputs["ratio"]):
             if pred is None:
-                self.detections.append([])
+                self.state.append([])
                 self.img_id += 1
                 continue
 
             if not np.isfinite(ratio) or ratio < 1e-6:
                 logging.warning(f"Invalid ratio={ratio}, skipping frame {self.img_id}")
-                self.detections.append([])
+                self.state.append([])
                 self.img_id += 1
                 continue
 
@@ -207,7 +214,7 @@ class YoloX():
                 })
                 logging.debug(bbox_list[-1])
 
-            self.detections.append(bbox_list)
+            self.state.append(bbox_list)
             self.img_id += 1
 
         return raw_outputs

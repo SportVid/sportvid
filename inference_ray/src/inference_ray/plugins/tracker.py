@@ -24,15 +24,17 @@ default_config = {
     "host": "localhost",
     "port": 6379,
     "detector": "yolox",
-    "tracker": "bytetrack"
+    "detector_params": {},
+    "tracker": "bytetrack",
+    "tracker_params": {}
 }
 
 default_yolox_params = {
-    "batch_size": 2,
-    "conf_thresh": 0.25,
+    "batch_size": 1,
+    "conf_thresh": 0.2,
     "nms_thresh": 0.65,
-    "fp16": False,
-    "num_classes": 2, 
+    "fp16": True,
+    "num_classes": 1, 
     "decode": True,             # whether to decode the model outputs into bounding boxes during inference. If False, raw model outputs will be returned.
     "test_size": [576, 1024],
     "model_path": "yolox-x",
@@ -40,7 +42,7 @@ default_yolox_params = {
 }
 
 default_yoloultra_params = {
-    "batch_size": 2,
+    "batch_size": 1,
     "conf": 0.1,                # min confidence threshold [0.1 - 0.6]
     "iou": 0.3,                 # threshold for NMS; lower values -> less detections [0.3 - 0.6]
     "agnostic_nms": False,      # class-agnostic NMS; merge overlapping boxes of different classes
@@ -54,7 +56,7 @@ default_yoloultra_params = {
 }
 
 default_rfdetr_params = {
-    "batch_size": 2,
+    "batch_size": 1,
     "conf": 0.2,               
     "classes": [0, 32],         # default COCO: 0 - person, 32 - ball
     # "classes": ['ball', 'player', 'referee', 'goalkeeper'], # specific checkpoint
@@ -233,47 +235,3 @@ class Tracker(
             self.update_callbacks(callbacks, progress=1.0)
 
         return {"tracklets": output_data}
-
-
-class Detector():
-    def __init__(
-        self,
-        model_path: str,
-        batch_size: int,
-        image_size: tuple[int, int],
-        detector_params: Dict[Any, Any],
-        device: str = "cuda",
-        **kwargs
-    ):
-        import torch
-        self.device = device if torch.cuda.is_available() else 'cpu'
-        
-        self.detector_params = detector_params
-        
-        # TODO: use correct detector class to preprocess/process inputs.
-        
-        self.batch_size = batch_size
-        self.model_chkpt = kwargs.get("model_chkpt", None)
-        self.w, self.h = image_size
-        
-    def preprocess(self, inputs, **kwargs) -> Dict[Any, Any]:
-        """ Anything that needs to be done before processing the input. """
-        input = inputs['frame']
-        input = input.to(self.device).float()
-        input_shape = input.shape
-        
-        return dict({
-            'inputs' : inputs,
-            'shape' : input_shape
-        })
-        
-    def process(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
-        """ Processing logic of this class. """
-        prep_inputs = self.preprocess(inputs, **kwargs)
-        mode = kwargs.get('mode', 'inference')
-        
-        results = {}
-        if mode == 'inference': results = self.run_inference(prep_inputs)
-        if mode == 'finetune':  results = self.run_finetune(prep_inputs)
-        
-        return results

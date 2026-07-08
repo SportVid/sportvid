@@ -5,14 +5,18 @@ import logging
 import tempfile
 import tempfile
 import time
+
 from django.views import View
 from django.http import HttpResponse, JsonResponse
 from django.conf import settings
+
+from rest_framework import serializers
 
 from backend.models import Video, PluginRun
 from backend.plugin_manager import PluginManager
 from backend.utils import download_url, download_file, media_url_to_file
 
+from backend.serializers import PluginRunRequestSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -21,101 +25,76 @@ class PluginRunNew(View):
     def post(self, request):
         try:
             if not request.user.is_authenticated:
-                logger.error("PluginRunNew::not_authenticated")
-                return JsonResponse({"status": "error"})
+                return JsonResponse({"status": "error"}, status=401)
 
-            if request.method != "POST":
-                logger.error("PluginRunNew::wrong_method")
-                return JsonResponse({"status": "error"})
+            raw_parameters = request.POST.get("parameters")
+            payload = {
+                "plugin": request.POST.get("plugin"),
+                "video_id": request.POST.get("video_id"),
+                "parameters": json.loads(raw_parameters) if raw_parameters else None,
+            }
+
+            serializer = PluginRunRequestSerializer(data=payload)
+            serializer.is_valid(raise_exception=True)
+            data = serializer.validated_data
 
             output_dir = tempfile.mkdtemp(dir="/tmp")
-            parameters = []
-            for k, v in request.FILES.items():
-                m = re.match(r"^file_(.*?)$", k)
-                if m:
-                    data_id_uuid = uuid.uuid4().hex
-                    download_result = download_file(
-                        output_dir=output_dir,
-                        output_name=data_id_uuid,
-                        file=v,
-                        max_size=11 * 1024 * 1024 * 1024,
-                    )
-                    if download_result.get("status") == "ok":
-                        parameters.append(
-                            {
-                                "name": m.group(1),
-                                "value": download_result.get("origin"),
-                                "path": download_result.get("path"),
-                            }
-                        )
-            parameters.extend(json.loads(request.POST.get("parameters")))
-            plugin = request.POST.get("plugin")
-            if plugin is None:
-                return JsonResponse({"status": "error", "type": "missing_values"})
+            file_parameters = {}
 
-            video_id = request.POST.get("video_id")
-            if video_id is None:
-                return JsonResponse({"status": "error", "type": "missing_values"})
+            for key, uploaded_file in request.FILES.items():
+                m = re.match(r"^file_(.*?)$", key)
+                if not m:
+                    continue
 
-            if not isinstance(parameters, list):
-                return JsonResponse({"status": "error", "type": "wrong_request_body"})
-            valid_parameters = []
-            for parameter in parameters:
-                if not isinstance(parameter, dict):
-                    return JsonResponse(
-                        {"status": "error", "type": "wrong_request_body"}
-                    )
+                data_id_uuid = uuid.uuid4().hex
+                download_result = download_file(
+                    output_dir=output_dir,
+                    output_name=data_id_uuid,
+                    file=uploaded_file,
+                    max_size=11 * 1024 * 1024 * 1024,
+                )
 
-                if "name" not in parameter:
-                    return JsonResponse(
-                        {"status": "error", "type": "wrong_request_body"}
-                    )
+                if download_result.get("status") == "ok":
+                    file_parameters[m.group(1)] = {
+                        "value": download_result["origin"],
+                        "path": download_result["path"],
+                    }
 
-                if "value" not in parameter:
-                    return JsonResponse(
-                        {"status": "error", "type": "wrong_request_body"}
-                    )
-                if "path" in parameter:
-                    valid_parameters.append(
-                        {
-                            "name": parameter.get("name"),
-                            "value": parameter.get("value"),
-                            "path": parameter.get("path"),
-                        }
-                    )
+            parameters = data["parameters"].copy()
+            parameters["_files"] = file_parameters
 
-                else:
-                    valid_parameters.append(
-                        {"name": parameter.get("name"), "value": parameter.get("value")}
-                    )
-
+            video_db = Video.objects.get(id=data["video_id"])
             plugin_manager = PluginManager()
 
-            if plugin not in plugin_manager:
-                logger.error(plugin)
-                return JsonResponse({"status": "error", "type": "not_exist"})
-
-            try:
-                video_db = Video.objects.get(id=video_id)
-            except Video.DoesNotExist:
-                return JsonResponse({"status": "error", "type": "not_exist"})
-
-            user_db = request.user
-            
             result = plugin_manager(
-                plugin,
-                user=user_db,
+                data["plugin"],
+                user=request.user,
                 video=video_db,
                 run_async=True,
-                parameters=valid_parameters,
+                parameters=parameters,
             )
 
-            if result:
-                return JsonResponse({"status": "ok"})
-            return JsonResponse({"status": "error", "type": "plugin_not_started"})
+            if not result:
+                return JsonResponse(
+                    {"status": "error", "type": "plugin_not_started"},
+                    status=500,
+                )
+
+            return JsonResponse({"status": "ok"})
+
+        except serializers.ValidationError as e:
+            return JsonResponse(
+                {"status": "error", "type": "validation_error", "errors": e.detail},
+                status=400,
+            )
+        except json.JSONDecodeError:
+            return JsonResponse(
+                {"status": "error", "type": "wrong_request_body"},
+                status=400,
+            )
         except Exception:
             logger.exception("Failed to create new plugin run")
-            return JsonResponse({"status": "error"})
+            return JsonResponse({"status": "error"}, status=500)
 
 
 class PluginRunDelete(View):
