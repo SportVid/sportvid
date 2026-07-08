@@ -23,10 +23,8 @@ from backend.utils import (
     media_path_to_file
 )
 from backend.models import Video
-
-from utils.video_converter import convert_to_hls
 from utils.helper import remove_file, remove_dir
-from backend.tasks.convert_video import convert_video_to_hls, convert_video_to_fmp4
+from backend.tasks.convert_video import convert_video_to_hls
 
 
 logger = logging.getLogger(__name__)
@@ -106,7 +104,7 @@ class VideoUpload(View):
                     status=Video.STATUS_PROCESSING,
                 )
                 
-                # schedule conversion & analysis asynchronously
+                # NOTE: schedule conversion & analysis asynchronously.
                 analyzers = []
                 try: analyzers = request.POST.get("analyser").split(",")
                 except Exception: analyzers = []
@@ -116,27 +114,28 @@ class VideoUpload(View):
                 asset_dir = os.path.join(output_root, video_db.id.hex)
                 manifest_path = os.path.join(asset_dir, f'stream.m3u8')
                 os.makedirs(asset_dir, exist_ok=True)
+                
                 logger.debug(f'out={output_root}, asset_dir={asset_dir}, file_in={file_in}, manifest_path={manifest_path}')
 
-                plugin_manager = PluginManager()
-                try:
-                    result = plugin_manager(
-                        "hls_convert", 
-                        video=video_db, 
-                        user=video_db.owner, 
-                        parameters=[
-                            {"name": "fmp4", "value": True},
-                            {"name": "segment_time", "value": 5},
-                            {"name": "output_root", "value": output_root},
-                            {"name": "file_in", "value": file_in},
-                            {"name": "asset_dir", "value": asset_dir},
-                            {"name": "manifest_path", "value": manifest_path},
-                        ]
-                    )
-                except Exception:
-                    logger.exception(f"Failed to schedule plugin 'hls_convert'")
+                # plugin_manager = PluginManager()
+                # try:
+                #     result = plugin_manager(
+                #         "hls_convert", 
+                #         video=video_db, 
+                #         user=video_db.owner, 
+                #         parameters=[
+                #             {"name": "fmp4", "value": True},
+                #             {"name": "segment_time", "value": 5},
+                #             {"name": "output_root", "value": output_root},
+                #             {"name": "file_in", "value": file_in},
+                #             {"name": "asset_dir", "value": asset_dir},
+                #             {"name": "manifest_path", "value": manifest_path},
+                #         ]
+                #     )
+                # except Exception:
+                #     logger.exception(f"Failed to schedule plugin 'hls_convert'")
                 
-                # NOTE: run automated plugins/analyzers
+                # NOTE: add comma-separated plugin names to run automatically on video upload.
                 # plugins = []
                 # if analyzers:
                 #     plugins += analyzers
@@ -146,13 +145,9 @@ class VideoUpload(View):
                 #     except Exception:
                 #         logger.exception(f"Failed to schedule plugin {plugin}")
                 
-                # pass original ext (e.g., .mp4) to the task
-                # task = convert_video_to_hls.apply_async((video_db.id.hex, ext, analyzers))
-                # convert_video_to_hls((video_db.id.hex, ext, analyzers))
-                # task = convert_video_to_fmp4.apply_async((video_db.id.hex, ext, analyzers))
-                
-                # video_db.task_id = task.id
-                # video_db.save(update_fields=["task_id"])
+                task = convert_video_to_hls.apply_async((video_db.id.hex, ext, analyzers))
+                video_db.task_id = task.id
+                video_db.save(update_fields=["task_id"])
 
                 request.user.used_storage_size += request.FILES["file"].size
                 request.user.save()

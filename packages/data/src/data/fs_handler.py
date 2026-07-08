@@ -130,7 +130,6 @@ class ZipFSHandler(FSHandler):
         if "w" in mode or "a" in mode:
             return self.zipfile.open(filename, mode=mode, force_zip64=True)
         
-        # return self.zipfile.open(filename, mode=mode, force_zip64=True)
         # NOTE: uses context manager to ensure handle is closed immediately
         with self.zipfile.open(filename, mode=mode, force_zip64=True) as zip_file_obj:
             file_data = zip_file_obj.read()
@@ -162,11 +161,8 @@ class LocalFSHandler(FSHandler):
 
     def close(self, data) -> None:
         logging.debug(f"close {self.path}")
-        if self.fs is None:
-            return
-
-        if self.fs.mode == "r":
-            return
+        if self.fs is None: return
+        if self.fs.mode == "r": return
 
         data.save()
 

@@ -111,9 +111,11 @@ class Data:
             data_dict[x.name] = getattr(self, x.name)
         return data_dict
     
-    # NOTE: idea is to get the local file path so we can run ffmpeg on the file.
     @contextmanager
     def get_local_file_path(self, filename: str):
+        ''' Returns a file path for the duration of the context, if it exists.
+            Else, it copies the object as a temp file.
+        '''
         if self.check_data_dir():
             path = self.file_path(filename)
             if not path.exists():
