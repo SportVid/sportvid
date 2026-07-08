@@ -16,16 +16,6 @@ from data import DataManager, Data
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-# @PluginManager.export_parser("floodlight_convert")
-# class FloodlightConvertParser(Parser):
-#     def __init__(self):
-#         self.valid_parameter = {
-#             "tracking_data_id": {"parser": str, "required": True},
-#             "format": {"parser": str, "required": True},
-#             "delimiter": {"parser": str, "required": False, "default": ";"}
-#         }
-
-
 @PluginManager.export_plugin("floodlight_convert")
 class FloodlightConvert(Task):
     def __init__(self):

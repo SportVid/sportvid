@@ -4,3 +4,4 @@ from .bytetrack import ByteTrackSerializer
 from .calibration_static_dlt import CalibrationSerializer
 from .posdata_convert import PosDataConvertSerializer
 from .kpi_computation import KPIComputationSerializer
+from .floodlight_convert import FloodlightConvertSerializer
