@@ -105,7 +105,17 @@
       "timeline": "Timeline",
       "events": "Ereignisse",
       "heatmap": "Heatmap",
-      "running_distance": "Laufdistanz"
+      "kpi": "KPIs"
+    },
+    "dashboard": {
+      "edit_toggle": "Layout bearbeiten",
+      "add_view": "Ansicht hinzufügen",
+      "remove": "Entfernen",
+      "toggle_width": "Breite umschalten",
+      "widgets": {
+        "video": "Video",
+        "topview": "Draufsicht"
+      }
     },
     "sports": {
       "soccer": "Fußball",

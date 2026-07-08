@@ -6,6 +6,7 @@ import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVideoStore } from "@/stores/video";
 import { useTopViewStore } from "@/stores/top_view";
 import { useTabStore } from "@/stores/tabs";
+import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 
 export const useTutorialStore = defineStore("tutorial", () => {
   const router = useRouter();
@@ -16,6 +17,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
   const videoStore = useVideoStore();
   const topViewStore = useTopViewStore();
   const tabStore = useTabStore();
+  const dashboardStore = useDashboardLayoutStore();
 
   const currentTutorialId = ref(null);
   const currentStepId = ref(null);
@@ -1210,9 +1212,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
           ],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
-              if (tabStore.visualizationTabId !== "heatmap") {
-                tabStore.visualizationTabId = "heatmap";
-              }
+              dashboardStore.activateWidget("heatmap");
               const el = document.querySelector('[data-tour="analysis-visualization-tabs"]');
               if (el) {
                 el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1368,9 +1368,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
           ],
           beforeShowPromise: () => {
             return new Promise((resolve) => {
-              if (tabStore.visualizationTabId !== "kpi") {
-                tabStore.visualizationTabId = "kpi";
-              }
+              dashboardStore.activateWidget("kpi");
               tabStore.kpiViewMode = "table";
               const el = document.querySelector('[data-tour="analysis-visualization-tabs"]');
               if (el) {

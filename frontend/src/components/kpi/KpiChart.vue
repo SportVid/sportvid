@@ -9,7 +9,7 @@ import { usePositionDataStore } from "@/stores/position_data";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePlayerStore } from "@/stores/player";
-import { useTabStore } from "@/stores/tabs";
+import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
 import { getTimecode } from "@/plugins/time";
@@ -19,7 +19,7 @@ const positionDataStore = usePositionDataStore();
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
 const playerStore = usePlayerStore();
-const tabStore = useTabStore();
+const dashboardStore = useDashboardLayoutStore();
 const { t } = useI18n();
 
 const props = defineProps({
@@ -525,7 +525,7 @@ watch(
 );
 
 watch(
-  () => tabStore.visualizationTabId,
+  () => dashboardStore.groupActiveTick,
   () => {
     nextTick(() => {
       if (plotContainer.value && plotInitialized) {
@@ -535,13 +535,22 @@ watch(
   }
 );
 
+let resizeObserver = null;
 onMounted(() => {
   nextTick(() => renderPlot());
   animFrameId = requestAnimationFrame(animLoop);
+
+  resizeObserver = new ResizeObserver(() => {
+    if (plotContainer.value && plotInitialized) {
+      Plotly.Plots.resize(plotContainer.value);
+    }
+  });
+  if (plotContainer.value) resizeObserver.observe(plotContainer.value);
 });
 
 onBeforeUnmount(() => {
   if (animFrameId) cancelAnimationFrame(animFrameId);
+  if (resizeObserver) resizeObserver.disconnect();
   if (plotContainer.value && plotInitialized) {
     Plotly.purge(plotContainer.value);
   }

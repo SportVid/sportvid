@@ -16,9 +16,9 @@ import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from "vue"
 import paper from "paper";
 import { getTimecode } from "@/plugins/time";
 import { usePlayerStore } from "@/stores/player";
-import { useTabStore } from "@/stores/tabs";
+import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 
-const tabStore = useTabStore();
+const dashboardStore = useDashboardLayoutStore();
 const playerStore = usePlayerStore();
 
 const props = defineProps({
@@ -333,6 +333,7 @@ function onSelectionChange() {
   seg[7].point.x = posEnd - props.radius;
 }
 
+let resizeObserver = null;
 onMounted(() => {
   scope = new paper.PaperScope();
   scope.setup(canvas.value);
@@ -355,9 +356,16 @@ onMounted(() => {
   nextTick(() => draw());
 
   animFrameId = requestAnimationFrame(animLoop);
+
+  resizeObserver = new ResizeObserver(() => {
+    clearTimeout(redraw.value);
+    redraw.value = setTimeout(onResize, 100);
+  });
+  if (container.value) resizeObserver.observe(container.value);
 });
 onBeforeUnmount(() => {
   if (animFrameId) cancelAnimationFrame(animFrameId);
+  if (resizeObserver) resizeObserver.disconnect();
   if (scope) {
     scope.view.onFrame = null;
     scope.view.onResize = null;
@@ -366,7 +374,7 @@ onBeforeUnmount(() => {
   }
 });
 watch(
-  () => tabStore.visualizationTabId,
+  () => dashboardStore.groupActiveTick,
   () => {
     nextTick(() => draw());
   }

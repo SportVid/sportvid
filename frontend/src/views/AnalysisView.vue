@@ -3,7 +3,7 @@
     <v-container fluid>
       <ModalObjectOverlay v-if="calibrationAssetStore.isAnyReferenceObjectActive" />
 
-      <v-row class="ma-n2">
+      <v-row v-if="calibrationAssetStore.calibrationMode" class="ma-n2">
         <v-col cols="6">
           <v-card
             elevation="2"
@@ -35,101 +35,36 @@
 
           <v-card
             v-else
-            class="d-flex flex-column flex-nowrap px-2 fill-height"
-            :class="{ 'calibration-card': calibrationAssetStore.calibrationMode }"
+            class="d-flex flex-column flex-nowrap px-2 fill-height calibration-card"
             elevation="2"
             ref="topViewCard"
             style="position: relative"
             data-tour="analysis-top-view"
           >
-            <template v-if="calibrationAssetStore.calibrationMode">
-              <v-row justify="center" class="position-relative">
-                <v-card-title class="mt-5 mb-n1">{{ $t("calibration_asset.title") }}</v-card-title>
-                <v-btn
-                  variant="tonal"
-                  color="error"
-                  size="small"
-                  prepend-icon="mdi-close"
-                  class="calibration-close-btn"
-                  @click="calibrationAssetStore.calibrationMode = false"
-                >
-                  {{ $t("button.exit") }}
-                </v-btn>
-              </v-row>
-
-              <v-row class="flex-grow-1">
-                <v-col>
-                  <TabWindowCalibration />
-                </v-col>
-              </v-row>
-            </template>
-
-            <template v-else>
-              <v-row justify="center">
-                <v-card-title class="mt-5 mb-n1">
-                  <div class="matchup-title">
-                    <template v-for="(team, index) in matchupTeams" :key="team.id">
-                      <span class="matchup-title-team">
-                        <span class="matchup-title-name">{{ team.name }}</span>
-                        <span class="matchup-title-line" :style="{ backgroundColor: team.color }" />
-                      </span>
-                      <span v-if="index < matchupTeams.length - 1" class="matchup-title-sep"
-                        >:</span
-                      >
-                    </template>
-                  </div>
-                </v-card-title>
-              </v-row>
-
-              <v-row class="flex-grow-1">
-                <v-col>
-                  <TabWindowPositionData />
-                </v-col>
-              </v-row>
-            </template>
-          </v-card>
-        </v-col>
-      </v-row>
-
-      <!-- <v-row class="ma-2">
-        <v-col>
-          <VisualizationMenu></VisualizationMenu>
-        </v-col>
-      </v-row> -->
-
-      <v-row v-if="!calibrationAssetStore.calibrationMode && !isLoading" class="ma-n2">
-        <v-col>
-          <v-card
-            class="d-flex flex-column flex-nowrap px-2"
-            elevation="2"
-            data-tour="analysis-visualization-tabs"
-          >
-            <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.visualizationTabId">
-              <v-tab
-                v-for="visualizationTab in tabStore.visualizationTabs"
-                :key="visualizationTab.id"
-                :value="visualizationTab.id"
+            <v-row justify="center" class="position-relative">
+              <v-card-title class="mt-5 mb-n1">{{ $t("calibration_asset.title") }}</v-card-title>
+              <v-btn
+                variant="tonal"
+                color="error"
+                size="small"
+                prepend-icon="mdi-close"
+                class="calibration-close-btn"
+                @click="calibrationAssetStore.calibrationMode = false"
               >
-                {{ visualizationTab.name }}
-              </v-tab>
-            </v-tabs>
+                {{ $t("button.exit") }}
+              </v-btn>
+            </v-row>
 
-            <v-row class="flex-grow-1 my-0">
+            <v-row class="flex-grow-1">
               <v-col>
-                <v-tabs-window v-model="tabStore.visualizationTabId">
-                  <v-tabs-window-item
-                    v-for="visualizationTab in tabStore.visualizationTabs"
-                    :key="visualizationTab.id"
-                    :value="visualizationTab.id"
-                  >
-                    <component :is="getVisualizationTabComponent(visualizationTab.id)" />
-                  </v-tabs-window-item>
-                </v-tabs-window>
+                <TabWindowCalibration />
               </v-col>
             </v-row>
           </v-card>
         </v-col>
       </v-row>
+
+      <DashboardGrid v-else :is-loading="isLoading" />
       <!-- <ModalTimelineSegmentAnnotate :show.sync="annotationDialog.show" /> -->
     </v-container>
 
@@ -180,18 +115,14 @@ import { useShortcutStore } from "@/stores/shortcut";
 import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 import { useShotStore } from "@/stores/shot";
-import { useTabStore } from "@/stores/tabs";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
+import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 // import * as Keyboard from "../plugins/keyboard";
 import VideoPlayer from "@/components/analysis-view/VideoPlayer.vue";
-import TabWindowPositionData from "@/components/analysis-view/TopView.vue";
 import TabWindowCalibration from "@/components/calibration-asset/CalibrationAsset.vue";
-import TabWindowHeatmap from "@/components/analysis-view/tab-window/TabWindowHeatmap.vue";
-import TabWindowTimeline from "@/components/analysis-view/tab-window/TabWindowTimeline.vue";
-import TabWindowEvents from "@/components/analysis-view/tab-window/TabWindowEvents.vue";
-import TabWindowKPI from "@/components/analysis-view/tab-window/TabWindowKPI.vue";
 import ModalObjectOverlay from "@/components/calibration-asset/ModalObjectOverlay.vue";
+import DashboardGrid from "@/components/analysis-view/dashboard/DashboardGrid.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
@@ -216,33 +147,22 @@ const shortcutStore = useShortcutStore();
 const annotationShortcutStore = useAnnotationShortcutStore();
 const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
-const tabStore = useTabStore();
 const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
-
-// Fallback label for active player teams (id ≥ 3) that have no name in the run's
-// team_ids meta -- e.g. team_clustering with K > 2 produces team_ids beyond the
-// TeamId enum's static "Team A"/"Team B" entries, or an older run predates them.
-// Derives "Team A"/"Team B"/"Team C"/... from the id offset, same scheme as
-// object_tracker.py's TeamId.TEAM_LEFT/TEAM_RIGHT labels.
-function fallbackTeamName(teamId) {
-  return `Team ${String.fromCharCode(65 + (teamId - 3))}`;
-}
+const dashboardStore = useDashboardLayoutStore();
 
 const matchupTeams = computed(() => {
   const meta = topViewStore.metaDataTopView;
-  // Derived from actually-assigned teams (precomputedPlayerList already only holds
-  // active players, team_id ≥ 3), not the static team_ids meta -- object_tracker.py
-  // always lists both "Team A"/"Team B" there even before team_clustering has run,
-  // so that dict alone can't tell us which teams are actually present.
-  const playerTeamIds = [...new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId))].sort(
-    (a, b) => a - b
-  );
-  return playerTeamIds.map((teamId) => ({
-    id: teamId,
-    name: meta?.team_ids?.[teamId]?.name ?? fallbackTeamName(teamId),
-    color: visualizationStore.getTeamColor(teamId),
-  }));
+  if (!meta?.team_ids) return [];
+  // New scheme: team_id ≥ 3 = active player teams (1=ball, 2=refs, 0=inactive — all hidden from matchup).
+  return Object.entries(meta.team_ids)
+    .filter(([teamId]) => Number(teamId) >= 3)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([teamId, info]) => ({
+      id: Number(teamId),
+      name: info.name,
+      color: visualizationStore.getTeamColor(Number(teamId)),
+    }));
 });
 
 function getVisualizationTabComponent(tabId) {
@@ -289,6 +209,7 @@ const fetchData = async ({ addResults = true }) => {
   } catch (error) {}
 };
 onMounted(async () => {
+  dashboardStore.initFromUser();
   try {
     await fetchData({ addResults: true });
     topViewStore.setSportFromVideo(playerStore.video?.sport);
@@ -744,34 +665,5 @@ onBeforeUnmount(() => {
 .calibration-card {
   border: 2px solid rgba(var(--v-theme-secondary), 0.45);
   transition: border-color 0.3s ease;
-}
-
-.matchup-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.matchup-title-team {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.matchup-title-name {
-  font-size: 1rem;
-}
-
-.matchup-title-line {
-  display: block;
-  width: 100%;
-  height: 3px;
-  border-radius: 1px;
-  margin-top: -4px;
-}
-
-.matchup-title-sep {
-  font-size: 1.1rem;
 }
 </style>

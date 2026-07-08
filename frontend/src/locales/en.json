@@ -112,6 +112,16 @@
       "events": "Events",
       "heatmap": "Heatmap",
       "kpi": "KPIs"
+    },
+    "dashboard": {
+      "edit_toggle": "Edit Layout",
+      "add_view": "Add View",
+      "remove": "Remove",
+      "toggle_width": "Toggle Width",
+      "widgets": {
+        "video": "Video",
+        "topview": "Top View"
+      }
     }
   },
   "sports": {

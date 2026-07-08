@@ -68,7 +68,8 @@ class UserGet(View):
                         "used_storage_size": user.used_storage_size,
                         "max_video_size": user.max_video_size,
                         "max_file_size": user.max_file_size,
-                        "date_joined": user.date_joined
+                        "date_joined": user.date_joined,
+                        "dashboard_layout": user.dashboard_layout
                     },
                 }
             )
@@ -119,7 +120,8 @@ def login(request):
                     "used_storage_size": user.used_storage_size,
                     "max_video_size": user.max_video_size,
                     "max_file_size": user.max_file_size,
-                    "date_joined": user.date_joined
+                    "date_joined": user.date_joined,
+                    "dashboard_layout": user.dashboard_layout
                 },
             }
         )
@@ -232,7 +234,18 @@ def user_update(request):
                             logger.exception("Failed to update session auth hash after password change")
 
                 return JsonResponse({"status": "ok"})
-            
+
+            elif update_type == "dashboard_layout":
+                user = request.user
+                dashboard_layout = params.get("dashboard_layout")
+                if not isinstance(dashboard_layout, dict):
+                    return JsonResponse({"status": "error", "message": "Invalid dashboard layout"})
+
+                user.dashboard_layout = dashboard_layout
+                user.save()
+
+                return JsonResponse({"status": "ok"})
+
             elif update_type == "admin":
                 user_id = params.get("id")
                 if not user_id:
