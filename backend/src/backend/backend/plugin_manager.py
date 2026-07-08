@@ -48,9 +48,11 @@ class PluginManager:
 
     @classmethod
     def validate_parameters(cls, plugin: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+        parameters = parameters or {}
+
         serializer_cls = cls.get_serializer(plugin)
         if serializer_cls is None:
-            return parameters or {}
+            return parameters
 
         serializer = serializer_cls(data=parameters or {})
         serializer.is_valid(raise_exception=True)
@@ -276,36 +278,3 @@ def run_plugin(self, args):
         if plugin_run_db is not None:
             plugin_run_db.status = PluginRun.STATUS_ERROR
             plugin_run_db.save()
-    
-
-    """ NOTE: old logic    
-    plugin_manager = PluginManager()
-    try:
-        plugin_result = plugin_manager._plugins[plugin]()(
-            parameters,
-            user=user_db,
-            video=video_db,
-            plugin_run=plugin_run_db,
-            dry_run=dry_run,
-            **kwargs,
-        )
-        manager = DataManager("/predictions/")
-
-        generate_plugin_run_result_cache(
-            manager, plugin_result.get("plugin_run_results", [])
-        )
-
-        if plugin_run_db is not None:
-            plugin_run_db.progress = 1.0
-            plugin_run_db.status = PluginRun.STATUS_DONE
-            plugin_run_db.save()
-
-        return
-
-    except Exception:
-        logger.exception(f"Plugin run failed for {plugin}")
-
-    if plugin_run_db is not None:
-        plugin_run_db.status = PluginRun.STATUS_ERROR
-        plugin_run_db.save()
-    """

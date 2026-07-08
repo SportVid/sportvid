@@ -7,5 +7,5 @@ class ByteTrackSerializer(serializers.Serializer):
         required=False,
         default=5,
         min_value=1,
-        max_value=30
+        max_value=30,
     )

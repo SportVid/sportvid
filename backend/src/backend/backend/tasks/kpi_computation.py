@@ -17,21 +17,21 @@ from data import DataManager, Data
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("kpi_computation")
-class KpiComputationParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "tracking_data_id": {"parser": str, "required": False, "default": ""},
-            "bytetrack_run_id": {"parser": str, "required": False, "default": ""},
-            "calibration_id": {"parser": str, "required": False, "default": ""},
-            "format": {"parser": str, "required": True},
-            "pos_meta": {"parser": str, "required": False, "default": ""},
-            "filter_type": {"parser": str, "required": False, "default": ""},
-            "order": {"parser": int, "required": False, "default": 3},
-            "Wn": {"parser": float, "required": False, "default": 1.0},
-            "window_length": {"parser": int, "required": False, "default": 5},
-            "poly_order": {"parser": int, "required": False, "default": 3},
-        }
+# @PluginManager.export_parser("kpi_computation")
+# class KpiComputationParser(Parser):
+#     def __init__(self):
+#         self.valid_parameter = {
+#             "tracking_data_id": {"parser": str, "required": False, "default": ""},
+#             "bytetrack_run_id": {"parser": str, "required": False, "default": ""},
+#             "calibration_id": {"parser": str, "required": False, "default": ""},
+#             "format": {"parser": str, "required": True},
+#             "pos_meta": {"parser": str, "required": False, "default": ""},
+#             "filter_type": {"parser": str, "required": False, "default": ""},
+#             "order": {"parser": int, "required": False, "default": 3},
+#             "Wn": {"parser": float, "required": False, "default": 1.0},
+#             "window_length": {"parser": int, "required": False, "default": 5},
+#             "poly_order": {"parser": int, "required": False, "default": 3},
+#         }
 
 
 @PluginManager.export_plugin("kpi_computation")

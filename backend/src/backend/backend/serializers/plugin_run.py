@@ -5,7 +5,7 @@ from backend.models import Video
 
 class PluginRunRequestSerializer(serializers.Serializer):
     plugin = serializers.CharField()
-    video_id = serializers.IntegerField()
+    video_id = serializers.UUIDField()
     parameters = serializers.JSONField()
 
     def validate_plugin(self, value):

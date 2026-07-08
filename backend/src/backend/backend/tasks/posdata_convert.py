@@ -17,20 +17,20 @@ from data import DataManager, Data
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("posdata_convert")
-class PosDataConvertParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "tracking_data_id": {"parser": str, "required": True},
-            "format": {"parser": str, "required": True},
-            "fps": {"parser": int, "required": False, "default": -1},
-            "delimiter": {"parser": str, "required": False, "default": ";"},
-            "origin": {"parser": str, "required": False, "default": "kickoff"},
-            "field_length": {"parser": float, "required": False, "default": 105.0},
-            "field_width": {"parser": float, "required": False, "default": 68.0},
-            "team_id_ball": {"parser": str, "required": False, "default": "ball"},
-            "team_id_ref": {"parser": str, "required": False, "default": ""},
-        }
+# @PluginManager.export_parser("posdata_convert")
+# class PosDataConvertParser(Parser):
+#     def __init__(self):
+#         self.valid_parameter = {
+#             "tracking_data_id": {"parser": str, "required": True},
+#             "format": {"parser": str, "required": True},
+#             "fps": {"parser": int, "required": False, "default": -1},
+#             "delimiter": {"parser": str, "required": False, "default": ";"},
+#             "origin": {"parser": str, "required": False, "default": "kickoff"},
+#             "field_length": {"parser": float, "required": False, "default": 105.0},
+#             "field_width": {"parser": float, "required": False, "default": 68.0},
+#             "team_id_ball": {"parser": str, "required": False, "default": "ball"},
+#             "team_id_ref": {"parser": str, "required": False, "default": ""},
+#         }
 
 
 @PluginManager.export_plugin("posdata_convert")

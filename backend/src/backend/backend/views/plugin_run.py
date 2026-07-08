@@ -27,12 +27,20 @@ class PluginRunNew(View):
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"}, status=401)
 
-            raw_parameters = request.POST.get("parameters")
-            payload = {
-                "plugin": request.POST.get("plugin"),
-                "video_id": request.POST.get("video_id"),
-                "parameters": json.loads(raw_parameters) if raw_parameters else None,
-            }
+            if request.content_type == "application/json":
+                body = json.loads(request.body or b"{}")
+                payload = {
+                    "plugin": body.get("plugin"),
+                    "video_id": body.get("video_id"),
+                    "parameters": body.get("parameters"),
+                }
+            else:
+                raw_parameters = request.POST.get("parameters")
+                payload = {
+                    "plugin": request.POST.get("plugin"),
+                    "video_id": request.POST.get("video_id"),
+                    "parameters": json.loads(raw_parameters) if raw_parameters else None,
+                }
 
             serializer = PluginRunRequestSerializer(data=payload)
             serializer.is_valid(raise_exception=True)
