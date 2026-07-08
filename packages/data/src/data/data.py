@@ -1,9 +1,12 @@
 import logging
 import yaml
+from contextlib import contextmanager
 from dataclasses import dataclass, field, fields
 from typing import Optional, Dict
 from pathlib import Path
 import uuid
+import shutil
+import tempfile
 
 from .fs_handler import FSHandler
 
@@ -107,3 +110,26 @@ class Data:
         for x in fields(Data):
             data_dict[x.name] = getattr(self, x.name)
         return data_dict
+    
+    @contextmanager
+    def get_local_file_path(self, filename: str):
+        ''' Returns a file path for the duration of the context, if it exists.
+            Else, it copies the object as a temp file.
+        '''
+        if self.check_data_dir():
+            path = self.file_path(filename)
+            if not path.exists():
+                raise FileNotFoundError(f"Local file not found: {path}")
+            yield path
+            return
+
+        if self.check_fs():
+            suffix = Path(filename).suffix
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=True) as tmp:
+                with self.fs.open_file(filename, "r") as src:
+                    shutil.copyfileobj(src, tmp)
+                tmp.flush()
+                yield Path(tmp.name)
+            return
+
+        raise AssertionError("No filesystem handler or data_dir registered")

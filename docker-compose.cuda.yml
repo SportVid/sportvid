@@ -134,6 +134,13 @@ services:
       - /tmp
       - /var
     working_dir: /app/backend/src/backend/
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
     command:
       - "uv"
       - "run"
@@ -193,8 +200,8 @@ services:
       - "--workers"
       - "${GUNICORN_WORKERS:-4}"
     depends_on:
-      # postgres: # NOTE: circular dependency?
-      #   condition: service_healthy
+      postgres:
+        condition: service_healthy
       memcached:
         condition: service_started
       celery:

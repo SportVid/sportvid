@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     git \
+    ffmpeg \
     build-essential \
     python3 \
     python3-dev \
