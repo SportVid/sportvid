@@ -103,12 +103,13 @@ services:
       - "yes"
     ports:
       - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT} # remap port
-    healthcheck:
-      test: ["CMD-SHELL", "valkey-cli -h 127.0.0.1 -p ${VALKEY_INTERNAL_PORT} -a ${VALKEY_PASSWORD} ping | grep PONG"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+    # TODO: not working, fix this...
+    # healthcheck:
+    #   test: ["CMD-SHELL", "valkey-cli -h 127.0.0.1 -p ${VALKEY_INTERNAL_PORT} -a ${VALKEY_PASSWORD} ping | grep PONG"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retries: 5
+    #   start_period: 10s
     networks:
       - dev
 
@@ -136,7 +137,7 @@ services:
       # postgres:
       #   condition: service_healthy
       valkey:
-        condition: service_healthy
+        condition: service_started
     tmpfs:
       - /tmp
       - /var/tmp
