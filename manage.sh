@@ -134,6 +134,10 @@ main() {
             echo "Shutting down..."
             run_docker down
             ;;
+        "complete-rebuild")
+            echo "Rebuilding (rmi & remove-orphans)..."
+            run_docker down --rmi all -v --remove-orphans
+            ;;
         "restart")
             echo "Restarting..."
             run_docker restart

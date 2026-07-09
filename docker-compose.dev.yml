@@ -127,8 +127,10 @@ services:
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
     depends_on:
-      postgres:
-        condition: service_healthy
+      # TODO: This doesn't work since it is not defined in the same compose file.
+      #       Need to integrate it into CI pipeline...!
+      # postgres:
+      #   condition: service_healthy
       valkey:
         condition: service_healthy
     tmpfs:
@@ -204,8 +206,8 @@ services:
       - "--workers"
       - "${GUNICORN_WORKERS:-16}"
     depends_on:
-      postgres:
-        condition: service_healthy
+      # postgres:
+      #   condition: service_healthy
       memcached:
         condition: service_started
       celery:
