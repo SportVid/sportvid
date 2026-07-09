@@ -1,4 +1,5 @@
-FROM python:3.12-slim-bookworm
+FROM pytorch/pytorch:2.12.1-cuda12.6-cudnn9-runtime
+# base image works fine with nvidia-driver-570
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -7,6 +8,7 @@ ENV UV_LINK_MODE=copy
 ENV UV_PROJECT_ENVIRONMENT=/app/.venv
 ENV PATH="/app/.venv/bin:${PATH}"
 ENV PYTHONPATH="/app:/app/inference_ray/third_party/ByteTrack"
+ENV HOME=/home/ubuntu
 
 WORKDIR /app
 
@@ -14,7 +16,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     git \
-    ffmpeg \
     build-essential \
     python3 \
     python3-dev \
@@ -38,28 +39,31 @@ COPY packages/interface /app/packages/interface
 COPY packages/utils /app/packages/utils
 COPY inference_ray /app/inference_ray
 
-RUN useradd -m -u 1000 appuser \
-    && mkdir -p /data /home/appuser/.cache/uv /app \
-    && chown -R appuser:appuser /app /data /home/appuser
+RUN mkdir -p /data /home/ubuntu/.cache/uv /app \
+    && chown -R ubuntu:ubuntu /app /data /home/ubuntu
 
-USER appuser
+USER ubuntu
 
-RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
+RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
     uv sync --frozen --no-dev --project /app/inference_ray --extra tracking
 
-# RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
-#    uv pip install -r /app/inference_ray/third_party/ByteTrack/requirements.txt
+# RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+#     uv pip install -r /app/inference_ray/third_party/ByteTrack/requirements.txt
 
-# RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
-#    uv pip install /app/inference_ray/third_party/ByteTrack
+# RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+#     uv pip install /app/inference_ray/third_party/ByteTrack
 
 # these were skipped during above requirements install, so add them manually!
-RUN uv pip install Cython
-RUN uv pip install gdown
-RUN uv pip install pycocotools
-RUN uv pip install cython_bbox
+RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+    uv pip install Cython
+RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+    uv pip install gdown
+RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+    uv pip install pycocotools
+RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+    uv pip install cython_bbox
 
 # import smoke tests:
 RUN python -c "import torch; print(torch.__version__); print(torch.version.cuda)"
-# RUN /app/.venv/bin/python -c "import floodlight; print('floodlight ok')"
-# RUN /app/.venv/bin/python -c "import cython_bbox; print('cython_bbox ok')"
+# RUN python -c "import cython_bbox; print('cython_bbox ok')"
+# RUN python -c "import floodlight; print('floodlight ok')"

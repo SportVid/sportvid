@@ -18,7 +18,7 @@ services:
     container_name: inference_ray_dev
     build:
       context: .
-      dockerfile: inference_ray/Dockerfile.cuda
+      dockerfile: inference_ray/Dockerfile
     init: true
     ports:
       - "127.0.0.1:8265:8265"
@@ -45,8 +45,8 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
+              device_ids: ["3"] #TODO: prod uses ["0", "1", "2"]; change to all 4 later on production.
+              capabilities: [gpu]
     command: >
       bash -c "
       uv run --package inference_ray ray start --head --dashboard-host=0.0.0.0 --dashboard-port=8265 &&
@@ -108,25 +108,6 @@ services:
     network:
       - dev
 
-  postgres:
-    container_name: postgres
-    image: postgres:14.17
-    env_file:
-      - ./.env
-    volumes:
-      - ${DATA_PATH}/shared/db/:/var/lib/postgresql/data
-      - ./postgres:/docker-entrypoint-initdb.d  # init.sh is invoked automatically
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-  
-      - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT}  # remap valkey port
-    networks:
-      - dev
-
   celery:
     container_name: celery_dev
     build:
@@ -159,8 +140,8 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
-              capabilities: [ gpu ]
+              device_ids: ["3"] #TODO: prod uses ["0", "1", "2"]; change to all 4 later on production.
+              capabilities: [gpu]
     command:
       - "uv"
       - "run"
@@ -223,7 +204,7 @@ services:
       - "--workers"
       - "${GUNICORN_WORKERS:-16}"
     depends_on:
-      postgres: # NOTE: circular dependency?
+      postgres:
         condition: service_healthy
       memcached:
         condition: service_started

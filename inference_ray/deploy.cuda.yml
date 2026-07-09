@@ -21,19 +21,19 @@ applications:
       - name: Deployment
         num_replicas: auto
         autoscaling_config:
-          max_ongoing_requests: 2 # 1 keeps one worker alive all the time (warm-start)
           initial_replicas: 0
-          max_replicas: 8 # at most 2 GPUs worth of capacity are running for this service
-          target_num_ongoing_requests_per_replica: 2
-          metrics_interval_s: 10
-          look_back_period_s: 30
-          upscale_delay_s: 30
-          downscale_delay_s: 120
           min_replicas: 0
-          max_replicas: 1
+          max_replicas: 2 # at most 1 GPU worth of capacity are running for this service, so 2 replicas at once should be feasible.
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
         ray_actor_options:
-          num_cpus: 1.0
-          num_gpus: 0.5
+          num_cpus: 2.0
+          num_gpus: 0.2
         runtime_env:
             env_vars:
               PYTHONPATH: "/app:/app/inference_ray/third_party/ByteTrack"
@@ -50,10 +50,16 @@ applications:
       - name: Deployment
         num_replicas: auto
         autoscaling_config:
-          max_ongoing_requests: 2
           initial_replicas: 0
           min_replicas: 0
-          max_replicas: 1
+          max_replicas: 2
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
         ray_actor_options:
           num_cpus: 1.0
           num_gpus: 0.0
@@ -69,16 +75,16 @@ applications:
       - name: Deployment
         num_replicas: auto
         autoscaling_config:
-          max_ongoing_requests: 2
           initial_replicas: 0
-          max_replicas: 2
-          target_num_ongoing_requests_per_replica: 2
-          metrics_interval_s: 10
-          look_back_period_s: 30
-          upscale_delay_s: 15
-          downscale_delay_s: 60
           min_replicas: 0
-          max_replicas: 1
+          max_replicas: 2
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
         ray_actor_options:
           num_cpus: 1.0
           num_gpus: 0.0
@@ -97,10 +103,16 @@ applications:
       - name: Deployment
         num_replicas: auto
         autoscaling_config:
-          max_ongoing_requests: 2
           initial_replicas: 0
           min_replicas: 0
-          max_replicas: 1
+          max_replicas: 2
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
         ray_actor_options:
           num_cpus: 1.0
           num_gpus: 0.0
@@ -119,10 +131,16 @@ applications:
       - name: Deployment
         num_replicas: auto
         autoscaling_config:
-          max_ongoing_requests: 2
           initial_replicas: 0
           min_replicas: 0
-          max_replicas: 1
+          max_replicas: 2
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
         ray_actor_options:
           num_cpus: 1.0
           num_gpus: 0.0
