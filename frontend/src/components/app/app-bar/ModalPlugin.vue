@@ -1021,7 +1021,7 @@ const plugins = ref([
             field: "slider",
             min: 1,
             max: 30,
-            value: playerStore.videoFPS,
+            value: Math.round(playerStore.videoFPS),
             step: 1,
             name: "fps",
             text: t("modal.plugin.fps"),

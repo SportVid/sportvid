@@ -19,9 +19,9 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 4 # 2 or 4 seems to be a reasonable upper bound for now
+        num_replicas: auto
         autoscaling_config:
-          min_replicas: 0 # 1 keeps one worker alive all the time (warm-start)
+          max_ongoing_requests: 2 # 1 keeps one worker alive all the time (warm-start)
           initial_replicas: 0
           max_replicas: 8 # at most 2 GPUs worth of capacity are running for this service
           target_num_ongoing_requests_per_replica: 2
@@ -29,34 +29,15 @@ applications:
           look_back_period_s: 30
           upscale_delay_s: 30
           downscale_delay_s: 120
+          min_replicas: 0
+          max_replicas: 1
         ray_actor_options:
-          num_gpus: 0.25
-          runtime_env:
-            uv:
-              - git+https://github.com/Alexk1704/ByteTrack.git
-              - torch>=2.6.0
-              - numpy==1.26.4
-              - opencv-python-headless>=4.11.0.86
-              - loguru
-              - scikit-image
-              - tqdm
-              - torchvision>=0.10.0
-              - Pillow
-              - thop
-              - ninja
-              - tabulate
-              - tensorboard
-              - lap
-              - motmetrics
-              - filterpy
-              - h5py
-              - cython_bbox
-              - gdown
-              - pycocotools
-              # - onnx==1.13.0
-              # - onnxruntime==1.13.1
-              # - onnx-simplifier==0.3.5
-  
+          num_cpus: 1.0
+          num_gpus: 0.5
+        runtime_env:
+            env_vars:
+              PYTHONPATH: "/app:/app/inference_ray/third_party/ByteTrack"
+
   # ---------- LOW (CPU only)
   - name: calibration_static_dlt
     route_prefix: /calibration_static_dlt
@@ -67,76 +48,15 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 4
+        num_replicas: auto
         autoscaling_config:
-          min_replicas: 0
+          max_ongoing_requests: 2
           initial_replicas: 0
-          max_replicas: 2
-          target_num_ongoing_requests_per_replica: 2
-          metrics_interval_s: 10
-          look_back_period_s: 30
-          upscale_delay_s: 15
-          downscale_delay_s: 60
-        ray_actor_options:
-          num_cpus: 2
-          runtime_env:
-            uv:
-              - numpy==2.2.4
-              - opencv-python-headless==4.11.0.86
-  
-  - name: floodlight_convert
-    route_prefix: /floodlight_convert
-    import_path: inference_ray.main:app_builder
-    args:
-      model: floodlight_convert
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        max_ongoing_requests: 4
-        autoscaling_config:
           min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 4
-          target_num_ongoing_requests_per_replica: 2
-          metrics_interval_s: 10
-          look_back_period_s: 30
-          upscale_delay_s: 15
-          downscale_delay_s: 60
+          max_replicas: 1
         ray_actor_options:
-          num_cpus: 4
-          runtime_env:
-            uv:
-              - numpy
-              - pandas
-              - floodlight==1.0.0
-  
-  - name: posdata_convert
-    route_prefix: /posdata_convert
-    import_path: inference_ray.main:app_builder
-    args:
-      model: posdata_convert
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        max_ongoing_requests: 4
-        autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 4
-          target_num_ongoing_requests_per_replica: 2
-          metrics_interval_s: 10
-          look_back_period_s: 30
-          upscale_delay_s: 15
-          downscale_delay_s: 60
-        ray_actor_options:
-          num_cpus: 4
-          runtime_env:
-            uv:
-              - numpy
-              - pandas
-              - lxml
+          num_cpus: 1.0
+          num_gpus: 0.0
 
   - name: kpi_computation
     route_prefix: /kpi_computation
@@ -147,39 +67,9 @@ applications:
       params: {}
     deployments:
       - name: Deployment
-        max_ongoing_requests: 4
+        num_replicas: auto
         autoscaling_config:
-          min_replicas: 0
-          initial_replicas: 0
-          max_replicas: 4
-          target_num_ongoing_requests_per_replica: 2
-          metrics_interval_s: 10
-          look_back_period_s: 30
-          upscale_delay_s: 15
-          downscale_delay_s: 60
-        ray_actor_options:
-          num_cpus: 4
-          runtime_env:
-            uv:
-              - numpy
-              - pandas
-              - floodlight==1.1.0
-              - numpy
-              - pandas
-              - floodlight==1.1.0
-
-  - name: thumbnail_generator
-    route_prefix: /thumbnail_generator
-    import_path: inference_ray.main:app_builder
-    args:
-      model: thumbnail_generator
-      data_path: /data
-      params: {}
-    deployments:
-      - name: Deployment
-        max_ongoing_requests: 4
-        autoscaling_config:
-          min_replicas: 0
+          max_ongoing_requests: 2
           initial_replicas: 0
           max_replicas: 2
           target_num_ongoing_requests_per_replica: 2
@@ -187,5 +77,56 @@ applications:
           look_back_period_s: 30
           upscale_delay_s: 15
           downscale_delay_s: 60
+          min_replicas: 0
+          max_replicas: 1
         ray_actor_options:
-          num_cpus: 1
+          num_cpus: 1.0
+          num_gpus: 0.0
+        runtime_env:
+          uv:
+            - pandas
+
+  - name: floodlight_convert
+    route_prefix: /floodlight_convert
+    import_path: inference_ray.main:app_builder
+    args:
+      model: floodlight_convert
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0
+        runtime_env:
+          uv:
+            - pandas
+  
+  - name: posdata_convert
+    route_prefix: /posdata_convert
+    import_path: inference_ray.main:app_builder
+    args:
+      model: posdata_convert
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0
+        runtime_env:
+          uv:
+            - pandas
+            - lxml

@@ -18,8 +18,11 @@ services:
     container_name: inference_ray_dev
     build:
       context: .
+      dockerfile: inference_ray/Dockerfile.cuda
     init: true
-    shm_size: "8g" # TODO: should be 30% of total available memory?
+    ports:
+      - "127.0.0.1:8265:8265"
+    shm_size: "8g" # NOTE: should be 30% of total available memory?
     environment:
       - HF_HOME=/models
       - NUMBA_CACHE_DIR=/tmp
@@ -43,15 +46,12 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
-    command:
-      - "uv"
-      - "run"
-      - "--package"
-      - "inference_ray"
-      - "serve"
-      - "run"
-      - "/app/inference_ray/deploy.cuda.yml"
+              capabilities: [ gpu ]
+    command: >
+      bash -c "
+      uv run --package inference_ray ray start --head --dashboard-host=0.0.0.0 --dashboard-port=8265 &&
+      uv run --package inference_ray serve run /app/inference_ray/deploy.cuda.yml
+      "
     networks:
       - dev
 
@@ -98,6 +98,31 @@ services:
       - "--protected-mode"
       - "yes"
     ports:
+      - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT} # remap port
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -h 127.0.0.1 -p ${VALKEY_INTERNAL_PORT} ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    network:
+      - dev
+
+  postgres:
+    container_name: postgres
+    image: postgres:14.17
+    env_file:
+      - ./.env
+    volumes:
+      - ${DATA_PATH}/shared/db/:/var/lib/postgresql/data
+      - ./postgres:/docker-entrypoint-initdb.d  # init.sh is invoked automatically
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  
       - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT}  # remap valkey port
     networks:
       - dev
@@ -120,14 +145,22 @@ services:
       - ./backend/:/app/backend
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
     tmpfs:
       - /tmp
       - /var/tmp
     working_dir: /app/backend/src/backend/
-    # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
-    # depends_on:
-    #   postgres:
-    #     condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
     command:
       - "uv"
       - "run"
@@ -190,9 +223,8 @@ services:
       - "--workers"
       - "${GUNICORN_WORKERS:-16}"
     depends_on:
-      # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
-      # postgres:
-      #   condition: service_healthy
+      postgres: # NOTE: circular dependency?
+        condition: service_healthy
       memcached:
         condition: service_started
       celery:
@@ -217,3 +249,6 @@ services:
     networks:
       - shared
       - dev
+    depends_on:
+      backend:
+        condition: service_started
