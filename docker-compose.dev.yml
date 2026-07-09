@@ -104,7 +104,7 @@ services:
     ports:
       - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT} # remap port
     healthcheck:
-      test: ["CMD-SHELL", "valkey-cli -h 127.0.0.1 -p ${VALKEY_INTERNAL_PORT} ping | grep PONG"]
+      test: ["CMD-SHELL", "valkey-cli -h 127.0.0.1 -p ${VALKEY_INTERNAL_PORT} -a ${VALKEY_PASSWORD} ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
