@@ -4,7 +4,7 @@ FROM pytorch/pytorch:2.12.1-cuda12.6-cudnn9-runtime
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-ENV UV_COMPILE_BYTECODE=1
+# ENV UV_COMPILE_BYTECODE=1 # NOTE: post-install .pyc compilation
 ENV UV_LINK_MODE=copy
 ENV UV_PROJECT_ENVIRONMENT=/app/.venv
 ENV PATH="/app/.venv/bin:${PATH}"
@@ -46,7 +46,7 @@ RUN mkdir -p /data /home/ubuntu/.cache/uv /app \
 USER ubuntu
 
 RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
-    uv sync --frozen --no-dev --no-compile-bytecode --project /app/inference_ray --extra tracking
+    uv sync --frozen --no-dev --project /app/inference_ray --extra tracking
 
 # RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
 #     uv pip install -r /app/inference_ray/third_party/ByteTrack/requirements.txt
