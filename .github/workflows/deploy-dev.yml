@@ -10,7 +10,20 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Debug Node
+        run: |
+          echo "PATH=$PATH"
+          which node || true
+          node --version || true
+          npm --version || true
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
 
       - name: Restart dev systemd service
         run: |
