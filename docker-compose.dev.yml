@@ -16,6 +16,10 @@ volumes:
 services:
   inference_ray:
     container_name: inference_ray_dev
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     build:
       context: .
       dockerfile: inference_ray/Dockerfile

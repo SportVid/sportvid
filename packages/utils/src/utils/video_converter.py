@@ -11,8 +11,8 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
     input_stream = ffmpeg.input(
         file_in,
         # NOTE: offloads encoding to the GPU via CUDA.
-        # hwaccel=kwargs.get("hwaccel"),
-        # hwaccel_output_format=kwargs.get("hwaccel_output_format"),    
+        hwaccel=kwargs.get("hwaccel"),
+        hwaccel_output_format=kwargs.get("hwaccel_output_format"),    
     )  
     
     output_kwargs = {
