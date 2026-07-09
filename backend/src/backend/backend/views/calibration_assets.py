@@ -5,6 +5,7 @@ from django.http import JsonResponse
 
 from backend.models import Video
 from backend.models import CalibrationAssets
+from backend.models import PluginRun
 from backend.utils.decode_auth import decode_and_authenticate
 
 
@@ -72,6 +73,13 @@ class CalibrationAssetsChange(View):
                         comp_area_coords_rel=obj.get("compAreaCoordsRel"),
                         video_coords_rel=obj.get("videoCoordsRel")
                     )
+                # the marker set changed, so any previously computed
+                # homography no longer corresponds to it -- invalidate the
+                # DLT run and force a rerun
+                PluginRun.objects.filter(
+                    type="calibration_static_dlt",
+                    calibration_asset=calibration_assets,
+                ).delete()
             calibration_assets.save()
 
             return JsonResponse({"status": "ok", "entry": calibration_assets.to_dict()})

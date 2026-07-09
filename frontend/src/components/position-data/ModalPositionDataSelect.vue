@@ -27,9 +27,10 @@
                 <template v-if="mode.id === 'bytetrack'">
                   <v-select
                     v-model="selectedCalibrationAsset"
-                    :items="Object.values(calibrationAssetStore.calibrationAssetsList)"
+                    :items="calibrationAssetItems"
                     item-title="name"
                     item-value="id"
+                    item-disabled="disabled"
                     :label="$t('modal.position_data.select.asset')"
                     variant="underlined"
                     class="mt-0 mx-4"
@@ -212,6 +213,25 @@ const selectedCalibrationAsset = ref(null);
 onMounted(() => {
   calibrationAssetStore.loadCalibrationAssetsList();
 });
+
+const IDENTITY_HOMOGRAPHY = [
+  [1, 0, 0],
+  [0, 1, 0],
+  [0, 0, 1],
+];
+const isUncalibrated = (matrix) => JSON.stringify(matrix) === JSON.stringify(IDENTITY_HOMOGRAPHY);
+const calibrationAssetItems = computed(() =>
+  Object.values(calibrationAssetStore.calibrationAssetsList).map((asset) => {
+    const uncalibrated = isUncalibrated(asset.homography_matrix);
+    return {
+      ...asset,
+      disabled: uncalibrated,
+      name: uncalibrated
+        ? `${asset.name} (${t("modal.position_data.select.not_calibrated")})`
+        : asset.name,
+    };
+  })
+);
 
 const selectedPositionData = ref(null);
 onMounted(() => {

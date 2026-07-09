@@ -12,9 +12,107 @@
       </v-toolbar>
 
       <v-card-text class="mt-2 scrollable-content">
+        <div class="mb-4">
+          <div class="status-area mb-3 d-flex align-center" :class="`state-${posdataOverallState}`">
+            <v-icon :color="stateColor(posdataOverallState)" size="28" class="mr-5">
+              {{ stateIcon(posdataOverallState) }}
+              <v-tooltip activator="parent" location="top">{{
+                stateText(posdataOverallState, posdataAllTypes)
+              }}</v-tooltip>
+            </v-icon>
+
+            <div class="flex-grow-1">
+              <div class="font-weight-medium mb-2">{{ $t("modal.status.area.posdata") }}</div>
+
+              <div class="d-flex align-center flex-wrap mb-2">
+                <span class="text-caption text-medium-emphasis mr-3">{{
+                  $t("modal.status.variant.auto")
+                }}</span>
+                <div class="d-flex align-center mr-4">
+                  <v-icon :color="stateColor(bytetrackState)" size="18" class="mr-1">
+                    {{ stateIcon(bytetrackState) }}
+                  </v-icon>
+                  <span class="text-caption">{{ $t("modal.status.source.bytetrack") }}</span>
+                </div>
+                <div class="d-flex align-center">
+                  <v-icon :color="stateColor(dltState)" size="18" class="mr-1">
+                    {{ stateIcon(dltState) }}
+                  </v-icon>
+                  <span class="text-caption">{{ $t("modal.status.source.dlt") }}</span>
+                </div>
+              </div>
+
+              <div class="d-flex align-center mt-n2 mb-0">
+                <v-divider class="flex-grow-1" />
+                <span class="text-caption text-medium-emphasis mx-2">{{
+                  $t("modal.status.variant.or")
+                }}</span>
+                <v-divider class="flex-grow-1" />
+              </div>
+
+              <div class="d-flex align-center">
+                <span class="text-caption text-medium-emphasis mr-3">{{
+                  $t("modal.status.variant.manual")
+                }}</span>
+                <div class="d-flex align-center">
+                  <v-icon :color="stateColor(uploadState)" size="18" class="mr-1">
+                    {{ stateIcon(uploadState) }}
+                  </v-icon>
+                  <span class="text-caption">{{ $t("modal.status.source.upload") }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="status-area d-flex align-center" :class="`state-${kpiState}`">
+            <v-icon :color="stateColor(kpiState)" size="28" class="mr-5">
+              {{ stateIcon(kpiState) }}
+              <v-tooltip activator="parent" location="top">{{
+                stateText(kpiState, kpiTypes)
+              }}</v-tooltip>
+            </v-icon>
+
+            <div>
+              <div class="font-weight-medium">{{ $t("modal.status.area.kpi") }}</div>
+              <div v-if="!posdataAvailable" class="text-caption text-medium-emphasis mt-1">
+                {{ $t("modal.status.kpi_requires_posdata") }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <v-divider class="mb-4" />
+
+        <v-data-table
+          data-tour="status-table"
+          color="primary"
+          hide-default-footer
+          :headers="headers"
+          :items="props.pluginRuns"
+          item-key="id"
+          class="mb-3 status-table"
+        >
+          <template #item.date="{ item }">
+            {{ formatLocalDate(item.date) }}
+          </template>
+          <template #item.progress="{ index }">
+            <v-progress-linear
+              v-model="progressComputed[index]"
+              height="8"
+              color="primary"
+              rounded
+            />
+          </template>
+          <template #item.status="{ value }">
+            <v-chip :color="progressColor(value)" variant="flat">
+              {{ getStatusText(value) }}
+            </v-chip>
+          </template>
+        </v-data-table>
+
         <v-expansion-panels v-if="props.canWrite" data-tour="status-delete-panel">
           <v-expansion-panel>
-            <v-expansion-panel-title color="error">{{
+            <v-expansion-panel-title class="delete-panel-title">{{
               $t("modal.status.delete.title")
             }}</v-expansion-panel-title>
             <v-expansion-panel-text class="my-2">
@@ -122,101 +220,6 @@
             </v-expansion-panel-text>
           </v-expansion-panel>
         </v-expansion-panels>
-
-        <v-divider class="my-4" />
-
-        <div class="mb-4">
-          <div class="status-area mb-3 d-flex align-center" :class="`state-${posdataOverallState}`">
-            <v-icon :color="stateColor(posdataOverallState)" size="28" class="mr-5">
-              {{ stateIcon(posdataOverallState) }}
-              <v-tooltip activator="parent" location="top">{{
-                stateText(posdataOverallState, posdataAllTypes)
-              }}</v-tooltip>
-            </v-icon>
-
-            <div class="flex-grow-1">
-              <div class="font-weight-medium mb-2">{{ $t("modal.status.area.posdata") }}</div>
-
-              <div class="d-flex align-center flex-wrap mb-2">
-                <span class="text-caption text-medium-emphasis mr-3">{{
-                  $t("modal.status.variant.auto")
-                }}</span>
-                <div class="d-flex align-center mr-4">
-                  <v-icon :color="stateColor(bytetrackState)" size="18" class="mr-1">
-                    {{ stateIcon(bytetrackState) }}
-                  </v-icon>
-                  <span class="text-caption">{{ $t("modal.status.source.bytetrack") }}</span>
-                </div>
-                <div class="d-flex align-center">
-                  <v-icon :color="stateColor(dltState)" size="18" class="mr-1">
-                    {{ stateIcon(dltState) }}
-                  </v-icon>
-                  <span class="text-caption">{{ $t("modal.status.source.dlt") }}</span>
-                </div>
-              </div>
-
-              <div class="d-flex align-center mt-n2 mb-0">
-                <v-divider class="flex-grow-1" />
-                <span class="text-caption text-medium-emphasis mx-2">{{
-                  $t("modal.status.variant.or")
-                }}</span>
-                <v-divider class="flex-grow-1" />
-              </div>
-
-              <div class="d-flex align-center">
-                <span class="text-caption text-medium-emphasis mr-3">{{
-                  $t("modal.status.variant.manual")
-                }}</span>
-                <div class="d-flex align-center">
-                  <v-icon :color="stateColor(uploadState)" size="18" class="mr-1">
-                    {{ stateIcon(uploadState) }}
-                  </v-icon>
-                  <span class="text-caption">{{ $t("modal.status.source.upload") }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="status-area d-flex align-center" :class="`state-${kpiState}`">
-            <v-icon :color="stateColor(kpiState)" size="28" class="mr-5">
-              {{ stateIcon(kpiState) }}
-              <v-tooltip activator="parent" location="top">{{
-                stateText(kpiState, kpiTypes)
-              }}</v-tooltip>
-            </v-icon>
-
-            <div>
-              <div class="font-weight-medium">{{ $t("modal.status.area.kpi") }}</div>
-              <div v-if="!posdataAvailable" class="text-caption text-medium-emphasis mt-1">
-                {{ $t("modal.status.kpi_requires_posdata") }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <v-divider class="mb-4" />
-
-        <v-data-table
-          data-tour="status-table"
-          color="primary"
-          hide-default-footer
-          :headers="headers"
-          :items="props.pluginRuns"
-          item-key="id"
-          class="elevation-2 mb-3"
-        >
-          <template #item.date="{ item }">
-            {{ formatLocalDate(item.date) }}
-          </template>
-          <template #item.progress="{ index }">
-            <v-progress-linear v-model="progressComputed[index]" height="8" color="primary" />
-          </template>
-          <template #item.status="{ value }">
-            <v-chip :color="progressColor(value)" variant="flat">
-              {{ getStatusText(value) }}
-            </v-chip>
-          </template>
-        </v-data-table>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -419,6 +422,12 @@ const formatLocalDate = (dateString) => {
   background-color: rgba(var(--v-theme-on-surface), 0.035);
 }
 
+.status-table {
+  border-radius: 8px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+  background-color: rgba(var(--v-theme-on-surface), 0.035) !important;
+}
+
 .status-area.state-done {
   border-color: rgba(76, 175, 80, 0.4);
   background-color: rgba(76, 175, 80, 0.12);
@@ -432,5 +441,14 @@ const formatLocalDate = (dateString) => {
 .status-area.state-error {
   border-color: rgba(244, 67, 54, 0.4);
   background-color: rgba(244, 67, 54, 0.12);
+}
+
+.delete-panel-title {
+  background-color: rgba(var(--v-theme-error), 0.1);
+}
+
+.delete-panel {
+  border: 2px solid rgba(var(--v-theme-error), 0.5);
+  border-radius: 8px;
 }
 </style>

@@ -43,6 +43,9 @@ class CalibrationStaticDlt(Task):
     ):
         # get point correspondences from database and pass them as plugin parameters
         data_db = CalibrationAssets.objects.get(id=parameters.get("calibration_id"))
+        if plugin_run is not None:
+            plugin_run.calibration_asset = data_db
+            plugin_run.save()
         point_correspondences = [
             p for p in data_db.object_data.all()
             if (

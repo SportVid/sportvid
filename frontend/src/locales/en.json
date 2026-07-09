@@ -1116,6 +1116,7 @@
           "manual": "Manual Upload"
         },
         "asset": "Select Calibration Asset",
+        "not_calibrated": "not calibrated",
         "bytetrack": "Select Bytetrack Plugin",
         "sport": "Select sport",
         "area_size": "Select area size",

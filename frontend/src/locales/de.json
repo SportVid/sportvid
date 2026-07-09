@@ -848,7 +848,8 @@
         "modes": {
           "bytetrack": "ByteTrack Plugin",
           "manual": "Manueller Upload"
-        }
+        },
+        "not_calibrated": "nicht kalibriert"
       },
       "entity_colors": {
         "title": "Teamfarben ändern",
