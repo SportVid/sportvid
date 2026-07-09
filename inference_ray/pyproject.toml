@@ -17,6 +17,7 @@ dependencies = [
     "protobuf>=5.29.3",
     "requests>=2.32.3",
     "numpy>=2.1.1", # NOTE: old version -> "numpy==1.26.4"
+    "torchvision",
     "pandas>=2.0.0",
     "tqdm>=4.67.1",
     "transformers>=4.48.3",
@@ -43,7 +44,8 @@ dependencies = [
     "thop",
     "Pillow",
     "loguru",
-    "scikit-image"
+    "scikit-image",
+    
 ]
 
 [tool.uv]

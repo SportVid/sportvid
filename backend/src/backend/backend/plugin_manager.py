@@ -49,6 +49,7 @@ class PluginManager:
     @classmethod
     def validate_parameters(cls, plugin: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         parameters = parameters or {}
+        logging.error(parameters)
 
         serializer_cls = cls.get_serializer(plugin)
         if serializer_cls is None:
@@ -251,8 +252,6 @@ def run_plugin(self, args):
         return
     
     try:
-        logging.error(parameters)
-        logging.error(type(parameters))
         plugin_result = plugin_cls()(
             parameters=parameters,
             user=user_db,

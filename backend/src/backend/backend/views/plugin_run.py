@@ -27,7 +27,8 @@ class PluginRunNew(View):
             if not request.user.is_authenticated:
                 return JsonResponse({"status": "error"}, status=401)
 
-            if request.content_type == "application/json":
+            if request.content_type == "application/json" or (
+                request.content_type.startswith("application/json")):
                 body = json.loads(request.body or b"{}")
                 payload = {
                     "plugin": body.get("plugin"),

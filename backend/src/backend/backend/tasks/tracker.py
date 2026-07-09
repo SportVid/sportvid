@@ -76,15 +76,12 @@ class Tracker(Task):
 
         with transaction.atomic():
             with tracker_result[1]["detections"] as detections:
-
-                # relevant db entry for frontend
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
                     data_id=detections.id,
                     name="bboxes",
                     type=PluginRunResult.TYPE_BBOXES,
                 )
-                # relevant for script-based calls
                 return {
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [plugin_run_result_db.id.hex],

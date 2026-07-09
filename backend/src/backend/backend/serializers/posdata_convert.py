@@ -43,12 +43,12 @@ class PosDataConvertSerializer(serializers.Serializer):
         default="ball",
         max_length=100,
         allow_blank=False,
-        #trim_whitespace=True,
+        # trim_whitespace=True,
     )
     team_id_ref = serializers.CharField(
         required=False,
         default="",
         max_length=100,
         allow_blank=True,
-        #trim_whitespace=True,
+        # trim_whitespace=True,
     )
