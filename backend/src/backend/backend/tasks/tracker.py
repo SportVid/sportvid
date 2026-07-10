@@ -76,10 +76,10 @@ class Tracker(Task):
             return {}
 
         with transaction.atomic():
-            with tracker_result[1]["detections"] as detections:
+            with tracker_result[1]["tracklets"] as tracklets:
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
-                    data_id=detections.id,
+                    data_id=tracklets.id,
                     name="bboxes",
                     type=PluginRunResult.TYPE_BBOXES,
                 )

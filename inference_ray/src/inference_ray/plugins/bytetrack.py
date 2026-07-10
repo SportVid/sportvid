@@ -22,7 +22,7 @@ default_config = {
     "host": "localhost",
     "port": 6379,
     "model_name": "bytetrack",
-    "model_file": "/models/bytetrack/bytetrack_x_mot17.pth.tar",
+    "model_file": "/models/yolox/bytetrack_x_mot17.pth.tar",
 }
 
 # args from tools/demo_track.py

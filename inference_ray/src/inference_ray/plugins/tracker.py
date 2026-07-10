@@ -18,7 +18,6 @@ from .tracker import (
     ByteTrack,
 )
 
-
 default_config = {
     "data_dir": "/data/",
     "host": "localhost",
@@ -28,14 +27,6 @@ default_config = {
     "detector_params": {},
     "tracker": "bytetrack",
     "tracker_params": {}
-}
-
-requires = {
-    "video": VideoData,
-}
-
-provides = {
-    "tracklets": BboxesData,
 }
 
 DETECTOR_MAP = {
@@ -59,10 +50,11 @@ class Tracker(
     config=default_config,
     parameters={},
     version="0.1",
-    requires=requires,
-    provides=provides,
+    requires={"video": VideoData},
+    provides={"tracklets": BboxesData}
 ):
     def __init__(self, config=None, **kwargs):
+        logging.error("INITTTTTTTTTTTT__________________")
         super().__init__(config, **kwargs)
 
     def call(
@@ -75,6 +67,7 @@ class Tracker(
         import json
         from collections import defaultdict
         
+        logging.error("CALLLLLLLLLLLL__________________")
         # -------> decode video and pass it to detector
         with inputs["video"] as input_data:
             with input_data.open_video("r") as f_video:
