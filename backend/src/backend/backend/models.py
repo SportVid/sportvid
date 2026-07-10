@@ -205,9 +205,8 @@ class Plugin(models.Model):
 class PluginRun(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     video = models.ForeignKey(Video, on_delete=models.CASCADE)
-    # source TrackingData for posdata_convert runs and kpi_computation runs
-    # (kinexon/dfl format) -- deleting the uploaded file cascades away the
-    # runs derived from it.
+    
+    # source data for plugin runs to delete data when plugin run is deleted (and vice versa for specific cases)
     tracking_data = models.ForeignKey(
         TrackingData,
         blank=True,
@@ -215,8 +214,6 @@ class PluginRun(models.Model):
         on_delete=models.CASCADE,
         related_name="plugin_runs",
     )
-    # source CalibrationAssets for calibration_static_dlt runs -- deleting
-    # the asset cascades away the run, but not vice versa.
     calibration_asset = models.ForeignKey(
         "CalibrationAssets",
         blank=True,
@@ -224,9 +221,6 @@ class PluginRun(models.Model):
         on_delete=models.CASCADE,
         related_name="plugin_runs",
     )
-    # source PluginRun for kpi_computation runs (sportvid format, derived
-    # from a bytetrack run) -- deleting the bytetrack run cascades away the
-    # derived kpi_computation run.
     source_plugin_run = models.ForeignKey(
         "self",
         blank=True,
@@ -234,6 +228,7 @@ class PluginRun(models.Model):
         on_delete=models.CASCADE,
         related_name="derived_plugin_runs",
     )
+    
     date = models.DateTimeField(auto_now_add=True)
     update_date = models.DateTimeField(auto_now_add=True)
     type = models.CharField(max_length=256)
