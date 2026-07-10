@@ -38,7 +38,11 @@ function repackFlat(flatCells) {
   }
   if (!packed) return null;
 
-  packed.forEach((row) => row.forEach(({ cell, width }) => { cell.width = width; }));
+  packed.forEach((row) =>
+    row.forEach(({ cell, width }) => {
+      cell.width = width;
+    })
+  );
   return [{ cells: packed[0].map((e) => e.cell) }, { cells: packed[1].map((e) => e.cell) }];
 }
 
@@ -195,6 +199,17 @@ export const useDashboardLayoutStore = defineStore(
     // Bumped whenever a group's active tab changes, so widget components can
     // trigger a resize/redraw without depending on the removed global tab id.
     const groupActiveTick = ref(0);
+    // Ephemeral UI state (like editMode) for the tab-pill drag gesture —
+    // which single widget is currently being dragged out of its group cell.
+    const draggedTab = ref(null); // { cellId, widgetId } | null
+
+    function startTabDrag(cellId, widgetId) {
+      draggedTab.value = { cellId, widgetId };
+    }
+
+    function endTabDrag() {
+      draggedTab.value = null;
+    }
 
     const placedWidgetIds = computed(() => {
       const ids = new Set();
@@ -352,6 +367,49 @@ export const useDashboardLayoutStore = defineStore(
       groupActiveTick.value++;
     }
 
+    // Extracts `widgetId` out of its current group cell and inserts it as a
+    // brand-new one-widget cell at `targetIndex` in the flat, row-major cell
+    // order (mirrors moveCell's insert/repack, but for a widget that doesn't
+    // have its own cell yet). Checks the repack succeeds *before* touching
+    // the source cell, so a "no room anywhere" drop leaves everything
+    // untouched instead of losing the widget.
+    function moveWidgetToNewCell(sourceCellId, widgetId, targetIndex) {
+      const flat = [...layout.value.rows[0].cells, ...layout.value.rows[1].cells];
+      const newCell = {
+        id: crypto.randomUUID(),
+        kind: "group",
+        widgets: [widgetId],
+        activeId: widgetId,
+        width: 1,
+      };
+      const insertAt = Math.max(0, Math.min(targetIndex, flat.length));
+      flat.splice(insertAt, 0, newCell);
+
+      const repacked = repackFlat(flat);
+      if (!repacked) return;
+
+      removeWidget(sourceCellId, widgetId);
+      layout.value.rows[0].cells = repacked[0].cells;
+      layout.value.rows[1].cells = repacked[1].cells;
+      groupActiveTick.value++;
+    }
+
+    // Reorders widgets within a single group cell's tab list — targetIndex
+    // is interpreted against the list *before* removal, same convention as
+    // moveCell/previewReorderedLayout.
+    function moveWidgetWithinGroup(cellId, widgetId, targetIndex) {
+      const found = findCell(cellId);
+      if (!found || found.cell.kind !== "group") return;
+      const widgets = found.cell.widgets;
+      const fromIdx = widgets.indexOf(widgetId);
+      if (fromIdx === -1) return;
+      widgets.splice(fromIdx, 1);
+      let insertAt = targetIndex;
+      if (fromIdx < insertAt) insertAt -= 1;
+      insertAt = Math.max(0, Math.min(insertAt, widgets.length));
+      widgets.splice(insertAt, 0, widgetId);
+    }
+
     function activateWidget(id) {
       for (const row of layout.value.rows) {
         for (const cell of row.cells) {
@@ -378,6 +436,7 @@ export const useDashboardLayoutStore = defineStore(
       editMode,
       layout,
       groupActiveTick,
+      draggedTab,
       placedWidgetIds,
       availableWidgetIds,
       initFromUser,
@@ -390,6 +449,10 @@ export const useDashboardLayoutStore = defineStore(
       expandToFull,
       splitRow,
       moveCell,
+      moveWidgetToNewCell,
+      moveWidgetWithinGroup,
+      startTabDrag,
+      endTabDrag,
       activateWidget,
       toggleEditMode,
       persist,
