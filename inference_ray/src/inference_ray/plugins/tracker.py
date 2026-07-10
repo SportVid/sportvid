@@ -7,7 +7,7 @@ from data import (
     BboxesData
 )
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
-from utils import VideoDecoder
+from utils import VideoDecoder, VideoBatcher
 from .detector import (
     YoloX, 
     YoloUltralytics,
@@ -23,90 +23,11 @@ default_config = {
     "data_dir": "/data/",
     "host": "localhost",
     "port": 6379,
+    "fps": 30,
     "detector": "yolox",
     "detector_params": {},
     "tracker": "bytetrack",
     "tracker_params": {}
-}
-
-default_yolox_params = {
-    "batch_size": 1,
-    "conf_thresh": 0.2,
-    "nms_thresh": 0.65,
-    "fp16": True,
-    "num_classes": 1, 
-    "decode": True,             # whether to decode the model outputs into bounding boxes during inference. If False, raw model outputs will be returned.
-    "test_size": [576, 1024],
-    "model_path": "yolox-x",
-    "model_checkpoint": "bytetrack/bytetrack_x_mot17.pth"
-}
-
-default_yoloultra_params = {
-    "batch_size": 1,
-    "conf": 0.1,                # min confidence threshold [0.1 - 0.6]
-    "iou": 0.3,                 # threshold for NMS; lower values -> less detections [0.3 - 0.6]
-    "agnostic_nms": False,      # class-agnostic NMS; merge overlapping boxes of different classes
-    "classes": [0, 32],         # filters predictions to specified class set: 'person','sports_ball' for COCO dataset
-    "half": False,
-    "imgsz": None,              # e.g. [640, 1280] or null to use img dims
-    "max_det": 100,             # max amount of detections per frame
-    "embed": None,              # specify layers from which to extract feature vectors or embeddings
-    "verbose": False,
-    "checkpoint": "yolo_ultra/yolo11l.pt"
-}
-
-default_rfdetr_params = {
-    "batch_size": 1,
-    "conf": 0.2,               
-    "classes": [0, 32],         # default COCO: 0 - person, 32 - ball
-    # "classes": ['ball', 'player', 'referee', 'goalkeeper'], # specific checkpoint
-    "max_det": 100,
-    "resolution": 672,          # has to be divisible by 56: [672,728,784,896,1008,1064,1120]
-    "verbose": False,
-    "checkpoint": "detr/rf-detr-large.pth"
-}
-
-default_rtdetr_params = {
-    "batch_size": 2,
-    "conf": 0.25,
-    "classes": [0, 32],         # default COCO: 0 - person, 32 - ball
-    "verbose": False, 
-    "checkpoint": "detr/rtdetr-x.pt"
-}
-
-default_bytetrack_params = {
-    "track_thresh": 0.4,        # tracking confidence threshold (0.6 = default)
-    "track_buffer": 300,        # num of frames to keep lost tracks
-    "match_thresh": 0.8,        # [0.8, 0.6, 0.4]; high = fewer ID switches, low -> More MOTA; IoU matching threshold for associating detections to existing tracks
-    "mot20": False,             # 'True' skips fusing scores?
-    "aspect_ratio_thresh": 5.0, # reject tracking artifacts / FPs of unrealistic shape
-    "min_box_area": 0,          # min box area thresholds (px^2)
-}
-
-DETECTOR_MAP = {
-    "yolox": YoloX,
-    "yolov10": YoloUltralytics,
-    "yolov11": YoloUltralytics,
-    "yolov26": YoloUltralytics,
-    "rfdetr": RFDetr,
-    "rtdetr": RTDetr,
-}
-
-DETECTOR_PARAMS_MAP = {
-    "yolox": default_yolox_params,
-    "yolov10": default_yoloultra_params,
-    "yolov11": default_yoloultra_params,
-    "yolov26": default_yoloultra_params,
-    "rfdetr": default_rfdetr_params,
-    "rtdetr": default_rtdetr_params, 
-}
-
-TRACKER_MAP = {
-    "bytetrack": ByteTrack
-}
-
-TRACKER_PARAMS_MAP = {
-    "bytetrack": default_bytetrack_params
 }
 
 requires = {
@@ -116,6 +37,21 @@ requires = {
 provides = {
     "tracklets": BboxesData,
 }
+
+DETECTOR_MAP = {
+    "yolox": YoloX,
+    "yolov10": YoloUltralytics,
+    "yolov11": YoloUltralytics,
+    "yolov12": YoloUltralytics,
+    "yolov26": YoloUltralytics,
+    "rfdetr": RFDetr,
+    "rtdetr": RTDetr,
+}
+
+TRACKER_MAP = {
+    "bytetrack": ByteTrack
+}
+
 
 @AnalyserPluginManager.export("tracker")
 class Tracker(
@@ -129,13 +65,6 @@ class Tracker(
     def __init__(self, config=None, **kwargs):
         super().__init__(config, **kwargs)
 
-        # -------> Load defaults based on selection
-        self.detector_defaults = DETECTOR_PARAMS_MAP[config["detector"]]
-        self.tracker_defaults = TRACKER_PARAMS_MAP[config["tracker"]]
-        
-        self.detector_name = config["detector"]
-        self.tracker_name = config["tracker"]
-
     def call(
         self,
         inputs: Dict[str, Data],
@@ -146,42 +75,40 @@ class Tracker(
         import json
         from collections import defaultdict
         
-        # -------> Args check
-        logging.error(parameters)
-        # extend args by default values if they have not been passed to call().
-        for default_arg_k, default_arg_v in zip(self.detector_defaults, self.tracker_defaults):
-            logging.error(default_arg_k, default_arg_v)
-            if default_arg_k not in parameters:
-                parameters.update({default_arg_k : default_arg_v})
-        logging.error(parameters)
-        
         # -------> decode video and pass it to detector
         with inputs["video"] as input_data:
-            with input_data.open_video() as f_video:
-                video_decoder = VideoDecoder(
-                    f_video,
-                    fps=parameters.get("fps"),
-                    extension=f".{input_data.ext}",
-                    ref_id=input_data.id,
+            with input_data.open_video("r") as f_video:
+                video_decoder = VideoBatcher(
+                    VideoDecoder(
+                        f_video, 
+                        fps=parameters["detector_params"]["batch_size"], 
+                        extension=f".{input_data.ext}"
+                    ),
+                    batch_size=parameters.get("batch_size"),
                 )
-                # -------> Detector
-                # ---> Instantiate objects
-                self.detector = DETECTOR_MAP[self.detector_name](
-                    model_path=parameters["model_path"],
-                    batch_size=len(video_decoder),
+                num_frames = (video_decoder.duration() * video_decoder.fps()) // parameters.get("batch_size")
+                # -------> instantiate detector & tracker objects
+                self.detector = DETECTOR_MAP[self.parameters.detector](
+                    model_path=parameters["detector_params"]["model_path"],
+                    batch_size=parameters["detector_params"]["batch_size"],
                     image_size=video_decoder._size,
-                    detector_cfg=parameters,
+                    detector_params=parameters["detector_params"],
                     device="cuda",
-                    **parameters
                 )
-                preproced_outputs = self.detector.preprocess(video_decoder)
-                raw_outputs = self.detector.run_inference(preproced_outputs)
-                logging.error(type(raw_outputs))
-                
-                # -------> Tracker
-        
-        # TODO: data schema below ... (team_id = 0 (inactive); 1 (ball); 2 (refs); >=3 (active teams)
-        # team_id will be re-assigned by 'team_assignment' plugin at some point.
+                self.tracker = TRACKER_MAP[self.parameters.tracker](
+                    tracker_params=parameters["tracker_params"],
+                    device="cuda",
+                )
+                for i, frame in enumerate(video_decoder):
+                    # -------> process detections
+                    preproced_outputs = self.detector.preprocess(video_decoder)
+                    raw_outputs = self.detector.run_inference(preproced_outputs)
+                    logging.error(type(raw_outputs))
+                    # -------> TOOD: process tracking       
+
+        # -------> build required output format for consistency
+        # TODO: use data schema below ... (team_id = 0 (inactive); 1 (ball); 2 (refs); >=3 (active teams)
+        #       team_id will be re-assigned by 'team_assignment' plugin at some point anyways.
         bboxes_dict = defaultdict(list)
         meta_dict = defaultdict(list)
         """
@@ -227,8 +154,6 @@ class Tracker(
             "ball_ids": {},
         }
         """
-
-        # TODO: 3) return correct struct
         with data_manager.create_data("BboxesData") as output_data:
             output_data.bboxes = json.dumps(bboxes_dict)
             output_data.meta_data = json.dumps(meta_dict)

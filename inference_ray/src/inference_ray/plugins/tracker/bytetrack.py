@@ -27,6 +27,7 @@ class ByteTrack():
     def __init__(
         self, 
         tracker_params: Dict [Any, Any],
+        device: str = "cuda",
         **kwargs
     ):
         import torch

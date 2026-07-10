@@ -46,7 +46,7 @@ class YoloX():
         self.exp = get_exp(None, model_path)
         
         self.batch_size = batch_size
-        self.model_chkpt = kwargs.get("model_chkpt", None)
+        self.checkpoint = kwargs.get("checkpoint", None)
         self.w, self.h = image_size
 
         self._init_inference(detector_params)
@@ -79,9 +79,9 @@ class YoloX():
                 "No test_size in inference_params -> using exp default "
                 f"{self.test_size}. Make sure this matches your training input_size."
             )
-
         logging.info(
-            f"[inference] test_size={self.test_size}, "
+            f"[inference] " 
+            f"test_size={self.test_size}, "
             f"num_classes={self.num_classes}, "
             f"conf={self.conf_thresh}, nms={self.nms_thresh}"
         )
@@ -90,10 +90,10 @@ class YoloX():
         self.model = self.exp.get_model().to(self.device)
 
         # load checkpoint
-        if self.model_chkpt:
-            logging.info(f"[inference] Loading checkpoint: {self.model_chkpt}")
-            ckpt = torch.load(self.model_chkpt, map_location=self.device)
-            self.model.load_state_dict(ckpt["model"], strict=True) # strict=True to check for architecture mismatches
+        if self.checkpoint:
+            logging.info(f"[inference] Loading checkpoint: {self.checkpoint}")
+            chkpt = torch.load(self.checkpoint, map_location=self.device)
+            self.model.load_state_dict(chkpt["model"], strict=True) # strict=True to check for architecture mismatches
             logging.info("[inference] Checkpoint loaded successfully.")
         else:
             logging.warning(

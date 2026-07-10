@@ -15,8 +15,9 @@ from django.db import transaction
 from django.conf import settings
 
 
-""" TODO: Frontend should send params as a JSON body in this format:
+""" NOTE: Frontend should send params as a JSON body in this format:
     {
+        "fps": 30,
         "detector": "yolox",
         "tracker": "bytetrack",
         "parameters" : { 
@@ -56,10 +57,10 @@ class Tracker(Task):
             client,
             "tracker",
             parameters={
+                "fps": parameters["fps"],
                 "detector": parameters["detector"],
-                "detector_params": parameters.get("detector_params", {}),
                 "tracker": parameters["tracker"],
-                "tracker_params": parameters.get("tracker_params", {}),
+                "parameters": parameters.get("parameters", {})
             },
             inputs={"video": video_id},
             outputs=["tracklets"],

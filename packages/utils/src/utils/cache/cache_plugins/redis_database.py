@@ -33,19 +33,13 @@ class ValkeyCache(Cache, config=default_config, version="0.1"):
 
     def set(self, id: str, data: Any) -> bool:
         try:
-            packed = msgpack.packb(data)
+            packed = msgpack.packb(data, use_bin_type=True)
             tag = self.config.get("tag")
             self.r.set(f"{tag}:{id}", packed)
+            return True
         except Exception as e:
             logging.error(f"valKeyCache {e}")
-
-    def delete(self, id: str) -> bool:
-        try:
-            tag = self.config.get("tag")
-            return self.r.delete(f"{tag}:{id}")
-        except Exception as e:
-            logging.error(f"valKeyCache {e}")
-            return None
+            return False
 
     def get(self, id: str) -> Any:
         try:
@@ -53,10 +47,62 @@ class ValkeyCache(Cache, config=default_config, version="0.1"):
             packed = self.r.get(f"{tag}:{id}")
             if packed is None:
                 return None
-            return msgpack.unpackb(packed)
+            return msgpack.unpackb(packed, raw=False)
         except Exception as e:
             logging.error(f"valKeyCache {e}")
             return None
+
+    def __iter__(self) -> Iterator:
+        try:
+            tag = self.config.get("tag")
+            start = len(f"{tag}:")
+            keys = list(self.r.scan_iter(f"{tag}:*", count=500))
+            while keys:
+                batch_keys = keys[:500]
+                keys = keys[500:]
+                values = self.r.mget(batch_keys)
+                for k, v in zip(batch_keys, values):
+                    if v is None:
+                        continue
+                    yield k[start:].decode("utf-8"), msgpack.unpackb(v, raw=False)
+        except Exception as e:
+            logging.error(f"valKeyCache {e}")
+            yield from []
+
+    def delete(self, data_id: str) -> bool:
+        try:
+            tag = self.config.get("tag")
+            return self.r.delete(f"{tag}:{id}")
+        except Exception as e:
+            logging.error(f"valKeyCache {e}")
+            return None
+
+    def delete_by_value_field(self, field: str, target: Any) -> int:
+        try:
+            tag = self.config.get("tag")
+            deleted = 0
+            batch = []
+
+            for raw_key in self.r.scan_iter(f"{tag}:*", count=500):
+                packed = self.r.get(raw_key)
+                if packed is None:
+                    continue
+
+                value = msgpack.unpackb(packed, raw=False)
+                if isinstance(value, dict) and value.get(field) == target:
+                    batch.append(raw_key)
+
+                if len(batch) >= 500:
+                    deleted += self.r.delete(*batch)
+                    batch = []
+
+            if batch:
+                deleted += self.r.delete(*batch)
+
+            return deleted
+        except Exception as e:
+            logging.error(f"valKeyCache {e}")
+            return 0
 
     def keys(self) -> List[str]:
         try:
@@ -70,19 +116,4 @@ class ValkeyCache(Cache, config=default_config, version="0.1"):
             logging.error(f"valKeyCache {e}")
             return []
 
-    def __iter__(self) -> Iterator:
-        try:
-            tag = self.config.get("tag")
-            start = len(f"{tag}:")
-            keys = list(self.r.scan_iter(f"{tag}:*", 500))
-            while len(keys) > 0:
-                batch_keys = keys[:500]
-                keys = keys[500:]
 
-                values = self.r.mget(batch_keys)
-                for k, v in zip(batch_keys, values):
-                    yield k[start:].decode("utf-8"), msgpack.unpackb(v)
-
-        except Exception as e:
-            logging.error(f"valKeyCache {e}")
-            yield from []

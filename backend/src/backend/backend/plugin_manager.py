@@ -57,7 +57,10 @@ class PluginManager:
 
         serializer = serializer_cls(data=parameters or {})
         serializer.is_valid(raise_exception=True)
-        return dict(serializer.validated_data)
+        val_params = dict(serializer.validated_data)
+        logging.error(val_params)
+        
+        return val_params
 
     def __contains__(self, plugin: str) -> bool:
         return plugin in self._plugins
@@ -214,7 +217,7 @@ def generate_plugin_run_result_cache(
             try:
                 with open(cache_path, "w") as f:
                     json.dump(result_dict, f)
-                    logger.debug(f"Writin result {x.id} to cache")
+                    logger.debug(f"Writing result {x.id} to cache")
             except Exception:
                 logger.exception("Cache couldn't write")
 
