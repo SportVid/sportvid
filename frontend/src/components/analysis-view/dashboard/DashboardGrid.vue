@@ -194,47 +194,26 @@ function flatCells() {
   return [...dashboardStore.layout.rows[0].cells, ...dashboardStore.layout.rows[1].cells];
 }
 
-// Holds the off-screen drag-ghost clone (see onDragStart) until onDragEnd —
-// removing it any earlier risks the browser not having captured its
-// snapshot yet and silently falling back to the default, full-size ghost.
-let dragImageClone = null;
+// A transparent 1x1 image used as the drag ghost — the grid already shows
+// where the cell will land (live reflow + the dashed overlay on the source
+// slot), so no dragged-card image needs to follow the cursor at all. Trying
+// to scale the browser's default full-size ghost down to match edit-mode
+// size proved unreliable, so we hide it entirely instead.
+const emptyDragImage = new Image();
+emptyDragImage.src =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7";
 
 function onDragStart(event, cellId) {
   draggedCellId.value = cellId;
   dragOverTargetIndex.value = null;
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("text/plain", cellId);
-
-  // The browser's default drag-ghost snapshot ignores the ancestor
-  // transform:scale() applied while arranging (edit mode), so it renders
-  // the card at its full, un-scaled size — much bigger than what's on
-  // screen. Feed it a clone with that same scale applied directly on
-  // itself (browsers do respect an element's own transform, just not an
-  // inherited one) so the ghost matches the current edit-mode size.
-  if (scale.value !== 1) {
-    const sourceEl = event.currentTarget;
-    const rect = sourceEl.getBoundingClientRect();
-    const clone = sourceEl.cloneNode(true);
-    clone.style.position = "fixed";
-    clone.style.top = "0";
-    clone.style.left = "-9999px";
-    clone.style.margin = "0";
-    clone.style.width = `${sourceEl.offsetWidth}px`;
-    clone.style.height = `${sourceEl.offsetHeight}px`;
-    clone.style.transform = `scale(${scale.value})`;
-    clone.style.transformOrigin = "top left";
-    clone.style.pointerEvents = "none";
-    document.body.appendChild(clone);
-    event.dataTransfer.setDragImage(clone, event.clientX - rect.left, event.clientY - rect.top);
-    dragImageClone = clone;
-  }
+  event.dataTransfer.setDragImage(emptyDragImage, 0, 0);
 }
 
 function onDragEnd() {
   draggedCellId.value = null;
   dragOverTargetIndex.value = null;
-  dragImageClone?.remove();
-  dragImageClone = null;
 }
 
 function onDragOverCell(event, cellId) {
