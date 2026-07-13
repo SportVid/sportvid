@@ -142,7 +142,14 @@
     "go_to_marker_time": "Zurück zu {time}"
   },
   "position_data": {
-    "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das Bytetrack-Plugin aus oder laden Sie die Positionsdaten manuell hoch.",
+    "not_selected": "Keine Positionsdaten vorhanden.",
+    "generate": {
+      "cv_heading": "Über Computer Vision",
+      "or": "oder",
+      "bytetrack": "ByteTrack",
+      "dlt": "DLT-Kalibrierung",
+      "upload_heading": "Per Datei-Upload"
+    },
     "display_settings": {
       "title": "Anzeigeeinstellungen",
       "view_bounding_box": "Bounding-Boxen anzeigen",
@@ -207,8 +214,11 @@
       }
     },
     "kpi": {
-      "posdata_not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führe das Bytetrack-Plugin aus oder lade Positionsdaten manuell hoch.",
-      "kpi_not_selected": "Keine KPI-Daten verfügbar.<br>Bitte führe das KPI-Berechnungs-Plugin aus, um KPIs auf Basis der ausgewählten Positionsdaten zu berechnen.",
+      "posdata_not_available": "Keine Positionsdaten vorhanden.<br>Erzeuge sie zuerst im TopView- oder Heatmap-Feld.",
+      "no_kpi_computed": "Keine KPIs berechnet.",
+      "compute": {
+        "button": "KPI berechnen"
+      },
       "view_mode": {
         "title": "Ansicht",
         "table": "Tabelle",

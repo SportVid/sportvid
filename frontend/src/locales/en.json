@@ -186,7 +186,14 @@
     "go_to_marker_time": "Go back to {time}"
   },
   "position_data": {
-    "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+    "not_selected": "No position data available yet.",
+    "generate": {
+      "cv_heading": "Via computer vision",
+      "or": "or",
+      "bytetrack": "ByteTrack",
+      "dlt": "DLT calibration",
+      "upload_heading": "Via file upload"
+    },
     "display_settings": {
       "title": "Display Settings",
       "view_bounding_box": "View bounding-boxes",
@@ -270,8 +277,10 @@
       }
     },
     "kpi": {
-      "posdata_not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
-      "kpi_not_selected": "No KPI data available.<br>Please run the KPI computation plugin to compute KPIs based on the selected position data.",
+      "posdata_not_available": "No position data available yet.<br>Generate it first in the TopView or Heatmap tab.",
+      "no_kpi_computed": "No KPIs computed.",
+      "compute_kpis": "Compute KPIs",
+      "select_kpis": "Select KPI data",
       "view_mode": {
         "title": "Select View",
         "table": "Table",
@@ -379,10 +388,8 @@
       "appbar_actions": "The toolbar gives you quick access to the main tools: run plugins to process your video, check the run history, manage annotation shortcuts, and export your data."
     },
     "run_plugin": {
-      "open_modal": "Click here to open the plugin panel. Plugins are tools that process your video and generate data — e.g. player tracking or camera calibration.",
-      "plugin_panel": "The plugin panel shows all available plugins grouped by category. Each plugin can be configured individually. E.g., run ByteTrack for player detection, DLT+RANSAC to compute the homography using your calibration asset, or the KPI computation plugin to compute performance metrics based on the position data.",
-      "plugin_select": "To select any plugin, just click it in the list. For this tutorial, select the 'KPI Computation' plugin.",
-      "plugin_details": "After selecting a plugin, you see its description and configuration options. Depending on the plugin, you may need to provide different inputs such as selecting files or specifying run IDs. Advanced options allow you to fine-tune the plugin's behavior, but if you're not sure, the default settings are a good starting point."
+      "position_data": "Actions that process your video now live right where their result is used, instead of behind a central menu. Here in the empty pitch view, you can generate position data — run ByteTrack for player tracking, set up a DLT+RANSAC camera calibration, or upload position data manually.",
+      "kpi_tab": "Once position data is available, open the KPI tab: computing performance metrics (distance covered, velocity, metabolic power, and more) happens inline, right there."
     },
     "check_status": {
       "open_modal": "Click here to open the plugin run history. This is where you can see the status of all your plugin runs — whether they are queued, running, completed, or if any errors occurred.",
@@ -396,21 +403,17 @@
       "export_details": "After selecting a format, you see its configuration options. Depending on the format, you may need to choose teams, time ranges, specific metrics, or other parameters. Once configured, click the Export button to download the file. Remember: if the required data hasn't been computed yet, the dropdowns will be empty and the export won't be possible."
     },
     "dlt_ransac": {
-      "open_modal": "Click here to open the plugin panel.",
-      "select_plugin": "Select the 'DLT+RANSAC from annotated landmarks' plugin from the list.",
-      "plugin_overview": "The DLT+RANSAC plugin computes a static camera calibration by mapping annotated landmark points from the pitch view to their corresponding positions in the video. This calibration is needed to convert pixel coordinates into real-world pitch coordinates, enabling accurate position data generation.<br><br>To run the plugin, you first need a calibration asset — a set of reference points defined on the pitch view.",
+      "intro": "Click here to open the DLT+RANSAC card. It computes a static camera calibration by mapping annotated landmark points from the pitch view to their corresponding positions in the video. This calibration is needed to convert pixel coordinates into real-world pitch coordinates, enabling accurate position data generation.<br><br>To apply it, you first need a calibration asset — a set of reference points defined on the pitch view.",
       "create_select": "If you don't have a calibration asset yet, click <em>Create</em> to set one up. Use <em>Select</em> to load an existing asset.",
       "create_modal": "Choose the calibration type: <em>Marker</em> uses individual landmark points (e.g. corner flags, penalty spots), <em>Segment</em> uses line segments. Select the type matching your setup, then click <em>Create</em>.",
       "calibration_asset_btn": "Via this button you can create a new calibration asset, save the current one, update an existing one, or switch to a different saved asset.",
       "object_btn": "This button shows your current calibration type (<em>Marker</em> or <em>Segments</em>). Click it to toggle the video marker overlay — this highlights reference landmarks on the pitch view. In <em>Marker</em> mode, you can also add custom markers or remove existing ones.",
-      "object_info": "Left-click a marker in the pitch view to open a zoomed video overlay, where you can precisely place it on the corresponding video position. Right-click a marker to de-toggle it and remove the video mapping.<br><br>Once all markers are set, save the asset via the <em>Calibration Asset</em> button, then go back to the plugin panel and run DLT+RANSAC with the saved asset selected."
+      "object_info": "Left-click a marker in the pitch view to open a zoomed video overlay, where you can precisely place it on the corresponding video position. Right-click a marker to de-toggle it and remove the video mapping.<br><br>Once all markers are set, save the asset via the <em>Calibration Asset</em> button, then go back to the empty pitch view and click <em>Apply Calibration</em> on the DLT+RANSAC card with the saved asset selected."
     },
     "posdata_bytetrack": {
-      "open_modal": "Click here to open the plugin panel.",
-      "select_plugin": "Select the 'ByteTrack' plugin from the list.",
-      "plugin_overview": "The ByteTrack plugin performs object tracking directly on the video. It detects and tracks players and the ball frame by frame, generating bounding boxes for each detected object.<br><br>The tracking results can later be used together with a camera calibration (DLT+RANSAC) to compute real-world position data, which in turn enables KPI computation.",
+      "intro": "Click here to open the ByteTrack card. It performs object tracking directly on the video, detecting and tracking players and the ball frame by frame, generating bounding boxes for each detected object.<br><br>The tracking results can later be used together with a camera calibration (DLT+RANSAC) to compute real-world position data, which in turn enables KPI computation.",
       "fps": "Set the frames per second (FPS) used for tracking. The value is pre-set to your video's frame rate, which is the recommended choice. It ensures every frame is analyzed and no motion is missed.<br><br>You can freely adjust it: a <em>lower</em> FPS speeds up processing but may cause the tracker to lose fast-moving objects between frames. A <em>higher</em> FPS than the video's native rate has no benefit, as no additional information is available.",
-      "run_plugin": "Click 'Run Plugin' to start the ByteTrack tracking. The progress can be tracked in the Status panel. Once completed, the tracking results can be used for position data generation via KPI Computation."
+      "run_plugin": "Click 'Start Tracking' to start the ByteTrack tracking. The progress can be tracked in the History panel or right here on the card. Once completed, the tracking results can be used for position data generation via KPI Computation."
     },
     "posdata_manual": {
       "upload_open": "Click the upload button to open the position data upload dialog.",
@@ -419,13 +422,11 @@
       "upload": "Once all fields are filled in, click 'Upload'. The system will automatically run the <em>Posdata Convert</em> plugin afterwards to normalize the data into the internal format, making it available for visualization and KPI computation."
     },
     "kpi_computation": {
-      "open_modal": "Click here to open the plugin panel.",
-      "select_plugin": "Select the 'KPI Computation' plugin from the list.",
-      "plugin_overview": "The KPI Computation plugin calculates performance metrics such as distance covered, velocity, metabolic power, equivalent distance, and centroid distance based on player position data.<br><br>Before running this plugin, make sure you have position data available. You can obtain it either by running <em>ByteTrack</em> (object tracking) and <em>DLT+RANSAC</em> (camera calibration) first, or by uploading position data manually.",
+      "intro": "Click here to open the KPI computation card. It calculates performance metrics such as distance covered, velocity, metabolic power, equivalent distance, and centroid distance based on player position data.",
       "format_select": "Select the data format that matches your position data source. Choosing 'SportVid (ByteTrack)' enables the ByteTrack run and calibration selectors below. All other formats use an externally uploaded position data file.",
       "tracking_data": "Select the position data to use for the computation. This dropdown lists the position data files that have been uploaded or generated for this video.<br><br>If you selected 'SportVid (ByteTrack)' as the format, you will instead see a ByteTrack run and calibration asset selector. Choose the corresponding run and the calibration asset used during tracking.",
       "advanced_options": "The 'Advanced Options' panel lets you configure an optional <em>smoothing filter</em> for the position data before computing KPIs. You can choose between a 'Butterworth lowpass' or a 'Savitzky-Golay lowpass' filter, and adjust their hyperparameters. If you are unsure, leaving this at 'None' is a good default.",
-      "run_plugin": "Click 'Run Plugin' to start the KPI computation. The progress can be tracked in the Status panel. Once completed, KPI results will appear in the KPI tab of the analysis view."
+      "run_plugin": "Click 'Compute KPIs' to start the KPI computation. The progress can be tracked in the History panel. Once completed, KPI results will appear right here in the KPI tab."
     },
     "top_view": {
       "pitch_overview": "The top-view shows your position data projected onto a 2D area — this could be a soccer pitch, a handball court, a basketball court, a climbing wall, or any other defined playing field. Each tracked entity appears as a colored dot, grouped and colored by team or assignment.",
@@ -454,11 +455,8 @@
       "choose_manual": "Manual Upload",
       "choose_bytetrack": "ByteTrack (Automatic)",
       "manual_upload": "Use the upload button to import your position data file. See the <em>Position Data (Manual)</em> tutorial for a detailed walkthrough.",
-      "open_plugin_panel": "Open the plugin panel.",
-      "select_dlt": "Select <em>DLT+RANSAC from Annotated Landmarks</em> from the list.",
-      "dlt_details": "Configure and run the DLT+RANSAC plugin here. If you don’t have a calibration asset yet, create one first — the <em>DLT+RANSAC</em> tutorial walks you through this step by step.",
-      "select_bytetrack": "Now select <em>ByteTrack</em> from the list.",
-      "run_bytetrack": "Set the FPS to match your video’s frame rate, then click <em>Run Plugin</em> to generate position data."
+      "select_dlt": "This is the DLT+RANSAC calibration button. If you don't have a calibration asset yet, create one first — the <em>DLT+RANSAC</em> tutorial walks you through this step by step.",
+      "select_bytetrack": "Now click this ByteTrack button to open its card, set the FPS to match your video's frame rate, then click <em>Start Tracking</em> to generate position data. See the <em>ByteTrack</em> tutorial for a detailed walkthrough."
     }
   },
   "modal": {
@@ -1109,7 +1107,8 @@
         "title": "Missing requirements",
         "video_uploaded": "You need to upload a video first.",
         "analysis_view_opened": "You need to open the analysis view for any video.",
-        "position_data_selected": "You need to select position data first."
+        "position_data_selected": "You need to select position data first.",
+        "position_data_not_selected": "This tutorial is only available while no position data is loaded yet."
       },
       "upload_video": {
         "name": "Upload Video",

@@ -736,6 +736,7 @@ onBeforeUnmount(() => {
   topViewStore.gridLongitudinal = 0;
   topViewStore.gridTransverse = 0;
   topViewStore.showSportZones = false;
+  visualizationStore.resetKpiData();
 });
 </script>
 

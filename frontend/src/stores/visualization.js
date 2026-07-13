@@ -144,6 +144,15 @@ export const useVisualizationStore = defineStore(
       }
     };
 
+    const resetKpiData = () => {
+      kpiData.value = {};
+      kpiNames.value = [];
+      kpiFramerate.value = null;
+      kpiMetaTeamIds.value = {};
+      kpiDataLoaded.value = false;
+      isLoadingKpi.value = false;
+    };
+
     return {
       halftimesExist,
       teamColorMapping,
@@ -167,6 +176,7 @@ export const useVisualizationStore = defineStore(
       kpiSelectedPlayerIds,
       heatmapDisplayMode,
       heatmapSelectedPlayerIds,
+      resetKpiData,
     };
   },
   {
