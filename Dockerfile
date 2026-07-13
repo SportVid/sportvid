@@ -1,38 +1,36 @@
-# Install uv
 FROM ghcr.io/astral-sh/uv:debian
 
 RUN apt-get update && apt-get install -y \
     wget \
-    ffmpeg
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-# Change the working directory to the `app` directory
 WORKDIR /app
 
-# Copy from the cache instead of linking since it's a mounted volume
-ENV UV_LINK_MODE=copy
+ENV UV_LINK_MODE=copy \
+    PATH="/app/.venv/bin:$PATH"
 
-COPY uv.lock /app/uv.lock
-COPY .python-version /app/.python-version
-COPY pyproject.toml /app/pyproject.toml
+# Copy only files that affect dependency resolution for this image
+COPY uv.lock pyproject.toml .python-version /app/
 COPY packages/data/pyproject.toml /app/packages/data/pyproject.toml
 COPY packages/interface/pyproject.toml /app/packages/interface/pyproject.toml
 COPY packages/utils/pyproject.toml /app/packages/utils/pyproject.toml
 COPY backend/pyproject.toml /app/backend/pyproject.toml
+
+# Install dependencies only, not the workspace packages themselves
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-workspace
+
+# Now copy only the source actually needed by backend
+COPY packages/data /app/packages/data
+COPY packages/interface /app/packages/interface
+COPY packages/utils /app/packages/utils
+COPY backend /app/backend
 COPY analyser/pyproject.toml /app/analyser/pyproject.toml
 COPY inference_ray/pyproject.toml /app/inference_ray/pyproject.toml
 
-# Install dependencies
+# Install just the backend package into the existing environment
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-install-project --no-dev
+    uv sync --frozen --no-dev --package backend
 
-# Then, add the rest of the project source code and install it
-# Installing separately from its dependencies allows optimal layer caching
-# COPY . /app
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked 
-
-# Place executables in the environment at the front of the path
-ENV PATH="/app/.venv/bin:$PATH"
-
-# Reset the entrypoint, don't invoke `uv`
 ENTRYPOINT []
