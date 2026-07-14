@@ -49,7 +49,7 @@ class PluginManager:
     @classmethod
     def validate_parameters(cls, plugin: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         parameters = parameters or {}
-        logging.error(parameters)
+        logging.error(f'PRE_VALIDATION PARAMS: {parameters}')
 
         serializer_cls = cls.get_serializer(plugin)
         if serializer_cls is None:
@@ -58,7 +58,7 @@ class PluginManager:
         serializer = serializer_cls(data=parameters or {})
         serializer.is_valid(raise_exception=True)
         val_params = dict(serializer.validated_data)
-        logging.error(val_params)
+        logging.error(f'VALIDATED PARAMS: {val_params}')
         
         return val_params
 

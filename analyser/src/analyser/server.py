@@ -6,6 +6,7 @@ import time
 import uuid
 
 import yaml
+import json
 import copy
 import traceback
 from concurrent import futures
@@ -142,30 +143,28 @@ def run_plugin(args):
 
         plugin_parameters = {}
         if "parameters" in params:
-            logging.error(f'GRPC SERVER: {params}')
             for parameter in params.get("parameters"):
-                if parameter.get("type") == "FLOAT_TYPE":
-                    plugin_parameters[parameter.get("name")] = float(
+                if parameter.get("type") == "BOOL_TYPE":
+                    plugin_parameters[parameter.get("name")] = json.loads(
                         parameter.get("value")
                     )
                 if parameter.get("type") == "INT_TYPE":
                     plugin_parameters[parameter.get("name")] = int(
+                        parameter.get("value")
+                    )                
+                if parameter.get("type") == "FLOAT_TYPE":
+                    plugin_parameters[parameter.get("name")] = float(
                         parameter.get("value")
                     )
                 if parameter.get("type") == "STRING_TYPE":
                     plugin_parameters[parameter.get("name")] = str(
                         parameter.get("value")
                     )
-                if parameter.get("type") == "BOOL_TYPE":
-                    if parameter.get("value") == "False":
-                        plugin_parameters[parameter.get("name")] = False
-                    else:
-                        plugin_parameters[parameter.get("name")] = True
                 if parameter.get("type") == "DICT_DATA":
-                    plugin_parameters[parameter.get("name")] = dict(
+                    plugin_parameters[parameter.get("name")] = json.loads(
                         parameter.get("value")
                     )
-
+        logging.error(f'GRPC SERVER PLUGIN_PARAMS: {plugin_parameters}')
         callbacks = [AnalyserProgressCallback(shared)]
         results = plugin_manager(
             plugin=params.get("plugin"),

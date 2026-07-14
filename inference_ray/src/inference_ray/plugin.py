@@ -46,7 +46,9 @@ class AnalyserPlugin(Plugin):
         **kwargs,
     ):
         super().__init_subclass__(**kwargs)
-        logging.error(f'{cls}, {parameters}, {requires}, {provides}')
+        
+        # logging.debug(f'{cls}, {parameters}, {requires}, {provides}')
+        
         cls._requires = requires
         cls._provides = provides
         cls._parameters = parameters

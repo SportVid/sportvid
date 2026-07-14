@@ -3,6 +3,8 @@ from django.shortcuts import get_object_or_404
 from backend.plugin_manager import PluginManager
 from backend.models import Video
 
+
+# NOTE: see https://www.django-rest-framework.org/api-guide/serializers/.
 class PluginRunRequestSerializer(serializers.Serializer):
     plugin = serializers.CharField()
     video_id = serializers.UUIDField()
