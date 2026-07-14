@@ -10,11 +10,11 @@ logging_config:
 
 applications:
   # ---------- NEW INTEGRATION (GPU required)
-  - name: tracker
-    route_prefix: /tracker
+  - name: object_tracker
+    route_prefix: /object_tracker
     import_path: inference_ray.main:app_builder
     args:
-      model: tracker
+      model: object_tracker
       data_path: /data
       params: {}
     deployments:

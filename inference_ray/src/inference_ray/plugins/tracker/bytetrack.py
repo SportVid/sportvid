@@ -1,6 +1,5 @@
 import logging
 import numpy as np
-
 from pprint import pprint
 from typing import Dict, Any
 

@@ -27,8 +27,8 @@ from django.conf import settings
     }
 """
 
-@PluginManager.export_plugin("tracker")
-class Tracker(Task):
+@PluginManager.export_plugin("object_tracker")
+class ObjectTracker(Task):
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",
@@ -52,16 +52,12 @@ class Tracker(Task):
             manager=manager,
         )
         video_id = self.upload_video(client, video)
-
+        
+        logging.error(f'TASK PARAMS: {parameters}')
         tracker_result = self.run_analyser(
             client,
-            "tracker",
-            parameters={
-                "fps": parameters["fps"],
-                "detector": parameters["detector"],
-                "tracker": parameters["tracker"],
-                "parameters": parameters.get("parameters", {})
-            },
+            "object_tracker",
+            parameters=parameters,
             inputs={"video": video_id},
             outputs=["tracklets"],
             downloads=["tracklets"],

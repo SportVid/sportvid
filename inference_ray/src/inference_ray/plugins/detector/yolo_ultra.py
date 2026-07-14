@@ -1,25 +1,25 @@
 import logging
 import torch
 import torch.nn.functional as F
-
-from typing import Any
-from omegaconf import OmegaConf, DictConfig
-from ultralytics import YOLO
-from .detector import Detector
+import numpy as np
+from typing import Any, Dict
 
 
-class YoloUltralytics(Detector):
+
+class YoloUltralytics():
     def __init__(
         self, 
         model_path: str,
         mode: str,
         batch_size: int,
         image_size: tuple[int, int],
-        inference_params: DictConfig,
-        finetune_params: DictConfig,
+        inference_params: Dict [Any, Any],
+        finetune_params: Dict [Any, Any],
         device: str = "cuda",
         **kwargs
     ):
+        from ultralytics import YOLO
+        
         super().__init__(
             model_path, mode, batch_size, image_size, inference_params, finetune_params, device)
 

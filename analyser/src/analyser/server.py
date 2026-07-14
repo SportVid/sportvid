@@ -102,7 +102,7 @@ class AnalyserCacheWrapper:
         if self.cache:
             for output, data in results.items():
                 data_id = data
-                logging.error(f"#####DEBUG {data_id} {data} {isinstance(data, Data)}")
+                logging.debug(f"#####DEBUG {data_id} {data} {isinstance(data, Data)}")
 
                 result_hash = get_hash_for_plugin(
                     plugin=plugin,
@@ -142,6 +142,7 @@ def run_plugin(args):
 
         plugin_parameters = {}
         if "parameters" in params:
+            logging.error(f'GRPC SERVER: {params}')
             for parameter in params.get("parameters"):
                 if parameter.get("type") == "FLOAT_TYPE":
                     plugin_parameters[parameter.get("name")] = float(
@@ -160,6 +161,10 @@ def run_plugin(args):
                         plugin_parameters[parameter.get("name")] = False
                     else:
                         plugin_parameters[parameter.get("name")] = True
+                if parameter.get("type") == "DICT_DATA":
+                    plugin_parameters[parameter.get("name")] = dict(
+                        parameter.get("value")
+                    )
 
         callbacks = [AnalyserProgressCallback(shared)]
         results = plugin_manager(

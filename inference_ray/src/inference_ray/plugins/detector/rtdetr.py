@@ -1,36 +1,32 @@
 import logging
 import torch
 import torch.nn.functional as F
-from typing import Any
-from omegaconf import DictConfig
-from .detector import Detector
-
-logger = logging.getLogger(__name__)
+from typing import Any, Dict
 
 
-class RTDetr(Detector):
-
+class RTDetr():
     def __init__(
         self,
         model_path: str,
         mode: str,
         batch_size: int,
         image_size: tuple,
-        inference_params: DictConfig,
-        finetune_params: DictConfig,
+        inference_params: Dict [Any, Any],
+        finetune_params: Dict [Any, Any],
         device: str = "cuda",
         **kwargs
     ):
+        from ultralytics import RTDETR
+        
         super().__init__(
             model_path, mode, batch_size, image_size,
             inference_params, finetune_params, device
         )
         
-        from ultralytics import RTDETR
         self.model = RTDETR(model_path)
         self.model.to(device)
         
-        logger.info(f"RT-DETR loaded from {model_path}")
+        logging.debug(f"RT-DETR loaded from {model_path}")
 
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs):

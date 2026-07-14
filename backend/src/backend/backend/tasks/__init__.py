@@ -14,7 +14,7 @@ from .cluster_to_scalar import *
 from .invert_scalar import *
 from .ocr import *
 
-from .tracker import *
+from .object_tracker import *
 from .bytetrack import *
 from .calibration_static_dlt import *
 from .posdata_convert import *

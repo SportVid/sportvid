@@ -8,15 +8,6 @@ from data import (
 )
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 from utils import VideoDecoder, VideoBatcher
-from .detector import (
-    YoloX, 
-    YoloUltralytics,
-    RFDetr,
-    RTDetr
-) 
-from .tracker import (
-    ByteTrack,
-)
 
 default_config = {
     "data_dir": "/data/",
@@ -29,34 +20,26 @@ default_config = {
     "tracker_params": {}
 }
 
-DETECTOR_MAP = {
-    "yolox": YoloX,
-    "yolov10": YoloUltralytics,
-    "yolov11": YoloUltralytics,
-    "yolov12": YoloUltralytics,
-    "yolov26": YoloUltralytics,
-    "rfdetr": RFDetr,
-    "rtdetr": RTDetr,
+requires = {
+    "video": VideoData,
 }
 
-TRACKER_MAP = {
-    "bytetrack": ByteTrack
+provides = {
+    "tracklets": BboxesData,
 }
 
-
-@AnalyserPluginManager.export("tracker")
-class Tracker(
+@AnalyserPluginManager.export("object_tracker")
+class ObjectTracker(
     AnalyserPlugin,
     config=default_config,
     parameters={},
     version="0.1",
-    requires={"video": VideoData},
-    provides={"tracklets": BboxesData}
+    requires=requires,
+    provides=provides
 ):
     def __init__(self, config=None, **kwargs):
-        logging.error("INITTTTTTTTTTTT__________________")
         super().__init__(config, **kwargs)
-
+        
     def call(
         self,
         inputs: Dict[str, Data],
@@ -67,7 +50,32 @@ class Tracker(
         import json
         from collections import defaultdict
         
-        logging.error("CALLLLLLLLLLLL__________________")
+        from .detector import (
+            YoloX, 
+            YoloUltralytics,
+            RFDetr,
+            RTDetr
+        )
+        
+        from .tracker import (
+            ByteTrack
+        )
+        
+        DETECTOR_MAP = {
+            "yolox": YoloX,
+            "yolov10": YoloUltralytics,
+            "yolov11": YoloUltralytics,
+            "yolov12": YoloUltralytics,
+            "yolov26": YoloUltralytics,
+            "rfdetr": RFDetr,
+            "rtdetr": RTDetr,
+        }
+        
+        TRACKER_MAP = {
+           "bytetrack": ByteTrack
+        }
+        
+        logging.error(f"PLUGIN PARAMS: {parameters}")
         # -------> decode video and pass it to detector
         with inputs["video"] as input_data:
             with input_data.open_video("r") as f_video:

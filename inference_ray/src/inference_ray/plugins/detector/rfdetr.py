@@ -1,16 +1,28 @@
 import logging
 import torch
 import numpy as np
-
 from PIL import Image
 from typing import Any, Dict
-from omegaconf import DictConfig, OmegaConf
-from rfdetr import RFDETRBase, RFDETRNano, RFDETRSmall, RFDETRMedium, RFDETRLarge
-from .detector import Detector
-from trak.utils.coords import xyxy_to_xywh
 
 
-class RFDetr(Detector):
+
+def xyxy_to_xywh(xyxy):
+    """
+    Transforms [x1,y1,x2,y2] -> [center of x,c enter of y, width, height]
+    Shape stays the same [N,4]
+    """
+    if len(xyxy.shape) == 1: # handle mini-batch
+        xyxy = xyxy.reshape(1, -1)
+    
+    x1, y1, x2, y2 = xyxy[:, 0], xyxy[:, 1], xyxy[:, 2], xyxy[:, 3]
+    cx = (x1 + x2) * 0.5
+    cy = (y1 + y2) * 0.5
+    w = x2 - x1
+    h = y2 - y1
+    
+    return np.array((cx,cy,w,h))
+
+class RFDetr():
 
     def __init__(
         self, 
@@ -18,11 +30,13 @@ class RFDetr(Detector):
         mode: str,
         batch_size: int,
         image_size: tuple[int, int],
-        inference_params: DictConfig,
-        finetune_params: DictConfig,
+        inference_params: Dict [Any, Any],
+        finetune_params: Dict [Any, Any],
         device: str = "cuda",
         **kwargs
     ):
+        from rfdetr import RFDETRBase, RFDETRNano, RFDETRSmall, RFDETRMedium, RFDETRLarge
+        
         super().__init__(
             model_path, mode, batch_size, image_size, inference_params, finetune_params, device
         )

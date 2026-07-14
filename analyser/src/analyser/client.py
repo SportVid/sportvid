@@ -146,14 +146,23 @@ class AnalyserClient:
             x.name = i.get("name")
             x.id = i.get("id")
 
+        logging.error(f'GRPC CLIENT: {parameters}')
         for i in parameters:
             x = run_request.parameters.add()
             x.name = i.get("name")
             x.value = str(i.get("value"))
-            if isinstance(i.get("value"), float): x.type = analyser_pb2.FLOAT_TYPE
-            if isinstance(i.get("value"), int): x.type = analyser_pb2.INT_TYPE
-            if isinstance(i.get("value"), str): x.type = analyser_pb2.STRING_TYPE
-            if isinstance(i.get("value"), bool): x.type = analyser_pb2.BOOL_TYPE
+            if isinstance(i.get("value"), bool): 
+                x.type = analyser_pb2.BOOL_TYPE
+            if isinstance(i.get("value"), int): 
+                x.type = analyser_pb2.INT_TYPE
+            if isinstance(i.get("value"), float): 
+                x.type = analyser_pb2.FLOAT_TYPE
+            if isinstance(i.get("value"), str): 
+                x.type = analyser_pb2.STRING_TYPE
+            if isinstance(i.get("value"), dict):
+                x.type = analyser_pb2.DICT_DATA
+                
+            logging.error(f'{x.name} - {x.type}')
 
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
         response = stub.run_plugin(run_request)

@@ -1,7 +1,6 @@
 import logging
 import torch
 import numpy as np
-
 from typing import Any, Dict
 
 
@@ -35,11 +34,8 @@ class YoloX():
         detector_params: Dict [Any, Any],
         **kwargs,
     ):
-        import torch
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        
         self.state = list()
-        
         self.detector_params = detector_params
         
         from yolox.exp import get_exp

@@ -152,8 +152,8 @@ class TrackerParamsSerializer(serializers.Serializer):
     min_box_area = serializers.FloatField(required=False, min_value=0.0)
 
 
-@PluginManager.export_serializer("tracker")
-class TrackerExecutionSerializer(serializers.Serializer):
+@PluginManager.export_serializer("object_tracker")
+class ObjectTrackerSerializer(serializers.Serializer):
     fps = serializers.IntegerField(required=False, min_value=1, max_value=30)
     detector = serializers.ChoiceField(
         choices=DETECTOR_CHOICES,

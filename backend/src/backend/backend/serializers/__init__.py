@@ -1,5 +1,5 @@
 from .plugin_run import PluginRunRequestSerializer
-from .tracker import TrackerExecutionSerializer
+from .object_tracker import ObjectTrackerSerializer
 from .bytetrack import ByteTrackSerializer
 from .calibration_static_dlt import CalibrationSerializer
 from .posdata_convert import PosDataConvertSerializer

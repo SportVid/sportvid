@@ -1,15 +1,10 @@
 import logging
 import zipfile
-
 from typing import List, Union
 from dataclasses import dataclass, field
-
-import numpy.typing as npt
-import numpy as np
-
 from ..manager import DataManager
 from ..data import Data
-from ..fs_handler import LocalFSHandler, ZipFSHandler
+from ..fs_handler import LocalFSHandler
 from interface import analyser_pb2
 
 
@@ -22,7 +17,8 @@ class ListData(Data):
 
     def load(self) -> None:
         super().load()
-        assert self.check_fs(), "No filesystem handler installed"
+        if not self.check_fs():
+            raise Exception("No filesystem handler installed")
 
         data = self.load_dict("list_data.yml")
         self.index = data.get("index")
@@ -30,14 +26,18 @@ class ListData(Data):
 
     def save(self) -> None:
         super().save()
-        assert self.check_fs(), "No filesystem handler installed"
-        assert self.fs.mode == "w", "Data packet is open read only"
+        if not self.check_fs():
+            raise Exception("No filesystem handler installed.")
+        if not self.fs.mode == "w":
+            raise Exception("Data packet is open read only.")
 
         self.save_dict("list_data.yml", {"index": self.index, "data": self.data})
 
     def create_data(self, data_type: str, index: str = None) -> Data:
-        assert self.fs.mode == "w", "Data packet is open read only"
-        assert data_type in DataManager._data_name_lut, f"Unknown data type {data_type}"
+        if not self.fs.mode == "w":
+            raise Exception("Data packet is open read only.")
+        if not data_type in DataManager._data_name_lut:
+            raise Exception(f"Unknown data type {data_type}.")
 
         data = DataManager._data_name_lut[data_type]()
         data._register_fs_handler(LocalFSHandler(self.fs, data.id))
@@ -70,28 +70,32 @@ class ListData(Data):
         return len(self.index)
 
     def __iter__(self):
+        if len(self.index) != len(self.data):
+            raise ValueError(
+                f"Length mismatch: index={len(self.index)} data={len(self.data)}"
+            )
+
         for i, data_id in zip(self.index, self.data):
-            data = Data()
-            data._register_fs_handler(LocalFSHandler(self.fs, data_id))
-            data_type = None
-            with data:
-                data_type = data.type
+            probe = Data()
+            probe._register_fs_handler(LocalFSHandler(self.fs, data_id))
 
-            assert data_type in DataManager._data_name_lut, f"Unknown data type {data_type}"
+            with probe:
+                data_type = probe.type
 
-            data = DataManager._data_name_lut[data_type]()
-            data._register_fs_handler(LocalFSHandler(self.fs, data_id))
+            if data_type not in DataManager._data_name_lut:
+                raise ValueError(f"Unknown data type {data_type}")
 
-            yield i, data
+            typed = DataManager._data_name_lut[data_type]()
+            typed._register_fs_handler(LocalFSHandler(self.fs, data_id))
+            yield i, typed
 
-    def extract_all(self, data_manager: DataManager) -> None:
-
-        for i, data in self:
+    def archive_all(self, data_manager: DataManager) -> None:
+        for _, data in self:
             with data:
                 output_path = data_manager._create_data_path(data.id)
                 with zipfile.ZipFile(output_path, "w") as z:
                     for file in data.fs.list_files():
-                        logging.info(f"Extract {file}")
+                        logging.info(f"Archiving {file}.")
                         with data.fs.open_file(file) as f_in, z.open(file, "w") as f_out:
                             while True:
                                 chunk = f_in.read(1024)
