@@ -68,11 +68,12 @@ class YoloX():
         self.nms_thresh = cfg["nms_thresh"]
 
         # test_size must match the training input_size exactly
+        self.test_size = self.exp.test_size # default is determined by exp
         if "test_size" in cfg:
-            self.test_size = tuple(cfg["test_size"])
-            self.exp.test_size = self.test_size
+            if cfg["test_size"]:
+                self.test_size = tuple(cfg["test_size"])
+                self.exp.test_size = self.test_size
         else:
-            self.test_size = self.exp.test_size
             logging.warning(
                 "No test_size in inference_params -> using exp default "
                 f"{self.test_size}. Make sure this matches your training input_size."
@@ -95,7 +96,7 @@ class YoloX():
             logging.info("[inference] Checkpoint loaded successfully.")
         else:
             logging.warning(
-                "[inference] No checkpoint provided — running with random weights. "
+                "[inference] No checkpoint provided -> running with random weights. "
                 "Set model_chkpt in your config."
             )
 
@@ -150,9 +151,8 @@ class YoloX():
         self.det_shape = (self.h, self.w)
 
         images = torch.from_numpy(processed).to(self.device)
-        if fp16:
-            images = images.half()
-
+        if fp16: images = images.half()
+            
         return {
             "inputs": images,
             "shape": last_hwc_shape,
@@ -213,7 +213,7 @@ class YoloX():
                     "cls_id": int(b[-1]),
                     "conf": float(b[-2]),
                 })
-                logging.debug(bbox_list[-1])
+                logging.error(bbox_list[-1])
 
             self.state.append(bbox_list)
             self.img_id += 1

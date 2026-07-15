@@ -103,6 +103,7 @@ class ObjectTracker(
                     # -------> detect & track
                     preproced_outputs = self.detector.preprocess(frame)
                     _ = self.detector.run_inference(preproced_outputs)
+                    logging.error(f'MB DET: {len(self.detector.state[start:end][0])}')
                     _ = self.tracker.process(
                             inputs = {
                                 'detections': self.detector.state[start:end],
@@ -110,9 +111,11 @@ class ObjectTracker(
                                 'det_shape': self.detector.det_shape,
                             }
                         )
-        track_results = self.tracker.state
-        logging.error(type(track_results))
-        logging.error(len(track_results))
+                    logging.error(f'MB TRK: {len(self.tracker.state)}')
+                    logging.error(f'MB TRK [0]: {self.tracker.state[0]}')
+                logging.error(f'looped frames: {loop_ctr}')
+        track_results = self.tracker.state # NOTE: returns a list of tracking results
+        logging.error(f'tracking results: {len(track_results)}')
         # -------> build required output format for consistency
         # TODO: use data schema below ... (team_id = 0 (inactive); 1 (ball); 2 (refs); >=3 (active teams)
         #       team_id will be re-assigned by 'team_assignment' plugin at some point anyways.
@@ -125,17 +128,18 @@ class ObjectTracker(
             DEFAULT_TEAM_ID: {"id": DEFAULT_TEAM_ID, "name": "Team A"},
         }
         
-        for i, per_frame_track_results in enumerate(track_results):
-            logging.error(type(per_frame_track_results))
-            logging.error(len(per_frame_track_results))
+        # logging.error(track_results[-1])
+        for i, per_frame_track_results in enumerate(track_results): # NOTE: returns a dict of 5 entries per frame
+            logging.error(f'per frame length: {len(per_frame_track_results)}')
             for (track_id, track_score, track_xywh, team_id) in zip(
                 per_frame_track_results['track_ids'],
                 per_frame_track_results['track_scores'],
                 per_frame_track_results['track_boxes'],
                 per_frame_track_results['team_ids']
             ):
-                frame_time = round((i/batch_size)*1000.) # TODO: check if frame_time is correct, got rid of "fps" as param.
-                logging.error(frame_time)
+                logging.error(f'{len(track_id)}, {len(track_score)}, {len(track_xywh)}, {len(team_id)}')
+                frame_time = round((i/fps)*1000.) # TODO: check if frame_time is correct, got rid of "fps" as param.
+                logging.error(f'frame_time: {frame_time}')
                 # coord normalization
                 x_norm = int(track_xywh[0]) / self.detector.w
                 y_norm = int(track_xywh[1]) / self.detector.h
@@ -143,8 +147,8 @@ class ObjectTracker(
                 h_norm = int(track_xywh[3]) / self.detector.h
             
                 for tracklet in zip(track_id, track_score, track_xywh, team_id):
-                    logging.error(f'{track_id}, {track_score}, {track_xywh}, {team_id}')
-                
+                    # logging.error(f'{track_id}, {track_score}, {track_xywh}, {team_id}')
+                    id = 0
                     # TODO: implement correct data struct, also keep in mind that i need another structure for reid & team assign.
                     # bbox = [
                     #     track_id, DEFAULT_TEAM_ID, 0,

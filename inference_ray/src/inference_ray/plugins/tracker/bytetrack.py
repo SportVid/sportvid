@@ -48,11 +48,9 @@ class ByteTrack():
         else:
             detections = []
             for det in inputs['detections']:
-                if det == []: det_merged = np.empty((0,5))
-                else:
-                    det_bbox = np.array([det_['xyxy']for det_ in det]) # [N,4]
-                    det_scores = np.array([det_['conf'] for det_ in det]) # [N,1]
-                    det_merged = np.hstack([det_bbox, det_scores[:, np.newaxis]]) # [N,5]
+                det_bbox = np.array([det_['xyxy']for det_ in det]) # [N,4]
+                det_scores = np.array([det_['conf'] for det_ in det]) # [N,1]
+                det_merged = np.hstack([det_bbox, det_scores[:, np.newaxis]]) # [N,5]
                 
                 detections.append(det_merged)
         
