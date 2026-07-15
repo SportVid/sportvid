@@ -154,7 +154,12 @@ class TrackerParamsSerializer(serializers.Serializer):
 
 @PluginManager.export_serializer("object_tracker")
 class ObjectTrackerSerializer(serializers.Serializer):
-    fps = serializers.IntegerField(required=False, min_value=1, max_value=30)
+    fps = serializers.IntegerField(
+        required=False, 
+        min_value=1, 
+        max_value=30,
+        default=10
+    )
     detector = serializers.ChoiceField(
         choices=DETECTOR_CHOICES,
         required=False,

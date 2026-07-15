@@ -13,11 +13,6 @@ default_config = {
     "data_dir": "/data/",
     "host": "localhost",
     "port": 6379,
-    "fps": 30,
-    "detector": "yolox",
-    "detector_params": {},
-    "tracker": "bytetrack",
-    "tracker_params": {}
 }
 
 requires = {
@@ -77,12 +72,14 @@ class ObjectTracker(
     
         # -------> decode video and pass it to detector
         batch_size = parameters["detector_params"]["batch_size"]
+        fps = parameters["fps"]
+        parameters["tracker_params"].update({"frame_rate" : fps})
         with inputs["video"] as input_data:
             with input_data.open_video("r") as f_video:
                 video_batcher = VideoBatcher(
                     VideoDecoder(
                         f_video, 
-                        fps=batch_size, 
+                        fps=fps, 
                         extension=f".{input_data.ext}"
                     ),
                     batch_size=batch_size,
@@ -114,12 +111,14 @@ class ObjectTracker(
                             }
                         )
         track_results = self.tracker.state
+        logging.error(type(track_results))
+        logging.error(len(track_results))
         # -------> build required output format for consistency
         # TODO: use data schema below ... (team_id = 0 (inactive); 1 (ball); 2 (refs); >=3 (active teams)
         #       team_id will be re-assigned by 'team_assignment' plugin at some point anyways.
         bboxes_dict = defaultdict(list)
         meta_dict = defaultdict(list)
-        unique_player_ids = set
+        unique_player_ids = set()
         
         DEFAULT_TEAM_ID = 3
         team_id_meta = {
@@ -127,6 +126,8 @@ class ObjectTracker(
         }
         
         for i, per_frame_track_results in enumerate(track_results):
+            logging.error(type(per_frame_track_results))
+            logging.error(len(per_frame_track_results))
             for (track_id, track_score, track_xywh, team_id) in zip(
                 per_frame_track_results['track_ids'],
                 per_frame_track_results['track_scores'],
