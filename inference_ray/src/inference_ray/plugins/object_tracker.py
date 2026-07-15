@@ -113,55 +113,60 @@ class ObjectTracker(
                                 'det_shape': self.detector.det_shape,
                             }
                         )
-        logging.error(type(self.tracker.state)) 
+        track_results = self.tracker.state
         # -------> build required output format for consistency
         # TODO: use data schema below ... (team_id = 0 (inactive); 1 (ball); 2 (refs); >=3 (active teams)
         #       team_id will be re-assigned by 'team_assignment' plugin at some point anyways.
         bboxes_dict = defaultdict(list)
         meta_dict = defaultdict(list)
-        """
+        unique_player_ids = set
+        
         DEFAULT_TEAM_ID = 3
-        bboxes_dict = defaultdict(list)
-        unique_player_ids = set()
-        for i, frame_info in enumerate(results):
-            frame_time = round((i/args.fps)*1000.)
-            for id, score, box in zip(
-                frame_info["track_ids"],
-                frame_info["track_scores"],
-                frame_info["track_boxes"],
-            ):
-                # Normalize coordinates once
-                x_norm = int(box[0]) / img_info["width"]
-                y_norm = int(box[1]) / img_info["height"]
-                w_norm = int(box[2]) / img_info["width"]
-                h_norm = int(box[3]) / img_info["height"]
-
-                bbox = [
-                    id, DEFAULT_TEAM_ID, 0,
-                    x_norm + (w_norm / 2), y_norm + h_norm,
-                    f'{i}-{id}',
-                    x_norm, y_norm, w_norm, h_norm,
-                    score
-                ]
-                bboxes_dict[frame_time].append(bbox)
-                unique_player_ids.add(id)
-
-        # New schema: separate dicts per entity kind. ByteTrack populates only player_ids
-        # (with team_id=3); ref_ids/ball_ids stay empty until a classification plugin runs.
         team_id_meta = {
             DEFAULT_TEAM_ID: {"id": DEFAULT_TEAM_ID, "name": "Team A"},
         }
+        
+        for i, per_frame_track_results in enumerate(track_results):
+            for (track_id, track_score, track_xywh, team_id) in zip(
+                per_frame_track_results['track_ids'],
+                per_frame_track_results['track_scores'],
+                per_frame_track_results['track_boxes'],
+                per_frame_track_results['team_ids']
+            ):
+                frame_time = round((i/batch_size)*1000.) # TODO: check if frame_time is correct, got rid of "fps" as param.
+                logging.error(frame_time)
+                # coord normalization
+                x_norm = int(track_xywh[0]) / self.detector.w
+                y_norm = int(track_xywh[1]) / self.detector.h
+                w_norm = int(track_xywh[2]) / self.detector.w
+                h_norm = int(track_xywh[3]) / self.detector.h
+            
+                for tracklet in zip(track_id, track_score, track_xywh, team_id):
+                    logging.error(f'{track_id}, {track_score}, {track_xywh}, {team_id}')
+                
+                    # TODO: implement correct data struct, also keep in mind that i need another structure for reid & team assign.
+                    # bbox = [
+                    #     track_id, DEFAULT_TEAM_ID, 0,
+                    #     x_norm + (w_norm / 2), y_norm + h_norm,
+                    #     f'{i}-{id}',
+                    #     x_norm, y_norm, w_norm, h_norm,
+                    #     score
+                    # ]
+                    # TODO: why is this wrapped in a list?
+                    # bboxes_dict[frame_time].append([bbox])
+                unique_player_ids.add(id)
+        
         player_id_meta = {
             pid: {"id": pid, "name": str(pid), "number": pid, "team_id": DEFAULT_TEAM_ID}
             for pid in sorted(unique_player_ids)
         }
+        
         meta_dict = {
             "team_ids": team_id_meta,
             "player_ids": player_id_meta,
             "ref_ids": {},
             "ball_ids": {},
         }
-        """
         
         raise Exception("ggwp")
         

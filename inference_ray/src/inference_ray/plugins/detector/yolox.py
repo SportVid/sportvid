@@ -37,13 +37,14 @@ class YoloX():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.state = list()
         self.img_id = 0
+        
         self.detector_params = detector_params
         
         from yolox.exp import get_exp
         self.exp = get_exp(None, model_path)
         
         self.batch_size = batch_size
-        self.checkpoint = kwargs.get("checkpoint", None)
+        self.checkpoint = detector_params.get("checkpoint", None)
         self.w, self.h = image_size
 
         self._init_inference(detector_params)
