@@ -16,7 +16,7 @@ default_yolox_params = {
     "num_classes": 1, 
     "decode": True,
     "model_path": "yolox-x",
-    "checkpoint": "models/bytetrack/bytetrack_x_mot17.pth"
+    "checkpoint": "/models/yolox/bytetrack_x_mot17.pth.tar"
 }
 
 default_yoloultra_params = {
@@ -30,8 +30,8 @@ default_yoloultra_params = {
     "max_det": 100,             # max amount of detections per frame
     "embed": None,              # specify layers from which to extract feature vectors or embeddings
     "verbose": False,
-    "model_path": "models/yolo_ultra/yolo12x.pt",
-    "checkpoint": "models/yolo_ultra/yolo12x.pt"
+    "model_path": "/models/yolo_ultra/yolo12x.pt",
+    "checkpoint": "/models/yolo_ultra/yolo12x.pt"
 }
 
 default_rfdetr_params = {
@@ -42,7 +42,7 @@ default_rfdetr_params = {
     "max_det": 100,
     "resolution": 1288,         # has to be divisible by 56: [672,728,784,896,1008,1064,1120]
     "verbose": False,
-    "checkpoint": "models/detr/rf-detr-large.pth"
+    "checkpoint": "/models/detr/rf-detr-large.pth"
 }
 
 default_rtdetr_params = {
@@ -50,7 +50,7 @@ default_rtdetr_params = {
     "conf": 0.25,
     "classes": [0, 32],         # default COCO: 0 - person, 32 - ball
     "verbose": False, 
-    "checkpoint": "models/detr/rtdetr-x.pt"
+    "checkpoint": "/models/detr/rtdetr-x.pt"
 }
 
 default_bytetrack_params = {

@@ -36,6 +36,7 @@ class YoloX():
     ):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.state = list()
+        self.img_id = 0
         self.detector_params = detector_params
         
         from yolox.exp import get_exp
@@ -118,21 +119,24 @@ class YoloX():
             dict with 'inputs' (model-ready tensor), 'shape', 'ratio' (list[float])
         """
         from yolox.data.data_augment import preproc
-        
-        input_shape = inputs["frame"].shape  # (N, C, H, W)
-        actual_batch = input_shape[0]
+
+        input_shape = inputs["frame"].shape  # TODO: (N, C, H, W) or (N, W, H, C)
         fp16 = self.cfg.get("fp16", False)
 
-        processed = np.zeros(
-            (actual_batch, input_shape[1], self.test_size[0], self.test_size[1]),
+        processed = np.zeros( # (N, C, H, W)
+            (input_shape[0], input_shape[3], self.test_size[0], self.test_size[1]),
             dtype=np.float16 if fp16 else np.float32,
         )
-        assert input_shape[1] == 3, "Expected 3-channel RGB input"
+        assert input_shape[3] == 3, "Expected 3-channel RGB input"
 
         ratios = []
         last_hwc_shape = None
         for i, frame in enumerate(inputs["frame"]):
-            img_hwc = frame.permute(1, 2, 0).numpy()  # (H, W, C)
+            img_hwc = frame
+            # NOTE: if input comes in as (N, W, H, C):
+            # img_hwc = frame.permute(1, 2, 0).numpy() # torch
+            # img_hwc = np.permute_dims(frame, (1, 2, 0)) # (H, W, C) # numpy
+            # logging.error("img_hwc type=%s shape=%s dtype=%s", type(img_hwc), getattr(img_hwc, "shape", None), getattr(img_hwc, "dtype", None))
             pimg, ratio = preproc(img_hwc, self.test_size, self.rgb_means, self.std)
             processed[i] = pimg
             ratio_scalar = (

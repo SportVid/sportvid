@@ -74,39 +74,46 @@ class ObjectTracker(
         TRACKER_MAP = {
            "bytetrack": ByteTrack
         }
-        
-        logging.error(f"PLUGIN PARAMS: {parameters}")
+    
         # -------> decode video and pass it to detector
+        batch_size = parameters["detector_params"]["batch_size"]
         with inputs["video"] as input_data:
             with input_data.open_video("r") as f_video:
-                video_decoder = VideoBatcher(
+                video_batcher = VideoBatcher(
                     VideoDecoder(
                         f_video, 
-                        fps=parameters["detector_params"]["batch_size"], 
+                        fps=batch_size, 
                         extension=f".{input_data.ext}"
                     ),
-                    batch_size=parameters.get("batch_size"),
+                    batch_size=batch_size,
                 )
-                num_frames = (video_decoder.duration() * video_decoder.fps()) // parameters.get("batch_size")
+                num_frames = (video_batcher.duration() * video_batcher.fps()) // batch_size
                 # -------> instantiate detector & tracker objects
-                self.detector = DETECTOR_MAP[self.parameters.detector](
+                self.detector = DETECTOR_MAP[parameters["detector"]](
                     model_path=parameters["detector_params"]["model_path"],
-                    batch_size=parameters["detector_params"]["batch_size"],
-                    image_size=video_decoder._size,
+                    batch_size=batch_size,
+                    image_size=video_batcher.video_decoder._size,
                     detector_params=parameters["detector_params"],
                     device="cuda",
                 )
-                self.tracker = TRACKER_MAP[self.parameters.tracker](
+                self.tracker = TRACKER_MAP[parameters["tracker"]](
                     tracker_params=parameters["tracker_params"],
                     device="cuda",
                 )
-                for i, frame in enumerate(video_decoder):
-                    # -------> process detections
-                    preproced_outputs = self.detector.preprocess(video_decoder)
-                    raw_outputs = self.detector.run_inference(preproced_outputs)
-                    logging.error(type(raw_outputs))
-                    # -------> TOOD: process tracking       
-
+                for loop_ctr, frame in enumerate(video_batcher):
+                    start = loop_ctr * batch_size
+                    end = start + batch_size
+                    # -------> detect & track
+                    preproced_outputs = self.detector.preprocess(frame)
+                    _ = self.detector.run_inference(preproced_outputs)
+                    _ = self.tracker.process(
+                            inputs = {
+                                'detections': self.detector.state[start:end],
+                                'image_shape': (self.detector.h, self.detector.w), 
+                                'det_shape': self.detector.det_shape,
+                            }
+                        )
+        logging.error(type(self.tracker.state)) 
         # -------> build required output format for consistency
         # TODO: use data schema below ... (team_id = 0 (inactive); 1 (ball); 2 (refs); >=3 (active teams)
         #       team_id will be re-assigned by 'team_assignment' plugin at some point anyways.
@@ -155,6 +162,9 @@ class ObjectTracker(
             "ball_ids": {},
         }
         """
+        
+        raise Exception("ggwp")
+        
         with data_manager.create_data("BboxesData") as output_data:
             output_data.bboxes = json.dumps(bboxes_dict)
             output_data.meta_data = json.dumps(meta_dict)

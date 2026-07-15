@@ -86,7 +86,7 @@ class AnalyserPlugin(Plugin):
         input_parameters = self._parameters
         if parameters is not None:
             input_parameters.update(parameters)
-            
+
         logging.info(f"[Plugin] {self._name} started.")
         result = self.call(inputs, data_manager, input_parameters, callbacks=callbacks)
         logging.info(f"[Plugin] {self._name} done.")
@@ -138,7 +138,7 @@ class AnalyserPluginManager(Manager):
                 f"{self.status_base_url}/api/serve/applications/"
             ).json()
         except:
-            logging.error("AnalyserPluginMananger: Can't get status from ray server.")
+            logging.error("[AnalyserPluginMananger] Can't get status from ray server.")
             return []
 
         running_model_map = {}
@@ -193,7 +193,7 @@ class AnalyserPluginManager(Manager):
                 plugin_to_run = plugin_cls
 
         if plugin_to_run is None:
-            logging.error(f"[AnalyserPluginManager] Plugin: {plugin} not found.")
+            logging.error(f"[AnalyserPluginManager] Plugin '{plugin}' not found.")
             return None
 
         return plugin_to_run(config)
@@ -209,7 +209,7 @@ class AnalyserPluginManager(Manager):
         plugins = {x["plugin"]: x for x in self.plugin_status()}
 
         if plugin not in plugins:
-            logging.error(f"[AnalyserPluginManager] Plugin: {plugin} not found.")
+            logging.error(f"[AnalyserPluginManager] Plugin '{plugin}' not found.")
             return None
 
         plugin_to_run = plugins[plugin]
@@ -224,14 +224,14 @@ class AnalyserPluginManager(Manager):
                 },
             )
         except:
-            logging.error("AnalyserPluginMananger: Can't start plugin on the ray server.")
+            logging.error("[AnalyserPluginMananger]: Can't start plugin on the ray server.")
             return []
 
         try:
             data = results.json()
         except:
-            logging.error(f"AnalyserPluginMananger: {results}")
-            logging.error("AnalyserPluginMananger: Can't decode response from ray server.")
+            logging.error(f"[AnalyserPluginMananger]: {results}")
+            logging.error("[AnalyserPluginMananger]: Can't decode response from ray server.")
             return []
 
         return data

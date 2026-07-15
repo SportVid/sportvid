@@ -33,6 +33,7 @@ enum DataType {
   INT_TYPE = 2;
   FLOAT_TYPE = 3;
   BOOL_TYPE = 4;
+  DICT_TYPE = 5;
 }
 
 message PluginInfoParameter {

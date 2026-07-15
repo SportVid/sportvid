@@ -160,11 +160,11 @@ def run_plugin(args):
                     plugin_parameters[parameter.get("name")] = str(
                         parameter.get("value")
                     )
-                if parameter.get("type") == "DICT_DATA":
+                if parameter.get("type") == "DICT_TYPE":
                     plugin_parameters[parameter.get("name")] = json.loads(
                         parameter.get("value")
                     )
-        logging.error(f'GRPC SERVER PLUGIN_PARAMS: {plugin_parameters}')
+        
         callbacks = [AnalyserProgressCallback(shared)]
         results = plugin_manager(
             plugin=params.get("plugin"),

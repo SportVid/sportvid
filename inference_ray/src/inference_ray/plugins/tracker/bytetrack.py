@@ -34,21 +34,25 @@ class ByteTrack():
         
         self.state = list()
         
-        self.tracker_params = tracker_params
+        from types import SimpleNamespace
+        self.tracker_params = SimpleNamespace(**tracker_params)
         
         from yolox.tracker.byte_tracker import BYTETracker
         self.tracker = BYTETracker(args=self.tracker_params)
         
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Brings the detection into the correct format required by BYTE. """
+        logging.error(inputs["detections"])
         if not inputs or not inputs['detections']: 
             detections = np.empty((0, 5))
         else:
             detections = []
             for det in inputs['detections']:
-                det_bbox = np.array([det_['xyxy']for det_ in det]) # [N,4]
-                det_scores = np.array([det_['conf'] for det_ in det]) # [N,1]
-                det_merged = np.hstack([det_bbox, det_scores[:, np.newaxis]]) # [N,5]
+                if det == []: det_merged = np.empty((0,5))
+                else:
+                    det_bbox = np.array([det_['xyxy']for det_ in det]) # [N,4]
+                    det_scores = np.array([det_['conf'] for det_ in det]) # [N,1]
+                    det_merged = np.hstack([det_bbox, det_scores[:, np.newaxis]]) # [N,5]
                 
                 detections.append(det_merged)
         
