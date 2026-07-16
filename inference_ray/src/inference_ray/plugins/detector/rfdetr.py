@@ -5,7 +5,6 @@ from PIL import Image
 from typing import Any, Dict
 
 
-
 def xyxy_to_xywh(xyxy):
     """
     Transforms [x1,y1,x2,y2] -> [center of x,c enter of y, width, height]
@@ -22,61 +21,63 @@ def xyxy_to_xywh(xyxy):
     
     return np.array((cx,cy,w,h))
 
+
 class RFDetr():
 
     def __init__(
         self, 
         model_path: str,
-        mode: str,
-        batch_size: int,
         image_size: tuple[int, int],
-        inference_params: Dict [Any, Any],
-        finetune_params: Dict [Any, Any],
-        device: str = "cuda",
+        detector_params: Dict [Any, Any],
         **kwargs
     ):
-        from rfdetr import RFDETRBase, RFDETRNano, RFDETRSmall, RFDETRMedium, RFDETRLarge
+        from rfdetr import RFDETRLarge
         
-        super().__init__(
-            model_path, mode, batch_size, image_size, inference_params, finetune_params, device
-        )
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.state = list()
+        self.img_id = 0
+        
+        self.detector_params = detector_params
+    
         self.det_shape = image_size
-        self.model_variant = kwargs.get('model_variant', 'medium')
-        self.classes_to_detect = kwargs.get('classes_to_detect', ['ball', 'player', 'referee', 'goalkeeper']) # TODO: fix...
+        self.classes_to_detect = detector_params .get('classes_to_detect')
         self.num_classes = len(self.classes_to_detect)
-        self.min_confidence = self.cfg.get('conf_thresh', 0.25)
-        self.resolution = self.cfg.get('resolution', 672)
+        
+        self.min_confidence = detector_params.get('conf', 0.25)
+        self.resolution = detector_params.get('resolution', 672)
+        self.max_det = detector_params.get('max_det', 100)
         
         pretrain_weights = None
-        if model_path:
-            if str(model_path) != "" or str(model_path) != "None":
-                pretrain_weights = str(model_path)
+        self.checkpoint = detector_params.get("checkpoint", None)
+        if self.checkpoint :
+            if str(self.checkpoint ) != "" or str(self.checkpoint ) != "None":
+                pretrain_weights = str(self.checkpoint)
+        # TODO: instantiate from model_path string representation.
         self.model = RFDETRLarge(
-            device=device,
+            device=self.device,
             pretrain_weights=pretrain_weights
         )
-        
-        # move to device and set eval mode
         self.model.model.model.to(self.device)
         self.model.model.model.eval()
         
-        logging.info(f"Model loaded successfully...")
-        
-        if self.mode == 'inference' and hasattr(self.model, 'optimize_for_inference'):
-            self.model.optimize_for_inference(compile=False)
+        logging.info(f"Model loaded successfully from checkpoint '{self.checkpoint}'...")
+        self.model.optimize_for_inference(compile=False)
 
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs) -> Dict[Any, Any]:
-        input = inputs['frame'] # expected shape (N, C, H, W)
-        input = input.to(self.device).float()
-        self.h, self.w = input.shape[2], input.shape[3]
+        input_shape = inputs["frame"].shape  # NOTE: VideoDecoder returns (N,H,W,C)
+        
+        assert input_shape[3] == 3, "Expected 3-channel RGB input"
         
         pil_images = []
-        for i in range(input.shape[0]):
+        for i, frame in enumerate(inputs['frame']):
             # NOTE: RF-DETR expects PIL image format (H,W,C)
-            img_np = input[i].permute(1, 2, 0).cpu().numpy().astype(np.uint8)
-            pil_images.append(Image.fromarray(img_np))
-            
+            # img_np = input[i].permute(1, 2, 0).cpu().numpy().astype(np.uint8)
+            img_hwc = frame
+            pil_images.append(Image.fromarray(img_hwc))
+        
+        self.h, self.w = input.shape[2], input.shape[3]
+        
         return {
             'inputs': pil_images,
             'shape': (self.h, self.w)
@@ -95,7 +96,6 @@ class RFDetr():
             
             bbox_list = []
             for box, score, class_id in zip(results.xyxy, results.confidence, results.class_id):
-                # if int(class_id) in self.classes_to_detect: # TODO!
                 bbox_dict = dict(
                     xyxy=box,
                     xywh=xyxy_to_xywh(box),
@@ -108,15 +108,3 @@ class RFDetr():
             self.img_id += 1
             
         return batch_results
-
-    def run_finetune(self, inputs):
-        return {}
-
-    def reset_state(self):
-        super().reset_state()
-
-    def save_state(self, state_path):
-        super().save_state(state_path)
-    
-    def load_state(self, state_path):
-        return super().load_state(state_path)

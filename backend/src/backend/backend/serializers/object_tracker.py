@@ -41,7 +41,7 @@ default_yoloultra_params = {
     "max_det": 100,             # max amount of detections per frame
     "embed": None,              # specify layers from which to extract feature vectors or embeddings
     "verbose": False,
-    "model_path": "/models/yolo_ultra/yolo12x.pt",
+    "model_path": "TODO",
     "checkpoint": "/models/yolo_ultra/yolo12x.pt",
     # TODO!
     "output_class_mapping": {
@@ -59,33 +59,32 @@ default_yoloultra_params = {
 default_rfdetr_params = {
     "batch_size": 1,
     "conf": 0.5,               
-    "classes": [0, 32],         # default COCO: 0 - person, 32 - ball
-    # "classes": ['ball', 'player', 'referee', 'goalkeeper'], # soccernet checkpoint
-    "max_det": 100,
-    "resolution": 1288,         # has to be divisible by 56: [672,728,784,896,1008,1064,1120]
+    # "classes": [0, 32],  # default COCO: 0 - person, 32 - ball
+    "classes": ['ball', 'player', 'referee', 'goalkeeper'], # SoccerNet checkpoint
+    "resolution": 1288,  # divisible by 56 -> [672,728,784,896,1008,1064,1120]
     "verbose": False,
-    "checkpoint": "/models/detr/rf-detr-large.pth",
-    # TODO!
+    "model_path": "RFDETRLarge",
+    "checkpoint": "/models/detr/rf-detr-large-sn.pth",
     "output_class_mapping": {
         "-1": {
             "entity_type": "unknown",
             "default_team": "-1"
         },
         "0": {
-            "entity_type": "athlete",
-            "default_team": "3"
-        },
-        "1": {
-            "entity_type": "sports ball",
+            "entity_type": "ball",
             "default_team": "0"
         },
-        "2": {
-            "entity_type": "goalkeeper",
+        "1": {
+            "entity_type": "player",
             "default_team": "3"
         },
-        "3": {
+        "2": {
             "entity_type": "referee",
             "default_team": "2"
+        },
+        "3": {
+            "entity_type": "goalkeeper",
+            "default_team": "3"
         }
     }
 }

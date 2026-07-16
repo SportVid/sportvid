@@ -16,7 +16,7 @@ dependencies = [
     "pip>=25.0.1",
     "protobuf>=5.29.3",
     "requests>=2.32.3",
-    "numpy>=2.1.1", # NOTE: old version -> "numpy==1.26.4"
+    "numpy>=2.1.1",
     "torchvision",
     "pandas>=2.0.0",
     "tqdm>=4.67.1",
@@ -34,7 +34,6 @@ dependencies = [
     "scipy>=1.15.2",
     "scikit-learn>=1.6.1",
     "opencv-python-headless>=4.11.0.86",
-    # "opencv_python", Should be redundant with opencv-python-headless
     "floodlight==1.1.0",
     "lap",
     "motmetrics",
@@ -45,7 +44,9 @@ dependencies = [
     "Pillow",
     "loguru",
     "scikit-image",
-    
+    "ultralytics>=8.0",
+    "rfdetr",
+    "torchreid"
 ]
 
 [tool.uv]

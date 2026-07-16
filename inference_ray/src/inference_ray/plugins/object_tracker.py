@@ -111,7 +111,6 @@ class ObjectTracker(
                 # -------> instantiate detector & tracker objects
                 self.detector = DETECTOR_MAP[parameters["detector"]](
                     model_path=parameters["detector_params"]["model_path"],
-                    batch_size=batch_size,
                     image_size=image_size,
                     detector_params=parameters["detector_params"],
                     device="cuda",

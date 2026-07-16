@@ -30,7 +30,6 @@ class YoloX():
     def __init__(
         self,
         model_path: str,
-        batch_size: int,
         image_size: tuple[int, int],
         detector_params: Dict [Any, Any],
         **kwargs,
@@ -44,7 +43,6 @@ class YoloX():
         from yolox.exp import get_exp
         self.exp = get_exp(None, model_path)
         
-        self.batch_size = batch_size
         self.checkpoint = detector_params.get("checkpoint", None)
         self.w, self.h = image_size
 
