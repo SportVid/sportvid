@@ -205,6 +205,30 @@ class Plugin(models.Model):
 class PluginRun(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     video = models.ForeignKey(Video, on_delete=models.CASCADE)
+    
+    # source data for plugin runs to delete data when plugin run is deleted (and vice versa for specific cases)
+    tracking_data = models.ForeignKey(
+        TrackingData,
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="plugin_runs",
+    )
+    calibration_asset = models.ForeignKey(
+        "CalibrationAssets",
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="plugin_runs",
+    )
+    source_plugin_run = models.ForeignKey(
+        "self",
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="derived_plugin_runs",
+    )
+    
     date = models.DateTimeField(auto_now_add=True)
     update_date = models.DateTimeField(auto_now_add=True)
     type = models.CharField(max_length=256)
@@ -776,3 +800,4 @@ class PointCorrespondence(models.Model):
             "compAreaCoordsRel": self.comp_area_coords_rel,
             "videoCoordsRel": self.video_coords_rel
         }
+

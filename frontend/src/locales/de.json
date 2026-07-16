@@ -71,7 +71,7 @@
     "home": "Startseite",
     "video_view": "Videos",
     "plugin_menu": "Plugin ausführen",
-    "history_menu": "Verlauf",
+    "history_menu": "Status",
     "shortcut_menu": "Kurzbefehle",
     "export_menu": "Exportieren",
     "user_menu": "Anmelden",
@@ -774,12 +774,45 @@
       "new_cluster": "Neuer Cluster",
       "move_existing": "In bestehenden Cluster verschieben"
     },
-    "history": {
-      "title": "Verlauf",
+    "status": {
+      "title": "Status",
+      "area": {
+        "posdata": "Positionsdaten",
+        "kpi": "KPIs"
+      },
+      "source": {
+        "bytetrack": "ByteTrack",
+        "dlt": "DLT-Kalibrierung",
+        "upload": "Upload"
+      },
+      "variant": {
+        "auto": "Automatisch:",
+        "manual": "Manuell:",
+        "or": "oder"
+      },
+      "state": {
+        "available": "Verfügbar",
+        "running": "Läuft",
+        "none": "Nicht vorhanden",
+        "error": "Fehler"
+      },
+      "kpi_requires_posdata": "Benötigt Positionsdaten",
       "plugin_name": "Plugin-Name",
       "date": "Datum",
       "progress": "Fortschritt",
-      "status": "Status"
+      "status": "Status",
+      "delete": {
+        "title": "Plugin-Läufe löschen",
+        "all": "Alle Plugin-Läufe löschen",
+        "plugin": "Plugin-bezogene Läufe löschen",
+        "video": "Video-bezogene Läufe löschen",
+        "selected": "Ausgewählte Läufe löschen",
+        "success": {
+          "all": "Alle Plugin-Läufe erfolgreich gelöscht",
+          "selected": "Ausgewählte Plugin-Läufe erfolgreich gelöscht"
+        },
+        "confirm": "Plugin-Läufe löschen? Dies kann nicht rückgängig gemacht werden."
+      }
     },
     "calibration_asset": {
       "create": {
@@ -815,7 +848,8 @@
         "modes": {
           "bytetrack": "ByteTrack Plugin",
           "manual": "Manueller Upload"
-        }
+        },
+        "not_calibrated": "nicht kalibriert"
       },
       "entity_colors": {
         "title": "Teamfarben ändern",

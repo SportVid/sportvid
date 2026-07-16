@@ -9,7 +9,7 @@ from django.views import View
 from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 
-from backend.models import Video, PluginRun
+from backend.models import Video, PluginRun, TrackingData
 from backend.plugin_manager import PluginManager
 from backend.utils import download_url, download_file, media_url_to_file
 
@@ -147,14 +147,38 @@ class PluginRunDelete(View):
             plugin_list = data.get("plugin_list")
 
             if list(plugin_list)[0] == 'all':
-                response, _ = PluginRun.objects.filter(video__owner=request.user).delete()
+                runs = PluginRun.objects.filter(video__owner=request.user)
             else:
-                response, _ = PluginRun.objects.filter(
+                runs = PluginRun.objects.filter(
                     id__in=plugin_list,
                     video__owner=request.user,
-                ).delete()
+                )
 
-            return JsonResponse({"status": "ok", "deleted_items": response})
+            # posdata_convert runs own the uploaded TrackingData they were
+            # created from -- deleting the run should delete that file too,
+            # so it doesn't keep showing up as available elsewhere. This
+            # also cascades away any kpi_computation run derived from the
+            # same file.
+            tracking_data_ids = list(
+                runs.filter(type="posdata_convert", tracking_data__isnull=False)
+                .values_list("tracking_data_id", flat=True)
+            )
+            cascaded_deleted = 0
+            if tracking_data_ids:
+                tdata_qs = TrackingData.objects.filter(id__in=tracking_data_ids)
+                total_size = sum(
+                    t.file_size + (t.meta_file_size if t.meta_file else 0) for t in tdata_qs
+                )
+                cascaded_deleted, _ = tdata_qs.delete()
+                if cascaded_deleted:
+                    request.user.used_storage_size = max(
+                        0, request.user.used_storage_size - total_size
+                    )
+                    request.user.save()
+
+            response, _ = runs.delete()
+
+            return JsonResponse({"status": "ok", "deleted_items": response + cascaded_deleted})
         except Exception:
             logger.exception("Failed to delete PluginRun")
             return JsonResponse({"status": "error"})

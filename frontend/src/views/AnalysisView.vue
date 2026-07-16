@@ -611,11 +611,11 @@ watch(
   ],
   ([del_all, del_selected]) => {
     if (del_all === true) {
-      pluginRunActionMessage.value = t("modal.history.delete.success.all");
+      pluginRunActionMessage.value = t("modal.status.delete.success.all");
       resetPluginRunActionSnackbar();
       positionDataStore.pluginRunDeleteAllSuccess = false;
     } else if (del_selected === true) {
-      pluginRunActionMessage.value = t("modal.history.delete.success.selected");
+      pluginRunActionMessage.value = t("modal.status.delete.success.selected");
       resetPluginRunActionSnackbar();
       positionDataStore.pluginRunDeleteSelectedSuccess = false;
     }

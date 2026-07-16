@@ -71,6 +71,11 @@ class KpiComputation(Task):
             if not calibration_id:
                 raise ValueError("calibration_id is required for format='sportvid'.")
 
+            bytetrack_run_db = PluginRun.objects.get(id=bytetrack_run_id)
+            if plugin_run is not None:
+                plugin_run.source_plugin_run = bytetrack_run_db
+                plugin_run.save()
+
             # Load BboxesData from the ByteTrack run
             bbox_results = PluginRunResult.objects.filter(
                 plugin_run_id=bytetrack_run_id,
@@ -171,6 +176,9 @@ class KpiComputation(Task):
         else:
             # --------> KINEXON / DFL: use raw TrackingData file
             tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
+            if plugin_run is not None:
+                plugin_run.tracking_data = tracking_data_db
+                plugin_run.save()
             delimiter = tracking_data_db.delimiter or ";"
 
             tracking_data_ = self.upload_td(client, tracking_data_db.file.hex, tracking_data_db.ext)

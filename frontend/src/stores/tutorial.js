@@ -84,11 +84,11 @@ export const useTutorialStore = defineStore("tutorial", () => {
       requirements: ["video-uploaded", "analysis-view-opened"],
     },
     {
-      id: "check-history",
+      id: "check-status",
       group: "basics",
-      name: t("modal.tutorial.check_history.name"),
-      description: t("modal.tutorial.check_history.description"),
-      icon: "mdi-history",
+      name: t("modal.tutorial.check_status.name"),
+      description: t("modal.tutorial.check_status.description"),
+      icon: "mdi-status",
       disabled: false,
       requirements: ["video-uploaded", "analysis-view-opened"],
     },
@@ -452,23 +452,23 @@ export const useTutorialStore = defineStore("tutorial", () => {
         },
       ],
     },
-    "check-history": {
+    "check-status": {
       steps: [
         {
-          id: "check-history-open",
-          text: t("tutorials.check_history.open_modal"),
+          id: "check-status-open",
+          text: t("tutorials.check_status.open_modal"),
           attachTo: {
-            element: '[data-tour="modal-history-open"]',
+            element: '[data-tour="modal-status-open"]',
             on: "bottom",
           },
           buttons: [],
           when: createClickToNextStepHandler(0, []),
         },
         {
-          id: "check-history-table",
-          text: t("tutorials.check_history.history_table"),
+          id: "check-status-table",
+          text: t("tutorials.check_status.status_table"),
           attachTo: {
-            element: '[data-tour="history-table"]',
+            element: '[data-tour="status-table"]',
             on: "top",
           },
           buttons: [
@@ -483,7 +483,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
             return new Promise((resolve) => {
               const check = () => {
                 if (!isTutorialRunning.value) return;
-                const el = document.querySelector('[data-tour="history-table"]');
+                const el = document.querySelector('[data-tour="status-table"]');
                 if (el) {
                   resolve();
                 } else {
@@ -495,10 +495,10 @@ export const useTutorialStore = defineStore("tutorial", () => {
           },
         },
         {
-          id: "check-history-delete",
-          text: t("tutorials.check_history.delete_panel"),
+          id: "check-status-delete",
+          text: t("tutorials.check_status.delete_panel"),
           attachTo: {
-            element: '[data-tour="history-delete-panel"]',
+            element: '[data-tour="status-delete-panel"]',
             on: "bottom",
           },
           buttons: [
