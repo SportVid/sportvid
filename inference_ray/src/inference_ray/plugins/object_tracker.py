@@ -74,6 +74,17 @@ class ObjectTracker(
         batch_size = parameters["detector_params"]["batch_size"]
         fps = parameters["fps"]
         parameters["tracker_params"].update({"frame_rate" : fps})
+        
+        # with inputs["video"] as input_data:
+        #     with input_data.open_video() as f_video:
+        #         video_decoder = VideoDecoder(
+        #             f_video,
+        #             fps=fps,
+        #             extension=f".{input_data.ext}",
+        #             ref_id=input_data.id,
+        #         )
+        #         image_size = video_decoder._size
+        
         with inputs["video"] as input_data:
             with input_data.open_video("r") as f_video:
                 video_batcher = VideoBatcher(
@@ -85,11 +96,13 @@ class ObjectTracker(
                     batch_size=batch_size,
                 )
                 num_frames = (video_batcher.duration() * video_batcher.fps()) // batch_size
+                image_size = video_batcher.video_decoder._size
+
                 # -------> instantiate detector & tracker objects
                 self.detector = DETECTOR_MAP[parameters["detector"]](
                     model_path=parameters["detector_params"]["model_path"],
                     batch_size=batch_size,
-                    image_size=video_batcher.video_decoder._size,
+                    image_size=image_size,
                     detector_params=parameters["detector_params"],
                     device="cuda",
                 )
@@ -97,86 +110,90 @@ class ObjectTracker(
                     tracker_params=parameters["tracker_params"],
                     device="cuda",
                 )
-                for loop_ctr, frame in enumerate(video_batcher):
-                    start = loop_ctr * batch_size
-                    end = start + batch_size
-                    # -------> detect & track
+                # -------> detect & track
+                for frame_id, frame in enumerate(video_batcher, start=0):
                     preproced_outputs = self.detector.preprocess(frame)
                     _ = self.detector.run_inference(preproced_outputs)
-                    logging.error(f'MB DET: {len(self.detector.state[start:end][0])}')
-                    _ = self.tracker.process(
-                            inputs = {
-                                'detections': self.detector.state[start:end],
-                                'image_shape': (self.detector.h, self.detector.w), 
-                                'det_shape': self.detector.det_shape,
-                            }
-                        )
-                    logging.error(f'MB TRK: {len(self.tracker.state)}')
-                    logging.error(f'MB TRK [0]: {self.tracker.state[0]}')
-                logging.error(f'looped frames: {loop_ctr}')
-        track_results = self.tracker.state # NOTE: returns a list of tracking results
-        logging.error(f'tracking results: {len(track_results)}')
-        # -------> build required output format for consistency
-        # TODO: use data schema below ... (team_id = 0 (inactive); 1 (ball); 2 (refs); >=3 (active teams)
-        #       team_id will be re-assigned by 'team_assignment' plugin at some point anyways.
-        bboxes_dict = defaultdict(list)
-        meta_dict = defaultdict(list)
-        unique_player_ids = set()
-        
-        DEFAULT_TEAM_ID = 3
-        team_id_meta = {
-            DEFAULT_TEAM_ID: {"id": DEFAULT_TEAM_ID, "name": "Team A"},
-        }
-        
-        # logging.error(track_results[-1])
-        for i, per_frame_track_results in enumerate(track_results): # NOTE: returns a dict of 5 entries per frame
-            logging.error(f'per frame length: {len(per_frame_track_results)}')
-            for (track_id, track_score, track_xywh, team_id) in zip(
-                per_frame_track_results['track_ids'],
-                per_frame_track_results['track_scores'],
-                per_frame_track_results['track_boxes'],
-                per_frame_track_results['team_ids']
-            ):
-                logging.error(f'{len(track_id)}, {len(track_score)}, {len(track_xywh)}, {len(team_id)}')
-                frame_time = round((i/fps)*1000.) # TODO: check if frame_time is correct, got rid of "fps" as param.
-                logging.error(f'frame_time: {frame_time}')
-                # coord normalization
-                x_norm = int(track_xywh[0]) / self.detector.w
-                y_norm = int(track_xywh[1]) / self.detector.h
-                w_norm = int(track_xywh[2]) / self.detector.w
-                h_norm = int(track_xywh[3]) / self.detector.h
-            
-                for tracklet in zip(track_id, track_score, track_xywh, team_id):
-                    # logging.error(f'{track_id}, {track_score}, {track_xywh}, {team_id}')
-                    id = 0
-                    # TODO: implement correct data struct, also keep in mind that i need another structure for reid & team assign.
-                    # bbox = [
-                    #     track_id, DEFAULT_TEAM_ID, 0,
-                    #     x_norm + (w_norm / 2), y_norm + h_norm,
-                    #     f'{i}-{id}',
-                    #     x_norm, y_norm, w_norm, h_norm,
-                    #     score
-                    # ]
-                    # TODO: why is this wrapped in a list?
-                    # bboxes_dict[frame_time].append([bbox])
-                unique_player_ids.add(id)
-        
-        player_id_meta = {
-            pid: {"id": pid, "name": str(pid), "number": pid, "team_id": DEFAULT_TEAM_ID}
-            for pid in sorted(unique_player_ids)
-        }
-        
-        meta_dict = {
-            "team_ids": team_id_meta,
-            "player_ids": player_id_meta,
-            "ref_ids": {},
-            "ball_ids": {},
-        }
-        
-        raise Exception("ggwp")
+                # TODO: check performance for 90m+ video footage.
+                _ = self.tracker.process(
+                        inputs = {
+                            'detections': self.detector.state,
+                            'image_shape': (self.detector.h, self.detector.w), 
+                            'det_shape': self.detector.det_shape,
+                        }
+                    )
+
+                track_results = self.tracker.state # NOTE: returns a list of per-frame tracking results
+
+                # -------> build the required output format for consistency with other plugins
+                tracklets = defaultdict(list)
+                unique_player_ids = set()
+                
+                DEFAULT_BYSTANDER_TEAM_ID = 0
+                DEFAULT_BALL_TEAM_ID = 1
+                DEFAULT_REF_TEAM_ID = 2 
+                DEFAULT_TEAM_ID = 3
+                
+                team_id_meta = {
+                    DEFAULT_BYSTANDER_TEAM_ID: {
+                        "name": "Bystander",
+                    },
+                    DEFAULT_BALL_TEAM_ID: {
+                        "name": "Ball",
+                    },
+                    DEFAULT_REF_TEAM_ID: {
+                        "name": "Referee"
+                    },
+                    DEFAULT_TEAM_ID: {
+                        "name": "Team A"
+                    },
+                }
+                
+                # TODO: create a tracklet to detection class mapping for the default team assignment at this stage.
+                
+                for frame_id, track in enumerate(track_results, start=0): # [N,5]
+                    for (track_id, track_score, track_xywh, team_id) in zip( # [5,]
+                        track['track_ids'],
+                        track['track_scores'],
+                        track['track_boxes'],
+                        track['team_ids']
+                    ):
+                        unique_player_ids.add(track_id)
+                        frame_time = round((frame_id/fps)*1000.)
+                        # coord normalization
+                        x_norm = int(track_xywh[0]) / self.detector.w
+                        y_norm = int(track_xywh[1]) / self.detector.h
+                        w_norm = int(track_xywh[2]) / self.detector.w
+                        h_norm = int(track_xywh[3]) / self.detector.h
+                        # construction of tracklet element
+                        tracklet = [
+                            int(frame_id),
+                            int(track_id),
+                            int(DEFAULT_TEAM_ID),
+                            float(track_xywh[0]), float(track_xywh[1]), float(track_xywh[2]), float(track_xywh[3]),
+                            float(x_norm + (w_norm / 2)), float(y_norm + h_norm),
+                            float(x_norm), float(y_norm), float(w_norm), float(h_norm),
+                            float(track_score),
+                        ]
+                        tracklets[frame_time].append([tracklet])        
+                
+                player_id_meta = {
+                    pid: {
+                        "id": pid, 
+                        "name": str(pid), 
+                        "number": pid, 
+                        "team_id": DEFAULT_TEAM_ID
+                    }
+                    for pid in sorted(unique_player_ids)
+                }
+                
+                meta_dict = {
+                    "team_ids": team_id_meta,
+                    "player_ids": player_id_meta
+                }
         
         with data_manager.create_data("BboxesData") as output_data:
-            output_data.bboxes = json.dumps(bboxes_dict)
+            output_data.bboxes = json.dumps(tracklets)
             output_data.meta_data = json.dumps(meta_dict)
             self.update_callbacks(callbacks, progress=1.0)
 

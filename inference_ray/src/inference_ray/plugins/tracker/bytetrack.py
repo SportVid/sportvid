@@ -51,9 +51,8 @@ class ByteTrack():
                 det_bbox = np.array([det_['xyxy']for det_ in det]) # [N,4]
                 det_scores = np.array([det_['conf'] for det_ in det]) # [N,1]
                 det_merged = np.hstack([det_bbox, det_scores[:, np.newaxis]]) # [N,5]
-                
                 detections.append(det_merged)
-        
+
         return dict({
             'detections': detections,
             'shape': inputs['image_shape'],
@@ -99,7 +98,6 @@ class ByteTrack():
                 img_shape,      # original image shape [H,W]
                 det_shape       # (H_model, W_model) -> detections coordinate space
             )
-            # logging.debug(online_targets)
 
             for tar in online_targets:
                 track_lwh = tar.tlwh
@@ -112,9 +110,6 @@ class ByteTrack():
                     online_scores.append(tar.score.item())
             
             xywh = np.array(online_tlwhs, dtype=np.float32)
-            # logging.debug(xywh.min(axis=0, keepdims=True))
-            # logging.debug(xywh.max(axis=0, keepdims=True))
-            
             team = np.full(len(online_ids), 3, dtype=np.int8)
 
             track_results = {

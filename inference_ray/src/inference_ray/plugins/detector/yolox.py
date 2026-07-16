@@ -19,7 +19,19 @@ def xyxy_to_xywh(xyxy):
     h = y2 - y1
     
     return np.array((cx,cy,w,h))
-    
+
+
+def _is_torch(x):
+    return isinstance(x, torch.Tensor)
+
+
+def _to_numpy(x):
+    if isinstance(x, np.ndarray):
+        return x
+    if isinstance(x, torch.Tensor):
+        return x.detach().cpu().numpy()
+    raise TypeError(f"Unsupported input type: {type(x)}")
+
 
 class YoloX():
     """
@@ -116,29 +128,29 @@ class YoloX():
         """
         Letterbox-resize each frame to test_size and normalise with ImageNet stats.
         Args:
-            inputs: dict with 'frame' tensor (N, C, H, W)
+            inputs: dict with 'frame' tensor (N, H, W, C)
         Returns:
             dict with 'inputs' (model-ready tensor), 'shape', 'ratio' (list[float])
         """
         from yolox.data.data_augment import preproc
 
-        input_shape = inputs["frame"].shape  # TODO: (N, C, H, W) or (N, W, H, C)
+        input_shape = inputs["frame"].shape  # NOTE: VideoDecoder returns (N,H,W,C)
         fp16 = self.cfg.get("fp16", False)
+
+        assert input_shape[3] == 3, "Expected 3-channel RGB input"
 
         processed = np.zeros( # (N, C, H, W)
             (input_shape[0], input_shape[3], self.test_size[0], self.test_size[1]),
             dtype=np.float16 if fp16 else np.float32,
         )
-        assert input_shape[3] == 3, "Expected 3-channel RGB input"
-
+    
         ratios = []
         last_hwc_shape = None
         for i, frame in enumerate(inputs["frame"]):
             img_hwc = frame
-            # NOTE: if input comes in as (N, W, H, C):
             # img_hwc = frame.permute(1, 2, 0).numpy() # torch
             # img_hwc = np.permute_dims(frame, (1, 2, 0)) # (H, W, C) # numpy
-            # logging.error("img_hwc type=%s shape=%s dtype=%s", type(img_hwc), getattr(img_hwc, "shape", None), getattr(img_hwc, "dtype", None))
+            logging.debug("img_hwc type=%s shape=%s dtype=%s", type(img_hwc), getattr(img_hwc, "shape", None), getattr(img_hwc, "dtype", None))
             pimg, ratio = preproc(img_hwc, self.test_size, self.rgb_means, self.std)
             processed[i] = pimg
             ratio_scalar = (
@@ -147,7 +159,7 @@ class YoloX():
             ratios.append(ratio_scalar)
             last_hwc_shape = img_hwc.shape
 
-        self.h, self.w = input_shape[2], input_shape[3]
+        self.h, self.w = input_shape[1], input_shape[2]
         self.det_shape = (self.h, self.w)
 
         images = torch.from_numpy(processed).to(self.device)
@@ -213,7 +225,6 @@ class YoloX():
                     "cls_id": int(b[-1]),
                     "conf": float(b[-2]),
                 })
-                logging.error(bbox_list[-1])
 
             self.state.append(bbox_list)
             self.img_id += 1
