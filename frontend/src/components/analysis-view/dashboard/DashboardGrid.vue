@@ -1,6 +1,6 @@
 <template>
-  <div class="dashboard-grid-viewport" ref="viewportRef" :style="viewportStyle">
-    <div class="dashboard-grid" ref="gridRef" :style="{ transform: `scale(${scale})` }">
+  <div class="dashboard-grid-viewport">
+    <div class="dashboard-grid" :class="{ 'dashboard-grid--editing': dashboardStore.editMode }">
       <div
         v-for="cell in allCells"
         :key="cell.id"
@@ -9,11 +9,12 @@
       >
         <div
           class="dashboard-grid-cell-wrapper"
+          :class="{ 'dashboard-grid-cell-wrapper--drop-target': cell.id === dragOverCellId }"
           :draggable="dashboardStore.editMode"
           @dragstart="onDragStart($event, cell.id)"
           @dragend="onDragEnd"
           @dragover="onDragOverCell($event, cell.id)"
-          @drop="onDrop($event, cell.id)"
+          @drop="onDrop($event)"
         >
           <DashboardCell :cell="cell" :row-idx="realRowIdx(cell.id)" :is-loading="isLoading" />
           <!-- Overlay only — the real card underneath stays mounted the whole
@@ -31,14 +32,14 @@
         @dragover.prevent="onDragOverAddSlot(slot.rowIdx)"
         @drop="onDropAddSlot($event, slot.rowIdx)"
       >
-        <AddWidgetCard :row-idx="slot.rowIdx" />
+        <AddWidgetCard :row-idx="slot.rowIdx" :dragging="isDragging" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from "vue";
+import { ref, computed } from "vue";
 import { useDashboardLayoutStore, previewReorderedLayout } from "@/stores/dashboard_layout";
 import DashboardCell from "@/components/analysis-view/dashboard/DashboardCell.vue";
 import AddWidgetCard from "@/components/analysis-view/dashboard/AddWidgetCard.vue";
@@ -49,87 +50,7 @@ const props = defineProps({
 
 const dashboardStore = useDashboardLayoutStore();
 
-// Scales the whole 2x2 grid down uniformly (same aspect ratio, cards
-// untouched internally) so it always fits the viewport height without
-// the page scrolling. Only ever shrinks — never scales above 1.
-const viewportRef = ref(null);
-const gridRef = ref(null);
-const scale = ref(1);
-const scaledHeight = ref(null);
-const VIEWPORT_BOTTOM_MARGIN = 24;
-
-function updateScale() {
-  const viewportEl = viewportRef.value;
-  const gridEl = gridRef.value;
-  if (!viewportEl || !gridEl) return;
-
-  // Only shrink to fit while arranging (edit mode) — outside of that the
-  // dashboard keeps its normal card size, scrolling if needed as before.
-  if (!dashboardStore.editMode) {
-    scale.value = 1;
-    scaledHeight.value = null;
-    return;
-  }
-
-  const naturalWidth = gridEl.offsetWidth;
-  const naturalHeight = gridEl.offsetHeight;
-  if (!naturalWidth || !naturalHeight) return;
-
-  const availableWidth = viewportEl.clientWidth;
-  const top = viewportEl.getBoundingClientRect().top;
-  // AppFooter isn't registered with Vuetify's layout system (no `app` prop),
-  // so it sits in normal flow below this content instead of being offset
-  // for automatically — account for it manually or it forces page scroll.
-  const footerHeight = document.querySelector(".v-footer")?.offsetHeight ?? 0;
-  const availableHeight = window.innerHeight - top - footerHeight - VIEWPORT_BOTTOM_MARGIN;
-
-  const nextScale = Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
-  scale.value = nextScale > 0 ? nextScale : 1;
-  scaledHeight.value = naturalHeight * scale.value;
-}
-
-const viewportStyle = computed(() => ({
-  height: scaledHeight.value != null ? `${scaledHeight.value}px` : "auto",
-}));
-
-let resizeObserver;
-let rafId = null;
-// Deferring to the next frame breaks the synchronous read-write cycle that
-// otherwise trips the browser's (harmless but noisy) "ResizeObserver loop
-// completed with undelivered notifications" warning.
-function scheduleUpdateScale() {
-  if (rafId !== null) return;
-  rafId = requestAnimationFrame(() => {
-    rafId = null;
-    updateScale();
-  });
-}
-
-onMounted(() => {
-  updateScale();
-  resizeObserver = new ResizeObserver(() => scheduleUpdateScale());
-  if (gridRef.value) resizeObserver.observe(gridRef.value);
-  window.addEventListener("resize", scheduleUpdateScale);
-});
-onBeforeUnmount(() => {
-  resizeObserver?.disconnect();
-  if (rafId !== null) cancelAnimationFrame(rafId);
-  window.removeEventListener("resize", scheduleUpdateScale);
-});
-
-watch(
-  () => [props.isLoading, dashboardStore.editMode],
-  () => nextTick(scheduleUpdateScale)
-);
-
-// The v-for source stays derived from the *committed* layout only, so a live
-// drag preview never changes this array's order — that's what lets Vue
-// reuse (rather than remount) each widget's component instance while cells
-// reflow around it.
-const allCells = computed(() => [
-  ...dashboardStore.layout.rows[0].cells,
-  ...dashboardStore.layout.rows[1].cells,
-]);
+const allCells = computed(() => dashboardStore.layout.rows.flatMap((row) => row.cells));
 
 function computeSlots(rows) {
   const map = new Map();
@@ -149,28 +70,52 @@ function realRowIdx(cellId) {
 }
 
 const draggedCellId = ref(null);
+// Set synchronously (unlike draggedCellId below, which is deliberately
+// deferred for the drag-image snapshot) so anything driven by "is a whole
+// cell being dragged right now" — like hiding the add-slot's "+" — updates
+// immediately everywhere, not just once the cursor reaches some target.
+const wholeCellDragActive = ref(false);
 const dragOverTargetIndex = ref(null);
+// Whether the current hover target is "beside an existing cell" (true) or a
+// brand-new empty row (false) — the shrinkToFit option moveCell gets on drop,
+// and what the live preview below renders.
+const dragOverShrink = ref(false);
+// Set instead of dragOverShrink when hovering the *center* of an existing
+// cell — the forceFullWidth option moveCell gets on drop, so the dragged
+// cell takes over that whole row in one gesture instead of landing at half
+// width and needing a separate manual expand afterwards.
+const dragOverFullWidth = ref(false);
+// Which existing cell (if any) the cursor is currently over — for the hover
+// highlight.
+const dragOverCellId = ref(null);
 
 const previewLayout = computed(() => {
   if (!draggedCellId.value || dragOverTargetIndex.value === null) return null;
   return previewReorderedLayout(
     dashboardStore.layout,
     draggedCellId.value,
-    dragOverTargetIndex.value
+    dragOverTargetIndex.value,
+    { shrinkToFit: dragOverShrink.value, forceFullWidth: dragOverFullWidth.value }
   );
 });
 
 const displayRows = computed(() => previewLayout.value?.rows ?? dashboardStore.layout.rows);
 const displaySlots = computed(() => computeSlots(displayRows.value));
 
+// Whether a whole cell or a tab is currently being dragged — used to keep
+// add-slots available as drop targets regardless of availableWidgetIds, and
+// to hide their "+" affordance in that case (it's a drop target then, not
+// an "add a new widget" button).
+const isDragging = computed(() => wholeCellDragActive.value || !!dashboardStore.draggedTab);
+
 const addSlots = computed(() => {
   if (!dashboardStore.editMode) return [];
   // Nothing left to place anywhere on the dashboard — hide the empty
   // add-slot entirely instead of showing a "+" that can't do anything.
-  // Exception: a tab is actively being dragged out of its card — the slot
-  // must stay as a drop target even though availableWidgetIds is still 0
-  // (the widget isn't "removed" until the drop actually happens).
-  if (dashboardStore.availableWidgetIds.length === 0 && !dashboardStore.draggedTab) return [];
+  // Exception: a whole cell or a tab is actively being dragged — the slot
+  // must stay as a drop target regardless (to reposition an existing cell
+  // there, or because a dragged-out tab isn't "removed" until it's dropped).
+  if (dashboardStore.availableWidgetIds.length === 0 && !isDragging.value) return [];
   const slots = [];
   displayRows.value.forEach((row, rowIdx) => {
     const used = row.cells.reduce((sum, cell) => sum + cell.width, 0);
@@ -178,6 +123,16 @@ const addSlots = computed(() => {
       slots.push({ key: `add-${rowIdx}`, rowIdx, colStart: used + 1, width: 2 - used });
     }
   });
+  // Every existing row is full — offer a brand-new row instead of capping
+  // the dashboard at whatever rows already exist.
+  if (slots.length === 0) {
+    slots.push({
+      key: `add-${displayRows.value.length}`,
+      rowIdx: displayRows.value.length,
+      colStart: 1,
+      width: 2,
+    });
+  }
   return slots;
 });
 
@@ -191,30 +146,103 @@ function itemStyle(cellId) {
 }
 
 function flatCells() {
-  return [...dashboardStore.layout.rows[0].cells, ...dashboardStore.layout.rows[1].cells];
+  return dashboardStore.layout.rows.flatMap((row) => row.cells);
 }
 
-// A transparent 1x1 image used as the drag ghost — the grid already shows
-// where the cell will land (live reflow + the dashed overlay on the source
-// slot), so no dragged-card image needs to follow the cursor at all. Trying
-// to scale the browser's default full-size ghost down to match edit-mode
-// size proved unreliable, so we hide it entirely instead.
-const emptyDragImage = new Image();
-emptyDragImage.src =
-  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBTAA7";
+// Flat-list insertion index for an add-slot sitting at the end of `rowIdx`
+// (or for a brand-new row past the current last one) — the sum of all
+// cells in rows up to and including it, row-major order.
+function insertIndexForRow(rowIdx) {
+  const rows = dashboardStore.layout.rows;
+  let idx = 0;
+  for (let i = 0; i <= rowIdx && i < rows.length; i++) {
+    idx += rows[i].cells.length;
+  }
+  return idx;
+}
 
 function onDragStart(event, cellId) {
-  draggedCellId.value = cellId;
+  wholeCellDragActive.value = true;
   dragOverTargetIndex.value = null;
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("text/plain", cellId);
-  event.dataTransfer.setDragImage(emptyDragImage, 0, 0);
+  // No custom drag image — cards render at natural size in edit mode now
+  // (no CSS-transform scaling to fight), so the browser's default snapshot
+  // of the dragged wrapper follows the cursor and matches on-screen size.
+  // That snapshot is taken synchronously right after dragstart fires, before
+  // any queued macrotask — so deferring the ghost-overlay-triggering state
+  // change here (instead of setting it immediately) keeps the real card
+  // content in the captured snapshot rather than the overlay that replaces
+  // it a moment later.
+  setTimeout(() => {
+    draggedCellId.value = cellId;
+  }, 0);
+}
+
+// Switching the *applied* hover target (and so the reflow) waits for this
+// dwell time, restarted every time a dragover resolves to a *different*
+// target than the one currently applied — and dropped altogether if the
+// cursor comes back to the applied target before it elapses. Two dragover
+// events a few ms apart for a cursor sitting right on the boundary between
+// two hit zones — natural sub-pixel jitter, or the browser's own periodic
+// dragover ticks — used to flip the applied target back and forth on every
+// tick, reflowing the grid each time: that's the flicker, and it also meant
+// a drop could land on whichever target happened to be applied at that
+// exact instant rather than the one the user was visually settled on.
+// Requiring the *same new* target to keep reappearing for a short stretch
+// before it's applied filters that out, while staying effectively instant
+// for a deliberate, sustained hover.
+const HOVER_DWELL_MS = 100;
+let hoverSwitchTimer = null;
+let pendingHoverKey = null;
+let appliedHoverKey = null;
+function cancelPendingHoverSwitch() {
+  if (hoverSwitchTimer !== null) {
+    clearTimeout(hoverSwitchTimer);
+    hoverSwitchTimer = null;
+  }
+  pendingHoverKey = null;
+}
+function resetHoverTracking() {
+  cancelPendingHoverSwitch();
+  appliedHoverKey = null;
+}
+// `apply` runs once `key` has been the resolved target continuously for
+// HOVER_DWELL_MS — never sooner, and never at all if the cursor moves off
+// it (or back to the already-applied key) before then.
+function requestHoverSwitch(key, apply) {
+  if (key === appliedHoverKey) {
+    cancelPendingHoverSwitch();
+    return;
+  }
+  if (key === pendingHoverKey) return;
+  cancelPendingHoverSwitch();
+  pendingHoverKey = key;
+  hoverSwitchTimer = setTimeout(() => {
+    hoverSwitchTimer = null;
+    pendingHoverKey = null;
+    appliedHoverKey = key;
+    apply();
+  }, HOVER_DWELL_MS);
 }
 
 function onDragEnd() {
   draggedCellId.value = null;
+  wholeCellDragActive.value = false;
   dragOverTargetIndex.value = null;
+  dragOverShrink.value = false;
+  dragOverFullWidth.value = false;
+  dragOverCellId.value = null;
+  resetHoverTracking();
 }
+
+// Hovering an existing cell is split into three horizontal zones: its left
+// edge and right edge each target "insert beside it, on that side" (same as
+// before), but the middle now targets "take over this cell's whole row" —
+// so a group cell can be dropped straight at full width in one gesture
+// instead of always landing at half width and needing a separate manual
+// expand afterwards.
+const EDGE_ZONE = 0.3;
 
 function onDragOverCell(event, cellId) {
   // Reacts to a whole-cell drag *or* a tab being dragged over another card
@@ -223,19 +251,36 @@ function onDragOverCell(event, cellId) {
   // by that cell's onTabRowDrop (and stops propagation before it gets here).
   if (!draggedCellId.value && !dashboardStore.draggedTab) return;
   // Always keep the zone valid (preventDefault) so the browser still fires
-  // `drop` here — this fires even on the dragged cell's own (live-reflowed)
-  // ghost slot, since it visually follows the cursor to the drop target.
-  // Only recompute the target index for a *different* (bystander) cell.
+  // `drop` here.
   event.preventDefault();
   if (draggedCellId.value === cellId) return;
+
   const rect = event.currentTarget.getBoundingClientRect();
-  const midpoint = rect.left + rect.width / 2;
-  const side = event.clientX < midpoint ? "left" : "right";
-  const targetIdx = flatCells().findIndex((c) => c.id === cellId);
-  dragOverTargetIndex.value = side === "right" ? targetIdx + 1 : targetIdx;
+  const relX = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0.5;
+  const idx = flatCells().findIndex((c) => c.id === cellId);
+
+  let zone, targetIdx;
+  if (relX < EDGE_ZONE) {
+    zone = "left";
+    targetIdx = idx;
+  } else if (relX > 1 - EDGE_ZONE) {
+    zone = "right";
+    targetIdx = idx + 1;
+  } else {
+    zone = "full";
+    const slot = realSlots.value.get(cellId);
+    targetIdx = insertIndexForRow((slot?.rowIdx ?? 1) - 1);
+  }
+
+  requestHoverSwitch(`cell:${zone}:${cellId}`, () => {
+    dragOverTargetIndex.value = targetIdx;
+    dragOverCellId.value = cellId;
+    dragOverShrink.value = zone !== "full";
+    dragOverFullWidth.value = zone === "full";
+  });
 }
 
-function onDrop(event, cellId) {
+function onDrop(event) {
   event.preventDefault();
   if (dashboardStore.draggedTab) {
     const { cellId: sourceCellId, widgetId } = dashboardStore.draggedTab;
@@ -244,20 +289,40 @@ function onDrop(event, cellId) {
     }
     dashboardStore.endTabDrag();
     dragOverTargetIndex.value = null;
+    dragOverCellId.value = null;
+    resetHoverTracking();
     return;
   }
   const draggedId = draggedCellId.value || event.dataTransfer.getData("text/plain");
   if (draggedId && dragOverTargetIndex.value !== null) {
-    dashboardStore.moveCell(draggedId, dragOverTargetIndex.value);
+    // Dropped directly onto an existing cell — either beside it (shrinking
+    // a full-width cell so it actually lands there) or, if the center zone
+    // was hovered, forcing the dragged cell to full width instead.
+    dashboardStore.moveCell(draggedId, dragOverTargetIndex.value, {
+      shrinkToFit: dragOverShrink.value,
+      forceFullWidth: dragOverFullWidth.value,
+    });
   }
   draggedCellId.value = null;
+  wholeCellDragActive.value = false;
   dragOverTargetIndex.value = null;
+  dragOverShrink.value = false;
+  dragOverFullWidth.value = false;
+  dragOverCellId.value = null;
+  resetHoverTracking();
 }
 
 function onDragOverAddSlot(rowIdx) {
   if (!draggedCellId.value) return;
-  dragOverTargetIndex.value =
-    rowIdx === 0 ? dashboardStore.layout.rows[0].cells.length : flatCells().length;
+  requestHoverSwitch(`row:${rowIdx}`, () => {
+    dragOverTargetIndex.value = insertIndexForRow(rowIdx);
+    // An add-slot is never an existing cell.
+    dragOverCellId.value = null;
+    // Only an existing (partially filled) row has a cell to sit beside —
+    // the brand-new-row slot is empty, so nothing to shrink for.
+    dragOverShrink.value = rowIdx < dashboardStore.layout.rows.length;
+    dragOverFullWidth.value = false;
+  });
 }
 
 function onDropAddSlot(event, rowIdx) {
@@ -267,22 +332,29 @@ function onDropAddSlot(event, rowIdx) {
     dashboardStore.removeWidget(sourceCellId, widgetId);
     dashboardStore.addGroupWidget(rowIdx, widgetId);
     dashboardStore.endTabDrag();
+    resetHoverTracking();
     return;
   }
   const draggedId = draggedCellId.value || event.dataTransfer.getData("text/plain");
   if (draggedId) {
-    const insertAt = rowIdx === 0 ? dashboardStore.layout.rows[0].cells.length : flatCells().length;
-    dashboardStore.moveCell(draggedId, insertAt);
+    // Only shrink-to-fit when the slot belongs to an existing (partially
+    // filled) row — the brand-new-row slot has nothing to sit beside.
+    const isNewRow = rowIdx >= dashboardStore.layout.rows.length;
+    dashboardStore.moveCell(draggedId, insertIndexForRow(rowIdx), { shrinkToFit: !isNewRow });
   }
   draggedCellId.value = null;
+  wholeCellDragActive.value = false;
   dragOverTargetIndex.value = null;
+  dragOverShrink.value = false;
+  dragOverFullWidth.value = false;
+  dragOverCellId.value = null;
+  resetHoverTracking();
 }
 </script>
 
 <style scoped>
 .dashboard-grid-viewport {
   width: 100%;
-  overflow: hidden;
 }
 
 .dashboard-grid {
@@ -290,7 +362,19 @@ function onDropAddSlot(event, rowIdx) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: minmax(340px, 1fr);
   gap: 16px;
-  transform-origin: top center;
+}
+
+/* A fixed (not scaled-to-fit-the-viewport) shrink while arranging — with any
+   number of rows now possible, keeping cards full-size would mean at most
+   ~2 rows fit on screen at once. Narrowing the grid's own width and
+   shrinking the row height keeps each card's proportions closer to a
+   landscape rectangle, like outside edit mode, instead of just flattening
+   it (full width, shorter height). */
+.dashboard-grid--editing {
+  width: 65%;
+  margin: 0 auto;
+  grid-auto-rows: minmax(250px, 1fr);
+  gap: 10px;
 }
 
 .dashboard-grid-item {
@@ -307,6 +391,12 @@ function onDropAddSlot(event, rowIdx) {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.dashboard-grid-cell-wrapper--drop-target {
+  outline: 3px solid rgb(var(--v-theme-primary));
+  outline-offset: -3px;
+  border-radius: 8px;
 }
 
 .dashboard-grid-ghost-overlay {

@@ -15,6 +15,7 @@ export const dashboardWidgets = {
     solo: true,
     permanent: true,
     taggable: false,
+    icon: "mdi-video-outline",
   },
   topview: {
     component: TopView,
@@ -22,6 +23,7 @@ export const dashboardWidgets = {
     solo: true,
     permanent: false,
     taggable: false,
+    icon: "mdi-soccer-field",
   },
   timeline: {
     component: TabWindowTimeline,
@@ -29,6 +31,7 @@ export const dashboardWidgets = {
     solo: false,
     permanent: false,
     taggable: true,
+    icon: "mdi-chart-timeline-variant",
   },
   events: {
     component: TabWindowEvents,
@@ -36,6 +39,7 @@ export const dashboardWidgets = {
     solo: false,
     permanent: false,
     taggable: true,
+    icon: "mdi-flag-variant-outline",
   },
   heatmap: {
     component: TabWindowHeatmap,
@@ -43,6 +47,7 @@ export const dashboardWidgets = {
     solo: false,
     permanent: false,
     taggable: true,
+    icon: "mdi-fire",
   },
   kpi: {
     component: TabWindowKPI,
@@ -50,6 +55,7 @@ export const dashboardWidgets = {
     solo: false,
     permanent: false,
     taggable: true,
+    icon: "mdi-speedometer",
   },
 };
 

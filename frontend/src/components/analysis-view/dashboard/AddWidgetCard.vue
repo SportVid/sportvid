@@ -4,19 +4,21 @@
     variant="tonal"
     class="add-widget-card fill-height d-flex align-center justify-center"
   >
-    <v-menu v-if="options.length">
-      <template #activator="{ props: menuProps }">
-        <v-btn v-bind="menuProps" icon size="large" variant="text">
-          <v-icon size="32">mdi-plus</v-icon>
-        </v-btn>
-      </template>
-      <v-list density="compact">
-        <v-list-item v-for="option in options" :key="option.id" @click="select(option.id)">
-          <v-list-item-title>{{ $t(option.labelKey) }}</v-list-item-title>
-        </v-list-item>
-      </v-list>
-    </v-menu>
-    <v-icon v-else size="32" class="text-medium-emphasis">mdi-plus</v-icon>
+    <template v-if="!dragging">
+      <v-menu v-if="options.length">
+        <template #activator="{ props: menuProps }">
+          <v-btn v-bind="menuProps" icon size="large" variant="text">
+            <v-icon size="32">mdi-plus</v-icon>
+          </v-btn>
+        </template>
+        <v-list density="compact">
+          <v-list-item v-for="option in options" :key="option.id" @click="select(option.id)">
+            <v-list-item-title>{{ $t(option.labelKey) }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+      <v-icon v-else size="32" class="text-medium-emphasis">mdi-plus</v-icon>
+    </template>
   </v-card>
 </template>
 
@@ -27,6 +29,7 @@ import { dashboardWidgets } from "@/config/dashboardWidgets";
 
 const props = defineProps({
   rowIdx: { type: Number, required: true },
+  dragging: { type: Boolean, default: false },
 });
 
 const dashboardStore = useDashboardLayoutStore();

@@ -16,14 +16,15 @@
     </template>
 
     <template v-else-if="cell.kind === 'video'">
-      <v-row justify="center">
+      <v-row v-if="!dashboardStore.editMode" justify="center">
         <v-card-title class="mt-5 mb-n1">
           {{ playerStore.videoName }}
         </v-card-title>
       </v-row>
       <v-row class="flex-grow-1">
         <v-col class="dashboard-cell-content">
-          <component :is="widgetComponent('video')" />
+          <WidgetPlaceholder v-if="dashboardStore.editMode" widget-id="video" />
+          <component :is="widgetComponent('video')" v-else />
         </v-col>
       </v-row>
     </template>
@@ -32,15 +33,15 @@
       <div v-if="dashboardStore.editMode" class="dashboard-cell-controls">
         <v-btn
           icon
-          size="x-large"
+          size="small"
           variant="text"
           :title="$t('analysis_view.dashboard.remove')"
           @click="dashboardStore.removeWidget(cell.id)"
         >
-          <v-icon size="50">mdi-close</v-icon>
+          <v-icon size="20">mdi-close</v-icon>
         </v-btn>
       </div>
-      <v-row v-if="matchupTeams.length" justify="center">
+      <v-row v-if="!dashboardStore.editMode && matchupTeams.length" justify="center">
         <v-card-title class="mt-5 mb-n1">
           <div class="matchup-title">
             <template v-for="(team, index) in matchupTeams" :key="team.id">
@@ -55,88 +56,63 @@
       </v-row>
       <v-row class="flex-grow-1">
         <v-col class="dashboard-cell-content">
-          <component :is="widgetComponent('topview')" />
+          <WidgetPlaceholder v-if="dashboardStore.editMode" widget-id="topview" />
+          <component :is="widgetComponent('topview')" v-else />
         </v-col>
       </v-row>
     </template>
 
     <template v-else-if="cell.kind === 'group'">
-      <v-row
-        v-if="dashboardStore.editMode || cell.widgets.length > 1"
-        align="center"
-        no-gutters
-        class="pt-1 flex-grow-0 dashboard-cell-tabs-row"
-      >
+      <!-- Edit mode: one absolutely-positioned corner overlay (pills, then a
+           divider, then the fixed action icons) instead of a row that takes
+           real layout space — so it never pushes the placeholder around,
+           the same way the video/topview controls already don't. -->
+      <div v-if="dashboardStore.editMode" class="dashboard-cell-tab-overlay">
         <div
-          v-if="dashboardStore.editMode"
           class="dashboard-cell-tab-pills"
+          :class="{ 'dashboard-cell-tab-pills--has-tabs': cell.widgets.length > 1 }"
           @dragover="onTabRowDragOver"
           @drop="onTabRowDrop"
         >
-          <template v-if="cell.widgets.length > 1">
-            <div
-              v-for="widgetId in cell.widgets"
-              :key="widgetId"
-              class="dashboard-cell-tab-pill"
-              :class="{
-                'dashboard-cell-tab-pill--active': widgetId === cell.activeId,
-                'dashboard-cell-tab-pill--dragging':
-                  dashboardStore.draggedTab?.cellId === cell.id &&
-                  dashboardStore.draggedTab?.widgetId === widgetId,
-              }"
-              draggable="true"
-              @click="dashboardStore.setGroupActive(cell.id, widgetId)"
-              @dragstart.stop="onTabDragStart($event, widgetId)"
-              @dragend="onTabDragEnd"
+          <div
+            v-for="widgetId in cell.widgets.length > 1 ? cell.widgets : []"
+            :key="widgetId"
+            class="dashboard-cell-tab-pill"
+            :class="{
+              'dashboard-cell-tab-pill--active': widgetId === cell.activeId,
+              'dashboard-cell-tab-pill--dragging':
+                dashboardStore.draggedTab?.cellId === cell.id &&
+                dashboardStore.draggedTab?.widgetId === widgetId,
+            }"
+            draggable="true"
+            @click="dashboardStore.setGroupActive(cell.id, widgetId)"
+            @dragstart.stop="onTabDragStart($event, widgetId)"
+            @dragend="onTabDragEnd"
+          >
+            {{ $t(widgetLabel(widgetId)) }}
+            <v-icon
+              size="16"
+              class="ml-1"
+              @click.stop="dashboardStore.removeWidget(cell.id, widgetId)"
             >
-              {{ $t(widgetLabel(widgetId)) }}
-              <v-icon
-                size="30"
-                class="ml-1"
-                @click.stop="dashboardStore.removeWidget(cell.id, widgetId)"
-              >
-                mdi-close
-              </v-icon>
-            </div>
-          </template>
-          <v-spacer v-else />
+              mdi-close
+            </v-icon>
+          </div>
         </div>
 
-        <template v-else>
-          <v-tabs
-            v-if="cell.widgets.length > 1"
-            density="compact"
-            slider-color="primary"
-            class="flex-grow-1"
-            :model-value="cell.activeId"
-            @update:model-value="dashboardStore.setGroupActive(cell.id, $event)"
-          >
-            <v-tab v-for="widgetId in cell.widgets" :key="widgetId" :value="widgetId">
-              {{ $t(widgetLabel(widgetId)) }}
-              <v-icon
-                v-if="dashboardStore.editMode"
-                size="14"
-                class="ml-1"
-                @click.stop="dashboardStore.removeWidget(cell.id, widgetId)"
-              >
-                mdi-close
-              </v-icon>
-            </v-tab>
-          </v-tabs>
-          <v-spacer v-else />
-        </template>
+        <div v-if="cell.widgets.length > 1" class="dashboard-cell-tab-divider" />
 
-        <div v-if="dashboardStore.editMode" class="dashboard-cell-tab-actions">
+        <div class="dashboard-cell-tab-actions">
           <v-menu v-if="addableTabs.length">
             <template #activator="{ props }">
               <v-btn
                 v-bind="props"
                 icon
-                size="x-large"
+                size="small"
                 variant="text"
                 :title="$t('analysis_view.dashboard.add_view')"
               >
-                <v-icon size="50">mdi-plus</v-icon>
+                <v-icon size="20">mdi-plus</v-icon>
               </v-btn>
             </template>
             <v-list density="compact">
@@ -152,13 +128,12 @@
 
           <v-btn
             icon
-            size="x-large"
+            size="small"
             variant="text"
-            :disabled="!canToggleWidth"
             :title="$t('analysis_view.dashboard.toggle_width')"
             @click="toggleWidth"
           >
-            <v-icon size="50">
+            <v-icon size="20">
               {{
                 cell.width === 2 ? "mdi-arrow-collapse-horizontal" : "mdi-arrow-expand-horizontal"
               }}
@@ -167,26 +142,47 @@
 
           <v-btn
             icon
-            size="x-large"
+            size="small"
             variant="text"
             :title="$t('analysis_view.dashboard.remove')"
             @click="dashboardStore.removeWidget(cell.id)"
           >
-            <v-icon size="50">mdi-close</v-icon>
+            <v-icon size="20">mdi-close</v-icon>
           </v-btn>
         </div>
+      </div>
+
+      <v-row
+        v-else-if="cell.widgets.length > 1"
+        align="center"
+        no-gutters
+        class="pt-1 flex-grow-0 dashboard-cell-tabs-row"
+      >
+        <v-tabs
+          density="compact"
+          slider-color="primary"
+          class="flex-grow-1"
+          :model-value="cell.activeId"
+          @update:model-value="dashboardStore.setGroupActive(cell.id, $event)"
+        >
+          <v-tab v-for="widgetId in cell.widgets" :key="widgetId" :value="widgetId">
+            {{ $t(widgetLabel(widgetId)) }}
+          </v-tab>
+        </v-tabs>
       </v-row>
 
       <v-row class="flex-grow-1 my-0">
         <v-col class="dashboard-cell-content">
-          <component :is="widgetComponent(cell.activeId)" />
+          <WidgetPlaceholder v-if="dashboardStore.editMode" :widget-id="cell.activeId" />
+          <component :is="widgetComponent(cell.activeId)" v-else />
         </v-col>
       </v-row>
     </template>
 
     <!-- Covers the whole card so it reads as inert while arranging — the
-         tabs row is kept above it (see .dashboard-cell-tabs-row) since it
-         must stay clickable to switch/manage tabs. -->
+         tab overlay/controls are kept above it (see .dashboard-cell-tab-
+         overlay and .dashboard-cell-controls) since they must stay
+         clickable to switch/manage tabs. -->
     <div v-if="dashboardStore.editMode" class="dashboard-cell-veil" />
   </v-card>
 </template>
@@ -198,6 +194,7 @@ import { useTopViewStore } from "@/stores/top_view";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 import { dashboardWidgets, isTaggableWidget } from "@/config/dashboardWidgets";
+import WidgetPlaceholder from "@/components/analysis-view/dashboard/WidgetPlaceholder.vue";
 
 const props = defineProps({
   cell: { type: Object, required: true },
@@ -241,13 +238,6 @@ const matchupTeams = computed(() => {
 const addableTabs = computed(() =>
   dashboardStore.availableWidgetIds.filter((id) => isTaggableWidget(id))
 );
-
-const canToggleWidth = computed(() => {
-  const row = dashboardStore.layout.rows[props.rowIdx];
-  if (!row) return false;
-  if (props.cell.width === 2) return true;
-  return row.cells.length === 1;
-});
 
 function toggleWidth() {
   if (props.cell.width === 2) {
@@ -341,22 +331,56 @@ function onTabRowDrop(event) {
   z-index: 4;
 }
 
+/* Right-aligned corner overlay: pills grow leftward from the divider, the
+   fixed icons (add, toggle, remove) sit to its right — same non-layout-
+   affecting positioning as .dashboard-cell-controls below. Sized to its
+   content (like that one), not stretched full-width, but capped so a lot
+   of pills scroll horizontally (see .dashboard-cell-tab-pills) instead of
+   overflowing past the card's edge or wrapping to a second (ugly) line.
+   One shared background for the whole cluster (pills, divider, and icons
+   together) rather than the icons alone being their own box. */
+.dashboard-cell-tab-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  max-width: calc(100% - 16px);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 4px 8px;
+  border-radius: 14px;
+  background: #d9d9d93b;
+}
+
+/* Scrolls horizontally instead of wrapping to a second line — `min-width: 0`
+   lets this flex child shrink below its content's natural width so overflow
+   actually kicks in, while the divider/action icons (flex-shrink: 0, not
+   part of this scroll area) always stay fully visible. No padding/gap here
+   by default — this container stays in the DOM even with zero pills (as a
+   drop target for dragging a tab in), and reserving space it isn't using
+   would leave the icons lopsided to the right with nothing to balance it
+   on the left. --has-tabs adds that spacing back only once there's
+   something to actually space out. */
 .dashboard-cell-tab-pills {
   display: flex;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  min-height: 40px;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.dashboard-cell-tab-pills--has-tabs {
+  padding: 2px 10px 2px 8px;
 }
 
 .dashboard-cell-tab-pill {
   display: flex;
   align-items: center;
-  padding: 4px 10px;
-  border-radius: 14px;
+  padding: 2px 8px;
+  border-radius: 12px;
   background: #d9d9d93b;
-  font-size: 1.5rem;
+  font-size: 0.9rem;
   cursor: grab;
   user-select: none;
 }
@@ -370,15 +394,20 @@ function onTabRowDrop(event) {
   opacity: 0.35;
 }
 
+.dashboard-cell-tab-divider {
+  width: 1px;
+  align-self: stretch;
+  min-height: 20px;
+  background: rgba(var(--v-theme-on-surface), 0.3);
+  flex-shrink: 0;
+  margin-right: 10px;
+}
+
 .dashboard-cell-tab-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-left: 8px;
+  gap: 2px;
   flex-shrink: 0;
-  padding: 4px 8px;
-  border-radius: 14px;
-  background: #d9d9d93b;
 }
 
 .dashboard-cell-controls {
