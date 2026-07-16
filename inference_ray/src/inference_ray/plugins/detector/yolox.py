@@ -4,6 +4,7 @@ import numpy as np
 from typing import Any, Dict
 
 
+@staticmethod
 def xyxy_to_xywh(xyxy):
     """
     Transforms [x1,y1,x2,y2] -> [center of x,c enter of y, width, height]
@@ -19,18 +20,6 @@ def xyxy_to_xywh(xyxy):
     h = y2 - y1
     
     return np.array((cx,cy,w,h))
-
-
-def _is_torch(x):
-    return isinstance(x, torch.Tensor)
-
-
-def _to_numpy(x):
-    if isinstance(x, np.ndarray):
-        return x
-    if isinstance(x, torch.Tensor):
-        return x.detach().cpu().numpy()
-    raise TypeError(f"Unsupported input type: {type(x)}")
 
 
 class YoloX():

@@ -16,7 +16,18 @@ default_yolox_params = {
     "num_classes": 1, 
     "decode": True,
     "model_path": "yolox-x",
-    "checkpoint": "/models/yolox/bytetrack_x_mot17.pth.tar"
+    "checkpoint": "/models/yolox/bytetrack_x_mot17.pth.tar",
+    # TODO!
+    "output_class_mapping": {
+        "-1": {
+            "entity_type": "unknown",
+            "default_team": "-1"
+        },
+        "0": {
+            "entity_type": "athlete",
+            "default_team": "3"
+        }
+    }
 }
 
 default_yoloultra_params = {
@@ -31,7 +42,18 @@ default_yoloultra_params = {
     "embed": None,              # specify layers from which to extract feature vectors or embeddings
     "verbose": False,
     "model_path": "/models/yolo_ultra/yolo12x.pt",
-    "checkpoint": "/models/yolo_ultra/yolo12x.pt"
+    "checkpoint": "/models/yolo_ultra/yolo12x.pt",
+    # TODO!
+    "output_class_mapping": {
+        "-1": {
+            "entity_type": "unknown",
+            "default_team": "-1"
+        },
+        "0": {
+            "entity_type": "athlete",
+            "default_team": "3"
+        }
+    }
 }
 
 default_rfdetr_params = {
@@ -42,7 +64,30 @@ default_rfdetr_params = {
     "max_det": 100,
     "resolution": 1288,         # has to be divisible by 56: [672,728,784,896,1008,1064,1120]
     "verbose": False,
-    "checkpoint": "/models/detr/rf-detr-large.pth"
+    "checkpoint": "/models/detr/rf-detr-large.pth",
+    # TODO!
+    "output_class_mapping": {
+        "-1": {
+            "entity_type": "unknown",
+            "default_team": "-1"
+        },
+        "0": {
+            "entity_type": "athlete",
+            "default_team": "3"
+        },
+        "1": {
+            "entity_type": "sports ball",
+            "default_team": "0"
+        },
+        "2": {
+            "entity_type": "goalkeeper",
+            "default_team": "3"
+        },
+        "3": {
+            "entity_type": "referee",
+            "default_team": "2"
+        }
+    }
 }
 
 default_rtdetr_params = {
@@ -50,7 +95,11 @@ default_rtdetr_params = {
     "conf": 0.25,
     "classes": [0, 32],         # default COCO: 0 - person, 32 - ball
     "verbose": False, 
-    "checkpoint": "/models/detr/rtdetr-x.pt"
+    "checkpoint": "/models/detr/rtdetr-x.pt",
+    # TODO!
+    "output_class_mapping": {
+        "player" : 0
+    }    
 }
 
 default_bytetrack_params = {
@@ -269,6 +318,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "model_path",
             "model_checkpoint",
             "confidence_threshold",
+            "output_class_mapping"
         }
         self._reject_unknown_keys("detector_params", params, allowed)
 
@@ -303,6 +353,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "verbose",
             "checkpoint",
             "confidence_threshold",
+            "output_class_mapping"
         }
         self._reject_unknown_keys("detector_params", params, allowed)
 
@@ -334,6 +385,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "verbose",
             "checkpoint",
             "confidence_threshold",
+            "output_class_mapping"
         }
         self._reject_unknown_keys("detector_params", params, allowed)
 
@@ -364,6 +416,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "verbose",
             "checkpoint",
             "confidence_threshold",
+            "output_class_mapping"
         }
         self._reject_unknown_keys("detector_params", params, allowed)
 

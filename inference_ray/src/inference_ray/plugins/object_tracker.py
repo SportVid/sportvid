@@ -1,6 +1,9 @@
 import logging
 import argparse
-from typing import Any, Callable, Dict, List, Tuple
+
+from pprint import pprint
+from enum import IntEnum
+from typing import Any, Callable, Dict, List, Tuple, Optional
 from data import (
     Data, DataManager, 
     VideoData,
@@ -22,6 +25,22 @@ requires = {
 provides = {
     "tracklets": BboxesData,
 }
+
+
+class TeamId(IntEnum):
+    UNKNOWN = (-1, "Unknown")
+    BALL = (0, "Ball")
+    BYSTANDER = (1, "Bystander")
+    REFEREE = (2, "Referee")
+    TEAM_LEFT = (3, "Team A")
+    TEAM_RIGHT = (4, "Team B")
+
+    def __new__(cls, value: int, label: str):
+        obj = int.__new__(cls, value)
+        obj._value_ = value
+        obj.label = label
+        return obj
+
 
 @AnalyserPluginManager.export("object_tracker")
 class ObjectTracker(
@@ -53,7 +72,8 @@ class ObjectTracker(
         )
         
         from .tracker import (
-            ByteTrack
+            ByteTrack,
+            TrackClassMapper
         )
         
         DETECTOR_MAP = {
@@ -74,16 +94,6 @@ class ObjectTracker(
         batch_size = parameters["detector_params"]["batch_size"]
         fps = parameters["fps"]
         parameters["tracker_params"].update({"frame_rate" : fps})
-        
-        # with inputs["video"] as input_data:
-        #     with input_data.open_video() as f_video:
-        #         video_decoder = VideoDecoder(
-        #             f_video,
-        #             fps=fps,
-        #             extension=f".{input_data.ext}",
-        #             ref_id=input_data.id,
-        #         )
-        #         image_size = video_decoder._size
         
         with inputs["video"] as input_data:
             with input_data.open_video("r") as f_video:
@@ -122,44 +132,50 @@ class ObjectTracker(
                             'det_shape': self.detector.det_shape,
                         }
                     )
-
-                track_results = self.tracker.state # NOTE: returns a list of per-frame tracking results
-
                 # -------> build the required output format for consistency with other plugins
                 tracklets = defaultdict(list)
                 unique_player_ids = set()
                 
-                DEFAULT_BYSTANDER_TEAM_ID = 0
-                DEFAULT_BALL_TEAM_ID = 1
-                DEFAULT_REF_TEAM_ID = 2 
-                DEFAULT_TEAM_ID = 3
-                
+                # TODO: This is specific to team-based sports, need a generic solution at some point...!
                 team_id_meta = {
-                    DEFAULT_BYSTANDER_TEAM_ID: {
-                        "name": "Bystander",
-                    },
-                    DEFAULT_BALL_TEAM_ID: {
-                        "name": "Ball",
-                    },
-                    DEFAULT_REF_TEAM_ID: {
-                        "name": "Referee"
-                    },
-                    DEFAULT_TEAM_ID: {
-                        "name": "Team A"
-                    },
+                    TeamId.UNKNOWN: {"name": "Unknown"},
+                    TeamId.BYSTANDER: {"name": "Bystander"},
+                    TeamId.BALL: {"name": "Ball"},
+                    TeamId.REFEREE: {"name": "Referee"},
+                    TeamId.TEAM_LEFT: {"name": "Team A"},
+                    TeamId.TEAM_RIGHT: {"name": "Team B"},
                 }
                 
-                # TODO: create a tracklet to detection class mapping for the default team assignment at this stage.
+                # NOTE: creates a tracklet to detection class mapping.
+                # We'll use it for the default team assignment at this stage.
+                trk_det_mapping = TrackClassMapper().map_tracks_to_detections(
+                    tracks=self.tracker.state,
+                    detections=self.detector.state,
+                    iou_thresh=0.3
+                )
+                """
+                {
+                    "0":{
+                        "entity_type": "athlete",
+                        "default_team": "3"
+                    }, ...
+                }                
+                """
+                out_cls_mapping = parameters["detector_params"]["output_class_mapping"]
                 
-                for frame_id, track in enumerate(track_results, start=0): # [N,5]
+                for frame_id, track in enumerate(self.tracker.state, start=0): # [N,5]
                     for (track_id, track_score, track_xywh, team_id) in zip( # [5,]
                         track['track_ids'],
                         track['track_scores'],
                         track['track_boxes'],
                         track['team_ids']
                     ):
-                        unique_player_ids.add(track_id)
                         frame_time = round((frame_id/fps)*1000.)
+                        unique_player_ids.add(track_id)
+                        # NOTE: Mapping of class_id to team_id.
+                        # Detectors have varying output heads, so we need some mapping dict from cls_id to real-world entity.
+                        class_id = trk_det_mapping[frame_id][track_id]['class']
+                        default_team_assignment = out_cls_mapping.get(str(class_id), -1).get('default_team', -1)
                         # coord normalization
                         x_norm = int(track_xywh[0]) / self.detector.w
                         y_norm = int(track_xywh[1]) / self.detector.h
@@ -169,7 +185,7 @@ class ObjectTracker(
                         tracklet = [
                             int(frame_id),
                             int(track_id),
-                            int(DEFAULT_TEAM_ID),
+                            int(default_team_assignment),
                             float(track_xywh[0]), float(track_xywh[1]), float(track_xywh[2]), float(track_xywh[3]),
                             float(x_norm + (w_norm / 2)), float(y_norm + h_norm),
                             float(x_norm), float(y_norm), float(w_norm), float(h_norm),
@@ -182,7 +198,7 @@ class ObjectTracker(
                         "id": pid, 
                         "name": str(pid), 
                         "number": pid, 
-                        "team_id": DEFAULT_TEAM_ID
+                        "team_id": default_team_assignment
                     }
                     for pid in sorted(unique_player_ids)
                 }
