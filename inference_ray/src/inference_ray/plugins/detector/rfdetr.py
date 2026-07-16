@@ -40,7 +40,9 @@ class RFDetr():
         self.detector_params = detector_params
     
         self.det_shape = image_size
-        self.classes_to_detect = detector_params .get('classes_to_detect')
+        self.classes_to_detect = detector_params.get('classes', [])
+        if len(self.classes_to_detect) == 0:
+            raise RuntimeError("Expected at least 1 class to detect, please check the 'classes' args.")
         self.num_classes = len(self.classes_to_detect)
         
         self.min_confidence = detector_params.get('conf', 0.25)
@@ -66,8 +68,10 @@ class RFDetr():
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs) -> Dict[Any, Any]:
         input_shape = inputs["frame"].shape  # NOTE: VideoDecoder returns (N,H,W,C)
+        self.h, self.w = input_shape[2], input_shape[3]
         
-        assert input_shape[3] == 3, "Expected 3-channel RGB input"
+        if input_shape[3] != 3:
+            raise RuntimeError("Expected 3-channel RGB input.")
         
         pil_images = []
         for i, frame in enumerate(inputs['frame']):
@@ -75,8 +79,6 @@ class RFDetr():
             # img_np = input[i].permute(1, 2, 0).cpu().numpy().astype(np.uint8)
             img_hwc = frame
             pil_images.append(Image.fromarray(img_hwc))
-        
-        self.h, self.w = input.shape[2], input.shape[3]
         
         return {
             'inputs': pil_images,

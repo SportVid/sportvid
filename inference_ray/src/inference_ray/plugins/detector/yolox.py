@@ -124,7 +124,8 @@ class YoloX():
         input_shape = inputs["frame"].shape  # NOTE: VideoDecoder returns (N,H,W,C)
         fp16 = self.cfg.get("fp16", False)
 
-        assert input_shape[3] == 3, "Expected 3-channel RGB input"
+        if input_shape[3] != 3:
+            raise RuntimeError("Expected 3-channel RGB input.")
 
         processed = np.zeros( # (N, C, H, W)
             (input_shape[0], input_shape[3], self.test_size[0], self.test_size[1]),
