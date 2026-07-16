@@ -46,7 +46,8 @@ dependencies = [
     "scikit-image",
     "ultralytics>=8.0",
     "rfdetr",
-    "torchreid"
+    "torchreid",
+    "click==8.2.1"
 ]
 
 [tool.uv]
