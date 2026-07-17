@@ -185,10 +185,10 @@ class ObjectTracker(
                             int(frame_id),
                             int(track_id),
                             int(default_team_assignment),
-                            float(track_xywh[0]), float(track_xywh[1]), float(track_xywh[2]), float(track_xywh[3]),
                             float(x_norm + (w_norm / 2)), float(y_norm + h_norm),
                             float(x_norm), float(y_norm), float(w_norm), float(h_norm),
-                            float(track_score),
+                            float(track_xywh[0]), float(track_xywh[1]), float(track_xywh[2]), float(track_xywh[3]),
+                            float(track_score)
                         ]
                         tracklets[frame_time].append([tracklet])        
                 
