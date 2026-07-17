@@ -8,43 +8,37 @@ class RTDetr():
     def __init__(
         self,
         model_path: str,
-        mode: str,
-        batch_size: int,
-        image_size: tuple,
-        inference_params: Dict [Any, Any],
-        finetune_params: Dict [Any, Any],
-        device: str = "cuda",
+        image_size: tuple[int, int],
+        detector_params: Dict [Any, Any],
         **kwargs
     ):
         from ultralytics import RTDETR
         
-        super().__init__(
-            model_path, mode, batch_size, image_size,
-            inference_params, finetune_params, device
-        )
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.state = list()
+        self.img_id = 0
         
-        self.model = RTDETR(model_path)
-        self.model.to(device)
+        self.detector_params = detector_params
         
-        logging.debug(f"RT-DETR loaded from {model_path}")
+        self.checkpoint = detector_params.get("checkpoint", None)
+        self.model = RTDETR(self.checkpoint)
+        self.model.to(self.device)
+        
+        logging.info(f"RT-DETR loaded from {self.checkpoint}")
 
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs):
-        """Preprocess - identical to YOLO."""
-        input_frame = inputs['frame']
-        input_frame = input_frame.to(self.device).float()
-        input_shape = input_frame.shape
+        input_shape = inputs["frame"].shape  # NOTE: VideoDecoder returns (N,H,W,C)
+        self.h, self.w = input_shape[2], input_shape[3]
         
-        h, w = input_shape[2], input_shape[3]
+        # pad to 32x stride (optional for transformers, but helps efficiency)
+        pad_h = (32 - self.h % 32) % 32
+        pad_w = (32 - self.w % 32) % 32
+        input_padded = F.pad(inputs["frame"], (0, pad_w, 0, pad_h), mode='constant', value=0)
         
-        # Pad to 32x stride (optional for transformers, but helps efficiency)
-        pad_h = (32 - h % 32) % 32
-        pad_w = (32 - w % 32) % 32
-        input_padded = F.pad(input_frame, (0, pad_w, 0, pad_h), mode='constant', value=0)
-        
-        self.h = h + pad_h
-        self.w = w + pad_w
-        self.det_shape = (self.h, self.w)  # For tracker
+        self.h = self.h + pad_h
+        self.w = self.w + pad_w
+        self.det_shape = (self.h, self.w)
         
         return {
             'inputs': input_padded.float() / 255.0,
@@ -61,10 +55,10 @@ class RTDetr():
         
         raw_outputs = self.model.predict(
             images,
-            batch=self.batch_size,
+            batch=self.detector_params.get('batch_size', 1),
             imgsz=shapes,
-            conf=self.cfg.get('conf', 0.25),
-            verbose=self.cfg.get('verbose', False)
+            conf=self.detector_params.get('conf', 0.25),
+            verbose=self.detector_params.get('verbose', False)
         )
         
         for result_per_img in raw_outputs:
@@ -74,10 +68,6 @@ class RTDetr():
                     b = bbox.cpu().numpy()
                     cls_id = int(b.cls[0])
                     conf = float(b.conf[0])
-                    
-                    # Filter by class if needed
-                    if self.cfg.get('classes') and cls_id not in self.cfg['classes']:
-                        continue
                     
                     bbox_dict = dict(
                         xyxy=b.xyxy[0],

@@ -92,12 +92,24 @@ default_rfdetr_params = {
 default_rtdetr_params = {
     "batch_size": 1,
     "conf": 0.25,
-    "classes": [0, 32],         # default COCO: 0 - person, 32 - ball
+    "classes": [0, 32],  # default COCO: 0 - person, 32 - ball
     "verbose": False, 
+    "model_path": "RTDETR",
     "checkpoint": "/models/detr/rtdetr-x.pt",
     # TODO!
     "output_class_mapping": {
-        "player" : 0
+        "-1": {
+            "entity_type": "unknown",
+            "default_team": "-1"
+        },
+        "0": {
+            "entity_type": "person",
+            "default_team": "3"
+        },
+        "32": {
+            "entity_type": "ball",
+            "default_team": "0"
+        }
     }    
 }
 
