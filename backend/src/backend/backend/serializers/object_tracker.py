@@ -8,6 +8,7 @@ TRACKER_CHOICES = ["bytetrack"]
 
 YOLOULTRA_CHOICES = ["yolo10", "yolo11", "yolo12", "yolo26"]
 
+# TODO: dynamic checkpoint loading based on context / sports type.
 default_yolox_params = {
     "batch_size": 1,
     "conf_thresh": 0.2,
@@ -17,7 +18,6 @@ default_yolox_params = {
     "decode": True,
     "model_path": "yolox-x",
     "checkpoint": "/models/yolox/bytetrack_x_mot17.pth.tar",
-    # TODO!
     "output_class_mapping": {
         "-1": {
             "entity_type": "unknown",
@@ -41,9 +41,8 @@ default_yoloultra_params = {
     "max_det": 100,             # max amount of detections per frame
     "embed": None,              # specify layers from which to extract feature vectors or embeddings
     "verbose": False,
-    "model_path": "TODO",
+    "model_path": "yolo12",
     "checkpoint": "/models/yolo_ultra/yolo12x.pt",
-    # TODO!
     "output_class_mapping": {
         "-1": {
             "entity_type": "unknown",
@@ -96,7 +95,6 @@ default_rtdetr_params = {
     "verbose": False, 
     "model_path": "RTDETR",
     "checkpoint": "/models/detr/rtdetr-x.pt",
-    # TODO!
     "output_class_mapping": {
         "-1": {
             "entity_type": "unknown",
@@ -305,6 +303,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "yolox": self._validate_yolox_params,
             "yolo10": self._validate_yoloultra_params,
             "yolo11": self._validate_yoloultra_params,
+            "yolo12": self._validate_yoloultra_params,
             "yolo26": self._validate_yoloultra_params,
             "rfdetr": self._validate_rfdetr_params,
             "rtdetr": self._validate_rtdetr_params,

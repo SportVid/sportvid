@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from typing import Any, Dict
 
 
+# TODO: Refactor -> merge this class with 'yolo_ultra' since they use the same API.
+# Should run under the detector "ultralytics" and instantiate different classes via `model_path`.
 class RTDetr():
     def __init__(
         self,
@@ -28,20 +30,22 @@ class RTDetr():
 
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs):
+        input = torch.from_numpy(inputs['frame']).float().to(self.device)
         input_shape = inputs["frame"].shape  # NOTE: VideoDecoder returns (N,H,W,C)
-        self.h, self.w = input_shape[2], input_shape[3]
+        input = input.permute(0, 3, 1, 2)
+        self.h, self.w = input_shape[1], input_shape[2]
         
-        # pad to 32x stride (optional for transformers, but helps efficiency)
+        # pad to stride-safe shape (32x stride is optional for transformers, but helps with efficiency)
         pad_h = (32 - self.h % 32) % 32
         pad_w = (32 - self.w % 32) % 32
-        input_padded = F.pad(inputs["frame"], (0, pad_w, 0, pad_h), mode='constant', value=0)
+        input_padded = F.pad(input, (0, pad_w, 0, pad_h), mode='constant', value=0)
         
         self.h = self.h + pad_h
         self.w = self.w + pad_w
         self.det_shape = (self.h, self.w)
         
         return {
-            'inputs': input_padded.float() / 255.0,
+            'inputs': input_padded.float() / 255.0,  # normalize inputs
             'shape': (self.h, self.w)
         }
 

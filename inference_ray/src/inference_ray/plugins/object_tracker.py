@@ -181,6 +181,7 @@ class ObjectTracker(
                         w_norm = int(track_xywh[2]) / self.detector.w
                         h_norm = int(track_xywh[3]) / self.detector.h
                         # construction of tracklet element
+                        # TODO: maybe get rid of some values here to save on memory/transfer?
                         tracklet = [
                             int(frame_id),
                             int(track_id),
