@@ -65,7 +65,7 @@ class YoloUltralytics():
         raw_outputs = self.model.predict( # NOTE: model() returns a Tensor, while model.predict() returns another format
             images,
             batch=self.detector_params.get('batch_size', 1),
-            imgsz=shapes, 
+            # imgsz=shapes, 
             **self.detector_params
         )
         
