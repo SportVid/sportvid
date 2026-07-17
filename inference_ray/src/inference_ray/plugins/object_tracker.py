@@ -78,10 +78,10 @@ class ObjectTracker(
         
         DETECTOR_MAP = {
             "yolox": YoloX,
-            "yolov10": YoloUltralytics,
-            "yolov11": YoloUltralytics,
-            "yolov12": YoloUltralytics,
-            "yolov26": YoloUltralytics,
+            "yolo10": YoloUltralytics,
+            "yolov1": YoloUltralytics,
+            "yolov2": YoloUltralytics,
+            "yolo26": YoloUltralytics,
             "rfdetr": RFDetr,
             "rtdetr": RTDetr,
         }

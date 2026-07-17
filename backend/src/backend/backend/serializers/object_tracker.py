@@ -3,10 +3,8 @@ from typing import Any, Dict, Iterable, Mapping
 from rest_framework import serializers
 from backend.plugin_manager import PluginManager
 
-DETECTOR_CHOICES = ["yolox", "yoloultra", "rfdetr", "rtdetr"]
+DETECTOR_CHOICES = ["yolox", "yolo10", "yolo11", "yolo12", "yolo26", "rfdetr", "rtdetr"]
 TRACKER_CHOICES = ["bytetrack"]
-
-YOLOULTRA_CHOICES = ["yolo10", "yolo11", "yolo12", "yolo26"]
 
 # TODO: dynamic checkpoint loading based on context / sports type.
 default_yolox_params = {
@@ -30,7 +28,7 @@ default_yolox_params = {
     }
 }
 
-default_yoloultra_params = {
+default_yolo10_params = {
     "batch_size": 1,
     "conf": 0.2,                # min confidence threshold [0.1 - 0.6]
     "iou": 0.3,                 # threshold for NMS; lower values -> less detections [0.3 - 0.6]
@@ -41,8 +39,8 @@ default_yoloultra_params = {
     "max_det": 100,             # max amount of detections per frame
     "embed": None,              # specify layers from which to extract feature vectors or embeddings
     "verbose": False,
-    "model_path": "yolo12",
-    "checkpoint": "/models/yolo_ultra/yolo12x.pt",
+    "model_path": "yolov10",
+    "checkpoint": "/models/yolo_ultra/yolov10x.pt",
     "output_class_mapping": {
         "-1": {
             "entity_type": "unknown",
@@ -53,6 +51,24 @@ default_yoloultra_params = {
             "default_team": "3"
         }
     }
+}
+
+default_yolo11_params = {
+    **default_yolo10_params,
+    "model_path": "yolo11",
+    "checkpoint": "/models/yolo_ultra/yolo11x.pt",
+}
+
+default_yolo12_params = {
+    **default_yolo10_params,
+    "model_path": "yolo12",
+    "checkpoint": "/models/yolo_ultra/yolo12x.pt",
+}
+
+default_yolo26_params = {
+    **default_yolo10_params,
+    "model_path": "yolo26",
+    "checkpoint": "/models/yolo_ultra/yolo26x.pt",
 }
 
 default_rfdetr_params = {
@@ -122,9 +138,10 @@ default_bytetrack_params = {
 
 DETECTOR_DEFAULTS = {
     "yolox": default_yolox_params,
-    "yolov10": default_yoloultra_params,
-    "yolov11": default_yoloultra_params,
-    "yolov26": default_yoloultra_params,
+    "yolo10": default_yolo10_params,
+    "yolo11": default_yolo11_params,
+    "yolo12": default_yolo12_params,
+    "yolov6": default_yolo26_params,
     "rfdetr": default_rfdetr_params,
     "rtdetr": default_rtdetr_params, 
 }
@@ -291,11 +308,6 @@ class ObjectTrackerSerializer(serializers.Serializer):
                 params["conf_thresh"] = confidence_threshold
             else:
                 params["conf"] = confidence_threshold
-
-        if detector in YOLOULTRA_CHOICES:
-            if "checkpoint" not in params:
-                params["checkpoint"] = default_yoloultra_params["checkpoint"]
-
         return params
 
     def _get_detector_validator(self, detector: str):
