@@ -46,6 +46,9 @@ class AnalyserPlugin(Plugin):
         **kwargs,
     ):
         super().__init_subclass__(**kwargs)
+        
+        # logging.debug(f'{cls}, {parameters}, {requires}, {provides}')
+        
         cls._requires = requires
         cls._provides = provides
         cls._parameters = parameters
@@ -83,11 +86,11 @@ class AnalyserPlugin(Plugin):
         input_parameters = self._parameters
         if parameters is not None:
             input_parameters.update(parameters)
-        logging.info(f"[Plugin] {self._name} starting")
 
+        logging.info(f"[Plugin] {self._name} started.")
         result = self.call(inputs, data_manager, input_parameters, callbacks=callbacks)
-
-        logging.info(f"[Plugin] {self._name} done")
+        logging.info(f"[Plugin] {self._name} done.")
+        
         return result
 
 
@@ -119,8 +122,6 @@ class AnalyserPluginManager(Manager):
         self.find()
         self.plugin_list = []
 
-        # logging.error(self.plugin_list)
-
     @classmethod
     def export(cls, name):
         def export_helper(plugin):
@@ -130,15 +131,14 @@ class AnalyserPluginManager(Manager):
         return export_helper
 
     # TODO I am not sure if this is fine here
-
     def plugin_status(self):
-        print(f"{self.status_base_url}/api/serve/applications/", flush=True)
+        # print(f"{self.status_base_url}/api/serve/applications/", flush=True)
         try:
             status = requests.get(
                 f"{self.status_base_url}/api/serve/applications/"
             ).json()
         except:
-            logging.error("AnalyserPluginMananger: Can get status from ray server")
+            logging.error("[AnalyserPluginMananger] Can't get status from ray server.")
             return []
 
         running_model_map = {}
@@ -150,9 +150,6 @@ class AnalyserPluginManager(Manager):
             is_running = app.get("status", "DEPLOY_FAILED") == "RUNNING"
             if model_name in running_model_map:
                 pass
-                # logging.warning(
-                #     f"The same plugin is running several times {model_name}"
-                # )
             running_model_map[model_name] = {
                 "plugin": model_name,
                 "route": route,
@@ -196,7 +193,7 @@ class AnalyserPluginManager(Manager):
                 plugin_to_run = plugin_cls
 
         if plugin_to_run is None:
-            logging.error(f"[AnalyserPluginManager] plugin: {plugin} not found")
+            logging.error(f"[AnalyserPluginManager] Plugin '{plugin}' not found.")
             return None
 
         return plugin_to_run(config)
@@ -212,7 +209,7 @@ class AnalyserPluginManager(Manager):
         plugins = {x["plugin"]: x for x in self.plugin_status()}
 
         if plugin not in plugins:
-            logging.error(f"[AnalyserPluginManager] plugin: {plugin} not found")
+            logging.error(f"[AnalyserPluginManager] Plugin '{plugin}' not found.")
             return None
 
         plugin_to_run = plugins[plugin]
@@ -227,14 +224,14 @@ class AnalyserPluginManager(Manager):
                 },
             )
         except:
-            logging.error("AnalyserPluginMananger: Can start plugin on ray server")
+            logging.error("[AnalyserPluginMananger]: Can't start plugin on the ray server.")
             return []
 
         try:
             data = results.json()
         except:
-            logging.error(f"AnalyserPluginMananger: {results}")
-            logging.error("AnalyserPluginMananger: Can decode response from ray server")
+            logging.error(f"[AnalyserPluginMananger]: {results}")
+            logging.error("[AnalyserPluginMananger]: Can't decode response from ray server.")
             return []
 
         return data

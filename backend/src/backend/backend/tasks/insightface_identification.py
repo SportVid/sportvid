@@ -12,17 +12,17 @@ from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("insightface_identification")
-class InsightfaceIdentificationParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "timeline": {"parser": str, "default": "Face Identification"},
-            "fps": {"parser": float, "default": 2},
-            "query_images": {"parser": str},
-            "normalize": {"parser": float, "default": 1},
-            "normalize_min_val": {"parser": float, "default": 0.3},
-            "normalize_max_val": {"parser": float, "default": 1.0},
-        }
+# @PluginManager.export_parser("insightface_identification")
+# class InsightfaceIdentificationParser(Parser):
+#     def __init__(self):
+#         self.valid_parameter = {
+#             "timeline": {"parser": str, "default": "Face Identification"},
+#             "fps": {"parser": float, "default": 2},
+#             "query_images": {"parser": str},
+#             "normalize": {"parser": float, "default": 1},
+#             "normalize_min_val": {"parser": float, "default": 0.3},
+#             "normalize_max_val": {"parser": float, "default": 1.0},
+#         }
 
 
 @PluginManager.export_plugin("insightface_identification")

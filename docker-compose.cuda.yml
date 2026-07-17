@@ -10,7 +10,7 @@ services:
     container_name: inference_ray
     build:
       context: .
-      dockerfile: inference_ray/Dockerfile.cuda
+      dockerfile: inference_ray/Dockerfile
     init: true
     ports:
       - "127.0.0.1:8265:8265"
@@ -134,6 +134,13 @@ services:
       - /tmp
       - /var
     working_dir: /app/backend/src/backend/
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
     command:
       - "uv"
       - "run"
@@ -193,8 +200,8 @@ services:
       - "--workers"
       - "${GUNICORN_WORKERS:-4}"
     depends_on:
-      # postgres: # NOTE: circular dependency?
-      #   condition: service_healthy
+      postgres:
+        condition: service_healthy
       memcached:
         condition: service_started
       celery:

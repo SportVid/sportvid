@@ -21,10 +21,10 @@ from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("whisper")
-class WhisperParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {}
+# @PluginManager.export_parser("whisper")
+# class WhisperParser(Parser):
+#     def __init__(self):
+#         self.valid_parameter = {}
 
 
 @PluginManager.export_plugin("whisper")

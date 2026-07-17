@@ -19,15 +19,15 @@ from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("ocr_video_detector_onnx")
-class OCRParser(Parser):
-    def __init__(self):
+# @PluginManager.export_parser("ocr_video_detector_onnx")
+# class OCRParser(Parser):
+#     def __init__(self):
 
-        self.valid_parameter = {
-            "timeline": {"parser": str, "default": "OCR"},
-            "fps": {"parser": float, "default": 2},
-            "search_term": {"parser": str, "default": ""},
-        }
+#         self.valid_parameter = {
+#             "timeline": {"parser": str, "default": "OCR"},
+#             "fps": {"parser": float, "default": 2},
+#             "search_term": {"parser": str, "default": ""},
+#         }
 
 
 @PluginManager.export_plugin("ocr_video_detector_onnx")

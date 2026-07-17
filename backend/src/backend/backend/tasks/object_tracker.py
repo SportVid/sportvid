@@ -15,18 +15,20 @@ from django.db import transaction
 from django.conf import settings
 
 
-""" TODO: Frontend should send params in this format:
-{
-    "detector": "yolox",
-    "tracker": "bytetrack",
-    "detector_params": {"model_chkpt": }
-    "tracker_params": {"fps": 5},
-    "weights": "checkpoint_name",
-}
+""" NOTE: Frontend should send params as a JSON body in this format:
+    {
+        "fps": 30,
+        "detector": "yolox",
+        "tracker": "bytetrack",
+        "parameters" : { 
+            "detector_params":  {"option1": "foo", "option2": "bar", ...},
+            "tracker_params":   {"option1" : "foo", "option2": "bar", ...}
+        }
+    }
 """
 
-@PluginManager.export_plugin("tracker")
-class Tracker(Task):
+@PluginManager.export_plugin("object_tracker")
+class ObjectTracker(Task):
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",
@@ -50,16 +52,12 @@ class Tracker(Task):
             manager=manager,
         )
         video_id = self.upload_video(client, video)
-
+        
+        logging.error(f'TASK PARAMS: {parameters}')
         tracker_result = self.run_analyser(
             client,
-            "tracker",
-            parameters={
-                "detector": parameters["detector"],
-                "detector_params": parameters.get("detector_params", {}),
-                "tracker": parameters["tracker"],
-                "tracker_params": parameters.get("tracker_params", {}),
-            },
+            "object_tracker",
+            parameters=parameters,
             inputs={"video": video_id},
             outputs=["tracklets"],
             downloads=["tracklets"],
@@ -74,16 +72,13 @@ class Tracker(Task):
             return {}
 
         with transaction.atomic():
-            with tracker_result[1]["detections"] as detections:
-
-                # relevant db entry for frontend
+            with tracker_result[1]["tracklets"] as tracklets:
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
-                    data_id=detections.id,
+                    data_id=tracklets.id,
                     name="bboxes",
                     type=PluginRunResult.TYPE_BBOXES,
                 )
-                # relevant for script-based calls
                 return {
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [plugin_run_result_db.id.hex],

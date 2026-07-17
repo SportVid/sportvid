@@ -1,10 +1,10 @@
 import logging
 import torch
 import numpy as np
-
 from typing import Any, Dict
 
 
+@staticmethod
 def xyxy_to_xywh(xyxy):
     """
     Transforms [x1,y1,x2,y2] -> [center of x,c enter of y, width, height]
@@ -20,7 +20,7 @@ def xyxy_to_xywh(xyxy):
     h = y2 - y1
     
     return np.array((cx,cy,w,h))
-    
+
 
 class YoloX():
     """
@@ -30,19 +30,23 @@ class YoloX():
     def __init__(
         self,
         model_path: str,
-        batch_size: int,
         image_size: tuple[int, int],
-        detector_cfg: Dict [Any, Any],
-        device: str = "cuda",
+        detector_params: Dict [Any, Any],
         **kwargs,
     ):
-        from yolox.exp import get_exp
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.state = list()
+        self.img_id = 0
         
-        self.batch_size = batch_size
+        self.detector_params = detector_params
+        
+        from yolox.exp import get_exp
         self.exp = get_exp(None, model_path)
-        self.model_chkpt = kwargs.get("model_chkpt", None)
+        
+        self.checkpoint = detector_params.get("checkpoint", None)
+        self.w, self.h = image_size
 
-        self._init_inference(detector_cfg)
+        self._init_inference(detector_params)
         
         # ImageNet norm constants (used in preprocess)
         self.rgb_means = (0.485, 0.456, 0.406)
@@ -63,18 +67,19 @@ class YoloX():
         self.nms_thresh = cfg["nms_thresh"]
 
         # test_size must match the training input_size exactly
+        self.test_size = self.exp.test_size # default is determined by exp
         if "test_size" in cfg:
-            self.test_size = tuple(cfg["test_size"])
-            self.exp.test_size = self.test_size
+            if cfg["test_size"]:
+                self.test_size = tuple(cfg["test_size"])
+                self.exp.test_size = self.test_size
         else:
-            self.test_size = self.exp.test_size
             logging.warning(
                 "No test_size in inference_params -> using exp default "
                 f"{self.test_size}. Make sure this matches your training input_size."
             )
-
         logging.info(
-            f"[inference] test_size={self.test_size}, "
+            f"[inference] " 
+            f"test_size={self.test_size}, "
             f"num_classes={self.num_classes}, "
             f"conf={self.conf_thresh}, nms={self.nms_thresh}"
         )
@@ -83,14 +88,14 @@ class YoloX():
         self.model = self.exp.get_model().to(self.device)
 
         # load checkpoint
-        if self.model_chkpt:
-            logging.info(f"[inference] Loading checkpoint: {self.model_chkpt}")
-            ckpt = torch.load(self.model_chkpt, map_location=self.device)
-            self.model.load_state_dict(ckpt["model"], strict=True) # strict=True to check for architecture mismatches
+        if self.checkpoint:
+            logging.info(f"[inference] Loading checkpoint: {self.checkpoint}")
+            chkpt = torch.load(self.checkpoint, map_location=self.device)
+            self.model.load_state_dict(chkpt["model"], strict=True) # strict=True to check for architecture mismatches
             logging.info("[inference] Checkpoint loaded successfully.")
         else:
             logging.warning(
-                "[inference] No checkpoint provided — running with random weights. "
+                "[inference] No checkpoint provided -> running with random weights. "
                 "Set model_chkpt in your config."
             )
 
@@ -110,26 +115,30 @@ class YoloX():
         """
         Letterbox-resize each frame to test_size and normalise with ImageNet stats.
         Args:
-            inputs: dict with 'frame' tensor (N, C, H, W)
+            inputs: dict with 'frame' tensor (N, H, W, C)
         Returns:
             dict with 'inputs' (model-ready tensor), 'shape', 'ratio' (list[float])
         """
         from yolox.data.data_augment import preproc
-        
-        input_shape = inputs["frame"].shape  # (N, C, H, W)
-        actual_batch = input_shape[0]
+
+        input_shape = inputs["frame"].shape  # NOTE: VideoDecoder returns (N,H,W,C)
         fp16 = self.cfg.get("fp16", False)
 
-        processed = np.zeros(
-            (actual_batch, input_shape[1], self.test_size[0], self.test_size[1]),
+        if input_shape[3] != 3:
+            raise RuntimeError("Expected 3-channel RGB input.")
+
+        processed = np.zeros( # (N, C, H, W)
+            (input_shape[0], input_shape[3], self.test_size[0], self.test_size[1]),
             dtype=np.float16 if fp16 else np.float32,
         )
-        assert input_shape[1] == 3, "Expected 3-channel RGB input"
-
+    
         ratios = []
         last_hwc_shape = None
         for i, frame in enumerate(inputs["frame"]):
-            img_hwc = frame.permute(1, 2, 0).numpy()  # (H, W, C)
+            img_hwc = frame
+            # img_hwc = frame.permute(1, 2, 0).numpy() # torch
+            # img_hwc = np.permute_dims(frame, (1, 2, 0)) # (H, W, C) # numpy
+            logging.debug("img_hwc type=%s shape=%s dtype=%s", type(img_hwc), getattr(img_hwc, "shape", None), getattr(img_hwc, "dtype", None))
             pimg, ratio = preproc(img_hwc, self.test_size, self.rgb_means, self.std)
             processed[i] = pimg
             ratio_scalar = (
@@ -138,13 +147,12 @@ class YoloX():
             ratios.append(ratio_scalar)
             last_hwc_shape = img_hwc.shape
 
-        self.h, self.w = input_shape[2], input_shape[3]
+        self.h, self.w = input_shape[1], input_shape[2]
         self.det_shape = (self.h, self.w)
 
         images = torch.from_numpy(processed).to(self.device)
-        if fp16:
-            images = images.half()
-
+        if fp16: images = images.half()
+            
         return {
             "inputs": images,
             "shape": last_hwc_shape,
@@ -172,13 +180,13 @@ class YoloX():
 
         for pred, ratio in zip(raw_outputs, inputs["ratio"]):
             if pred is None:
-                self.detections.append([])
+                self.state.append([])
                 self.img_id += 1
                 continue
 
             if not np.isfinite(ratio) or ratio < 1e-6:
                 logging.warning(f"Invalid ratio={ratio}, skipping frame {self.img_id}")
-                self.detections.append([])
+                self.state.append([])
                 self.img_id += 1
                 continue
 
@@ -205,9 +213,8 @@ class YoloX():
                     "cls_id": int(b[-1]),
                     "conf": float(b[-2]),
                 })
-                logging.debug(bbox_list[-1])
 
-            self.detections.append(bbox_list)
+            self.state.append(bbox_list)
             self.img_id += 1
 
         return raw_outputs

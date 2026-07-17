@@ -126,11 +126,25 @@ class DataManager:
         zip_path = create_data_path(self.data_dir, data_id, "zip")
         asset_dir = Path(self.data_dir) / data_id
 
+        if self.cache and hasattr(self.cache, "delete_by_value_field"):
+            try:
+                deleted = self.cache.delete_by_value_field("data_id", data_id)
+                if deleted:
+                    logging.info("Deleted %d cache entries for data_id %s", deleted, data_id)
+            except Exception:
+                logging.exception("Failed cache invalidation for data_id %s", data_id)
+
         if os.path.exists(zip_path):
-            os.remove(zip_path)
+            try:
+                os.remove(zip_path)
+            except FileNotFoundError:
+                pass
 
         if asset_dir.exists():
-            shutil.rmtree(asset_dir)
+            try:
+                shutil.rmtree(asset_dir)
+            except FileNotFoundError:
+                pass
 
     def load_file_from_stream(self, data_stream: Iterable) -> tuple[Data, str]:
         data_stream = iter(data_stream)

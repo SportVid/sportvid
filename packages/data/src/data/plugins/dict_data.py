@@ -1,6 +1,6 @@
 import logging
 import zipfile
-from typing import List, Union
+from typing import List, Dict, Union, Any
 from dataclasses import dataclass, field
 from ..manager import DataManager
 from ..data import Data
@@ -8,13 +8,13 @@ from ..fs_handler import LocalFSHandler
 from interface import analyser_pb2
 
 
-@DataManager.export("ListData", analyser_pb2.LIST_DATA)
+@DataManager.export("DictData", analyser_pb2.DICT_DATA)
 @dataclass(kw_only=True)
-class ListData(Data):
-    type: str = field(default="ListData")
-    data: List[str] = field(default_factory=list)
+class DictData(Data):
+    type: str = field(default="DictData")
+    data: Dict[Any, Any] = field(default_factory=dict)
     index: List[Union[str, int]] = field(default_factory=list)
-
+    
     def load(self) -> None:
         super().load()
         if not self.check_fs():

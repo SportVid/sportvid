@@ -5,7 +5,7 @@ from backend.plugin_manager import PluginManager
 class ByteTrackSerializer(serializers.Serializer):
     fps = serializers.IntegerField(
         required=False,
-        default=5,
-        min_value=0,
-        max_value=30
+        default=10,
+        min_value=1,
+        max_value=30,
     )

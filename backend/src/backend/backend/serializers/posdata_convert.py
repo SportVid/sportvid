@@ -3,21 +3,13 @@ from backend.plugin_manager import PluginManager
 
 @PluginManager.export_serializer("posdata_convert")
 class PosDataConvertSerializer(serializers.Serializer):
-    
     parameters = serializers.DictField(required=False, default=dict)
-    
     tracking_data_id = serializers.UUIDField(required=True)
     
-    # TODO: fix.
-    # format = serializers.ChoiceField(
-    #     required=True,
-    #     choices=["dfl", "kinexon"]
-    # )
-    
-    format = serializers.CharField(
+    format = serializers.ChoiceField(
         required=True,
+        choices=["dfl", "kinexon"]
     )
-    
     fps = serializers.IntegerField(
         required=False,
         default=-1,
@@ -51,13 +43,12 @@ class PosDataConvertSerializer(serializers.Serializer):
         default="ball",
         max_length=100,
         allow_blank=False,
-        #trim_whitespace=True,
+        # trim_whitespace=True,
     )
-    
     team_id_ref = serializers.CharField(
         required=False,
         default="",
         max_length=100,
         allow_blank=True,
-        #trim_whitespace=True,
+        # trim_whitespace=True,
     )

@@ -108,25 +108,25 @@ class TrackingDataUpload(View):
                     return JsonResponse(
                         {"status": "error", "type": "database_error"}, status=500)
                 
-                analyser_params = [
-                    {"name": "tracking_data_id", "value": tracking_data_db.id.hex},
-                    {"name": "format", "value": db_params["file_type"]}
-                ]
+                analyser_params = {
+                    "tracking_data_id": tracking_data_db.id.hex,
+                    "format" : db_params["file_type"],
+                }
                 if request.POST.get("fps"):
-                    analyser_params.append({"name": "fps", "value": request.POST.get("fps")})
+                    analyser_params.append({"fps" : request.POST.get("fps")})
                 if request.POST.get("delimiter"):
-                    analyser_params.append({"name": "delimiter", "value": request.POST.get("delimiter")})
+                    analyser_params.append({"delimiter" : request.POST.get("delimiter")})
                 if request.POST.get("format") == "kinexon":
                     analyser_params.extend([
-                        {"name": "field_length", "value": video_db.field_length},
-                        {"name": "field_width", "value": video_db.field_width}
+                        {"field_length" : video_db.field_length},
+                        {"field_width" : video_db.field_width}
                     ])
                     if request.POST.get("team_id_ball"):
-                        analyser_params.append({"name": "team_id_ball", "value": request.POST.get("team_id_ball")})
+                        analyser_params.append({"team_id_ball" : request.POST.get("team_id_ball")})
                     if request.POST.get("team_id_ref"):
-                        analyser_params.append({"name": "team_id_ref", "value": request.POST.get("team_id_ref")})
+                        analyser_params.append({"team_id_ref" : request.POST.get("team_id_ref")})
   
-                result = self.submit_analyse(
+                _ = self.submit_analyse(
                     plugins=["posdata_convert"],
                     video=video_db,
                     user=request.user,

@@ -11,18 +11,18 @@ from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("color_analysis")
-class ColorAnalyserParser(Parser):
-    def __init__(self):
+# @PluginManager.export_parser("color_analysis")
+# class ColorAnalyserParser(Parser):
+#     def __init__(self):
 
-        self.valid_parameter = {
-            "timeline": {"parser": str, "default": "Color Analysis"},
-            "k": {"parser": int, "default": 4},
-            "fps": {"parser": float, "default": 2.0},
-            "max_resolution": {"parser": int, "default": 48},
-            "max_iter": {"parser": int, "default": 10},
-            "timeline_visualization": {"parser": int, "default": 0},
-        }
+#         self.valid_parameter = {
+#             "timeline": {"parser": str, "default": "Color Analysis"},
+#             "k": {"parser": int, "default": 4},
+#             "fps": {"parser": float, "default": 2.0},
+#             "max_resolution": {"parser": int, "default": 48},
+#             "max_iter": {"parser": int, "default": 10},
+#             "timeline_visualization": {"parser": int, "default": 0},
+#         }
 
 
 @PluginManager.export_plugin("color_analysis")

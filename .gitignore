@@ -185,8 +185,7 @@ test_env/
 models/
 
 # Data dirs
-.data
-data/
+**/data/
 
 # Project specific things
 README.md

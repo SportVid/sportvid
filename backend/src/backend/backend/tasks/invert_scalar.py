@@ -19,13 +19,13 @@ from ..utils.analyser_client import TaskAnalyserClient
 logger = logging.getLogger(__name__)
 
 
-@PluginManager.export_parser("invert_scalar")
-class InvertScalarParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "timeline": {"parser": str, "default": "Inverted Timeline"},
-            "scalar_timeline_id": {"required": True},
-        }
+# @PluginManager.export_parser("invert_scalar")
+# class InvertScalarParser(Parser):
+#     def __init__(self):
+#         self.valid_parameter = {
+#             "timeline": {"parser": str, "default": "Inverted Timeline"},
+#             "scalar_timeline_id": {"required": True},
+#         }
 
 
 @PluginManager.export_plugin("invert_scalar")
