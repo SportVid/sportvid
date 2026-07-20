@@ -1031,6 +1031,216 @@ const plugins = ref([
         optional_parameters: [],
       },
       {
+        name: t("modal.plugin.object_tracker.plugin_name"),
+        description: t("modal.plugin.object_tracker.plugin_description"),
+        icon: "mdi-radar",
+        plugin: "object_tracker",
+        id: 704,
+        parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 30,
+            value: Math.round(playerStore.videoFPS),
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+          {
+            field: "select_options",
+            name: "detector",
+            value: "yolox",
+            items: [
+              { title: "YOLOX", value: "yolox" },
+              { title: "YOLOv10 (Ultralytics)", value: "yolo10" },
+              { title: "YOLOv11 (Ultralytics)", value: "yolo11" },
+              { title: "YOLOv12 (Ultralytics)", value: "yolo12" },
+              { title: "YOLOv26 (Ultralytics)", value: "yolo26" },
+              { title: "RF-DETR", value: "rfdetr" },
+              { title: "RT-DETR", value: "rtdetr" },
+            ],
+            text: t("modal.plugin.object_tracker.detector"),
+          },
+          {
+            field: "select_options",
+            name: "tracker",
+            value: "bytetrack",
+            items: [{ title: "ByteTrack", value: "bytetrack" }],
+            text: t("modal.plugin.object_tracker.tracker"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 0,
+            max: 1,
+            value: 0.2,
+            step: 0.05,
+            name: "confidence_threshold",
+            text: t("modal.plugin.object_tracker.confidence_threshold"),
+            group: "detector_params",
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 16,
+            value: 1,
+            step: 1,
+            name: "batch_size",
+            text: t("modal.plugin.object_tracker.batch_size"),
+            group: "detector_params",
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 1,
+            value: 0.65,
+            step: 0.05,
+            name: "nms_thresh",
+            text: t("modal.plugin.object_tracker.nms_thresh"),
+            group: "detector_params",
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 1,
+            value: 0.3,
+            step: 0.05,
+            name: "iou",
+            text: t("modal.plugin.object_tracker.iou"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "agnostic_nms",
+            text: t("modal.plugin.object_tracker.agnostic_nms"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "checkbox",
+            value: true,
+            name: "fp16",
+            text: t("modal.plugin.object_tracker.fp16"),
+            group: "detector_params",
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "half",
+            text: t("modal.plugin.object_tracker.half"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "checkbox",
+            value: true,
+            name: "decode",
+            text: t("modal.plugin.object_tracker.decode"),
+            group: "detector_params",
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 1,
+            step: 1,
+            name: "num_classes",
+            text: t("modal.plugin.object_tracker.num_classes"),
+            group: "detector_params",
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 300,
+            value: 100,
+            step: 1,
+            name: "max_det",
+            text: t("modal.plugin.object_tracker.max_det"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 56,
+            max: 1400,
+            value: 1288,
+            step: 56,
+            name: "resolution",
+            text: t("modal.plugin.object_tracker.resolution"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "verbose",
+            text: t("modal.plugin.object_tracker.verbose"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 1,
+            value: 0.4,
+            step: 0.05,
+            name: "track_thresh",
+            text: t("modal.plugin.object_tracker.track_thresh"),
+            group: "tracker_params",
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 600,
+            value: 300,
+            step: 10,
+            name: "track_buffer",
+            text: t("modal.plugin.object_tracker.track_buffer"),
+            group: "tracker_params",
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 1,
+            value: 0.8,
+            step: 0.05,
+            name: "match_thresh",
+            text: t("modal.plugin.object_tracker.match_thresh"),
+            group: "tracker_params",
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "mot20",
+            text: t("modal.plugin.object_tracker.mot20"),
+            group: "tracker_params",
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 10,
+            value: 5.0,
+            step: 0.1,
+            name: "aspect_ratio_thresh",
+            text: t("modal.plugin.object_tracker.aspect_ratio_thresh"),
+            group: "tracker_params",
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 500,
+            value: 0,
+            step: 10,
+            name: "min_box_area",
+            text: t("modal.plugin.object_tracker.min_box_area"),
+            group: "tracker_params",
+          },
+        ],
+      },
+      {
         name: t("modal.plugin.calibration_static_dlt.plugin_name"),
         description: t("modal.plugin.calibration_static_dlt.plugin_description"),
         icon: "mdi-camera-enhance",
@@ -1203,6 +1413,89 @@ watch(
   { immediate: true }
 );
 
+// Toggle visibility of detector-specific parameters for object_tracker based on selected detector
+const DETECTOR_PARAM_VISIBILITY = {
+  yolox: ["confidence_threshold", "batch_size", "nms_thresh", "fp16", "decode", "num_classes"],
+  yolo10: [
+    "confidence_threshold",
+    "batch_size",
+    "iou",
+    "agnostic_nms",
+    "half",
+    "max_det",
+    "verbose",
+  ],
+  yolo11: [
+    "confidence_threshold",
+    "batch_size",
+    "iou",
+    "agnostic_nms",
+    "half",
+    "max_det",
+    "verbose",
+  ],
+  yolo12: [
+    "confidence_threshold",
+    "batch_size",
+    "iou",
+    "agnostic_nms",
+    "half",
+    "max_det",
+    "verbose",
+  ],
+  yolo26: [
+    "confidence_threshold",
+    "batch_size",
+    "iou",
+    "agnostic_nms",
+    "half",
+    "max_det",
+    "verbose",
+  ],
+  rfdetr: ["confidence_threshold", "batch_size", "max_det", "resolution", "verbose"],
+  rtdetr: ["confidence_threshold", "batch_size", "verbose"],
+};
+
+const DETECTOR_CONFIDENCE_DEFAULT = {
+  yolox: 0.2,
+  yolo10: 0.2,
+  yolo11: 0.2,
+  yolo12: 0.2,
+  yolo26: 0.2,
+  rfdetr: 0.5,
+  rtdetr: 0.25,
+};
+
+const objectTrackerParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 704);
+  return plugin?.parameters || [];
+});
+
+const objectTrackerOptionalParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 704);
+  return plugin?.optional_parameters || [];
+});
+
+watch(
+  () => objectTrackerParams.value.find((p) => p.name === "detector")?.value,
+  (detector) => {
+    const visible = DETECTOR_PARAM_VISIBILITY[detector] || [];
+    for (const p of objectTrackerOptionalParams.value) {
+      if (p.group !== "detector_params") continue;
+      p.hidden = !visible.includes(p.name);
+    }
+    const confidenceParam = objectTrackerOptionalParams.value.find(
+      (p) => p.name === "confidence_threshold"
+    );
+    if (confidenceParam && detector in DETECTOR_CONFIDENCE_DEFAULT) {
+      confidenceParam.value = DETECTOR_CONFIDENCE_DEFAULT[detector];
+    }
+  },
+  { immediate: true }
+);
+
 const pluginsSorted = computed(() => {
   return plugins.value.slice(0).sort((a, b) => a.name.localeCompare(b.name));
 });
@@ -1221,13 +1514,37 @@ const selected = computed(() => {
 
 const runPlugin = async (plugin, parameters, optional_parameters) => {
   parameters = [...parameters, ...optional_parameters];
-  parameters = parameters.map((e) => {
+
+  // `hidden` always means "not applicable to the current selection" (e.g.
+  // kpi_computation's format-dependent tracking_data_id / bytetrack_run_id /
+  // calibration_id, or object_tracker's detector-dependent params) -- such
+  // entries are dropped entirely rather than submitted with a stale/empty
+  // value, so the backend falls back to its own defaults / conditional logic.
+  // Parameters additionally tagged with `group` (e.g. object_tracker's
+  // detector_params / tracker_params) are bundled into a single nested
+  // object under that group name instead of being submitted individually.
+  const grouped = {};
+  const ungrouped = [];
+  for (const e of parameters) {
+    if (e.hidden) continue;
+    if (e.group) {
+      grouped[e.group] = grouped[e.group] || {};
+      grouped[e.group][e.name] = e.value;
+    } else {
+      ungrouped.push(e);
+    }
+  }
+
+  parameters = ungrouped.map((e) => {
     if ("file" in e) {
       return { name: e.name, file: e.file };
     } else {
       return { name: e.name, value: e.value };
     }
   });
+  for (const [name, value] of Object.entries(grouped)) {
+    parameters.push({ name, value });
+  }
 
   for (const video of props.videoIds) {
     const video_params = [];

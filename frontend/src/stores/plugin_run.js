@@ -33,12 +33,12 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     const formData = new FormData();
     formData.append("plugin", plugin);
 
-    const jsonParameters = [];
+    const jsonParameters = {};
     parameters.forEach((p) => {
       if ("file" in p) {
         formData.append(`file_${p.name}`, p.file);
       } else {
-        jsonParameters.push(p);
+        jsonParameters[p.name] = p.value;
       }
     });
     formData.append("parameters", JSON.stringify(jsonParameters));
