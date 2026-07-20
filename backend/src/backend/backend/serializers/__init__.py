@@ -5,3 +5,5 @@ from .calibration_static_dlt import CalibrationSerializer
 from .posdata_convert import PosDataConvertSerializer
 from .kpi_computation import KPIComputationSerializer
 from .floodlight_convert import FloodlightConvertSerializer
+from .osnet_reid import OSNetReIdentificationSerializer
+from .team_clustering import TeamClusteringSeriaizer

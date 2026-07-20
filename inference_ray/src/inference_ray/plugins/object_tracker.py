@@ -175,6 +175,7 @@ class ObjectTracker(
                         # Detectors have varying output heads, so we need some mapping dict from cls_id to real-world entity.
                         class_id = trk_det_mapping[frame_id][track_id]['class']
                         default_team_assignment = out_cls_mapping.get(str(class_id), -1).get('default_team', -1)
+                        out_cls_mapping.get(str(class_id), {}).get('default_team', -1)
                         # coord normalization
                         x_norm = int(track_xywh[0]) / self.detector.w
                         y_norm = int(track_xywh[1]) / self.detector.h

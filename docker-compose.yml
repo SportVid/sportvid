@@ -2,12 +2,10 @@ secrets:
   django_settings:
     file: ${SPORTVID_BACKEND_CONFIG}
 
-# volumes:
-#   assets:
-#     name: frontend-assets
 services:
   inference_ray:
     container_name: inference_ray
+    user: "1000:1000"
     build:
       context: .
       dockerfile: inference_ray/Dockerfile
@@ -47,8 +45,10 @@ services:
 
   analyser:
     container_name: analyser
+    user: "1000:1000"
     build:
       context: .
+      # dockerfile: analyser/Dockerfile
     env_file:
       - ./.env
     volumes:
@@ -109,6 +109,7 @@ services:
   
   celery:
     container_name: celery
+    user: "1000:1000"
     build:
       context: .
     env_file:
@@ -148,6 +149,7 @@ services:
 
   backend:
     container_name: backend
+    user: "1000:1000"
     build:
       context: .
       args:
@@ -217,9 +219,7 @@ services:
       - ./frontend/:/app/frontend
       - ${DATA_PATH}/predictions/:/thumbnails
       - ${DATA_PATH}/media/:/media
-      # - assets:/assets
     working_dir: /app/frontend
     depends_on:
       backend:
         condition: service_started
-

@@ -1,36 +1,37 @@
-FROM ghcr.io/astral-sh/uv:debian
+FROM python:3.10-slim-bookworm
 
-RUN apt-get update && apt-get install -y \
-    wget \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+
+COPY --from=ghcr.io/astral-sh/uv:0.8.4 /uv /uvx /bin/
 
 WORKDIR /app
 
-ENV UV_LINK_MODE=copy \
-    PATH="/app/.venv/bin:$PATH"
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g ${GID} appuser && \
+    useradd -m -u ${UID} -g ${GID} -s /bin/bash appuser
 
-# Copy only files that affect dependency resolution for this image
-COPY uv.lock pyproject.toml .python-version /app/
-COPY packages/data/pyproject.toml /app/packages/data/pyproject.toml
-COPY packages/interface/pyproject.toml /app/packages/interface/pyproject.toml
-COPY packages/utils/pyproject.toml /app/packages/utils/pyproject.toml
-COPY backend/pyproject.toml /app/backend/pyproject.toml
-
-# Install dependencies only, not the workspace packages themselves
+# Install dependencies first (best practice for caching)
+COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-install-workspace
+    uv sync --frozen --no-dev --no-install-project --no-editable
 
-# Now copy only the source actually needed by backend
-COPY packages/data /app/packages/data
-COPY packages/interface /app/packages/interface
-COPY packages/utils /app/packages/utils
-COPY backend /app/backend
-COPY analyser/pyproject.toml /app/analyser/pyproject.toml
-COPY inference_ray/pyproject.toml /app/inference_ray/pyproject.toml
-
-# Install just the backend package into the existing environment
+# Then copy the rest of the project and install it
+COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --package backend
+    uv sync --frozen --no-dev --no-editable
 
+# Ensure .venv is writable by appuser
+RUN chown -R appuser:appuser /app
+
+# Runtime as non-root
+USER appuser
+
+# Set PATH to use the venv
+ENV PATH="/app/.venv/bin:$PATH"
+
+# Adjust entrypoint for your actual app
 ENTRYPOINT []
