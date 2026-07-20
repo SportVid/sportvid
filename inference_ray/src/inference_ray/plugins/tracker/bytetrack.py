@@ -85,11 +85,8 @@ class ByteTrack():
         img_shape = inputs['shape']
         det_shape = inputs['det_shape']
 
-        # logging.debug(len(detections)); logging.debug(detections[0].shape)
-        # logging.info(f'img dim: {img_shape}, det dim: {det_shape}')
-        
         for detection in detections:
-            # reset to prevent accumulation
+            # reset state to prevent accumulation
             online_tlwhs = []
             online_ids = []
             online_scores = []

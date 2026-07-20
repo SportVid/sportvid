@@ -30,9 +30,6 @@ class ByteTrack(Task):
         dry_run: bool = False,
         **kwargs
     ):
-        
-        logging.error(parameters)
-        
         manager = DataManager(self.config["output_path"])
         client = TaskAnalyserClient(
             host=self.config["analyser_host"],

@@ -62,15 +62,14 @@ class ObjectTracker(
         callbacks: Callable = None,
     ):
         import json
+        import time
         from collections import defaultdict
-        
         from .detector import (
             YoloX, 
             YoloUltralytics,
             RFDetr,
             RTDetr
         )
-        
         from .tracker import (
             ByteTrack,
             TrackClassMapper
@@ -85,7 +84,6 @@ class ObjectTracker(
             "rfdetr": RFDetr,
             "rtdetr": RTDetr,
         }
-        
         TRACKER_MAP = {
            "bytetrack": ByteTrack
         }
@@ -108,6 +106,7 @@ class ObjectTracker(
                 num_frames = (video_batcher.duration() * video_batcher.fps()) // batch_size
                 image_size = video_batcher.video_decoder._size
 
+                s = time.time()
                 # -------> instantiate detector & tracker objects
                 self.detector = DETECTOR_MAP[parameters["detector"]](
                     model_path=parameters["detector_params"]["model_path"],
@@ -133,6 +132,8 @@ class ObjectTracker(
                             'det_shape': self.detector.det_shape,
                         }
                     )
+                e = time.time()
+                logging.error(f"object_tracker.py took: {e-s}")
                 # -------> build the required output format for consistency with other plugins
                 tracklets = defaultdict(list)
                 unique_player_ids = set()
