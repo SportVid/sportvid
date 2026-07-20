@@ -132,16 +132,34 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 asynchronous=True,
                 **conversion_args
             )
-            while True:
-                try:
-                    _, stderr = ffmpeg_proc.communicate(timeout=_POLL_INTERVAL)
-                    break
-                except subprocess.TimeoutExpired:
+            try:
+                while True:
                     if not Video.objects.filter(id=video_id_hex).exists():
-                        logger.info("Video %s deleted during HLS conversion, killing ffmpeg.", video_id_hex)
+                        logger.info(
+                            "Video %s deleted during HLS conversion, killing ffmpeg.",
+                            video_id_hex,
+                        )
                         ffmpeg_proc.kill()
-                        ffmpeg_proc.wait()
-                        return
+                        break
+                    line = ffmpeg_proc.stderr.readline()
+
+                    if line: logger.debug("[ffmpeg] %s", line.rstrip()) # consume line
+
+                    if ffmpeg_proc.poll() is not None:
+                        # process exited; drain remaining stderr
+                        rest = ffmpeg_proc.stderr.read()
+                        if rest:
+                            for extra_line in rest.splitlines():
+                                logger.info("[ffmpeg] %s", extra_line)
+                        break
+
+                    time.sleep(_POLL_INTERVAL)
+
+                    rc = ffmpeg_proc.wait()
+                    if rc != 0: raise RuntimeError(f"ffmpeg exited with code {rc}")
+            finally:
+                if ffmpeg_proc.stderr: ffmpeg_proc.stderr.close()
+                
         else: 
             ffmpeg_done = convert_to_hls(
                 str(file_in),
