@@ -120,9 +120,11 @@ class ObjectTracker(
                     device="cuda",
                 )
                 # -------> detect & track
+                logging.error(f'Processing input video with the object detector!')
                 for frame_id, frame in enumerate(video_batcher, start=0):
                     preproced_outputs = self.detector.preprocess(frame)
                     _ = self.detector.run_inference(preproced_outputs)
+                logging.error(f'Done processing the input video with the object detector!')
                 # TODO: check performance for 90m+ video footage.
                 _ = self.tracker.process(
                         inputs = {

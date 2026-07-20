@@ -37,6 +37,7 @@ class ByteTrack():
         
         from types import SimpleNamespace
         self.tracker_params = SimpleNamespace(**tracker_params)
+        logging.error(f"BYTETracker params: {self.tracker_params}")
         
         from yolox.tracker.byte_tracker import BYTETracker
         self.tracker = BYTETracker(args=self.tracker_params)
