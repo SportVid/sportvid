@@ -123,14 +123,15 @@ class YoloUltralytics():
             pad_w = (32 - self.orig_w % 32) % 32
             if pad_h or pad_w:
                 x = F.pad(x, (0, pad_w, 0, pad_h), mode="constant", value=114.0 / 255.0)
+            self.h = self.orig_h + pad_h, self.w = self.orig_w + pad_w
             infer_shape = (self.orig_h + pad_h, self.orig_w + pad_w)
         else:
             if (x.shape[-2], x.shape[-1]) != (target_h, target_w):
                 x = F.interpolate(x, size=(target_h, target_w), mode="bilinear", align_corners=False)
+            self.h = target_h, self.w = target_w
             infer_shape = (target_h, target_w)
-
         self.det_shape = infer_shape
-        self.h = self.det_shape[0], self.w = self.det_shape[1]
+        
         return {
             "inputs": x,
             "orig_shape": (self.orig_h, self.orig_w),
