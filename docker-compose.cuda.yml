@@ -145,6 +145,7 @@ services:
     command:
       - "uv"
       - "run"
+      - "--no-editable"
       - "--package"
       - "backend"
       - "celery"
@@ -186,6 +187,7 @@ services:
     command:
       - "uv"
       - "run"
+      - "--no-editable"
       - "--package"
       - "backend"
       - "gunicorn"
