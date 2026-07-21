@@ -51,8 +51,8 @@ class RFDetr():
         
         pretrain_weights = None
         self.checkpoint = detector_params.get("checkpoint", None)
-        if self.checkpoint :
-            if str(self.checkpoint ) != "" or str(self.checkpoint ) != "None":
+        if self.checkpoint is not None and (
+            str(self.checkpoint).strip().lower() not in {"", "none", "null"}):
                 pretrain_weights = str(self.checkpoint)
         # TODO: instantiate from model_path string representation.
         self.model = RFDETRLarge(
@@ -63,26 +63,48 @@ class RFDetr():
         self.model.model.model.eval()
         
         logging.info(f"Model loaded successfully from checkpoint '{self.checkpoint}'...")
-        self.model.optimize_for_inference(compile=False)
+        try:
+            self.model.optimize_for_inference(
+                compile=False,
+                batch_size=detector_params.get("batch_size", 1),
+                dtype="float16" if (self.device.startswith("cuda") and detector_params.get("fp16", False)) else "float32",
+            )
+        except Exception:
+            logging.warning("RF-DETR optimize_for_inference failed; continuing without optimized model.", exc_info=True)
+
+    def _ensure_batched_hwc(self, frames):
+        if isinstance(frames, np.ndarray):
+            frames = torch.from_numpy(frames)
+        elif not isinstance(frames, torch.Tensor):
+            raise TypeError(f"Unsupported frame type: {type(frames)}")
+
+        if frames.ndim == 3:  # HWC
+            frames = frames.unsqueeze(0)
+        if frames.ndim != 4:
+            raise RuntimeError(f"Expected (H,W,C) or (N,H,W,C), got {tuple(frames.shape)}")
+        if frames.shape[-1] != 3:
+            raise RuntimeError(f"Expected RGB NHWC input with 3 channels, got {tuple(frames.shape)}")
+
+        return frames.contiguous()
 
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs) -> Dict[Any, Any]:
-        input_shape = inputs["frame"].shape  # NOTE: VideoDecoder returns (N,H,W,C)
-        self.h, self.w = input_shape[2], input_shape[3]
-        
-        if input_shape[3] != 3:
-            raise RuntimeError("Expected 3-channel RGB input.")
-        
+        frames = self._ensure_batched_hwc(inputs["frame"])
+        n, h, w, _ = frames.shape
+        self.h, self.w = h, w
+
         pil_images = []
-        for i, frame in enumerate(inputs['frame']):
-            # NOTE: RF-DETR expects PIL image format (H,W,C)
-            # img_np = input[i].permute(1, 2, 0).cpu().numpy().astype(np.uint8)
-            img_hwc = frame
-            pil_images.append(Image.fromarray(img_hwc))
-        
+        for frame in frames:
+            if frame.dtype != np.uint8:
+                if frame.max() <= 1.0:
+                    frame = (frame * 255.0).clip(0, 255).astype(np.uint8)
+                else:
+                    frame = frame.clip(0, 255).astype(np.uint8)
+            pil_images.append(Image.fromarray(frame))
+
         return {
-            'inputs': pil_images,
-            'shape': (self.h, self.w)
+            "inputs": pil_images,
+            "shape": (self.h, self.w),
         }
 
     def process(self, inputs: Any, **kwargs):
@@ -90,23 +112,46 @@ class RFDetr():
 
     @torch.no_grad()
     def run_inference(self, inputs):
-        pil_images = inputs['inputs']
+        pil_images = inputs["inputs"]
+
+        try:
+            results = self.model.predict(
+                pil_images,
+                threshold=self.min_confidence,
+            )
+            batched = True
+        except Exception:
+            results = [self.model.predict(img, threshold=self.min_confidence) for img in pil_images]
+            batched = False
+
         batch_results = []
-        
-        for image in pil_images:
-            results = self.model.predict(image, threshold=self.min_confidence)
-            
-            bbox_list = []
-            for box, score, class_id in zip(results.xyxy, results.confidence, results.class_id):
-                bbox_dict = dict(
-                    xyxy=box,
-                    xywh=xyxy_to_xywh(box),
-                    cls_id=int(class_id),
-                    conf=float(score)
-                )
-                bbox_list.append(bbox_dict)
+
+        iterable = results if batched else results
+        for det in iterable:
+            xyxy = np.asarray(det.xyxy)
+            conf = np.asarray(det.confidence)
+            cls = np.asarray(det.class_id)
+
+            if len(xyxy) > self.max_det:
+                order = np.argsort(-conf)[: self.max_det]
+                xyxy = xyxy[order]
+                conf = conf[order]
+                cls = cls[order]
+
+            xywh = self.xyxy_to_xywh(xyxy)
+
+            bbox_list = [
+                {
+                    "xyxy": xyxy[i],
+                    "xywh": xywh[i],
+                    "cls_id": int(cls[i]),
+                    "conf": float(conf[i]),
+                }
+                for i in range(len(xyxy))
+            ]
+
             self.state.append(bbox_list)
             batch_results.append(bbox_list)
             self.img_id += 1
-            
+
         return batch_results
