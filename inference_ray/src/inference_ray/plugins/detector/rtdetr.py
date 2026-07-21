@@ -53,7 +53,7 @@ class RTDetr:
         self.letterbox = LetterBox(
             new_shape=self.imgsz,
             auto=False,
-            scaleFill=True,
+            scale_fill=True,
             scaleup=True,
             center=True,
             stride=32,

@@ -11,19 +11,19 @@ default_yolox_params = {
     "batch_size": 1,
     "conf_thresh": 0.2,
     "nms_thresh": 0.65,
-    "fp16": True,
+    "fp16": False,
     "num_classes": 1, 
     "decode": True,
     "model_path": "yolox-x",
     "checkpoint": "/models/yolox/bytetrack_x_mot17.pth.tar",
     "output_class_mapping": {
-        "-1": {
+        -1: {
             "entity_type": "unknown",
-            "default_team": "-1"
+            "default_team": -1
         },
-        "0": {
+        0: {
             "entity_type": "athlete",
-            "default_team": "3"
+            "default_team": 3
         }
     }
 }
@@ -42,13 +42,17 @@ default_yolo10_params = {
     "model_path": "yolov10",
     "checkpoint": "/models/yolo_ultra/yolov10x.pt",
     "output_class_mapping": {
-        "-1": {
+        -1: {
             "entity_type": "unknown",
-            "default_team": "-1"
+            "default_team": -1
         },
-        "0": {
+        0: {
             "entity_type": "athlete",
-            "default_team": "3"
+            "default_team": 3
+        },
+        32: {
+            "entity_type": "ball",
+            "default_team": 0
         }
     }
 }
@@ -81,25 +85,25 @@ default_rfdetr_params = {
     "model_path": "RFDETRLarge",
     "checkpoint": "/models/detr/rfdetr-large-sn.pth",
     "output_class_mapping": {
-        "-1": {
+        -1: {
             "entity_type": "unknown",
-            "default_team": "-1"
+            "default_team": -1
         },
-        "0": {
+        0: {
             "entity_type": "ball",
-            "default_team": "0"
+            "default_team": 0
         },
-        "1": {
+        1: {
             "entity_type": "player",
-            "default_team": "3"
+            "default_team": 3
         },
-        "2": {
+        2: {
             "entity_type": "referee",
-            "default_team": "2"
+            "default_team": 2
         },
-        "3": {
+        3: {
             "entity_type": "goalkeeper",
-            "default_team": "3"
+            "default_team": 3
         }
     }
 }
@@ -112,17 +116,17 @@ default_rtdetr_params = {
     "model_path": "RTDETR",
     "checkpoint": "/models/detr/rtdetr-x.pt",
     "output_class_mapping": {
-        "-1": {
+        -1: {
             "entity_type": "unknown",
-            "default_team": "-1"
+            "default_team": -1
         },
-        "0": {
+        0: {
             "entity_type": "person",
-            "default_team": "3"
+            "default_team": 3
         },
-        "32": {
+        32: {
             "entity_type": "ball",
-            "default_team": "0"
+            "default_team": 0
         }
     }    
 }

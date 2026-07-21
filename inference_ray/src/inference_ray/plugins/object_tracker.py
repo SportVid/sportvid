@@ -105,6 +105,7 @@ class ObjectTracker(
         #         )
         #         num_frames = (video_batcher.duration() * video_batcher.fps()) // batch_size
         #         image_size = video_batcher.video_decoder._size
+
         with inputs["video"] as input_data:
             with input_data.open_video() as f_video:
                 video_decoder = VideoDecoder(
@@ -164,6 +165,7 @@ class ObjectTracker(
                     detections=self.detector.state,
                     iou_thresh=0.3
                 )
+                logging.error(trk_det_mapping)
                 """
                 {
                     "0":{
@@ -172,7 +174,8 @@ class ObjectTracker(
                     }, ...
                 }                
                 """
-                out_cls_mapping = parameters["detector_params"]["output_class_mapping"]
+                out_cls_map = parameters["detector_params"]["output_class_mapping"]
+                logging.error(out_cls_map)
                 
                 for frame_id, track in enumerate(self.tracker.state, start=0): # [N,5]
                     for (track_id, track_score, track_xywh, team_id) in zip( # [5,]
@@ -186,8 +189,11 @@ class ObjectTracker(
                         # NOTE: Mapping of class_id to team_id.
                         # Detectors have varying output heads, so we need some mapping dict from cls_id to real-world entity.
                         class_id = trk_det_mapping[frame_id][track_id]['class']
-                        default_team_assignment = out_cls_mapping.get(str(class_id), -1).get('default_team', -1)
-                        out_cls_mapping.get(str(class_id), {}).get('default_team', -1)
+                        logging.error(class_id)
+                        assigned_cls_id = out_cls_map.get(str(class_id), '-1')
+                        logging.error(assigned_cls_id)
+                        default_team_assgn = out_cls_map.get(str(assigned_cls_id), '3')
+                        logging.error(default_team_assgn)
                         # coord normalization
                         x_norm = int(track_xywh[0]) / self.detector.w
                         y_norm = int(track_xywh[1]) / self.detector.h
@@ -198,7 +204,7 @@ class ObjectTracker(
                         tracklet = [
                             int(frame_id),
                             int(track_id),
-                            int(default_team_assignment),
+                            int(default_team_assgn),
                             float(x_norm + (w_norm / 2)), float(y_norm + h_norm),
                             float(x_norm), float(y_norm), float(w_norm), float(h_norm),
                             float(track_xywh[0]), float(track_xywh[1]), float(track_xywh[2]), float(track_xywh[3]),
@@ -211,11 +217,10 @@ class ObjectTracker(
                         "id": pid, 
                         "name": str(pid), 
                         "number": pid, 
-                        "team_id": default_team_assignment
+                        "team_id": int(default_team_assgn)
                     }
                     for pid in sorted(unique_player_ids)
-                }
-                
+                }     
                 meta_dict = {
                     "team_ids": team_id_meta,
                     "player_ids": player_id_meta

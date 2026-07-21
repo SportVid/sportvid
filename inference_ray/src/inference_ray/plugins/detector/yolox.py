@@ -91,8 +91,6 @@ class YoloX():
         return padded, float(ratio)
 
     def _preprocess_torch(self, frames: torch.Tensor, target_device: torch.device):
-        fp16 = self.cfg.get("fp16", False) and target_device.type == "cuda"
-
         frames = frames.contiguous()
         input_shape = frames.shape
         self.h, self.w = int(input_shape[1]), int(input_shape[2])
@@ -126,7 +124,7 @@ class YoloX():
             ratios.append(ratio)
 
         images = torch.stack(processed_list, dim=0).contiguous()
-        if fp16:
+        if self.fp16:
             images = images.to(dtype=torch.float16)
 
         return {
@@ -148,21 +146,17 @@ class YoloX():
 
         images = inputs["inputs"]
 
-        if images.device.type == "cuda":
-            torch.cuda.synchronize()
+        if images.device.type == "cuda": torch.cuda.synchronize()
         raw = self.model(images)
-        if images.device.type == "cuda":
-            torch.cuda.synchronize()
-
+        
+        if images.device.type == "cuda": torch.cuda.synchronize()
         decoded = self.model.head.decode_outputs(raw, dtype=raw.dtype)
 
-        if images.device.type == "cuda":
-            torch.cuda.synchronize()
+        if images.device.type == "cuda": torch.cuda.synchronize()
         raw_outputs = postprocess(
             decoded, self.num_classes, self.conf_thresh, self.nms_thresh
         )
-        if images.device.type == "cuda":
-            torch.cuda.synchronize()
+        if images.device.type == "cuda": torch.cuda.synchronize()
 
         img_h, img_w = inputs["orig_hw"]
 
@@ -260,7 +254,8 @@ class YoloX():
             )
 
         # fp16 after checkpoint load so the cast doesn't affect weight loading
-        if cfg.get("fp16", False):
+        self.fp16 = bool(cfg.get("fp16", False) and self.device.startswith("cuda"))
+        if self.fp16:
             self.model = self.model.half()
             logging.info("[inference] Model cast to fp16.")
 

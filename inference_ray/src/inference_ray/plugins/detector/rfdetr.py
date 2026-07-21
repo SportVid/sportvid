@@ -73,42 +73,31 @@ class RFDetr():
             logging.warning("RF-DETR optimize_for_inference failed; continuing without optimized model.", exc_info=True)
 
     def _ensure_batched_hwc(self, frames):
-        if isinstance(frames, np.ndarray):
-            frames = torch.from_numpy(frames)
-        elif not isinstance(frames, torch.Tensor):
+        if not isinstance(frames, np.ndarray):
             raise TypeError(f"Unsupported frame type: {type(frames)}")
-
         if frames.ndim == 3:  # HWC
-            frames = frames.unsqueeze(0)
+            frames = np.expand_dims(frames, axis=0)
         if frames.ndim != 4:
             raise RuntimeError(f"Expected (H,W,C) or (N,H,W,C), got {tuple(frames.shape)}")
         if frames.shape[-1] != 3:
             raise RuntimeError(f"Expected RGB NHWC input with 3 channels, got {tuple(frames.shape)}")
-
-        return frames.contiguous()
+        return np.ascontiguousarray(frames)
 
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs) -> Dict[Any, Any]:
-        frames = self._ensure_batched_hwc(inputs["frame"])
-        n, h, w, _ = frames.shape
-        self.h, self.w = h, w
+        frames = inputs['frame'] # expected shape (N, C, H, W)
+        n, self.h, self.w, _ = frames.shape
 
         pil_images = []
         for frame in frames:
-            if frame.dtype != np.uint8:
-                if frame.max() <= 1.0:
-                    frame = (frame * 255.0).clip(0, 255).astype(np.uint8)
-                else:
-                    frame = frame.clip(0, 255).astype(np.uint8)
-            pil_images.append(Image.fromarray(frame))
+            # NOTE: RF-DETR expects PIL image format (H,W,C)
+            img_np = frame.permute(1, 2, 0).astype(np.uint8)
+            pil_images.append(Image.fromarray(img_np))
 
         return {
             "inputs": pil_images,
             "shape": (self.h, self.w),
         }
-
-    def process(self, inputs: Any, **kwargs):
-        return super().process(inputs, **kwargs)
 
     @torch.no_grad()
     def run_inference(self, inputs):
@@ -119,39 +108,24 @@ class RFDetr():
                 pil_images,
                 threshold=self.min_confidence,
             )
-            batched = True
         except Exception:
-            results = [self.model.predict(img, threshold=self.min_confidence) for img in pil_images]
-            batched = False
+            raise ValueError("Something went wrong...")
 
         batch_results = []
-
-        iterable = results if batched else results
-        for det in iterable:
-            xyxy = np.asarray(det.xyxy)
-            conf = np.asarray(det.confidence)
-            cls = np.asarray(det.class_id)
-
-            if len(xyxy) > self.max_det:
-                order = np.argsort(-conf)[: self.max_det]
-                xyxy = xyxy[order]
-                conf = conf[order]
-                cls = cls[order]
-
-            xywh = self.xyxy_to_xywh(xyxy)
-
-            bbox_list = [
-                {
-                    "xyxy": xyxy[i],
-                    "xywh": xywh[i],
-                    "cls_id": int(cls[i]),
-                    "conf": float(conf[i]),
-                }
-                for i in range(len(xyxy))
-            ]
-
-            self.state.append(bbox_list)
-            batch_results.append(bbox_list)
-            self.img_id += 1
-
+        bbox_list = []
+        
+        for box, score, class_id in zip(results.xyxy, results.confidence, results.class_id):  
+            bbox_dict = dict(
+                xyxy=box,
+                xywh=xyxy_to_xywh(box),
+                cls_id=int(class_id),
+                conf=float(score)
+            )
+            bbox_list.append(bbox_dict)
+        
+        self.state.append(bbox_list)
+        batch_results.append(bbox_list)
+        self.img_id += 1
+        
+        logging.error(batch_results)            
         return batch_results

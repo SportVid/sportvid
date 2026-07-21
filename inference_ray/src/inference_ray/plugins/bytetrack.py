@@ -119,7 +119,6 @@ class ByteTrack(
         callbacks: Callable = None,
     ) -> Dict[str, Data]:        
         import json
-        import time
         import torch
         from collections import defaultdict
         from yolox.exp import get_exp
@@ -132,7 +131,6 @@ class ByteTrack(
                     extension=f".{input_data.ext}",
                     ref_id=input_data.id,
                 )
-                s = time.time()
                 
                 args = argparse.Namespace(**parameters)
                 exp = get_exp(None, "yolox-x")
@@ -150,9 +148,6 @@ class ByteTrack(
                 predictor = Predictor(model, exp, None, self.device, fp16=args.fp16)
 
                 results, img_info = self.track(video_decoder, predictor, args)
-                
-                e = time.time()
-                logging.error(f"bytetrack.py took: {e-s}")
                 
                 DEFAULT_TEAM_ID = 3
                 bboxes_dict = defaultdict(list)
