@@ -62,15 +62,14 @@ class ObjectTracker(
         callbacks: Callable = None,
     ):
         import json
+        import time
         from collections import defaultdict
-        
         from .detector import (
             YoloX, 
             YoloUltralytics,
             RFDetr,
             RTDetr
         )
-        
         from .tracker import (
             ByteTrack,
             TrackClassMapper
@@ -79,13 +78,12 @@ class ObjectTracker(
         DETECTOR_MAP = {
             "yolox": YoloX,
             "yolo10": YoloUltralytics,
-            "yolov1": YoloUltralytics,
-            "yolov2": YoloUltralytics,
+            "yolo11": YoloUltralytics,
+            "yolo12": YoloUltralytics,
             "yolo26": YoloUltralytics,
             "rfdetr": RFDetr,
             "rtdetr": RTDetr,
         }
-        
         TRACKER_MAP = {
            "bytetrack": ByteTrack
         }
@@ -95,19 +93,28 @@ class ObjectTracker(
         fps = parameters["fps"]
         parameters["tracker_params"].update({"frame_rate" : fps})
         
+        # with inputs["video"] as input_data:
+        #     with input_data.open_video("r") as f_video:
+        #         video_batcher = VideoBatcher(
+        #             VideoDecoder(
+        #                 f_video, 
+        #                 fps=fps, 
+        #                 extension=f".{input_data.ext}"
+        #             ),
+        #             batch_size=batch_size,
+        #         )
+        #         num_frames = (video_batcher.duration() * video_batcher.fps()) // batch_size
+        #         image_size = video_batcher.video_decoder._size
         with inputs["video"] as input_data:
-            with input_data.open_video("r") as f_video:
-                video_batcher = VideoBatcher(
-                    VideoDecoder(
-                        f_video, 
-                        fps=fps, 
-                        extension=f".{input_data.ext}"
-                    ),
-                    batch_size=batch_size,
+            with input_data.open_video() as f_video:
+                video_decoder = VideoDecoder(
+                    f_video,
+                    fps=parameters.get("fps"),
+                    extension=f".{input_data.ext}",
+                    ref_id=input_data.id,
                 )
-                num_frames = (video_batcher.duration() * video_batcher.fps()) // batch_size
-                image_size = video_batcher.video_decoder._size
-
+                image_size = video_decoder._size
+                s = time.time()
                 # -------> instantiate detector & tracker objects
                 self.detector = DETECTOR_MAP[parameters["detector"]](
                     model_path=parameters["detector_params"]["model_path"],
@@ -120,9 +127,12 @@ class ObjectTracker(
                     device="cuda",
                 )
                 # -------> detect & track
-                for frame_id, frame in enumerate(video_batcher, start=0):
-                    preproced_outputs = self.detector.preprocess(frame)
+                logging.error(f'Processing input video with the object detector!')
+                #for frame_id, _frame in enumerate(video_batcher, start=0):
+                for frame_id, _frame in enumerate(video_decoder):
+                    preproced_outputs = self.detector.preprocess(_frame)
                     _ = self.detector.run_inference(preproced_outputs)
+                logging.error(f'Done processing the input video with the object detector!')
                 # TODO: check performance for 90m+ video footage.
                 _ = self.tracker.process(
                         inputs = {
@@ -131,6 +141,8 @@ class ObjectTracker(
                             'det_shape': self.detector.det_shape,
                         }
                     )
+                e = time.time()
+                logging.error(f"object_tracker.py took: {e-s}")
                 # -------> build the required output format for consistency with other plugins
                 tracklets = defaultdict(list)
                 unique_player_ids = set()
@@ -175,6 +187,7 @@ class ObjectTracker(
                         # Detectors have varying output heads, so we need some mapping dict from cls_id to real-world entity.
                         class_id = trk_det_mapping[frame_id][track_id]['class']
                         default_team_assignment = out_cls_mapping.get(str(class_id), -1).get('default_team', -1)
+                        out_cls_mapping.get(str(class_id), {}).get('default_team', -1)
                         # coord normalization
                         x_norm = int(track_xywh[0]) / self.detector.w
                         y_norm = int(track_xywh[1]) / self.detector.h

@@ -1,20 +1,20 @@
 import logging
-from django.db import transaction
-from django.conf import settings
 from typing import Dict, List
-
 from backend.models import (
     PluginRun,
     PluginRunResult,
     Video
 )
 from backend.plugin_manager import PluginManager
-from backend.utils.task import Task
-from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
+from data import DataManager
+from backend.utils.task import Task
+from django.db import transaction
+from django.conf import settings
 
-@PluginManager.export_plugin("bytetrack")
-class ByteTrack(Task):
+
+@PluginManager.export_plugin("osnet_reid")
+class OSNetReID(Task):
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",
@@ -38,16 +38,37 @@ class ByteTrack(Task):
             manager=manager,
         )
         video_id = self.upload_video(client, video)
-
-        bytetrack_result = self.run_analyser(
+        
+        object_tracker_id = parameters.get("object_tracker_id")
+        if not object_tracker_id:
+            raise ValueError("object_tracker_id is required to run this plugin.")
+        
+        tracklets = PluginRunResult.objects.filter(
+            plugin_run_id=object_tracker_id,
+            type=PluginRunResult.TYPE_BBOXES,
+        )
+        
+        if not tracklets.exists():
+            raise ValueError(
+                f"No tracklets (TYPE_BBOXES) found for object tracker run {object_tracker_id}."
+            )
+        
+        prr = tracklets.first()
+        tracklets_ = manager.load(prr.data_id)
+        if tracklets_ is None:
+            raise ValueError(f"Could not load BboxesData for ByteTrack run {object_tracker_id}.")
+        
+        logging.error(f'TASK PARAMS: {parameters}')
+        reids = self.run_analyser(
             client,
-            "bytetrack",
-            parameters={
-                "fps": parameters.get("fps"),
+            "team_clustering",
+            parameters=parameters,
+            inputs={
+                "video": video_id,
+                "tracklets": tracklets_ 
             },
-            inputs={"video": video_id},
-            outputs=["tracklets"],
-            downloads=["tracklets"],
+            outputs=["reids"],
+            downloads=["reids"],
         )
 
         if plugin_run is not None:
@@ -59,15 +80,16 @@ class ByteTrack(Task):
             return {}
 
         with transaction.atomic():
-            with bytetrack_result[1]["tracklets"] as tracklets:
+            with reids[1]["reids"] as reids:
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
-                    data_id=tracklets.id,
-                    name="bboxes",
-                    type=PluginRunResult.TYPE_BBOXES,
+                    data_id=reids.id,
+                    name="reids",
+                    type=PluginRunResult.TYPE_LIST,
                 )
                 return {
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [plugin_run_result_db.id.hex],
-                    "data": {"tracklets": bytetrack_result[1]["tracklets"].id}
+                    "data": {"reids": reids[1]["reids"].id},
                 }
+

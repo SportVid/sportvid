@@ -119,9 +119,9 @@ class ByteTrack(
         callbacks: Callable = None,
     ) -> Dict[str, Data]:        
         import json
-        from collections import defaultdict
-        
+        import time
         import torch
+        from collections import defaultdict
         from yolox.exp import get_exp
 
         with inputs["video"] as input_data:
@@ -132,7 +132,8 @@ class ByteTrack(
                     extension=f".{input_data.ext}",
                     ref_id=input_data.id,
                 )
-
+                s = time.time()
+                
                 args = argparse.Namespace(**parameters)
                 exp = get_exp(None, "yolox-x")
                 exp.num_classes = args.num_classes
@@ -149,10 +150,10 @@ class ByteTrack(
                 predictor = Predictor(model, exp, None, self.device, fp16=args.fp16)
 
                 results, img_info = self.track(video_decoder, predictor, args)
-
-                # New entity-classification scheme (see posdata_convert): team_id=1 ball, =2 refs,
-                # =0 inactive, ≥3 active teams. ByteTrack only knows "person" detections — assign
-                # all to team_id=3 (single team). A future classification plugin will reassign.
+                
+                e = time.time()
+                logging.error(f"bytetrack.py took: {e-s}")
+                
                 DEFAULT_TEAM_ID = 3
                 bboxes_dict = defaultdict(list)
                 unique_player_ids = set()
@@ -179,8 +180,6 @@ class ByteTrack(
                         bboxes_dict[frame_time].append(bbox)
                         unique_player_ids.add(id)
 
-                # New schema: separate dicts per entity kind. ByteTrack populates only player_ids
-                # (with team_id=3); ref_ids/ball_ids stay empty until a classification plugin runs.
                 team_id_meta = {
                     DEFAULT_TEAM_ID: {"id": DEFAULT_TEAM_ID, "name": "Team A"},
                 }

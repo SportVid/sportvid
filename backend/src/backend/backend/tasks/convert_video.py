@@ -79,8 +79,6 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         with imageio.get_reader(str(file_in)) as reader:
             meta = reader.get_meta_data()
             fps = float(meta["fps"])
-            # duration = float(meta["duration"]) * 1000.
-            # size = meta['size']
 
         segment_time = 5
         gop = max(1, int(round(fps * segment_time)))
@@ -95,19 +93,20 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             "hls_playlist_type": "vod",
             "segment_time" : segment_time,
             # -------- input: hardware acceleration
-            "hwaccel": "cuda",
-            "hwaccel_output_format": "cuda",
+            # NOTE: uncomment these lines if running without a GPU.
+            # "hwaccel": "cuda",
+            # "hwaccel_output_format": "cuda",
             # -------- output: video/audio options
-            "vcodec" : "h264_nvenc", # libx264
+            "vcodec" : "libx264", # NOTE: use "h264_nvenc" for GPU conversion via NVENC.
             "acodec" : "aac",
             "audio_bitrate" : "128k",
             # -------- HLS stuff
             "g": gop, # GOP size should match segment duration
             "keyint_min": gop, # same as GOP
             # "sc_threshold": 0, # no unpredictable keyframe insertions
-            # "crf": 23,  # constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
+            "crf": 23,  # NOTE: comment in for "libx264". This is the constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
             # -------- NVENC tuning
-            "preset": "p4",       # controls encoding speed --vs.-- compression trade-off [p1-p7]
+            # "preset": "p4", # NOTE: uncomment if using CPU-only. This controls encoding speed --vs.-- compression trade-off [p1-p7].
             "rc": "vbr",
             "cq": 23,
             # -------- output compat
@@ -132,16 +131,34 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 asynchronous=True,
                 **conversion_args
             )
-            while True:
-                try:
-                    _, stderr = ffmpeg_proc.communicate(timeout=_POLL_INTERVAL)
-                    break
-                except subprocess.TimeoutExpired:
+            try:
+                while True:
                     if not Video.objects.filter(id=video_id_hex).exists():
-                        logger.info("Video %s deleted during HLS conversion, killing ffmpeg.", video_id_hex)
+                        logger.info(
+                            "Video %s deleted during HLS conversion, killing ffmpeg.",
+                            video_id_hex,
+                        )
                         ffmpeg_proc.kill()
-                        ffmpeg_proc.wait()
-                        return
+                        break
+                    line = ffmpeg_proc.stderr.readline()
+
+                    if line: logger.debug("[ffmpeg] %s", line.rstrip()) # consume line
+
+                    if ffmpeg_proc.poll() is not None:
+                        # process exited; drain remaining stderr
+                        rest = ffmpeg_proc.stderr.read()
+                        if rest:
+                            for extra_line in rest.splitlines():
+                                logger.info("[ffmpeg] %s", extra_line)
+                        break
+
+                    time.sleep(_POLL_INTERVAL)
+
+                    rc = ffmpeg_proc.wait()
+                    if rc != 0: raise RuntimeError(f"ffmpeg exited with code {rc}")
+            finally:
+                if ffmpeg_proc.stderr: ffmpeg_proc.stderr.close()
+                
         else: 
             ffmpeg_done = convert_to_hls(
                 str(file_in),

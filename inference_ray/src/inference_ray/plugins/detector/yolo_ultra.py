@@ -16,15 +16,51 @@ class YoloUltralytics():
     ):
         from ultralytics import YOLO
         
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.state = list()
+        self.device = device if (device != "cuda" or torch.cuda.is_available()) else "cpu"
+        
+        self.state = []
         self.img_id = 0
 
         self.detector_params = detector_params
 
         self.checkpoint = detector_params.get("checkpoint", None)
         self.model = YOLO(self.checkpoint)
-        self.model.to(device)
+        self.model.to(self.device)
+        
+        self.use_fp16 = bool(detector_params.get("fp16", False) and self.device.startswith("cuda"))
+        self.conf = detector_params.get("conf", 0.25)
+        self.iou = detector_params.get("iou", 0.7)
+        self.max_det = detector_params.get("max_det", 300)
+        self.rect = detector_params.get("rect", True)
+        self.verbose = detector_params.get("verbose", False)
+        
+        if self.use_fp16:
+            try:
+                self.model.model.half()
+            except Exception:
+                logging.warning("FP16 cast not applied to underlying Ultralytics model.")
+
+    def _prepare_frames(self, frames):
+        if isinstance(frames, np.ndarray):
+            frames = torch.from_numpy(frames)
+        elif not isinstance(frames, torch.Tensor):
+            raise TypeError(f"Unsupported frame type: {type(frames)}")
+
+        if frames.ndim == 3:  # HWC
+            frames = frames.unsqueeze(0)
+        if frames.ndim != 4:
+            raise RuntimeError(f"Expected (H,W,C) or (N,H,W,C), got {tuple(frames.shape)}")
+        if frames.shape[-1] != 3:
+            raise RuntimeError(f"Expected RGB NHWC input with 3 channels, got {tuple(frames.shape)}")
+
+        return frames.contiguous()
+
+    def _move_to_device(self, x: torch.Tensor) -> torch.Tensor:
+        if x.device.type == "cpu" and self.device.startswith("cuda"):
+            x = x.pin_memory().to(self.device, non_blocking=True)
+        else:
+            x = x.to(self.device)
+        return x
 
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs):
@@ -54,34 +90,89 @@ class YoloUltralytics():
             'shape': (self.h, self.w)
         }
 
-    def process(self, inputs: Any, **kwargs):
-        return super().process(inputs)
+    @torch.no_grad()
+    def preprocess(self, inputs, **kwargs):
+        frames = self._prepare_frames(inputs["frame"])   # NHWC
+        n, h, w, c = frames.shape
+        self.orig_h, self.orig_w = int(h), int(w)
+
+        x = frames.permute(0, 3, 1, 2).contiguous()     # NCHW
+
+        if x.dtype == torch.uint8:
+            x = x.float().div_(255.0)
+        else:
+            x = x.float()
+            if x.max() > 1.0:
+                x = x.div_(255.0)
+
+        x = self._move_to_device(x)
+
+        if self.use_fp16:
+            x = x.half()
+
+        imgsz = self.detector_params.get("imgsz", None)
+        if imgsz is None:
+            target_h, target_w = self.orig_h, self.orig_w
+        elif isinstance(imgsz, int):
+            target_h, target_w = imgsz, imgsz
+        else:
+            target_h, target_w = int(imgsz[0]), int(imgsz[1])
+
+        if self.rect:
+            pad_h = (32 - self.orig_h % 32) % 32
+            pad_w = (32 - self.orig_w % 32) % 32
+            if pad_h or pad_w:
+                x = F.pad(x, (0, pad_w, 0, pad_h), mode="constant", value=114.0 / 255.0)
+            self.h = self.orig_h + pad_h, self.w = self.orig_w + pad_w
+            infer_shape = (self.orig_h + pad_h, self.orig_w + pad_w)
+        else:
+            if (x.shape[-2], x.shape[-1]) != (target_h, target_w):
+                x = F.interpolate(x, size=(target_h, target_w), mode="bilinear", align_corners=False)
+            self.h = target_h, self.w = target_w
+            infer_shape = (target_h, target_w)
+        self.det_shape = infer_shape
+        
+        return {
+            "inputs": x,
+            "orig_shape": (self.orig_h, self.orig_w),
+            "infer_shape": infer_shape,
+        }
 
     @torch.no_grad()
     def run_inference(self, inputs):
-        images = inputs['inputs']
-        shapes = inputs['shape']
-        
-        raw_outputs = self.model.predict( # NOTE: model() returns a Tensor, while model.predict() returns another format
+        images = inputs["inputs"]
+
+        results = self.model(
             images,
-            batch=self.detector_params.get('batch_size', 1),
-            imgsz=shapes, 
-            # **self.detector_params
+            conf=self.conf,
+            iou=self.iou,
+            max_det=self.max_det,
+            verbose=self.verbose,
         )
-        
-        for result_per_img in raw_outputs:
-            bbox_list = list()
-            for bbox in result_per_img.boxes:
-                b = bbox.cpu().numpy()
-                bbox_dict = dict(
-                    xyxy=b.xyxy[0],
-                    xywh=b.xywh[0],
-                    cls_id=int(b.cls[0]),
-                    conf=float(b.conf[0])
-                )
-                bbox_list.append(bbox_dict)
-                
+
+        for r in results:
+            if r.boxes is None or len(r.boxes) == 0:
+                self.state.append([])
+                self.img_id += 1
+                continue
+
+            boxes = r.boxes
+            xyxy = boxes.xyxy.detach().cpu().numpy()
+            xywh = boxes.xywh.detach().cpu().numpy()
+            conf = boxes.conf.detach().cpu().numpy()
+            cls = boxes.cls.detach().cpu().numpy().astype(np.int32)
+
+            bbox_list = [
+                {
+                    "xyxy": xyxy[i],
+                    "xywh": xywh[i],
+                    "cls_id": int(cls[i]),
+                    "conf": float(conf[i]),
+                }
+                for i in range(len(xyxy))
+            ]
+
             self.state.append(bbox_list)
             self.img_id += 1
-        
-        return raw_outputs
+
+        return results

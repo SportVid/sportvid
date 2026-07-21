@@ -279,6 +279,8 @@ class PluginRunResult(models.Model):
     TYPE_VIDEO = "V"
     TYPE_IMAGES = "I"
     TYPE_SCALAR = "S"
+    TYPE_LIST = "TL"
+    TYPE_DICT = "TD"
     TYPE_HIST = "H"
     TYPE_SHOTS = "SH"
     TYPE_RGB_HIST = "R"
@@ -288,11 +290,13 @@ class PluginRunResult(models.Model):
     TYPE_BBOXES = "B"
     TYPE_POS = "P"
     TYPE_FL = "FL"
-    TYPE_KPI = "KI"
+    TYPE_KPI = "KPI"
     TYPE = {
         TYPE_VIDEO: "VIDEO",
         TYPE_IMAGES: "IMAGES",
         TYPE_SCALAR: "SCALAR",
+        TYPE_LIST: "LIST",
+        TYPE_DICT: "DICT",
         TYPE_HIST: "HIST",
         TYPE_SHOTS: "SHOTS",
         TYPE_RGB_HIST: "RGB_HIST",
@@ -305,7 +309,7 @@ class PluginRunResult(models.Model):
         TYPE_KPI: "KPI",
     }
     type = models.CharField(
-        max_length=2,
+        max_length=3,
         choices=[(k, v) for k, v in TYPE.items()],
         default=TYPE_SCALAR,
     )

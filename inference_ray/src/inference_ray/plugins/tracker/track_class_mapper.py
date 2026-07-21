@@ -77,7 +77,7 @@ class TrackClassMapper:
                         'det_idx': -1,
                         'iou': 0.0
                     }})
-                mapping.append({frame_id: per_frame_td_map})
+                mapping.update({frame_id: per_frame_td_map})
                 logging.debug(f"Matched 0/{len(track_ids)} tracks.")
                 continue
             
