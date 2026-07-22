@@ -61,24 +61,27 @@ class TrackClassMapper:
             track_ids = track['track_ids']
             
             track_boxes_xywh = np.array(track['track_boxes'], dtype=np.float32)  # [[x1,y1,w,h],[....],]
+            logging.error(frame_id)
+            logging.error(track_boxes_xywh)
             track_boxes_xyxy = track_boxes_xywh.copy()        # conversion (x1,y1,w,h) -> (x1,y1,x2,y2)!
             if track_boxes_xyxy.size > 0:
                 track_boxes_xyxy[:, 2] += track_boxes_xywh[:, 0]  # x2 = x1 + w
                 track_boxes_xyxy[:, 3] += track_boxes_xywh[:, 1]  # y2 = y1 + h
             
             if len(track_ids) == 0 or not detections:
-                return [{'track_id': tid, 'class': None, 'det_idx': -1, 'iou': 0.0} for tid in track_ids]
+                logging.error(f"Returning empty list since no detections are available.")
+                return [{'track_id': tid, 'class': -1, 'det_idx': -1, 'iou': 0.0} for tid in track_ids]
             
             if len(det) == 0:
                 per_frame_td_map = dict()
                 for track_id in track_ids:
                     per_frame_td_map.update({track_id: {
-                        'class': self._track_last_class.get(track_id, None),
+                        'class': self._track_last_class.get(track_id, -1),
                         'det_idx': -1,
                         'iou': 0.0
                     }})
                 mapping.update({frame_id: per_frame_td_map})
-                logging.debug(f"Matched 0/{len(track_ids)} tracks.")
+                logging.error(f"Matched 0/{len(track_ids)} tracks.")
                 continue
             
             det_boxes_xyxy = np.array([det_['xyxy'] for det_ in det],  dtype=np.float32)  # [M_dets, 4]
@@ -107,7 +110,7 @@ class TrackClassMapper:
                 if i in track_to_det:
                     det_idx = track_to_det[i]
                     iou_val = float(ious[i, det_idx])
-                    cls_id = det[det_idx].get('cls_id', None)
+                    cls_id = det[det_idx].get('cls_id', -1)
                     det_score = float(det[det_idx].get('score', det[det_idx].get('conf', 1.0)))
                     
                     if cls_id is not None:
@@ -130,11 +133,11 @@ class TrackClassMapper:
                     }})    
                 else:  # default values for unmatched tracks
                     per_frame_td_map.update({track_id: {
-                        'class': self._track_last_class.get(track_id, None),
+                        'class': self._track_last_class.get(track_id, -1),
                         'det_idx': -1,
                         'iou': 0.0
                     }})
             mapping.update({frame_id : per_frame_td_map})
-            logging.debug(f"Matched {len(matched_tracks)}/{len(track_ids)} tracks.")
+            logging.error(f"Matched {len(matched_tracks)}/{len(track_ids)} tracks.")
             
         return mapping

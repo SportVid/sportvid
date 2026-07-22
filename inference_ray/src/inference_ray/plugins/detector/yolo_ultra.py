@@ -40,7 +40,7 @@ class YoloUltralytics():
             except Exception:
                 logging.warning("FP16 cast not applied to underlying Ultralytics model.")
 
-    def _prepare_frames(self, frames):
+    def _ensure_batched_hwc(self, frames):
         if isinstance(frames, np.ndarray):
             frames = torch.from_numpy(frames)
         elif not isinstance(frames, torch.Tensor):
@@ -92,7 +92,7 @@ class YoloUltralytics():
 
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs):
-        frames = self._prepare_frames(inputs["frame"])   # NHWC
+        frames = self._ensure_batched_hwc(inputs["frame"])   # NHWC
         n, h, w, c = frames.shape
         self.orig_h, self.orig_w = int(h), int(w)
 
@@ -123,12 +123,14 @@ class YoloUltralytics():
             pad_w = (32 - self.orig_w % 32) % 32
             if pad_h or pad_w:
                 x = F.pad(x, (0, pad_w, 0, pad_h), mode="constant", value=114.0 / 255.0)
-            self.h = self.orig_h + pad_h, self.w = self.orig_w + pad_w
+            self.h = self.orig_h + pad_h
+            self.w = self.orig_w + pad_w
             infer_shape = (self.orig_h + pad_h, self.orig_w + pad_w)
         else:
             if (x.shape[-2], x.shape[-1]) != (target_h, target_w):
                 x = F.interpolate(x, size=(target_h, target_w), mode="bilinear", align_corners=False)
-            self.h = target_h, self.w = target_w
+            self.h = target_h
+            self.w = target_w
             infer_shape = (target_h, target_w)
         self.det_shape = infer_shape
         
