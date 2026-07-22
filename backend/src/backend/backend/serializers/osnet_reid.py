@@ -7,6 +7,8 @@ MODEL_CHOICES = ["osnet_x1_0"]
 
 @PluginManager.export_serializer("osnet_reid")
 class OSNetReIdentificationSerializer(serializers.Serializer):
+    object_tracker_id = serializers.UUIDField(required=True)
+    
     model_name = serializers.ChoiceField(
         choices=MODEL_CHOICES,
         required=False,
@@ -19,14 +21,6 @@ class OSNetReIdentificationSerializer(serializers.Serializer):
         min_value=0.01,
         max_value=1.0,
     )
-    
-    reid_class_filter = serializers.ListField(
-        child=serializers.CharField(allow_blank=True),
-        min_length=0,
-        required=False,
-        default=list
-    )
-
     max_missed = serializers.IntegerField(
         required=False,
         default=300,

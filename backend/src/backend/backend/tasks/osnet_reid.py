@@ -38,7 +38,6 @@ class OSNetReID(Task):
             manager=manager,
         )
         video_id = self.upload_video(client, video)
-        
         object_tracker_id = parameters.get("object_tracker_id")
         if not object_tracker_id:
             raise ValueError("object_tracker_id is required to run this plugin.")
@@ -47,6 +46,7 @@ class OSNetReID(Task):
             plugin_run_id=object_tracker_id,
             type=PluginRunResult.TYPE_BBOXES,
         )
+        parameters.update({"object_tracker_id": str(object_tracker_id)})
         
         if not tracklets.exists():
             raise ValueError(
@@ -58,14 +58,15 @@ class OSNetReID(Task):
         if tracklets_ is None:
             raise ValueError(f"Could not load BboxesData for ByteTrack run {object_tracker_id}.")
         
-        logging.error(f'TASK PARAMS: {parameters}')
+        input_tracklets_id = client.upload_data(tracklets_)
+        
         reids = self.run_analyser(
             client,
-            "team_clustering",
+            "osnet_reid",
             parameters=parameters,
             inputs={
                 "video": video_id,
-                "tracklets": tracklets_ 
+                "tracklets": input_tracklets_id 
             },
             outputs=["reids"],
             downloads=["reids"],

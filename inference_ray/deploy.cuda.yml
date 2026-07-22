@@ -10,6 +10,25 @@ logging_config:
 
 applications:
   # ---------- NEW INTEGRATION (GPU required)
+  - name: osnet_reid
+    route_prefix: /osnet_reid
+    import_path: inference_ray.main:app_builder
+    args:
+      model: osnet_reid
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
+        ray_actor_options:
+          # num_cpus: 1.0
+          num_gpus: 0.5
+
   - name: object_tracker
     route_prefix: /object_tracker
     import_path: inference_ray.main:app_builder
