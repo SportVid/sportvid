@@ -107,18 +107,19 @@ class OSNetReID(
         self.cfg = parameters
         
         self.reid_threshold = self.cfg.get('reid_thresh', 0.6)
-        self.crop_size = self.cfg.get('crop_size', [128, 256]) # resizing to (H,W) for feature extractor
+        self.max_missed = self.cfg.get('max_missed', 30) # prune stale tracks
+        
+        # resizing to (H,W) for feature extractor
+        self.crop_size_x = self.cfg.get('crop_size_x', 128) 
+        self.crop_size_y = self.cfg.get('crop_size_y', 256)
         self.crop_x1_offset = self.cfg.get('crop_x1_offset', 0)
         self.crop_y1_offset = self.cfg.get('crop_y1_offset', 0)
         self.crop_x2_offset = self.cfg.get('crop_x2_offset', 0)
         self.crop_y2_offset = self.cfg.get('crop_y2_offset', 0)
-        
-        self.reid_cls = self.cfg.get('reid_cls', []) # filter by classes
-        self.max_missed = self.cfg.get('max_missed', 30) # prune stale tracks
-        
+    
         self.feat_extr = FeatureExtractor( # wraps preprocessing and model forward
             model_name=self.cfg.get('model_name'),
-            model_path=self.cfg.get('model_path', None), # checkpoint: if we provide 'None' -> model uses default weights
+            model_path=self.cfg.get('model_path', None), # NOTE: checkpoint -> if we provide 'None': model uses default weights.
             device=self.device
         )
         
@@ -147,22 +148,23 @@ class OSNetReID(
 
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Encode tracklet crops using the feature extractor. """
-        tracks = inputs.get('tracklets', {}) # {'track_ids':[], 'track_boxes':[N,4] xywh}
-        imgs = inputs.get('images') # full frame numpy BGR
+        tracks = inputs.get('tracklets', {})    # {'track_ids':[], 'track_boxes':[N,4] xywh}
+        imgs = inputs.get('images')             # full frame numpy BGR
     
         logging.debug(f'{tracks}')
-    
+        
         if not tracks: return inputs
         
         proc = []
         for i, (track, img) in enumerate(zip(tracks, imgs['frame'])):
             track_ids = track['track_ids']
             track_boxes = track['track_boxes'] # [N,4] [x1,y1,w,h]
+            # TODO: revert coordinate normalization of track_boxes using detector W/H
             crops = _crop_tracks( # crops track boxes
                 img, 
                 track_boxes, 
                 track_ids,
-                self.crop_size,
+                (self.crop_size_x, self.crop_size_y),
                 self.crop_x1_offset,
                 self.crop_y1_offset,
                 self.crop_x2_offset,
@@ -211,7 +213,6 @@ class OSNetReID(
                     updated_ids.append(tid)
             else:
                 updated_ids = tids
-            # update id from ByteTrack with ReID
             
             self.frame_id += 1
             self.gallery.prune(self.frame_id)
@@ -239,7 +240,7 @@ class Gallery:
         self.last_seen = {}      # pid -> frame_idx
 
     def match(self, feats: np.ndarray, frame_id: int) -> Optional[int]:
-        """ Given some feature vector, match it othe mean gallery features & return matched_id or None. """
+        """ Given some feature vector, match it to the mean gallery features & return matched_id or None. """
         if not self.features: return None # (N,D)
         # compute cosine similarity between feat and the mean feature of each id
         gallery_means = np.array([np.mean(feats_, axis=0) for feats_ in self.features.values()])

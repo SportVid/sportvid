@@ -194,14 +194,14 @@ class ObjectTracker(
                         w_norm = int(track_xywh[2]) / self.detector.w
                         h_norm = int(track_xywh[3]) / self.detector.h
                         # construction of tracklet element
-                        # TODO: maybe get rid of some values here to save on memory/transfer?
+                        # TODO: check if we can get rid of track_xywh at some point...
                         tracklet = [
-                            int(frame_id),
                             int(track_id),
                             int(default_team_assgn),
+                            0,
                             float(x_norm + (w_norm / 2)), float(y_norm + h_norm),
                             float(x_norm), float(y_norm), float(w_norm), float(h_norm),
-                            float(track_xywh[0]), float(track_xywh[1]), float(track_xywh[2]), float(track_xywh[3]),
+                            int(self.detector.h), int(self.detector.w),
                             float(track_score)
                         ]
                         tracklets[frame_time].append([tracklet])        
