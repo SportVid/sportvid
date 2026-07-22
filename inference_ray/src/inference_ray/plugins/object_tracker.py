@@ -115,7 +115,7 @@ class ObjectTracker(
                     ref_id=input_data.id,
                 )
                 image_size = video_decoder._size
-                s = time.time()
+                # s = time.time()
                 # -------> instantiate detector & tracker objects
                 self.detector = DETECTOR_MAP[parameters["detector"]](
                     model_path=parameters["detector_params"]["model_path"],
@@ -128,12 +128,11 @@ class ObjectTracker(
                     device="cuda",
                 )
                 # -------> detect & track
-                logging.error(f'Processing input video with the object detector!')
                 #for frame_id, _frame in enumerate(video_batcher, start=0):
                 for frame_id, _frame in enumerate(video_decoder):
                     preproced_outputs = self.detector.preprocess(_frame)
                     _ = self.detector.run_inference(preproced_outputs)
-                logging.error(f'Done processing the input video with the object detector!')
+
                 # TODO: check performance for 90m+ video footage.
                 _ = self.tracker.process(
                         inputs = {
@@ -142,8 +141,8 @@ class ObjectTracker(
                             'det_shape': self.detector.det_shape,
                         }
                     )
-                e = time.time()
-                logging.error(f"object_tracker.py took: {e-s}")
+                # e = time.time()
+                # logging.error(f"object_tracker.py took: {e-s}")
                 # -------> build the required output format for consistency with other plugins
                 tracklets = defaultdict(list)
                 unique_player_ids = set()
@@ -158,7 +157,7 @@ class ObjectTracker(
                     TeamId.TEAM_RIGHT: {"name": "Team B"},
                 }
                 
-                # NOTE: creates a tracklet to detection class mapping.
+                # NOTE: Creates a tracklet to detection class mapping.
                 # We'll use it for the default team assignment at this stage.
                 trk_det_mapping = TrackClassMapper().map_tracks_to_detections(
                     tracks=self.tracker.state,

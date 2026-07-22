@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 import torch
+import torch.nn.functional as F
 from typing import Any, Dict
 
 
@@ -79,42 +80,35 @@ class RTDetr:
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs):
         frames = self._ensure_batched_hwc(inputs["frame"])
-        n, h, w, _ = frames.shape
+        
+        if isinstance(frames, np.ndarray):
+            frames = torch.from_numpy(frames)
+        
+        _, self.h, self.w, _ = frames.shape
+        
+        frames = frames.permute(0, 3, 1, 2).contiguous()    # (N,C,H,W)
+        
+        if frames.device.type != self.device:
+            if self.device == "cuda":
+                frames = frames.pin_memory().to(self.device, non_blocking=True)
+            else:
+                frames = frames.to(self.device)
 
-        self.h, self.w = h, w
-        self.orig_shape = (h, w)
+        pad_h = (32 - self.h % 32) % 32
+        pad_w = (32 - self.w % 32) % 32
 
-        processed = []
-        for frame in frames:
-            if frame.dtype != np.uint8:
-                if frame.max() <= 1.0:
-                    frame = (frame * 255.0).clip(0, 255).astype(np.uint8)
-                else:
-                    frame = frame.clip(0, 255).astype(np.uint8)
+        frames = F.pad(frames, (0, pad_w, 0, pad_h), mode="constant", value=0)
 
-            if self.detector_params.get("bgr_input", False):
-                frame = frame[..., ::-1]
+        self.h = self.h + pad_h
+        self.w = self.w + pad_w
+        self.det_shape = (self.h + pad_h, self.w + pad_w)
 
-            frame_lb = self.letterbox(image=frame)
-            processed.append(frame_lb)
-
-        batch = np.stack(processed, axis=0)  # NHWC
-        self.det_shape = batch.shape[1:3]
-
-        batch = np.ascontiguousarray(batch.transpose(0, 3, 1, 2))  # NCHW
-        images = torch.from_numpy(batch)
-
-        images = images.to(torch.float16 if self.use_fp16 else torch.float32).div_(255.0)
-
-        if str(self.device).startswith("cuda"):
-            images = images.pin_memory().to(self.device, non_blocking=True)
-        else:
-            images = images.to(self.device)
+        frames = frames.float().div_(255.0)
 
         return {
-            "inputs": images,
-            "orig_shape": self.orig_shape,
-            "infer_shape": self.det_shape,
+            "inputs": frames,
+            "shape": self.det_shape,
+            "orig_shape": (self.h, self.w),
         }
 
     @torch.no_grad()

@@ -31,7 +31,6 @@ class RFDetr():
         
         self.detector_params = detector_params
     
-        self.det_shape = image_size
         self.classes_to_detect = detector_params.get('classes', [])
         if len(self.classes_to_detect) == 0:
             raise RuntimeError("Expected at least 1 class to detect, please check the 'classes' args.")
@@ -59,7 +58,7 @@ class RFDetr():
             self.model.optimize_for_inference(
                 compile=False,
                 batch_size=detector_params.get("batch_size", 1),
-                dtype="float16" if (self.device.startswith("cuda") and detector_params.get("fp16", False)) else "float32",
+                dtype=torch.float16 if (self.device.startswith("cuda") and detector_params.get("fp16", False)) else torch.float32,
             )
         except Exception:
             logging.warning("RF-DETR optimize_for_inference failed; continuing without optimized model.", exc_info=True)
@@ -67,7 +66,6 @@ class RFDetr():
     def _ensure_batched_hwc(self, frames):
         if not isinstance(frames, np.ndarray):
             raise TypeError(f"Unsupported frame type: {type(frames)}")
-        logging.error(frames.shape)
         if frames.ndim == 3:  # HWC
             frames = np.expand_dims(frames, axis=0)
         if frames.ndim != 4:
@@ -81,12 +79,10 @@ class RFDetr():
         frames = inputs['frame'] # expected shape (N, C, H, W)
         frames = self._ensure_batched_hwc(frames)
         n, self.h, self.w, _ = frames.shape
-        logging.error(frames.shape)
+        self.det_shape = (self.h, self.w)
         pil_images = []  # NOTE: RF-DETR expects PIL image format (H,W,C)
         for frame in frames:
             # permuted_img = frame.transpose(1, 2, 0)
-            logging.error(f'{frame.min(axis=0)}/{frame.max(axis=0)}')
-            logging.error(f'{frame.min(axis=1)}/{frame.max(axis=1)}')
             pil_images.append(Image.fromarray(frame))
 
         return {
@@ -96,30 +92,23 @@ class RFDetr():
 
     @torch.no_grad()
     def run_inference(self, inputs):
-        pil_images = inputs["inputs"]
-
-        try:
-            results = self.model.predict(
-                pil_images,
-                threshold=self.min_confidence,
-            )
-        except Exception:
-            raise ValueError("Something went wrong...")
-
+        pil_images = inputs['inputs']
         batch_results = []
-        bbox_list = []
         
-        for box, score, class_id in zip(results.xyxy, results.confidence, results.class_id):  
-            bbox_dict = dict(
-                xyxy=box,
-                xywh=xyxy_to_xywh(box),
-                cls_id=int(class_id),
-                conf=float(score)
-            )
-            bbox_list.append(bbox_dict)
-        
-        self.state.append(bbox_list)
-        batch_results.append(bbox_list)
-        self.img_id += 1
-               
+        for image in pil_images:
+            results = self.model.predict(image, threshold=self.min_confidence)
+            
+            bbox_list = []
+            for box, score, class_id in zip(results.xyxy, results.confidence, results.class_id):  
+                bbox_dict = dict(
+                    xyxy=box,
+                    xywh=xyxy_to_xywh(box),
+                    cls_id=int(class_id),
+                    conf=float(score)
+                )
+                bbox_list.append(bbox_dict)
+            self.state.append(bbox_list)
+            batch_results.append(bbox_list)
+            self.img_id += 1
+            
         return batch_results
