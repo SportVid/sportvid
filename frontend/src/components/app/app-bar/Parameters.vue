@@ -760,7 +760,7 @@ const formatLocalDate = (dateString) => {
 const bytetrackRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
-    .filter((e) => e.type === "bytetrack" && e.status === "DONE")
+    .filter((e) => ["bytetrack", "object_tracker"].includes(e.type) && e.status === "DONE")
     .map((e) => ({
       id: e.id,
       name: formatLocalDate(e.date),

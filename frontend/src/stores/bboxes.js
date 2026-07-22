@@ -33,7 +33,12 @@ export const useBboxesStore = defineStore("bboxes", () => {
       const _bboxData = await Promise.all(
         pluginRunStore
           .forVideo(playerStore.videoId)
-          .filter((e) => e.type === "bytetrack" && e.status === "DONE" && e.id === pluginRunId)
+          .filter(
+            (e) =>
+              ["bytetrack", "object_tracker"].includes(e.type) &&
+              e.status === "DONE" &&
+              e.id === pluginRunId
+          )
           .map(async (e) => ({
             ...e,
             results: await pluginRunResultStore.forPluginRunWithData(e.id, playerStore.videoId),

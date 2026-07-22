@@ -64,6 +64,46 @@
                   </v-row>
                 </template>
 
+                <template v-else-if="mode.id === 'object_tracker'">
+                  <v-select
+                    v-model="selectedCalibrationAsset"
+                    :items="calibrationAssetItems"
+                    item-title="name"
+                    item-value="id"
+                    item-disabled="disabled"
+                    :label="$t('modal.position_data.select.asset')"
+                    variant="underlined"
+                    class="mt-0 mx-4"
+                  />
+
+                  <v-select
+                    v-model="selectedObjectTracker"
+                    :items="objectTrackerRuns"
+                    item-title="date"
+                    item-value="id"
+                    :label="$t('modal.position_data.select.object_tracker')"
+                    variant="underlined"
+                    class="mt-2 mx-4"
+                  />
+
+                  <v-select
+                    v-model="areaSize"
+                    :items="areaOptions"
+                    item-title="title"
+                    item-value="value"
+                    :label="$t('modal.position_data.select.area_size')"
+                    variant="underlined"
+                    class="mt-2 mx-4"
+                  />
+
+                  <v-row class="justify-center my-2">
+                    <div v-if="areaSize" style="position: relative; display: inline-block">
+                      <img :src="mainPreview" style="height: 200px; display: block" />
+                      <div v-if="cropPct" :style="cropOverlayStyle" />
+                    </div>
+                  </v-row>
+                </template>
+
                 <template v-else-if="mode.id === 'manual'">
                   <v-list density="compact" style="max-height: 210px; overflow-y: auto">
                     <v-list-item
@@ -135,7 +175,7 @@
           @click="
             confirmSelection(
               selectedCalibrationAsset,
-              selectedBytetrack,
+              selectedTrackerRun,
               selectedPositionData,
               areaSize
             )
@@ -206,6 +246,7 @@ watch(
 const selectedMode = ref("bytetrack");
 const PositionDataModes = ref([
   { id: "bytetrack", name: t("modal.position_data.select.modes.bytetrack") },
+  { id: "object_tracker", name: t("modal.position_data.select.modes.object_tracker") },
   { id: "manual", name: t("modal.position_data.select.modes.manual") },
 ]);
 
@@ -263,10 +304,32 @@ const bytetrackRuns = computed(() => {
     }));
 });
 
+const selectedObjectTracker = ref(null);
+const objectTrackerRuns = computed(() => {
+  return pluginRunStore
+    .forVideo(playerStore.videoId)
+    .filter((e) => e.type === "object_tracker" && e.status === "DONE")
+    .map((pluginRun) => ({
+      id: pluginRun.id,
+      type: "Object Tracker",
+      date: formatLocalDate(pluginRun.date),
+    }));
+});
+
+const selectedTrackerRun = computed(() =>
+  selectedMode.value === "object_tracker" ? selectedObjectTracker.value : selectedBytetrack.value
+);
+
 const isButtonDisabled = computed(() => {
   if (selectedMode.value === "bytetrack") {
     return (
       selectedCalibrationAsset.value === null || selectedBytetrack.value === null || !areaSize.value
+    );
+  } else if (selectedMode.value === "object_tracker") {
+    return (
+      selectedCalibrationAsset.value === null ||
+      selectedObjectTracker.value === null ||
+      !areaSize.value
     );
   } else if (selectedMode.value === "manual") {
     return !selectedPositionData.value || !areaSize.value;
@@ -274,20 +337,15 @@ const isButtonDisabled = computed(() => {
   return true;
 });
 
-const confirmSelection = async (
-  calibrationAssetId,
-  bytetrackPluginId,
-  positionDataId,
-  areaSize
-) => {
-  if (selectedMode.value === "bytetrack") {
-    await topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
+const confirmSelection = async (calibrationAssetId, trackerPluginId, positionDataId, areaSize) => {
+  if (selectedMode.value === "bytetrack" || selectedMode.value === "object_tracker") {
+    await topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, trackerPluginId);
     const keys = topViewStore.sortedFrameKeys;
     if (keys.length > 0) {
       positionDataStore.setSelectedTimeRangeStart(keys[0]);
       positionDataStore.setSelectedTimeRangeEnd(keys[keys.length - 1]);
     }
-    visualizationStore.loadKpiData(bytetrackPluginId);
+    visualizationStore.loadKpiData(trackerPluginId);
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
     visualizationStore.loadKpiData(positionDataId);

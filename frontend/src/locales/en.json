@@ -1138,11 +1138,13 @@
         "title": "Select Position Data",
         "modes": {
           "bytetrack": "ByteTrack Plugin",
+          "object_tracker": "Object Tracking Plugin",
           "manual": "Manual Upload"
         },
         "asset": "Select Calibration Asset",
         "not_calibrated": "not calibrated",
         "bytetrack": "Select Bytetrack Plugin",
+        "object_tracker": "Select Object Tracking Plugin",
         "sport": "Select sport",
         "area_size": "Select area size",
         "uploaded_position_data": "Select uploaded position data"

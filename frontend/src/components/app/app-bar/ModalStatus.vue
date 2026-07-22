@@ -365,7 +365,7 @@ const stateText = (state, types = null) => {
   return text;
 };
 
-const bytetrackTypes = ["bytetrack"];
+const bytetrackTypes = ["bytetrack", "object_tracker"];
 const dltTypes = ["calibration_static_dlt"];
 const uploadTypes = ["posdata_convert"];
 const kpiTypes = ["kpi_computation"];

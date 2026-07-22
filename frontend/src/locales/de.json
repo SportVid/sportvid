@@ -872,9 +872,11 @@
         "title": "Positionsdaten auswählen",
         "modes": {
           "bytetrack": "ByteTrack Plugin",
+          "object_tracker": "Object Tracking Plugin",
           "manual": "Manueller Upload"
         },
-        "not_calibrated": "nicht kalibriert"
+        "not_calibrated": "nicht kalibriert",
+        "object_tracker": "Object Tracking Plugin auswählen"
       },
       "entity_colors": {
         "title": "Teamfarben ändern",
