@@ -146,17 +146,54 @@ class YoloX():
 
         images = inputs["inputs"]
 
-        if images.device.type == "cuda": torch.cuda.synchronize()
+        # if images.device.type == "cuda": torch.cuda.synchronize()
         raw = self.model(images)
-        
-        if images.device.type == "cuda": torch.cuda.synchronize()
-        decoded = self.model.head.decode_outputs(raw, dtype=raw.dtype)
 
-        if images.device.type == "cuda": torch.cuda.synchronize()
+        def _decode_outputs(raw):
+            """ Custom CUDA-compatible implementation of YOLOX model head decode_outputs(). """
+            grids = []
+            strides = []
+            
+            device = raw.device
+            dtype = raw.dtype
+            
+            for (hsize, wsize), stride in zip(self.model.head.hw, self.model.head.strides):
+                yv, xv = torch.meshgrid(
+                    torch.arange(hsize, device=device),
+                    torch.arange(wsize, device=device),
+                    indexing="ij",
+                )
+                grid = torch.stack((xv, yv), dim=2).view(1, -1, 2)
+                grids.append(grid)
+                
+                shape = grid.shape[:2]
+                stride_tensor = torch.full((*shape, 1), stride, device=device, dtype=dtype)
+                strides.append(stride_tensor)
+
+            grids = torch.cat(grids, dim=1).to(device=device, dtype=dtype)
+            strides = torch.cat(strides, dim=1).to(device=device, dtype=dtype)
+
+            raw = raw.clone()
+            raw[..., :2] = (raw[..., :2] + grids) * strides
+            raw[..., 2:4] = torch.exp(raw[..., 2:4]) * strides
+            return raw
+
+        # NOTE: Might also move back raw computations to cpu, since YOLOX does not support "on-CUDA" decode_outputs().
+        # if raw.device.type == "cuda":
+        #    raw = raw.detach().cpu()
+        # if images.device.type == "cuda": torch.cuda.synchronize()
+        # decoded = self.model.head.decode_outputs(raw, dtype=raw.dtype)
+        self.hw = [
+            (images.shape[2] // stride, images.shape[3] // stride)
+            for stride in self.model.head.strides
+        ]
+        decoded = _decode_outputs(raw)
+
+        # if images.device.type == "cuda": torch.cuda.synchronize()
         raw_outputs = postprocess(
             decoded, self.num_classes, self.conf_thresh, self.nms_thresh
         )
-        if images.device.type == "cuda": torch.cuda.synchronize()
+        # if images.device.type == "cuda": torch.cuda.synchronize()
 
         img_h, img_w = inputs["orig_hw"]
 

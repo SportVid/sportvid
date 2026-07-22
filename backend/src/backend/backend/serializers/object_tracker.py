@@ -82,6 +82,7 @@ default_rfdetr_params = {
     "classes": ['ball', 'player', 'referee', 'goalkeeper'], # SoccerNet checkpoint
     "resolution": 1288,  # divisible by 56 -> [672,728,784,896,1008,1064,1120]
     "verbose": False,
+    "fp16": False,
     "model_path": "RFDETRLarge",
     "checkpoint": "/models/detr/rfdetr-large-sn.pth",
     "output_class_mapping": {

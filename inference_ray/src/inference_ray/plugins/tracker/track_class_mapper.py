@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 
+from itertools import zip_longest
 
 class TrackClassMapper:
     def __init__(self, *args, **kwargs):
@@ -56,23 +57,18 @@ class TrackClassMapper:
         """ Match each track bbox to best-overlapping detection. """
         mapping = dict()
         
-        for track, det in zip(tracks, detections):
+        for track, det in zip_longest(tracks, detections, fillvalue=[]):
             frame_id = track['frame_id']
             track_ids = track['track_ids']
             
             track_boxes_xywh = np.array(track['track_boxes'], dtype=np.float32)  # [[x1,y1,w,h],[....],]
-            logging.error(frame_id)
-            logging.error(track_boxes_xywh)
+            
             track_boxes_xyxy = track_boxes_xywh.copy()        # conversion (x1,y1,w,h) -> (x1,y1,x2,y2)!
             if track_boxes_xyxy.size > 0:
                 track_boxes_xyxy[:, 2] += track_boxes_xywh[:, 0]  # x2 = x1 + w
                 track_boxes_xyxy[:, 3] += track_boxes_xywh[:, 1]  # y2 = y1 + h
             
-            if len(track_ids) == 0 or not detections:
-                logging.error(f"Returning empty list since no detections are available.")
-                return [{'track_id': tid, 'class': -1, 'det_idx': -1, 'iou': 0.0} for tid in track_ids]
-            
-            if len(det) == 0:
+            if len(track_ids) == 0 or len(det) == 0:
                 per_frame_td_map = dict()
                 for track_id in track_ids:
                     per_frame_td_map.update({track_id: {
