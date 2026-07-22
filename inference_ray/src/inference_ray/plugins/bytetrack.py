@@ -168,7 +168,6 @@ class ByteTrack(
                         bbox = [
                             id, DEFAULT_TEAM_ID, 0,
                             x_norm + (w_norm / 2), y_norm + h_norm,
-                            f'{i}-{id}',
                             x_norm, y_norm, w_norm, h_norm,
                             score
                         ]

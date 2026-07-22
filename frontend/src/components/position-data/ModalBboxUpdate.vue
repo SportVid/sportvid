@@ -252,10 +252,11 @@ watch(
 const bboxData = ref({});
 watch(
   () => [props.bbox, dialog.value],
-  ([bbox, open]) => {
-    if (open && bbox) {
+  ([bboxEntry, open]) => {
+    if (open && bboxEntry) {
+      const bbox = bboxEntry.box;
       bboxData.value.bytetrackRunId = bboxesStore.bboxPluginRunId;
-      bboxData.value.bboxId = bbox[5];
+      bboxData.value.bboxId = bboxEntry.bboxId;
       bboxData.value.playerId = bbox[0];
       bboxData.value.teamId = bbox[1];
       bboxData.value.newPlayerId = bbox[0];

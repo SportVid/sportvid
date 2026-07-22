@@ -128,12 +128,13 @@ class BoundingBoxesChange(View):
                 with manager.create_data("BboxesData") as altered_bbx:
                     if not update_all_player_id and bbox_id:
                         # --- single edit (1 frame); O(n) at worse
+                        # bbox_id is "{frame_id}-{player_id}", derived on the fly rather than
+                        # stored in the tracklet itself (frame_id is the dict key, player_id is bbx[0])
                         frame_id = str(bbox_id.split("-", 1)[0])  # only iterate through lists that are related to the frame
                         for bbx in bbd_data[frame_id]:
                             # mutate list
-                            if bbx[5] == bbox_id:
+                            if f"{frame_id}-{bbx[0]}" == bbox_id:
                                 bbx[0] = new_player_id
-                                bbx[5] = f"{frame_id}-{new_player_id}"
                                 bbx[1] = new_team_id
                                 break
                     if update_all_player_id and current_player_id and new_player_id:
@@ -141,9 +142,7 @@ class BoundingBoxesChange(View):
                         for _, bboxes in bbd_data.items():
                             for bbx in bboxes:
                                 if bbx[0] == current_player_id:
-                                    frame_id = bbx[5].split("-", 1)[0]
                                     bbx[0] = new_player_id
-                                    bbx[5] = f"{frame_id}-{new_player_id}"
                                     bbx[1] = new_team_id
                     # --- bulk team edit (all frames, no player_id changes)
                     if (current_team_id is not None and new_team_id is not None) and (
@@ -229,11 +228,12 @@ class BoundingBoxesDelete(View):
                 with manager.create_data("BboxesData") as altered_bbx:
                     if not delete_all_player_id and bbox_id:
                         # --- single delete (1 frame); O(n) at worse
+                        # bbox_id is "{frame_id}-{player_id}", derived on the fly (see BoundingBoxesChange)
                         frame_id = str(bbox_id.split("-", 1)[0])  # only iterate through lists that are related to the frame
-                        for bbx_id, bbx in enumerate(bbd_data[frame_id]):
+                        for bbx_idx, bbx in enumerate(bbd_data[frame_id]):
                             # mutate list
-                            if bbx[5] == bbox_id:
-                                del bbd_data[frame_id][bbx_id]
+                            if f"{frame_id}-{bbx[0]}" == bbox_id:
+                                del bbd_data[frame_id][bbx_idx]
                                 break
                     if delete_all_player_id and player_id_to_delete:
                         # --- bulk delete (all frames); iterates each entry O(n)

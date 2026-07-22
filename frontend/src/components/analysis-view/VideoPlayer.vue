@@ -76,7 +76,7 @@
             v-show="bboxesStore.showBoundingBox"
             :key="position"
             :style="getEllipseSvg(position).style"
-            @click="openEditBBox(position)"
+            @click="openEditBBox(position, currentFrameKey)"
           >
             <svg class="player-ellipse">
               <path
@@ -96,11 +96,15 @@
             >
               <div>
                 <div>
-                  <strong>{{ $t("modal.bounding_box.tooltip.box_id") }}: {{ position[5] }}</strong>
+                  <strong
+                    >{{ $t("modal.bounding_box.tooltip.box_id") }}:
+                    {{ `${currentFrameKey}-${position[0]}` }}</strong
+                  >
                 </div>
                 <v-divider class="my-1" />
                 <div>
-                  {{ entityLabelKey(position[1]) }}: {{ topViewStore.getEntityName(position[0], position[1]) }}
+                  {{ entityLabelKey(position[1]) }}:
+                  {{ topViewStore.getEntityName(position[0], position[1]) }}
                 </div>
                 <div>{{ $t("modal.bounding_box.tooltip.team_id") }}: {{ position[1] }}</div>
               </div>
@@ -584,8 +588,8 @@ watch(() => window.innerHeight, updateMaxHeight);
 
 const editDialog = ref(false);
 const editBBox = ref(null);
-function openEditBBox(bbox) {
-  editBBox.value = bbox;
+function openEditBBox(bbox, frameKey) {
+  editBBox.value = { box: bbox, bboxId: `${frameKey}-${bbox[0]}` };
   editDialog.value = true;
 }
 
@@ -663,10 +667,10 @@ onBeforeUnmount(() => {
 });
 
 const getEllipseSvg = (position) => {
-  const x = position[6];
-  const y = position[7];
-  const w = position[8];
-  const h = position[9];
+  const x = position[5];
+  const y = position[6];
+  const w = position[7];
+  const h = position[8];
 
   const vid = videoStore.videoSize;
 
