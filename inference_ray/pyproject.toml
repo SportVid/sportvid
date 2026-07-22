@@ -45,7 +45,7 @@ dependencies = [
     "loguru",
     "scikit-image",
     "ultralytics>=8.0",
-    "rfdetr",
+    "rfdetr==1.3.0",
     "torchreid",
     "click==8.2.1"
 ]

@@ -165,7 +165,6 @@ class ObjectTracker(
                     detections=self.detector.state,
                     iou_thresh=0.3
                 )
-                logging.error(trk_det_mapping)
                 """
                 {
                     "0":{
@@ -175,7 +174,6 @@ class ObjectTracker(
                 }                
                 """
                 out_cls_map = parameters["detector_params"]["output_class_mapping"]
-                logging.error(out_cls_map)
                 
                 for frame_id, track in enumerate(self.tracker.state, start=0): # [N,5]
                     for (track_id, track_score, track_xywh, team_id) in zip( # [5,]
@@ -189,11 +187,8 @@ class ObjectTracker(
                         # NOTE: Mapping of class_id to team_id.
                         # Detectors have varying output heads, so we need some mapping dict from cls_id to real-world entity.
                         class_id = trk_det_mapping[frame_id][track_id]['class']
-                        logging.error(class_id)
                         assigned_cls_id = out_cls_map.get(str(class_id), '-1')
-                        logging.error(assigned_cls_id)
                         default_team_assgn = out_cls_map.get(str(assigned_cls_id), '3')
-                        logging.error(default_team_assgn)
                         # coord normalization
                         x_norm = int(track_xywh[0]) / self.detector.w
                         y_norm = int(track_xywh[1]) / self.detector.h

@@ -61,6 +61,8 @@ class TrackClassMapper:
             track_ids = track['track_ids']
             
             track_boxes_xywh = np.array(track['track_boxes'], dtype=np.float32)  # [[x1,y1,w,h],[....],]
+            logging.error(frame_id)
+            logging.error(track_boxes_xywh)
             track_boxes_xyxy = track_boxes_xywh.copy()        # conversion (x1,y1,w,h) -> (x1,y1,x2,y2)!
             if track_boxes_xyxy.size > 0:
                 track_boxes_xyxy[:, 2] += track_boxes_xywh[:, 0]  # x2 = x1 + w

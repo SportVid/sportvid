@@ -1,8 +1,7 @@
 import logging
-from typing import Any, Dict
-
 import numpy as np
 import torch
+from typing import Any, Dict
 
 
 class RTDetr:

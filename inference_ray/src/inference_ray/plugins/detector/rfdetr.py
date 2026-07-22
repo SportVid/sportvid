@@ -5,22 +5,14 @@ from PIL import Image
 from typing import Any, Dict
 
 
+@staticmethod
 def xyxy_to_xywh(xyxy):
-    """
-    Transforms [x1,y1,x2,y2] -> [center of x,c enter of y, width, height]
-    Shape stays the same [N,4]
-    """
-    if len(xyxy.shape) == 1: # handle mini-batch
-        xyxy = xyxy.reshape(1, -1)
-    
+    xyxy = np.asarray(xyxy)
+    if xyxy.ndim == 1:
+        x1, y1, x2, y2 = xyxy
+        return np.array([(x1 + x2) * 0.5, (y1 + y2) * 0.5, x2 - x1, y2 - y1], dtype=xyxy.dtype)
     x1, y1, x2, y2 = xyxy[:, 0], xyxy[:, 1], xyxy[:, 2], xyxy[:, 3]
-    cx = (x1 + x2) * 0.5
-    cy = (y1 + y2) * 0.5
-    w = x2 - x1
-    h = y2 - y1
-    
-    return np.array((cx,cy,w,h))
-
+    return np.stack(((x1 + x2) * 0.5, (y1 + y2) * 0.5, x2 - x1, y2 - y1), axis=-1)
 
 class RFDetr():
 
@@ -75,6 +67,7 @@ class RFDetr():
     def _ensure_batched_hwc(self, frames):
         if not isinstance(frames, np.ndarray):
             raise TypeError(f"Unsupported frame type: {type(frames)}")
+        logging.error(frames.shape)
         if frames.ndim == 3:  # HWC
             frames = np.expand_dims(frames, axis=0)
         if frames.ndim != 4:
@@ -86,13 +79,15 @@ class RFDetr():
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs) -> Dict[Any, Any]:
         frames = inputs['frame'] # expected shape (N, C, H, W)
+        frames = self._ensure_batched_hwc(frames)
         n, self.h, self.w, _ = frames.shape
-
-        pil_images = []
+        logging.error(frames.shape)
+        pil_images = []  # NOTE: RF-DETR expects PIL image format (H,W,C)
         for frame in frames:
-            # NOTE: RF-DETR expects PIL image format (H,W,C)
-            img_np = frame.permute(1, 2, 0).astype(np.uint8)
-            pil_images.append(Image.fromarray(img_np))
+            # permuted_img = frame.transpose(1, 2, 0)
+            logging.error(f'{frame.min(axis=0)}/{frame.max(axis=0)}')
+            logging.error(f'{frame.min(axis=1)}/{frame.max(axis=1)}')
+            pil_images.append(Image.fromarray(frame))
 
         return {
             "inputs": pil_images,
@@ -126,6 +121,5 @@ class RFDetr():
         self.state.append(bbox_list)
         batch_results.append(bbox_list)
         self.img_id += 1
-        
-        logging.error(batch_results)            
+               
         return batch_results
