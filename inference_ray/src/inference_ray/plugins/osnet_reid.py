@@ -1,4 +1,5 @@
 import logging
+import json
 import torch
 import numpy as np
 import cv2
@@ -51,17 +52,17 @@ def _crop_tracks(
             return img  
 
     img_npy = torch_to_npy(img)
-    logging.debug(f"img shape: {img_npy.shape}") # (H,W,C)
+    # logging.error(f"img shape: {img_npy.shape}") # (H,W,C)
 
     h_img, w_img = img_npy.shape[:2]
     
     crops = []
-    for i, (tid, box) in enumerate(zip(track_ids, track_boxes)):
+    for tid, box in zip(track_ids, track_boxes):
         x1, y1, w, h = box.astype(float)
 
         if w <= 0 or h <= 0: # sanity check raw box
-            logging.debug(f"Raw box: x1={x1}, y1={y1}, w={w}, h={h}")
-            logging.debug(f"Skipping invalid box {box}")
+            logging.error(f"Raw box: x1={x1}, y1={y1}, w={w}, h={h}")
+            logging.error(f"Skipping invalid box {box}")
             continue
 
         # apply fractional offsets
@@ -128,53 +129,71 @@ class OSNetReID(
             max_missed=parameters["max_missed"]
         )
         
-        self.state = list()
+        self.state = dict()
         self.frame_id = 0
-        with inputs["video"] as video_input_data, inputs["tracklets"] as tracklets_data:
-            with video_input_data.open_video() as f_video:
-                video_decoder = VideoDecoder(
-                    f_video,
-                    extension=f".{video_input_data.ext}",
-                    ref_id=video_input_data.id,
-                )
-                tracklets_meta = tracklets_data.meta_data.get('video', {}),
-                logging.error(tracklets_meta)
-                self.fps = tracklets_meta.get('fps', 30)
-                self.detector_h = tracklets_meta.get('detector_h', 1080)
-                self.detector_w = tracklets_meta.get('detector_w', 1920)
-                tracklets_data = tracklets_data.bboxes
-                
-                for frame_id, _frame in enumerate(video_decoder):
-                    frame_time = round((frame_id/self.fps)*1000.)
-                    _tracklets = tracklets_data[frame_time]
-                    _preproc = self.preprocess(
-                        inputs={
-                            "tracklets": _tracklets,
-                            "image": _frame,
-                        }
+        with inputs["tracklets"] as tracklets_data:
+            # data unpacking
+            tracklets_meta = json.loads(tracklets_data.meta_data)
+            tracklets_meta = tracklets_meta.get('video', {})
+            self.fps = tracklets_meta.get('fps', 30)
+            self.detector_h = tracklets_meta.get('detector_h', 1080)
+            self.detector_w = tracklets_meta.get('detector_w', 1920)
+            
+            tracklets_data = json.loads(tracklets_data.bboxes)
+            # video decoding
+            with inputs["video"] as video_input_data: 
+                with video_input_data.open_video() as f_video:
+                    video_decoder = VideoDecoder(
+                        f_video,
+                        fps=self.fps,
+                        extension=f".{video_input_data.ext}",
+                        ref_id=video_input_data.id,
                     )
-                    self.process(_preproc)
-                        
+                    # main processing loop
+                    for frame_id, _frame in enumerate(video_decoder):
+                        frame_time = round((frame_id/self.fps)*1000.)
+                        _tracklets = tracklets_data.get(f'{frame_time}', [])
+                        per_frame_reids = self.process(inputs={
+                            "tracklets": _tracklets,
+                            "image": _frame["frame"],
+                        })
+                        self.state.update({ frame_time : per_frame_reids})     
+                    logging.error(self.state)
+
+            with data_manager.create_data("ReID_Data") as output_data:
+                # TODO: implement efficient data format for numpy feature arrays, embeddings, etc.
+                # "shape": arr.shape,
+                # "dtype": str(arr.dtype),
+                # "buffer": arr.tobytes(),
+                # ------------------------------------
+                # arr = np.frombuffer(payload["data"], 
+                # dtype=np.dtype(payload["dtype"]))
+                # arr = arr.reshape(payload["shape"])
+                self.update_callbacks(callbacks, progress=1.0)
 
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Encode tracklet crops using the feature extractor. """
         # NOTE: Expects single tracklet/image pair as inputs.
-        tracklets = inputs.get('tracklets', {})    # {'track_ids':[], 'track_boxes':[N,4] xywh}
-        img = inputs.get('image')                 # full frame numpy BGR
-    
-        logging.debug(f'{tracklets}')
-        
+        tracklets = inputs.get('tracklets', []) # [track_id, *, *, *, *, x_norm, y_norm, w_norm, h_norm, *]
+                                                # previous layout:  'track_ids':[], 'track_boxes':[N,4] xywh}
+        img = inputs.get('image')               # full frame numpy BGR (H,W,C)
         if not tracklets: return inputs
+        tracklets_npy = np.array(tracklets)
+        tracklets_npy = np.squeeze(tracklets_npy, axis=1)
         
-        proc = []
+        # undo normalization of coords using in-place mul
+        tracklets_npy[:,5] *= self.detector_w  # x_n
+        tracklets_npy[:,6] *= self.detector_h  # y_n
+        tracklets_npy[:,7] *= self.detector_w  # w_n
+        tracklets_npy[:,8] *= self.detector_h  # h_n
         
-        # for i, (track, img) in enumerate(zip(tracks, imgs['frame'])):
-        track_ids = tracklets['track_ids']
-        track_boxes = tracklets['track_boxes'] # [N,4] [x1,y1,w,h]
+        track_ids = tracklets_npy[:,0]    # [N,]
+        track_xywh = tracklets_npy[:,5:9] # [N,4] [x1,y1,w,h]
+        
         # TODO: revert coordinate normalization of track_boxes using detector W/H
         crops = _crop_tracks( # crops track boxes
             img, 
-            track_boxes, 
+            track_xywh, 
             track_ids,
             (self.crop_size_x, self.crop_size_y),
             self.crop_x1_offset,
@@ -186,20 +205,19 @@ class OSNetReID(
         
         crop_arrays_rgb = []
         for crop_pil in crops:
-            crop_np_rgb = np.array(crop_pil)  # PIL -> RGB numpy HWC uint8
-            crop_arrays_rgb.append(crop_np_rgb)
+            crop_rgb_npy = np.array(crop_pil)  # PIL -> RGB numpy HWC uint8
+            crop_arrays_rgb.append(crop_rgb_npy)
 
         features = self.feat_extr(crop_arrays_rgb).cpu().numpy() # extract features: PIL list of image bboxes -> [N,512] normalized
-    
-        [dict(
-                {
-                    'tracks': tracklets,
-                    'features': features,
-                    'crops': crops
-                }
-        )]
-    
-        return { 'inputs': proc } 
+
+        # NOTE: returning per-frame processed input.
+        return { 
+            'inputs' : [{
+                'tracks': tracklets_npy,    # [N,10]
+                'features': features,       # [N,512] 
+                'crops': crop_rgb_npy       # [N,?]
+            }]
+        }
 
     def process(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ 
@@ -210,35 +228,41 @@ class OSNetReID(
         preproc_inputs = self.preprocess(inputs, **kwargs)
         per_frame_data = preproc_inputs['inputs']
         
+        tracks = {}
         for frame_data in per_frame_data:
+            tracklets = frame_data['tracks']
             feats = frame_data['features']
-            tracks = frame_data['tracks']
             crops = frame_data['crops']
-            
             # update gallery & assign/update track IDs
             updated_ids = []
-            tids = self.gallery.match(feats, tracks['frame_id'])
+            tids = self.gallery.match(feats, frame_id=self.frame_id)
             if tids is None: 
-                for feat in feats: # register single track into the gallery
-                    tid = self.gallery.register(feat, tracks['frame_id'])
+                for feat in feats:  # register single track into the gallery
+                    tid = self.gallery.register(feat, frame_id=self.frame_id)
                     updated_ids.append(tid)
             else:
                 updated_ids = tids
+            updated_ids = np.array(updated_ids)
             
             self.frame_id += 1
             self.gallery.prune(self.frame_id)
             
-            # store back in tracks
-            tracks.update({ "reid_ids" : updated_ids}) # update ReID IDs
-            tracks.update({ "crops": crops}) # append crops
-            tracks.update({ "features": feats}) # append features
+            logging.error(f'{type(tracklets)},{type(updated_ids)},{type(crops)},{type(feats)}')
+            logging.error(f'{tracklets.shape},{updated_ids.shape},{crops.shape},{feats.shape}')
+            
+            # TODO: what to store and return -> based on team assignment plugin...!
+            # TODO: adjust data format here... many unnecessary conversions.
+            # keep all as numpy arrays and serialize to bytes...
+            tracks.update({ "tracks" : tracklets})      # append nd.array?
+            tracks.update({ "reid_ids" : updated_ids})  # update ReID IDs
+            tracks.update({ "crops": crops})            # append crops
+            tracks.update({ "features": feats})         # append features
+             
+            logging.error(f'Frame {self.frame_id}: {len(crops)} crops -> {len(set(updated_ids))} ReID IDs')
+            logging.error(f"Old IDs: {tracks['tracks'][...,0]}")
+            logging.error(f"New IDs: {tracks['reid_ids']}")
         
-            logging.debug(f'Frame {self.frame_id}: {len(crops)} crops -> {len(set(updated_ids))} ReID IDs')
-            logging.debug(f"Old IDs: {tracks['track_ids']}")
-            logging.debug(f"New IDs: {tracks['reid_ids']}")
-        
-            self.state.append(tracks)
-        return self.state
+        return tracks
     
 
 class Gallery:

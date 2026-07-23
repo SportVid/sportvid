@@ -37,18 +37,18 @@ class OSNetReIdentificationSerializer(serializers.Serializer):
     checkpoint = serializers.CharField(
         required=False, 
         allow_blank=False,
-        default="/models/reid/data/models/reid/osnet_ain_x1_0_msmt17_256x128_amsgrad_ep50_lr0.0015_coslr_b64_fb10_softmax_labsmth_flip_jitter.pth")
+        default="/models/reid/osnet_ain_x1_0_msmt17_256x128_amsgrad_ep50_lr0.0015_coslr_b64_fb10_softmax_labsmth_flip_jitter.pth")
     
     def validate(self, attrs):
         model_name = attrs["model_name"]
-        checkpoint_path = attrs["checkpoint_path"]
+        checkpoint = attrs["checkpoint"]
 
-        filename = Path(checkpoint_path).name
+        filename = Path(checkpoint).name
         if not filename.startswith(f"{model_name}_"):
             raise serializers.ValidationError(
                 {
                     "checkpoint_path": (
-                        f"Checkpoint '{checkpoint_path}' does not belong to model '{model_name}'."
+                        f"Checkpoint '{checkpoint}' does not belong to model '{model_name}'."
                     )
                 }
             )
