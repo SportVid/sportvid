@@ -194,14 +194,12 @@ class ObjectTracker(
                         w_norm = int(track_xywh[2]) / self.detector.w
                         h_norm = int(track_xywh[3]) / self.detector.h
                         # construction of tracklet element
-                        # TODO: check if we can get rid of track_xywh at some point...
                         tracklet = [
                             int(track_id),
                             int(default_team_assgn),
                             0,
                             float(x_norm + (w_norm / 2)), float(y_norm + h_norm),
                             float(x_norm), float(y_norm), float(w_norm), float(h_norm),
-                            int(self.detector.h), int(self.detector.w),
                             float(track_score)
                         ]
                         tracklets[frame_time].append([tracklet])        
@@ -217,7 +215,12 @@ class ObjectTracker(
                 }     
                 meta_dict = {
                     "team_ids": team_id_meta,
-                    "player_ids": player_id_meta
+                    "player_ids": player_id_meta,
+                    "video": dict(
+                        fps=fps,
+                        h=int(self.detector.h),
+                        w=int(self.detector.w)
+                    )
                 }
         
         with data_manager.create_data("BboxesData") as output_data:
