@@ -39,6 +39,7 @@ dependencies = [
     "motmetrics",
     "filterpy",
     "tabulate",
+    "tensorboard",
     "ninja",
     "thop",
     "Pillow",

@@ -146,7 +146,7 @@ DETECTOR_DEFAULTS = {
     "yolo10": default_yolo10_params,
     "yolo11": default_yolo11_params,
     "yolo12": default_yolo12_params,
-    "yolov6": default_yolo26_params,
+    "yolo26": default_yolo26_params,
     "rfdetr": default_rfdetr_params,
     "rtdetr": default_rtdetr_params, 
 }
