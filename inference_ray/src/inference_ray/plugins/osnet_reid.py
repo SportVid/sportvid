@@ -119,8 +119,13 @@ class OSNetReID(
     
         self.feat_extr = FeatureExtractor( # wraps preprocessing and model forward
             model_name=self.cfg.get('model_name'),
-            model_path=self.cfg.get('model_path', None), # NOTE: checkpoint -> if we provide 'None': model uses default weights.
-            device=self.device
+            model_path=self.cfg.get('checkpoint', None), # NOTE: checkpoint -> if we provide 'None': model uses default weights.
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
+        
+        self.gallery = Gallery(
+            threshold=parameters["reid_threshold"], 
+            max_missed=parameters["max_missed"]
         )
         
         self.state = list()
@@ -132,61 +137,67 @@ class OSNetReID(
                     extension=f".{video_input_data.ext}",
                     ref_id=video_input_data.id,
                 )
-                self.device = "cuda" if torch.cuda.is_available() else "cpu"
+                tracklets_meta = tracklets_data.meta_data.get('video', {}),
+                logging.error(tracklets_meta)
+                self.fps = tracklets_meta.get('fps', 30)
+                self.detector_h = tracklets_meta.get('detector_h', 1080)
+                self.detector_w = tracklets_meta.get('detector_w', 1920)
+                tracklets_data = tracklets_data.bboxes
                 
-                self.gallery = Gallery(
-                    threshold=parameters["reid_threshold"], 
-                    max_missed=parameters["max_missed"]
-                )
-                self.preprocess(
-                    inputs={
-                        "tracklets": tracklets_data,
-                        "images": video_decoder,
-                    }
-                )
-                
+                for frame_id, _frame in enumerate(video_decoder):
+                    frame_time = round((frame_id/self.fps)*1000.)
+                    _tracklets = tracklets_data[frame_time]
+                    _preproc = self.preprocess(
+                        inputs={
+                            "tracklets": _tracklets,
+                            "image": _frame,
+                        }
+                    )
+                    self.process(_preproc)
+                        
 
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Encode tracklet crops using the feature extractor. """
-        tracks = inputs.get('tracklets', {})    # {'track_ids':[], 'track_boxes':[N,4] xywh}
-        imgs = inputs.get('images')             # full frame numpy BGR
+        # NOTE: Expects single tracklet/image pair as inputs.
+        tracklets = inputs.get('tracklets', {})    # {'track_ids':[], 'track_boxes':[N,4] xywh}
+        img = inputs.get('image')                 # full frame numpy BGR
     
-        logging.debug(f'{tracks}')
+        logging.debug(f'{tracklets}')
         
-        if not tracks: return inputs
+        if not tracklets: return inputs
         
         proc = []
-        for i, (track, img) in enumerate(zip(tracks, imgs['frame'])):
-            track_ids = track['track_ids']
-            track_boxes = track['track_boxes'] # [N,4] [x1,y1,w,h]
-            # TODO: revert coordinate normalization of track_boxes using detector W/H
-            crops = _crop_tracks( # crops track boxes
-                img, 
-                track_boxes, 
-                track_ids,
-                (self.crop_size_x, self.crop_size_y),
-                self.crop_x1_offset,
-                self.crop_y1_offset,
-                self.crop_x2_offset,
-                self.crop_y2_offset
-            ) 
-            if not crops: crops = []
-            
-            crop_arrays_rgb = []
-            for crop_pil in crops:
-                crop_np_rgb = np.array(crop_pil)  # PIL -> RGB numpy HWC uint8
-                crop_arrays_rgb.append(crop_np_rgb)
+        
+        # for i, (track, img) in enumerate(zip(tracks, imgs['frame'])):
+        track_ids = tracklets['track_ids']
+        track_boxes = tracklets['track_boxes'] # [N,4] [x1,y1,w,h]
+        # TODO: revert coordinate normalization of track_boxes using detector W/H
+        crops = _crop_tracks( # crops track boxes
+            img, 
+            track_boxes, 
+            track_ids,
+            (self.crop_size_x, self.crop_size_y),
+            self.crop_x1_offset,
+            self.crop_y1_offset,
+            self.crop_x2_offset,
+            self.crop_y2_offset
+        ) 
+        if not crops: crops = []
+        
+        crop_arrays_rgb = []
+        for crop_pil in crops:
+            crop_np_rgb = np.array(crop_pil)  # PIL -> RGB numpy HWC uint8
+            crop_arrays_rgb.append(crop_np_rgb)
 
-            features = self.feat_extr(crop_arrays_rgb).cpu().numpy() # extract features: PIL list of image bboxes -> [N,512] normalized
-            
-            proc.append(
-                dict(
-                    {
-                        'tracks': track,
-                        'features': features,
-                        'crops': crops
-                    }
-            ))
+        features = self.feat_extr(crop_arrays_rgb).cpu().numpy() # extract features: PIL list of image bboxes -> [N,512] normalized
+    
+        [dict(
+                {
+                    'tracks': tracklets,
+                    'features': features,
+                    'crops': crops
+                }
+        )]
     
         return { 'inputs': proc } 
 

@@ -1,8 +1,28 @@
+from pathlib import Path
 from rest_framework import serializers
 from backend.plugin_manager import PluginManager
 
 
-MODEL_CHOICES = ["osnet_x1_0"]
+MODEL_CHOICES = [
+    "osnet_x1_0", 
+    "osnet_ibn_x1_0", 
+    "osnet_ain_x1_0"
+]
+MODEL_CHECKPOINTS = [
+    # ImageNet pretrained
+    "/models/reid/osnet_x1_0_imagenet.pth",
+    "/models/reid/osnet_ibn_x1_0_imagenet.pth",
+    "/models/reid/osnet_ain_x1_0_imagenet.pth",
+    # MSMT17 benchmark
+    "/models/reid/osnet_x1_0_msmt17_combineall_256x128_amsgrad_ep150_stp60_lr0.0015_b64_fb10_softmax_labelsmooth_flip_jitter.pth",
+    "/models/reid/osnet_x1_0_msmt17_256x128_amsgrad_ep150_stp60_lr0.0015_b64_fb10_softmax_labelsmooth_flip",
+    "/models/reid/osnet_ibn_x1_0_msmt17_combineall_256x128_amsgrad_ep150_stp60_lr0.0015_b64_fb10_softmax_labelsmooth_flip_jitter.pth",
+    "/models/reid/osnet_ain_x1_0_msmt17_256x128_amsgrad_ep50_lr0.0015_coslr_b64_fb10_softmax_labsmth_flip_jitter.pth",  
+    # Multi-source domain generalization
+    "/models/reid/osnet_x1_0_ms_d_c.pth",
+    "/models/reid/osnet_ain_ms_d_c.pth",
+    "/models/reid/osnet_ibn_ms_d_c.pth",
+]
 
 
 @PluginManager.export_serializer("osnet_reid")
@@ -12,8 +32,28 @@ class OSNetReIdentificationSerializer(serializers.Serializer):
     model_name = serializers.ChoiceField(
         choices=MODEL_CHOICES,
         required=False,
-        default="osnet_x1_0",
+        default="osnet_ain_x1_0",
     )
+    checkpoint = serializers.CharField(
+        required=False, 
+        allow_blank=False,
+        default="/models/reid/data/models/reid/osnet_ain_x1_0_msmt17_256x128_amsgrad_ep50_lr0.0015_coslr_b64_fb10_softmax_labsmth_flip_jitter.pth")
+    
+    def validate(self, attrs):
+        model_name = attrs["model_name"]
+        checkpoint_path = attrs["checkpoint_path"]
+
+        filename = Path(checkpoint_path).name
+        if not filename.startswith(f"{model_name}_"):
+            raise serializers.ValidationError(
+                {
+                    "checkpoint_path": (
+                        f"Checkpoint '{checkpoint_path}' does not belong to model '{model_name}'."
+                    )
+                }
+            )
+
+        return attrs
     
     reid_threshold = serializers.FloatField(
         required=False,
