@@ -52,7 +52,7 @@ class TeamClustering(Task):
                 raise ValueError(
                     f"No reids (TYPE_REID_DATA) found for osnet_reid run {osnet_reid_id}."
                 )
-            prr = tracklets.first()
+            prr = reids.first()
             reids_ = manager.load(prr.data_id)
             if reids_ is None:
                 raise ValueError(f"Could not load REID_DATA for osnet_reid run {osnet_reid_id}.")
@@ -74,14 +74,14 @@ class TeamClustering(Task):
                 tracklets_id = client.upload_data(tracklets_)
 
         logging.error(f'TASK PARAMS: {parameters}')
-        reids = self.run_analyser(
+        teams = self.run_analyser(
             client,
-            "osnet_reid",
+            "team_clustering",
             parameters=parameters,
             inputs={
                 "video": video_id,
-                "tracklets": None if reid_id else tracklets_id,
-                "reids": reid_id if reid_id else None
+                "tracklets": "" if reid_id else tracklets_id,
+                "reids": reid_id if reid_id else ""
             },
             outputs=["teams"],
             downloads=["teams"],

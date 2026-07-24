@@ -8,6 +8,15 @@ HDBSCAN_METRIC_CHOICE = ["euclidean", "cosine"]
 
 @PluginManager.export_serializer("team_clustering")
 class TeamClusteringSeriaizer(serializers.Serializer):
+    object_tracker_id = serializers.UUIDField(
+        required=False,
+        default=None
+    )
+    osnet_reid_id = serializers.UUIDField(
+        required=False,
+        default=None
+    )
+    
     clustering_algo = serializers.ChoiceField(
         choices=CLUSTERING_ALGORITHM_CHOICE,
         required=False,

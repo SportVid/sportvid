@@ -10,11 +10,11 @@ logging_config:
 
 applications:
   # ---------- NEW INTEGRATION (GPU required)
-  - name: osnet_reid
-    route_prefix: /osnet_reid
+  - name: team_clustering
+    route_prefix: /team_clustering
     import_path: inference_ray.main:app_builder
     args:
-      model: osnet_reid
+      model: team_clustering
       data_path: /data
       params: {}
     deployments:
@@ -27,7 +27,6 @@ applications:
           max_replicas: 1
         ray_actor_options:
           num_cpus: 4.0
-          num_gpus: 0.0
 
   - name: object_tracker
     route_prefix: /object_tracker
