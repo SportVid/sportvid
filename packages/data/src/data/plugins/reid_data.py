@@ -12,8 +12,8 @@ from interface import analyser_pb2
 class ReIDData(Data):
     type: str = field(default="ReIDData")
     reid_data_id: str | None = None
-    tracking_data_id: str | None = None
     frames: dict[str, dict[str, NDArrayData]] = field(default_factory=dict)
+    mapping: str = None  # JSON representation
 
     def add_array(self, frame_id: str, name: str, arr: np.ndarray) -> None:
         if frame_id not in self.frames:
@@ -31,14 +31,15 @@ class ReIDData(Data):
 
     def load(self) -> None:
         super().load()
-        meta = self.load_dict("reid_data.yml")
+        assert self.check_fs(), "No filesystem handler installed"
+        data = self.load_dict("reid_data.yml")
 
-        self.reid_data_id = meta.get("reid_data_id")
-        self.tracking_data_id = meta.get("tracking_data_id")
-
+        self.reid_data_id = data.get("reid_data_id")
+        self.mapping = data.get("mapping")
+        
         with self.fs.open_file("frames.json", "r") as f:
-            raw_frames = json.load(f)
-
+            raw_frames = json.loads(f.read().decode("utf-8"))
+        
         self.frames = {
             frame_id: {
                 name: NDArrayData(
@@ -54,12 +55,14 @@ class ReIDData(Data):
 
     def save(self) -> None:
         super().save()
+        assert self.check_fs(), "No filesystem handler installed"
+        assert self.fs.mode == "w", "Data package is opened as 'read only'"
 
         self.save_dict(
             "reid_data.yml",
             {
                 "reid_data_id": self.reid_data_id,
-                "tracking_data_id": self.tracking_data_id,
+                "mapping": self.mapping
             },
         )
 
@@ -76,15 +79,16 @@ class ReIDData(Data):
             for frame_id, frame_payloads in self.frames.items()
         }
 
+        payload = json.dumps(raw_frames).encode("utf-8")
         with self.fs.open_file("frames.json", "w") as f:
-            json.dump(raw_frames, f)
+            f.write(payload)
 
     def to_dict(self) -> dict:
         meta = super().to_dict()
         return {
             **meta,
             "reid_data_id": self.reid_data_id,
-            "tracking_data_id": self.tracking_data_id,
+            "mapping": self.mapping,
             "frames": {
                 frame_id: {
                     name: {

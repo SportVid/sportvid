@@ -18,66 +18,12 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize
 
 
-def _crop_tracks(
-    img: np.ndarray, 
-    track_boxes: np.ndarray, 
-    track_ids: List[int],
-    crop_size: List[int] = [128, 256],
-    x1_offset: float = 0.0,
-    y1_offset: float = 0.0,
-    x2_offset: float = 0.0,
-    y2_offset: float = 0.0
-) -> List[Image.Image]:
-    """ Crops track boxes and converts them to PIL RGB (H,W,C). """
-
-    def torch_to_npy(img):
-        if isinstance(img, torch.Tensor):
-            img_npy = img.permute(1, 2, 0).cpu().numpy()  # CHW -> HWC
-            if img_npy.max() <= 1.0:  # normalize
-                img_npy = (img_npy * 255).astype(np.uint8)
-            return img_npy
-        else:
-            return img  
-
-    img_npy = torch_to_npy(img)
-    logging.debug(f"img shape: {img_npy.shape}") # (H,W,C)
-
-    h_img, w_img = img_npy.shape[:2]
-    
-    crops = []
-    for i, (tid, box) in enumerate(zip(track_ids, track_boxes)):
-        x1, y1, w, h = box.astype(float)
-
-        if w <= 0 or h <= 0: # sanity check raw box
-            logging.debug(f"Raw box: x1={x1}, y1={y1}, w={w}, h={h}")
-            logging.debug(f"Skipping invalid box {box}")
-            continue
-
-        # apply fractional offsets
-        x1 += w * x1_offset
-        y1 += h * y1_offset
-        x2 = x1 + w * (1.0 + x2_offset)
-        y2 = y1 + h * (1.0 + y2_offset)
-        
-        # clipping
-        x1, y1 = max(0, x1), max(0, y1)
-        x2, y2 = min(w_img, x2), min(h_img, y2)
-        
-        crop_bgr = img_npy[int(y1):int(y2), int(x1):int(x2)]
-        crop_rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
-        crop_pil = Image.fromarray(crop_rgb)
-        crop_pil = crop_pil.resize(crop_size, Image.Resampling.LANCZOS) # resize to OSNet crop_size
-        crops.append(crop_pil)
-
-    return crops  
-
-
 class Clustering:
     """
-    This module either runs k-Means or HDBSCAN clustering on tracklet crops or ReID embeddings for team assignment.
-    - Each tracklet gets a team label assigned from [0,K-1].
+    This module either runs k-Means on tracklet crops or HDBSCAN clustering on the ReID embeddings for team assignment.
+    - Each tracklet gets a team label assigned from [0, K-1].
     - For k-Means a color histogram of the player crops is computed that captures the color distribution.
-    - HDBScan uses the ReID embeddings [N,512] with optional dim. reduction via PCA for clustering.
+    - HDBScan REuses the REID embeddings [N,512] with optional dim. reduction via PCA for clustering.
     """
 
     def __init__(

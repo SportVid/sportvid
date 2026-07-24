@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from data import (
     Data, DataManager, 
     VideoData,
-    BboxesData
+    ReIDData
 )
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 from utils import VideoDecoder, VideoBatcher
@@ -26,7 +26,7 @@ requires = {
 }
 
 provides = {
-    "tracklets": BboxesData,
+    "reids": ReIDData,
 }
 
 
@@ -150,26 +150,24 @@ class OSNetReID(
                         ref_id=video_input_data.id,
                     )
                     # main processing loop
-                    for frame_id, _frame in enumerate(video_decoder):
-                        frame_time = round((frame_id/self.fps)*1000.)
-                        _tracklets = tracklets_data.get(f'{frame_time}', [])
-                        per_frame_reids = self.process(inputs={
-                            "tracklets": _tracklets,
-                            "image": _frame["frame"],
-                        })
-                        self.state.update({ frame_time : per_frame_reids})     
-                    logging.error(self.state)
+                    with data_manager.create_data("ReIDData") as reids:
+                        mapping = {}
+                        for frame_id, _frame in enumerate(video_decoder):
+                            frame_time = round((frame_id/self.fps)*1000.)
+                            _tracklets = tracklets_data.get(f'{frame_time}', [])
+                            per_frame_reids = self.process(inputs={
+                                "tracklets": _tracklets,
+                                "image": _frame["frame"],
+                            })
+                            
+                            for name, arr in per_frame_reids.items():
+                                if type(arr) is np.ndarray:
+                                    reids.add_array(str(frame_id), name, arr)
+                            mapping[frame_time] = per_frame_reids['mapping']
+                        reids.mapping = mapping
+                        self.update_callbacks(callbacks, progress=1.0) 
 
-            with data_manager.create_data("ReID_Data") as output_data:
-                # TODO: implement efficient data format for numpy feature arrays, embeddings, etc.
-                # "shape": arr.shape,
-                # "dtype": str(arr.dtype),
-                # "buffer": arr.tobytes(),
-                # ------------------------------------
-                # arr = np.frombuffer(payload["data"], 
-                # dtype=np.dtype(payload["dtype"]))
-                # arr = arr.reshape(payload["shape"])
-                self.update_callbacks(callbacks, progress=1.0)
+                    return { "reids" : reids }
 
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Encode tracklet crops using the feature extractor. """
@@ -204,18 +202,19 @@ class OSNetReID(
         if not crops: crops = []
         
         crop_arrays_rgb = []
+        # NOTE: seems very inefficient, however feature extractor requires a list of PIL numpy arrays..
         for crop_pil in crops:
             crop_rgb_npy = np.array(crop_pil)  # PIL -> RGB numpy HWC uint8
             crop_arrays_rgb.append(crop_rgb_npy)
-
         features = self.feat_extr(crop_arrays_rgb).cpu().numpy() # extract features: PIL list of image bboxes -> [N,512] normalized
-
+        crop_arrays_rgb = np.array(crop_arrays_rgb)
+        
         # NOTE: returning per-frame processed input.
         return { 
             'inputs' : [{
                 'tracks': tracklets_npy,    # [N,10]
                 'features': features,       # [N,512] 
-                'crops': crop_rgb_npy       # [N,?]
+                'crops': crop_arrays_rgb    # [N,H,W,C]
             }]
         }
 
@@ -247,20 +246,20 @@ class OSNetReID(
             self.frame_id += 1
             self.gallery.prune(self.frame_id)
             
-            logging.error(f'{type(tracklets)},{type(updated_ids)},{type(crops)},{type(feats)}')
-            logging.error(f'{tracklets.shape},{updated_ids.shape},{crops.shape},{feats.shape}')
+            old_ids = tracklets[:, 0]
+            old_ids = old_ids.astype(dtype=np.int_)
+            mapping = dict(zip(old_ids.tolist(), updated_ids.tolist()))
             
-            # TODO: what to store and return -> based on team assignment plugin...!
-            # TODO: adjust data format here... many unnecessary conversions.
-            # keep all as numpy arrays and serialize to bytes...
-            tracks.update({ "tracks" : tracklets})      # append nd.array?
-            tracks.update({ "reid_ids" : updated_ids})  # update ReID IDs
-            tracks.update({ "crops": crops})            # append crops
-            tracks.update({ "features": feats})         # append features
+            # logging.error(f'{type(tracklets)},{type(updated_ids)},{type(crops)},{type(feats)}')
+            # logging.error(f'{tracklets.shape},{updated_ids.shape},{crops.shape},{feats.shape}')
+            
+            tracks.update({ "tracks" : tracklets})      # (N,10)
+            tracks.update({ "reid_ids" : updated_ids})  # (N,)
+            tracks.update({ "mapping": mapping})        # { 'old_id' : 'new_id' }
+            tracks.update({ "crops": crops})            # (N,H,W,C)
+            tracks.update({ "features": feats})         # (N,F_DIM)
              
-            logging.error(f'Frame {self.frame_id}: {len(crops)} crops -> {len(set(updated_ids))} ReID IDs')
-            logging.error(f"Old IDs: {tracks['tracks'][...,0]}")
-            logging.error(f"New IDs: {tracks['reid_ids']}")
+            logging.error(f'Frame {self.frame_id}: {len(crops)} crops -> {len(set(updated_ids))} ReID IDs. Mapping: {mapping}')
         
         return tracks
     

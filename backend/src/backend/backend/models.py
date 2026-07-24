@@ -267,6 +267,8 @@ class PluginRunResult(models.Model):
     TYPE_POS = "P"
     TYPE_FL = "FL"
     TYPE_KPI = "KPI"
+    TYPE_NDARRAY = "NPY"
+    TYPE_REID_DATA = "RID"
     TYPE = {
         TYPE_VIDEO: "VIDEO",
         TYPE_IMAGES: "IMAGES",
@@ -283,6 +285,8 @@ class PluginRunResult(models.Model):
         TYPE_POS: "POS",
         TYPE_FL: "FL",
         TYPE_KPI: "KPI",
+        TYPE_NDARRAY: "NPY",
+        TYPE_REID_DATA: "RID"
     }
     type = models.CharField(
         max_length=3,

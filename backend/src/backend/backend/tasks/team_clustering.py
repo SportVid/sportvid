@@ -39,36 +39,52 @@ class TeamClustering(Task):
         )
         video_id = self.upload_video(client, video)
         
-        object_tracker_id = parameters.get("object_tracker_id")
-        if not object_tracker_id:
-            raise ValueError("object_tracker_id is required to run this plugin.")
+        object_tracker_id = parameters.get("object_tracker_id", None)
+        osnet_reid_id = parameters.get("osnet_reid_id", None)
         
-        tracklets = PluginRunResult.objects.filter(
-            plugin_run_id=object_tracker_id,
-            type=PluginRunResult.TYPE_BBOXES,
-        )
-        
-        if not tracklets.exists():
-            raise ValueError(
-                f"No tracklets (TYPE_BBOXES) found for object tracker run {object_tracker_id}."
+        reid_id = None
+        if osnet_reid_id:
+            reids = PluginRunResult.objects.filter(
+                    plugin_run_id=osnet_reid_id,
+                    type=PluginRunResult.TYPE_REID_DATA,
             )
-        
-        prr = tracklets.first()
-        tracklets_ = manager.load(prr.data_id)
-        if tracklets_ is None:
-            raise ValueError(f"Could not load BboxesData for ByteTrack run {object_tracker_id}.")
-        
+            if not reids.exists():
+                raise ValueError(
+                    f"No reids (TYPE_REID_DATA) found for osnet_reid run {osnet_reid_id}."
+                )
+            prr = tracklets.first()
+            reids_ = manager.load(prr.data_id)
+            if reids_ is None:
+                raise ValueError(f"Could not load REID_DATA for osnet_reid run {osnet_reid_id}.")
+            reid_id = client.upload_data(reids_)
+        else:
+            if object_tracker_id:
+                tracklets = PluginRunResult.objects.filter(
+                    plugin_run_id=object_tracker_id,
+                    type=PluginRunResult.TYPE_BBOXES,
+                )
+                if not tracklets.exists():
+                    raise ValueError(
+                        f"No tracklets (TYPE_BBOXES) found for object_tracker run {object_tracker_id}."
+                    )
+                prr = tracklets.first()
+                tracklets_ = manager.load(prr.data_id)
+                if tracklets_ is None:
+                    raise ValueError(f"Could not load BBOXES for object_tracker run {object_tracker_id}.")
+                tracklets_id = client.upload_data(tracklets_)
+
         logging.error(f'TASK PARAMS: {parameters}')
         reids = self.run_analyser(
             client,
-            "team_clustering",
+            "osnet_reid",
             parameters=parameters,
             inputs={
                 "video": video_id,
-                "tracklets": tracklets_ 
+                "tracklets": None if reid_id else tracklets_id,
+                "reids": reid_id if reid_id else None
             },
-            outputs=["reids"],
-            downloads=["reids"],
+            outputs=["teams"],
+            downloads=["teams"],
         )
 
         if plugin_run is not None:
@@ -80,16 +96,19 @@ class TeamClustering(Task):
             return {}
 
         with transaction.atomic():
-            with reids[1]["reids"] as reids:
+            with reids[1]["teams"] as teams:
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
                     data_id=reids.id,
-                    name="reids",
-                    type=PluginRunResult.TYPE_LIST,
+                    name="teams",
+                    type=PluginRunResult.TYPE_TEAM_DATA,
                 )
                 return {
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [plugin_run_result_db.id.hex],
-                    "data": {"reids": reids[1]["reids"].id},
+                    "data": {
+                        "teams": teams.id,
+                        "teams": teams.mapping    
+                    },
                 }
 
