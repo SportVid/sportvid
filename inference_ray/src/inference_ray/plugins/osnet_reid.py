@@ -110,7 +110,7 @@ class OSNetReID(
         self.reid_threshold = self.cfg.get('reid_thresh', 0.6)
         self.max_missed = self.cfg.get('max_missed', 30) # prune stale tracks
         
-        # resizing to (H,W) for feature extractor
+        # crop sizes (should match requirements of feature extractor)
         self.crop_size_x = self.cfg.get('crop_size_x', 128) 
         self.crop_size_y = self.cfg.get('crop_size_y', 256)
         self.crop_x1_offset = self.cfg.get('crop_x1_offset', 0)
@@ -129,7 +129,6 @@ class OSNetReID(
             max_missed=parameters["max_missed"]
         )
         
-        self.state = dict()
         self.frame_id = 0
         with inputs["tracklets"] as tracklets_data:
             # data unpacking

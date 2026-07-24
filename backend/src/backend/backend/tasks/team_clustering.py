@@ -101,7 +101,7 @@ class TeamClustering(Task):
                     plugin_run=plugin_run,
                     data_id=reids.id,
                     name="teams",
-                    type=PluginRunResult.TYPE_TEAM_DATA,
+                    type=PluginRunResult.TYPE_TEAMS_DATA,
                 )
                 return {
                     "plugin_run": plugin_run.id.hex,

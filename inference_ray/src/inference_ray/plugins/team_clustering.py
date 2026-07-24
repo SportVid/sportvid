@@ -1,44 +1,74 @@
 import logging
-from typing import Any, Callable, Dict, List, Tuple, Optional
-from data import (
-    Data, DataManager, 
-    VideoData,
-    BboxesData
-)
-from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
-from utils import VideoDecoder, VideoBatcher
-
 import time
 import torch
 import numpy as np
 import cv2
+from typing import Any, Callable, Dict, List, Tuple, Optional
+from data import (
+    Data, DataManager, 
+    VideoData,
+    BboxesData,
+    ReIDData,
+    TeamsData
+)
 from PIL import Image
 from sklearn.cluster import KMeans, HDBSCAN
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize
+from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
+from utils import VideoDecoder, VideoBatcher
+from .object_tracker import TeamId
+from .osnet_reid import _crop_tracks
 
 
-class Clustering:
-    """
-    This module either runs k-Means on tracklet crops or HDBSCAN clustering on the ReID embeddings for team assignment.
+default_config = {
+    "data_dir": "/data/",
+    "host": "localhost",
+    "port": 6379,
+}
+
+requires = {
+    "video": VideoData,
+    # "tracklets": BboxesData,
+    # "reids": ReIDData
+}
+
+provides = {
+    "teams": TeamsData
+}
+
+
+@AnalyserPluginManager.export("team_clustering")
+class TeamClustering(
+    AnalyserPlugin,
+    config=default_config,
+    parameters={},
+    version="0.1",
+    requires=requires,
+    provides=provides
+):
+    """ This module either runs k-Means on tracklet crops or HDBSCAN clustering on the ReID embeddings for team assignment.
     - Each tracklet gets a team label assigned from [0, K-1].
     - For k-Means a color histogram of the player crops is computed that captures the color distribution.
     - HDBScan REuses the REID embeddings [N,512] with optional dim. reduction via PCA for clustering.
     """
-
-    def __init__(
-        self, 
-        model_name: str = "team_clustering",
-        model_path: Optional[str] = None,
-        device: str = "cuda",
-        **kwargs
+    def __init__(self, config=None, **kwargs):
+        super().__init__(config, **kwargs)
+        
+    def call(
+        self,
+        inputs: Dict[str, Data],
+        data_manager: DataManager,
+        parameters: Dict = None,
+        callbacks: Callable = None,
     ):
-        self.device = device if torch.cuda.is_available() else 'cpu'
-        logging.info(f'Team cfg: {self.cfg}')
+        self.cfg = parameters
         
         self.clustering_method = self.cfg.get('clustering_method', 'KMEANS') # ['KMEANS', 'HDBSCAN']
         
-        self.crop_size = self.cfg.get('crop_size', [128, 256]) # resizing to (H,W)
+        # crop sizes
+        self.crop_size_x = self.cfg.get('crop_size_x', 128) 
+        self.crop_size_y = self.cfg.get('crop_size_y', 256)
         self.crop_x1_offset = self.cfg.get('crop_x1_offset', 0)
         self.crop_y1_offset = self.cfg.get('crop_y1_offset', 0)
         self.crop_x2_offset = self.cfg.get('crop_x2_offset', 0)
@@ -53,10 +83,14 @@ class Clustering:
         self.use_pca = self.cfg.get('use_pca', False)
         self.pca_components = self.cfg.get('pca_components', 50)
         self.metric = self.cfg.get('metric', 'euclidean')
+        
+        if inputs["reids"]: # crops are there, allows the use of HDBSCAN.
+            with inputs["reids"] as reids_data:
+                reids_ = reids_.frames
+                logging.error(reids_)
+                self.reids = True
 
-        self.state = list()
-        self.frame_id = 0
-
+    
     @torch.no_grad()
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Encode tracklet crops using the feature extractor. """
@@ -182,10 +216,101 @@ class Clustering:
         
         return self.state
 
-    def preproc_features(self, crop, embeddings):
-        if not np.any(embeddings):
-            # TODO: in case there exist no embeddings, compute them on-the-fly ???
-            return []
+    # TODO: test & adjust for input crops.
+    def color_descriptor(
+        self,
+        crop,
+        hist_bins=(4, 6, 6),
+        use_torso=True,
+        add_stats=True,
+        mask_gray=True,
+    ):
+        """
+        Compute a LAB-based color descriptor for jersey clustering.
+
+        Args:
+            crop (np.ndarray): RGB crop of a player, shape (H, W, 3).
+            hist_bins (tuple): Number of bins for L, A, B histogram.
+            use_torso (bool): Use upper-middle torso region instead of full crop.
+            add_stats (bool): Append per-channel mean/std in LAB.
+            mask_gray (bool): Mask low-chroma pixels that are less informative.
+
+        Returns:
+            np.ndarray: 1D L2-normalized feature vector.
+        """
+        if crop is None or crop.size == 0:
+            return np.array([], dtype=np.float32)
+        if crop.ndim != 3 or crop.shape[2] != 3:
+            return np.array([], dtype=np.float32)
+        h, w = crop.shape[:2]
+        if h < 4 or w < 4:
+            return np.array([], dtype=np.float32)
+        roi = crop
+
+        if use_torso: # focus on jersey region: upper-middle torso
+            y1 = int(0.18 * h)
+            y2 = int(0.60 * h)
+            x1 = int(0.20 * w)
+            x2 = int(0.80 * w)
+            if y2 > y1 and x2 > x1:
+                roi = crop[y1:y2, x1:x2]
+
+        roi = cv2.GaussianBlur(roi, (3, 3), 0)  # smooth to reduce pixel noise
+        lab = cv2.cvtColor(roi, cv2.COLOR_RGB2LAB)  # RGB -> LAB
+
+        # optional mask to suppress low-chroma pixels
+        mask = None
+        if mask_gray:
+            lab_f = lab.astype(np.float32)
+            a = lab_f[:, :, 1] - 128.0
+            b = lab_f[:, :, 2] - 128.0
+            chroma = np.sqrt(a * a + b * b)
+            # keep sufficiently colorful pixels
+            mask = (chroma > 12).astype(np.uint8) * 255
+            # fallback if mask is too small
+            if np.count_nonzero(mask) < 0.05 * mask.size:
+                mask = None
+            
+        hist = cv2.calcHist( # 3D histogram in LAB
+            [lab],
+            [0, 1, 2],
+            mask,
+            list(hist_bins),
+            [0, 256, 0, 256, 0, 256]
+        )
+        hist = hist.astype(np.float32).flatten()
+
+        # normalize histogram to sum=1 first
+        hist_sum = hist.sum()
+        if hist_sum > 0:
+            hist /= hist_sum
+        feats = [hist]
+
+        if add_stats:
+            if mask is not None:
+                pixels = lab[mask > 0].reshape(-1, 3).astype(np.float32)
+            else:
+                pixels = lab.reshape(-1, 3).astype(np.float32)
+
+            if len(pixels) > 0:
+                mean = pixels.mean(axis=0)
+                std = pixels.std(axis=0)
+                stats = np.concatenate([  # scale to roughly comparable ranges
+                    mean / 255.0,
+                    std / 255.0
+                ]).astype(np.float32)
+                feats.append(stats)
+    
+        feat = np.concatenate(feats).astype(np.float32)
+        # final L2 normalization
+        feat = normalize(feat.reshape(1, -1), norm='l2').squeeze(0)
+        return feat
+
+    def preproc_features(self, crops, embeddings):
+        if embeddings is None or not np.any(embeddings):
+            # NOTE: in case there is no embeddings from the REID modules.
+            # Computes a LAB-based color discriptor on-the-fly.
+            return self.color_descriptor(crops)     
         
         # ---> L2-normalize feature vector
         if len(embeddings.shape) == 1: 
@@ -194,11 +319,11 @@ class Clustering:
         
         if self.clustering_method == 'KMEANS':
             # lighting invariance
-            crop_norm = self.normalize_illumination(crop)
+            crops_norm = self.normalize_illumination(crops)
             # compute color histogram
-            hsv_crop = cv2.cvtColor(crop_norm, cv2.COLOR_RGB2HSV)
+            hsv_crops = cv2.cvtColor(crops_norm, cv2.COLOR_RGB2HSV)
             color_hist = cv2.calcHist(
-                [hsv_crop], 
+                [hsv_crops], 
                 [0, 1] if self.two_channel else [0, 1, 2],
                 None, 
                 [3, 3] if self.two_channel else [3, 3, 3], 
