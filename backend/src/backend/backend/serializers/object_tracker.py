@@ -3,8 +3,10 @@ from typing import Any, Dict, Iterable, Mapping
 from rest_framework import serializers
 from backend.plugin_manager import PluginManager
 
+
 DETECTOR_CHOICES = ["yolox", "yolo10", "yolo11", "yolo12", "yolo26", "rfdetr", "rtdetr"]
 TRACKER_CHOICES = ["bytetrack"]
+
 
 # TODO: dynamic checkpoint loading based on context / sports type.
 default_yolox_params = {
@@ -252,7 +254,8 @@ class ObjectTrackerSerializer(serializers.Serializer):
     tracker = serializers.ChoiceField(
         choices=TRACKER_CHOICES,
         required=False,
-        default="bytetrack",
+        default=None,
+        allow_null=True,
     )
     detector_params = DetectorParamsSerializer(required=False, default=dict)
     tracker_params = TrackerParamsSerializer(required=False, default=dict)
@@ -273,10 +276,20 @@ class ObjectTrackerSerializer(serializers.Serializer):
             detector=detector,
             user_params=detector_params,
         )
-        data["tracker_params"] = self.build_tracker_runtime_params(
-            tracker=tracker,
-            user_params=tracker_params,
-        )
+        if tracker is not None:
+            tracker_validator = self._get_tracker_validator(tracker)
+            tracker_validator(tracker_params)
+            data["tracker_params"] = self.build_tracker_runtime_params(
+                tracker=tracker,
+                user_params=tracker_params,
+            )
+        else:
+            if tracker_params:
+                raise serializers.ValidationError({
+                    "tracker_params": ["tracker_params cannot be provided when tracker is null or omitted."]
+                })
+            data["tracker_params"] = {}
+
         return data
 
     @classmethod

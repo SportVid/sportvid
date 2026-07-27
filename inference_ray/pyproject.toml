@@ -47,7 +47,7 @@ dependencies = [
     "scikit-image",
     "ultralytics>=8.0",
     "rfdetr==1.3.0",
-    "torchreid",
+    # "torchreid",
     "click==8.2.1"
 ]
 
@@ -61,6 +61,7 @@ package = true
 [project.optional-dependencies]
 tracking = [
      "bytetrack",
+     "torchreid"
 ]
 
 [tool.uv.sources]
@@ -68,3 +69,4 @@ interface = { workspace = true }
 data = { workspace = true }
 utils = { workspace = true }
 bytetrack = { path = "third_party/ByteTrack" }
+torchreid = { path = "third_party/sportsreid" }

@@ -1,8 +1,7 @@
 import logging
 import numpy as np
-
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Set, Any
+from typing import Dict, List, Optional, Tuple, Set
 from scipy.optimize import linear_sum_assignment
 from .gallery import _vec, _l2_normalize
 

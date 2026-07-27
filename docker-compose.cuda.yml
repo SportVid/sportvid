@@ -6,6 +6,7 @@ services:
   inference_ray:
     container_name: inference_ray
     user: "1000:1000"
+    image: sportvid-inference_ray:latest
     build:
       context: .
       dockerfile: inference_ray/Dockerfile
@@ -46,6 +47,7 @@ services:
   analyser:
     container_name: analyser
     user: "1000:1000"
+    image: sportvid-analyser:latest
     build:
       context: .
       # dockerfile: analyser/Dockerfile
@@ -110,6 +112,7 @@ services:
   celery:
     container_name: celery
     user: "1000:1000"
+    image: sportvid-celery:latest
     build:
       context: .
     env_file:
@@ -158,6 +161,7 @@ services:
   backend:
     container_name: backend
     user: "1000:1000"
+    image: sportvid-backend:latest
     build:
       context: .
       args:
@@ -219,6 +223,7 @@ services:
 
   frontend:
     container_name: frontend
+    image: sportvid-frontend:latest
     build:
       context: ./frontend
     ports:

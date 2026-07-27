@@ -3,11 +3,8 @@ import torch
 import json
 import numpy as np
 import cv2
-
 from typing import Any, Callable, Dict, List, Tuple, Optional
-from torchreid.utils.feature_extractor import FeatureExtractor
 from PIL import Image
-
 from data import (
     Data, DataManager,
     VideoData,
@@ -17,17 +14,16 @@ from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 from utils import VideoDecoder, VideoBatcher
 from .reid import GlobalIDManager, Gallery, ProtoGallery
 
+
 default_config = {
     "data_dir": "/data/",
     "host": "localhost",
     "port": 6379,
 }
 
-
 requires = {
     "video": VideoData,
 }
-
 
 provides = {
     "tracklets": BboxesData,
@@ -118,7 +114,7 @@ class OSNetReID(
         parameters: Dict = None,
         callbacks: Callable = None,
     ):
-        from torchreid.reid.utils.feature_extractor import FeatureExtractor
+        from torchreid.utils.feature_extractor import FeatureExtractor
 
         self.cfg = parameters or {}
 

@@ -1,6 +1,5 @@
 import logging
 import argparse
-
 from pprint import pprint
 from enum import IntEnum
 from typing import Any, Callable, Dict, List, Tuple, Optional
@@ -11,6 +10,7 @@ from data import (
 )
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 from utils import VideoDecoder, VideoBatcher
+
 
 default_config = {
     "data_dir": "/data/",
@@ -89,11 +89,12 @@ class ObjectTracker(
         }
     
         # -------> decode video and pass it to detector
+        # TODO: Implement VideoBatcher for more efficient mini-batch processing.
         batch_size = parameters["detector_params"]["batch_size"]
+        
         fps = parameters["fps"]
         parameters["tracker_params"].update({"frame_rate" : fps})
-        self.use_tracker = parameters["use_tracker"]
-        
+        self.tracker = parameters.get("tracker", None)
         with inputs["video"] as input_data:
             with input_data.open_video() as f_video:
                 video_decoder = VideoDecoder(
@@ -111,7 +112,7 @@ class ObjectTracker(
                     detector_params=parameters["detector_params"],
                     device="cuda",
                 )
-                if self.use_tracker:
+                if self.tracker:
                     self.tracker = TRACKER_MAP[parameters["tracker"]](
                         tracker_params=parameters["tracker_params"],
                         device="cuda",
@@ -127,11 +128,27 @@ class ObjectTracker(
                     'image_shape': (self.detector.h, self.detector.w), 
                     'det_shape': self.detector.det_shape,
                 }
-                if self.use_tracker:
+                if self.tracker:
                     _ = self.tracker.process(tracker_inputs)  # TODO: check performance for 90m+ video footage.
+                    # NOTE: Creates a tracklet to detection class mapping.
+                    # We'll use it for the default team assignment at this stage.
+                    trk_det_mapping = TrackClassMapper().map_tracks_to_detections(
+                        tracks=self.tracker.state,
+                        detections=self.detector.state,
+                        iou_thresh=0.3
+                    )
+                    """
+                    {
+                        "0":{
+                            "entity_type": "athlete",
+                            "default_team": "3"
+                        }, ...
+                    }                
+                    """
                 
                 # e = time.time()
                 # logging.error(f"object_tracker.py took: {e-s}")
+                
                 # -------> build the required output format for consistency with other plugins
                 tracklets = defaultdict(list)
                 unique_player_ids = set()
@@ -145,26 +162,10 @@ class ObjectTracker(
                     TeamId.TEAM_LEFT: {"name": "Team A"},
                     TeamId.TEAM_RIGHT: {"name": "Team B"},
                 }
-                
-                # NOTE: Creates a tracklet to detection class mapping.
-                # We'll use it for the default team assignment at this stage.
-                trk_det_mapping = TrackClassMapper().map_tracks_to_detections(
-                    tracks=self.tracker.state,
-                    detections=self.detector.state,
-                    iou_thresh=0.3
-                )
-                """
-                {
-                    "0":{
-                        "entity_type": "athlete",
-                        "default_team": "3"
-                    }, ...
-                }                
-                """
                 out_cls_map = parameters["detector_params"]["output_class_mapping"]
                 
                 # ----------- NOTE: output of this plugin run returns tracklets
-                if self.use_tracker:
+                if self.tracker:
                     for frame_id, track in enumerate(self.tracker.state, start=0): # [N,5]
                         for (track_id, track_score, track_xywh, team_id) in zip( # [5,]
                             track['track_ids'],
