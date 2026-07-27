@@ -23,10 +23,16 @@ class YoloUltralytics():
 
         self.detector_params = detector_params
 
+        self.classes = self.detector_params.get('classes', [])
+        self.num_classes = len(self.classes)
+        if self.num_classes == 0:
+            raise RuntimeError("Expected at least 1 class to detect, please check the 'classes' args.")
+
         self.checkpoint = detector_params.get("checkpoint", None)
         self.model = YOLO(self.checkpoint)
         self.model.to(self.device)
         
+        self.batch_size = detector_params.get('batch_size', 1)
         self.use_fp16 = bool(detector_params.get("fp16", False) and self.device.startswith("cuda"))
         self.conf = detector_params.get("conf", 0.25)
         self.iou = detector_params.get("iou", 0.7)
@@ -146,6 +152,7 @@ class YoloUltralytics():
 
         results = self.model(
             images,
+            batch=self.batch_size,
             conf=self.conf,
             iou=self.iou,
             max_det=self.max_det,
@@ -164,17 +171,19 @@ class YoloUltralytics():
             conf = boxes.conf.detach().cpu().numpy()
             cls = boxes.cls.detach().cpu().numpy().astype(np.int32)
 
-            bbox_list = [
-                {
-                    "xyxy": xyxy[i],
-                    "xywh": xywh[i],
-                    "cls_id": int(cls[i]),
-                    "conf": float(conf[i]),
-                }
-                for i in range(len(xyxy))
-            ]
+            for i in range(len(xyxy)):
+                if int(cls[i]) not in self.classes:
+                    continue
+                bbox_list = [
+                    {
+                        "xyxy": xyxy[i],
+                        "xywh": xywh[i],
+                        "cls_id": int(cls[i]),
+                        "conf": float(conf[i]),
+                    }
+                ]
 
-            self.state.append(bbox_list)
-            self.img_id += 1
+                self.state.append(bbox_list)
+                self.img_id += 1
 
         return results

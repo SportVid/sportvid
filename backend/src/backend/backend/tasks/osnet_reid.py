@@ -50,13 +50,13 @@ class OSNetReID(Task):
         
         if not tracklets.exists():
             raise ValueError(
-                f"No tracklets (TYPE_BBOXES) found for object tracker run {object_tracker_id}."
+                f"No tracklets (TYPE_BBOXES) found for object_tracker run {object_tracker_id}."
             )
         
         prr = tracklets.first()
         tracklets_ = manager.load(prr.data_id)
         if tracklets_ is None:
-            raise ValueError(f"Could not load BboxesData for ByteTrack run {object_tracker_id}.")
+            raise ValueError(f"Could not load BBOXES for object_tracker run {object_tracker_id}.")
         
         input_tracklets_id = client.upload_data(tracklets_)
         
@@ -86,11 +86,14 @@ class OSNetReID(Task):
                     plugin_run=plugin_run,
                     data_id=reids.id,
                     name="reids",
-                    type=PluginRunResult.TYPE_LIST,
+                    type=PluginRunResult.TYPE_REID_DATA,
                 )
                 return {
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [plugin_run_result_db.id.hex],
-                    "data": {"reids": reids[1]["reids"].id},
+                    "data": {
+                        "reids": reids.id,
+                        "mapping": reids.mapping    
+                    },
                 }
 

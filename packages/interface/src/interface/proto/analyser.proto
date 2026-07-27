@@ -68,6 +68,9 @@ enum PluginDataType {
   FL_DATA = 22;
   KPI_DATA = 23;
   VIDEO_ASSET_DATA = 24;
+  NDARRAY_DATA = 25;
+  REID_DATA = 26;
+  TEAMS_DATA = 27;
 }
 
 message PluginInfoData {

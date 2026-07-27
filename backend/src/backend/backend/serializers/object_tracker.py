@@ -1,16 +1,20 @@
+import logging
 from copy import deepcopy
 from typing import Any, Dict, Iterable, Mapping
 from rest_framework import serializers
 from backend.plugin_manager import PluginManager
 
+
 DETECTOR_CHOICES = ["yolox", "yolo10", "yolo11", "yolo12", "yolo26", "rfdetr", "rtdetr"]
 TRACKER_CHOICES = ["bytetrack"]
+
 
 # TODO: dynamic checkpoint loading based on context / sports type.
 default_yolox_params = {
     "batch_size": 1,
     "conf_thresh": 0.2,
-    "nms_thresh": 0.65,
+    "nms_thresh": 0.4,
+    "classes": [0],
     "fp16": False,
     "num_classes": 1, 
     "decode": True,
@@ -30,8 +34,8 @@ default_yolox_params = {
 
 default_yolo10_params = {
     "batch_size": 1,
-    "conf": 0.2,                # min confidence threshold [0.1 - 0.6]
-    "iou": 0.3,                 # threshold for NMS; lower values -> less detections [0.3 - 0.6]
+    "conf": 0.15,               # min confidence threshold [0.15 - 0.6]
+    "iou": 0.4,                 # threshold for NMS; lower values -> less detections [0.3 - 0.6]
     "agnostic_nms": False,      # class-agnostic NMS; merge overlapping boxes of different classes
     "classes": [0, 32],         # filters predictions to specified class set: 'person','sports_ball' for COCO dataset
     "half": False,
@@ -77,7 +81,7 @@ default_yolo26_params = {
 
 default_rfdetr_params = {
     "batch_size": 1,
-    "conf": 0.5,               
+    "conf": 0.6,               
     # "classes": [0, 32],  # default COCO: 0 - person, 32 - ball
     "classes": ['ball', 'player', 'referee', 'goalkeeper'], # SoccerNet checkpoint
     "resolution": 1288,  # divisible by 56 -> [672,728,784,896,1008,1064,1120]
@@ -132,10 +136,14 @@ default_rtdetr_params = {
     }    
 }
 
+# Example parameter settings:
+#   1) balanced: [0.5 60 0.7]
+#   2) conservative: [0.5 60 0.75]
+#   3) occlusion-heavy: [0.45 90 0.7]
 default_bytetrack_params = {
-    "track_thresh": 0.4,        # tracking confidence threshold (0.6 = default)
-    "track_buffer": 300,        # num of frames to keep lost tracks
-    "match_thresh": 0.8,        # [0.8, 0.6, 0.4]; high = fewer ID switches, low -> More MOTA; IoU matching threshold for associating detections to existing tracks
+    "track_thresh": 0.45,       # tracking confidence threshold (0.6 = default)
+    "track_buffer": 90,         # num of frames to keep lost tracks
+    "match_thresh": 0.7,        # [0.8, 0.6, 0.4]; high = fewer ID switches, low -> More MOTA; IoU matching threshold for associating detections to existing tracks
     "mot20": False,             # 'True' skips fusing scores?
     "aspect_ratio_thresh": 5.0, # reject tracking artifacts / FPs of unrealistic shape
     "min_box_area": 0,          # min box area thresholds (px^2)
@@ -248,7 +256,8 @@ class ObjectTrackerSerializer(serializers.Serializer):
     tracker = serializers.ChoiceField(
         choices=TRACKER_CHOICES,
         required=False,
-        default="bytetrack",
+        default=None,
+        allow_blank=True
     )
     detector_params = DetectorParamsSerializer(required=False, default=dict)
     tracker_params = TrackerParamsSerializer(required=False, default=dict)
@@ -256,23 +265,31 @@ class ObjectTrackerSerializer(serializers.Serializer):
     def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
         detector = data.get("detector", "yolox")
         tracker = data.get("tracker", "bytetrack")
+        
         detector_params = data.get("detector_params", {})
         tracker_params = data.get("tracker_params", {})
 
         detector_validator = self._get_detector_validator(detector)
         detector_validator(detector_params)
 
-        tracker_validator = self._get_tracker_validator(tracker)
-        tracker_validator(tracker_params)
-
         data["detector_params"] = self.build_detector_runtime_params(
             detector=detector,
             user_params=detector_params,
         )
-        data["tracker_params"] = self.build_tracker_runtime_params(
-            tracker=tracker,
-            user_params=tracker_params,
-        )
+        if tracker not in (None, ""):
+            tracker_validator = self._get_tracker_validator(tracker)
+            tracker_validator(tracker_params)
+            data["tracker_params"] = self.build_tracker_runtime_params(
+                tracker=tracker,
+                user_params=tracker_params,
+            )
+        else:
+            if tracker_params:
+                raise serializers.ValidationError({
+                    "tracker_params": ["tracker_params cannot be provided when tracker is null or omitted."]
+                })
+            data["tracker_params"] = {}
+
         return data
 
     @classmethod
@@ -339,6 +356,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "conf_thresh",
             "nms_thresh",
             "fp16",
+            "classes",
             "num_classes",
             "decode",
             "test_size",
@@ -348,13 +366,6 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "output_class_mapping"
         }
         self._reject_unknown_keys("detector_params", params, allowed)
-
-        if "classes" in params:
-            self._raise_field_error(
-                "detector_params",
-                "classes",
-                "YOLOX configuration does not support a 'classes' filter in this schema."
-            )
 
         test_size = params.get("test_size")
         if test_size is not None:

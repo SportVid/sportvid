@@ -14,6 +14,7 @@ def xyxy_to_xywh(xyxy):
     x1, y1, x2, y2 = xyxy[:, 0], xyxy[:, 1], xyxy[:, 2], xyxy[:, 3]
     return np.stack(((x1 + x2) * 0.5, (y1 + y2) * 0.5, x2 - x1, y2 - y1), axis=-1)
 
+
 @staticmethod
 def xyxy_to_xywh_tensor(xyxy: torch.Tensor) -> torch.Tensor:
     if xyxy.ndim == 1:
@@ -24,6 +25,7 @@ def xyxy_to_xywh_tensor(xyxy: torch.Tensor) -> torch.Tensor:
     w = x2 - x1
     h = y2 - y1
     return torch.stack((cx, cy, w, h), dim=-1)
+
 
 class YoloX():
     """
@@ -54,6 +56,70 @@ class YoloX():
         # ImageNet norm constants for preprocessing
         self.rgb_means = (0.485, 0.456, 0.406)
         self.std = (0.229, 0.224, 0.225)
+
+    def _init_inference(self, cfg: Dict[Any, Any]):
+        """
+        Build and prepare the model for inference:
+          - loads architecture from exp
+          - restores weights from checkpoint (strict)
+          - sets eval mode and disables internal decoding
+        """
+        import torch
+        
+        self.cfg = cfg
+        self.exp.num_classes = self.num_classes = self.cfg["num_classes"]
+        self.conf_thresh = self.cfg["conf_thresh"]
+        self.nms_thresh = self.cfg["nms_thresh"]
+        
+        self.classes = self.cfg.get('classes', [])
+        self.num_classes = len(self.classes)
+        if self.num_classes == 0:
+            raise RuntimeError("Expected at least 1 class to detect, please check the 'classes' args.")
+
+        # test_size must match the training input_size exactly
+        self.test_size = self.exp.test_size # default is determined by exp
+        if "test_size" in self.cfg:
+            if self.cfg["test_size"]:
+                self.test_size = tuple(self.cfg["test_size"])
+                self.exp.test_size = self.test_size
+        else:
+            logging.warning(
+                "No test_size in inference_params -> using exp default "
+                f"{self.test_size}. Make sure this matches your training input_size."
+            )
+        logging.info(
+            f"[inference] " 
+            f"test_size={self.test_size}, "
+            f"num_classes={self.num_classes}, "
+            f"conf={self.conf_thresh}, nms={self.nms_thresh}"
+        )
+
+        # build model
+        self.model = self.exp.get_model().to(self.device)
+
+        # load checkpoint
+        if self.checkpoint:
+            logging.info(f"[inference] Loading checkpoint: {self.checkpoint}")
+            chkpt = torch.load(self.checkpoint, map_location=self.device)
+            self.model.load_state_dict(chkpt["model"], strict=True) # strict=True to check for architecture mismatches
+            logging.info("[inference] Checkpoint loaded successfully.")
+        else:
+            logging.warning(
+                "[inference] No checkpoint provided -> running with random weights. "
+                "Set model_chkpt in your config."
+            )
+
+        # fp16 after checkpoint load so the cast doesn't affect weight loading
+        self.fp16 = bool(cfg.get("fp16", False) and self.device.startswith("cuda"))
+        if self.fp16:
+            self.model = self.model.half()
+            logging.info("[inference] Model cast to fp16.")
+
+        # eval mode + disable internal decoding (we call decode_outputs manually)
+        self.model.eval()
+        if hasattr(self.model, "head"):
+            self.model.head.training = False
+            self.model.head.decode_in_inference = False
 
     def _prepare_frames_tensor(self, frames):
         if isinstance(frames, np.ndarray):
@@ -236,187 +302,10 @@ class YoloX():
                 }
                 for i in range(pred_cpu.shape[0])
                 if torch.isfinite(pred_cpu[i, :4]).all()
+                and int(pred_cpu[i, -1].item()) in self.classes
             ]
 
             self.state.append(bbox_list)
             self.img_id += 1
 
         return raw_outputs
-
-    def _init_inference(self, cfg: Dict[Any, Any]):
-        """
-        Build and prepare the model for inference:
-          - loads architecture from exp
-          - restores weights from checkpoint (strict)
-          - sets eval mode and disables internal decoding
-        """
-        import torch
-        
-        self.cfg = cfg
-        self.exp.num_classes = self.num_classes = cfg["num_classes"]
-        self.conf_thresh = cfg["conf_thresh"]
-        self.nms_thresh = cfg["nms_thresh"]
-
-        # test_size must match the training input_size exactly
-        self.test_size = self.exp.test_size # default is determined by exp
-        if "test_size" in cfg:
-            if cfg["test_size"]:
-                self.test_size = tuple(cfg["test_size"])
-                self.exp.test_size = self.test_size
-        else:
-            logging.warning(
-                "No test_size in inference_params -> using exp default "
-                f"{self.test_size}. Make sure this matches your training input_size."
-            )
-        logging.info(
-            f"[inference] " 
-            f"test_size={self.test_size}, "
-            f"num_classes={self.num_classes}, "
-            f"conf={self.conf_thresh}, nms={self.nms_thresh}"
-        )
-
-        # build model
-        self.model = self.exp.get_model().to(self.device)
-
-        # load checkpoint
-        if self.checkpoint:
-            logging.info(f"[inference] Loading checkpoint: {self.checkpoint}")
-            chkpt = torch.load(self.checkpoint, map_location=self.device)
-            self.model.load_state_dict(chkpt["model"], strict=True) # strict=True to check for architecture mismatches
-            logging.info("[inference] Checkpoint loaded successfully.")
-        else:
-            logging.warning(
-                "[inference] No checkpoint provided -> running with random weights. "
-                "Set model_chkpt in your config."
-            )
-
-        # fp16 after checkpoint load so the cast doesn't affect weight loading
-        self.fp16 = bool(cfg.get("fp16", False) and self.device.startswith("cuda"))
-        if self.fp16:
-            self.model = self.model.half()
-            logging.info("[inference] Model cast to fp16.")
-
-        # eval mode + disable internal decoding (we call decode_outputs manually)
-        self.model.eval()
-        if hasattr(self.model, "head"):
-            self.model.head.training = False
-            self.model.head.decode_in_inference = False
-
-    # NOTE: old numpy/torch mixed code...
-    # @torch.no_grad()
-    # def preprocess(self, inputs, **kwargs) -> Dict[Any, Any]:
-    #     """
-    #     Letterbox-resize each frame to test_size and normalise with ImageNet stats.
-    #     Args:
-    #         inputs: dict with 'frame' tensor (N, H, W, C)
-    #     Returns:
-    #         dict with 'inputs' (model-ready tensor), 'shape', 'ratio' (list[float])
-    #     """
-    #     from yolox.data.data_augment import preproc
-
-    #     # NOTE: VideoBatcher returns (N,H,W,C); VideoDecoder returns (H,W,C)
-    #     inputs = inputs["frame"]
-    #     fp16 = self.cfg.get("fp16", False)
-
-    #     if len(inputs.shape) == 3:
-    #         if isinstance(inputs, np.ndarray):
-    #             inputs = np.expand_dims(inputs, axis=0)
-    #         else:
-    #             inputs = inputs.unsqueeze(0)
-    #     input_shape = inputs.shape
-        
-    #     if input_shape[3] != 3:
-    #         raise RuntimeError("Expected 3-channel RGB input.")
-
-    #     processed = np.zeros( # (N, C, H, W)
-    #         (input_shape[0], input_shape[3], self.test_size[0], self.test_size[1]),
-    #         dtype=np.float16 if fp16 else np.float32,
-    #     )
-    
-    #     ratios = []
-    #     last_hwc_shape = None
-    #     for i, frame in enumerate(inputs):
-    #         img_hwc = frame
-    #         # img_hwc = frame.permute(1, 2, 0).numpy() # torch
-    #         # img_hwc = np.permute_dims(frame, (1, 2, 0)) # (H, W, C) # numpy
-    #         logging.error("img_hwc type=%s shape=%s dtype=%s", type(img_hwc), getattr(img_hwc, "shape", None), getattr(img_hwc, "dtype", None))
-    #         pimg, ratio = preproc(img_hwc, self.test_size, self.rgb_means, self.std)
-    #         processed[i] = pimg
-    #         ratio_scalar = (
-    #             ratio[0] if isinstance(ratio, (list, tuple, np.ndarray)) else float(ratio)
-    #         )
-    #         ratios.append(ratio_scalar)
-    #         last_hwc_shape = img_hwc.shape
-
-    #     self.h, self.w = input_shape[1], input_shape[2]
-    #     self.det_shape = (self.h, self.w)
-
-    #     images = torch.from_numpy(processed).to(self.device)
-    #     if fp16: images = images.half()
-            
-    #     return {
-    #         "inputs": images,
-    #         "shape": last_hwc_shape,
-    #         "ratio": ratios,
-    #     }
-
-    # @torch.no_grad()
-    # def run_inference(self, inputs):
-    #     from yolox.utils import postprocess
-        
-    #     images = inputs["inputs"]
-    #     logging.error("Running inference...")
-    #     raw = self.model(images) # forward pass: raw grid-relative outputs (decode_in_inference=False)
-    #     logging.error("Decoding outputs...")
-    #     decoded = self.model.head.decode_outputs(raw, dtype=raw.type()) # manual decode into absolute pixel coordinates
-
-    #     logging.error(
-    #         f"decoded range: x={decoded[0,:,0].min():.1f}~{decoded[0,:,0].max():.1f}, "
-    #         f"y={decoded[0,:,1].min():.1f}~{decoded[0,:,1].max():.1f}, "
-    #         f"max_conf={torch.sigmoid(decoded[0,:,4]).max():.4f}"
-    #     )
-    #     logging.error("Postprocessing...")
-    #     raw_outputs = postprocess(
-    #         decoded, self.num_classes, self.conf_thresh, self.nms_thresh,
-    #     )
-
-    #     for pred, ratio in zip(raw_outputs, inputs["ratio"]):
-    #         if pred is None:
-    #             self.state.append([])
-    #             self.img_id += 1
-    #             continue
-
-    #         if not np.isfinite(ratio) or ratio < 1e-6:
-    #             logging.warning(f"Invalid ratio={ratio}, skipping frame {self.img_id}")
-    #             self.state.append([])
-    #             self.img_id += 1
-    #             continue
-
-    #         # scale boxes from letterboxed space back to original resolution
-    #         scaling_factor = 1.0 / ratio
-    #         pred[:, [0, 2]] *= scaling_factor  # x1, x2
-    #         pred[:, [1, 3]] *= scaling_factor  # y1, y2
-
-    #         # clamp to image bounds
-    #         pred[:, 0].clamp_(0, self.w)
-    #         pred[:, 1].clamp_(0, self.h)
-    #         pred[:, 2].clamp_(0, self.w)
-    #         pred[:, 3].clamp_(0, self.h)
-
-    #         bbox_list = []
-    #         for box in pred:
-    #             b = box.cpu().numpy()
-    #             if not np.all(np.isfinite(b[:4])):
-    #                 continue
-    #             box_coords = np.array((b[0], b[1], b[2], b[3]))
-    #             bbox_list.append({
-    #                 "xyxy": box_coords,
-    #                 "xywh": xyxy_to_xywh(box_coords),
-    #                 "cls_id": int(b[-1]),
-    #                 "conf": float(b[-2]),
-    #             })
-
-    #         self.state.append(bbox_list)
-    #         self.img_id += 1
-
-    #     return raw_outputs

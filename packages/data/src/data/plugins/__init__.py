@@ -24,4 +24,6 @@ from .tracking_data import TrackingData
 from .position_data import PositionData
 from .floodlight_data import FloodlightData
 from .kpi_data import KpiData
+from .reid_data import ReIDData
+from .team_data import TeamsData
 from .video_asset_data import VideoAssetData

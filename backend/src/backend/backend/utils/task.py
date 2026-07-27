@@ -40,7 +40,6 @@ class Task:
         if outputs is None: outputs = []
         if downloads is None: downloads = []
 
-        logging.error(f'TASK ANALYSER CLIENT: {parameters}')
         job_id = client.run_plugin(
             analyser,
             [{"name": k, "id": v} for k, v in inputs.items()],
