@@ -115,8 +115,12 @@ class OSNetReID(
         callbacks: Callable = None,
     ):
         from torchreid.utils.feature_extractor import FeatureExtractor
-
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
         self.cfg = parameters or {}
+
+        self.model_name = self.cfg.get("model_name", "osnet_x1_0")
+        self.checkpoint = self.cfg.get("checkpoint", "/models/reid/osnet_x1_0_ms_d_c.pth.tar")
 
         self.gallery_mode = self.cfg.get("gallery_mode", "tracks")
         self.match_threshold = self.cfg.get("match_threshold", 0.6)
@@ -130,16 +134,17 @@ class OSNetReID(
         self.max_missed = self.cfg.get("max_missed", 30)
         self.reid_cls = self.cfg.get("reid_cls", [])
 
-        self.crop_size = self.cfg.get("crop_size", [128, 256])
+        self.crop_size_x = self.cfg.get("crop_size_x", 128)
+        self.crop_size_y = self.cfg.get("crop_size_y", 256)
         self.crop_x1_offset = self.cfg.get("crop_x1_offset", 0)
         self.crop_y1_offset = self.cfg.get("crop_y1_offset", 0)
         self.crop_x2_offset = self.cfg.get("crop_x2_offset", 0)
         self.crop_y2_offset = self.cfg.get("crop_y2_offset", 0)
 
         self.feat_extr = FeatureExtractor(
-            model_name=model_name,
-            model_path=model_path,
-            device=self.device,
+            model_name=self.model_name,
+            model_path=self.checkpoint,
+            device=self.device
         )
 
         self.gallery = None
@@ -205,6 +210,7 @@ class OSNetReID(
                     with data_manager.create_data("ReIDData") as reids:
                         mapping = {}
                         for frame_id, _frame in enumerate(video_decoder):
+                            self.frame_id = frame_id
                             frame_time = round((frame_id/self.fps)*1000.)
                             _tracklets = tracklets_data.get(f'{frame_time}', [])
                             per_frame_reids = self.process(
@@ -287,67 +293,97 @@ class OSNetReID(
         
         tracks = {}
         for frame_data in per_frame_data:
-            tracklets = frame_data['tracks']
-            feats = frame_data['features']
+            tracklets = frame_data['tracks']    # expected: np.ndarray (N, 10)
+            feats = frame_data['features']      # expected: np.ndarray (N, F_DIM) or None
             crops = frame_data['crops']
             
-            frame_id = tracks["frame_id"]
+            # frame_id = tracks["frame_id"]
             track_ids = list(tracks.get("track_ids", []))
             track_boxes = list(tracks.get("track_boxes", []))
 
-            if feats is None or len(feats) == 0 or len(track_ids) == 0:
+            if tracklets is None or len(tracklets) == 0:
                 tracks.update({
-                    "reid_ids": [],
-                    "reid_scores": [],
-                    "reid_status": [],
+                    "tracks": tracklets,
+                    "reid_ids": np.array([], dtype=np.int_),
+                    "mapping": {},
                     "crops": crops,
                     "features": feats,
                 })
+                self.frame_id += 1
+                continue
+            
+            old_ids = tracklets[:, 0].astype(np.int_)
+            track_ids = old_ids.tolist()
+
+            # adjust this slice if your old tracklet layout stores boxes elsewhere
+            track_boxes = tracklets[:, 5:9] if tracklets.shape[1] >= 5 else None
+
+            if feats is None or len(feats) == 0 or len(track_ids) == 0:
+                updated_ids = np.array([], dtype=np.int_)
+                mapping = {}
+                tracks.update({
+                    "tracks": tracklets,
+                    "reid_ids": updated_ids,
+                    "mapping": mapping,
+                    "crops": crops,
+                    "features": feats,
+                })
+                self.frame_id += 1
                 continue
 
             if self.gallery_mode == "protos":
                 global_ids, reid_scores, reid_status = self.global_id_manager.update(
-                    frame_id=frame_id,
+                    frame_id=self.frame_id,
                     track_ids=track_ids,
                     feats=feats,
                     boxes_xywh=track_boxes,
                 )
+                updated_ids = np.array(global_ids, dtype=object)
             else:
-                matched_ids, matched_scores = self.gallery.match(feats, frame_id)
+                matched_ids, matched_scores = self.gallery.match(feats, self.frame_id)
+
                 global_ids = list(matched_ids)
                 reid_scores = list(matched_scores)
                 reid_status = []
 
                 for i, pid in enumerate(global_ids):
                     if pid is None:
-                        pid = self.gallery.register(feats[i], frame_id)
+                        pid = self.gallery.register(feats[i], self.frame_id)
                         global_ids[i] = pid
                         reid_scores[i] = None
                         reid_status.append("new")
                     else:
                         reid_status.append("matched")
 
-                self.gallery.prune(frame_id)
+                self.gallery.prune(self.frame_id)
+                updated_ids = np.array(global_ids, dtype=object)
+
+            mapping = dict(zip(old_ids.tolist(), updated_ids.tolist()))
 
             tracks.update({
-                "reid_ids": global_ids,
-                "reid_scores": reid_scores,
-                "reid_status": reid_status,
+                "tracks": tracklets,
+                "reid_ids": updated_ids,
+                "mapping": mapping,
                 "crops": crops,
                 "features": feats,
             })
 
             logging.error(
-                f"Frame {frame_id}: tracks={len(track_ids)}, "
-                f"unique_global={len({gid for gid in global_ids if gid is not None})}, "
-                f"new={sum(s == 'new' for s in reid_status)}, "
-                f"continued={sum(s == 'continued' for s in reid_status)}, "
-                f"matched_active={sum(s == 'matched_active' for s in reid_status)}, "
-                f"reentry={sum(s == 'reid_reentry' for s in reid_status)}"
+                f"Frame {self.frame_id}: tracks={len(track_ids)}, "
+                f"unique_global={len({gid for gid in updated_ids.tolist() if gid is not None})}, "
+                f"mapping={mapping}"
             )
-            logging.error(f"Old tracker IDs: {track_ids}")
-            logging.error(f"Global IDs: {global_ids}")
-            logging.error(f"Scores: {reid_scores}")
-            logging.error(f"Status: {reid_status}")
+            logging.error(f"Old tracker IDs: {old_ids.tolist()}")
+            logging.error(f"Global IDs: {updated_ids.tolist()}")
+
+            if self.gallery_mode == "protos":
+                logging.error(f"Status: {reid_status}")
+                logging.error(f"Scores: {reid_scores}")
+                tracks.update({
+                    "reid_status": reid_status,
+                    "reid_scores": reid_scores
+                })
+
+            self.frame_id += 1
 
         return tracks

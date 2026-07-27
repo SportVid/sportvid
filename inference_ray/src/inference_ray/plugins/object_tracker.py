@@ -95,6 +95,8 @@ class ObjectTracker(
         fps = parameters["fps"]
         parameters["tracker_params"].update({"frame_rate" : fps})
         self.tracker = parameters.get("tracker", None)
+        if self.tracker in [None, "", "None"]: self.tracker = None
+        
         with inputs["video"] as input_data:
             with input_data.open_video() as f_video:
                 video_decoder = VideoDecoder(
@@ -164,6 +166,7 @@ class ObjectTracker(
                 }
                 out_cls_map = parameters["detector_params"]["output_class_mapping"]
                 
+                # --------------------------------------------------
                 # ----------- NOTE: output of this plugin run returns tracklets
                 if self.tracker:
                     for frame_id, track in enumerate(self.tracker.state, start=0): # [N,5]
@@ -196,11 +199,38 @@ class ObjectTracker(
                             ]
                             tracklets[frame_time].append([tracklet])        
                 else: 
-                # ----------- NOTE: output of this plugin run returns detections only
-                    for frame_id, detection in enumerate(tracker_inputs['detections']):
-                        logging.error(frame_id, detection)
-                    
-                    
+                # ----------- NOTE: output of this plugin run returns detections only.
+                # TODO: currently hard-coded for ball detections...!
+                    for frame_id, detections in enumerate(tracker_inputs['detections']):
+                        frame_time = round((frame_id / fps) * 1000.0)
+                        for det in detections:
+                            class_id = det["cls_id"]
+                            track_id = 0 # NOTE: always assigning 0 to all detections here.
+                            assigned_cls = out_cls_map.get(str(class_id), {})
+                            default_team_assgn = assigned_cls.get("default_team", 3)
+
+                            x, y, w, h = det["xywh"]
+                            x_norm = x / self.detector.w
+                            y_norm = y / self.detector.h
+                            w_norm = w / self.detector.w
+                            h_norm = h / self.detector.h
+
+                            track_score = det["conf"]
+
+                            tracklet = [
+                                int(track_id),
+                                int(default_team_assgn),
+                                0,
+                                float(x_norm + (w_norm / 2)),
+                                float(y_norm + h_norm),
+                                float(x_norm),
+                                float(y_norm),
+                                float(w_norm),
+                                float(h_norm),
+                                float(track_score),
+                            ]
+                            tracklets[frame_time].append([tracklet])
+                # --------------------------------------------------
                 player_id_meta = {
                     pid: {
                         "id": pid, 

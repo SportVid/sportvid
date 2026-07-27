@@ -12,9 +12,9 @@ MODEL_CHOICES = [
 
 MODEL_CHECKPOINTS = [
     # Trained on multiple sources for domain generalization:
-    "/models/reid/osnet_x1_0_ms_d_c.pth",
-    "/models/reid/osnet_ain_ms_d_c.pth",
-    "/models/reid/osnet_ibn_ms_d_c.pth",
+    "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
+    "/models/reid/osnet_ain_ms_d_c.pt.tarh",
+    "/models/reid/osnet_ibn_ms_d_c.pth.tar",
     # TODO: test sportsreid package:
     # "/models/reid/model.osnet.pth.tar-10",
     # "/models/reid/model.deit_s.pth.tar-16",
@@ -34,7 +34,7 @@ class OSNetReIdentificationSerializer(serializers.Serializer):
     checkpoint = serializers.CharField(
         required=False, 
         allow_blank=False,
-        default="/models/reid/osnet_x1_0_ms_d_c.pth")
+        default="/models/reid/osnet_x1_0_ms_d_c.pth.tar")
     
     # TODO: integrate for sportsreid checkpoints
     # def validate(self, attrs):

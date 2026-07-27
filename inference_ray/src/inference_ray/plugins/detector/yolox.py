@@ -5,12 +5,6 @@ import numpy as np
 from typing import Any, Dict, List
 
 
-CLASS_MAP = {
-    "ball" : 32,
-    "player" : 0
-}
-
-
 @staticmethod
 def xyxy_to_xywh(xyxy):
     xyxy = np.asarray(xyxy)
@@ -73,15 +67,20 @@ class YoloX():
         import torch
         
         self.cfg = cfg
-        self.exp.num_classes = self.num_classes = cfg["num_classes"]
-        self.conf_thresh = cfg["conf_thresh"]
-        self.nms_thresh = cfg["nms_thresh"]
+        self.exp.num_classes = self.num_classes = self.cfg["num_classes"]
+        self.conf_thresh = self.cfg["conf_thresh"]
+        self.nms_thresh = self.cfg["nms_thresh"]
+        
+        self.classes = self.cfg.get('classes', [])
+        self.num_classes = len(self.classes)
+        if self.num_classes == 0:
+            raise RuntimeError("Expected at least 1 class to detect, please check the 'classes' args.")
 
         # test_size must match the training input_size exactly
         self.test_size = self.exp.test_size # default is determined by exp
-        if "test_size" in cfg:
-            if cfg["test_size"]:
-                self.test_size = tuple(cfg["test_size"])
+        if "test_size" in self.cfg:
+            if self.cfg["test_size"]:
+                self.test_size = tuple(self.cfg["test_size"])
                 self.exp.test_size = self.test_size
         else:
             logging.warning(
@@ -303,6 +302,7 @@ class YoloX():
                 }
                 for i in range(pred_cpu.shape[0])
                 if torch.isfinite(pred_cpu[i, :4]).all()
+                and int(pred_cpu[i, -1].item()) in self.classes
             ]
 
             self.state.append(bbox_list)

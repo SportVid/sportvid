@@ -1,3 +1,4 @@
+import logging
 from copy import deepcopy
 from typing import Any, Dict, Iterable, Mapping
 from rest_framework import serializers
@@ -13,6 +14,7 @@ default_yolox_params = {
     "batch_size": 1,
     "conf_thresh": 0.2,
     "nms_thresh": 0.4,
+    "classes": [0],
     "fp16": False,
     "num_classes": 1, 
     "decode": True,
@@ -255,7 +257,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
         choices=TRACKER_CHOICES,
         required=False,
         default=None,
-        allow_null=True,
+        allow_blank=True
     )
     detector_params = DetectorParamsSerializer(required=False, default=dict)
     tracker_params = TrackerParamsSerializer(required=False, default=dict)
@@ -263,20 +265,18 @@ class ObjectTrackerSerializer(serializers.Serializer):
     def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
         detector = data.get("detector", "yolox")
         tracker = data.get("tracker", "bytetrack")
+        
         detector_params = data.get("detector_params", {})
         tracker_params = data.get("tracker_params", {})
 
         detector_validator = self._get_detector_validator(detector)
         detector_validator(detector_params)
 
-        tracker_validator = self._get_tracker_validator(tracker)
-        tracker_validator(tracker_params)
-
         data["detector_params"] = self.build_detector_runtime_params(
             detector=detector,
             user_params=detector_params,
         )
-        if tracker is not None:
+        if tracker not in (None, ""):
             tracker_validator = self._get_tracker_validator(tracker)
             tracker_validator(tracker_params)
             data["tracker_params"] = self.build_tracker_runtime_params(
@@ -356,6 +356,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "conf_thresh",
             "nms_thresh",
             "fp16",
+            "classes",
             "num_classes",
             "decode",
             "test_size",
@@ -365,13 +366,6 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "output_class_mapping"
         }
         self._reject_unknown_keys("detector_params", params, allowed)
-
-        if "classes" in params:
-            self._raise_field_error(
-                "detector_params",
-                "classes",
-                "YOLOX configuration does not support a 'classes' filter in this schema."
-            )
 
         test_size = params.get("test_size")
         if test_size is not None:
