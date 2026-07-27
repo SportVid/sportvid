@@ -15,7 +15,7 @@ class BackendConfig(AppConfig):
         if 'backend_pluginrun' not in connection.introspection.table_names():
             return
         # import here otherwise django complains
-        from sportvid.celery import app
+        from backend.src.backend.sportvid.celery import app
         from backend.models import PluginRun
         
         # import serializers for auto discovery
