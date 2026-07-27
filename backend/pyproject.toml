@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "backend"
 version = "0.1.0"
@@ -28,6 +32,15 @@ dependencies = [
     "pympi-ling>=1.70.2",
     "pandas>=2.2.3",
 ]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["backend*", "sportvid*"]
+namespaces = false
 
 [tool.uv]
 package = true

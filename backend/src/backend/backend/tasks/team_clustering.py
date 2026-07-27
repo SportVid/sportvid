@@ -38,50 +38,57 @@ class TeamClustering(Task):
             manager=manager,
         )
         video_id = self.upload_video(client, video)
+        object_tracker_id = parameters.get("object_tracker_id")
         
-        object_tracker_id = parameters.get("object_tracker_id", None)
-        osnet_reid_id = parameters.get("osnet_reid_id", None)
-        
-        reid_id = None
-        if osnet_reid_id:
-            reids = PluginRunResult.objects.filter(
-                    plugin_run_id=osnet_reid_id,
-                    type=PluginRunResult.TYPE_REID_DATA,
-            )
-            if not reids.exists():
-                raise ValueError(
-                    f"No reids (TYPE_REID_DATA) found for osnet_reid run {osnet_reid_id}."
-                )
-            prr = reids.first()
-            reids_ = manager.load(prr.data_id)
-            if reids_ is None:
-                raise ValueError(f"Could not load REID_DATA for osnet_reid run {osnet_reid_id}.")
-            reid_id = client.upload_data(reids_)
-        else:
-            if object_tracker_id:
-                tracklets = PluginRunResult.objects.filter(
-                    plugin_run_id=object_tracker_id,
-                    type=PluginRunResult.TYPE_BBOXES,
-                )
-                if not tracklets.exists():
-                    raise ValueError(
-                        f"No tracklets (TYPE_BBOXES) found for object_tracker run {object_tracker_id}."
-                    )
-                prr = tracklets.first()
-                tracklets_ = manager.load(prr.data_id)
-                if tracklets_ is None:
-                    raise ValueError(f"Could not load BBOXES for object_tracker run {object_tracker_id}.")
-                tracklets_id = client.upload_data(tracklets_)
+        # osnet_reid_id = parameters.get("osnet_reid_id")
+        # reid_input_id = ""
+        # if osnet_reid_id:
+        #     reid_results = PluginRunResult.objects.filter(
+        #         plugin_run_id=osnet_reid_id,
+        #         type=PluginRunResult.TYPE_REID_DATA,
+        #     )
+        #     if not reid_results.exists():
+        #         raise ValueError(
+        #             f"No reids (TYPE_REID_DATA) found for osnet_reid run {osnet_reid_id}."
+        #         )
 
-        logging.error(f'TASK PARAMS: {parameters}')
-        teams = self.run_analyser(
+        #     prr = reid_results.first()
+        #     reids_data = manager.load(prr.data_id)
+        #     if reids_data is None:
+        #         raise ValueError(f"Could not load REID_DATA for osnet_reid run {osnet_reid_id}.")
+        #     reid_input_id = client.upload_data(reids_data)
+
+        # parameters["osnet_reid_id"] = str(parameters["osnet_reid_id"])
+        
+        tracklet_results = PluginRunResult.objects.filter(
+            plugin_run_id=object_tracker_id,
+            type=PluginRunResult.TYPE_BBOXES,
+        )
+        if not tracklet_results.exists():
+            raise ValueError(
+                f"No tracklets (TYPE_BBOXES) found for object_tracker run {object_tracker_id}."
+            )
+
+        prr = tracklet_results.first()
+        tracklets_data = manager.load(prr.data_id)
+        if tracklets_data is None:
+            raise ValueError(f"Could not load BBOXES for object_tracker run {object_tracker_id}.")
+
+        tracklets_input_id = client.upload_data(tracklets_data)
+
+        parameters["object_tracker_id"] = str(parameters["object_tracker_id"])
+       
+
+        logging.error(f"TASK PARAMS: {parameters}")
+
+        analyser_result = self.run_analyser(
             client,
             "team_clustering",
             parameters=parameters,
             inputs={
                 "video": video_id,
-                "tracklets": "" if reid_id else tracklets_id,
-                "reids": reid_id if reid_id else ""
+                "tracklets": tracklets_input_id,
+                # "reids": reid_input_id,
             },
             outputs=["teams"],
             downloads=["teams"],
@@ -96,10 +103,10 @@ class TeamClustering(Task):
             return {}
 
         with transaction.atomic():
-            with reids[1]["teams"] as teams:
+            with analyser_result[1]["teams"] as teams_data:
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
-                    data_id=reids.id,
+                    data_id=teams_data.id,
                     name="teams",
                     type=PluginRunResult.TYPE_TEAMS_DATA,
                 )
@@ -107,8 +114,7 @@ class TeamClustering(Task):
                     "plugin_run": plugin_run.id.hex,
                     "plugin_run_results": [plugin_run_result_db.id.hex],
                     "data": {
-                        "teams": teams.id,
-                        "teams": teams.mapping    
+                        "teams": teams_data.id,
+                        "teams_mapping": getattr(teams_data, "mapping", None),
                     },
                 }
-

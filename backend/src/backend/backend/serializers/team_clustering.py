@@ -12,10 +12,11 @@ class TeamClusteringSeriaizer(serializers.Serializer):
         required=False,
         default=None
     )
-    osnet_reid_id = serializers.UUIDField(
-        required=False,
-        default=None
-    )
+    # TODO!
+    # osnet_reid_id = serializers.UUIDField(
+    #     required=False,
+    #     default=None
+    # )
     
     clustering_algo = serializers.ChoiceField(
         choices=CLUSTERING_ALGORITHM_CHOICE,

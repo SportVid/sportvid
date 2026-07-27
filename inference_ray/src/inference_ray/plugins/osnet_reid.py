@@ -219,8 +219,7 @@ class OSNetReID(
                                     "image": _frame["frame"],
                                 }
                             )
-                            logging.error(per_frame_reids)
-                            
+                            # logging.error(per_frame_reids)
                             for name, arr in per_frame_reids.items():
                                 if type(arr) is np.ndarray:
                                     reids.add_array(str(frame_id), name, arr)
