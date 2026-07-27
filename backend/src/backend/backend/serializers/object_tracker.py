@@ -10,7 +10,7 @@ TRACKER_CHOICES = ["bytetrack"]
 default_yolox_params = {
     "batch_size": 1,
     "conf_thresh": 0.2,
-    "nms_thresh": 0.65,
+    "nms_thresh": 0.4,
     "fp16": False,
     "num_classes": 1, 
     "decode": True,
@@ -30,8 +30,8 @@ default_yolox_params = {
 
 default_yolo10_params = {
     "batch_size": 1,
-    "conf": 0.2,                # min confidence threshold [0.1 - 0.6]
-    "iou": 0.3,                 # threshold for NMS; lower values -> less detections [0.3 - 0.6]
+    "conf": 0.15,               # min confidence threshold [0.15 - 0.6]
+    "iou": 0.4,                 # threshold for NMS; lower values -> less detections [0.3 - 0.6]
     "agnostic_nms": False,      # class-agnostic NMS; merge overlapping boxes of different classes
     "classes": [0, 32],         # filters predictions to specified class set: 'person','sports_ball' for COCO dataset
     "half": False,
@@ -77,7 +77,7 @@ default_yolo26_params = {
 
 default_rfdetr_params = {
     "batch_size": 1,
-    "conf": 0.5,               
+    "conf": 0.6,               
     # "classes": [0, 32],  # default COCO: 0 - person, 32 - ball
     "classes": ['ball', 'player', 'referee', 'goalkeeper'], # SoccerNet checkpoint
     "resolution": 1288,  # divisible by 56 -> [672,728,784,896,1008,1064,1120]
@@ -132,10 +132,14 @@ default_rtdetr_params = {
     }    
 }
 
+# Example parameter settings:
+#   1) balanced: [0.5 60 0.7]
+#   2) conservative: [0.5 60 0.75]
+#   3) occlusion-heavy: [0.45 90 0.7]
 default_bytetrack_params = {
-    "track_thresh": 0.4,        # tracking confidence threshold (0.6 = default)
-    "track_buffer": 300,        # num of frames to keep lost tracks
-    "match_thresh": 0.8,        # [0.8, 0.6, 0.4]; high = fewer ID switches, low -> More MOTA; IoU matching threshold for associating detections to existing tracks
+    "track_thresh": 0.45,       # tracking confidence threshold (0.6 = default)
+    "track_buffer": 90,         # num of frames to keep lost tracks
+    "match_thresh": 0.7,        # [0.8, 0.6, 0.4]; high = fewer ID switches, low -> More MOTA; IoU matching threshold for associating detections to existing tracks
     "mot20": False,             # 'True' skips fusing scores?
     "aspect_ratio_thresh": 5.0, # reject tracking artifacts / FPs of unrealistic shape
     "min_box_area": 0,          # min box area thresholds (px^2)

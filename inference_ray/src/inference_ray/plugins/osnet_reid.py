@@ -1,11 +1,13 @@
 import logging
-from collections import deque
 import torch
 import json
 import numpy as np
 import cv2
+
 from typing import Any, Callable, Dict, List, Tuple, Optional
+from torchreid.utils.feature_extractor import FeatureExtractor
 from PIL import Image
+
 from data import (
     Data, DataManager,
     VideoData,
@@ -13,7 +15,7 @@ from data import (
 )
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 from utils import VideoDecoder, VideoBatcher
-
+from .reid import GlobalIDManager, Gallery, ProtoGallery
 
 default_config = {
     "data_dir": "/data/",
@@ -120,38 +122,61 @@ class OSNetReID(
 
         self.cfg = parameters or {}
 
-        self.reid_threshold = self.cfg.get("reid_threshold", 0.72)
-        self.reid_update_threshold = self.cfg.get("reid_update_threshold", 0.82)
-        self.reid_margin = self.cfg.get("reid_margin", 0.03)
-        self.max_missed = self.cfg.get("max_missed", 30)
+        self.gallery_mode = self.cfg.get("gallery_mode", "tracks")
+        self.match_threshold = self.cfg.get("match_threshold", 0.6)
+        self.update_threshold = self.cfg.get("update_threshold", 0.82)
         self.ema_alpha = self.cfg.get("ema_alpha", 0.95)
         self.cache_size = self.cfg.get("cache_size", 20)
-        self.proto_weight = self.cfg.get("proto_weight", 0.7)
+        self.margin = self.cfg.get("margin", 0.03)
+        self.prototype_weight = self.cfg.get("prototype_weight", 0.7)
         self.cache_weight = self.cfg.get("cache_weight", 0.3)
 
-        self.crop_size_x = self.cfg.get("crop_size_x", 128)
-        self.crop_size_y = self.cfg.get("crop_size_y", 256)
-        self.crop_x1_offset = self.cfg.get("crop_x1_offset", 0.0)
-        self.crop_y1_offset = self.cfg.get("crop_y1_offset", 0.0)
-        self.crop_x2_offset = self.cfg.get("crop_x2_offset", 0.0)
-        self.crop_y2_offset = self.cfg.get("crop_y2_offset", 0.0)
+        self.max_missed = self.cfg.get("max_missed", 30)
+        self.reid_cls = self.cfg.get("reid_cls", [])
+
+        self.crop_size = self.cfg.get("crop_size", [128, 256])
+        self.crop_x1_offset = self.cfg.get("crop_x1_offset", 0)
+        self.crop_y1_offset = self.cfg.get("crop_y1_offset", 0)
+        self.crop_x2_offset = self.cfg.get("crop_x2_offset", 0)
+        self.crop_y2_offset = self.cfg.get("crop_y2_offset", 0)
 
         self.feat_extr = FeatureExtractor(
-            model_name=self.cfg.get("model_name"),
-            model_path=self.cfg.get("model_path", None),
-            device="cuda" if torch.cuda.is_available() else "cpu"
+            model_name=model_name,
+            model_path=model_path,
+            device=self.device,
         )
-        
-        self.gallery = Gallery(
-            match_threshold=self.cfg.reid_threshold,
-            update_threshold=self.reid_update_threshold,
-            max_missed=self.max_missed,
-            ema_alpha=self.ema_alpha,
-            cache_size=self.cache_size,
-            margin=self.reid_margin,
-            prototype_weight=self.proto_weight,
-            cache_weight=self.cache_weight,
-        )
+
+        self.gallery = None
+        self.global_id_manager = None
+
+        if self.gallery_mode == "tracks":
+            self.gallery = Gallery(
+                threshold=self.match_threshold,
+                max_missed=self.max_missed,
+            )
+
+        elif self.gallery_mode == "protos":
+            self.gallery = ProtoGallery(
+                match_threshold=self.match_threshold,
+                update_threshold=self.update_threshold,
+                max_missed=self.max_missed,
+                ema_alpha=self.ema_alpha,
+                cache_size=self.cache_size,
+                margin=self.margin,
+                prototype_weight=self.prototype_weight,
+                cache_weight=self.cache_weight,
+            )
+
+            self.global_id_manager = GlobalIDManager(
+                gallery=self.gallery,
+                active_ttl=30,
+                lost_ttl=300,
+                reentry_threshold=0.68,
+                spatial_gate_px=150.0,
+                use_spatial_gate=True,
+            )
+        else:
+            raise ValueError(f"Unknown gallery_mode: {self.gallery_mode}")
 
         with inputs["video"] as video_input_data, inputs["tracklets"] as tracklets_data:
             with video_input_data.open_video() as f_video:
@@ -186,10 +211,13 @@ class OSNetReID(
                         for frame_id, _frame in enumerate(video_decoder):
                             frame_time = round((frame_id/self.fps)*1000.)
                             _tracklets = tracklets_data.get(f'{frame_time}', [])
-                            per_frame_reids = self.process(inputs={
-                                "tracklets": _tracklets,
-                                "image": _frame["frame"],
-                            })
+                            per_frame_reids = self.process(
+                                inputs={
+                                    "tracklets": _tracklets,
+                                    "image": _frame["frame"],
+                                }
+                            )
+                            logging.error(per_frame_reids)
                             
                             for name, arr in per_frame_reids.items():
                                 if type(arr) is np.ndarray:
@@ -237,9 +265,11 @@ class OSNetReID(
         for crop_pil in crops:
             crop_rgb_npy = np.array(crop_pil)  # PIL -> RGB numpy HWC uint8
             crop_arrays_rgb.append(crop_rgb_npy)
-        features = self.feat_extr(crop_arrays_rgb).cpu().numpy() # extract features: PIL list of image bboxes -> [N,512] normalized
-        features = l2_normalize(features)
-        crop_arrays_rgb = np.array(crop_arrays_rgb)
+            
+        if len(crop_arrays_rgb) > 0:
+            features = self.feat_extr(crop_arrays_rgb).cpu().numpy() # extract features: PIL list of image bboxes -> [N,512] normalized
+        else:
+            features = np.empty((0,512), dtype=np.float32)
         
         # NOTE: returning per-frame processed input.
         return { 
@@ -251,10 +281,10 @@ class OSNetReID(
         }
 
     def process(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
-        """ 
-        1) Use feature extraction model
-        2) Update embedding gallery
-        3) Store updated ID for tracklets
+        """
+            1) Extract ReID features
+            2) Associate detections to identities
+            3) In ProtoGallery mode, use global-ID lifecycle management
         """
         preproc_inputs = self.preprocess(inputs, **kwargs)
         per_frame_data = preproc_inputs['inputs']
@@ -264,204 +294,64 @@ class OSNetReID(
             tracklets = frame_data['tracks']
             feats = frame_data['features']
             crops = frame_data['crops']
-            # update gallery & assign/update track IDs
-            updated_ids = []
-            tids = self.gallery.match(feats, frame_id=self.frame_id)
-            if tids is None: 
-                for feat in feats:  # register single track into the gallery
-                    tid = self.gallery.register(feat, frame_id=self.frame_id)
-                    updated_ids.append(tid)
+            
+            frame_id = tracks["frame_id"]
+            track_ids = list(tracks.get("track_ids", []))
+            track_boxes = list(tracks.get("track_boxes", []))
+
+            if feats is None or len(feats) == 0 or len(track_ids) == 0:
+                tracks.update({
+                    "reid_ids": [],
+                    "reid_scores": [],
+                    "reid_status": [],
+                    "crops": crops,
+                    "features": feats,
+                })
+                continue
+
+            if self.gallery_mode == "protos":
+                global_ids, reid_scores, reid_status = self.global_id_manager.update(
+                    frame_id=frame_id,
+                    track_ids=track_ids,
+                    feats=feats,
+                    boxes_xywh=track_boxes,
+                )
             else:
-                updated_ids = tids
-            updated_ids = np.array(updated_ids)
-            
-            self.frame_id += 1
-            self.gallery.prune(self.frame_id)
-            
-            old_ids = tracklets[:, 0]
-            old_ids = old_ids.astype(dtype=np.int_)
-            mapping = dict(zip(old_ids.tolist(), updated_ids.tolist()))
-            
-            # logging.error(f'{type(tracklets)},{type(updated_ids)},{type(crops)},{type(feats)}')
-            # logging.error(f'{tracklets.shape},{updated_ids.shape},{crops.shape},{feats.shape}')
-            
-            tracks.update({ "tracks" : tracklets})      # (N,10)
-            tracks.update({ "reid_ids" : updated_ids})  # (N,)
-            tracks.update({ "mapping": mapping})        # { 'old_id' : 'new_id' }
-            tracks.update({ "crops": crops})            # (N,H,W,C)
-            tracks.update({ "features": feats})         # (N,F_DIM)
-             
-            logging.error(f'Frame {self.frame_id}: {len(crops)} crops -> {len(set(updated_ids))} ReID IDs. Mapping: {mapping}')
-        
+                matched_ids, matched_scores = self.gallery.match(feats, frame_id)
+                global_ids = list(matched_ids)
+                reid_scores = list(matched_scores)
+                reid_status = []
+
+                for i, pid in enumerate(global_ids):
+                    if pid is None:
+                        pid = self.gallery.register(feats[i], frame_id)
+                        global_ids[i] = pid
+                        reid_scores[i] = None
+                        reid_status.append("new")
+                    else:
+                        reid_status.append("matched")
+
+                self.gallery.prune(frame_id)
+
+            tracks.update({
+                "reid_ids": global_ids,
+                "reid_scores": reid_scores,
+                "reid_status": reid_status,
+                "crops": crops,
+                "features": feats,
+            })
+
+            logging.error(
+                f"Frame {frame_id}: tracks={len(track_ids)}, "
+                f"unique_global={len({gid for gid in global_ids if gid is not None})}, "
+                f"new={sum(s == 'new' for s in reid_status)}, "
+                f"continued={sum(s == 'continued' for s in reid_status)}, "
+                f"matched_active={sum(s == 'matched_active' for s in reid_status)}, "
+                f"reentry={sum(s == 'reid_reentry' for s in reid_status)}"
+            )
+            logging.error(f"Old tracker IDs: {track_ids}")
+            logging.error(f"Global IDs: {global_ids}")
+            logging.error(f"Scores: {reid_scores}")
+            logging.error(f"Status: {reid_status}")
+
         return tracks
-    
-class Gallery:
-    """ Online ReID gallery with:
-        - L2-normalized features.
-        - One EMA prototype per identity.
-        - One recent-feature cache per identity.
-        - Conservative update policy with match/update thresholds.
-        - Ambiguity margin on best vs second-best score.
-    """
-    def __init__(
-        self,
-        match_threshold: float = 0.72,
-        update_threshold: float = 0.82,
-        max_missed: int = 100,
-        ema_alpha: float = 0.95,
-        cache_size: int = 20,
-        margin: float = 0.03,
-        prototype_weight: float = 0.7,
-        cache_weight: float = 0.3,
-    ):
-        self.match_threshold = match_threshold # rejects low-score matches
-        self.update_threshold = update_threshold
-        self.max_missed = max_missed
-        self.ema_alpha = ema_alpha
-        self.cache_size = cache_size
-        self.margin = margin # rejects ambiguous matches when best and second-best are too close
-        self.prototype_weight = prototype_weight
-        self.cache_weight = cache_weight
-        
-        self.next_id = 1
-        # self.features = {}       # pid -> list[features] (append history)
-        self.prototype: Dict[int, np.ndarray] = {}
-        self.cache: Dict[int, deque] = {}
-        self.last_seen: Dict[int, int] = {}      # pid -> frame_idx
-
-    def _similarity_to_pid(self, feat: np.ndarray, pid: int) -> Tuple[float, float, float]:
-        proto = self.prototype[pid]
-        proto_sim = float(np.dot(feat, proto))
-
-        cached = self.cache[pid]
-        if len(cached) > 0:
-            cached_feats = np.stack(cached, axis=0)
-            cache_sim = float(np.max(cached_feats @ feat))
-        else:
-            cache_sim = proto_sim
-
-        score = self.prototype_weight * proto_sim + self.cache_weight * cache_sim
-        return score, proto_sim, cache_sim
-
-    def _update_identity(self, pid: int, feat: np.ndarray, frame_id: int):
-        feat = l2_normalize(feat)
-
-        new_proto = self.ema_alpha * self.prototype[pid] + (1.0 - self.ema_alpha) * feat
-        self.prototype[pid] = l2_normalize(new_proto)
-        self.cache[pid].append(feat)
-        self.last_seen[pid] = frame_id
-
-    def match_one(self, feat: np.ndarray, frame_id: int) -> Tuple[Optional[int], Optional[float]]:
-        feat = l2_normalize(feat)
-
-        if not self.prototype:
-            return None, None
-
-        pids = list(self.prototype.keys())
-        scores = []
-
-        for pid in pids:
-            score, proto_sim, cache_sim = self._similarity_to_pid(feat, pid)
-            scores.append(score)
-
-        scores = np.asarray(scores, dtype=np.float32)
-        order = np.argsort(-scores)
-        best_idx = int(order[0])
-        best_score = float(scores[best_idx])
-
-        second_score = -1.0
-        if len(order) > 1:
-            second_score = float(scores[int(order[1])])
-
-        if best_score < self.match_threshold:
-            return None, best_score
-
-        if (best_score - second_score) < self.margin:
-            return None, best_score
-
-        pid = pids[best_idx]
-
-        if best_score >= self.update_threshold:
-            self._update_identity(pid, feat, frame_id)
-
-        return pid, best_score
-
-    def match_batch(self, feats: np.ndarray, frame_id: int) -> Tuple[List[Optional[int]], List[Optional[float]]]:
-        matched_pids: List[Optional[int]] = []
-        matched_scores: List[Optional[float]] = []
-
-        if feats is None or len(feats) == 0:
-            return matched_pids, matched_scores
-
-        feats = l2_normalize(feats)
-
-        for feat in feats:
-            pid, score = self.match_one(feat, frame_id)
-            matched_pids.append(pid)
-            matched_scores.append(score)
-
-        return matched_pids, matched_scores
-
-    def register(self, feat: np.ndarray, frame_id: int) -> int:
-        feat = l2_normalize(feat)
-
-        pid = self.next_id
-        self.next_id += 1
-
-        self.prototype[pid] = feat
-        self.cache[pid] = deque([feat], maxlen=self.cache_size)
-        self.last_seen[pid] = frame_id
-        return pid
-
-    def prune(self, frame_id: int):
-        stale = [
-            pid for pid, last in self.last_seen.items()
-            if frame_id - last > self.max_missed
-        ]
-        for pid in stale:
-            del self.prototype[pid]
-            del self.cache[pid]
-            del self.last_seen[pid]
-
-    # NOTE: old gallery code.
-    # ------------------------
-    # def match(self, feats: np.ndarray, frame_id: int) -> Optional[int]:
-    #     """ Given some feature vector, match it to the mean gallery features & return matched_id or None. """
-    #     if not self.features: return None # (N,D)
-    #     # compute cosine similarity between feat and the mean feature of each id
-    #     gallery_means = np.array([np.mean(feats_, axis=0) for feats_ in self.features.values()])
-    #     if len(gallery_means.shape) == 3: gallery_means = np.squeeze(gallery_means, axis=0)
-    #     sims = cosine_similarity(feats, gallery_means) # (N, K)
-        
-    #     best_indices = np.argmax(sims, axis=1)  # (N,)
-    #     best_sims = sims[np.arange(len(feats)), best_indices]
-        
-    #     matched_pids = []
-    #     gallery_pids = list(self.features.keys())
-        
-    #     for i, (best_idx, best_sim) in enumerate(zip(best_indices, best_sims)):
-    #         if best_sim >= self.threshold:
-    #             pid = gallery_pids[best_idx]
-    #             self.features[pid].append(feats[i])  # add new feature to the gallery
-    #             self.last_seen[pid] = frame_id
-    #             matched_pids.append(pid)
-    #         else:
-    #             matched_pids.append(None)
-        
-    #     return matched_pids
-        
-    # def register(self, feat: np.ndarray, frame_id: int) -> int:
-    #     """ Register new track ID. """
-    #     pid = self.next_id
-    #     self.next_id += 1
-    #     self.features[pid] = [feat]
-    #     self.last_seen[pid] = frame_id
-    #     return pid
-
-    # def prune(self, frame_id: int):
-    #     """ Removes stale tracks that have not been seen for more than max_missed frames. """
-    #     stale = [pid for pid, last in self.last_seen.items()
-    #                  if frame_id - last > self.max_missed]
-    #     for pid in stale:
-    #         del self.features[pid]
-    #         del self.last_seen[pid]

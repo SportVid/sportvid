@@ -92,20 +92,8 @@ class ObjectTracker(
         batch_size = parameters["detector_params"]["batch_size"]
         fps = parameters["fps"]
         parameters["tracker_params"].update({"frame_rate" : fps})
+        self.use_tracker = parameters["use_tracker"]
         
-        # with inputs["video"] as input_data:
-        #     with input_data.open_video("r") as f_video:
-        #         video_batcher = VideoBatcher(
-        #             VideoDecoder(
-        #                 f_video, 
-        #                 fps=fps, 
-        #                 extension=f".{input_data.ext}"
-        #             ),
-        #             batch_size=batch_size,
-        #         )
-        #         num_frames = (video_batcher.duration() * video_batcher.fps()) // batch_size
-        #         image_size = video_batcher.video_decoder._size
-
         with inputs["video"] as input_data:
             with input_data.open_video() as f_video:
                 video_decoder = VideoDecoder(
@@ -123,24 +111,25 @@ class ObjectTracker(
                     detector_params=parameters["detector_params"],
                     device="cuda",
                 )
-                self.tracker = TRACKER_MAP[parameters["tracker"]](
-                    tracker_params=parameters["tracker_params"],
-                    device="cuda",
-                )
+                if self.use_tracker:
+                    self.tracker = TRACKER_MAP[parameters["tracker"]](
+                        tracker_params=parameters["tracker_params"],
+                        device="cuda",
+                    )
                 # -------> detect & track
                 #for frame_id, _frame in enumerate(video_batcher, start=0):
                 for frame_id, _frame in enumerate(video_decoder):
                     preproced_outputs = self.detector.preprocess(_frame)
                     _ = self.detector.run_inference(preproced_outputs)
 
-                # TODO: check performance for 90m+ video footage.
-                _ = self.tracker.process(
-                        inputs = {
-                            'detections': self.detector.state,
-                            'image_shape': (self.detector.h, self.detector.w), 
-                            'det_shape': self.detector.det_shape,
-                        }
-                    )
+                tracker_inputs = {
+                    'detections': self.detector.state,
+                    'image_shape': (self.detector.h, self.detector.w), 
+                    'det_shape': self.detector.det_shape,
+                }
+                if self.use_tracker:
+                    _ = self.tracker.process(tracker_inputs)  # TODO: check performance for 90m+ video footage.
+                
                 # e = time.time()
                 # logging.error(f"object_tracker.py took: {e-s}")
                 # -------> build the required output format for consistency with other plugins
@@ -174,36 +163,43 @@ class ObjectTracker(
                 """
                 out_cls_map = parameters["detector_params"]["output_class_mapping"]
                 
-                for frame_id, track in enumerate(self.tracker.state, start=0): # [N,5]
-                    for (track_id, track_score, track_xywh, team_id) in zip( # [5,]
-                        track['track_ids'],
-                        track['track_scores'],
-                        track['track_boxes'],
-                        track['team_ids']
-                    ):
-                        frame_time = round((frame_id/fps)*1000.)
-                        unique_player_ids.add(track_id)
-                        # NOTE: Mapping of class_id to team_id.
-                        # Detectors have varying output heads, so we need some mapping dict from cls_id to real-world entity.
-                        class_id = trk_det_mapping[frame_id][track_id]['class']
-                        assigned_cls_id = out_cls_map.get(str(class_id), {})
-                        default_team_assgn = assigned_cls_id.get(str(assigned_cls_id), '3')
-                        # coord normalization
-                        x_norm = int(track_xywh[0]) / self.detector.w
-                        y_norm = int(track_xywh[1]) / self.detector.h
-                        w_norm = int(track_xywh[2]) / self.detector.w
-                        h_norm = int(track_xywh[3]) / self.detector.h
-                        # construction of tracklet element
-                        tracklet = [
-                            int(track_id),
-                            int(default_team_assgn),
-                            0,
-                            float(x_norm + (w_norm / 2)), float(y_norm + h_norm),
-                            float(x_norm), float(y_norm), float(w_norm), float(h_norm),
-                            float(track_score)
-                        ]
-                        tracklets[frame_time].append([tracklet])        
-                
+                # ----------- NOTE: output of this plugin run returns tracklets
+                if self.use_tracker:
+                    for frame_id, track in enumerate(self.tracker.state, start=0): # [N,5]
+                        for (track_id, track_score, track_xywh, team_id) in zip( # [5,]
+                            track['track_ids'],
+                            track['track_scores'],
+                            track['track_boxes'],
+                            track['team_ids']
+                        ):
+                            frame_time = round((frame_id/fps)*1000.)
+                            unique_player_ids.add(track_id)
+                            # NOTE: Mapping of class_id to team_id.
+                            # Detectors have varying output heads, so we need some mapping dict from cls_id to real-world entity.
+                            class_id = trk_det_mapping[frame_id][track_id]['class']
+                            assigned_cls_id = out_cls_map.get(str(class_id), {})
+                            default_team_assgn = assigned_cls_id.get(str(assigned_cls_id), '3')
+                            # coord normalization
+                            x_norm = int(track_xywh[0]) / self.detector.w
+                            y_norm = int(track_xywh[1]) / self.detector.h
+                            w_norm = int(track_xywh[2]) / self.detector.w
+                            h_norm = int(track_xywh[3]) / self.detector.h
+                            # construction of tracklet element
+                            tracklet = [
+                                int(track_id),
+                                int(default_team_assgn),
+                                0,
+                                float(x_norm + (w_norm / 2)), float(y_norm + h_norm),
+                                float(x_norm), float(y_norm), float(w_norm), float(h_norm),
+                                float(track_score)
+                            ]
+                            tracklets[frame_time].append([tracklet])        
+                else: 
+                # ----------- NOTE: output of this plugin run returns detections only
+                    for frame_id, detection in enumerate(tracker_inputs['detections']):
+                        logging.error(frame_id, detection)
+                    
+                    
                 player_id_meta = {
                     pid: {
                         "id": pid, 

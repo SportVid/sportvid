@@ -5,6 +5,21 @@ from PIL import Image
 from typing import Any, Dict
 
 
+MERGED_CLASS_IDs = {
+    0: 0,  # ball -> ball
+    1: 1,  # player -> player
+    2: 1,  # referee -> player
+    3: 1,  # goalkeeper -> player
+}
+
+CLASS_MAP = {
+    "ball" : 0,
+    "player" : 1,
+    "referee": 2,
+    "goalkeeper": 3
+}
+
+
 @staticmethod
 def xyxy_to_xywh(xyxy):
     xyxy = np.asarray(xyxy)
@@ -31,10 +46,17 @@ class RFDetr():
         
         self.detector_params = detector_params
     
-        self.classes_to_detect = detector_params.get('classes', [])
-        if len(self.classes_to_detect) == 0:
-            raise RuntimeError("Expected at least 1 class to detect, please check the 'classes' args.")
+        self.classes = self.cfg.get('classes', [])
+        self.classes_to_detect = []
+        if len(self.classes) >= 1:
+            self.classes_to_detect = [
+                class_id
+                for class_name, class_id in CLASS_MAP.items()
+                if class_name in self.classes
+            ]
         self.num_classes = len(self.classes_to_detect)
+        if self.num_classes == 0:
+            raise RuntimeError("Expected at least 1 class to detect, please check the 'classes' args.")
         
         self.min_confidence = detector_params.get('conf', 0.25)
         self.resolution = detector_params.get('resolution', 672)
@@ -100,6 +122,10 @@ class RFDetr():
             
             bbox_list = []
             for box, score, class_id in zip(results.xyxy, results.confidence, results.class_id):  
+                # NOTE: class filtering
+                if len(self.classes_to_detect) >= 1:
+                    if int(class_id) not in self.classes_to_detect:
+                        continue
                 bbox_dict = dict(
                     xyxy=box,
                     xywh=xyxy_to_xywh(box),

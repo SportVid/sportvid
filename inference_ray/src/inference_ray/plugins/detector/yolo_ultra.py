@@ -27,6 +27,7 @@ class YoloUltralytics():
         self.model = YOLO(self.checkpoint)
         self.model.to(self.device)
         
+        self.batch_size = detector_params.get('batch_size', 1)
         self.use_fp16 = bool(detector_params.get("fp16", False) and self.device.startswith("cuda"))
         self.conf = detector_params.get("conf", 0.25)
         self.iou = detector_params.get("iou", 0.7)
@@ -146,6 +147,7 @@ class YoloUltralytics():
 
         results = self.model(
             images,
+            batch=self.batch_size,
             conf=self.conf,
             iou=self.iou,
             max_det=self.max_det,
