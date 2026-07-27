@@ -153,7 +153,7 @@ services:
       - "backend"
       - "celery"
       - "-A"
-      - "sportvid"
+      - "sportvid.celery:app"
       - "worker"
       - "--loglevel"
       - "${LOG_LEVEL:-DEBUG}"
