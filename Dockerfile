@@ -23,8 +23,8 @@ COPY packages/utils /app/packages/utils
 COPY backend /app/backend
 
 
-ARG UID=1000
-ARG GID=1000
+ARG UID=1003
+ARG GID=1003
 RUN groupadd -g ${GID} appuser && \
     useradd -m -u ${UID} -g ${GID} -s /bin/bash appuser
 
@@ -39,7 +39,7 @@ USER appuser
 # COPY packages/utils/pyproject.toml /app/packages/utils/pyproject.toml
 # COPY backend/pyproject.toml /app/backend/pyproject.toml
 
-RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000,gid=1000 \
+RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=${UID},gid=${GID} \
     uv sync --frozen --no-dev --no-install-workspace --package backend
 
 # Copy only the source actually needed by backend

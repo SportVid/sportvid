@@ -41,28 +41,36 @@ COPY packages/interface /app/packages/interface
 COPY packages/utils /app/packages/utils
 COPY inference_ray /app/inference_ray
 
-RUN mkdir -p /data /home/ubuntu/.cache/uv /app \
-    && chown -R ubuntu:ubuntu /app /data /home/ubuntu
+ARG UID=1003
+ARG GID=1003
+
+RUN groupmod -g ${GID} ubuntu && \
+    usermod -u ${UID} -g ${GID} ubuntu && \
+    mkdir -p /data /home/ubuntu/.cache/uv /app && \
+    chown -R ${UID}:${GID} /app /data /home/ubuntu
+
+# RUN mkdir -p /data /home/ubuntu/.cache/uv /app \
+#     && chown -R ubuntu:ubuntu /app /data /home/ubuntu
 
 USER ubuntu
 
-RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=${UID},gid=${GID} \
     uv sync --frozen --no-dev --project /app/inference_ray --extra tracking
 
-# RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+# RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=${UID},gid=${GID} \
 #     uv pip install -r /app/inference_ray/third_party/ByteTrack/requirements.txt
 
-# RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+# RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=${UID},gid=${GID} \
 #     uv pip install /app/inference_ray/third_party/ByteTrack
 
 # these were skipped during above requirements install, so add them manually!
-RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=${UID},gid=${GID} \
     uv pip install Cython
-RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=${UID},gid=${GID} \
     uv pip install gdown
-RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=${UID},gid=${GID} \
     uv pip install pycocotools
-RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=1000,gid=1000 \
+RUN --mount=type=cache,target=/home/ubuntu/.cache/uv,uid=${UID},gid=${GID} \
     uv pip install cython_bbox
 
 # import smoke tests:
