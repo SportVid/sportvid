@@ -42,9 +42,6 @@ where = ["src"]
 include = ["backend*", "sportvid*"]
 namespaces = false
 
-[tool.distutils.egg_info]
-egg_base = "build"
-
 [tool.uv]
 package = true
 

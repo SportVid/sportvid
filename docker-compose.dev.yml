@@ -16,7 +16,7 @@ volumes:
 services:
   inference_ray:
     container_name: inference_ray_dev
-    user: "1000:1000"
+    user: "${UID}:${GID}"
     image: sportvid_dev-inference_ray:latest
     build:
       context: .
@@ -59,7 +59,7 @@ services:
 
   analyser:
     container_name: analyser_dev
-    user: "1000:1000"
+    user: "${UID}:${GID}"
     image: sportvid_dev-analyser:latest
     build:
       context: .
@@ -116,7 +116,7 @@ services:
 
   celery:
     container_name: celery_dev
-    user: "1000:1000"
+    user: "${UID}:${GID}"
     image: sportvid_dev-celery:latest
     build:
       context: .
@@ -170,7 +170,7 @@ services:
 
   backend:
     container_name: backend_dev
-    user: "1000:1000"
+    user: "${UID}:${GID}"
     image: sportvid_dev-backend:latest
     build:
       context: .
