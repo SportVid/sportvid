@@ -169,6 +169,9 @@ main() {
             run_docker build --no-cache frontend
             run_docker up -d --no-deps --force-recreate frontend
             ;;
+        "clean-build-artifacts")
+            find ./packages ./analyser ./backend ./inference_ray \( -name '*.egg-info' -o -name build -o -name dist \) -exec rm -rf {} +
+            ;;
         "wipe")
             wipe_environment
             ;;
