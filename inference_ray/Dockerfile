@@ -4,7 +4,8 @@ FROM pytorch/pytorch:2.12.1-cuda12.6-cudnn9-runtime
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-# ENV UV_COMPILE_BYTECODE=1 # NOTE: post-install .pyc compilation
+# NOTE: better disable post-install .pyc compilation
+ENV UV_COMPILE_BYTECODE=0 
 ENV UV_LINK_MODE=copy
 ENV UV_PROJECT_ENVIRONMENT=/app/.venv
 ENV PATH="/app/.venv/bin:${PATH}"

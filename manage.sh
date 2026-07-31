@@ -9,7 +9,7 @@ else
 fi
 
 usage() {
-    echo "Usage: $0 {prod|production|dev|development|shared} {build|rebuild|up|down|restart|logs|shell|migrate|frontend-install|frontend-build|wipe}"
+    echo "Usage: $0 {prod|production|dev|development|shared} {build|rebuild|up|down|restart|logs|shell|migrate|frontend-install|frontend-build|wipe} [service...]"
 }
 
 safe_exit() {
@@ -29,6 +29,8 @@ die() {
 
 ENVIRONMENT="${1:-}"
 COMMAND="${2:-}"
+shift 2 || true
+SERVICES=("$@")
 
 ENV_NAME=""
 ENV_FILE=""
@@ -72,17 +74,17 @@ prepare() {
     git reset --hard "origin/$BRANCH" || die "Failed to reset to origin/$BRANCH"
 }
 
-run_docker(){
-    local -a docker_cmd=("$@")
-
-    prepare || return $?    
-
+docker_compose() {
     docker compose \
         -p "$ENV_NAME" \
         --env-file "$ENV_FILE" \
         "${DOCKER_FILES[@]}" \
-        "${docker_cmd[@]}" || die "Running docker compose command failed."
+        "$@"
+}
 
+run_docker() {
+    prepare || return $?
+    docker_compose "$@" || die "Running docker compose command failed."
     echo "Done!"
 }
 
@@ -100,12 +102,10 @@ wipe_environment() {
     esac
 
     base="/mnt/data/${ENV_NAME}/data"
-
     [[ -d "$base" ]] || die "Refusing to wipe: base directory does not exist: $base"
 
     for d in predictions backend_cache cache analyser media tmp; do
         target="${base}/${d}"
-
         if [[ -d "$target" ]]; then
             sudo find "$target" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
         else
@@ -117,18 +117,19 @@ wipe_environment() {
 }
 
 main() {
-    case $COMMAND in
+    case "$COMMAND" in
         "build")
             echo "Building..."
-            run_docker up --build -d
+            run_docker build "${SERVICES[@]}"
             ;;
         "rebuild")
-            echo "Rebuilding (force recreate)..."
-            run_docker up --build --force-recreate -d
+            echo "Rebuilding without cache and recreating containers..."
+            run_docker build --no-cache "${SERVICES[@]}"
+            run_docker up -d --force-recreate "${SERVICES[@]}"
             ;;
         "up")
             echo "Up..."
-            run_docker up -d
+            run_docker up -d "${SERVICES[@]}"
             ;;
         "down")
             echo "Shutting down..."
@@ -137,20 +138,22 @@ main() {
         "complete-rebuild")
             echo "Rebuilding (rmi & remove-orphans)..."
             run_docker down --rmi all -v --remove-orphans
+            run_docker up --build -d
             ;;
         "restart")
             echo "Restarting..."
-            run_docker restart
+            run_docker restart "${SERVICES[@]}"
             ;;
         "logs")
             echo "Logs..."
-            run_docker logs -f
+            run_docker logs -f "${SERVICES[@]}"
             ;;
         "shell")
-            run_docker exec backend bash
+            local target="${1:-backend}"
+            run_docker exec "$target" bash
             ;;
         "migrate")
-            if [[ "$ENVIRONMENT" == "shared" ]]; then   
+            if [[ "$ENVIRONMENT" == "shared" ]]; then
                 die "Cannot migrate shared environment."
             fi
             echo "Migrating..."
@@ -158,13 +161,13 @@ main() {
             ;;
         "frontend-build")
             echo "Building frontend packages..."
-            run_docker compose build frontend
-            run_docker compose up --no-deps frontend
+            run_docker build frontend
+            run_docker up -d --no-deps frontend
             ;;
         "frontend-rebuild")
             echo "Rebuilding frontend packages..."
             run_docker build --no-cache frontend
-            run_docker up --no-deps frontend
+            run_docker up -d --no-deps --force-recreate frontend
             ;;
         "wipe")
             wipe_environment
@@ -177,6 +180,6 @@ main() {
     esac
 }
 
-if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
     main "$@"
 fi

@@ -2,7 +2,8 @@ FROM python:3.10-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV UV_COMPILE_BYTECODE=1
+# NOTE: better disable post-install .pyc compilation
+ENV UV_COMPILE_BYTECODE=0
 ENV UV_LINK_MODE=copy
 
 WORKDIR /app
