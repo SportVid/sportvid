@@ -535,6 +535,9 @@
         "plugin_name": "Objektverfolgung",
         "plugin_description": "Dieses Plugin führt Multi-Object-Tracking (MOT) direkt auf dem Video durch. Es erkennt und verfolgt Spieler und den Ball Bild für Bild und erzeugt dabei Bounding-Boxen für jedes erkannte Objekt. Das für die zugrunde liegende Objekterkennung verwendete Detektor-Modell sowie dessen Parameter und die Tracker-Parameter lassen sich unter „Erweiterte Optionen“ frei konfigurieren.<br><br>Die Tracking-Ergebnisse können anschließend zusammen mit einer Kamerakalibrierung (DLT+RANSAC) verwendet werden, um reale Positionsdaten zu berechnen.",
         "timeline_name": "Objektverfolgung",
+        "tracking_target": "Tracking-Ziel",
+        "tracking_target_player": "Spieler",
+        "tracking_target_ball": "Ball",
         "detector": "Detektor-Modell",
         "tracker": "Tracker",
         "confidence_threshold": "Konfidenzschwelle",
@@ -876,14 +879,15 @@
           "manual": "Manueller Upload"
         },
         "not_calibrated": "nicht kalibriert",
-        "object_tracker": "Object Tracking Plugin auswählen"
+        "object_tracker": "Object Tracking Plugin auswählen",
+        "ball_tracker": "Ball-Tracking Lauf auswählen (optional)"
       },
       "entity_colors": {
         "title": "Teamfarben ändern",
         "special_entities": "Besondere Entitäten",
         "teams": "Teams",
-        "entity_0": "Rest / Inaktiv",
-        "entity_1": "Ball",
+        "entity_0": "Ball",
+        "entity_1": "Rest / Inaktiv",
         "entity_2": "Schiedsrichter"
       }
     }

@@ -223,7 +223,7 @@ const visualizationStore = useVisualizationStore();
 const matchupTeams = computed(() => {
   const meta = topViewStore.metaDataTopView;
   if (!meta?.team_ids) return [];
-  // New scheme: team_id ≥ 3 = active player teams (1=ball, 2=refs, 0=inactive — all hidden from matchup).
+  // New scheme: team_id ≥ 3 = active player teams (0=ball, 2=refs, 1=inactive — all hidden from matchup).
   return Object.entries(meta.team_ids)
     .filter(([teamId]) => Number(teamId) >= 3)
     .sort(([a], [b]) => Number(a) - Number(b))
@@ -680,6 +680,14 @@ onBeforeUnmount(() => {
   topViewStore.gridTransverse = 0;
   topViewStore.showSportZones = false;
 });
+
+watch(
+  () => topViewStore.positionDataTopView,
+  (neww) => {
+    console.log("topViewStore.positionDataTopView changed:", neww);
+  },
+  { immediate: true }
+);
 </script>
 
 <style scoped>

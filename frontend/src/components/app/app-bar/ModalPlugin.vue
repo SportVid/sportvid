@@ -169,6 +169,19 @@ watch(showCalibrationCreate, (newVal, oldVal) => {
     calibrationAssetStore.calibrationMode = true;
   }
 });
+const ALL_OBJECT_TRACKER_DETECTOR_ITEMS = [
+  { title: "YOLOX", value: "yolox" },
+  { title: "YOLOv10 (Ultralytics)", value: "yolo10" },
+  { title: "YOLOv11 (Ultralytics)", value: "yolo11" },
+  { title: "YOLOv12 (Ultralytics)", value: "yolo12" },
+  { title: "YOLOv26 (Ultralytics)", value: "yolo26" },
+  { title: "RF-DETR", value: "rfdetr" },
+  { title: "RT-DETR", value: "rtdetr" },
+];
+const BALL_OBJECT_TRACKER_DETECTOR_ITEMS = ALL_OBJECT_TRACKER_DETECTOR_ITEMS.filter((d) =>
+  ["yolo11", "yolo12", "rfdetr"].includes(d.value)
+);
+
 const plugins = ref([
   {
     id: 1,
@@ -1048,17 +1061,22 @@ const plugins = ref([
           },
           {
             field: "select_options",
+            name: "tracking_target",
+            value: "player",
+            items: [
+              {
+                title: t("modal.plugin.object_tracker.tracking_target_player"),
+                value: "player",
+              },
+              { title: t("modal.plugin.object_tracker.tracking_target_ball"), value: "ball" },
+            ],
+            text: t("modal.plugin.object_tracker.tracking_target"),
+          },
+          {
+            field: "select_options",
             name: "detector",
             value: "yolox",
-            items: [
-              { title: "YOLOX", value: "yolox" },
-              { title: "YOLOv10 (Ultralytics)", value: "yolo10" },
-              { title: "YOLOv11 (Ultralytics)", value: "yolo11" },
-              { title: "YOLOv12 (Ultralytics)", value: "yolo12" },
-              { title: "YOLOv26 (Ultralytics)", value: "yolo26" },
-              { title: "RF-DETR", value: "rfdetr" },
-              { title: "RT-DETR", value: "rtdetr" },
-            ],
+            items: ALL_OBJECT_TRACKER_DETECTOR_ITEMS,
             text: t("modal.plugin.object_tracker.detector"),
           },
           {
@@ -1496,6 +1514,59 @@ watch(
   { immediate: true }
 );
 
+// Toggle between "player" and "ball" tracking runs of object_tracker: restricts the detector
+// choices, hides the tracker (ByteTrack) and all tracker_params fields for ball runs (no
+// tracker for ball detections), and adjusts detector confidence/iou defaults accordingly.
+const BALL_TARGET_DETECTORS = ["yolo11", "yolo12", "rfdetr"];
+const BALL_RFDETR_CONFIDENCE_DEFAULT = 0.2;
+const BALL_YOLO_IOU_DEFAULT = 0.5;
+const PLAYER_IOU_DEFAULT = 0.3;
+
+watch(
+  () => [
+    objectTrackerParams.value.find((p) => p.name === "tracking_target")?.value,
+    objectTrackerParams.value.find((p) => p.name === "detector")?.value,
+  ],
+  ([target, detector]) => {
+    const detectorParam = objectTrackerParams.value.find((p) => p.name === "detector");
+    const trackerParam = objectTrackerParams.value.find((p) => p.name === "tracker");
+    const trackerParamFields = objectTrackerOptionalParams.value.filter(
+      (p) => p.group === "tracker_params"
+    );
+    const confidenceParam = objectTrackerOptionalParams.value.find(
+      (p) => p.name === "confidence_threshold"
+    );
+    const iouParam = objectTrackerOptionalParams.value.find((p) => p.name === "iou");
+
+    if (target === "ball") {
+      detectorParam.items = BALL_OBJECT_TRACKER_DETECTOR_ITEMS;
+      if (!BALL_TARGET_DETECTORS.includes(detector)) {
+        detectorParam.value = "yolo11";
+        return;
+      }
+      if (trackerParam) trackerParam.hidden = true;
+      for (const p of trackerParamFields) p.hidden = true;
+
+      if (detector === "rfdetr" && confidenceParam) {
+        confidenceParam.value = BALL_RFDETR_CONFIDENCE_DEFAULT;
+      }
+      if ((detector === "yolo11" || detector === "yolo12") && iouParam) {
+        iouParam.value = BALL_YOLO_IOU_DEFAULT;
+      }
+    } else {
+      detectorParam.items = ALL_OBJECT_TRACKER_DETECTOR_ITEMS;
+      if (trackerParam) trackerParam.hidden = false;
+      for (const p of trackerParamFields) p.hidden = false;
+
+      if (iouParam) iouParam.value = PLAYER_IOU_DEFAULT;
+      if (confidenceParam && detector in DETECTOR_CONFIDENCE_DEFAULT) {
+        confidenceParam.value = DETECTOR_CONFIDENCE_DEFAULT[detector];
+      }
+    }
+  },
+  { immediate: true }
+);
+
 const pluginsSorted = computed(() => {
   return plugins.value.slice(0).sort((a, b) => a.name.localeCompare(b.name));
 });
@@ -1512,8 +1583,42 @@ const selected = computed(() => {
   return plugin;
 });
 
+// Ball vs. player class filters per detector, keyed by tracking_target. The frontend has no
+// UI control for `classes` -- it's derived here from the (UI-only) tracking_target parameter,
+// which is stripped from the payload afterwards since the backend doesn't know that field.
+const OBJECT_TRACKER_CLASSES_BY_TARGET = {
+  ball: {
+    yolo11: [32],
+    yolo12: [32],
+    rfdetr: ["ball"],
+  },
+  player: {
+    yolox: [0],
+    yolo10: [0],
+    yolo11: [0],
+    yolo12: [0],
+    yolo26: [0],
+    rtdetr: [0],
+    rfdetr: ["player", "referee", "goalkeeper"],
+  },
+};
+
 const runPlugin = async (plugin, parameters, optional_parameters) => {
   parameters = [...parameters, ...optional_parameters];
+
+  if (plugin === "object_tracker") {
+    const trackingTargetIndex = parameters.findIndex((e) => e.name === "tracking_target");
+    if (trackingTargetIndex >= 0) {
+      const target = parameters[trackingTargetIndex].value;
+      const detector = parameters.find((e) => e.name === "detector")?.value;
+      parameters.splice(trackingTargetIndex, 1);
+
+      const classes = OBJECT_TRACKER_CLASSES_BY_TARGET[target]?.[detector];
+      if (classes) {
+        parameters.push({ name: "classes", value: classes, group: "detector_params" });
+      }
+    }
+  }
 
   // `hidden` always means "not applicable to the current selection" (e.g.
   // kpi_computation's format-dependent tracking_data_id / bytetrack_run_id /

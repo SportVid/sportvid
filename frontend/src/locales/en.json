@@ -690,6 +690,9 @@
         "plugin_name": "Object Tracking",
         "plugin_description": "This plugin performs multi-object tracking (MOT) directly on the video. It detects and tracks players and the ball frame by frame, generating bounding boxes for each detected object. The detector model used for the underlying object detection, as well as its parameters and the tracker parameters, can be freely configured under 'Advanced Options'.<br><br>The tracking results can later be used together with a camera calibration (DLT+RANSAC) to compute real-world position data.",
         "timeline_name": "Object Tracking",
+        "tracking_target": "Tracking Target",
+        "tracking_target_player": "Player",
+        "tracking_target_ball": "Ball",
         "detector": "Detector Model",
         "tracker": "Tracker",
         "confidence_threshold": "Confidence Threshold",
@@ -1145,6 +1148,7 @@
         "not_calibrated": "not calibrated",
         "bytetrack": "Select Bytetrack Plugin",
         "object_tracker": "Select Object Tracking Plugin",
+        "ball_tracker": "Select Ball Tracking Run (optional)",
         "sport": "Select sport",
         "area_size": "Select area size",
         "uploaded_position_data": "Select uploaded position data"
@@ -1160,8 +1164,8 @@
       "entity_colors": {
         "title": "Change entity colors",
         "other_entities": "Other entities",
-        "entity_0": "Rest",
-        "entity_1": "Ball",
+        "entity_0": "Ball",
+        "entity_1": "Rest",
         "entity_2": "Referee"
       },
       "offset": {
@@ -1188,7 +1192,7 @@
           "info_all_team": "Apply to all Bounding Boxes with the same Team-ID"
         },
         "rules": {
-          "player_min": "Minimum value is 1",
+          "player_min": "Minimum value is 0",
           "player_max": "Maximum value is 999",
           "player_duplicate": "This Player-ID belongs to another player in the current frame"
         },
@@ -1198,8 +1202,9 @@
         "new_player_id": "New Player-ID",
         "new_team_id": "New Team-ID",
         "team": {
-          "rest": "0 (Rest)",
-          "ball": "1 (Ball)",
+          "unknown": "-1 (Unknown)",
+          "rest": "1 (Rest)",
+          "ball": "0 (Ball)",
           "referee": "2 (Referee)",
           "team": "{id} (Team)",
           "new_team": "{id} (New Team)"

@@ -23,6 +23,14 @@ export const useBboxesStore = defineStore("bboxes", () => {
 
   const bboxPluginRunId = ref(0);
 
+  // Separately-run ball-tracking result (no tracker, ball class only), merged into
+  // bboxDataInterpolated/positionDataTopView by topViewStore.mergeBallTracking. Tracked
+  // here so edits/deletes of a ball bbox can be routed to the correct plugin run instead
+  // of the player run's (see updateBboxData/deleteBboxData below).
+  const bboxBallDataActive = ref(null);
+  const bboxBallMetaData = ref(null);
+  const bboxBallPluginRunId = ref(null);
+
   const isLoading = ref(false);
 
   const loadBboxData = async (pluginRunId) => {
@@ -155,12 +163,19 @@ export const useBboxesStore = defineStore("bboxes", () => {
         params.value
       );
       if (res.data.status === "ok") {
-        bboxMetaData.value = res.data.entry.meta_data ?? null;
-        topViewStore.transformBBoxToPositionDataTopView(
-          calibrationAssetStore.calibrationAssetId,
-          bboxPluginRunId.value,
-          res.data.entry.bboxes
-        );
+        // Route the refresh to whichever plugin run was actually edited, so the
+        // merged view (VideoPlayer overlay + TopView) reflects the change without
+        // dropping the other run's data.
+        if (bboxData.bytetrackRunId === bboxBallPluginRunId.value) {
+          topViewStore.refreshBallBboxData(res.data.entry.bboxes, res.data.entry.meta_data);
+        } else {
+          bboxMetaData.value = res.data.entry.meta_data ?? null;
+          topViewStore.transformBBoxToPositionDataTopView(
+            calibrationAssetStore.calibrationAssetId,
+            bboxPluginRunId.value,
+            res.data.entry.bboxes
+          );
+        }
 
         if (bboxData.applyAllPlayerId || bboxData.applyAllTeamId) {
           bboxDataUpdateSuccess.value = true;
@@ -203,12 +218,16 @@ export const useBboxesStore = defineStore("bboxes", () => {
         params.value
       );
       if (res.data.status === "ok") {
-        bboxMetaData.value = res.data.entry.meta_data ?? null;
-        topViewStore.transformBBoxToPositionDataTopView(
-          calibrationAssetStore.calibrationAssetId,
-          bboxPluginRunId.value,
-          res.data.entry.bboxes
-        );
+        if (bboxData.bytetrackRunId === bboxBallPluginRunId.value) {
+          topViewStore.refreshBallBboxData(res.data.entry.bboxes, res.data.entry.meta_data);
+        } else {
+          bboxMetaData.value = res.data.entry.meta_data ?? null;
+          topViewStore.transformBBoxToPositionDataTopView(
+            calibrationAssetStore.calibrationAssetId,
+            bboxPluginRunId.value,
+            res.data.entry.bboxes
+          );
+        }
 
         if (bboxData.applyAllPlayerId || bboxData.applyAllTeamId) {
           bboxDataDeleteSuccess.value = true;
@@ -241,6 +260,9 @@ export const useBboxesStore = defineStore("bboxes", () => {
     bboxDataLoaded,
     bboxDataInterpolated,
     bboxPluginRunId,
+    bboxBallDataActive,
+    bboxBallMetaData,
+    bboxBallPluginRunId,
     bboxDataTopView,
     showBoundingBox,
     viewBoundingBox,

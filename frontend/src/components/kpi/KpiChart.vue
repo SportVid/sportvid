@@ -51,15 +51,22 @@ const kpiLabel = computed(() => {
   if (props.selectedKpi === "running_distance") return t("visualization.kpi.kpi_label.distance");
   if (props.selectedKpi === "velocity") {
     if (props.chartMode === "windowed")
-      return t("visualization.kpi.kpi_label.velocity_max_with_unit", { unit: velocityUnitHtml.value });
+      return t("visualization.kpi.kpi_label.velocity_max_with_unit", {
+        unit: velocityUnitHtml.value,
+      });
     return t("visualization.kpi.kpi_label.velocity_with_unit", { unit: velocityUnitHtml.value });
   }
   if (props.selectedKpi === "velocity_max")
-    return t("visualization.kpi.kpi_label.velocity_max_with_unit", { unit: velocityUnitHtml.value });
-  if (props.selectedKpi === "metabolic_work") return t("visualization.kpi.kpi_label.metabolic_work");
-  if (props.selectedKpi === "equivalent_distance") return t("visualization.kpi.kpi_label.equivalent_distance");
+    return t("visualization.kpi.kpi_label.velocity_max_with_unit", {
+      unit: velocityUnitHtml.value,
+    });
+  if (props.selectedKpi === "metabolic_work")
+    return t("visualization.kpi.kpi_label.metabolic_work");
+  if (props.selectedKpi === "equivalent_distance")
+    return t("visualization.kpi.kpi_label.equivalent_distance");
   if (props.selectedKpi === "centroid_distance") {
-    if (props.chartMode === "windowed") return t("visualization.kpi.kpi_label.centroid_distance_max");
+    if (props.chartMode === "windowed")
+      return t("visualization.kpi.kpi_label.centroid_distance_max");
     return t("visualization.kpi.kpi_label.centroid_distance");
   }
   return props.selectedKpi;
@@ -103,7 +110,10 @@ const getPlayerNumber = (playerId) => {
 function isInAnyZone(x, y, zones) {
   if (!zones || zones.length === 0) return false;
   for (const z of zones) {
-    if (z.sportZone) { if (isInSportZone(z.sportKey, z.zoneId, x, y)) return true; continue; }
+    if (z.sportZone) {
+      if (isInSportZone(z.sportKey, z.zoneId, x, y)) return true;
+      continue;
+    }
     if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1) return true;
   }
   return false;
@@ -156,7 +166,7 @@ function buildRawTimeSeries() {
       const equiv_dist_inc = p[7];
       const cent_dist = p[9];
 
-      if (tid === 1 || tid === 2) continue; // skip ball and ref
+      if (tid === 0 || tid === 2) continue; // skip ball and ref
       if (!props.selectedPlayerIds.has(pid)) continue;
 
       const pp = posMap[pid];
@@ -206,7 +216,12 @@ function buildRawTimeSeries() {
  * - velocity_max: keep per-frame values as-is (velocity profile over time)
  */
 function toCumulative(rawMap) {
-  if (props.selectedKpi === "velocity_max" || props.selectedKpi === "velocity" || props.selectedKpi === "centroid_distance") return rawMap;
+  if (
+    props.selectedKpi === "velocity_max" ||
+    props.selectedKpi === "velocity" ||
+    props.selectedKpi === "centroid_distance"
+  )
+    return rawMap;
 
   const result = new Map();
   for (const [pid, series] of rawMap) {
@@ -321,7 +336,9 @@ function buildChartTraces() {
     const traces = [];
     for (const [teamId, team] of teamMap) {
       const sortedTimes = [...team.timeValues.keys()].sort((a, b) => a - b);
-      const allValues = sortedTimes.map((t) => parseFloat((team.timeValues.get(t) || 0).toFixed(2)));
+      const allValues = sortedTimes.map((t) =>
+        parseFloat((team.timeValues.get(t) || 0).toFixed(2))
+      );
       const { times, values } = strideDownsample(sortedTimes, allValues);
       const color = toRgb(visualizationStore.getTeamColor(teamId), 0);
       traces.push({

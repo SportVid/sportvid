@@ -92,7 +92,7 @@ class KpiComputation(
             for int_id_str, info in pos_meta.get("player_ids", {}).items():
                 player_id_by_orig[info["id"]] = int(int_id_str)
 
-        # Skip teams that aren't real player teams: 1=ball, 2=refs, 0=inactive.
+        # Skip teams that aren't real player teams: 0=ball, 2=refs, 1=inactive.
         # `ball_team_ids` is kept (set of original team ids) but populated for both ball AND ref groups,
         # since both must be filtered out of KPI computation.
         SKIP_TEAM_IDS = {0, 1, 2}
@@ -209,7 +209,7 @@ class KpiComputation(
             sorted_ts_keys = sorted(pos_json.keys(), key=lambda k: int(k))
             n_frames_sportvid = len(sorted_ts_keys)
 
-            # Build player → team mapping. Skip non-player entities (ball=1, refs=2, inactive=0).
+            # Build player → team mapping. Skip non-player entities (ball=0, refs=2, inactive=1).
             player_team_map = {}
             for ts_key in sorted_ts_keys:
                 for row in pos_json[ts_key]:

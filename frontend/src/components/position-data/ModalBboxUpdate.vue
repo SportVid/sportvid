@@ -126,7 +126,7 @@
                     variant="underlined"
                     type="number"
                     step="1"
-                    min="1"
+                    min="0"
                     max="999"
                     :rules="[checkPlayerId]"
                   />
@@ -152,7 +152,7 @@
                     variant="underlined"
                     type="number"
                     step="1"
-                    min="1"
+                    min="0"
                     max="999"
                     :rules="[checkPlayerId]"
                   />
@@ -211,7 +211,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { useTopViewStore } from "@/stores/top_view";
+import { useTopViewStore, BBOX_SOURCE_RUN_IDX } from "@/stores/top_view";
 import { useBboxesStore } from "@/stores/bboxes";
 import { usePlayerStore } from "@/stores/player";
 import { useVisualizationStore } from "@/stores/visualization";
@@ -255,7 +255,11 @@ watch(
   ([bboxEntry, open]) => {
     if (open && bboxEntry) {
       const bbox = bboxEntry.box;
-      bboxData.value.bytetrackRunId = bboxesStore.bboxPluginRunId;
+      // Route edits/deletes to whichever plugin run this bbox was physically loaded from.
+      // Not derived from team_id: team_id is a mutable field a previous edit may already
+      // have reassigned across the ball/player boundary, while the entry's physical file
+      // never changes -- see BBOX_SOURCE_RUN_IDX in top_view.js.
+      bboxData.value.bytetrackRunId = bbox[BBOX_SOURCE_RUN_IDX] ?? bboxesStore.bboxPluginRunId;
       bboxData.value.bboxId = bboxEntry.bboxId;
       bboxData.value.playerId = bbox[0];
       bboxData.value.teamId = bbox[1];
@@ -296,8 +300,9 @@ const teamOptions = computed(() => {
   }
 
   const options = [
-    { id: 0, label: t("modal.bounding_box.edit.team.rest"), isNew: false },
-    { id: 1, label: t("modal.bounding_box.edit.team.ball"), isNew: false },
+    { id: -1, label: t("modal.bounding_box.edit.team.unknown"), isNew: false },
+    { id: 0, label: t("modal.bounding_box.edit.team.ball"), isNew: false },
+    { id: 1, label: t("modal.bounding_box.edit.team.rest"), isNew: false },
     { id: 2, label: t("modal.bounding_box.edit.team.referee"), isNew: false },
     ...existing.map((id) => ({
       id,
@@ -321,10 +326,10 @@ const checkPlayerId = (value) => {
   const frame = topViewStore.getFrameAt(playerStore.currentTime);
   const playerIds = frame.map((p) => p[0]);
 
-  if (!value) {
+  if (value === null || value === undefined || value === "") {
     return t("field.required");
   }
-  if (value < 1) {
+  if (value < 0) {
     return t("modal.bounding_box.edit.rules.player_min");
   }
   if (value > 999) {

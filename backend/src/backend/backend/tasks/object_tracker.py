@@ -76,7 +76,7 @@ class ObjectTracker(Task):
                 plugin_run_result_db = PluginRunResult.objects.create(
                     plugin_run=plugin_run,
                     data_id=tracklets.id,
-                    name="bboxes",
+                    name="bboxes" if parameters.get("tracker") else "bboxes_ball",
                     type=PluginRunResult.TYPE_BBOXES,
                 )
                 return {

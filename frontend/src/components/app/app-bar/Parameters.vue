@@ -597,7 +597,7 @@ const positionDataTeams = computed(() => {
   // Use precomputed lists as source of truth — they are rebuilt from actual bbox data
   // by transformBBoxToPositionDataTopView and are always up-to-date after edits.
   if (topViewStore.precomputedBallList.length > 0) {
-    items.push({ id: 1, name: t("position_data.entity_kind.ball") });
+    items.push({ id: 0, name: t("position_data.entity_kind.ball") });
   }
   if (topViewStore.precomputedRefList.length > 0) {
     items.push({ id: 2, name: t("position_data.entity_kind.ref") });
@@ -611,7 +611,7 @@ const positionDataTeams = computed(() => {
   }
 
   if (topViewStore.precomputedInactiveList.length > 0) {
-    items.push({ id: 0, name: t("position_data.entity_kind.rest") });
+    items.push({ id: 1, name: t("position_data.entity_kind.rest") });
   }
 
   return items.length > 0 ? items : undefined;

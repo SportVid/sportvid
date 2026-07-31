@@ -187,10 +187,10 @@ export function fromPosDataObject(posDataObj) {
   const yCoords = new Float32Array(totalPlayers);
 
   // Metadata extraction split by entity kind. team_id semantics:
-  //   0 = inactive, 1 = ball, 2 = ref, ≥3 = active player team
+  //   0 = ball, 1 = inactive, 2 = ref, ≥3 = active player team
   // playerMap holds active players only (used by KPI/heatmap selection);
   // separate maps for ball/ref/inactive feed the top-view toggle UI.
-  const playerMap = new Map();   // active players (team_id ≥ 3)
+  const playerMap = new Map(); // active players (team_id ≥ 3)
   const refMap = new Map();
   const ballMap = new Map();
   const inactiveMap = new Map();
@@ -214,9 +214,9 @@ export function fromPosDataObject(posDataObj) {
       offset++;
 
       const tid = p[1];
-      if (tid === 1) ballMap.set(p[0], tid);
+      if (tid === 0) ballMap.set(p[0], tid);
       else if (tid === 2) refMap.set(p[0], tid);
-      else if (tid === 0) inactiveMap.set(p[0], tid);
+      else if (tid === 1) inactiveMap.set(p[0], tid);
       else playerMap.set(p[0], tid);
 
       const gs = p[2];
@@ -232,7 +232,13 @@ export function fromPosDataObject(posDataObj) {
   frameOffsets[keys.length] = offset;
 
   const compact = new CompactPositionData(
-    timestamps, frameOffsets, playerIds, teamIds, gameSections, xCoords, yCoords
+    timestamps,
+    frameOffsets,
+    playerIds,
+    teamIds,
+    gameSections,
+    xCoords,
+    yCoords
   );
 
   const _toList = (map) =>

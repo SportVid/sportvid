@@ -11,48 +11,73 @@
  */
 
 // ── Sport-zone containment ───────────────────────────────────────────────────
-var _HB_GOAL_YL = 0.425, _HB_GOAL_YH = 0.575;
+var _HB_GOAL_YL = 0.425,
+  _HB_GOAL_YH = 0.575;
 function _hbLeft(id, px, py) {
   switch (id) {
-    case 0: return py <  _HB_GOAL_YL && px < (_HB_GOAL_YL - py) / 2;
-    case 1: return py <  _HB_GOAL_YL && px >= (_HB_GOAL_YL - py) / 2;
-    case 2: return py >= _HB_GOAL_YL && py <= _HB_GOAL_YH;
-    case 3: return py >  _HB_GOAL_YH && px >= (py - _HB_GOAL_YH) / 2;
-    case 4: return py >  _HB_GOAL_YH && px < (py - _HB_GOAL_YH) / 2;
-    default: return false;
+    case 0:
+      return py < _HB_GOAL_YL && px < (_HB_GOAL_YL - py) / 2;
+    case 1:
+      return py < _HB_GOAL_YL && px >= (_HB_GOAL_YL - py) / 2;
+    case 2:
+      return py >= _HB_GOAL_YL && py <= _HB_GOAL_YH;
+    case 3:
+      return py > _HB_GOAL_YH && px >= (py - _HB_GOAL_YH) / 2;
+    case 4:
+      return py > _HB_GOAL_YH && px < (py - _HB_GOAL_YH) / 2;
+    default:
+      return false;
   }
 }
-var _BB_BKT = 1.575/28, _BB_PX = 0.2025, _BB_PYL = 0.34, _BB_PYH = 0.66;
-var _BB_3PTX = 0.15, _BB_CYL = 0.06, _BB_CYH = 0.94;
-var _BB_R2 = (_BB_3PTX-_BB_BKT)*(_BB_3PTX-_BB_BKT)*784 + (_BB_CYH-0.5)*(_BB_CYH-0.5)*225;
+var _BB_BKT = 1.575 / 28,
+  _BB_PX = 0.2025,
+  _BB_PYL = 0.34,
+  _BB_PYH = 0.66;
+var _BB_3PTX = 0.15,
+  _BB_CYL = 0.06,
+  _BB_CYH = 0.94;
+var _BB_R2 =
+  (_BB_3PTX - _BB_BKT) * (_BB_3PTX - _BB_BKT) * 784 + (_BB_CYH - 0.5) * (_BB_CYH - 0.5) * 225;
 var _BB_SLOPE = (1 - _BB_PYH) / (0.5 - _BB_PX); // top diagonal slope
 function _bbLeft(id, px, py) {
   var inKey = px < _BB_PX && py >= _BB_PYL && py <= _BB_PYH;
   var inCT = py >= _BB_CYH && px <= _BB_3PTX;
   var inCB = py <= _BB_CYL && px <= _BB_3PTX;
-  var dx = (px-_BB_BKT)*28, dy = (py-0.5)*15, inA = dx*dx+dy*dy < _BB_R2;
-  var abT = py > _BB_PYH + _BB_SLOPE*(px - _BB_PX);
-  var belB = py < _BB_PYL - _BB_SLOPE*(px - _BB_PX);
+  var dx = (px - _BB_BKT) * 28,
+    dy = (py - 0.5) * 15,
+    inA = dx * dx + dy * dy < _BB_R2;
+  var abT = py > _BB_PYH + _BB_SLOPE * (px - _BB_PX);
+  var belB = py < _BB_PYL - _BB_SLOPE * (px - _BB_PX);
   switch (id) {
-    case 0: return inKey;
-    case 1: return inCT;
-    case 2: return inCB;
-    case 3: return !inCT && inA && !inKey && abT;
-    case 4: return !inCT && !inCB && inA && !inKey && !abT && !belB;
-    case 5: return !inCB && inA && !inKey && belB;
-    case 6: return !inCT && !inA && abT;
-    case 7: return !inCT && !inCB && !inA && !abT && !belB;
-    case 8: return !inCB && !inA && belB;
-    default: return false;
+    case 0:
+      return inKey;
+    case 1:
+      return inCT;
+    case 2:
+      return inCB;
+    case 3:
+      return !inCT && inA && !inKey && abT;
+    case 4:
+      return !inCT && !inCB && inA && !inKey && !abT && !belB;
+    case 5:
+      return !inCB && inA && !inKey && belB;
+    case 6:
+      return !inCT && !inA && abT;
+    case 7:
+      return !inCT && !inCB && !inA && !abT && !belB;
+    case 8:
+      return !inCB && !inA && belB;
+    default:
+      return false;
   }
 }
 function _inSportZone(z, x, y) {
   var isLeft = x <= 0.5;
   if (z.half === 0 && !isLeft) return false;
-  if (z.half === 1 &&  isLeft) return false;
+  if (z.half === 1 && isLeft) return false;
   var tx = isLeft ? x : 1 - x;
-  if (z.sportKey === 'handball')   return _hbLeft(z.zoneId, tx, y);
-  if (z.sportKey === 'basketball') return _bbLeft(z.zoneId, tx, y);
+  if (z.sportKey === "handball") return _hbLeft(z.zoneId, tx, y);
+  if (z.sportKey === "basketball") return _bbLeft(z.zoneId, tx, y);
   return false;
 }
 // ────────────────────────────────────────────────────────────────────────────
@@ -61,7 +86,10 @@ function isInAnyZone(x, y, zones) {
   if (!zones || zones.length === 0) return false;
   for (var zi = 0; zi < zones.length; zi++) {
     var z = zones[zi];
-    if (z.sportZone) { if (_inSportZone(z, x, y)) return true; continue; }
+    if (z.sportZone) {
+      if (_inSportZone(z, x, y)) return true;
+      continue;
+    }
     if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1) return true;
   }
   return false;
@@ -127,14 +155,14 @@ function handleRunningDistance(id, msg) {
     return a - b;
   });
 
-  // Collect all players (excluding ball = teamId 1)
+  // Collect all players (excluding ball = teamId 0)
   var allPlayers = {};
   for (var fi = 0; fi < allTimes.length; fi++) {
     var players = posData[allTimes[fi]];
     if (!players) continue;
     for (var j = 0; j < players.length; j++) {
       var p = players[j];
-      if (p[1] === 1 || p[1] === 2) continue;
+      if (p[1] === 0 || p[1] === 2) continue;
       if (!(p[0] in allPlayers)) {
         allPlayers[p[0]] = { player_id: p[0], team_id: p[1], distance: 0 };
       }
@@ -158,7 +186,7 @@ function handleRunningDistance(id, msg) {
 
       for (var c = 0; c < curr.length; c++) {
         var cp = curr[c];
-        if (cp[1] === 1 || cp[1] === 2) continue;
+        if (cp[1] === 0 || cp[1] === 2) continue;
         var pp = prevMap[cp[0]];
         if (!pp) continue;
         if (!isInAnyZone(cp[3], cp[4], zones)) continue;
@@ -219,7 +247,7 @@ function handleHeatmapPoints(id, msg) {
     if (!arr) continue;
     for (var j = 0; j < arr.length; j++) {
       var pos = arr[j];
-      if (pos[1] === 1 || pos[1] === 2) continue; // skip ball and ref
+      if (pos[1] === 0 || pos[1] === 2) continue; // skip ball and ref
       if (!pidSet[pos[0]]) continue;
       var xCrop = (pos[3] - cropPct.x[0]) / (cropPct.x[1] - cropPct.x[0]);
       var yCrop = (pos[4] - cropPct.y[0]) / (cropPct.y[1] - cropPct.y[0]);
@@ -350,7 +378,7 @@ function handleExportRunningDistanceCSV(id, msg) {
     if (!players) continue;
     for (var j = 0; j < players.length; j++) {
       var p = players[j];
-      if (p[1] === 1 || p[1] === 2) continue;
+      if (p[1] === 0 || p[1] === 2) continue;
       var teamOk = !selectedTeam.length || selectedTeam.indexOf(p[1]) !== -1;
       if (!teamOk) continue;
       if (!(p[0] in distMap)) {
@@ -372,7 +400,7 @@ function handleExportRunningDistanceCSV(id, msg) {
 
       for (var c = 0; c < curr.length; c++) {
         var cp = curr[c];
-        if (cp[1] === 1 || cp[1] === 2) continue;
+        if (cp[1] === 0 || cp[1] === 2) continue;
         var pp = prevMap[cp[0]];
         if (!pp) continue;
         if (!(cp[0] in distMap)) continue;
@@ -475,7 +503,9 @@ function handleKpiAggregation(id, msg) {
       filtered.push(frameKeys[fi]);
     }
   }
-  filtered.sort(function (a, b) { return a - b; });
+  filtered.sort(function (a, b) {
+    return a - b;
+  });
 
   if (!filtered.length) {
     self.postMessage({ type: "KPI_AGGREGATION_RESULT", id: id, data: [] });
@@ -505,21 +535,29 @@ function handleKpiAggregation(id, msg) {
       var equiv_dist_inc = players[j][7];
       var cent_dist = players[j][9];
 
-      if (tid === 1 || tid === 2) continue; // skip ball and ref
+      if (tid === 0 || tid === 2) continue; // skip ball and ref
       if (!pidSet[pid]) continue;
 
       if (!playerData[pid]) {
-        playerData[pid] = { tid: tid, totalDist: 0, velocities: [], metpows: [], totalEquivDist: 0, centDistances: [] };
+        playerData[pid] = {
+          tid: tid,
+          totalDist: 0,
+          velocities: [],
+          metpows: [],
+          totalEquivDist: 0,
+          centDistances: [],
+        };
       }
       var data = playerData[pid];
 
       // Zone check via position data
       var pp = posMap[pid];
-      var inZone = zones.length === 0 ? false : (pp ? isInAnyZone(pp[3], pp[4], zones) : false);
+      var inZone = zones.length === 0 ? false : pp ? isInAnyZone(pp[3], pp[4], zones) : false;
 
       if (inZone) {
         if (dist_inc != null && dist_inc === dist_inc && dist_inc > 0) data.totalDist += dist_inc;
-        if (equiv_dist_inc != null && equiv_dist_inc === equiv_dist_inc && equiv_dist_inc > 0) data.totalEquivDist += equiv_dist_inc;
+        if (equiv_dist_inc != null && equiv_dist_inc === equiv_dist_inc && equiv_dist_inc > 0)
+          data.totalEquivDist += equiv_dist_inc;
         if (vel != null && vel === vel) data.velocities.push(vel);
         if (metpow != null && metpow === metpow) data.metpows.push(metpow);
         if (cent_dist != null && cent_dist === cent_dist) data.centDistances.push(cent_dist);
@@ -568,7 +606,8 @@ function handleKpiAggregation(id, msg) {
       distance: d.totalDist > 0 ? parseFloat(d.totalDist.toFixed(1)) : null,
       velocity_max: velocity_max,
       metabolic_work: metabolic_work,
-      equivalent_distance: d.totalEquivDist > 0 ? parseFloat((d.totalEquivDist / kpiFramerate).toFixed(1)) : null,
+      equivalent_distance:
+        d.totalEquivDist > 0 ? parseFloat((d.totalEquivDist / kpiFramerate).toFixed(1)) : null,
       centroid_distance_max: centroid_distance_max,
     });
   }

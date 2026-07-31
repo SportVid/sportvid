@@ -364,7 +364,7 @@ const { t } = useI18n();
 
 const entityLabelKey = (teamId) => {
   const tid = Number(teamId);
-  if (tid === 1) return t("modal.bounding_box.tooltip.ball_id");
+  if (tid === 0) return t("modal.bounding_box.tooltip.ball_id");
   if (tid === 2) return t("modal.bounding_box.tooltip.ref_id");
   return t("modal.bounding_box.tooltip.player_id");
 };

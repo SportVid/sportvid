@@ -47,6 +47,17 @@
                   />
 
                   <v-select
+                    v-model="selectedBallTracker"
+                    :items="ballTrackerRuns"
+                    item-title="date"
+                    item-value="id"
+                    clearable
+                    :label="$t('modal.position_data.select.ball_tracker')"
+                    variant="underlined"
+                    class="mt-2 mx-4"
+                  />
+
+                  <v-select
                     v-model="areaSize"
                     :items="areaOptions"
                     item-title="title"
@@ -82,6 +93,17 @@
                     item-title="date"
                     item-value="id"
                     :label="$t('modal.position_data.select.object_tracker')"
+                    variant="underlined"
+                    class="mt-2 mx-4"
+                  />
+
+                  <v-select
+                    v-model="selectedBallTracker"
+                    :items="ballTrackerRuns"
+                    item-title="date"
+                    item-value="id"
+                    clearable
+                    :label="$t('modal.position_data.select.ball_tracker')"
                     variant="underlined"
                     class="mt-2 mx-4"
                   />
@@ -194,6 +216,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
@@ -206,6 +229,7 @@ const { t } = useI18n({ useScope: "global" });
 
 const playerStore = usePlayerStore();
 const pluginRunStore = usePluginRunStore();
+const pluginRunResultStore = usePluginRunResultStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const positionDataStore = usePositionDataStore();
 const topViewStore = useTopViewStore();
@@ -253,6 +277,9 @@ const PositionDataModes = ref([
 const selectedCalibrationAsset = ref(null);
 onMounted(() => {
   calibrationAssetStore.loadCalibrationAssetsList();
+  // Cheap call (no add_results) so already-finished runs are classified as
+  // player- vs. ball-tracking runs via their result name (see objectTrackerRuns / ballTrackerRuns).
+  pluginRunResultStore.fetchForVideo({ videoId: playerStore.videoId });
 });
 
 const IDENTITY_HOMOGRAPHY = [
@@ -304,14 +331,33 @@ const bytetrackRuns = computed(() => {
     }));
 });
 
+// A "real" player-tracking object_tracker run has a bytetrack tracker attached, so its
+// result is named "bboxes" (see backend tasks/object_tracker.py). Ball-only runs (no
+// tracker, ball-class filtered detections) are named "bboxes_ball" and are offered
+// separately via ballTrackerRuns below.
+const isBallTrackerRun = (pluginRunId) =>
+  pluginRunResultStore.forPluginRun(pluginRunId).some((r) => r.name === "bboxes_ball");
+
 const selectedObjectTracker = ref(null);
 const objectTrackerRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
-    .filter((e) => e.type === "object_tracker" && e.status === "DONE")
+    .filter((e) => e.type === "object_tracker" && e.status === "DONE" && !isBallTrackerRun(e.id))
     .map((pluginRun) => ({
       id: pluginRun.id,
       type: "Object Tracker",
+      date: formatLocalDate(pluginRun.date),
+    }));
+});
+
+const selectedBallTracker = ref(null);
+const ballTrackerRuns = computed(() => {
+  return pluginRunStore
+    .forVideo(playerStore.videoId)
+    .filter((e) => e.type === "object_tracker" && e.status === "DONE" && isBallTrackerRun(e.id))
+    .map((pluginRun) => ({
+      id: pluginRun.id,
+      type: "Ball Tracker",
       date: formatLocalDate(pluginRun.date),
     }));
 });
@@ -323,12 +369,14 @@ const selectedTrackerRun = computed(() =>
 const isButtonDisabled = computed(() => {
   if (selectedMode.value === "bytetrack") {
     return (
-      selectedCalibrationAsset.value === null || selectedBytetrack.value === null || !areaSize.value
+      selectedCalibrationAsset.value === null ||
+      (selectedBytetrack.value === null && !selectedBallTracker.value) ||
+      !areaSize.value
     );
   } else if (selectedMode.value === "object_tracker") {
     return (
       selectedCalibrationAsset.value === null ||
-      selectedObjectTracker.value === null ||
+      (selectedObjectTracker.value === null && !selectedBallTracker.value) ||
       !areaSize.value
     );
   } else if (selectedMode.value === "manual") {
@@ -339,13 +387,20 @@ const isButtonDisabled = computed(() => {
 
 const confirmSelection = async (calibrationAssetId, trackerPluginId, positionDataId, areaSize) => {
   if (selectedMode.value === "bytetrack" || selectedMode.value === "object_tracker") {
-    await topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, trackerPluginId);
+    if (trackerPluginId) {
+      await topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, trackerPluginId);
+    }
+    if (selectedBallTracker.value) {
+      await topViewStore.mergeBallTracking(calibrationAssetId, selectedBallTracker.value);
+    }
     const keys = topViewStore.sortedFrameKeys;
     if (keys.length > 0) {
       positionDataStore.setSelectedTimeRangeStart(keys[0]);
       positionDataStore.setSelectedTimeRangeEnd(keys[keys.length - 1]);
     }
-    visualizationStore.loadKpiData(trackerPluginId);
+    if (trackerPluginId) {
+      visualizationStore.loadKpiData(trackerPluginId);
+    }
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
     visualizationStore.loadKpiData(positionDataId);

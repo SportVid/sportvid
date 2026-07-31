@@ -323,6 +323,7 @@ class PluginRunResult(models.Model):
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         result = {
             "id": self.id.hex,
+            "name": self.name,
             "type": self.TYPE[self.type],
             "data_id": self.data_id,
         }
