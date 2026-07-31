@@ -26,18 +26,18 @@
           <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
         </v-btn>
 
-        <v-btn @click="showModalHistory = true" data-tour="modal-history-open">
-          <app-bar-icon>mdi-history</app-bar-icon>
+        <v-btn @click="showModalStatus = true" data-tour="modal-status-open">
+          <app-bar-icon>mdi-format-list-checks</app-bar-icon>
           <v-badge
             v-if="numRunningPlugins > 0"
             color="accent"
             :content="numRunningPlugins"
             floating
           >
-            <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
+            <span class="text-primary">{{ $t("app_bar.status_menu") }}</span>
           </v-badge>
           <span v-else>
-            <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
+            <span class="text-primary">{{ $t("app_bar.status_menu") }}</span>
           </span>
         </v-btn>
 
@@ -161,7 +161,12 @@
     </template>
 
     <ModalPlugin v-if="showModalPlugin" v-model="showModalPlugin" :videoIds="[videoId]" />
-    <ModalHistory v-if="showModalHistory" v-model="showModalHistory" :pluginRuns="pluginRuns" :canWrite="canWrite" />
+    <ModalStatus
+      v-if="showModalStatus"
+      v-model="showModalStatus"
+      :pluginRuns="pluginRuns"
+      :canWrite="canWrite"
+    />
     <ModalShortcut v-if="showModalShortcut" v-model="showModalShortcut" />
     <ModalExport v-if="showModalExport" v-model="showModalExport" />
     <ModalVideoUpload v-if="showModalVideoUpload" v-model="showModalVideoUpload" />
@@ -188,7 +193,7 @@ import { useTutorialStore } from "@/stores/tutorial";
 import { useLanguageStore } from "@/stores/languages";
 import { useVideoUploadStore } from "@/stores/video_upload";
 import { useThemeStore } from "@/stores/theme";
-import ModalHistory from "@/components/app/app-bar/ModalHistory.vue";
+import ModalStatus from "@/components/app/app-bar/ModalStatus.vue";
 import ModalPlugin from "@/components/app/app-bar/ModalPlugin.vue";
 import ModalShortcut from "@/components/app/app-bar/ModalShortcut.vue";
 import ModalExport from "@/components/app/app-bar/ModalExport.vue";
@@ -218,7 +223,7 @@ const guidelinesView = computed(() => route.name === "GuidelinesView");
 const showModalPlugin = ref(false);
 const videoId = computed(() => playerStore.videoId);
 
-const showModalHistory = ref(false);
+const showModalStatus = ref(false);
 const pluginRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)

@@ -1,6 +1,5 @@
 import logging
 import numpy as np
-
 from pprint import pprint
 from typing import Dict, Any
 
@@ -26,14 +25,22 @@ class ByteTrack():
     
     def __init__(
         self, 
-        tracker_params: Dict[Any, Any], 
-        device: str = "cuda", 
+        tracker_params: Dict [Any, Any],
+        device: str = "cuda",
         **kwargs
     ):
-        super().__init__(tracker_params, device, **kwargs)
+        import torch
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        self.state = list()
+        self.frame_id = 0
+        
+        from types import SimpleNamespace
+        self.tracker_params = SimpleNamespace(**tracker_params)
+        # logging.info(f"BYTETracker params: {self.tracker_params}")
         
         from yolox.tracker.byte_tracker import BYTETracker
-        self.tracker = BYTETracker(args=self.cfg_args_dict)
+        self.tracker = BYTETracker(args=self.tracker_params)
         
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Brings the detection into the correct format required by BYTE. """
@@ -45,9 +52,8 @@ class ByteTrack():
                 det_bbox = np.array([det_['xyxy']for det_ in det]) # [N,4]
                 det_scores = np.array([det_['conf'] for det_ in det]) # [N,1]
                 det_merged = np.hstack([det_bbox, det_scores[:, np.newaxis]]) # [N,5]
-                
                 detections.append(det_merged)
-        
+
         return dict({
             'detections': detections,
             'shape': inputs['image_shape'],
@@ -79,11 +85,8 @@ class ByteTrack():
         img_shape = inputs['shape']
         det_shape = inputs['det_shape']
 
-        # logging.debug(len(detections)); logging.debug(detections[0].shape)
-        # logging.info(f'img dim: {img_shape}, det dim: {det_shape}')
-        
         for detection in detections:
-            # reset to prevent accumulation
+            # reset state to prevent accumulation
             online_tlwhs = []
             online_ids = []
             online_scores = []
@@ -93,23 +96,19 @@ class ByteTrack():
                 img_shape,      # original image shape [H,W]
                 det_shape       # (H_model, W_model) -> detections coordinate space
             )
-            # logging.debug(online_targets)
 
             for tar in online_targets:
                 track_lwh = tar.tlwh
                 track_id = tar.track_id
                 
-                vertical = track_lwh[2] / track_lwh[3] > self.cfg_args_dict.aspect_ratio_thresh
-                if track_lwh[2] * track_lwh[3] > self.cfg_args_dict.min_box_area and not vertical:
+                vertical = track_lwh[2] / track_lwh[3] > self.tracker_params.aspect_ratio_thresh
+                if track_lwh[2] * track_lwh[3] > self.tracker_params.min_box_area and not vertical:
                     online_tlwhs.append(track_lwh)
                     online_ids.append(track_id)
                     online_scores.append(tar.score.item())
             
             xywh = np.array(online_tlwhs, dtype=np.float32)
-            # logging.debug(xywh.min(axis=0, keepdims=True))
-            # logging.debug(xywh.max(axis=0, keepdims=True))
-            
-            team = np.zeros(len(online_ids), dtype=np.int8)
+            team = np.full(len(online_ids), 3, dtype=np.int8)
 
             track_results = {
                 "frame_id": self.frame_id,

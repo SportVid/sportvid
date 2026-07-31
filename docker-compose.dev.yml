@@ -23,6 +23,7 @@ services:
     build:
       context: .
       dockerfile: inference_ray/Dockerfile
+      dockerfile: inference_ray/Dockerfile
     init: true
     ports:
       - "127.0.0.1:8265:8265"
@@ -63,6 +64,7 @@ services:
     container_name: analyser_dev
     build:
       context: .
+      # dockerfile: analyser/Dockerfile
     env_file:
       - /opt/deploy/.env.dev
     volumes:
@@ -152,11 +154,12 @@ services:
     command:
       - "uv"
       - "run"
+      - "--no-editable"
       - "--package"
       - "backend"
       - "celery"
       - "-A"
-      - "sportvid"
+      - "sportvid.celery:app"
       - "worker"
       - "--loglevel"
       - "${LOG_LEVEL:-DEBUG}"
@@ -195,6 +198,7 @@ services:
     command:
       - "uv"
       - "run"
+      - "--no-editable"
       - "--package"
       - "backend"
       - "gunicorn"

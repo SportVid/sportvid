@@ -193,8 +193,7 @@ github/
 models/
 
 # Data dirs
-/data/
-!/packages/data/
+**/data/
 
 # Project specific things
 README.md

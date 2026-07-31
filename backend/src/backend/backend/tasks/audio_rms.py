@@ -12,14 +12,14 @@ from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("audio_rms")
-class AudioRmsParser(Parser):
-    def __init__(self):
+# @PluginManager.export_parser("audio_rms")
+# class AudioRmsParser(Parser):
+#     def __init__(self):
 
-        self.valid_parameter = {
-            "timeline": {"parser": str, "default": "audio_amp"},
-            "sr": {"parser": int, "default": 24000},
-        }
+#         self.valid_parameter = {
+#             "timeline": {"parser": str, "default": "audio_amp"},
+#             "sr": {"parser": int, "default": 24000},
+#         }
 
 
 @PluginManager.export_plugin("audio_rms")

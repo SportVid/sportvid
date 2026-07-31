@@ -14,8 +14,11 @@ from .cluster_to_scalar import *
 from .invert_scalar import *
 from .ocr import *
 
-from .bytetrack import *
+from .object_tracker import *
+from .bytetrack import * # TODO: remove after integration of object_tracker
 from .calibration_static_dlt import *
 from .posdata_convert import *
 from .floodlight_convert import *
 from .kpi_computation import *
+from .osnet_reid import *
+from .team_clustering import *

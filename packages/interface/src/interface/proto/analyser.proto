@@ -33,6 +33,7 @@ enum DataType {
   INT_TYPE = 2;
   FLOAT_TYPE = 3;
   BOOL_TYPE = 4;
+  DICT_TYPE = 5;
 }
 
 message PluginInfoParameter {
@@ -51,21 +52,25 @@ enum PluginDataType {
   SHOTS_DATA = 6;
   IMAGES_DATA = 7;
   LIST_DATA = 8;
-  RGB_DATA = 9;
-  HIST_DATA = 10;
-  ANNOTATION_DATA = 11;
-  IMAGE_EMBEDDING_DATA = 12;
-  TEXT_EMBEDDING_DATA = 13;
-  KPSS_DATA = 14;
-  FACES_DATA = 15;
-  VIDEO_TEMPORAL_EMBEDDING_DATA = 16;
-  STRING_DATA = 17;
-  CLUSTER_DATA = 18;
-  TRACKING_DATA = 19;
-  POS_DATA = 20;
-  FL_DATA = 21;
-  KPI_DATA = 22;
-  VIDEO_ASSET_DATA = 23;
+  DICT_DATA = 9;
+  RGB_DATA = 10;
+  HIST_DATA = 11;
+  ANNOTATION_DATA = 12;
+  IMAGE_EMBEDDING_DATA = 13;
+  TEXT_EMBEDDING_DATA = 14;
+  KPSS_DATA = 15;
+  FACES_DATA = 16;
+  VIDEO_TEMPORAL_EMBEDDING_DATA = 17;
+  STRING_DATA = 18;
+  CLUSTER_DATA = 19;
+  TRACKING_DATA = 20;
+  POS_DATA = 21;
+  FL_DATA = 22;
+  KPI_DATA = 23;
+  VIDEO_ASSET_DATA = 24;
+  NDARRAY_DATA = 25;
+  REID_DATA = 26;
+  TEAMS_DATA = 27;
 }
 
 message PluginInfoData {
@@ -259,9 +264,7 @@ message GetPipelineStatusResponse {
 
   enum Status {
     UNKNOWN = 0;
-    ERROR = 1;// -----------------------------------------------------------------------------
-// Plugin
-// -----------------------------------------------------------------------------
+    ERROR = 1;
     DONE = 2;
     RUNNING = 3;
     WAITING = 4;

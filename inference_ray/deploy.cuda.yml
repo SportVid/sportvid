@@ -9,12 +9,61 @@ logging_config:
   enable_access_log: false
 
 applications:
-  # ---------- CRITICAL (GPU required)
-  - name: bytetrack
-    route_prefix: /bytetrack
+  # ---------- NEW INTEGRATION (GPU required)
+  - name: team_clustering
+    route_prefix: /team_clustering
     import_path: inference_ray.main:app_builder
     args:
-      model: bytetrack
+      model: team_clustering
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 2 # at most 1 GPU worth of capacity are running for this service, so 2 replicas at once should be feasible.
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
+        ray_actor_options:
+          num_cpus: 2.0
+
+  - name: osnet_reid
+    route_prefix: /osnet_reid
+    import_path: inference_ray.main:app_builder
+    args:
+      model: osnet_reid
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 2 # at most 1 GPU worth of capacity are running for this service, so 2 replicas at once should be feasible.
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
+        ray_actor_options:
+          num_cpus: 2.0
+          num_gpus: 0.2
+
+  - name: object_tracker
+    route_prefix: /object_tracker
+    import_path: inference_ray.main:app_builder
+    args:
+      model: object_tracker
       data_path: /data
       params: {}
     deployments:
@@ -38,6 +87,35 @@ applications:
             env_vars:
               PYTHONPATH: "/app:/app/inference_ray/third_party/ByteTrack"
 
+  # ---------- CRITICAL (GPU required)
+  # - name: bytetrack
+  #   route_prefix: /bytetrack
+  #   import_path: inference_ray.main:app_builder
+  #   args:
+  #     model: bytetrack
+  #     data_path: /data
+  #     params: {}
+  #   deployments:
+  #     - name: Deployment
+  #       num_replicas: auto
+  #       autoscaling_config:
+  #         initial_replicas: 0
+  #         min_replicas: 0
+  #         max_replicas: 2 # at most 1 GPU worth of capacity are running for this service, so 2 replicas at once should be feasible.
+  #         max_ongoing_requests: 2
+  #         target_ongoing_requests: 1
+  #         metrics_interval_s: 5
+  #         look_back_period_s: 15
+  #         upscale_delay_s: 5
+  #         downscale_delay_s: 180
+  #         downscale_to_zero_delay_s: 600
+  #       ray_actor_options:
+  #         num_cpus: 2.0
+  #         num_gpus: 0.2
+  #       runtime_env:
+  #           env_vars:
+  #             PYTHONPATH: "/app:/app/inference_ray/third_party/ByteTrack"
+  
   # ---------- LOW (CPU only)
   - name: calibration_static_dlt
     route_prefix: /calibration_static_dlt

@@ -1,97 +1,148 @@
 import logging
+import numpy as np
 import torch
 import torch.nn.functional as F
-from typing import Any
-from omegaconf import DictConfig
-from .detector import Detector
-
-logger = logging.getLogger(__name__)
+from typing import Any, Dict
 
 
-class RTDetr(Detector):
-
+class RTDetr:
     def __init__(
         self,
         model_path: str,
-        mode: str,
-        batch_size: int,
-        image_size: tuple,
-        inference_params: DictConfig,
-        finetune_params: DictConfig,
-        device: str = "cuda",
-        **kwargs
+        image_size: tuple[int, int],
+        detector_params: Dict[Any, Any],
+        **kwargs,
     ):
-        super().__init__(
-            model_path, mode, batch_size, image_size,
-            inference_params, finetune_params, device
-        )
-        
         from ultralytics import RTDETR
-        self.model = RTDETR(model_path)
-        self.model.to(device)
-        
-        logger.info(f"RT-DETR loaded from {model_path}")
+        from ultralytics.data.augment import LetterBox
+
+        self.device = detector_params.get(
+            "device",
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
+        if self.device == "cuda" and not torch.cuda.is_available():
+            self.device = "cpu"
+
+        self.state = []
+        self.img_id = 0
+        self.detector_params = detector_params
+
+        self.checkpoint = detector_params.get("checkpoint", model_path)
+        self.model = RTDETR(self.checkpoint)
+        self.model.to(self.device)
+
+        self.conf = detector_params.get("conf", 0.25)
+        self.max_det = detector_params.get("max_det", 300)
+        self.verbose = detector_params.get("verbose", False)
+
+        imgsz = detector_params.get("imgsz", image_size)
+        if isinstance(imgsz, int):
+            self.imgsz = (imgsz, imgsz)
+        else:
+            self.imgsz = tuple(imgsz)
+
+        self.use_fp16 = bool(
+            detector_params.get("fp16", False) and str(self.device).startswith("cuda")
+        )
+        if self.use_fp16:
+            try:
+                self.model.model.half()
+            except Exception:
+                logging.warning("Could not cast RT-DETR backend model to FP16.")
+
+        self.letterbox = LetterBox(
+            new_shape=self.imgsz,
+            auto=False,
+            scale_fill=True,
+            scaleup=True,
+            center=True,
+            stride=32,
+        )
+
+        logging.info("RT-DETR loaded from %s on %s", self.checkpoint, self.device)
+
+    def _ensure_batched_hwc(self, frames):
+        if isinstance(frames, torch.Tensor):
+            frames = frames.detach().cpu().numpy()
+
+        if not isinstance(frames, np.ndarray):
+            raise TypeError(f"Unsupported input type: {type(frames)}")
+
+        if frames.ndim == 3:
+            frames = frames[None, ...]
+        if frames.ndim != 4:
+            raise RuntimeError(f"Expected (H,W,C) or (N,H,W,C), got {frames.shape}")
+        if frames.shape[-1] != 3:
+            raise RuntimeError(f"Expected 3-channel input, got {frames.shape}")
+
+        return np.ascontiguousarray(frames)
 
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs):
-        """Preprocess - identical to YOLO."""
-        input_frame = inputs['frame']
-        input_frame = input_frame.to(self.device).float()
-        input_shape = input_frame.shape
+        frames = self._ensure_batched_hwc(inputs["frame"])
         
-        h, w = input_shape[2], input_shape[3]
+        if isinstance(frames, np.ndarray):
+            frames = torch.from_numpy(frames)
         
-        # Pad to 32x stride (optional for transformers, but helps efficiency)
-        pad_h = (32 - h % 32) % 32
-        pad_w = (32 - w % 32) % 32
-        input_padded = F.pad(input_frame, (0, pad_w, 0, pad_h), mode='constant', value=0)
+        _, self.h, self.w, _ = frames.shape
         
-        self.h = h + pad_h
-        self.w = w + pad_w
-        self.det_shape = (self.h, self.w)  # For tracker
+        frames = frames.permute(0, 3, 1, 2).contiguous()    # (N,C,H,W)
         
-        return {
-            'inputs': input_padded.float() / 255.0,
-            'shape': (self.h, self.w)
-        }
+        if frames.device.type != self.device:
+            if self.device == "cuda":
+                frames = frames.pin_memory().to(self.device, non_blocking=True)
+            else:
+                frames = frames.to(self.device)
 
-    def process(self, inputs: Any, **kwargs):
-        return super().process(inputs)
+        pad_h = (32 - self.h % 32) % 32
+        pad_w = (32 - self.w % 32) % 32
+
+        frames = F.pad(frames, (0, pad_w, 0, pad_h), mode="constant", value=0)
+
+        self.h = self.h + pad_h
+        self.w = self.w + pad_w
+        self.det_shape = (self.h + pad_h, self.w + pad_w)
+
+        frames = frames.float().div_(255.0)
+
+        return {
+            "inputs": frames,
+            "shape": self.det_shape,
+            "orig_shape": (self.h, self.w),
+        }
 
     @torch.no_grad()
     def run_inference(self, inputs):
-        images = inputs['inputs']
-        shapes = inputs['shape']
-        
-        raw_outputs = self.model.predict(
+        images = inputs["inputs"]
+
+        results = self.model(
             images,
-            batch=self.batch_size,
-            imgsz=shapes,
-            conf=self.cfg.get('conf', 0.25),
-            verbose=self.cfg.get('verbose', False)
+            conf=self.conf,
+            max_det=self.max_det,
+            verbose=self.verbose,
         )
-        
-        for result_per_img in raw_outputs:
+
+        for result_per_img in results:
             bbox_list = []
-            if result_per_img.boxes is not None:
-                for bbox in result_per_img.boxes:
-                    b = bbox.cpu().numpy()
-                    cls_id = int(b.cls[0])
-                    conf = float(b.conf[0])
-                    
-                    # Filter by class if needed
-                    if self.cfg.get('classes') and cls_id not in self.cfg['classes']:
-                        continue
-                    
-                    bbox_dict = dict(
-                        xyxy=b.xyxy[0],
-                        xywh=b.xywh[0],
-                        cls_id=cls_id,
-                        conf=conf
-                    )
-                    bbox_list.append(bbox_dict)
-            
+
+            if result_per_img.boxes is not None and len(result_per_img.boxes) > 0:
+                boxes = result_per_img.boxes
+                xyxy = boxes.xyxy.detach().cpu().numpy()
+                xywh = boxes.xywh.detach().cpu().numpy()
+                cls = boxes.cls.detach().cpu().numpy().astype(np.int32)
+                conf = boxes.conf.detach().cpu().numpy()
+
+                bbox_list = [
+                    {
+                        "xyxy": xyxy[i],
+                        "xywh": xywh[i],
+                        "cls_id": int(cls[i]),
+                        "conf": float(conf[i]),
+                    }
+                    for i in range(len(xyxy))
+                ]
+
             self.state.append(bbox_list)
             self.img_id += 1
-        
-        return raw_outputs
+
+        return results

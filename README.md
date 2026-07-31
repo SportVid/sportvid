@@ -28,6 +28,7 @@ https://sportvid.github.io/
     sudo rm -rf ./data/models/models.tar.gz
     sudo chown -R 1000:1000 ./data/
     sudo chmod -R u+rwX ./data/
+    sudo chown -R 999:999 "data/shared/db"
     ```
 3. **Build and start:**
     Prepare:

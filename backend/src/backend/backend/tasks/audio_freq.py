@@ -11,15 +11,15 @@ from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("audio_freq")
-class AudioFreqParser(Parser):
-    def __init__(self):
+# @PluginManager.export_parser("audio_freq")
+# class AudioFreqParser(Parser):
+#     def __init__(self):
 
-        self.valid_parameter = {
-            "timeline": {"parser": str, "default": "audio_freq"},
-            "sr": {"parser": int, "default": 24000},
-            "n_fft": {"parser": int, "default": 256},
-        }
+#         self.valid_parameter = {
+#             "timeline": {"parser": str, "default": "audio_freq"},
+#             "sr": {"parser": int, "default": 24000},
+#             "n_fft": {"parser": int, "default": 256},
+#         }
 
 
 @PluginManager.export_plugin("audio_freq")

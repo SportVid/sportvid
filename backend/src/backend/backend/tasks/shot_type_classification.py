@@ -34,14 +34,14 @@ LABEL_LUT = {
 }
 
 
-@PluginManager.export_parser("shot_type_classification")
-class ShotTypeClassifierParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "timeline": {"parser": str, "default": "Camera Setting"},
-            "fps": {"parser": float, "default": 2.0},
-            "shot_timeline_id": {},
-        }
+# @PluginManager.export_parser("shot_type_classification")
+# class ShotTypeClassifierParser(Parser):
+#     def __init__(self):
+#         self.valid_parameter = {
+#             "timeline": {"parser": str, "default": "Camera Setting"},
+#             "fps": {"parser": float, "default": 2.0},
+#             "shot_timeline_id": {},
+#         }
 
 
 @PluginManager.export_plugin("shot_type_classification")

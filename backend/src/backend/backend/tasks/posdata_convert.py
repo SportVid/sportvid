@@ -17,22 +17,6 @@ from data import DataManager, Data
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("posdata_convert")
-class PosDataConvertParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "tracking_data_id": {"parser": str, "required": True},
-            "format": {"parser": str, "required": True},
-            "fps": {"parser": int, "required": False, "default": -1},
-            "delimiter": {"parser": str, "required": False, "default": ";"},
-            "origin": {"parser": str, "required": False, "default": "kickoff"},
-            "field_length": {"parser": float, "required": False, "default": 105.0},
-            "field_width": {"parser": float, "required": False, "default": 68.0},
-            "team_id_ball": {"parser": str, "required": False, "default": "ball"},
-            "team_id_ref": {"parser": str, "required": False, "default": ""},
-        }
-
-
 @PluginManager.export_plugin("posdata_convert")
 class PosDataConvert(Task):
     def __init__(self):
@@ -66,7 +50,10 @@ class PosDataConvert(Task):
         
         # obtain ref. object from DB to position data table
         tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
-        
+        if plugin_run is not None:
+            plugin_run.tracking_data = tracking_data_db
+            plugin_run.save()
+
         # TODO: should we rather transfer binaries instead of using the FSHandler?
         tracking_data_ = self.upload_td(client, tracking_data_db.file.hex, tracking_data_db.ext)  # uses the FSHandler, file is zipped before transfer
 
@@ -114,11 +101,15 @@ class PosDataConvert(Task):
                     # manager.delete(tracking_data_db.pk)
                     cache_path = os.path.join(settings.DATA_CACHE_ROOT, f"{tracking_data_db.pk}.json")
                     if os.path.exists(cache_path): os.remove(cache_path)
+                    # detach before deleting tracking_data_db, otherwise the
+                    # tracking_data CASCADE would delete this plugin_run too
+                    # before the ERROR status below could be persisted
+                    plugin_run.tracking_data = None
+                    plugin_run.status = "ERROR"
+                    plugin_run.save()
                     count, _ = TrackingData.objects.filter(
                         id=parameters.get("tracking_data_id")
                     ).delete()
-                    plugin_run.status = "ERROR"
-                    plugin_run.save()
                     if count:
                         logging.info(f"Successfully updated DB and deleted old data with id {parameters.get('tracking_data_id')}.")
                     td_id = None

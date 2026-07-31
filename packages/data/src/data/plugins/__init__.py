@@ -9,6 +9,7 @@ from .cluster_data import ClusterData, Cluster
 from .string_data import StringData, StringsData
 from .scalar_data import ScalarData
 from .list_data import ListData
+from .dict_data import DictData
 from .image_embedding import ImageEmbedding, ImageEmbeddings
 from .text_embedding import TextEmbedding, TextEmbeddings
 from .bounding_box_data import (
@@ -23,4 +24,6 @@ from .tracking_data import TrackingData
 from .position_data import PositionData
 from .floodlight_data import FloodlightData
 from .kpi_data import KpiData
+from .reid_data import ReIDData
+from .team_data import TeamsData
 from .video_asset_data import VideoAssetData

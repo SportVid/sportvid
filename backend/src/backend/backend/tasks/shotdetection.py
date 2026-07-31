@@ -12,13 +12,13 @@ from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("shotdetection")
-class ShotDetectionParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "timeline": {"parser": str, "default": "Shots"},
-            "fps": {"parser": float, "default": 2.0},
-        }
+# @PluginManager.export_parser("shotdetection")
+# class ShotDetectionParser(Parser):
+#     def __init__(self):
+#         self.valid_parameter = {
+#             "timeline": {"parser": str, "default": "Shots"},
+#             "fps": {"parser": float, "default": 2.0},
+#         }
 
 
 @PluginManager.export_plugin("shotdetection")

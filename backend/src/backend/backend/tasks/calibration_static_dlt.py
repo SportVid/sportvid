@@ -10,19 +10,9 @@ from backend.models import (
     Video,
 )
 from backend.plugin_manager import PluginManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
-
-
-@PluginManager.export_parser("calibration_static_dlt")
-class CalibrationStaticDltParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "calibration_id": {"parser": str, "required": True},
-        }
-
 
 @PluginManager.export_plugin("calibration_static_dlt")
 class CalibrationStaticDlt(Task):
@@ -43,6 +33,9 @@ class CalibrationStaticDlt(Task):
     ):
         # get point correspondences from database and pass them as plugin parameters
         data_db = CalibrationAssets.objects.get(id=parameters.get("calibration_id"))
+        if plugin_run is not None:
+            plugin_run.calibration_asset = data_db
+            plugin_run.save()
         point_correspondences = [
             p for p in data_db.object_data.all()
             if (

@@ -79,9 +79,7 @@ class AnalyserClient:
     def upload_file(self, path, id=None):
         ext = os.path.splitext(path)[-1][1:]
         filename = os.path.basename(path)
-        
         mimetype = mimetypes.guess_type(path)
-        logging.error(mimetype)
         
         if re.match(r"video/*", mimetype[0]) or (
             re.match(r'application/x-tar', mimetype[0])):
@@ -92,7 +90,6 @@ class AnalyserClient:
             data_type = analyser_pb2.IMAGES_DATA
         if re.match(r"text/*", mimetype[0]) or re.match(r"application/xml", mimetype[0]):
             data_type = analyser_pb2.TRACKING_DATA
-
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
 
         class RequestGenerator:
@@ -127,9 +124,9 @@ class AnalyserClient:
             if response.hash == generator.hash() and response.success:
                 print(response.id)
                 return response.id
-            logging.warning("Retry to upload the data again ...")
+            logging.warning("Retrying to upload the data again...")
             try_count -= 1
-        logging.error("Error while copying data ...")
+        logging.error("Error while copying data.")
         return None
 
     def check_data(self, data_id):
@@ -149,18 +146,31 @@ class AnalyserClient:
         for i in parameters:
             x = run_request.parameters.add()
             x.name = i.get("name")
-            x.value = str(i.get("value"))
-            if isinstance(i.get("value"), float): x.type = analyser_pb2.FLOAT_TYPE
-            if isinstance(i.get("value"), int): x.type = analyser_pb2.INT_TYPE
-            if isinstance(i.get("value"), str): x.type = analyser_pb2.STRING_TYPE
-            if isinstance(i.get("value"), bool): x.type = analyser_pb2.BOOL_TYPE
+            v = i.get("value")
+            if isinstance(v, bool): 
+                x.type = analyser_pb2.BOOL_TYPE
+                x.value = json.dumps(v)
+            elif isinstance(v, int): 
+                x.type = analyser_pb2.INT_TYPE
+                x.value = str(v)
+            elif isinstance(v, float): 
+                x.type = analyser_pb2.FLOAT_TYPE
+                x.value = str(v)
+            elif isinstance(v, str): 
+                x.type = analyser_pb2.STRING_TYPE
+                x.value = v
+            elif isinstance(v, dict):
+                x.type = analyser_pb2.DICT_TYPE
+                x.value = json.dumps(v)
+            else:
+                raise TypeError('Data type {x.type} is not supported.')    
 
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
         response = stub.run_plugin(run_request)
         if response.success:
             return response.id
 
-        logging.error("Error while run plugin ...")
+        logging.error("Error while requesting run_plugin.")
         return None
 
     def get_plugin_status(self, job_id):
@@ -185,7 +195,7 @@ class AnalyserClient:
                 time.sleep(0.5)
                 continue
             elif result.status == analyser_pb2.GetPluginStatusResponse.ERROR:
-                logging.error("Job is crashing")
+                logging.error("Job is crashing.")
                 return
             elif result.status == analyser_pb2.GetPluginStatusResponse.DONE:
                 break

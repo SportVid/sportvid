@@ -13,14 +13,14 @@ from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("x_clip")
-class XCLIPParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "timeline": {"parser": str, "default": "x_clip"},
-            "search_term": {"parser": str, "required": True},
-            "fps": {"parser": float, "default": 2.0},
-        }
+# @PluginManager.export_parser("x_clip")
+# class XCLIPParser(Parser):
+#     def __init__(self):
+#         self.valid_parameter = {
+#             "timeline": {"parser": str, "default": "x_clip"},
+#             "search_term": {"parser": str, "required": True},
+#             "fps": {"parser": float, "default": 2.0},
+#         }
 
 
 @PluginManager.export_plugin("x_clip")

@@ -205,6 +205,30 @@ class Plugin(models.Model):
 class PluginRun(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     video = models.ForeignKey(Video, on_delete=models.CASCADE)
+    
+    # source data for plugin runs to delete data when plugin run is deleted (and vice versa for specific cases)
+    tracking_data = models.ForeignKey(
+        TrackingData,
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="plugin_runs",
+    )
+    calibration_asset = models.ForeignKey(
+        "CalibrationAssets",
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="plugin_runs",
+    )
+    source_plugin_run = models.ForeignKey(
+        "self",
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
+        related_name="derived_plugin_runs",
+    )
+    
     date = models.DateTimeField(auto_now_add=True)
     update_date = models.DateTimeField(auto_now_add=True)
     type = models.CharField(max_length=256)
@@ -255,6 +279,8 @@ class PluginRunResult(models.Model):
     TYPE_VIDEO = "V"
     TYPE_IMAGES = "I"
     TYPE_SCALAR = "S"
+    TYPE_LIST = "TL"
+    TYPE_DICT = "TD"
     TYPE_HIST = "H"
     TYPE_SHOTS = "SH"
     TYPE_RGB_HIST = "R"
@@ -264,11 +290,16 @@ class PluginRunResult(models.Model):
     TYPE_BBOXES = "B"
     TYPE_POS = "P"
     TYPE_FL = "FL"
-    TYPE_KPI = "KI"
+    TYPE_KPI = "KPI"
+    TYPE_NDARRAY = "NPY"
+    TYPE_REID_DATA = "RID"
+    TYPE_TEAMS_DATA = "TID"
     TYPE = {
         TYPE_VIDEO: "VIDEO",
         TYPE_IMAGES: "IMAGES",
         TYPE_SCALAR: "SCALAR",
+        TYPE_LIST: "LIST",
+        TYPE_DICT: "DICT",
         TYPE_HIST: "HIST",
         TYPE_SHOTS: "SHOTS",
         TYPE_RGB_HIST: "RGB_HIST",
@@ -279,6 +310,9 @@ class PluginRunResult(models.Model):
         TYPE_POS: "POS",
         TYPE_FL: "FL",
         TYPE_KPI: "KPI",
+        TYPE_NDARRAY: "NPY",
+        TYPE_REID_DATA: "RID",
+        TYPE_TEAMS_DATA: "TID"
     }
     type = models.CharField(
         max_length=3,
@@ -776,3 +810,4 @@ class PointCorrespondence(models.Model):
             "compAreaCoordsRel": self.comp_area_coords_rel,
             "videoCoordsRel": self.video_coords_rel
         }
+

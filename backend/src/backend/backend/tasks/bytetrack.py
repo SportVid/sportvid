@@ -10,18 +10,8 @@ from backend.models import (
 )
 from backend.plugin_manager import PluginManager
 from backend.utils.task import Task
-from backend.utils.parser import Parser
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
-
-
-@PluginManager.export_parser("bytetrack")
-class ByteTrackParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "fps": {"parser": int, "default": 5}
-        }
-
 
 @PluginManager.export_plugin("bytetrack")
 class ByteTrack(Task):
@@ -40,9 +30,6 @@ class ByteTrack(Task):
         dry_run: bool = False,
         **kwargs
     ):
-        
-        logging.error(parameters)
-        
         manager = DataManager(self.config["output_path"])
         client = TaskAnalyserClient(
             host=self.config["analyser_host"],

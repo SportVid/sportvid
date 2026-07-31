@@ -17,23 +17,6 @@ from data import DataManager, Data
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("kpi_computation")
-class KpiComputationParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "tracking_data_id": {"parser": str, "required": False, "default": ""},
-            "bytetrack_run_id": {"parser": str, "required": False, "default": ""},
-            "calibration_id": {"parser": str, "required": False, "default": ""},
-            "format": {"parser": str, "required": True},
-            "pos_meta": {"parser": str, "required": False, "default": ""},
-            "filter_type": {"parser": str, "required": False, "default": ""},
-            "order": {"parser": int, "required": False, "default": 3},
-            "Wn": {"parser": float, "required": False, "default": 1.0},
-            "window_length": {"parser": int, "required": False, "default": 5},
-            "poly_order": {"parser": int, "required": False, "default": 3},
-        }
-
-
 @PluginManager.export_plugin("kpi_computation")
 class KpiComputation(Task):
     def __init__(self):
@@ -70,6 +53,11 @@ class KpiComputation(Task):
                 raise ValueError("bytetrack_run_id is required for format='sportvid'.")
             if not calibration_id:
                 raise ValueError("calibration_id is required for format='sportvid'.")
+
+            bytetrack_run_db = PluginRun.objects.get(id=bytetrack_run_id)
+            if plugin_run is not None:
+                plugin_run.source_plugin_run = bytetrack_run_db
+                plugin_run.save()
 
             # Load BboxesData from the ByteTrack run
             bbox_results = PluginRunResult.objects.filter(
@@ -171,6 +159,9 @@ class KpiComputation(Task):
         else:
             # --------> KINEXON / DFL: use raw TrackingData file
             tracking_data_db = TrackingData.objects.get(id=parameters.get("tracking_data_id"))
+            if plugin_run is not None:
+                plugin_run.tracking_data = tracking_data_db
+                plugin_run.save()
             delimiter = tracking_data_db.delimiter or ";"
 
             tracking_data_ = self.upload_td(client, tracking_data_db.file.hex, tracking_data_db.ext)
