@@ -69,6 +69,17 @@
                   />
 
                   <v-select
+                    v-model="selectedReid"
+                    :items="reidRuns"
+                    item-title="date"
+                    item-value="id"
+                    clearable
+                    :label="$t('modal.position_data.select.reid')"
+                    variant="underlined"
+                    class="mt-2 mx-4"
+                  />
+
+                  <v-select
                     v-model="areaSize"
                     :items="areaOptions"
                     item-title="title"
@@ -126,6 +137,17 @@
                     item-value="id"
                     clearable
                     :label="$t('modal.position_data.select.team_clustering')"
+                    variant="underlined"
+                    class="mt-2 mx-4"
+                  />
+
+                  <v-select
+                    v-model="selectedReid"
+                    :items="reidRuns"
+                    item-title="date"
+                    item-value="id"
+                    clearable
+                    :label="$t('modal.position_data.select.reid')"
                     variant="underlined"
                     class="mt-2 mx-4"
                   />
@@ -396,6 +418,18 @@ const teamClusteringRuns = computed(() => {
     }));
 });
 
+const selectedReid = ref(null);
+const reidRuns = computed(() => {
+  return pluginRunStore
+    .forVideo(playerStore.videoId)
+    .filter((e) => e.type === "osnet_reid" && e.status === "DONE")
+    .map((pluginRun) => ({
+      id: pluginRun.id,
+      type: "ReID",
+      date: formatLocalDate(pluginRun.date),
+    }));
+});
+
 const selectedTrackerRun = computed(() =>
   selectedMode.value === "object_tracker" ? selectedObjectTracker.value : selectedBytetrack.value
 );
@@ -429,6 +463,9 @@ const confirmSelection = async (calibrationAssetId, trackerPluginId, positionDat
     }
     if (selectedTeamClustering.value) {
       await topViewStore.mergeTeamAssignment(selectedTeamClustering.value);
+    }
+    if (selectedReid.value) {
+      await topViewStore.mergeReid(selectedReid.value);
     }
     const keys = topViewStore.sortedFrameKeys;
     if (keys.length > 0) {

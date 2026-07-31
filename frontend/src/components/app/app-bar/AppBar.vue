@@ -275,6 +275,8 @@ const pluginName = (type) => {
     calibration_static_dlt: "modal.plugin.calibration_static_dlt.plugin_name",
     posdata_convert: "modal.plugin.posdata_convert.plugin_name",
     kpi_computation: "modal.plugin.kpi_computation.plugin_name",
+    team_clustering: "modal.plugin.team_clustering.plugin_name",
+    osnet_reid: "modal.plugin.osnet_reid.plugin_name",
   };
   return t(typeMap[type] || type);
 };

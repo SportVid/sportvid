@@ -232,13 +232,20 @@ class OSNetReID(
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Encode tracklet crops using the feature extractor. """
         # NOTE: Expects single tracklet/image pair as inputs.
-        tracklets = inputs.get('tracklets', []) # [track_id, *, *, *, *, x_norm, y_norm, w_norm, h_norm, *]
-                                                # previous layout:  'track_ids':[], 'track_boxes':[N,4] xywh}
+        tracklets = inputs.get('tracklets', []) # [[track_id, team_id, game_section, x_center, y_bottom,
+                                                 #   x_norm, y_norm, w_norm, h_norm, score], ...] (N,10)
         img = inputs.get('image')               # full frame numpy BGR (H,W,C)
-        if not tracklets: return inputs
+        if not tracklets:
+            # Empty-frame shape must match the normal-path return below, since process()
+            # unconditionally reads preproc_inputs['inputs'] -- its own len(tracks)==0 branch
+            # (further down) is what actually handles the "no detections this frame" case.
+            return {'inputs': [{
+                'tracks': np.empty((0, 10), dtype=np.float32),
+                'features': np.empty((0, 512), dtype=np.float32),
+                'crops': [],
+            }]}
         tracklets_npy = np.array(tracklets)
-        tracklets_npy = np.squeeze(tracklets_npy, axis=1)
-        
+
         # undo normalization of coords using in-place mul
         tracklets_npy[:,5] *= self.detector_w  # x_n
         tracklets_npy[:,6] *= self.detector_h  # y_n

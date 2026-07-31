@@ -559,6 +559,63 @@ export const useTopViewStore = defineStore(
       _recomputeAggregates(_combinedStoredMeta());
     }
 
+    // Applies a separately-run osnet_reid result (ReIDData: {frame_time: {old_track_id:
+    // new_reid_id}}) onto the currently loaded player run by overwriting b[0] (track_id/
+    // player_id) in bboxesStore.bboxDataActive. Like mergeTeamAssignment, this is a ONE-TIME
+    // mutation of the source and must run AFTER mergeTeamAssignment, since team_clustering's
+    // mapping is keyed by the ORIGINAL object_tracker track_ids -- swapping b[0] first would
+    // break that lookup. The raw reid mapping is also stashed on bboxesStore.bboxReidMapping
+    // so bbox edits/deletes (updateBboxData/deleteBboxData) can translate the currently
+    // displayed (new) id back to the original track_id the backend still knows about.
+    async function mergeReid(reidPluginRunId) {
+      if (!reidPluginRunId) return;
+
+      const results = await pluginRunResultStore.forPluginRunWithData(
+        reidPluginRunId,
+        playerStore.videoId
+      );
+      const reidResult = results.find((r) => r.data?.mapping !== undefined);
+      if (!reidResult) return;
+
+      const reidMapping = reidResult.data.mapping;
+      bboxesStore.bboxReidMapping = reidMapping;
+
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+      const newPlayerIds = new Set();
+      for (const [frameTime, boxes] of Object.entries(playerRaw)) {
+        const frameMapping = reidMapping[frameTime];
+        if (!frameMapping) continue;
+
+        for (const b of boxes) {
+          const newId = frameMapping[b[0]];
+          if (newId === undefined || newId === null) continue;
+
+          b[0] = newId;
+          newPlayerIds.add(newId);
+        }
+      }
+      bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
+
+      // player_ids meta is keyed by track_id -- entries under the old ids are now orphaned.
+      // Rebuild entries for the new (reid) ids using the same default naming convention as
+      // the backend (object_tracker.py: name=str(pid), number=pid). team_id is intentionally
+      // left alone here; team assignment already ran (and wrote b[1]) before this merge.
+      const playerMeta = bboxesStore.bboxMetaData ? JSON.parse(bboxesStore.bboxMetaData) : {};
+      const rebuiltPlayerIds = {};
+      for (const pid of newPlayerIds) {
+        rebuiltPlayerIds[pid] = playerMeta.player_ids?.[pid] ?? {
+          id: pid,
+          name: String(pid),
+          number: pid,
+        };
+      }
+      playerMeta.player_ids = { ...(playerMeta.player_ids ?? {}), ...rebuiltPlayerIds };
+      bboxesStore.bboxMetaData = JSON.stringify(playerMeta);
+
+      _applyMergedBboxData();
+      _recomputeAggregates(_combinedStoredMeta());
+    }
+
     const showSportZones = ref(false);
     const toggleSportZones = () => {
       showSportZones.value = !showSportZones.value;
@@ -746,6 +803,7 @@ export const useTopViewStore = defineStore(
       transformBBoxToPositionDataTopView,
       mergeBallTracking,
       mergeTeamAssignment,
+      mergeReid,
       refreshBallBboxData,
       showPlayerId,
       viewPlayerId,

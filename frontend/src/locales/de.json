@@ -596,6 +596,31 @@
         "crop_x2_offset": "Crop-Offset rechts",
         "crop_y2_offset": "Crop-Offset unten"
       },
+      "osnet_reid": {
+        "plugin_name": "Re-Identification (OSNet)",
+        "plugin_description": "Dieses Plugin führt Spieler-Tracks aus einem vorherigen Player-Tracking-Lauf über Track-ID-Wechsel hinweg (z. B. nach Verdeckungen oder wenn Spieler das Feld verlassen/wieder betreten) wieder zusammen. Dazu wird ein erscheinungsbasierter Feature-Extraktor (OSNet) zusammen mit einer Online-Gallerie von Identitäts-Prototypen genutzt. Es benötigt keinen eigenen Tracker, sondern greift auf die Bounding-Boxen eines abgeschlossenen Objektverfolgung-Laufs zurück.<br><br>Die meisten Parameter sind unter „Erweiterte Optionen“ vorkonfiguriert und müssen in der Regel nicht angepasst werden.",
+        "timeline_name": "Re-Identification",
+        "object_tracker_id": "Objektverfolgung-Lauf auswählen",
+        "object_tracker_id_hint": "Wähle einen abgeschlossenen Player-Tracking-Lauf (Objektverfolgung) dieses Videos aus.",
+        "gallery_mode": "Gallerie-Modus",
+        "gallery_mode_protos": "Prototypen (EMA, empfohlen)",
+        "gallery_mode_tracks": "Track-Features",
+        "model_name": "ReID-Modell",
+        "match_thresh": "Match-Schwellwert",
+        "update_threshold": "Prototyp-Update-Schwellwert",
+        "ema_alpha": "EMA-Drift (Prototyp-Aktualisierungsrate)",
+        "margin": "Mehrdeutigkeits-Margin",
+        "prototype_weight": "Prototyp-Gewichtung",
+        "cache_weight": "Cache-Gewichtung",
+        "cache_size": "Cache-Größe",
+        "max_missed": "Max. verpasste Frames (Gallerie-Bereinigung)",
+        "crop_size_x": "Crop-Größe X (px)",
+        "crop_size_y": "Crop-Größe Y (px)",
+        "crop_x1_offset": "Crop-Offset links",
+        "crop_y1_offset": "Crop-Offset oben",
+        "crop_x2_offset": "Crop-Offset rechts",
+        "crop_y2_offset": "Crop-Offset unten"
+      },
       "calibration_static_dlt": {
         "plugin_name": "DLT+RANSAC aus annotierten Landmarken",
         "plugin_description": "Dieses Plugin führt eine statische Kalibrierung des Videos mittels Direct Linear Transformation (DLT) + RANSAC durch. Es nutzt die annotierten Marker-Korrespondenzen eines Kalibrierungs-Assets, um die Homographiematrix zu schätzen.",
@@ -918,7 +943,8 @@
         "not_calibrated": "nicht kalibriert",
         "object_tracker": "Object Tracking Plugin auswählen",
         "ball_tracker": "Ball-Tracking Lauf auswählen (optional)",
-        "team_clustering": "Team-Zuordnung auswählen (optional)"
+        "team_clustering": "Team-Zuordnung auswählen (optional)",
+        "reid": "Re-Identification auswählen (optional)"
       },
       "entity_colors": {
         "title": "Teamfarben ändern",

@@ -273,9 +273,14 @@ watch(
 );
 
 const selectedMode = ref("bbox");
-const BboxUpdateModes = ref([
+// "allPlayer" (rename all boxes with a given player id) is hidden once a ReID run is merged:
+// a single reid identity can correspond to several different original track_ids over time,
+// so a global rename by id is ambiguous (see bboxesStore.translatePlayerId).
+const BboxUpdateModes = computed(() => [
   { id: "bbox", name: t("modal.bounding_box.edit.modes.bbox") },
-  { id: "allPlayer", name: t("modal.bounding_box.edit.modes.all_player") },
+  ...(bboxesStore.bboxReidMapping
+    ? []
+    : [{ id: "allPlayer", name: t("modal.bounding_box.edit.modes.all_player") }]),
   { id: "allTeam", name: t("modal.bounding_box.edit.modes.all_team") },
 ]);
 

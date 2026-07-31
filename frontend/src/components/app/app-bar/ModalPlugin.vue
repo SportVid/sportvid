@@ -1536,6 +1536,184 @@ const plugins = ref([
         ],
       },
       {
+        name: t("modal.plugin.osnet_reid.plugin_name"),
+        description: t("modal.plugin.osnet_reid.plugin_description"),
+        icon: "mdi-account-search",
+        plugin: "osnet_reid",
+        id: 706,
+        parameters: [
+          {
+            field: "select_object_tracker_run",
+            name: "object_tracker_id",
+            value: "",
+            text: t("modal.plugin.osnet_reid.object_tracker_id"),
+            hint: t("modal.plugin.osnet_reid.object_tracker_id_hint"),
+            no_data_text: "modal.plugin.team_clustering.object_tracker_run_none",
+          },
+          {
+            field: "select_options",
+            name: "gallery_mode",
+            value: "protos",
+            items: [
+              { title: t("modal.plugin.osnet_reid.gallery_mode_protos"), value: "protos" },
+              { title: t("modal.plugin.osnet_reid.gallery_mode_tracks"), value: "tracks" },
+            ],
+            text: t("modal.plugin.osnet_reid.gallery_mode"),
+          },
+          {
+            field: "select_options",
+            name: "model_name",
+            value: "osnet_x1_0",
+            items: [
+              { title: "OSNet x1.0", value: "osnet_x1_0" },
+              { title: "OSNet-IBN x1.0", value: "osnet_ibn_x1_0" },
+              { title: "OSNet-AIN x1.0", value: "osnet_ain_x1_0" },
+            ],
+            text: t("modal.plugin.osnet_reid.model_name"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "text_field",
+            name: "checkpoint",
+            value: "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0.6,
+            max: 0.9,
+            value: 0.72,
+            step: 0.01,
+            name: "match_thresh",
+            text: t("modal.plugin.osnet_reid.match_thresh"),
+          },
+          {
+            field: "slider",
+            min: 0.85,
+            max: 0.95,
+            value: 0.85,
+            step: 0.01,
+            name: "update_threshold",
+            text: t("modal.plugin.osnet_reid.update_threshold"),
+          },
+          {
+            field: "slider",
+            min: 0.98,
+            max: 0.99,
+            value: 0.98,
+            step: 0.001,
+            name: "ema_alpha",
+            text: t("modal.plugin.osnet_reid.ema_alpha"),
+          },
+          {
+            field: "slider",
+            min: 0.05,
+            max: 0.08,
+            value: 0.06,
+            step: 0.005,
+            name: "margin",
+            text: t("modal.plugin.osnet_reid.margin"),
+          },
+          {
+            field: "slider",
+            min: 0.65,
+            max: 0.8,
+            value: 0.7,
+            step: 0.01,
+            name: "prototype_weight",
+            text: t("modal.plugin.osnet_reid.prototype_weight"),
+          },
+          {
+            field: "slider",
+            min: 0.2,
+            max: 0.35,
+            value: 0.3,
+            step: 0.01,
+            name: "cache_weight",
+            text: t("modal.plugin.osnet_reid.cache_weight"),
+          },
+          {
+            field: "slider",
+            min: 8,
+            max: 12,
+            value: 10,
+            step: 1,
+            name: "cache_size",
+            text: t("modal.plugin.osnet_reid.cache_size"),
+          },
+          {
+            field: "slider",
+            min: 90,
+            max: 300,
+            value: 120,
+            step: 10,
+            name: "max_missed",
+            text: t("modal.plugin.osnet_reid.max_missed"),
+          },
+          {
+            field: "slider",
+            min: 5,
+            max: 512,
+            value: 128,
+            step: 1,
+            name: "crop_size_x",
+            text: t("modal.plugin.osnet_reid.crop_size_x"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 5,
+            max: 512,
+            value: 256,
+            step: 1,
+            name: "crop_size_y",
+            text: t("modal.plugin.osnet_reid.crop_size_y"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_x1_offset",
+            text: t("modal.plugin.osnet_reid.crop_x1_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_y1_offset",
+            text: t("modal.plugin.osnet_reid.crop_y1_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_x2_offset",
+            text: t("modal.plugin.osnet_reid.crop_x2_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_y2_offset",
+            text: t("modal.plugin.osnet_reid.crop_y2_offset"),
+            hidden: true,
+          },
+        ],
+      },
+      {
         name: t("modal.plugin.calibration_static_dlt.plugin_name"),
         description: t("modal.plugin.calibration_static_dlt.plugin_description"),
         icon: "mdi-camera-enhance",
@@ -1879,6 +2057,56 @@ watch(
       (p) => p.name === "pca_components"
     );
     if (pcaComponentsParam) pcaComponentsParam.hidden = !usePca;
+  },
+  { immediate: true }
+);
+
+const osnetReidParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 706);
+  return plugin?.parameters || [];
+});
+
+const osnetReidOptionalParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 706);
+  return plugin?.optional_parameters || [];
+});
+
+// Only relevant for gallery_mode "protos" (ProtoGallery): prototype/cache-based matching
+// hyperparameters. "tracks" mode (Gallery) only uses match_thresh & max_missed.
+const PROTOS_ONLY_PARAMS = [
+  "update_threshold",
+  "ema_alpha",
+  "cache_size",
+  "margin",
+  "prototype_weight",
+  "cache_weight",
+];
+
+watch(
+  () => osnetReidParams.value.find((p) => p.name === "gallery_mode")?.value,
+  (galleryMode) => {
+    for (const p of osnetReidOptionalParams.value) {
+      if (PROTOS_ONLY_PARAMS.includes(p.name)) p.hidden = galleryMode !== "protos";
+    }
+  },
+  { immediate: true }
+);
+
+const MODEL_CHECKPOINT_MAP = {
+  osnet_x1_0: "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
+  osnet_ain_x1_0: "/models/reid/osnet_ain_ms_d_c.pt.tarh",
+  osnet_ibn_x1_0: "/models/reid/osnet_ibn_ms_d_c.pth.tar",
+};
+
+watch(
+  () => osnetReidParams.value.find((p) => p.name === "model_name")?.value,
+  (modelName) => {
+    const checkpointParam = osnetReidOptionalParams.value.find((p) => p.name === "checkpoint");
+    if (checkpointParam && modelName in MODEL_CHECKPOINT_MAP) {
+      checkpointParam.value = MODEL_CHECKPOINT_MAP[modelName];
+    }
   },
   { immediate: true }
 );
