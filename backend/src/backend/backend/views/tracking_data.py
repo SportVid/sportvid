@@ -113,18 +113,18 @@ class TrackingDataUpload(View):
                     "format" : db_params["file_type"],
                 }
                 if request.POST.get("fps"):
-                    analyser_params.append({"fps" : request.POST.get("fps")})
+                    analyser_params["fps"] = request.POST.get("fps")
                 if request.POST.get("delimiter"):
-                    analyser_params.append({"delimiter" : request.POST.get("delimiter")})
+                    analyser_params["delimiter"] = request.POST.get("delimiter")
+                if request.POST.get("origin"):
+                    analyser_params["origin"] = request.POST.get("origin")
                 if request.POST.get("format") == "kinexon":
-                    analyser_params.extend([
-                        {"field_length" : video_db.field_length},
-                        {"field_width" : video_db.field_width}
-                    ])
+                    analyser_params["field_length"] = video_db.field_length
+                    analyser_params["field_width"] = video_db.field_width
                     if request.POST.get("team_id_ball"):
-                        analyser_params.append({"team_id_ball" : request.POST.get("team_id_ball")})
+                        analyser_params["team_id_ball"] = request.POST.get("team_id_ball")
                     if request.POST.get("team_id_ref"):
-                        analyser_params.append({"team_id_ref" : request.POST.get("team_id_ref")})
+                        analyser_params["team_id_ref"] = request.POST.get("team_id_ref")
   
                 _ = self.submit_analyse(
                     plugins=["posdata_convert"],

@@ -23,6 +23,21 @@ export const useBboxesStore = defineStore("bboxes", () => {
 
   const bboxPluginRunId = ref(0);
 
+  // Separately-run ball-tracking result (no tracker, ball class only), merged into
+  // bboxDataInterpolated/positionDataTopView by topViewStore.mergeBallTracking. Tracked
+  // here so edits/deletes of a ball bbox can be routed to the correct plugin run instead
+  // of the player run's (see updateBboxData/deleteBboxData below).
+  const bboxBallDataActive = ref(null);
+  const bboxBallMetaData = ref(null);
+  const bboxBallPluginRunId = ref(null);
+
+  // Raw osnet_reid mapping ({frame_time: {old_track_id: new_reid_id}}), set by
+  // topViewStore.mergeReid once a ReID run is merged. b[0] in bboxDataActive then shows the
+  // new reid id, but the backend's stored BboxesData for bboxPluginRunId still only knows the
+  // original track_id -- translatePlayerId (below) reverses the swap for a given frame before
+  // edits/deletes are sent, so editing continues to work without any backend changes.
+  const bboxReidMapping = ref(null);
+
   const isLoading = ref(false);
 
   const loadBboxData = async (pluginRunId) => {
@@ -33,7 +48,12 @@ export const useBboxesStore = defineStore("bboxes", () => {
       const _bboxData = await Promise.all(
         pluginRunStore
           .forVideo(playerStore.videoId)
-          .filter((e) => e.type === "bytetrack" && e.status === "DONE" && e.id === pluginRunId)
+          .filter(
+            (e) =>
+              ["bytetrack", "object_tracker"].includes(e.type) &&
+              e.status === "DONE" &&
+              e.id === pluginRunId
+          )
           .map(async (e) => ({
             ...e,
             results: await pluginRunResultStore.forPluginRunWithData(e.id, playerStore.videoId),
@@ -112,8 +132,36 @@ export const useBboxesStore = defineStore("bboxes", () => {
     return _bboxDatainterpolated;
   }
 
+  // Once a ReID run is merged (bboxReidMapping set), the player_id shown/edited in the UI is
+  // the new reid id. Single-box edits (bbox tab) are translated back to the original
+  // track_id for the affected frame so the existing edit endpoint (which only knows the
+  // object_tracker run's original ids) still finds the right row. Bulk "apply to all
+  // player id" edits are intentionally left untranslated -- a single reid identity can map
+  // to several different original track_ids over time, so a global rename is ambiguous; that
+  // mode is hidden in the UI whenever a ReID merge is active (see ModalBboxUpdate.vue).
+  const translatePlayerId = (bboxData) => {
+    if (!bboxReidMapping.value || bboxData.applyAllPlayerId || bboxData.applyAllTeamId) {
+      return bboxData;
+    }
+    const [frameKey] = String(bboxData.bboxId).split("-");
+    const frameMapping = bboxReidMapping.value[frameKey];
+    if (!frameMapping) return bboxData;
+
+    const originalId = Object.entries(frameMapping).find(
+      ([, newId]) => newId === bboxData.playerId
+    )?.[0];
+    if (originalId === undefined) return bboxData;
+
+    return {
+      ...bboxData,
+      playerId: Number(originalId),
+      bboxId: `${frameKey}-${originalId}`,
+    };
+  };
+
   const updateBboxData = async (bboxData) => {
     if (isLoading.value) return;
+    bboxData = translatePlayerId(bboxData);
     isLoading.value = true;
     const params = ref({});
 
@@ -150,12 +198,19 @@ export const useBboxesStore = defineStore("bboxes", () => {
         params.value
       );
       if (res.data.status === "ok") {
-        bboxMetaData.value = res.data.entry.meta_data ?? null;
-        topViewStore.transformBBoxToPositionDataTopView(
-          calibrationAssetStore.calibrationAssetId,
-          bboxPluginRunId.value,
-          res.data.entry.bboxes
-        );
+        // Route the refresh to whichever plugin run was actually edited, so the
+        // merged view (VideoPlayer overlay + TopView) reflects the change without
+        // dropping the other run's data.
+        if (bboxData.bytetrackRunId === bboxBallPluginRunId.value) {
+          topViewStore.refreshBallBboxData(res.data.entry.bboxes, res.data.entry.meta_data);
+        } else {
+          bboxMetaData.value = res.data.entry.meta_data ?? null;
+          topViewStore.transformBBoxToPositionDataTopView(
+            calibrationAssetStore.calibrationAssetId,
+            bboxPluginRunId.value,
+            res.data.entry.bboxes
+          );
+        }
 
         if (bboxData.applyAllPlayerId || bboxData.applyAllTeamId) {
           bboxDataUpdateSuccess.value = true;
@@ -170,6 +225,7 @@ export const useBboxesStore = defineStore("bboxes", () => {
 
   const deleteBboxData = async (bboxData) => {
     if (isLoading.value) return;
+    bboxData = translatePlayerId(bboxData);
     isLoading.value = true;
     const params = ref({});
 
@@ -198,12 +254,16 @@ export const useBboxesStore = defineStore("bboxes", () => {
         params.value
       );
       if (res.data.status === "ok") {
-        bboxMetaData.value = res.data.entry.meta_data ?? null;
-        topViewStore.transformBBoxToPositionDataTopView(
-          calibrationAssetStore.calibrationAssetId,
-          bboxPluginRunId.value,
-          res.data.entry.bboxes
-        );
+        if (bboxData.bytetrackRunId === bboxBallPluginRunId.value) {
+          topViewStore.refreshBallBboxData(res.data.entry.bboxes, res.data.entry.meta_data);
+        } else {
+          bboxMetaData.value = res.data.entry.meta_data ?? null;
+          topViewStore.transformBBoxToPositionDataTopView(
+            calibrationAssetStore.calibrationAssetId,
+            bboxPluginRunId.value,
+            res.data.entry.bboxes
+          );
+        }
 
         if (bboxData.applyAllPlayerId || bboxData.applyAllTeamId) {
           bboxDataDeleteSuccess.value = true;
@@ -236,6 +296,10 @@ export const useBboxesStore = defineStore("bboxes", () => {
     bboxDataLoaded,
     bboxDataInterpolated,
     bboxPluginRunId,
+    bboxBallDataActive,
+    bboxBallMetaData,
+    bboxBallPluginRunId,
+    bboxReidMapping,
     bboxDataTopView,
     showBoundingBox,
     viewBoundingBox,

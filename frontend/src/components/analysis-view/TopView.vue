@@ -484,7 +484,7 @@
               }"
               @click="overlayToggleTeam(teamId)"
             >
-              <v-icon v-if="Number(teamId) === 1" size="14">mdi-soccer</v-icon>
+              <v-icon v-if="Number(teamId) === 0" size="14">mdi-soccer</v-icon>
               <template v-else>{{ overlayGetTeamName(teamId) }}</template>
             </div>
             <span class="chart-legend-sep">|</span>
@@ -772,7 +772,7 @@ const overlayGetPlayerNumber = (playerId, teamId) => {
 };
 
 const overlayGetEntityLabel = (playerId, teamId) => {
-  if (Number(teamId) === 1 || Number(teamId) === 2) return playerId;
+  if (Number(teamId) === 0 || Number(teamId) === 2) return playerId;
   return topViewStore.getEntityNumber(playerId, teamId);
 };
 
@@ -1143,7 +1143,7 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
     const { px, py } = toPixel(pos[3], pos[4]);
     const tid = pos[1];
 
-    if (tid === 1) {
+    if (tid === 0) {
       if (!visible.ball) continue;
       if (!includedPlayers.value.has(`${tid}_${pos[0]}`)) continue;
       // Ball – sport-specific SVG icon
@@ -1175,7 +1175,7 @@ function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
       ctx.lineWidth = 1.5;
       ctx.fill();
       ctx.stroke();
-    } else if (tid === 0) {
+    } else if (tid === 1) {
       if (!visible.rest) continue;
       if (!includedPlayers.value.has(`${tid}_${pos[0]}`)) continue;
       // Inactive / spectator — dimmed grey

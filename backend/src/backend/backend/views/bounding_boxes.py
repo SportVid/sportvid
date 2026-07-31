@@ -22,11 +22,11 @@ logger = logging.getLogger(__name__)
 def _compute_meta_data(bbd_data):
     """
     Rebuild meta_data after bbox edits/deletes.
-    - New entity scheme: team_id 0=inactive, 1=ball, 2=refs, ≥3=teams. 
-    - Each kind has its own id namespace stored under player_ids / ref_ids / ball_ids. 
-    - team_id=0 entries (inactive) stay inside player_ids since they were tracked as person-detections.
+    - New entity scheme: team_id 0=ball, 1=inactive, 2=refs, ≥3=teams.
+    - Each kind has its own id namespace stored under player_ids / ref_ids / ball_ids.
+    - team_id=1 entries (inactive) stay inside player_ids since they were tracked as person-detections.
     """
-    BALL_TID, REF_TID = 1, 2
+    BALL_TID, REF_TID = 0, 2
     # collect (entity_id, team_id) per kind
     players_by_team = {}  # team_id -> set(entity_id) for teams (incl. inactive=0)
     ball_ids = set()
@@ -94,13 +94,13 @@ class BoundingBoxesChange(View):
   
             # possible update ops.
             CH = None
-            if not update_all_player_id and bbox_id: 
+            if not update_all_player_id and bbox_id:
                 CH='SINGLE_PLAYER_ID'
-                if new_team_id and not update_all_team_id:
+                if new_team_id is not None and not update_all_team_id:
                     CH='SINGLE_PLAYERTEAM_ID'
-            if update_all_player_id and current_player_id and new_player_id:
+            if update_all_player_id and current_player_id is not None and new_player_id is not None:
                 CH='BULK_PLAYER_ID'
-                if current_team_id and new_team_id:
+                if current_team_id is not None and new_team_id is not None:
                     CH='BULK_PLAYERTEAM_ID'
             if (current_team_id is not None and new_team_id is not None) and (
                 update_all_team_id and not new_player_id): 
@@ -128,22 +128,31 @@ class BoundingBoxesChange(View):
                 with manager.create_data("BboxesData") as altered_bbx:
                     if not update_all_player_id and bbox_id:
                         # --- single edit (1 frame); O(n) at worse
+                        # bbox_id is "{frame_id}-{player_id}", derived on the fly rather than
+                        # stored in the tracklet itself (frame_id is the dict key, player_id is bbx[0])
                         frame_id = str(bbox_id.split("-", 1)[0])  # only iterate through lists that are related to the frame
-                        for bbx in bbd_data[frame_id]:
+                        matched = False
+                        for bbx in bbd_data.get(frame_id, []):
                             # mutate list
-                            if bbx[5] == bbox_id:
+                            if f"{frame_id}-{bbx[0]}" == bbox_id:
                                 bbx[0] = new_player_id
-                                bbx[5] = f"{frame_id}-{new_player_id}"
                                 bbx[1] = new_team_id
+                                matched = True
                                 break
-                    if update_all_player_id and current_player_id and new_player_id:
+                        if not matched:
+                            # bbox_id no longer exists in this plugin run's data -- e.g. the
+                            # frontend routed the edit to the wrong run, or the entry was
+                            # already renamed/deleted by a previous edit. Fail loudly instead
+                            # of silently persisting an unchanged copy under a new data_id.
+                            raise ValueError(
+                                f"bbox_id '{bbox_id}' not found in plugin run {bytetrack_result_id}"
+                            )
+                    if update_all_player_id and current_player_id is not None and new_player_id is not None:
                         # --- bulk edit (all frames); iterates each entry O(n)
                         for _, bboxes in bbd_data.items():
                             for bbx in bboxes:
                                 if bbx[0] == current_player_id:
-                                    frame_id = bbx[5].split("-", 1)[0]
                                     bbx[0] = new_player_id
-                                    bbx[5] = f"{frame_id}-{new_player_id}"
                                     bbx[1] = new_team_id
                     # --- bulk team edit (all frames, no player_id changes)
                     if (current_team_id is not None and new_team_id is not None) and (
@@ -206,9 +215,9 @@ class BoundingBoxesDelete(View):
             CH = None
             if not delete_all_player_id and bbox_id:
                 CH='SINGLE_FRAME_DEL'
-            if delete_all_player_id and player_id_to_delete:
+            if delete_all_player_id and player_id_to_delete is not None:
                 CH='ALL_PLAYER_DEL'
-            if delete_all_team_id and team_id_to_delete and not player_id_to_delete:
+            if delete_all_team_id and team_id_to_delete is not None and not player_id_to_delete:
                 CH='COMPLETE_TEAM_DEL'
             if not CH: return JsonResponse({"status": "error", "type": "missing_args"})
             else: logging.info(f'running {CH} delete op. on bbox data...')
@@ -229,20 +238,27 @@ class BoundingBoxesDelete(View):
                 with manager.create_data("BboxesData") as altered_bbx:
                     if not delete_all_player_id and bbox_id:
                         # --- single delete (1 frame); O(n) at worse
+                        # bbox_id is "{frame_id}-{player_id}", derived on the fly (see BoundingBoxesChange)
                         frame_id = str(bbox_id.split("-", 1)[0])  # only iterate through lists that are related to the frame
-                        for bbx_id, bbx in enumerate(bbd_data[frame_id]):
+                        matched = False
+                        for bbx_idx, bbx in enumerate(bbd_data.get(frame_id, [])):
                             # mutate list
-                            if bbx[5] == bbox_id:
-                                del bbd_data[frame_id][bbx_id]
+                            if f"{frame_id}-{bbx[0]}" == bbox_id:
+                                del bbd_data[frame_id][bbx_idx]
+                                matched = True
                                 break
-                    if delete_all_player_id and player_id_to_delete:
+                        if not matched:
+                            raise ValueError(
+                                f"bbox_id '{bbox_id}' not found in plugin run {bytetrack_result_id}"
+                            )
+                    if delete_all_player_id and player_id_to_delete is not None:
                         # --- bulk delete (all frames); iterates each entry O(n)
                         for frame_id, bboxes in bbd_data.items():
                             for bbx_id, bbx in enumerate(bboxes):
                                 if bbx[0] == player_id_to_delete:
                                     del bbd_data[frame_id][bbx_id]
                     # --- bulk team edit (all frames, no player_id changes)
-                    if delete_all_team_id and team_id_to_delete and not player_id_to_delete: # delete team exclusively
+                    if delete_all_team_id and team_id_to_delete is not None and not player_id_to_delete: # delete team exclusively
                         for frame_id, bboxes in bbd_data.items():
                             for bbx_id, bbx in enumerate(bboxes):
                                 if bbx[1] == team_id_to_delete:

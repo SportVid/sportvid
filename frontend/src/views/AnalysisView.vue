@@ -220,18 +220,29 @@ const tabStore = useTabStore();
 const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
 
+// Fallback label for active player teams (id ≥ 3) that have no name in the run's
+// team_ids meta -- e.g. team_clustering with K > 2 produces team_ids beyond the
+// TeamId enum's static "Team A"/"Team B" entries, or an older run predates them.
+// Derives "Team A"/"Team B"/"Team C"/... from the id offset, same scheme as
+// object_tracker.py's TeamId.TEAM_LEFT/TEAM_RIGHT labels.
+function fallbackTeamName(teamId) {
+  return `Team ${String.fromCharCode(65 + (teamId - 3))}`;
+}
+
 const matchupTeams = computed(() => {
   const meta = topViewStore.metaDataTopView;
-  if (!meta?.team_ids) return [];
-  // New scheme: team_id ≥ 3 = active player teams (1=ball, 2=refs, 0=inactive — all hidden from matchup).
-  return Object.entries(meta.team_ids)
-    .filter(([teamId]) => Number(teamId) >= 3)
-    .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([teamId, info]) => ({
-      id: Number(teamId),
-      name: info.name,
-      color: visualizationStore.getTeamColor(Number(teamId)),
-    }));
+  // Derived from actually-assigned teams (precomputedPlayerList already only holds
+  // active players, team_id ≥ 3), not the static team_ids meta -- object_tracker.py
+  // always lists both "Team A"/"Team B" there even before team_clustering has run,
+  // so that dict alone can't tell us which teams are actually present.
+  const playerTeamIds = [...new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId))].sort(
+    (a, b) => a - b
+  );
+  return playerTeamIds.map((teamId) => ({
+    id: teamId,
+    name: meta?.team_ids?.[teamId]?.name ?? fallbackTeamName(teamId),
+    color: visualizationStore.getTeamColor(teamId),
+  }));
 });
 
 function getVisualizationTabComponent(tabId) {

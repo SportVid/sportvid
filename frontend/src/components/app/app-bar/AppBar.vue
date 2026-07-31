@@ -271,9 +271,12 @@ const pluginName = (type) => {
     shot_type_classification: "modal.plugin.shot_type_classification.plugin_name",
     thumbnail: "modal.plugin.thumbnail.plugin_name",
     bytetrack: "modal.plugin.bytetrack.plugin_name",
+    object_tracker: "modal.plugin.object_tracker.plugin_name",
     calibration_static_dlt: "modal.plugin.calibration_static_dlt.plugin_name",
     posdata_convert: "modal.plugin.posdata_convert.plugin_name",
     kpi_computation: "modal.plugin.kpi_computation.plugin_name",
+    team_clustering: "modal.plugin.team_clustering.plugin_name",
+    osnet_reid: "modal.plugin.osnet_reid.plugin_name",
   };
   return t(typeMap[type] || type);
 };

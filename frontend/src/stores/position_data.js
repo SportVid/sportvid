@@ -172,7 +172,10 @@ export const usePositionDataStore = defineStore(
     function isInAnyZone(x, y, zones) {
       if (!zones || zones.length === 0) return false;
       for (const z of zones) {
-        if (z.sportZone) { if (isInSportZoneUtil(z, x, y)) return true; continue; }
+        if (z.sportZone) {
+          if (isInSportZoneUtil(z, x, y)) return true;
+          continue;
+        }
         if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1) return true;
       }
       return false;
@@ -223,7 +226,7 @@ export const usePositionDataStore = defineStore(
           for (const p of playersPrev) prevMap.set(p[0], p);
 
           for (const currPlayer of playersCurr) {
-            if (currPlayer[1] === 1) continue;
+            if (currPlayer[1] === 0) continue;
 
             const prevPlayer = prevMap.get(currPlayer[0]);
             if (!prevPlayer) continue;

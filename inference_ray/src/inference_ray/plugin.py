@@ -83,7 +83,7 @@ class AnalyserPlugin(Plugin):
         parameters: Dict = None,
         callbacks: Callable = None,
     ) -> Dict[str, Data]:
-        input_parameters = self._parameters
+        input_parameters = dict(self._parameters or {})
         if parameters is not None:
             input_parameters.update(parameters)
 

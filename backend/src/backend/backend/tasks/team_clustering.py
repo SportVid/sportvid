@@ -60,6 +60,11 @@ class TeamClustering(Task):
 
         # parameters["osnet_reid_id"] = str(parameters["osnet_reid_id"])
         
+        object_tracker_run_db = PluginRun.objects.get(id=object_tracker_id)
+        if plugin_run is not None:
+            plugin_run.source_plugin_run = object_tracker_run_db
+            plugin_run.save()
+
         tracklet_results = PluginRunResult.objects.filter(
             plugin_run_id=object_tracker_id,
             type=PluginRunResult.TYPE_BBOXES,

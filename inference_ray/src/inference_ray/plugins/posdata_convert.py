@@ -403,7 +403,7 @@ class PosDataConvert(
             if 'entity_kind' not in df.columns:
                 df['entity_kind'] = 'player'
 
-            # ---- New team_id scheme: 1=ball, 2=refs, 3+=teams (sorted by player count desc)
+            # ---- New team_id scheme: 0=ball, 2=refs, 3+=teams (sorted by player count desc)
             ball_orig = df.loc[df['entity_kind'] == 'ball', 'team_id'].unique().tolist()
             ref_orig = df.loc[df['entity_kind'] == 'ref', 'team_id'].unique().tolist()
             player_team_counts = (
@@ -415,9 +415,9 @@ class PosDataConvert(
 
             team_id_mapping = {}
             for tid in ball_orig:
-                team_id_mapping[tid] = 1
+                team_id_mapping[tid] = 0
             if ball_orig:
-                self.meta_dict["team_ids"][1] = {"id": ball_orig[0], "name": "Ball"}
+                self.meta_dict["team_ids"][0] = {"id": ball_orig[0], "name": "Ball"}
             for tid in ref_orig:
                 team_id_mapping[tid] = 2
             if ref_orig:
@@ -434,7 +434,7 @@ class PosDataConvert(
             df["team_id"] = df["team_id"].map(team_id_mapping).astype('int16')
 
             # ---- Per-kind entity_id mapping (each kind gets its own 1..N namespace).
-            # Frame data carries (entity_id, team_id); team_id (1=ball, 2=ref, ≥3=player) selects which dict to look up.
+            # Frame data carries (entity_id, team_id); team_id (0=ball, 2=ref, ≥3=player) selects which dict to look up.
             kind_to_dict = {'player': "player_ids", 'ref': "ref_ids", 'ball': "ball_ids"}
             full_pid_map = {}
             for kind, dict_key in kind_to_dict.items():

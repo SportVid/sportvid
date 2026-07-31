@@ -4,7 +4,17 @@ import { useI18n } from "vue-i18n";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePlayerStore } from "@/stores/player";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { fromPosDataObject } from "../plugins/compact_posdata";
+
+// Trailing index used to tag each merged tracklet with the plugin run it was physically
+// loaded from (see _mergeRawBboxSources below). team_id is a mutable field that edits can
+// freely change -- including across the "0 = ball" boundary -- so it can no longer be used
+// to infer which backend PluginRunResult a bbox entry lives in once it's been reassigned.
+// Consumers (e.g. ModalBboxUpdate.vue) should read bbox[BBOX_SOURCE_RUN_IDX] to know which
+// plugin run to send edits/deletes to. Only ever set in-memory on the merged copies; never
+// sent back to the backend, which re-reads its own stored blob by run id.
+export const BBOX_SOURCE_RUN_IDX = 10;
 
 export const useTopViewStore = defineStore(
   "top_view",
@@ -12,6 +22,7 @@ export const useTopViewStore = defineStore(
     const bboxesStore = useBboxesStore();
     const calibrationAssetStore = useCalibrationAssetStore();
     const playerStore = usePlayerStore();
+    const pluginRunResultStore = usePluginRunResultStore();
 
     const { t } = useI18n();
 
@@ -284,7 +295,7 @@ export const useTopViewStore = defineStore(
 
     // Precomputed metadata - populated once in setPositionData() to avoid
     // multiple components independently scanning all 135k+ frames.
-    // Kinds split by team_id: 0=inactive, 1=ball, 2=ref, ≥3=active player.
+    // Kinds split by team_id: 0=ball, 1=inactive, 2=ref, ≥3=active player.
     const precomputedPlayerList = shallowRef([]); // active players only (team_id ≥ 3)
     const precomputedRefList = shallowRef([]);
     const precomputedBallList = shallowRef([]);
@@ -305,9 +316,9 @@ export const useTopViewStore = defineStore(
     // Lookup helpers: pick the right meta dict based on team_id semantics.
     const _kindFromTeamId = (tid) => {
       const n = Number(tid);
-      if (n === 1) return "ball";
+      if (n === 0) return "ball";
       if (n === 2) return "ref";
-      if (n === 0) return "rest";
+      if (n === 1) return "rest";
       return "player";
     };
     const getEntityName = (entityId, teamId) => {
@@ -329,6 +340,141 @@ export const useTopViewStore = defineStore(
     // Whether the current positionDataTopView is a CompactPositionData instance
     const _isCompact = ref(false);
 
+    // Applies the calibration homography to a plain-object bbox dataset (time -> [tracklet, ...]),
+    // matching the tracklet layout produced by bytetrack/object_tracker (b[3]/b[4] = x/y).
+    function _applyHomographyToBboxData(bboxData) {
+      if (!calibrationAssetStore.calibrationMatrix) return null;
+      const transformed = {};
+      for (const [time, boxes] of Object.entries(bboxData)) {
+        transformed[time] = boxes.map((b) => {
+          const { x, y } = calibrationAssetStore.applyHomography(
+            calibrationAssetStore.calibrationMatrix,
+            { x: b[3], y: b[4] }
+          );
+          b[3] = x;
+          b[4] = 1 - y;
+          return b;
+        });
+      }
+      return transformed;
+    }
+
+    // Combines the player run's raw bboxes (bboxesStore.bboxDataActive) with the
+    // separately-tracked ball run's raw bboxes (bboxesStore.bboxBallDataActive), both in
+    // video-space (b[5..8] = x,y,w,h), keyed by frame time. Re-parses fresh each call so
+    // callers can safely pass the result into _applyHomographyToBboxData (which mutates
+    // its input in place) without corrupting bboxDataInterpolated.
+    function _mergeRawBboxSources() {
+      const tagSource = (boxes, runId) =>
+        boxes.map((b) => {
+          b[BBOX_SOURCE_RUN_IDX] = runId;
+          return b;
+        });
+
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+      const ballRaw = bboxesStore.bboxBallDataActive
+        ? JSON.parse(bboxesStore.bboxBallDataActive)
+        : {};
+
+      const merged = {};
+      for (const [time, boxes] of Object.entries(playerRaw)) {
+        merged[time] = tagSource(boxes, bboxesStore.bboxPluginRunId);
+      }
+      for (const [time, boxes] of Object.entries(ballRaw)) {
+        const tagged = tagSource(boxes, bboxesStore.bboxBallPluginRunId);
+        merged[time] = merged[time] ? [...merged[time], ...tagged] : tagged;
+      }
+      return merged;
+    }
+
+    // Combines player + ball meta_data (team_ids/player_ids/ref_ids/ball_ids), so neither
+    // run's entity names/numbers get dropped when the other run is (re)loaded or edited.
+    function _combinedStoredMeta() {
+      const playerMeta = bboxesStore.bboxMetaData ? JSON.parse(bboxesStore.bboxMetaData) : {};
+      const ballMeta = bboxesStore.bboxBallMetaData ? JSON.parse(bboxesStore.bboxBallMetaData) : {};
+      return {
+        team_ids: { ...(playerMeta.team_ids ?? {}), ...(ballMeta.team_ids ?? {}) },
+        player_ids: { ...(playerMeta.player_ids ?? {}), ...(ballMeta.player_ids ?? {}) },
+        ref_ids: { ...(playerMeta.ref_ids ?? {}), ...(ballMeta.ref_ids ?? {}) },
+        ball_ids: { ...(playerMeta.ball_ids ?? {}), ...(ballMeta.ball_ids ?? {}) },
+      };
+    }
+
+    // Rebuilds bboxDataInterpolated (video overlay) and positionDataTopView (pitch view)
+    // from the current player + ball raw sources. Called after loading either run and
+    // after editing/deleting a bbox in either run, so the merged view never goes stale.
+    function _applyMergedBboxData() {
+      bboxesStore.bboxDataInterpolated = _mergeRawBboxSources();
+
+      const newPosData = _applyHomographyToBboxData(_mergeRawBboxSources());
+      if (newPosData) {
+        positionDataTopView.value = newPosData;
+        _isCompact.value = false;
+      }
+    }
+
+    // Rebuilds metaDataTopView and the four precomputed*List aggregates from the current
+    // positionDataTopView.value (plain-object path only). Shared by the initial bbox load
+    // and by mergeBallTracking, so both end up with consistent aggregates.
+    function _recomputeAggregates(storedMeta) {
+      const playerMap = new Map();
+      const refMap = new Map();
+      const ballMap = new Map();
+      const inactiveMap = new Map();
+      const sections = new Set();
+      const boundaries = {};
+      for (const [timeKey, boxes] of Object.entries(positionDataTopView.value ?? {})) {
+        const t = Number(timeKey);
+        for (const b of boxes) {
+          const tid = b[1];
+          if (tid === 0) {
+            ballMap.set(b[0], tid);
+            refMap.delete(b[0]);
+            inactiveMap.delete(b[0]);
+            playerMap.delete(b[0]);
+          } else if (tid === 2) {
+            refMap.set(b[0], tid);
+            ballMap.delete(b[0]);
+            inactiveMap.delete(b[0]);
+            playerMap.delete(b[0]);
+          } else if (tid === 1) {
+            if (!ballMap.has(b[0]) && !refMap.has(b[0]) && !playerMap.has(b[0]))
+              inactiveMap.set(b[0], tid);
+          } else {
+            playerMap.set(b[0], tid);
+            ballMap.delete(b[0]);
+            refMap.delete(b[0]);
+            inactiveMap.delete(b[0]);
+          }
+          const gs = b[2];
+          sections.add(gs);
+          if (!boundaries[gs]) {
+            boundaries[gs] = { first: t, last: t };
+          } else {
+            if (t < boundaries[gs].first) boundaries[gs].first = t;
+            if (t > boundaries[gs].last) boundaries[gs].last = t;
+          }
+        }
+      }
+      metaDataTopView.value = {
+        team_ids: storedMeta.team_ids ?? {},
+        player_ids: storedMeta.player_ids ?? {},
+        ref_ids: storedMeta.ref_ids ?? {},
+        ball_ids: storedMeta.ball_ids ?? {},
+      };
+      const _toList = (m) =>
+        Array.from(m, ([pid, tid]) => ({ playerId: pid, teamId: tid })).sort(
+          (a, b) => a.playerId - b.playerId
+        );
+      precomputedPlayerList.value = _toList(playerMap);
+      precomputedRefList.value = _toList(refMap);
+      precomputedBallList.value = _toList(ballMap);
+      precomputedInactiveList.value = _toList(inactiveMap);
+      precomputedPlayerIdSet.value = new Set(playerMap.keys());
+      precomputedGameSections.value = sections;
+      precomputedHalftimeBoundaries.value = boundaries;
+    }
+
     async function transformBBoxToPositionDataTopView(
       calibrationAssetId,
       bytetrackPluginId,
@@ -344,92 +490,149 @@ export const useTopViewStore = defineStore(
       }
 
       if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
-        // const _parsedData = JSON.parse(bboxesStore.bboxDataActive);
-
-        const _bboxDataInterpolated = JSON.parse(bboxesStore.bboxDataActive);
-
-        // const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
-        //   _parsedData,
-        //   playerStore.videoFPS,
-        //   30
-        // );
-        bboxesStore.bboxDataInterpolated = _bboxDataInterpolated;
-
-        if (calibrationAssetStore.calibrationMatrix) {
-          const newPosData = {};
-          for (const [time, boxes] of Object.entries(_bboxDataInterpolated)) {
-            newPosData[time] = boxes.map((b) => {
-              const { x, y } = calibrationAssetStore.applyHomography(
-                calibrationAssetStore.calibrationMatrix,
-                { x: b[3], y: b[4] }
-              );
-              b[3] = x;
-              b[4] = 1 - y;
-              return b;
-            });
-          }
-          positionDataTopView.value = newPosData;
-          _isCompact.value = false;
-        }
-
-        const storedMeta = bboxesStore.bboxMetaData ? JSON.parse(bboxesStore.bboxMetaData) : {};
-        const playerMap = new Map();
-        const refMap = new Map();
-        const ballMap = new Map();
-        const inactiveMap = new Map();
-        const sections = new Set();
-        const boundaries = {};
-        for (const [timeKey, boxes] of Object.entries(_bboxDataInterpolated)) {
-          const t = Number(timeKey);
-          for (const b of boxes) {
-            const tid = b[1];
-            if (tid === 1) {
-              ballMap.set(b[0], tid);
-              refMap.delete(b[0]);
-              inactiveMap.delete(b[0]);
-              playerMap.delete(b[0]);
-            } else if (tid === 2) {
-              refMap.set(b[0], tid);
-              ballMap.delete(b[0]);
-              inactiveMap.delete(b[0]);
-              playerMap.delete(b[0]);
-            } else if (tid === 0) {
-              if (!ballMap.has(b[0]) && !refMap.has(b[0]) && !playerMap.has(b[0]))
-                inactiveMap.set(b[0], tid);
-            } else {
-              playerMap.set(b[0], tid);
-              ballMap.delete(b[0]);
-              refMap.delete(b[0]);
-              inactiveMap.delete(b[0]);
-            }
-            const gs = b[2];
-            sections.add(gs);
-            if (!boundaries[gs]) {
-              boundaries[gs] = { first: t, last: t };
-            } else {
-              if (t < boundaries[gs].first) boundaries[gs].first = t;
-              if (t > boundaries[gs].last) boundaries[gs].last = t;
-            }
-          }
-        }
-        metaDataTopView.value = {
-          team_ids: storedMeta.team_ids ?? {},
-          player_ids: storedMeta.player_ids ?? {},
-          ref_ids: storedMeta.ref_ids ?? {},
-          ball_ids: storedMeta.ball_ids ?? {},
-        };
-        const _toList = (m) =>
-          Array.from(m, ([pid, tid]) => ({ playerId: pid, teamId: tid })).sort(
-            (a, b) => a.playerId - b.playerId
-          );
-        precomputedPlayerList.value = _toList(playerMap);
-        precomputedRefList.value = _toList(refMap);
-        precomputedBallList.value = _toList(ballMap);
-        precomputedInactiveList.value = _toList(inactiveMap);
-        precomputedPlayerIdSet.value = new Set(playerMap.keys());
-        precomputedGameSections.value = sections;
-        precomputedHalftimeBoundaries.value = boundaries;
+        _applyMergedBboxData();
+        _recomputeAggregates(_combinedStoredMeta());
       }
+    }
+
+    // Merges an optional, separately-run ball-tracking result (object_tracker plugin run
+    // without a tracker, filtered to the ball class) into the currently loaded
+    // positionDataTopView and bboxesStore.bboxDataInterpolated, so both the pitch view and
+    // the video overlay (VideoPlayer.vue) render the ball. The ball run's own state
+    // (bboxBallDataActive/bboxBallMetaData/bboxBallPluginRunId) is tracked separately from
+    // bboxesStore.bboxDataActive/bboxPluginRunId, which must keep pointing at the player
+    // run for bbox editing. Plain-object path only (no manual/Compact merge).
+    async function mergeBallTracking(calibrationAssetId, ballPluginRunId) {
+      if (!ballPluginRunId) return;
+
+      calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
+
+      const results = await pluginRunResultStore.forPluginRunWithData(
+        ballPluginRunId,
+        playerStore.videoId
+      );
+      const ballResult = results.find((r) => r.data?.bboxes !== undefined);
+      if (!ballResult) return;
+
+      bboxesStore.bboxBallPluginRunId = ballPluginRunId;
+      bboxesStore.bboxBallDataActive = ballResult.data.bboxes;
+      bboxesStore.bboxBallMetaData = ballResult.data.meta_data ?? null;
+
+      _applyMergedBboxData();
+      _recomputeAggregates(_combinedStoredMeta());
+    }
+
+    // Refreshes the ball run's raw bboxes/meta after an edit or delete targeting the ball
+    // plugin run (see bboxesStore.updateBboxData/deleteBboxData), then rebuilds the merged
+    // view so the change shows up immediately without dropping the player run's data.
+    function refreshBallBboxData(updatedBboxes, updatedMeta) {
+      bboxesStore.bboxBallDataActive = updatedBboxes;
+      bboxesStore.bboxBallMetaData = updatedMeta ?? null;
+
+      _applyMergedBboxData();
+      _recomputeAggregates(_combinedStoredMeta());
+    }
+
+    // team_clustering writes raw cluster indices (0..K-1, or -1 for HDBSCAN noise) into
+    // TeamsData, not the app's TeamId convention (0=ball, 1=bystander, 2=referee, 3+=teams,
+    // see inference_ray/.../object_tracker.py's TeamId enum and visualization.js's
+    // teamColorMapping). Cluster 0/1 must not be written to b[1] as-is, or players would be
+    // misclassified as ball/bystander -- offset active clusters into the team range and map
+    // noise to "bystander" (no confident team assignment).
+    const TEAM_CLUSTER_LABEL_OFFSET = 3;
+    const TEAM_CLUSTER_NOISE_TEAM_ID = 1;
+
+    // Applies a separately-run team_clustering result (TeamsData: {frame_time: {track_id:
+    // cluster_label}}) onto the currently loaded player run by overwriting b[1] (team_id) in
+    // bboxesStore.bboxDataActive. This is a ONE-TIME mutation of the source, not a live
+    // overlay like mergeBallTracking -- ModalBboxUpdate.vue lets users manually correct
+    // individual team assignments afterwards, and those edits must not be reverted the next
+    // time _applyMergedBboxData() recomputes (e.g. after an unrelated bbox edit elsewhere).
+    async function mergeTeamAssignment(teamClusteringPluginRunId) {
+      if (!teamClusteringPluginRunId) return;
+
+      const results = await pluginRunResultStore.forPluginRunWithData(
+        teamClusteringPluginRunId,
+        playerStore.videoId
+      );
+      const teamsResult = results.find((r) => r.data?.teams_data !== undefined);
+      if (!teamsResult) return;
+
+      const teamsMapping = teamsResult.data.teams_data;
+
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+      for (const [frameTime, boxes] of Object.entries(playerRaw)) {
+        const frameAssignments = teamsMapping[frameTime];
+        if (!frameAssignments) continue;
+
+        for (const b of boxes) {
+          const label = frameAssignments[b[0]];
+          if (label === undefined || label === null) continue;
+
+          b[1] = label < 0 ? TEAM_CLUSTER_NOISE_TEAM_ID : label + TEAM_CLUSTER_LABEL_OFFSET;
+        }
+      }
+      bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
+
+      _applyMergedBboxData();
+      _recomputeAggregates(_combinedStoredMeta());
+    }
+
+    // Applies a separately-run osnet_reid result (ReIDData: {frame_time: {old_track_id:
+    // new_reid_id}}) onto the currently loaded player run by overwriting b[0] (track_id/
+    // player_id) in bboxesStore.bboxDataActive. Like mergeTeamAssignment, this is a ONE-TIME
+    // mutation of the source and must run AFTER mergeTeamAssignment, since team_clustering's
+    // mapping is keyed by the ORIGINAL object_tracker track_ids -- swapping b[0] first would
+    // break that lookup. The raw reid mapping is also stashed on bboxesStore.bboxReidMapping
+    // so bbox edits/deletes (updateBboxData/deleteBboxData) can translate the currently
+    // displayed (new) id back to the original track_id the backend still knows about.
+    async function mergeReid(reidPluginRunId) {
+      if (!reidPluginRunId) return;
+
+      const results = await pluginRunResultStore.forPluginRunWithData(
+        reidPluginRunId,
+        playerStore.videoId
+      );
+      const reidResult = results.find((r) => r.data?.mapping !== undefined);
+      if (!reidResult) return;
+
+      const reidMapping = reidResult.data.mapping;
+      bboxesStore.bboxReidMapping = reidMapping;
+
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+      const newPlayerIds = new Set();
+      for (const [frameTime, boxes] of Object.entries(playerRaw)) {
+        const frameMapping = reidMapping[frameTime];
+        if (!frameMapping) continue;
+
+        for (const b of boxes) {
+          const newId = frameMapping[b[0]];
+          if (newId === undefined || newId === null) continue;
+
+          b[0] = newId;
+          newPlayerIds.add(newId);
+        }
+      }
+      bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
+
+      // player_ids meta is keyed by track_id -- entries under the old ids are now orphaned.
+      // Rebuild entries for the new (reid) ids using the same default naming convention as
+      // the backend (object_tracker.py: name=str(pid), number=pid). team_id is intentionally
+      // left alone here; team assignment already ran (and wrote b[1]) before this merge.
+      const playerMeta = bboxesStore.bboxMetaData ? JSON.parse(bboxesStore.bboxMetaData) : {};
+      const rebuiltPlayerIds = {};
+      for (const pid of newPlayerIds) {
+        rebuiltPlayerIds[pid] = playerMeta.player_ids?.[pid] ?? {
+          id: pid,
+          name: String(pid),
+          number: pid,
+        };
+      }
+      playerMeta.player_ids = { ...(playerMeta.player_ids ?? {}), ...rebuiltPlayerIds };
+      bboxesStore.bboxMetaData = JSON.stringify(playerMeta);
+
+      _applyMergedBboxData();
+      _recomputeAggregates(_combinedStoredMeta());
     }
 
     const showSportZones = ref(false);
@@ -617,6 +820,10 @@ export const useTopViewStore = defineStore(
       metaDataTopView,
       setPositionData,
       transformBBoxToPositionDataTopView,
+      mergeBallTracking,
+      mergeTeamAssignment,
+      mergeReid,
+      refreshBallBboxData,
       showPlayerId,
       viewPlayerId,
       mirrorXY,

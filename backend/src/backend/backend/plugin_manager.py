@@ -3,6 +3,7 @@ import traceback
 import sys
 import os
 import json
+import uuid
 from celery import shared_task
 from django.conf import settings
 from typing import Any, Dict, List, Optional, Type
@@ -45,6 +46,19 @@ class PluginManager:
             return serializer_cls
         return export_helper
 
+    @staticmethod
+    def _stringify_uuids(value: Any) -> Any:
+        # DRF's UUIDField yields a native uuid.UUID in validated_data, but the
+        # analyser gRPC client only knows how to serialize bool/int/float/str/dict
+        # parameter values -- an unconverted UUID trips its "unsupported type" path.
+        if isinstance(value, uuid.UUID):
+            return value.hex
+        if isinstance(value, dict):
+            return {k: PluginManager._stringify_uuids(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [PluginManager._stringify_uuids(v) for v in value]
+        return value
+
     @classmethod
     def validate_parameters(cls, plugin: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         parameters = parameters or {}
@@ -56,9 +70,9 @@ class PluginManager:
 
         serializer = serializer_cls(data=parameters or {})
         serializer.is_valid(raise_exception=True)
-        val_params = dict(serializer.validated_data)
+        val_params = cls._stringify_uuids(dict(serializer.validated_data))
         # logging.error(f'validated params: {val_params}')
-        
+
         return val_params
 
     def __contains__(self, plugin: str) -> bool:

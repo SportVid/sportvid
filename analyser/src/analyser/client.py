@@ -163,7 +163,7 @@ class AnalyserClient:
                 x.type = analyser_pb2.DICT_TYPE
                 x.value = json.dumps(v)
             else:
-                raise TypeError('Data type {x.type} is not supported.')    
+                raise TypeError(f'Data type {type(v)} is not supported.')
 
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
         response = stub.run_plugin(run_request)

@@ -133,7 +133,7 @@ default_rtdetr_params = {
             "entity_type": "ball",
             "default_team": 0
         }
-    }    
+    }
 }
 
 # Example parameter settings:

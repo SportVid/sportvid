@@ -16,10 +16,10 @@ export const useVisualizationStore = defineStore(
       return s.has(1) && s.has(2);
     });
 
-    // team_id semantics (matches posdata_convert): 0=inactive, 1=ball, 2=refs, ≥3=active teams.
+    // team_id semantics (matches posdata_convert): 0=ball, 1=inactive, 2=refs, ≥3=active teams.
     const teamColorMapping = ref({
-      0: "#9E9E9E", // grey — inactive / spectator
-      1: "#000000", // black — ball (rendered as SVG icon; color used only for matchup labels)
+      0: "#000000", // black — ball (rendered as SVG icon; color used only for matchup labels)
+      1: "#9E9E9E", // grey — inactive / spectator
       2: "#FFD600", // yellow — referees
       3: "#FF0000", // red — team A
       4: "#0000FF", // blue — team B

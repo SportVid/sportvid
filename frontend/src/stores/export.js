@@ -100,12 +100,11 @@ export const useExportStore = defineStore("export", () => {
       alwaysIncluded: true,
       position: "last",
     },
-    { id: 5, name: t("modal.export.position_data.attributes.bbox_id"), csv: "bbox_id" },
-    { id: 6, name: t("modal.export.position_data.attributes.bbox_left"), csv: "bbox_left" },
-    { id: 7, name: t("modal.export.position_data.attributes.bbox_top"), csv: "bbox_top" },
-    { id: 8, name: t("modal.export.position_data.attributes.bbox_width"), csv: "bbox_width" },
-    { id: 9, name: t("modal.export.position_data.attributes.bbox_height"), csv: "bbox_height" },
-    { id: 10, name: t("modal.export.position_data.attributes.det_score"), csv: "det_score" },
+    { id: 5, name: t("modal.export.position_data.attributes.bbox_left"), csv: "bbox_left" },
+    { id: 6, name: t("modal.export.position_data.attributes.bbox_top"), csv: "bbox_top" },
+    { id: 7, name: t("modal.export.position_data.attributes.bbox_width"), csv: "bbox_width" },
+    { id: 8, name: t("modal.export.position_data.attributes.bbox_height"), csv: "bbox_height" },
+    { id: 9, name: t("modal.export.position_data.attributes.det_score"), csv: "det_score" },
   ];
   const selectablePositionDataAttributes = computed(() => {
     // Determine which column indices are present by sampling one frame

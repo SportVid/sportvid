@@ -43,7 +43,7 @@ class Task:
         job_id = client.run_plugin(
             analyser,
             [{"name": k, "id": v} for k, v in inputs.items()],
-            [{"name": k, "value": v} for k, v in parameters.items()],
+            [{"name": k, "value": v} for k, v in parameters.items() if v is not None],
         )
         if job_id is None:
             return None

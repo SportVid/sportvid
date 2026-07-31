@@ -182,7 +182,7 @@ class ObjectTracker(
                             # Detectors have varying output heads, so we need some mapping dict from cls_id to real-world entity.
                             class_id = trk_det_mapping[frame_id][track_id]['class']
                             assigned_cls_id = out_cls_map.get(str(class_id), {})
-                            default_team_assgn = assigned_cls_id.get(str(assigned_cls_id), '3')
+                            default_team_assgn = assigned_cls_id.get("default_team", 3)
                             # coord normalization
                             x_norm = int(track_xywh[0]) / self.detector.w
                             y_norm = int(track_xywh[1]) / self.detector.h
@@ -197,8 +197,8 @@ class ObjectTracker(
                                 float(x_norm), float(y_norm), float(w_norm), float(h_norm),
                                 float(track_score)
                             ]
-                            tracklets[frame_time].append([tracklet])        
-                else: 
+                            tracklets[frame_time].append(tracklet)
+                else:
                 # ----------- NOTE: output of this plugin run returns detections only.
                 # TODO: currently hard-coded for ball detections...!
                     for frame_id, detections in enumerate(tracker_inputs['detections']):
@@ -229,7 +229,7 @@ class ObjectTracker(
                                 float(h_norm),
                                 float(track_score),
                             ]
-                            tracklets[frame_time].append([tracklet])
+                            tracklets[frame_time].append(tracklet)
                 # --------------------------------------------------
                 player_id_meta = {
                     pid: {

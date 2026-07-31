@@ -105,7 +105,31 @@
         persistent-hint
         variant="underlined"
         class="mb-4"
-        :no-data-text="$t('modal.plugin.kpi_computation.bytetrack_run_none')"
+        :no-data-text="
+          parameter.no_data_text
+            ? $t(parameter.no_data_text)
+            : $t('modal.plugin.kpi_computation.bytetrack_run_none')
+        "
+        :data-tour="parameter.dataTour || undefined"
+      />
+
+      <v-select
+        v-model="parameter.value"
+        :items="objectTrackerPlayerRuns"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_object_tracker_run'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+        class="mb-4"
+        :no-data-text="
+          parameter.no_data_text
+            ? $t(parameter.no_data_text)
+            : $t('modal.plugin.kpi_computation.bytetrack_run_none')
+        "
         :data-tour="parameter.dataTour || undefined"
       />
 
@@ -523,6 +547,7 @@ import { useExportStore } from "@/stores/export";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { usePlayerStore } from "@/stores/player";
 
 const timelineStore = useTimelineStore();
@@ -532,6 +557,7 @@ const exportStore = useExportStore();
 const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
 const pluginRunStore = usePluginRunStore();
+const pluginRunResultStore = usePluginRunResultStore();
 const playerStore = usePlayerStore();
 
 const { t } = useI18n();
@@ -597,7 +623,7 @@ const positionDataTeams = computed(() => {
   // Use precomputed lists as source of truth — they are rebuilt from actual bbox data
   // by transformBBoxToPositionDataTopView and are always up-to-date after edits.
   if (topViewStore.precomputedBallList.length > 0) {
-    items.push({ id: 1, name: t("position_data.entity_kind.ball") });
+    items.push({ id: 0, name: t("position_data.entity_kind.ball") });
   }
   if (topViewStore.precomputedRefList.length > 0) {
     items.push({ id: 2, name: t("position_data.entity_kind.ref") });
@@ -611,7 +637,7 @@ const positionDataTeams = computed(() => {
   }
 
   if (topViewStore.precomputedInactiveList.length > 0) {
-    items.push({ id: 0, name: t("position_data.entity_kind.rest") });
+    items.push({ id: 1, name: t("position_data.entity_kind.rest") });
   }
 
   return items.length > 0 ? items : undefined;
@@ -760,16 +786,31 @@ const formatLocalDate = (dateString) => {
 const bytetrackRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
-    .filter((e) => e.type === "bytetrack" && e.status === "DONE")
+    .filter((e) => ["bytetrack", "object_tracker"].includes(e.type) && e.status === "DONE")
     .map((e) => ({
       id: e.id,
       name: formatLocalDate(e.date),
     }));
 });
 
+// A "real" player-tracking object_tracker run has a bytetrack tracker attached, so its
+// result is named "bboxes" (see backend tasks/object_tracker.py). Ball-only runs (no
+// tracker, ball-class filtered detections) are named "bboxes_ball" and don't make sense
+// as input for team assignment, so they're excluded here (same check as in
+// ModalPositionDataSelect.vue's isBallTrackerRun).
+const isBallTrackerRun = (pluginRunId) =>
+  pluginRunResultStore.forPluginRun(pluginRunId).some((r) => r.name === "bboxes_ball");
+
+const objectTrackerPlayerRuns = computed(() => {
+  return bytetrackRuns.value.filter((e) => !isBallTrackerRun(e.id));
+});
+
 onMounted(() => {
   calibrationAssetStore.loadCalibrationAssetsList();
   positionDataStore.loadPositionDataList();
+  // Cheap call (no add_results) so finished object_tracker runs can be classified as
+  // player- vs. ball-tracking via their result name (see objectTrackerPlayerRuns above).
+  pluginRunResultStore.fetchForVideo({ videoId: playerStore.videoId });
 });
 </script>
 
