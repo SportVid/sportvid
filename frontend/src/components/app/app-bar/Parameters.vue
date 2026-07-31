@@ -105,7 +105,31 @@
         persistent-hint
         variant="underlined"
         class="mb-4"
-        :no-data-text="$t('modal.plugin.kpi_computation.bytetrack_run_none')"
+        :no-data-text="
+          parameter.no_data_text
+            ? $t(parameter.no_data_text)
+            : $t('modal.plugin.kpi_computation.bytetrack_run_none')
+        "
+        :data-tour="parameter.dataTour || undefined"
+      />
+
+      <v-select
+        v-model="parameter.value"
+        :items="objectTrackerPlayerRuns"
+        :label="parameter.text"
+        :hint="parameter.hint"
+        item-title="name"
+        item-value="id"
+        v-if="parameter.field == 'select_object_tracker_run'"
+        :key="parameter.name"
+        persistent-hint
+        variant="underlined"
+        class="mb-4"
+        :no-data-text="
+          parameter.no_data_text
+            ? $t(parameter.no_data_text)
+            : $t('modal.plugin.kpi_computation.bytetrack_run_none')
+        "
         :data-tour="parameter.dataTour || undefined"
       />
 
@@ -523,6 +547,7 @@ import { useExportStore } from "@/stores/export";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { usePlayerStore } from "@/stores/player";
 
 const timelineStore = useTimelineStore();
@@ -532,6 +557,7 @@ const exportStore = useExportStore();
 const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
 const pluginRunStore = usePluginRunStore();
+const pluginRunResultStore = usePluginRunResultStore();
 const playerStore = usePlayerStore();
 
 const { t } = useI18n();
@@ -767,9 +793,24 @@ const bytetrackRuns = computed(() => {
     }));
 });
 
+// A "real" player-tracking object_tracker run has a bytetrack tracker attached, so its
+// result is named "bboxes" (see backend tasks/object_tracker.py). Ball-only runs (no
+// tracker, ball-class filtered detections) are named "bboxes_ball" and don't make sense
+// as input for team assignment, so they're excluded here (same check as in
+// ModalPositionDataSelect.vue's isBallTrackerRun).
+const isBallTrackerRun = (pluginRunId) =>
+  pluginRunResultStore.forPluginRun(pluginRunId).some((r) => r.name === "bboxes_ball");
+
+const objectTrackerPlayerRuns = computed(() => {
+  return bytetrackRuns.value.filter((e) => !isBallTrackerRun(e.id));
+});
+
 onMounted(() => {
   calibrationAssetStore.loadCalibrationAssetsList();
   positionDataStore.loadPositionDataList();
+  // Cheap call (no add_results) so finished object_tracker runs can be classified as
+  // player- vs. ball-tracking via their result name (see objectTrackerPlayerRuns above).
+  pluginRunResultStore.fetchForVideo({ videoId: playerStore.videoId });
 });
 </script>
 

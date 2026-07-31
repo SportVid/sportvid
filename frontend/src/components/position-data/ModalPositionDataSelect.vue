@@ -58,6 +58,17 @@
                   />
 
                   <v-select
+                    v-model="selectedTeamClustering"
+                    :items="teamClusteringRuns"
+                    item-title="date"
+                    item-value="id"
+                    clearable
+                    :label="$t('modal.position_data.select.team_clustering')"
+                    variant="underlined"
+                    class="mt-2 mx-4"
+                  />
+
+                  <v-select
                     v-model="areaSize"
                     :items="areaOptions"
                     item-title="title"
@@ -104,6 +115,17 @@
                     item-value="id"
                     clearable
                     :label="$t('modal.position_data.select.ball_tracker')"
+                    variant="underlined"
+                    class="mt-2 mx-4"
+                  />
+
+                  <v-select
+                    v-model="selectedTeamClustering"
+                    :items="teamClusteringRuns"
+                    item-title="date"
+                    item-value="id"
+                    clearable
+                    :label="$t('modal.position_data.select.team_clustering')"
                     variant="underlined"
                     class="mt-2 mx-4"
                   />
@@ -362,6 +384,18 @@ const ballTrackerRuns = computed(() => {
     }));
 });
 
+const selectedTeamClustering = ref(null);
+const teamClusteringRuns = computed(() => {
+  return pluginRunStore
+    .forVideo(playerStore.videoId)
+    .filter((e) => e.type === "team_clustering" && e.status === "DONE")
+    .map((pluginRun) => ({
+      id: pluginRun.id,
+      type: "Team Clustering",
+      date: formatLocalDate(pluginRun.date),
+    }));
+});
+
 const selectedTrackerRun = computed(() =>
   selectedMode.value === "object_tracker" ? selectedObjectTracker.value : selectedBytetrack.value
 );
@@ -392,6 +426,9 @@ const confirmSelection = async (calibrationAssetId, trackerPluginId, positionDat
     }
     if (selectedBallTracker.value) {
       await topViewStore.mergeBallTracking(calibrationAssetId, selectedBallTracker.value);
+    }
+    if (selectedTeamClustering.value) {
+      await topViewStore.mergeTeamAssignment(selectedTeamClustering.value);
     }
     const keys = topViewStore.sortedFrameKeys;
     if (keys.length > 0) {

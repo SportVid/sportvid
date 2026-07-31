@@ -514,6 +514,51 @@ export const useTopViewStore = defineStore(
       _recomputeAggregates(_combinedStoredMeta());
     }
 
+    // team_clustering writes raw cluster indices (0..K-1, or -1 for HDBSCAN noise) into
+    // TeamsData, not the app's TeamId convention (0=ball, 1=bystander, 2=referee, 3+=teams,
+    // see inference_ray/.../object_tracker.py's TeamId enum and visualization.js's
+    // teamColorMapping). Cluster 0/1 must not be written to b[1] as-is, or players would be
+    // misclassified as ball/bystander -- offset active clusters into the team range and map
+    // noise to "bystander" (no confident team assignment).
+    const TEAM_CLUSTER_LABEL_OFFSET = 3;
+    const TEAM_CLUSTER_NOISE_TEAM_ID = 1;
+
+    // Applies a separately-run team_clustering result (TeamsData: {frame_time: {track_id:
+    // cluster_label}}) onto the currently loaded player run by overwriting b[1] (team_id) in
+    // bboxesStore.bboxDataActive. This is a ONE-TIME mutation of the source, not a live
+    // overlay like mergeBallTracking -- ModalBboxUpdate.vue lets users manually correct
+    // individual team assignments afterwards, and those edits must not be reverted the next
+    // time _applyMergedBboxData() recomputes (e.g. after an unrelated bbox edit elsewhere).
+    async function mergeTeamAssignment(teamClusteringPluginRunId) {
+      if (!teamClusteringPluginRunId) return;
+
+      const results = await pluginRunResultStore.forPluginRunWithData(
+        teamClusteringPluginRunId,
+        playerStore.videoId
+      );
+      const teamsResult = results.find((r) => r.data?.teams_data !== undefined);
+      if (!teamsResult) return;
+
+      const teamsMapping = teamsResult.data.teams_data;
+
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+      for (const [frameTime, boxes] of Object.entries(playerRaw)) {
+        const frameAssignments = teamsMapping[frameTime];
+        if (!frameAssignments) continue;
+
+        for (const b of boxes) {
+          const label = frameAssignments[b[0]];
+          if (label === undefined || label === null) continue;
+
+          b[1] = label < 0 ? TEAM_CLUSTER_NOISE_TEAM_ID : label + TEAM_CLUSTER_LABEL_OFFSET;
+        }
+      }
+      bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
+
+      _applyMergedBboxData();
+      _recomputeAggregates(_combinedStoredMeta());
+    }
+
     const showSportZones = ref(false);
     const toggleSportZones = () => {
       showSportZones.value = !showSportZones.value;
@@ -700,6 +745,7 @@ export const useTopViewStore = defineStore(
       setPositionData,
       transformBBoxToPositionDataTopView,
       mergeBallTracking,
+      mergeTeamAssignment,
       refreshBallBboxData,
       showPlayerId,
       viewPlayerId,

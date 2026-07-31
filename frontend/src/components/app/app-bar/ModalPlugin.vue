@@ -1259,6 +1259,283 @@ const plugins = ref([
         ],
       },
       {
+        name: t("modal.plugin.team_clustering.plugin_name"),
+        description: t("modal.plugin.team_clustering.plugin_description"),
+        icon: "mdi-account-group",
+        plugin: "team_clustering",
+        id: 705,
+        parameters: [
+          {
+            field: "select_object_tracker_run",
+            name: "object_tracker_id",
+            value: "",
+            text: t("modal.plugin.team_clustering.object_tracker_id"),
+            hint: t("modal.plugin.team_clustering.object_tracker_id_hint"),
+            no_data_text: "modal.plugin.team_clustering.object_tracker_run_none",
+          },
+          {
+            field: "select_options",
+            name: "clustering_algo",
+            value: "KMEANS",
+            items: [
+              { title: "K-Means", value: "KMEANS" },
+              { title: "HDBSCAN", value: "HDBSCAN" },
+            ],
+            text: t("modal.plugin.team_clustering.clustering_algo"),
+          },
+          {
+            field: "slider",
+            min: 2,
+            max: 16,
+            value: 2,
+            step: 1,
+            name: "K",
+            text: t("modal.plugin.team_clustering.K"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 50,
+            value: 2,
+            step: 1,
+            name: "min_samples_per_track",
+            text: t("modal.plugin.team_clustering.min_samples_per_track"),
+          },
+          {
+            field: "slider",
+            min: 5,
+            max: 100,
+            value: 20,
+            step: 1,
+            name: "max_samples_per_track",
+            text: t("modal.plugin.team_clustering.max_samples_per_track"),
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 100,
+            value: 3,
+            step: 1,
+            name: "min_cluster_size",
+            text: t("modal.plugin.team_clustering.min_cluster_size"),
+          },
+          {
+            field: "slider",
+            min: 12,
+            max: 500,
+            value: 12,
+            step: 4,
+            name: "min_pixels",
+            text: t("modal.plugin.team_clustering.min_pixels"),
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "use_illumination_norm",
+            text: t("modal.plugin.team_clustering.use_illumination_norm"),
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "use_central_band",
+            text: t("modal.plugin.team_clustering.use_central_band"),
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "use_torso_crop",
+            text: t("modal.plugin.team_clustering.use_torso_crop"),
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "use_green_mask",
+            text: t("modal.plugin.team_clustering.use_green_mask"),
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "use_gray_mask",
+            text: t("modal.plugin.team_clustering.use_gray_mask"),
+          },
+          {
+            field: "checkbox",
+            value: true,
+            name: "two_channel",
+            text: t("modal.plugin.team_clustering.two_channel"),
+          },
+          {
+            field: "checkbox",
+            value: true,
+            name: "use_pca",
+            text: t("modal.plugin.team_clustering.use_pca"),
+          },
+          {
+            field: "slider",
+            min: 2,
+            max: 128,
+            value: 16,
+            step: 1,
+            name: "pca_components",
+            text: t("modal.plugin.team_clustering.pca_components"),
+            hidden: true,
+          },
+          {
+            field: "select_options",
+            name: "metric",
+            value: "euclidean",
+            items: [
+              { title: "Euclidean", value: "euclidean" },
+              { title: "Cosine", value: "cosine" },
+            ],
+            text: t("modal.plugin.team_clustering.metric"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0.01,
+            max: 0.99,
+            value: 0.5,
+            step: 0.01,
+            name: "cluster_selection_epsilon",
+            text: t("modal.plugin.team_clustering.cluster_selection_epsilon"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 100,
+            value: 20,
+            step: 1,
+            name: "n_init",
+            text: t("modal.plugin.team_clustering.n_init"),
+            hidden: false,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 9999,
+            value: 42,
+            step: 1,
+            name: "random_state",
+            text: t("modal.plugin.team_clustering.random_state"),
+            hidden: false,
+          },
+          {
+            field: "slider",
+            min: 4,
+            max: 64,
+            value: 16,
+            step: 1,
+            name: "hist_h_bins",
+            text: t("modal.plugin.team_clustering.hist_h_bins"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 32,
+            value: 4,
+            step: 1,
+            name: "hist_s_bins",
+            text: t("modal.plugin.team_clustering.hist_s_bins"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 32,
+            value: 4,
+            step: 1,
+            name: "hist_v_bins",
+            text: t("modal.plugin.team_clustering.hist_v_bins"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 6,
+            max: 200,
+            value: 12,
+            step: 1,
+            name: "min_crop_w",
+            text: t("modal.plugin.team_clustering.min_crop_w"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 12,
+            max: 400,
+            value: 24,
+            step: 1,
+            name: "min_crop_h",
+            text: t("modal.plugin.team_clustering.min_crop_h"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 5,
+            max: 512,
+            value: 128,
+            step: 1,
+            name: "crop_size_x",
+            text: t("modal.plugin.team_clustering.crop_size_x"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 5,
+            max: 512,
+            value: 256,
+            step: 1,
+            name: "crop_size_y",
+            text: t("modal.plugin.team_clustering.crop_size_y"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_x1_offset",
+            text: t("modal.plugin.team_clustering.crop_x1_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_y1_offset",
+            text: t("modal.plugin.team_clustering.crop_y1_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_x2_offset",
+            text: t("modal.plugin.team_clustering.crop_x2_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_y2_offset",
+            text: t("modal.plugin.team_clustering.crop_y2_offset"),
+            hidden: true,
+          },
+        ],
+      },
+      {
         name: t("modal.plugin.calibration_static_dlt.plugin_name"),
         description: t("modal.plugin.calibration_static_dlt.plugin_description"),
         icon: "mdi-camera-enhance",
@@ -1563,6 +1840,45 @@ watch(
         confidenceParam.value = DETECTOR_CONFIDENCE_DEFAULT[detector];
       }
     }
+  },
+  { immediate: true }
+);
+
+const teamClusteringParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 705);
+  return plugin?.parameters || [];
+});
+
+const teamClusteringOptionalParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 705);
+  return plugin?.optional_parameters || [];
+});
+
+// Only relevant for HDBSCAN: distance metric and cluster-selection epsilon.
+const HDBSCAN_ONLY_PARAMS = ["metric", "cluster_selection_epsilon"];
+// Only relevant for K-Means: number of initializations and the random seed.
+const KMEANS_ONLY_PARAMS = ["n_init", "random_state"];
+
+watch(
+  () => teamClusteringParams.value.find((p) => p.name === "clustering_algo")?.value,
+  (algo) => {
+    for (const p of teamClusteringOptionalParams.value) {
+      if (HDBSCAN_ONLY_PARAMS.includes(p.name)) p.hidden = algo !== "HDBSCAN";
+      if (KMEANS_ONLY_PARAMS.includes(p.name)) p.hidden = algo !== "KMEANS";
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => teamClusteringOptionalParams.value.find((p) => p.name === "use_pca")?.value,
+  (usePca) => {
+    const pcaComponentsParam = teamClusteringOptionalParams.value.find(
+      (p) => p.name === "pca_components"
+    );
+    if (pcaComponentsParam) pcaComponentsParam.hidden = !usePca;
   },
   { immediate: true }
 );
