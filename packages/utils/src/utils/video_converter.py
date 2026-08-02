@@ -12,7 +12,8 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
         file_in,
         # NOTE: offloads encoding to the GPU via CUDA.
         hwaccel=kwargs.get("hwaccel"),
-        hwaccel_output_format=kwargs.get("hwaccel_output_format"),    
+        hwaccel_output_format=kwargs.get("hwaccel_output_format"),
+        extra_hw_frames=kwargs.get("extra_hw_frames")
     )  
     
     output_kwargs = {
@@ -29,7 +30,7 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
         "acodec": kwargs.get("acodec"),
         "audio_bitrate": kwargs.get("audio_bitrate"),
         "preset": kwargs.get("preset"),
-        "crf": kwargs.get("crf", 23),
+        "crf": kwargs.get("crf", None),
         "rc": kwargs.get("rc", "vbr"),
         "cq": kwargs.get("cq", 23),
         "g": kwargs.get("g", kwargs.get("gop")),

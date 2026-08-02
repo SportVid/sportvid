@@ -96,6 +96,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             # NOTE: uncomment these lines if running without a GPU.
             "hwaccel": "cuda",
             "hwaccel_output_format": "cuda",
+            "extra_hw_frames": 8,
             # -------- output: video/audio options
             "vcodec" : "h264_nvenc", # NOTE: use "h264_nvenc" for GPU conversion via NVENC.
             "acodec" : "aac",
@@ -116,7 +117,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         if fmp4:
             conversion_args.update({ 
                 "hls_segment_type": "fmp4",
-                "hls_flags" : "single_file+independent_segments",
+                "hls_flags" : "independent_segments",
             })
         else:
             conversion_args.update({ 
