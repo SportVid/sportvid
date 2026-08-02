@@ -50,7 +50,7 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
     cmd.insert(2, "-loglevel")
     cmd.insert(3, "error")
 
-    logging.error("FFmpeg command: {cmd}")
+    logging.error(f"FFmpeg command: {cmd}")
 
     if asynchronous:
         return subprocess.Popen(

@@ -116,7 +116,9 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         if fmp4:
             conversion_args.update({ 
                 "hls_segment_type": "fmp4",
-                "hls_flags" : "single_file+independent_segments",
+                "hls_flags" : "independent_segments",
+                "hls_fmp4_init_filename": "init.mp4",
+                "hls_segment_filename": os.path.join(asset_dir, "segment_%05d.m4s")
             })
         else:
             conversion_args.update({ 
@@ -163,15 +165,49 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 **conversion_args
             )
         
-        # TODO: need a more secure check if all the segments have been written properly to the asset dir.
+        # ------------------------> Validation if all the files have been written properly to the asset dir.
         asset_dir = Path(asset_dir)
-        media_candidates = list(asset_dir.glob("*.m3u8"))
-        segment_candidates = list(asset_dir.glob("*.ts")) + list(asset_dir.glob("*.m4s"))
-        if not media_candidates:
-            raise RuntimeError(f"No HLS manifest generated in {asset_dir}")
-        if not segment_candidates:
-            raise RuntimeError(f"No HLS segments generated in {asset_dir}")
-        segment_path = segment_candidates[0]
+        manifest = Path(manifest_path)
+
+        if not manifest.exists():
+            raise RuntimeError(f"No HLS manifest generated: {manifest}")
+
+        manifest_text = manifest.read_text(encoding="utf-8")
+
+        if fmp4:
+            if "#EXT-X-MAP" not in manifest_text:
+                raise RuntimeError("fMP4 manifest missing #EXT-X-MAP")
+
+            import re
+
+            map_match = re.search(r'#EXT-X-MAP:URI="([^"]+)"', manifest_text)
+            if not map_match:
+                raise RuntimeError("Could not parse init segment from #EXT-X-MAP")
+
+            init_name = map_match.group(1)
+            init_path = asset_dir / init_name
+            if not init_path.exists():
+                raise RuntimeError(f"Init segment missing: {init_path}")
+
+            segment_lines = [
+                line.strip() for line in manifest_text.splitlines()
+                if line.strip() and not line.startswith("#")
+            ]
+            media_segments = [asset_dir / line for line in segment_lines if line.endswith(".m4s")]
+            if not media_segments:
+                raise RuntimeError(f"No fMP4 media segments listed in manifest {manifest}")
+
+            missing = [str(p) for p in media_segments if not p.exists()]
+            if missing:
+                raise RuntimeError(f"Missing fMP4 media segments: {missing}")
+
+            media_path_for_db = str(init_path)
+
+        else:
+            segment_candidates = list(asset_dir.glob("*.ts"))
+            if not segment_candidates:
+                raise RuntimeError(f"No MPEG-TS segments generated in {asset_dir}")
+            media_path_for_db = segment_candidates[0]
 
         # creates the archive to be transfered
         # TODO: Eventually we can remove putting everything into archives to send them around via gRPC.
@@ -198,7 +234,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             status=Video.STATUS_DONE,
             asset_dir = str(asset_dir),
             manifest_path = str(manifest_path),
-            media_path = str(segment_path)
+            media_path = str(media_path_for_db)
         )
 
         e = time.time()
