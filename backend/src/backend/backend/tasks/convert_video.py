@@ -116,7 +116,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         if fmp4:
             conversion_args.update({ 
                 "hls_segment_type": "fmp4",
-                "hls_flags" : "independent_segments",
+                "hls_flags" : "single_file+independent_segments",
             })
         else:
             conversion_args.update({ 
