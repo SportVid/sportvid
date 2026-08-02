@@ -12,7 +12,7 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
         file_in,
         # NOTE: offloads encoding to the GPU via CUDA.
         hwaccel=kwargs.get("hwaccel"),
-        hwaccel_output_format=kwargs.get("hwaccel_output_format"),
+        # hwaccel_output_format=kwargs.get("hwaccel_output_format"),
         extra_hw_frames=kwargs.get("extra_hw_frames")
     )  
     
@@ -50,7 +50,7 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
     cmd.insert(2, "-loglevel")
     cmd.insert(3, "error")
 
-    logging.error("FFmpeg command:", " ".join(cmd))
+    logging.error("FFmpeg command: {cmd}")
 
     if asynchronous:
         return subprocess.Popen(
