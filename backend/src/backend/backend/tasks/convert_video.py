@@ -94,19 +94,19 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             "segment_time" : segment_time,
             # -------- input: hardware acceleration
             # NOTE: uncomment these lines if running without a GPU.
-            # "hwaccel": "cuda",
-            # "hwaccel_output_format": "cuda",
+            "hwaccel": "cuda",
+            "hwaccel_output_format": "cuda",
             # -------- output: video/audio options
-            "vcodec" : "libx264", # NOTE: use "h264_nvenc" for GPU conversion via NVENC.
+            "vcodec" : "h264_nvenc", # NOTE: use "h264_nvenc" for GPU conversion via NVENC.
             "acodec" : "aac",
             "audio_bitrate" : "128k",
             # -------- HLS stuff
             "g": gop, # GOP size should match segment duration
             "keyint_min": gop, # same as GOP
             # "sc_threshold": 0, # no unpredictable keyframe insertions
-            "crf": 23,  # NOTE: comment in for "libx264". This is the constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
+            # "crf": 23,  # NOTE: comment in for "libx264". This is the constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
             # -------- NVENC tuning
-            # "preset": "p4", # NOTE: uncomment if using CPU-only. This controls encoding speed --vs.-- compression trade-off [p1-p7].
+            "preset": "p4", # NOTE: uncomment if using GPU conversion. This controls encoding speed --vs.-- compression trade-off [p1-p7].
             "rc": "vbr",
             "cq": 23,
             # -------- output compat
@@ -133,32 +133,28 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             )
             try:
                 while True:
-                    if not Video.objects.filter(id=video_id_hex).exists():
-                        logger.info(
-                            "Video %s deleted during HLS conversion, killing ffmpeg.",
-                            video_id_hex,
-                        )
-                        ffmpeg_proc.kill()
+                    try:
+                        _, stderr = ffmpeg_proc.communicate(timeout=_POLL_INTERVAL)
+                        if ffmpeg_proc.returncode != 0:
+                            raise RuntimeError(
+                                f"ffmpeg exited with code {ffmpeg_proc.returncode}"
+                            )
+                        if stderr:
+                            for line in stderr.splitlines():
+                                logger.error("[ffmpeg] %s", line)
                         break
-                    line = ffmpeg_proc.stderr.readline()
-
-                    if line: logger.debug("[ffmpeg] %s", line.rstrip()) # consume line
-
-                    if ffmpeg_proc.poll() is not None:
-                        # process exited; drain remaining stderr
-                        rest = ffmpeg_proc.stderr.read()
-                        if rest:
-                            for extra_line in rest.splitlines():
-                                logger.info("[ffmpeg] %s", extra_line)
-                        break
-
-                    time.sleep(_POLL_INTERVAL)
-
-                    rc = ffmpeg_proc.wait()
-                    if rc != 0: raise RuntimeError(f"ffmpeg exited with code {rc}")
+                    except subprocess.TimeoutExpired:
+                        if not Video.objects.filter(id=video_id_hex).exists():
+                            logger.info(
+                                "Video %s deleted during HLS conversion, killing ffmpeg.",
+                                video_id_hex,
+                            )
+                            ffmpeg_proc.kill()
+                            ffmpeg_proc.wait()
+                            return
             finally:
-                if ffmpeg_proc.stderr: ffmpeg_proc.stderr.close()
-                
+                if ffmpeg_proc.stderr:
+                    ffmpeg_proc.stderr.close()           
         else: 
             ffmpeg_done = convert_to_hls(
                 str(file_in),
