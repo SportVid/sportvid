@@ -96,7 +96,6 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             # NOTE: uncomment these lines if running without a GPU.
             "hwaccel": "cuda",
             "hwaccel_output_format": "cuda",
-            "extra_hw_frames": 8,
             # -------- output: video/audio options
             "vcodec" : "h264_nvenc", # NOTE: use "h264_nvenc" for GPU conversion via NVENC.
             "acodec" : "aac",

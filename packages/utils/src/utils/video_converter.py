@@ -13,7 +13,7 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
         # NOTE: offloads encoding to the GPU via CUDA.
         hwaccel=kwargs.get("hwaccel"),
         # hwaccel_output_format=kwargs.get("hwaccel_output_format"),
-        extra_hw_frames=kwargs.get("extra_hw_frames")
+        # extra_hw_frames=kwargs.get("extra_hw_frames")
     )  
     
     output_kwargs = {
