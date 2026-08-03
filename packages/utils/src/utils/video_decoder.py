@@ -20,13 +20,19 @@ def _resolve_video_source(video_object):
 def _materialize_archive_to_tempdir(archive_obj):
     tmpdir = tempfile.TemporaryDirectory()
     for rel_path in archive_obj.list_files():
+        rel_path = str(rel_path).strip()
+
+        if not rel_path or rel_path.endswith(("/", "\\")):
+            continue
+
         target = Path(tmpdir.name) / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
 
         src = archive_obj.open_nested(rel_path)
         try:
-            with open(target, "wb") as dst:
-                dst.write(src.read())
+            if hasattr(src, "read"):
+                with open(target, "wb") as dst:
+                    dst.write(src.read())
         finally:
             if hasattr(src, "close"):
                 src.close()
