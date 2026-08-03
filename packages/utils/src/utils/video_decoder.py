@@ -22,8 +22,15 @@ def _materialize_archive_to_tempdir(archive_obj):
     for rel_path in archive_obj.list_files():
         target = Path(tmpdir.name) / rel_path
         target.parent.mkdir(parents=True, exist_ok=True)
-        with archive_obj.open_nested(rel_path) as src, open(target, "wb") as dst:
-            dst.write(src.read())
+
+        src = archive_obj.open_nested(rel_path)
+        try:
+            with open(target, "wb") as dst:
+                dst.write(src.read())
+        finally:
+            if hasattr(src, "close"):
+                src.close()
+
     return tmpdir
 
 
