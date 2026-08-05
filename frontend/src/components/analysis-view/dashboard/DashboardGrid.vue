@@ -5,18 +5,24 @@
         v-for="cell in allCells"
         :key="cell.id"
         class="dashboard-grid-item"
-        :style="itemStyle(cell.id)"
+        :style="itemStyle(cell)"
       >
         <div
           class="dashboard-grid-cell-wrapper"
           :class="{ 'dashboard-grid-cell-wrapper--drop-target': cell.id === dragOverCellId }"
           :draggable="dashboardStore.editMode"
+          :ref="(el) => setAnchorWrapperRef(el, cell)"
           @dragstart="onDragStart($event, cell.id)"
           @dragend="onDragEnd"
           @dragover="onDragOverCell($event, cell.id)"
           @drop="onDrop($event)"
         >
-          <DashboardCell :cell="cell" :row-idx="realRowIdx(cell.id)" :is-loading="isLoading" />
+          <DashboardCell
+            :cell="cell"
+            :row-idx="realRowIdx(cell.id)"
+            :is-loading="isLoading"
+            :constrained="isConstrainedCell(cell)"
+          />
           <!-- Overlay only — the real card underneath stays mounted the whole
                time, so the drag source is never removed from the DOM (that
                cancels native HTML5 drag) and no widget state is lost. -->
@@ -39,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, reactive, computed, onBeforeUnmount } from "vue";
 import { useDashboardLayoutStore, previewReorderedLayout } from "@/stores/dashboard_layout";
 import DashboardCell from "@/components/analysis-view/dashboard/DashboardCell.vue";
 import AddWidgetCard from "@/components/analysis-view/dashboard/AddWidgetCard.vue";
@@ -67,6 +73,92 @@ function computeSlots(rows) {
 const realSlots = computed(() => computeSlots(dashboardStore.layout.rows));
 function realRowIdx(cellId) {
   return realSlots.value.get(cellId)?.rowIdx ?? 0;
+}
+
+// --- Row-height coupling: everything defers to the video's size ---------
+//
+// The video is the one true anchor: it must always render at exactly the
+// size it'd have on its own (see VideoPlayer's own viewport-driven
+// max-height) — never stretched by a neighboring topview/widget, in
+// whichever row it ends up in. That size is also the ONE reference TopView
+// and every tabwindow widget defer to: a cell only gets its own natural/max
+// size when it's truly alone in its row (today's plain CSS Grid auto-row
+// sizing, untouched); the moment it shares a row with anything else — the
+// video, or another widget, e.g. KPI next to the heatmap — it's capped to
+// the video's height instead and scrolls its content internally (TopView
+// already ties its own content height to the video directly when position
+// data is loaded — see topViewStore usage — so this cap mainly matters for
+// its "no data selected" placeholder, and for widget/widget pairings).
+//
+// The video gets `align-self: start` so the grid's row-stretch never
+// applies to it, regardless of how tall its row ends up — that alone
+// guarantees its rendered height stays genuinely natural. A ResizeObserver
+// feeds that natural height back in as the cap applied to every other
+// non-solo cell, wherever it sits. TopView must NOT get the same
+// align-self override: it needs to stay stretchable so it fills up to the
+// video's height by default when they share a row (that's what makes its
+// "no data" placeholder match the video's size), rather than sitting at
+// its own, much shorter, natural height.
+function isVideoCell(cell) {
+  return cell.kind === "video";
+}
+
+const videoCells = computed(() =>
+  dashboardStore.layout.rows.flatMap((row) => row.cells.filter(isVideoCell))
+);
+
+const cellNaturalHeights = reactive({}); // cellId -> measured px height
+const cellResizeObservers = new Map(); // cellId -> ResizeObserver
+
+function setAnchorWrapperRef(el, cell) {
+  const existing = cellResizeObservers.get(cell.id);
+  if (existing) {
+    existing.disconnect();
+    cellResizeObservers.delete(cell.id);
+  }
+  if (!el || !isVideoCell(cell)) return;
+  const ro = new ResizeObserver((entries) => {
+    const h = entries[0]?.contentRect?.height;
+    if (!h) return;
+    // Deferred a frame rather than applied straight from the observer
+    // callback — writing reactive state in here can trigger a re-layout
+    // within the same ResizeObserver cycle (the widget's max-height
+    // reacting to it, in turn nudging the grid), which is exactly what
+    // produces the (benign, but noisy) "loop completed with undelivered
+    // notifications" condition. Pushing the write to the next frame lets
+    // this cycle finish cleanly first.
+    requestAnimationFrame(() => {
+      cellNaturalHeights[cell.id] = h;
+    });
+  });
+  ro.observe(el);
+  cellResizeObservers.set(cell.id, ro);
+}
+
+onBeforeUnmount(() => {
+  cellResizeObservers.forEach((ro) => ro.disconnect());
+  cellResizeObservers.clear();
+});
+
+// The single shared reference height every non-solo cell is capped to.
+// null before the video's first measurement lands, or if it's been removed
+// from the dashboard entirely — other cells fall back to their own natural
+// size in that case, same as when they're alone in a row.
+const anchorHeight = computed(() => {
+  const heights = videoCells.value.map((c) => cellNaturalHeights[c.id]).filter((h) => h > 0);
+  return heights.length ? Math.max(...heights) : null;
+});
+
+function sharesRow(cell) {
+  return (dashboardStore.layout.rows[realRowIdx(cell.id)]?.cells.length ?? 0) > 1;
+}
+
+// Only meaningful outside edit mode — while editing, widgets render as
+// WidgetPlaceholder (not their real, potentially-tall content), so there's
+// nothing to cap yet.
+function isConstrainedCell(cell) {
+  if (dashboardStore.editMode || cell.kind !== "group") return false;
+  return sharesRow(cell) && anchorHeight.value != null;
 }
 
 const draggedCellId = ref(null);
@@ -136,13 +228,23 @@ const addSlots = computed(() => {
   return slots;
 });
 
-function itemStyle(cellId) {
-  const slot = displaySlots.value.get(cellId);
+function itemStyle(cell) {
+  const slot = displaySlots.value.get(cell.id);
   if (!slot) return {};
-  return {
+  const style = {
     gridRow: slot.rowIdx + 1,
     gridColumn: `${slot.colStart} / span ${slot.width}`,
   };
+
+  if (!dashboardStore.editMode) {
+    if (isVideoCell(cell)) {
+      style.alignSelf = "start";
+    } else if ((cell.kind === "topview" || cell.kind === "group") && sharesRow(cell)) {
+      if (anchorHeight.value) style.maxHeight = `${anchorHeight.value}px`;
+    }
+  }
+
+  return style;
 }
 
 function flatCells() {
@@ -360,7 +462,15 @@ function onDropAddSlot(event, rowIdx) {
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(340px, 1fr);
+  /* `auto`, not `1fr` — without a definite height on this grid container
+     (it just grows to fit its content), CSS Grid ties all `1fr` auto-rows
+     together via a shared flex-fraction: the tallest row's content ends up
+     stretching *every* row to match, even ones with nothing to do with it
+     (e.g. the video/topview row getting pulled taller by an unrelated,
+     much-taller widget row below). `auto` sizes each row purely to its own
+     content again, with the 340px floor as the only constraint shared
+     across rows. */
+  grid-auto-rows: minmax(340px, auto);
   gap: 16px;
 }
 

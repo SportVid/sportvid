@@ -115,9 +115,11 @@
     },
     "dashboard": {
       "edit_toggle": "Edit Layout",
+      "edit_done": "Done",
       "add_view": "Add View",
       "remove": "Remove",
       "toggle_width": "Toggle Width",
+      "switch_view": "Switch view",
       "widgets": {
         "video": "Video",
         "topview": "Top View"

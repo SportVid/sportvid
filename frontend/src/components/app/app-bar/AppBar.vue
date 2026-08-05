@@ -50,15 +50,6 @@
           <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
           <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
         </v-btn>
-
-        <v-btn
-          @click="dashboardStore.toggleEditMode()"
-          :color="dashboardStore.editMode ? 'primary' : undefined"
-          data-tour="dashboard-edit-toggle"
-        >
-          <app-bar-icon>mdi-view-dashboard-edit</app-bar-icon>
-          <span class="text-primary">{{ $t("analysis_view.dashboard.edit_toggle") }}</span>
-        </v-btn>
       </div>
 
       <v-btn
@@ -202,7 +193,6 @@ import { useTutorialStore } from "@/stores/tutorial";
 import { useLanguageStore } from "@/stores/languages";
 import { useVideoUploadStore } from "@/stores/video_upload";
 import { useThemeStore } from "@/stores/theme";
-import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 import ModalStatus from "@/components/app/app-bar/ModalStatus.vue";
 import ModalPlugin from "@/components/app/app-bar/ModalPlugin.vue";
 import ModalShortcut from "@/components/app/app-bar/ModalShortcut.vue";
@@ -222,7 +212,6 @@ const tutorialStore = useTutorialStore();
 const languageStore = useLanguageStore();
 const videoUploadStore = useVideoUploadStore();
 const themeStore = useThemeStore();
-const dashboardStore = useDashboardLayoutStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
 

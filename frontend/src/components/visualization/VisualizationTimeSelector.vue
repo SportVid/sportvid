@@ -32,7 +32,7 @@ const props = defineProps({
   },
   height: {
     type: String,
-    default: "50",
+    default: "40",
   },
   radius: {
     type: Number,
@@ -58,7 +58,14 @@ const canvasHeight = ref(null);
 const containerWidth = ref(null);
 const containerHeight = ref(null);
 
-const redraw = ref(false);
+let resizeRafId = null;
+function scheduleRedraw() {
+  if (resizeRafId !== null) return;
+  resizeRafId = requestAnimationFrame(() => {
+    resizeRafId = null;
+    draw();
+  });
+}
 
 const duration = computed(() => {
   const keys = topViewStore.sortedFrameKeys;
@@ -156,7 +163,7 @@ function drawScale() {
 
   const textList = frames.map((frame, index) => {
     const x = frameToX(frame);
-    const text = new paper.PointText(new paper.Point(x, 40));
+    const text = new paper.PointText(new paper.Point(x, 37));
     if (index === 0) {
       text.justification = "left";
     } else if (index === frames.length - 1) {
@@ -179,7 +186,7 @@ function drawScale() {
   const minorFrames = linspace(0, 20, minorInterval);
   const minorStrokes = minorFrames.map((frame) => {
     const x = frameToX(frame);
-    return new paper.Path(new paper.Point(x, 25), new paper.Point(x, 30));
+    return new paper.Path(new paper.Point(x, 15), new paper.Point(x, 20));
   });
   new paper.Group(minorStrokes).strokeColor = "black";
 }
@@ -218,8 +225,8 @@ function drawSelection() {
   const radius = new paper.Size(props.radius, props.radius);
 
   const rect = new paper.Rectangle(
-    new paper.Point(frameToX(hiddenStart.value), 5),
-    new paper.Point(frameToX(hiddenEnd.value), canvasHeight.value - 5)
+    new paper.Point(frameToX(hiddenStart.value), 2),
+    new paper.Point(frameToX(hiddenEnd.value), canvasHeight.value - 2)
   );
 
   const path = new paper.Path.Rectangle(rect, radius);
@@ -229,7 +236,7 @@ function drawSelection() {
   const createHandle = (frame) => {
     const x = frameToX(frame);
     const handleRect = new paper.Rectangle(
-      new paper.Point(x - 5, 10),
+      new paper.Point(x - 2, 10),
       new paper.Point(x + 5, canvasHeight.value - 10)
     );
     const handle = new paper.Path.Rectangle(handleRect, radius);
@@ -242,8 +249,12 @@ function drawSelection() {
 
   handleGroup = new paper.Group([path, handleLeft, handleRight]);
 
-  const onDragStart = () => { isDragging = true; };
-  const onDragEnd = () => { isDragging = false; };
+  const onDragStart = () => {
+    isDragging = true;
+  };
+  const onDragEnd = () => {
+    isDragging = false;
+  };
 
   handleLeft.onMouseDown = onDragStart;
   handleLeft.onMouseUp = onDragEnd;
@@ -316,14 +327,12 @@ onMounted(() => {
       container.value.clientWidth !== containerWidth.value ||
       container.value.clientHeight !== containerHeight.value
     ) {
-      clearTimeout(redraw.value);
-      redraw.value = setTimeout(onResize, 100);
+      scheduleRedraw();
     }
   };
 
   scope.view.onResize = () => {
-    clearTimeout(redraw.value);
-    redraw.value = setTimeout(onResize, 100);
+    scheduleRedraw();
   };
 
   nextTick(() => draw());
@@ -331,13 +340,13 @@ onMounted(() => {
   animFrameId = requestAnimationFrame(animLoop);
 
   resizeObserver = new ResizeObserver(() => {
-    clearTimeout(redraw.value);
-    redraw.value = setTimeout(onResize, 100);
+    scheduleRedraw();
   });
   if (container.value) resizeObserver.observe(container.value);
 });
 onBeforeUnmount(() => {
   if (animFrameId) cancelAnimationFrame(animFrameId);
+  if (resizeRafId) cancelAnimationFrame(resizeRafId);
   if (resizeObserver) resizeObserver.disconnect();
   if (scope) {
     scope.view.onFrame = null;

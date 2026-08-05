@@ -64,7 +64,33 @@
         </v-col>
       </v-row>
 
-      <DashboardGrid v-else :is-loading="isLoading" />
+      <div v-else class="dashboard-view-wrapper">
+        <button
+          v-if="!dashboardStore.editMode"
+          type="button"
+          class="dashboard-edit-entry"
+          data-tour="dashboard-edit-toggle"
+          :title="$t('analysis_view.dashboard.edit_toggle')"
+          @click="dashboardStore.toggleEditMode()"
+        >
+          <v-icon size="40" color="primary">mdi-view-dashboard-edit</v-icon>
+          <span class="dashboard-edit-entry-label text-primary">
+            {{ $t("analysis_view.dashboard.edit_toggle") }}
+          </span>
+        </button>
+
+        <button
+          v-else
+          type="button"
+          class="dashboard-edit-done"
+          :title="$t('analysis_view.dashboard.edit_done')"
+          @click="dashboardStore.toggleEditMode()"
+        >
+          <v-icon size="40" color="secondary">mdi-check</v-icon>
+        </button>
+
+        <DashboardGrid :is-loading="isLoading" />
+      </div>
       <!-- <ModalTimelineSegmentAnnotate :show.sync="annotationDialog.show" /> -->
     </v-container>
 
@@ -119,7 +145,7 @@ import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 // import * as Keyboard from "../plugins/keyboard";
-import VideoPlayer from "@/components/analysis-view/VideoPlayer.vue";
+import VideoPlayer from "@/components/analysis-view/cards/VideoPlayer.vue";
 import TabWindowCalibration from "@/components/calibration-asset/CalibrationAsset.vue";
 import ModalObjectOverlay from "@/components/calibration-asset/ModalObjectOverlay.vue";
 import DashboardGrid from "@/components/analysis-view/dashboard/DashboardGrid.vue";
@@ -665,5 +691,72 @@ onBeforeUnmount(() => {
 .calibration-card {
   border: 2px solid rgba(var(--v-theme-secondary), 0.45);
   transition: border-color 0.3s ease;
+}
+
+.dashboard-view-wrapper {
+  position: relative;
+}
+
+.dashboard-edit-entry,
+.dashboard-edit-done {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 20;
+  cursor: pointer;
+  background: rgb(var(--v-theme-surface));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: max-width 0.2s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-edit-entry:hover,
+.dashboard-edit-done:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+.dashboard-edit-entry:active,
+.dashboard-edit-done:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.dashboard-edit-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 68px;
+  max-width: 68px;
+  padding: 0 14px;
+  overflow: hidden;
+  border: 2px solid rgba(var(--v-theme-primary), 0.5);
+  border-radius: 34px;
+}
+
+.dashboard-edit-entry:hover {
+  max-width: 260px;
+  padding: 0 18px;
+}
+
+.dashboard-edit-entry-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.dashboard-edit-entry:hover .dashboard-edit-entry-label {
+  opacity: 1;
+  transition-delay: 0.08s;
+}
+
+.dashboard-edit-done {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border: 2px solid rgba(var(--v-theme-secondary), 0.6);
+  border-radius: 50%;
 }
 </style>

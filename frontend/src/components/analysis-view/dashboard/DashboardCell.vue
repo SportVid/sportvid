@@ -3,7 +3,10 @@
     v-if="cell.kind !== 'group' || !isLoading"
     elevation="2"
     class="dashboard-cell fill-height d-flex flex-column"
-    :class="{ 'dashboard-cell--editing': dashboardStore.editMode }"
+    :class="{
+      'dashboard-cell--editing': dashboardStore.editMode,
+      'dashboard-cell--has-switcher': hasTabSwitcher,
+    }"
     :data-tour="cellDataTour"
   >
     <template v-if="cell.kind === 'topview' && isLoading">
@@ -16,11 +19,6 @@
     </template>
 
     <template v-else-if="cell.kind === 'video'">
-      <v-row v-if="!dashboardStore.editMode" justify="center">
-        <v-card-title class="mt-5 mb-n1">
-          {{ playerStore.videoName }}
-        </v-card-title>
-      </v-row>
       <v-row class="flex-grow-1">
         <v-col class="dashboard-cell-content">
           <WidgetPlaceholder v-if="dashboardStore.editMode" widget-id="video" />
@@ -41,19 +39,6 @@
           <v-icon size="20">mdi-close</v-icon>
         </v-btn>
       </div>
-      <v-row v-if="!dashboardStore.editMode && matchupTeams.length" justify="center">
-        <v-card-title class="mt-5 mb-n1">
-          <div class="matchup-title">
-            <template v-for="(team, index) in matchupTeams" :key="team.id">
-              <span class="matchup-title-team">
-                <span class="matchup-title-name">{{ team.name }}</span>
-                <span class="matchup-title-line" :style="{ backgroundColor: team.color }" />
-              </span>
-              <span v-if="index < matchupTeams.length - 1" class="matchup-title-sep">:</span>
-            </template>
-          </div>
-        </v-card-title>
-      </v-row>
       <v-row class="flex-grow-1">
         <v-col class="dashboard-cell-content">
           <WidgetPlaceholder v-if="dashboardStore.editMode" widget-id="topview" />
@@ -63,10 +48,6 @@
     </template>
 
     <template v-else-if="cell.kind === 'group'">
-      <!-- Edit mode: one absolutely-positioned corner overlay (pills, then a
-           divider, then the fixed action icons) instead of a row that takes
-           real layout space — so it never pushes the placeholder around,
-           the same way the video/topview controls already don't. -->
       <div v-if="dashboardStore.editMode" class="dashboard-cell-tab-overlay">
         <div
           class="dashboard-cell-tab-pills"
@@ -152,46 +133,58 @@
         </div>
       </div>
 
-      <v-row
+      <div
         v-else-if="cell.widgets.length > 1"
-        align="center"
-        no-gutters
-        class="pt-1 flex-grow-0 dashboard-cell-tabs-row"
+        class="dashboard-cell-tab-switcher"
+        :class="{ 'dashboard-cell-tab-switcher--expanded': switcherExpanded }"
+        @mouseenter="switcherExpanded = true"
+        @mouseleave="switcherExpanded = false"
+        @click="switcherExpanded = true"
       >
-        <v-tabs
-          density="compact"
-          slider-color="primary"
-          class="flex-grow-1"
-          :model-value="cell.activeId"
-          @update:model-value="dashboardStore.setGroupActive(cell.id, $event)"
-        >
-          <v-tab v-for="widgetId in cell.widgets" :key="widgetId" :value="widgetId">
-            {{ $t(widgetLabel(widgetId)) }}
-          </v-tab>
-        </v-tabs>
-      </v-row>
+        <div class="dashboard-cell-tab-switcher-shape">
+          <div class="dashboard-cell-tab-switcher-names">
+            <button
+              v-for="widgetId in cell.widgets"
+              :key="widgetId"
+              type="button"
+              class="dashboard-cell-tab-switcher-name"
+              :class="{ 'dashboard-cell-tab-switcher-name--active': widgetId === cell.activeId }"
+              @click="
+                dashboardStore.setGroupActive(cell.id, widgetId);
+                switcherExpanded = false;
+              "
+            >
+              {{ $t(widgetLabel(widgetId)) }}
+            </button>
+          </div>
+        </div>
+      </div>
 
-      <v-row class="flex-grow-1 my-0">
-        <v-col class="dashboard-cell-content">
+      <v-row
+        class="flex-grow-1"
+        :class="{ 'dashboard-cell-tabs-content-row--scroll': constrained }"
+      >
+        <v-col
+          class="dashboard-cell-content"
+          :class="{ 'dashboard-cell-content--scroll': constrained }"
+        >
           <WidgetPlaceholder v-if="dashboardStore.editMode" :widget-id="cell.activeId" />
-          <component :is="widgetComponent(cell.activeId)" v-else />
+          <component
+            :is="widgetComponent(cell.activeId)"
+            :dense="constrained"
+            :narrow="cell.width === 1"
+            v-else
+          />
         </v-col>
       </v-row>
     </template>
 
-    <!-- Covers the whole card so it reads as inert while arranging — the
-         tab overlay/controls are kept above it (see .dashboard-cell-tab-
-         overlay and .dashboard-cell-controls) since they must stay
-         clickable to switch/manage tabs. -->
     <div v-if="dashboardStore.editMode" class="dashboard-cell-veil" />
   </v-card>
 </template>
 
 <script setup>
 import { computed, ref } from "vue";
-import { usePlayerStore } from "@/stores/player";
-import { useTopViewStore } from "@/stores/top_view";
-import { useVisualizationStore } from "@/stores/visualization";
 import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 import { dashboardWidgets, isTaggableWidget } from "@/config/dashboardWidgets";
 import WidgetPlaceholder from "@/components/analysis-view/dashboard/WidgetPlaceholder.vue";
@@ -200,11 +193,12 @@ const props = defineProps({
   cell: { type: Object, required: true },
   rowIdx: { type: Number, required: true },
   isLoading: { type: Boolean, default: false },
+  // True when this (group) cell shares its row with video/topview and has
+  // been height-capped to their natural size by DashboardGrid — the widget
+  // inside must scroll its own content instead of growing the row further.
+  constrained: { type: Boolean, default: false },
 });
 
-const playerStore = usePlayerStore();
-const topViewStore = useTopViewStore();
-const visualizationStore = useVisualizationStore();
 const dashboardStore = useDashboardLayoutStore();
 
 const cellDataTour = computed(() => {
@@ -221,19 +215,19 @@ function widgetLabel(id) {
   return dashboardWidgets[id]?.labelKey ?? id;
 }
 
-const matchupTeams = computed(() => {
-  const meta = topViewStore.metaDataTopView;
-  if (!meta?.team_ids) return [];
-  // New scheme: team_id ≥ 3 = active player teams (1=ball, 2=refs, 0=inactive — all hidden from matchup).
-  return Object.entries(meta.team_ids)
-    .filter(([teamId]) => Number(teamId) >= 3)
-    .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([teamId, info]) => ({
-      id: Number(teamId),
-      name: info.name,
-      color: visualizationStore.getTeamColor(Number(teamId)),
-    }));
-});
+// Whether the tab switcher's collapsed shape is expanded into its "name
+// picker" banner — hover-driven (see the switcher div's mouseenter/leave),
+// with a click fallback so it's still reachable without hover (touch).
+const switcherExpanded = ref(false);
+
+// Vuetify's v-card sets `overflow: hidden` by default (for its rounded-
+// corner/elevation clipping) — that also clips the tab switcher's overlay,
+// most of which deliberately sits *above* the card's own top edge. Only
+// lift that clipping for cells that actually render the switcher, so
+// video/topview/single-widget cards keep Vuetify's default behavior.
+const hasTabSwitcher = computed(
+  () => props.cell.kind === "group" && !dashboardStore.editMode && props.cell.widgets.length > 1
+);
 
 const addableTabs = computed(() =>
   dashboardStore.availableWidgetIds.filter((id) => isTaggableWidget(id))
@@ -306,6 +300,12 @@ function onTabRowDrop(event) {
   position: relative;
 }
 
+/* See hasTabSwitcher — undoes Vuetify's default overflow: hidden on v-card
+   just for cells whose tab-switcher overlay pokes out above the card. */
+.dashboard-cell--has-switcher {
+  overflow: visible;
+}
+
 .dashboard-cell--editing {
   outline: 3px dashed rgba(var(--v-theme-primary), 0.85);
   outline-offset: -3px;
@@ -319,6 +319,20 @@ function onTabRowDrop(event) {
   position: relative;
 }
 
+/* Row/column pairing that lets a height-capped widget cell (see
+   DashboardGrid's anchor-row coupling) actually scroll internally instead
+   of overflowing past the card — min-height: 0 is what lets a flex child
+   shrink below its content's natural size so overflow-y: auto kicks in. */
+.dashboard-cell-tabs-content-row--scroll {
+  min-height: 0;
+}
+
+.dashboard-cell-content--scroll {
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+}
+
 .dashboard-cell-veil {
   position: absolute;
   inset: 0;
@@ -326,19 +340,65 @@ function onTabRowDrop(event) {
   background: rgba(0, 0, 0, 0.45);
 }
 
-.dashboard-cell-tabs-row {
-  position: relative;
-  z-index: 4;
+.dashboard-cell-tab-switcher {
+  position: absolute;
+  top: -1px;
+  left: 10%;
+  right: 10%;
+  z-index: 5;
 }
 
-/* Right-aligned corner overlay: pills grow leftward from the divider, the
-   fixed icons (add, toggle, remove) sit to its right — same non-layout-
-   affecting positioning as .dashboard-cell-controls below. Sized to its
-   content (like that one), not stretched full-width, but capped so a lot
-   of pills scroll horizontally (see .dashboard-cell-tab-pills) instead of
-   overflowing past the card's edge or wrapping to a second (ugly) line.
-   One shared background for the whole cluster (pills, divider, and icons
-   together) rather than the icons alone being their own box. */
+.dashboard-cell-tab-switcher-shape {
+  width: 100%;
+  height: 10px;
+  background: rgb(var(--v-theme-primary));
+  clip-path: polygon(0% 5%, 100% 5%, 70% 35%, 50% 100%, 30% 35%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  transition: height 0.18s ease, clip-path 0.18s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-cell-tab-switcher--expanded .dashboard-cell-tab-switcher-shape {
+  height: 50px;
+  clip-path: polygon(0% 5%, 100% 5%, 75% 100%, 25% 100%);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+}
+
+.dashboard-cell-tab-switcher-names {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.dashboard-cell-tab-switcher--expanded .dashboard-cell-tab-switcher-names {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dashboard-cell-tab-switcher-name {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 2px 0;
+  color: rgb(var(--v-theme-on-primary));
+  font-size: 1rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.dashboard-cell-tab-switcher-name--active {
+  border-bottom-color: rgb(var(--v-theme-on-primary));
+}
+
 .dashboard-cell-tab-overlay {
   position: absolute;
   top: 8px;
@@ -353,15 +413,6 @@ function onTabRowDrop(event) {
   background: #d9d9d93b;
 }
 
-/* Scrolls horizontally instead of wrapping to a second line — `min-width: 0`
-   lets this flex child shrink below its content's natural width so overflow
-   actually kicks in, while the divider/action icons (flex-shrink: 0, not
-   part of this scroll area) always stay fully visible. No padding/gap here
-   by default — this container stays in the DOM even with zero pills (as a
-   drop target for dragging a tab in), and reserving space it isn't using
-   would leave the icons lopsided to the right with nothing to balance it
-   on the left. --has-tabs adds that spacing back only once there's
-   something to actually space out. */
 .dashboard-cell-tab-pills {
   display: flex;
   align-items: center;
@@ -439,34 +490,5 @@ function onTabRowDrop(event) {
   margin-top: 10px;
   font-size: 18px;
   color: rgb(var(--v-theme-primary));
-}
-
-.matchup-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.matchup-title-team {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.matchup-title-name {
-  font-size: 1rem;
-}
-
-.matchup-title-line {
-  display: block;
-  width: 100%;
-  height: 3px;
-  border-radius: 1px;
-  margin-top: -4px;
-}
-
-.matchup-title-sep {
-  font-size: 1.1rem;
 }
 </style>

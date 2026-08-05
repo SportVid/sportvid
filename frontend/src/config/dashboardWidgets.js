@@ -1,9 +1,9 @@
-import VideoPlayer from "@/components/analysis-view/VideoPlayer.vue";
-import TopView from "@/components/analysis-view/TopView.vue";
-import TabWindowTimeline from "@/components/analysis-view/tab-window/TabWindowTimeline.vue";
-import TabWindowEvents from "@/components/analysis-view/tab-window/TabWindowEvents.vue";
-import TabWindowHeatmap from "@/components/analysis-view/tab-window/TabWindowHeatmap.vue";
-import TabWindowKPI from "@/components/analysis-view/tab-window/TabWindowKPI.vue";
+import VideoPlayer from "@/components/analysis-view/cards/VideoPlayer.vue";
+import TopView from "@/components/analysis-view/cards/TopView.vue";
+import TabWindowTimeline from "@/components/analysis-view/cards/tab-window/TabWindowTimeline.vue";
+import TabWindowEvents from "@/components/analysis-view/cards/tab-window/TabWindowEvents.vue";
+import TabWindowHeatmap from "@/components/analysis-view/cards/tab-window/TabWindowHeatmap.vue";
+import TabWindowKPI from "@/components/analysis-view/cards/tab-window/TabWindowKPI.vue";
 
 // Central registry of all dashboard widgets. Replaces the old
 // getVisualizationTabComponent switch — the DashboardGrid/DashboardCell

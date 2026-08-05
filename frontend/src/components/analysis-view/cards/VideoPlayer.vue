@@ -1,5 +1,9 @@
 <template>
-  <v-container ref="videoContainer" class="d-flex flex-column">
+  <div ref="videoContainer" class="d-flex flex-column pa-4">
+    <div class="card-header-zone">
+      <div class="video-title">{{ playerStore.videoName }}</div>
+    </div>
+
     <v-row justify="center">
       <div ref="videoFullscreenRoot" class="video-fullscreen-root">
         <div class="video-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
@@ -337,7 +341,7 @@
         :max="playerStore.videoDuration"
       />
     </v-row>
-  </v-container>
+  </div>
 </template>
 
 <script setup>
@@ -759,11 +763,11 @@ function tarGzUrlToHlsUrl(tarUrl) {
   return url.toString();
 }
 watch(
-  () => playerStore.videoUrl,
-  (url) => {
-    if (!url || !videoElement.value) return;
+  [() => playerStore.videoUrl, videoElement],
+  ([url, el]) => {
+    if (!url || !el) return;
 
-    const video = videoElement.value;
+    const video = el;
     const hlsUrl = tarGzUrlToHlsUrl(url);
 
     if (!hlsUrl) return;
@@ -810,6 +814,27 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* Fixed-height header zone — same pattern and height as TopView.vue's
+   matchup-title zone / the tab-window widgets' controls row (see
+   TabWindowHeatmap.vue's own .card-header-zone), so that in the default
+   video+topview row, both anchor cards' actual content (video / pitch)
+   starts at the same y. Keep the height in sync across all of them if you
+   ever change it. */
+.card-header-zone {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.video-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  text-align: center;
+  margin-top: -28px;
+}
+
 .video-control {
   gap: 5px;
 }

@@ -15,7 +15,19 @@
 
   <PositionDataMenu v-else-if="topViewStore.sortedFrameKeys.length === 0" />
 
-  <v-container v-else class="d-flex flex-column">
+  <div v-else class="d-flex flex-column pa-4">
+    <div class="card-header-zone">
+      <div v-if="matchupTeams.length" class="matchup-title">
+        <template v-for="(team, index) in matchupTeams" :key="team.id">
+          <span class="matchup-title-team">
+            <span class="matchup-title-name">{{ team.name }}</span>
+            <span class="matchup-title-line" :style="{ backgroundColor: team.color }" />
+          </span>
+          <span v-if="index < matchupTeams.length - 1" class="matchup-title-sep">:</span>
+        </template>
+      </div>
+    </div>
+
     <v-row justify="center">
       <div ref="topViewFullscreenRoot" class="top-view-fullscreen-root">
         <div
@@ -374,7 +386,11 @@
                 </v-list-item>
               </template>
               <v-list class="py-0" density="compact">
-                <v-list-item v-if="canWrite" class="menu-item" @click="showModalPositionDataUpload = true">
+                <v-list-item
+                  v-if="canWrite"
+                  class="menu-item"
+                  @click="showModalPositionDataUpload = true"
+                >
                   <v-list-item-title>
                     {{ $t("position_data.display_settings.position_data.upload") }}
                   </v-list-item-title>
@@ -509,7 +525,7 @@
         </div>
       </div>
     </div>
-  </v-container>
+  </div>
 </template>
 
 <script setup>
@@ -547,6 +563,26 @@ const canWrite = computed(() => {
   const ownerUsername = playerStore.video?.owner_username;
   if (!ownerUsername) return true;
   return ownerUsername === userStore.username;
+});
+
+// Rendered here (rather than injected by DashboardCell, as it used to be)
+// so this component owns its whole content stack above the pitch image —
+// same as the tab-window widgets (KPI/Heatmap) already do — which is what
+// makes lining the pitch up with theirs a matter of matching this
+// component's own spacing instead of chasing a header height that lived in
+// a different file.
+const matchupTeams = computed(() => {
+  const meta = topViewStore.metaDataTopView;
+  if (!meta?.team_ids) return [];
+  // New scheme: team_id ≥ 3 = active player teams (1=ball, 2=refs, 0=inactive — all hidden from matchup).
+  return Object.entries(meta.team_ids)
+    .filter(([teamId]) => Number(teamId) >= 3)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([teamId, info]) => ({
+      id: Number(teamId),
+      name: info.name,
+      color: visualizationStore.getTeamColor(Number(teamId)),
+    }));
 });
 
 const _BALL_SVG = {
@@ -852,7 +888,8 @@ const convexHullForCurrentFrame = computed(() => {
   const framePositions = topViewStore.currentFramePlayers;
   if (!framePositions || !framePositions.length) return {};
 
-  const _cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || { x: [0, 1], y: [0, 1] };
+  const _cropPct = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]
+    ?.templateCrop || { x: [0, 1], y: [0, 1] };
   const cropPct = topViewStore.mirrorXY ? mirrorCropRange(_cropPct) : _cropPct;
 
   const teams = {};
@@ -917,7 +954,8 @@ const voronoiForCurrentFrame = computed(() => {
   const framePositions = topViewStore.currentFramePlayers;
   if (!framePositions || !framePositions.length) return [];
 
-  const _cropPctV = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]?.templateCrop || {
+  const _cropPctV = topViewStore.currentSport.areas?.[topViewStore.currentAreaSize]
+    ?.templateCrop || {
     x: [0, 1],
     y: [0, 1],
   };
@@ -1450,6 +1488,44 @@ async function saveScreenshot() {
   display: block;
   max-width: 100%;
   max-height: 100%;
+}
+
+.card-header-zone {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.matchup-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: -28px;
+}
+
+.matchup-title-team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.matchup-title-name {
+  font-size: 1rem;
+}
+
+.matchup-title-line {
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 1px;
+  margin-top: -4px;
+}
+
+.matchup-title-sep {
+  font-size: 1.1rem;
 }
 
 .video-control {

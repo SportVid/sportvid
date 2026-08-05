@@ -1,11 +1,12 @@
 <template>
-  <div
-    v-if="!hasPositionData && posdataWorkerStore.isLoading"
-    class="heatmap-loading-card"
-  >
+  <div v-if="!hasPositionData && posdataWorkerStore.isLoading" class="heatmap-loading-card">
     <div class="heatmap-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
     <div class="heatmap-loading-text">
-      {{ posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100 ? `${posdataWorkerStore.loadProgress}%` : "" }}
+      {{
+        posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100
+          ? `${posdataWorkerStore.loadProgress}%`
+          : ""
+      }}
     </div>
   </div>
 
@@ -22,117 +23,147 @@
     v-html="heatmapNotSelectedText"
   />
 
-  <v-card v-else class="d-flex flex-column flex-nowrap px-2 mb-1" elevation="0">
-    <v-row align="center" data-tour="heatmap-controls-row">
-      <v-col cols="auto" class="mt-3 d-flex align-center flex-shrink-0" style="gap: 8px" data-tour="heatmap-settings">
-        <v-menu location="bottom">
-          <template #activator="{ props }">
-            <v-btn v-bind="props" style="height: 40px" class="ml-2 mt-n2" size="small">
-              {{ $t("visualization.heatmap.area_size") }}
-            </v-btn>
-          </template>
-          <v-list class="py-0" density="compact">
-            <v-list-item
-              v-for="(areaData, areaSize) in topViewStore.currentSport.areas"
-              :key="areaSize"
-              class="menu-item"
-              @click="topViewStore.onSportChange(topViewStore.currentSport.title, areaSize)"
-            >
-              <v-list-item-title class="my-0">
-                {{ areaData.title }}
-              </v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
-
-        <v-btn-toggle
-          v-model="displayMode"
-          color="primary"
-          border
-          mandatory
-          elevation="2"
-          style="height: 40px"
-          class="mt-n2"
+  <div v-else class="d-flex flex-column flex-nowrap pa-4">
+    <div class="card-header-zone">
+      <v-row
+        align="center"
+        class="flex-nowrap mx-n4 mt-n8"
+        style="width: 100%"
+        data-tour="heatmap-controls-row"
+      >
+        <v-col
+          cols="auto"
+          class="d-flex align-center flex-shrink-0"
+          style="gap: 12px"
+          data-tour="heatmap-settings"
         >
-          <v-btn value="heatmap" size="small">
-            <v-icon>mdi-blur</v-icon>
+          <v-btn
+            v-if="narrow"
+            size="small"
+            @click="controlsExpanded = !controlsExpanded"
+            class="mt-n2"
+          >
+            <v-icon>{{ controlsExpanded ? "mdi-close" : "mdi-menu" }}</v-icon>
           </v-btn>
-          <v-btn value="movement" size="small">
-            <v-icon>mdi-map-marker-path</v-icon>
-          </v-btn>
-        </v-btn-toggle>
 
-        <v-btn style="height: 40px" size="small" class="mt-n2" @click="saveScreenshot">
-          <v-icon>mdi-download</v-icon>
-        </v-btn>
+          <div
+            class="toolbar-collapse"
+            :class="{ 'toolbar-collapse--expanded': !narrow || controlsExpanded }"
+          >
+            <div class="toolbar-collapse-inner">
+              <v-menu location="bottom">
+                <template #activator="{ props }">
+                  <v-btn v-bind="props" size="small">
+                    {{ $t("visualization.heatmap.area_size") }}
+                  </v-btn>
+                </template>
+                <v-list class="py-0" density="compact">
+                  <v-list-item
+                    v-for="(areaData, areaSize) in topViewStore.currentSport.areas"
+                    :key="areaSize"
+                    class="menu-item"
+                    @click="topViewStore.onSportChange(topViewStore.currentSport.title, areaSize)"
+                  >
+                    <v-list-item-title class="my-0">
+                      {{ areaData.title }}
+                    </v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
 
-        <v-menu location="bottom">
-          <template #activator="{ props }">
-            <v-btn v-bind="props" style="height: 40px" size="small" class="mt-n2">
-              <v-icon>mdi-timer-sync-outline</v-icon>
-            </v-btn>
-          </template>
-          <v-list class="py-0" density="compact" width="250px">
-            <v-list-item
-              class="menu-item"
-              @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
-            >
-              <v-list-item-title>
-                {{ $t("visualization.time_selection.sync_start") }}
-              </v-list-item-title>
-            </v-list-item>
+              <v-btn-toggle
+                v-model="displayMode"
+                color="primary"
+                border
+                mandatory
+                density="compact"
+                elevation="2"
+                style="height: 28px"
+              >
+                <v-btn value="heatmap" size="small">
+                  <v-icon>mdi-blur</v-icon>
+                </v-btn>
+                <v-btn value="movement" size="small">
+                  <v-icon>mdi-map-marker-path</v-icon>
+                </v-btn>
+              </v-btn-toggle>
 
-            <v-list-item
-              class="menu-item"
-              @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
-            >
-              <v-list-item-title>
-                {{ $t("visualization.time_selection.sync_end") }}
-              </v-list-item-title>
-            </v-list-item>
+              <v-btn size="small" @click="saveScreenshot">
+                <v-icon>mdi-download</v-icon>
+              </v-btn>
 
-            <v-divider />
+              <v-menu location="bottom">
+                <template #activator="{ props }">
+                  <v-btn v-bind="props" size="small" class="mr-2">
+                    <v-icon>mdi-timer-sync-outline</v-icon>
+                  </v-btn>
+                </template>
+                <v-list class="py-0" density="compact" width="250px">
+                  <v-list-item
+                    class="menu-item"
+                    @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
+                  >
+                    <v-list-item-title>
+                      {{ $t("visualization.time_selection.sync_start") }}
+                    </v-list-item-title>
+                  </v-list-item>
 
-            <v-list-item
-              class="menu-item"
-              @click="
-                positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
-                positionDataStore.setSelectedTimeRangeEnd(allFrameKeys[allFrameKeys.length - 1]);
-              "
-            >
-              <v-list-item-title>
-                {{ $t("visualization.time_selection.full_match") }}
-              </v-list-item-title>
-            </v-list-item>
+                  <v-list-item
+                    class="menu-item"
+                    @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
+                  >
+                    <v-list-item-title>
+                      {{ $t("visualization.time_selection.sync_end") }}
+                    </v-list-item-title>
+                  </v-list-item>
 
-            <v-list-item
-              class="menu-item"
-              :disabled="!visualizationStore.halftimesExist"
-              @click="selectHalftime(1)"
-            >
-              <v-list-item-title>
-                {{ $t("visualization.time_selection.first_half") }}
-              </v-list-item-title>
-            </v-list-item>
+                  <v-divider />
 
-            <v-list-item
-              class="menu-item"
-              :disabled="!visualizationStore.halftimesExist"
-              @click="selectHalftime(2)"
-            >
-              <v-list-item-title>
-                {{ $t("visualization.time_selection.second_half") }}
-              </v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
-      </v-col>
-      <v-col class="mt-2" data-tour="heatmap-time-selector">
-        <VisualizationTimeSelector class="ml-n1" />
-      </v-col>
-    </v-row>
+                  <v-list-item
+                    class="menu-item"
+                    @click="
+                      positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
+                      positionDataStore.setSelectedTimeRangeEnd(
+                        allFrameKeys[allFrameKeys.length - 1]
+                      );
+                    "
+                  >
+                    <v-list-item-title>
+                      {{ $t("visualization.time_selection.full_match") }}
+                    </v-list-item-title>
+                  </v-list-item>
 
-    <v-row class="mt-2" justify="center">
+                  <v-list-item
+                    class="menu-item"
+                    :disabled="!visualizationStore.halftimesExist"
+                    @click="selectHalftime(1)"
+                  >
+                    <v-list-item-title>
+                      {{ $t("visualization.time_selection.first_half") }}
+                    </v-list-item-title>
+                  </v-list-item>
+
+                  <v-list-item
+                    class="menu-item"
+                    :disabled="!visualizationStore.halftimesExist"
+                    @click="selectHalftime(2)"
+                  >
+                    <v-list-item-title>
+                      {{ $t("visualization.time_selection.second_half") }}
+                    </v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+            </div>
+          </div>
+        </v-col>
+        <v-col class="pa-0" data-tour="heatmap-time-selector">
+          <VisualizationTimeSelector class="ml-n2" />
+        </v-col>
+      </v-row>
+    </div>
+
+    <v-row justify="center">
       <div class="top-view-wrapper" data-tour="heatmap-pitch">
         <img
           ref="topViewElement"
@@ -173,7 +204,11 @@
       </div>
     </v-row>
 
-    <div class="chart-legend mt-6" data-tour="heatmap-player-legend">
+    <div
+      class="chart-legend mt-7"
+      :class="{ 'chart-legend--dense': dense }"
+      data-tour="heatmap-player-legend"
+    >
       <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
         <div
           class="team-dot"
@@ -210,7 +245,7 @@
         </div>
       </div>
     </div>
-  </v-card>
+  </div>
 </template>
 
 <script setup>
@@ -228,6 +263,18 @@ import h337 from "heatmap.js";
 import { toRgb } from "@/plugins/helpers";
 import { resampleApprox } from "@/plugins/draw/utils";
 import { debounce } from "lodash";
+
+defineProps({
+  // True when this widget shares its row with video/topview and has been
+  // height-capped to their size (see DashboardGrid) — squeeze the legend
+  // into a single, horizontally-scrolling row instead of letting it wrap
+  // to as many lines as it needs.
+  dense: { type: Boolean, default: false },
+  // True when this cell spans only one dashboard column (see DashboardCell)
+  // — the controls row has too little width to keep every button visible
+  // alongside the time selector, so collapse them behind a toggle instead.
+  narrow: { type: Boolean, default: false },
+});
 
 const { t } = useI18n();
 const topViewStore = useTopViewStore();
@@ -255,6 +302,10 @@ const currentArea = computed(
 );
 
 const displayMode = ref("heatmap");
+
+// Narrow layout (see `narrow` prop): the button row starts collapsed behind
+// the hamburger toggle so the time selector gets its space by default.
+const controlsExpanded = ref(false);
 
 const localSize = ref({ width: 0, height: 0 });
 const topViewElement = ref(null);
@@ -501,16 +552,19 @@ function renderMovementCanvas() {
   renderMovementToCanvas(canvas, localSize.value.width, localSize.value.height);
 }
 
-watch([() => localSize.value.width, () => localSize.value.height, () => topViewStore.mirrorXY], () => {
-  if (displayMode.value === "heatmap") {
-    nextTick(() => {
-      createHeatmap();
-      nextTick(() => renderHeatmap());
-    });
-  } else if (displayMode.value === "movement") {
-    nextTick(() => renderMovementCanvas());
+watch(
+  [() => localSize.value.width, () => localSize.value.height, () => topViewStore.mirrorXY],
+  () => {
+    if (displayMode.value === "heatmap") {
+      nextTick(() => {
+        createHeatmap();
+        nextTick(() => renderHeatmap());
+      });
+    } else if (displayMode.value === "movement") {
+      nextTick(() => renderMovementCanvas());
+    }
   }
-});
+);
 
 watch(selectedPositions, () => {
   if (displayMode.value === "heatmap") {
@@ -563,7 +617,9 @@ async function saveScreenshot() {
 
   if (displayMode.value === "heatmap" && selectedPositions.value.length > 0) {
     const tempContainer = document.createElement("div");
-    tempContainer.style.cssText = `position:fixed;left:${-(targetW + 10)}px;top:0;width:${targetW}px;height:${targetH}px;overflow:hidden;`;
+    tempContainer.style.cssText = `position:fixed;left:${-(
+      targetW + 10
+    )}px;top:0;width:${targetW}px;height:${targetH}px;overflow:hidden;`;
     document.body.appendChild(tempContainer);
     const area = currentArea.value;
     const hiResHeatmap = h337.create({
@@ -576,8 +632,14 @@ async function saveScreenshot() {
     });
     const mirrorShot = topViewStore.mirrorXY;
     const points = selectedPositions.value.map((pos) => ({
-      x: Math.round((mirrorShot ? 1 - pos[3] : pos[3]) * (targetW * area.widthRel) + ((1 - area.widthRel) / 2) * targetW),
-      y: Math.round((mirrorShot ? 1 - pos[4] : pos[4]) * (targetH * area.heightRel) + ((1 - area.heightRel) / 2) * targetH),
+      x: Math.round(
+        (mirrorShot ? 1 - pos[3] : pos[3]) * (targetW * area.widthRel) +
+          ((1 - area.widthRel) / 2) * targetW
+      ),
+      y: Math.round(
+        (mirrorShot ? 1 - pos[4] : pos[4]) * (targetH * area.heightRel) +
+          ((1 - area.heightRel) / 2) * targetH
+      ),
       value: 1,
     }));
     hiResHeatmap.setData({ max: 10, data: points });
@@ -629,6 +691,34 @@ async function saveScreenshot() {
   max-height: 100%;
 }
 
+.toolbar-collapse {
+  display: grid;
+  grid-template-columns: 0fr;
+  min-width: 0;
+  transition: grid-template-columns 0.25s ease;
+}
+
+.toolbar-collapse--expanded {
+  grid-template-columns: 1fr;
+}
+
+.toolbar-collapse-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  margin-top: -8px;
+  height: 32px;
+}
+
+.card-header-zone {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .menu-item {
   cursor: pointer;
 }
@@ -644,9 +734,18 @@ async function saveScreenshot() {
 .chart-legend {
   display: flex;
   justify-content: center;
-  column-gap: 40px;
+  column-gap: 20px;
   row-gap: 8px;
   flex-wrap: wrap;
+}
+
+/* Squeezed next to video/topview: one row, horizontal scroll instead of
+   wrapping to more lines than the capped height has room for. */
+.chart-legend--dense {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
 .chart-legend-team {
@@ -656,8 +755,8 @@ async function saveScreenshot() {
 }
 
 .team-dot {
-  height: 28px;
-  border-radius: 14px;
+  height: 24px;
+  border-radius: 50%;
   padding: 0 8px;
   display: flex;
   align-items: center;
@@ -682,8 +781,8 @@ async function saveScreenshot() {
 }
 
 .player-dot {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -698,6 +797,5 @@ async function saveScreenshot() {
 
 .top-view-wrapper {
   position: relative;
-  overflow: hidden;
 }
 </style>

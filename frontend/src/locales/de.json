@@ -109,9 +109,11 @@
     },
     "dashboard": {
       "edit_toggle": "Layout bearbeiten",
+      "edit_done": "Fertig",
       "add_view": "Ansicht hinzufügen",
       "remove": "Entfernen",
       "toggle_width": "Breite umschalten",
+      "switch_view": "Ansicht wechseln",
       "widgets": {
         "video": "Video",
         "topview": "Draufsicht"
