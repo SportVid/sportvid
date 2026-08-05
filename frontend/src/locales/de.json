@@ -871,7 +871,8 @@
         "kpi": "KPIs"
       },
       "source": {
-        "bytetrack": "ByteTrack",
+        "player_tracking": "Spieler-Tracking",
+        "object_tracking": "Objekt-Tracking (Ball)",
         "dlt": "DLT-Kalibrierung",
         "upload": "Upload"
       },
@@ -886,6 +887,7 @@
         "none": "Nicht vorhanden",
         "error": "Fehler"
       },
+      "optional": "optional",
       "kpi_requires_posdata": "Benötigt Positionsdaten",
       "plugin_name": "Plugin-Name",
       "date": "Datum",
