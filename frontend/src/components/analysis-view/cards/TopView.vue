@@ -714,11 +714,24 @@ const resizeObserver = new ResizeObserver(() => {
 });
 onMounted(() => {
   window.addEventListener("resize", updateTopViewSize);
-  if (topViewElement.value) {
-    resizeObserver.observe(topViewElement.value);
-    updateTopViewSize();
-  }
 });
+// The <img> only exists once position data has loaded (it's behind a v-else
+// on topViewStore.sortedFrameKeys.length, see template) — on a reload that
+// can resolve well after this component's own onMounted already ran, so
+// attaching the observer there (guarded on topViewElement.value) could silently
+// no-op and never actually attach. Watching the ref instead reacts whenever
+// the element actually (dis)appears, whether that's at mount or later.
+watch(
+  topViewElement,
+  (el, oldEl) => {
+    if (oldEl) resizeObserver.unobserve(oldEl);
+    if (el) {
+      resizeObserver.observe(el);
+      updateTopViewSize();
+    }
+  },
+  { immediate: true }
+);
 onBeforeUnmount(() => {
   window.removeEventListener("resize", updateTopViewSize);
   if (topViewElement.value) {

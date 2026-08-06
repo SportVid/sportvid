@@ -169,12 +169,7 @@
           :class="{ 'dashboard-cell-content--scroll': constrained }"
         >
           <WidgetPlaceholder v-if="dashboardStore.editMode" :widget-id="cell.activeId" />
-          <component
-            :is="widgetComponent(cell.activeId)"
-            :dense="constrained"
-            :narrow="cell.width === 1"
-            v-else
-          />
+          <component :is="widgetComponent(cell.activeId)" :dense="constrained" v-else />
         </v-col>
       </v-row>
     </template>

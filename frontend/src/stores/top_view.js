@@ -33,6 +33,13 @@ export const useTopViewStore = defineStore(
       topViewSize.value = size;
     };
 
+    // Kept as this store's own local (persisted) state rather than proxying
+    // through the visualization store: currentAreaSize is set together with
+    // currentSport.areaImage/widthRel/heightRel in the same onSportChange()
+    // call below, and those live here too — cross-store proxying introduced a
+    // circular import (top_view <-> visualization) that caused the two to
+    // desync after a reload (pitch image stuck on "full" while player/zone
+    // positions correctly used the restored area).
     const currentAreaSize = ref("full");
 
     const currentSport = ref({
@@ -230,9 +237,17 @@ export const useTopViewStore = defineStore(
       });
     };
 
-    const setSportFromVideo = (sportKey, areaSize = "full") => {
+    const setSportFromVideo = (sportKey, areaSize) => {
       const sport = sports.value.find((s) => s.key === sportKey);
-      if (sport) onSportChange(sport.title, areaSize);
+      if (!sport) return;
+      // Keep whatever area size was already selected (currentAreaSize is
+      // persisted across reloads, see its definition above) instead of always
+      // forcing it back to "full" on mount — but only if it's actually a
+      // valid area for this sport (a different video's sport might not define
+      // e.g. "halfLeft").
+      const effectiveAreaSize =
+        areaSize ?? (sport.areas?.[currentAreaSize.value] ? currentAreaSize.value : "full");
+      onSportChange(sport.title, effectiveAreaSize);
     };
 
     const showSpaceControl = ref(false);
@@ -837,7 +852,7 @@ export const useTopViewStore = defineStore(
   },
   {
     persist: {
-      pick: ["currentSport", "currentAreaSize"],
+      pick: ["currentSport", "currentAreaSize", "showSportZones", "gridLongitudinal", "gridTransverse"],
       storage: sessionStorage,
     },
   }

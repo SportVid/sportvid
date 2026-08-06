@@ -37,25 +37,95 @@
           style="gap: 12px"
           data-tour="heatmap-settings"
         >
-          <v-btn
-            v-if="narrow"
-            size="small"
-            @click="controlsExpanded = !controlsExpanded"
-            class="mt-n2"
-          >
-            <v-icon>{{ controlsExpanded ? "mdi-close" : "mdi-menu" }}</v-icon>
-          </v-btn>
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" size="small" data-tour="heatmap-display-settings-btn">
+                <v-icon>mdi-menu</v-icon>
+              </v-btn>
+            </template>
+            <v-list
+              class="py-0"
+              density="compact"
+              width="190px"
+              data-tour="heatmap-display-settings-list"
+            >
+              <v-list-item class="menu-item" @click="showModalPositionDataOffset = true">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.offset") }}
+                </v-list-item-title>
+              </v-list-item>
 
-          <div
-            class="toolbar-collapse"
-            :class="{ 'toolbar-collapse--expanded': !narrow || controlsExpanded }"
-          >
-            <div class="toolbar-collapse-inner">
-              <v-menu location="bottom">
+              <v-list-item class="menu-item" @click="topViewStore.viewMirrorXY">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.mirror_xy") }}
+                  <tab-window-icon
+                    :class="{
+                      'text-disabled': !topViewStore.mirrorXY,
+                      'text-red': topViewStore.mirrorXY,
+                    }"
+                  >
+                    mdi-check
+                  </tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-divider />
+
+              <v-menu location="end" open-on-hover>
                 <template #activator="{ props }">
-                  <v-btn v-bind="props" size="small">
-                    {{ $t("visualization.heatmap.area_size") }}
-                  </v-btn>
+                  <v-list-item v-bind="props" class="menu-item">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.heatmap.display_mode.title") }}
+                      <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                </template>
+                <v-list class="py-0" density="compact" width="120px">
+                  <v-list-item class="menu-item" @click="displayMode = 'heatmap'">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.heatmap.display_mode.heatmap") }}
+                      <tab-window-icon
+                        :class="{
+                          'text-disabled': displayMode !== 'heatmap',
+                          'text-red': displayMode === 'heatmap',
+                        }"
+                      >
+                        mdi-check
+                      </tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item class="menu-item" @click="displayMode = 'movement'">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.heatmap.display_mode.movement") }}
+                      <tab-window-icon
+                        :class="{
+                          'text-disabled': displayMode !== 'movement',
+                          'text-red': displayMode === 'movement',
+                        }"
+                      >
+                        mdi-check
+                      </tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+
+              <v-list-item class="menu-item" @click="showModalPositionDataEntityColors = true">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.entity_colors") }}
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-divider />
+
+              <v-menu location="end" open-on-hover>
+                <template #activator="{ props }">
+                  <v-list-item v-bind="props" class="menu-item">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("position_data.display_settings.area_size") }}
+                      <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
                 </template>
                 <v-list class="py-0" density="compact">
                   <v-list-item
@@ -71,91 +141,202 @@
                 </v-list>
               </v-menu>
 
-              <v-btn-toggle
-                v-model="displayMode"
-                color="primary"
-                border
-                mandatory
-                density="compact"
-                elevation="2"
-                style="height: 28px"
+              <!-- Soccer: full longitudinal/transverse grid picker -->
+              <v-menu
+                v-if="topViewStore.currentSport.key === 'soccer'"
+                location="end"
+                open-on-hover
               >
-                <v-btn value="heatmap" size="small">
-                  <v-icon>mdi-blur</v-icon>
-                </v-btn>
-                <v-btn value="movement" size="small">
-                  <v-icon>mdi-map-marker-path</v-icon>
-                </v-btn>
-              </v-btn-toggle>
-
-              <v-btn size="small" @click="saveScreenshot">
-                <v-icon>mdi-download</v-icon>
-              </v-btn>
-
-              <v-menu location="bottom">
                 <template #activator="{ props }">
-                  <v-btn v-bind="props" size="small" class="mr-2">
-                    <v-icon>mdi-timer-sync-outline</v-icon>
-                  </v-btn>
+                  <v-list-item v-bind="props" class="menu-item">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("position_data.display_settings.set_zones.title") }}
+                      <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
                 </template>
-                <v-list class="py-0" density="compact" width="250px">
-                  <v-list-item
-                    class="menu-item"
-                    @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
-                  >
-                    <v-list-item-title>
-                      {{ $t("visualization.time_selection.sync_start") }}
+                <v-list class="py-0" density="compact" width="220px">
+                  <v-list-item class="menu-item" @click.stop>
+                    <v-list-item-title class="d-flex justify-space-between align-center">
+                      {{ $t("position_data.display_settings.set_zones.longitudinal") }}
+                      <v-btn-toggle
+                        v-model="topViewStore.gridLongitudinal"
+                        color="primary"
+                        border
+                        elevation="2"
+                        mandatory
+                        density="compact"
+                        divided
+                      >
+                        <v-btn
+                          v-for="opt in topViewStore.gridConfig.longitudinal.options"
+                          :key="opt"
+                          :value="opt"
+                          size="x-small"
+                          >{{ opt }}</v-btn
+                        >
+                      </v-btn-toggle>
                     </v-list-item-title>
                   </v-list-item>
 
-                  <v-list-item
-                    class="menu-item"
-                    @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
-                  >
-                    <v-list-item-title>
-                      {{ $t("visualization.time_selection.sync_end") }}
-                    </v-list-item-title>
-                  </v-list-item>
-
-                  <v-divider />
-
-                  <v-list-item
-                    class="menu-item"
-                    @click="
-                      positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
-                      positionDataStore.setSelectedTimeRangeEnd(
-                        allFrameKeys[allFrameKeys.length - 1]
-                      );
-                    "
-                  >
-                    <v-list-item-title>
-                      {{ $t("visualization.time_selection.full_match") }}
-                    </v-list-item-title>
-                  </v-list-item>
-
-                  <v-list-item
-                    class="menu-item"
-                    :disabled="!visualizationStore.halftimesExist"
-                    @click="selectHalftime(1)"
-                  >
-                    <v-list-item-title>
-                      {{ $t("visualization.time_selection.first_half") }}
-                    </v-list-item-title>
-                  </v-list-item>
-
-                  <v-list-item
-                    class="menu-item"
-                    :disabled="!visualizationStore.halftimesExist"
-                    @click="selectHalftime(2)"
-                  >
-                    <v-list-item-title>
-                      {{ $t("visualization.time_selection.second_half") }}
+                  <v-list-item class="menu-item" @click.stop>
+                    <v-list-item-title class="d-flex justify-space-between align-center">
+                      {{ $t("position_data.display_settings.set_zones.transverse") }}
+                      <v-btn-toggle
+                        v-model="topViewStore.gridTransverse"
+                        color="primary"
+                        border
+                        elevation="2"
+                        mandatory
+                        density="compact"
+                        divided
+                      >
+                        <v-btn
+                          v-for="opt in topViewStore.gridConfig.transverse.options"
+                          :key="opt"
+                          :value="opt"
+                          size="x-small"
+                          >{{ opt }}</v-btn
+                        >
+                      </v-btn-toggle>
                     </v-list-item-title>
                   </v-list-item>
                 </v-list>
               </v-menu>
-            </div>
-          </div>
+
+              <!-- Handball / Basketball: single zone-overlay toggle -->
+              <v-list-item
+                v-else-if="
+                  topViewStore.currentSport.key === 'handball' ||
+                  topViewStore.currentSport.key === 'basketball'
+                "
+                class="menu-item"
+                @click="topViewStore.toggleSportZones"
+              >
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.toggle_zones") }}
+                  <tab-window-icon
+                    :class="{
+                      'text-disabled': !topViewStore.showSportZones,
+                      'text-red': topViewStore.showSportZones,
+                    }"
+                  >
+                    mdi-check
+                  </tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-divider />
+
+              <v-menu location="end" open-on-hover>
+                <template #activator="{ props }">
+                  <v-list-item v-bind="props" class="menu-item">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("position_data.display_settings.position_data.title") }}
+                      <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                </template>
+                <v-list class="py-0" density="compact">
+                  <v-list-item
+                    v-if="canWrite"
+                    class="menu-item"
+                    @click="showModalPositionDataUpload = true"
+                  >
+                    <v-list-item-title>
+                      {{ $t("position_data.display_settings.position_data.upload") }}
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item class="menu-item" @click="showModalPositionDataSelect = true">
+                    <v-list-item-title>
+                      {{ $t("position_data.display_settings.position_data.select") }}
+                    </v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+            </v-list>
+          </v-menu>
+          <ModalPositionDataUpload
+            v-if="showModalPositionDataUpload"
+            v-model="showModalPositionDataUpload"
+          />
+          <ModalPositionDataSelect
+            v-if="showModalPositionDataSelect"
+            v-model="showModalPositionDataSelect"
+          />
+          <ModalPositionDataEntityColors
+            v-if="showModalPositionDataEntityColors"
+            v-model="showModalPositionDataEntityColors"
+          />
+          <ModalPositionDataOffset
+            v-if="showModalPositionDataOffset"
+            v-model="showModalPositionDataOffset"
+          />
+
+          <v-btn size="small" @click="saveScreenshot">
+            <v-icon>mdi-download</v-icon>
+          </v-btn>
+
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" size="small" class="mr-2">
+                <v-icon>mdi-timer-sync-outline</v-icon>
+              </v-btn>
+            </template>
+            <v-list class="py-0" density="compact" width="250px">
+              <v-list-item
+                class="menu-item"
+                @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
+              >
+                <v-list-item-title>
+                  {{ $t("visualization.time_selection.sync_start") }}
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-list-item
+                class="menu-item"
+                @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
+              >
+                <v-list-item-title>
+                  {{ $t("visualization.time_selection.sync_end") }}
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-divider />
+
+              <v-list-item
+                class="menu-item"
+                @click="
+                  positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
+                  positionDataStore.setSelectedTimeRangeEnd(allFrameKeys[allFrameKeys.length - 1]);
+                "
+              >
+                <v-list-item-title>
+                  {{ $t("visualization.time_selection.full_match") }}
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-list-item
+                class="menu-item"
+                :disabled="!visualizationStore.halftimesExist"
+                @click="selectHalftime(1)"
+              >
+                <v-list-item-title>
+                  {{ $t("visualization.time_selection.first_half") }}
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-list-item
+                class="menu-item"
+                :disabled="!visualizationStore.halftimesExist"
+                @click="selectHalftime(2)"
+              >
+                <v-list-item-title>
+                  {{ $t("visualization.time_selection.second_half") }}
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </v-col>
         <v-col class="pa-0" data-tour="heatmap-time-selector">
           <VisualizationTimeSelector class="ml-n2" />
@@ -259,6 +440,10 @@ import { useVisualizationStore } from "@/stores/visualization";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { useUserStore } from "@/stores/user";
 import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
+import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
+import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
+import ModalPositionDataEntityColors from "@/components/position-data/ModalPositionDataEntityColors.vue";
+import ModalPositionDataOffset from "@/components/position-data/ModalPositionDataOffset.vue";
 import h337 from "heatmap.js";
 import { toRgb } from "@/plugins/helpers";
 import { resampleApprox } from "@/plugins/draw/utils";
@@ -270,10 +455,6 @@ defineProps({
   // into a single, horizontally-scrolling row instead of letting it wrap
   // to as many lines as it needs.
   dense: { type: Boolean, default: false },
-  // True when this cell spans only one dashboard column (see DashboardCell)
-  // — the controls row has too little width to keep every button visible
-  // alongside the time selector, so collapse them behind a toggle instead.
-  narrow: { type: Boolean, default: false },
 });
 
 const { t } = useI18n();
@@ -301,11 +482,17 @@ const currentArea = computed(
   () => topViewStore.currentSport.areas?.[topViewStore.currentAreaSize] ?? {}
 );
 
-const displayMode = ref("heatmap");
+const displayMode = computed({
+  get: () => visualizationStore.heatmapDisplayMode,
+  set: (val) => {
+    visualizationStore.heatmapDisplayMode = val;
+  },
+});
 
-// Narrow layout (see `narrow` prop): the button row starts collapsed behind
-// the hamburger toggle so the time selector gets its space by default.
-const controlsExpanded = ref(false);
+const showModalPositionDataSelect = ref(false);
+const showModalPositionDataUpload = ref(false);
+const showModalPositionDataEntityColors = ref(false);
+const showModalPositionDataOffset = ref(false);
 
 const localSize = ref({ width: 0, height: 0 });
 const topViewElement = ref(null);
@@ -327,16 +514,28 @@ const resizeObserver = new ResizeObserver(() => {
 
 onMounted(() => {
   window.addEventListener("resize", measureImage);
-  if (topViewElement.value) {
-    resizeObserver.observe(topViewElement.value);
-  }
-  nextTick(() => {
-    measureImage();
-    if (displayMode.value === "heatmap" && heatmapContainer.value) {
-      createHeatmap();
-    }
-  });
 });
+// The <img> only exists once position data has loaded (this whole branch is
+// behind a v-else on hasPositionData, see template) — on a reload that can
+// resolve well after this component's own onMounted already ran, so
+// attaching the observer there (guarded on topViewElement.value) could
+// silently no-op and never actually attach. Watching the ref instead reacts
+// whenever the element actually (dis)appears, whether at mount or later.
+watch(
+  topViewElement,
+  (el, oldEl) => {
+    if (oldEl) resizeObserver.unobserve(oldEl);
+    if (!el) return;
+    resizeObserver.observe(el);
+    nextTick(() => {
+      measureImage();
+      if (displayMode.value === "heatmap" && heatmapContainer.value) {
+        createHeatmap();
+      }
+    });
+  },
+  { immediate: true }
+);
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", measureImage);
@@ -356,7 +555,12 @@ const selectHalftime = (half) => {
   }
 };
 
-const selectedPlayerIds = ref([]);
+const selectedPlayerIds = computed({
+  get: () => visualizationStore.heatmapSelectedPlayerIds,
+  set: (val) => {
+    visualizationStore.heatmapSelectedPlayerIds = val;
+  },
+});
 
 const playerOptions = computed(() => topViewStore.precomputedPlayerList);
 
@@ -689,27 +893,6 @@ async function saveScreenshot() {
   display: block;
   max-width: 100%;
   max-height: 100%;
-}
-
-.toolbar-collapse {
-  display: grid;
-  grid-template-columns: 0fr;
-  min-width: 0;
-  transition: grid-template-columns 0.25s ease;
-}
-
-.toolbar-collapse--expanded {
-  grid-template-columns: 1fr;
-}
-
-.toolbar-collapse-inner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  overflow: hidden;
-  margin-top: -8px;
-  height: 32px;
 }
 
 .card-header-zone {

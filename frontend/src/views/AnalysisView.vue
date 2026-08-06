@@ -69,9 +69,15 @@
           v-if="!dashboardStore.editMode"
           type="button"
           class="dashboard-edit-entry"
+          :class="[
+            `dashboard-edit-entry--${entryButtonCorner}`,
+            { 'dashboard-edit-entry--dragging': isDraggingEntry },
+          ]"
+          :style="entryDragStyle"
           data-tour="dashboard-edit-toggle"
           :title="$t('analysis_view.dashboard.edit_toggle')"
-          @click="dashboardStore.toggleEditMode()"
+          @pointerdown="onEntryPointerDown"
+          @click="onEntryClick"
         >
           <v-icon size="40" color="primary">mdi-view-dashboard-edit</v-icon>
           <span class="dashboard-edit-entry-label text-primary">
@@ -239,7 +245,13 @@ onMounted(async () => {
   try {
     await fetchData({ addResults: true });
     topViewStore.setSportFromVideo(playerStore.video?.sport);
-    // positionDataStore.restoreFromCache();
+    // Re-fetch the previously selected position/KPI data after a reload (id is
+    // persisted in sessionStorage — see position_data.js). Deliberately not
+    // awaited: it re-runs the same chunked backend load a manual selection
+    // would, so it can take a while on a big dataset, and the KPI/Heatmap tabs
+    // already show their own progress spinner (posdataWorkerStore.isLoading)
+    // while it's in flight instead of blocking the rest of the page.
+    positionDataStore.restoreFromCache();
   } catch (error) {
   } finally {
     isLoading.value = false;
@@ -628,7 +640,85 @@ watch(
   { immediate: true }
 );
 
+// --- Draggable "enter edit mode" button (snaps to a corner of the dashboard) ---
+const ENTRY_BUTTON_CORNER_STORAGE_KEY = "sportvid.dashboardEditEntryCorner";
+const ENTRY_BUTTON_CORNERS = ["top-right", "top-left", "bottom-right", "bottom-left"];
+
+function loadEntryButtonCorner() {
+  const stored = localStorage.getItem(ENTRY_BUTTON_CORNER_STORAGE_KEY);
+  return ENTRY_BUTTON_CORNERS.includes(stored) ? stored : "top-right";
+}
+
+const entryButtonCorner = ref(loadEntryButtonCorner());
+const isDraggingEntry = ref(false);
+const entryDragStyle = ref({});
+
+const ENTRY_DRAG_THRESHOLD = 6; // px of pointer movement before a press counts as a drag, not a click
+let entryDragStartX = 0;
+let entryDragStartY = 0;
+let entryPointerOffsetX = 0;
+let entryPointerOffsetY = 0;
+let entryDidDrag = false;
+
+function onEntryPointerDown(event) {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  const rect = event.currentTarget.getBoundingClientRect();
+  entryPointerOffsetX = event.clientX - rect.left;
+  entryPointerOffsetY = event.clientY - rect.top;
+  entryDragStartX = event.clientX;
+  entryDragStartY = event.clientY;
+  entryDidDrag = false;
+  window.addEventListener("pointermove", onEntryPointerMove);
+  window.addEventListener("pointerup", onEntryPointerUp, { once: true });
+}
+
+function onEntryPointerMove(event) {
+  const dx = event.clientX - entryDragStartX;
+  const dy = event.clientY - entryDragStartY;
+  if (!entryDidDrag && Math.hypot(dx, dy) > ENTRY_DRAG_THRESHOLD) {
+    entryDidDrag = true;
+    isDraggingEntry.value = true;
+  }
+  if (!entryDidDrag) return;
+  entryDragStyle.value = {
+    position: "fixed",
+    left: `${event.clientX - entryPointerOffsetX}px`,
+    top: `${event.clientY - entryPointerOffsetY}px`,
+    right: "auto",
+    bottom: "auto",
+  };
+}
+
+function onEntryPointerUp(event) {
+  window.removeEventListener("pointermove", onEntryPointerMove);
+  if (entryDidDrag) {
+    // Corners are relative to the viewport (not the dashboard wrapper) so the
+    // button stays reachable in a fixed screen corner no matter how far the
+    // page is scrolled — the wrapper itself can be far taller than the
+    // viewport.
+    const vertical = event.clientY < window.innerHeight / 2 ? "top" : "bottom";
+    const horizontal = event.clientX < window.innerWidth / 2 ? "left" : "right";
+    entryButtonCorner.value = `${vertical}-${horizontal}`;
+    localStorage.setItem(ENTRY_BUTTON_CORNER_STORAGE_KEY, entryButtonCorner.value);
+  }
+  isDraggingEntry.value = false;
+  entryDragStyle.value = {};
+}
+
+function onEntryClick(event) {
+  // A drag gesture ends with a click event right after pointerup — swallow
+  // that one so dragging the button doesn't also toggle edit mode.
+  if (entryDidDrag) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  dashboardStore.toggleEditMode();
+}
+
 onBeforeUnmount(() => {
+  window.removeEventListener("pointermove", onEntryPointerMove);
+  window.removeEventListener("pointerup", onEntryPointerUp);
   positionDataStore.positionDataId = null;
   positionDataStore.selectedTimeRange = { start: 0, end: 0 };
   topViewStore.setPositionData(null, {});
@@ -700,13 +790,53 @@ onBeforeUnmount(() => {
 .dashboard-edit-entry,
 .dashboard-edit-done {
   position: absolute;
-  top: -10px;
-  right: -10px;
   z-index: 20;
   cursor: pointer;
   background: rgb(var(--v-theme-surface));
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   transition: max-width 0.2s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-edit-done {
+  top: -10px;
+  right: -10px;
+}
+
+.dashboard-edit-entry {
+  /* Fixed to the viewport (not the dashboard wrapper) so the button stays in
+     its chosen corner no matter how far the page is scrolled. */
+  position: fixed;
+  touch-action: none;
+  user-select: none;
+}
+
+/* 64px = the app bar's height, so the top corners sit just below it instead
+   of overlapping. */
+.dashboard-edit-entry--top-right {
+  top: 74px;
+  right: 20px;
+}
+
+.dashboard-edit-entry--top-left {
+  top: 74px;
+  left: 20px;
+}
+
+.dashboard-edit-entry--bottom-right {
+  bottom: 20px;
+  right: 20px;
+}
+
+.dashboard-edit-entry--bottom-left {
+  bottom: 20px;
+  left: 20px;
+}
+
+.dashboard-edit-entry--dragging {
+  max-width: 68px !important;
+  cursor: grabbing;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  transition: none;
 }
 
 .dashboard-edit-entry:hover,

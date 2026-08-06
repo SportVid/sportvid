@@ -148,13 +148,20 @@ function draw() {
   scope.view.draw();
 }
 
+// Fewer major ticks once the canvas gets too narrow for the full set to
+// fit without overlapping (e.g. card squeezed into a single dashboard
+// column) — canvasWidth is already kept current by draw() on every
+// resize, so this just reads it fresh on each redraw.
+const TICK_OVERLAP_WIDTH = 750;
+
 function drawScale() {
   if (scaleLayer) scaleLayer.removeChildren();
   scope.activate();
   scaleLayer = new paper.Layer();
 
-  const interval = duration.value / 5;
-  const frames = linspace(0, 5, interval);
+  const numTicks = canvasWidth.value < TICK_OVERLAP_WIDTH ? 3 : 5;
+  const interval = duration.value / numTicks;
+  const frames = linspace(0, numTicks, interval);
 
   const mainStrokes = frames.map((frame) => {
     const x = frameToX(frame);
@@ -178,12 +185,12 @@ function drawScale() {
   new paper.Group(mainStrokes).strokeColor = "black";
   new paper.Group(textList).style = {
     fontFamily: "Courier New",
-    fontSize: 10,
+    fontSize: 12,
     fillColor: "black",
   };
 
   const minorInterval = interval / 4;
-  const minorFrames = linspace(0, 20, minorInterval);
+  const minorFrames = linspace(0, numTicks * 4, minorInterval);
   const minorStrokes = minorFrames.map((frame) => {
     const x = frameToX(frame);
     return new paper.Path(new paper.Point(x, 15), new paper.Point(x, 20));

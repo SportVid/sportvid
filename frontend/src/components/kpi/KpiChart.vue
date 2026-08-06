@@ -1,5 +1,5 @@
 <template>
-  <div ref="plotContainer" style="width: 100%; min-height: 45vh"></div>
+  <div ref="plotContainer" style="width: 100%; min-height: 48vh"></div>
 </template>
 
 <script setup>
@@ -43,6 +43,16 @@ const plotContainer = ref(null);
 let plotInitialized = false;
 let animFrameId = null;
 let lastCurrentTime = null;
+
+// Fewer x-axis ticks once the container gets too narrow for the full set
+// to fit without overlapping (e.g. card squeezed into a single dashboard
+// column) — measured via the same ResizeObserver already driving Plotly's
+// own resize, so it reacts live to drag/resize instead of only on mount.
+const TICK_OVERLAP_WIDTH = 800;
+const containerWidth = ref(0);
+const numTicks = computed(() =>
+  containerWidth.value > 0 && containerWidth.value < TICK_OVERLAP_WIDTH ? 3 : 5
+);
 
 const selectedStart = computed(() => positionDataStore.selectedTimeRange.start);
 const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
@@ -420,10 +430,9 @@ function computeTickVals() {
   const start = selectedStart.value;
   const end = selectedEnd.value;
   const range = end - start;
-  const numTicks = 5;
-  const step = range / numTicks;
+  const step = range / numTicks.value;
   const vals = [];
-  for (let i = 0; i <= numTicks; i++) {
+  for (let i = 0; i <= numTicks.value; i++) {
     vals.push(start + step * i);
   }
   return vals;
@@ -540,12 +549,17 @@ onMounted(() => {
   nextTick(() => renderPlot());
   animFrameId = requestAnimationFrame(animLoop);
 
-  resizeObserver = new ResizeObserver(() => {
+  resizeObserver = new ResizeObserver((entries) => {
+    const width = entries[0]?.contentRect?.width;
+    if (width) containerWidth.value = width;
     if (plotContainer.value && plotInitialized) {
       Plotly.Plots.resize(plotContainer.value);
     }
   });
-  if (plotContainer.value) resizeObserver.observe(plotContainer.value);
+  if (plotContainer.value) {
+    containerWidth.value = plotContainer.value.clientWidth;
+    resizeObserver.observe(plotContainer.value);
+  }
 });
 
 onBeforeUnmount(() => {

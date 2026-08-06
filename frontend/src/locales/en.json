@@ -262,13 +262,29 @@
     },
     "heatmap": {
       "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
-      "area_size": "Area size"
+      "area_size": "Area size",
+      "display_mode": {
+        "title": "Display mode",
+        "heatmap": "Heatmap",
+        "movement": "Movement"
+      }
     },
     "kpi": {
       "posdata_not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
       "kpi_not_selected": "No KPI data available.<br>Please run the KPI computation plugin to compute KPIs based on the selected position data.",
+      "view_mode": {
+        "title": "Select View",
+        "table": "Table",
+        "chart": "Chart"
+      },
+      "group_mode": {
+        "title": "Select Grouping",
+        "player": "Player",
+        "team": "Team"
+      },
       "kpi_selection": {
-        "title": "KPI",
+        "title": "Select KPI",
+        "unit": "Unit",
         "group_distance": "Distance",
         "group_velocity": "Velocity",
         "group_metabolic_work": "Metabolic Work",
@@ -302,7 +318,7 @@
         "centroid_distance": "Centroid Distance [m]"
       },
       "zone_selection": {
-        "title": "Zone",
+        "title": "Select Zones",
         "full_size": "Full size",
         "all_data": "All data",
         "clear": "Clear",

@@ -308,8 +308,11 @@ export const usePositionDataStore = defineStore(
     }
 
     /**
-     * Restore posData after navigation. Checks in-memory cache first,
-     * then falls back to a full reload from the backend.
+     * Restore posData after a reload, using the positionDataId persisted in
+     * sessionStorage (see this store's `persist` option below). Checks the
+     * worker's in-memory cache first, then falls back to the same chunked
+     * backend reload used for a manual selection — a reload never re-fetches
+     * everything, just the one previously-selected dataset.
      */
     async function restoreFromCache() {
       const id = positionDataId.value;
@@ -317,6 +320,13 @@ export const usePositionDataStore = defineStore(
       if (topViewStore.sortedFrameKeys.length > 0) return;
       isRestoringPosData.value = true;
       try {
+        // positionDataList itself isn't persisted (it's just an index of what's
+        // available, cheap to refetch) — loadPositionData() looks the id up in
+        // it, so make sure it's populated before relying on a persisted id that
+        // may otherwise still be empty this early after a reload.
+        if (positionDataList.value.length === 0) {
+          await loadPositionDataList();
+        }
         await loadPositionData(id);
         await visualizationStore.loadKpiData(id);
       } finally {

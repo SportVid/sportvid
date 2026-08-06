@@ -54,61 +54,137 @@
           style="gap: 12px"
           data-tour="kpi-settings"
         >
-          <v-btn
-            v-if="narrow"
-            size="small"
-            @click="controlsExpanded = !controlsExpanded"
-            class="mt-n2"
-          >
-            <v-icon>{{ controlsExpanded ? "mdi-close" : "mdi-menu" }}</v-icon>
-          </v-btn>
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" size="small" data-tour="kpi-display-settings-btn">
+                <v-icon>mdi-menu</v-icon>
+              </v-btn>
+            </template>
+            <v-list
+              class="py-0"
+              density="compact"
+              width="190px"
+              data-tour="kpi-display-settings-list"
+            >
+              <v-list-item class="menu-item" @click="showModalPositionDataOffset = true">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.offset") }}
+                </v-list-item-title>
+              </v-list-item>
 
-          <div
-            class="toolbar-collapse"
-            :class="{ 'toolbar-collapse--expanded': !narrow || controlsExpanded }"
-          >
-            <div class="toolbar-collapse-inner">
-              <v-btn-toggle
-                v-model="viewMode"
-                color="primary"
-                border
-                mandatory
-                elevation="2"
-                style="height: 28px"
-                density="compact"
-              >
-                <v-btn value="table" size="small">
-                  <v-icon size="small">mdi-table</v-icon>
-                </v-btn>
+              <v-list-item class="menu-item" @click="topViewStore.viewMirrorXY">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.mirror_xy") }}
+                  <tab-window-icon
+                    :class="{
+                      'text-disabled': !topViewStore.mirrorXY,
+                      'text-red': topViewStore.mirrorXY,
+                    }"
+                  >
+                    mdi-check
+                  </tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
 
-                <v-btn value="chart" size="small">
-                  <v-icon size="small">mdi-chart-line</v-icon>
-                </v-btn>
-              </v-btn-toggle>
+              <v-divider />
 
-              <v-btn-toggle
-                v-model="groupMode"
-                color="primary"
-                border
-                mandatory
-                elevation="2"
-                style="height: 28px"
-                density="compact"
-              >
-                <v-btn value="player" size="small">
-                  <v-icon size="small">mdi-account</v-icon>
-                </v-btn>
-
-                <v-btn value="team" size="small">
-                  <v-icon size="small">mdi-account-group</v-icon>
-                </v-btn>
-              </v-btn-toggle>
-
-              <v-menu v-model="kpiMenuOpen" location="bottom" :close-on-content-click="false">
+              <v-menu location="end" open-on-hover>
                 <template #activator="{ props }">
-                  <v-btn v-bind="props" size="small">
-                    {{ $t("visualization.kpi.kpi_selection.title") }}
-                  </v-btn>
+                  <v-list-item v-bind="props" class="menu-item">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.kpi.view_mode.title") }}
+                      <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                </template>
+                <v-list class="py-0" density="compact" width="100px">
+                  <v-list-item class="menu-item" @click="viewMode = 'table'">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.kpi.view_mode.table") }}
+                      <tab-window-icon
+                        :class="{
+                          'text-disabled': viewMode !== 'table',
+                          'text-red': viewMode === 'table',
+                        }"
+                      >
+                        mdi-check
+                      </tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item class="menu-item" @click="viewMode = 'chart'">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.kpi.view_mode.chart") }}
+                      <tab-window-icon
+                        :class="{
+                          'text-disabled': viewMode !== 'chart',
+                          'text-red': viewMode === 'chart',
+                        }"
+                      >
+                        mdi-check
+                      </tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+
+              <v-menu location="end" open-on-hover>
+                <template #activator="{ props }">
+                  <v-list-item v-bind="props" class="menu-item">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.kpi.group_mode.title") }}
+                      <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                </template>
+                <v-list class="py-0" density="compact" width="100px">
+                  <v-list-item class="menu-item" @click="groupMode = 'player'">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.kpi.group_mode.player") }}
+                      <tab-window-icon
+                        :class="{
+                          'text-disabled': groupMode !== 'player',
+                          'text-red': groupMode === 'player',
+                        }"
+                      >
+                        mdi-check
+                      </tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                  <v-list-item class="menu-item" @click="groupMode = 'team'">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.kpi.group_mode.team") }}
+                      <tab-window-icon
+                        :class="{
+                          'text-disabled': groupMode !== 'team',
+                          'text-red': groupMode === 'team',
+                        }"
+                      >
+                        mdi-check
+                      </tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+
+              <v-list-item class="menu-item" @click="showModalPositionDataEntityColors = true">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("position_data.display_settings.entity_colors") }}
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-menu
+                v-model="kpiMenuOpen"
+                location="end"
+                open-on-hover
+                :close-on-content-click="false"
+              >
+                <template #activator="{ props }">
+                  <v-list-item v-bind="props" class="menu-item">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.kpi.kpi_selection.title") }}
+                      <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
                 </template>
 
                 <v-list
@@ -132,7 +208,7 @@
                           <template v-if="group.key === 'velocity'">
                             <v-list-item class="menu-item" @click.stop>
                               <v-list-item-title class="d-flex align-center justify-space-between">
-                                <span>Unit</span>
+                                <span>{{ $t("visualization.kpi.kpi_selection.unit") }}</span>
                                 <v-btn-toggle
                                   v-model="velocityUnit"
                                   mandatory
@@ -270,11 +346,16 @@
                 </v-list>
               </v-menu>
 
-              <v-menu location="bottom" :close-on-content-click="false">
+              <v-divider />
+
+              <v-menu location="end" open-on-hover :close-on-content-click="false">
                 <template #activator="{ props }">
-                  <v-btn v-bind="props" size="small">
-                    {{ $t("visualization.kpi.zone_selection.title") }}
-                  </v-btn>
+                  <v-list-item v-bind="props" class="menu-item">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.kpi.zone_selection.title") }}
+                      <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
                 </template>
 
                 <ZoneSelectorPicker
@@ -285,81 +366,124 @@
                 />
               </v-menu>
 
-              <v-btn v-if="viewMode === 'chart'" size="small" @click="kpiChartRef?.saveChart()">
-                <v-icon>mdi-download</v-icon>
-              </v-btn>
+              <v-divider />
 
-              <v-menu location="bottom">
+              <v-menu location="end" open-on-hover>
                 <template #activator="{ props }">
-                  <v-btn v-bind="props" size="small" class="mr-2">
-                    <v-icon size="small">mdi-timer-sync-outline</v-icon>
-                  </v-btn>
+                  <v-list-item v-bind="props" class="menu-item">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("position_data.display_settings.position_data.title") }}
+                      <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
                 </template>
-
-                <v-list class="py-0" density="compact" width="250px">
+                <v-list class="py-0" density="compact">
                   <v-list-item
+                    v-if="canWrite"
                     class="menu-item"
-                    @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
+                    @click="showModalPositionDataUpload = true"
                   >
                     <v-list-item-title>
-                      {{ $t("visualization.time_selection.sync_start") }}
+                      {{ $t("position_data.display_settings.position_data.upload") }}
                     </v-list-item-title>
                   </v-list-item>
-
-                  <v-list-item
-                    class="menu-item"
-                    @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
-                  >
+                  <v-list-item class="menu-item" @click="showModalPositionDataSelect = true">
                     <v-list-item-title>
-                      {{ $t("visualization.time_selection.sync_end") }}
-                    </v-list-item-title>
-                  </v-list-item>
-
-                  <v-divider />
-
-                  <v-list-item
-                    class="menu-item"
-                    @click="
-                      positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
-                      positionDataStore.setSelectedTimeRangeEnd(
-                        allFrameKeys[allFrameKeys.length - 1]
-                      );
-                    "
-                  >
-                    <v-list-item-title>
-                      {{ $t("visualization.time_selection.full_match") }}
-                    </v-list-item-title>
-                  </v-list-item>
-
-                  <v-list-item
-                    class="menu-item"
-                    @click="
-                      positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(1));
-                      positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(1));
-                    "
-                    :disabled="!visualizationStore.halftimesExist"
-                  >
-                    <v-list-item-title>
-                      {{ $t("visualization.time_selection.first_half") }}
-                    </v-list-item-title>
-                  </v-list-item>
-
-                  <v-list-item
-                    class="menu-item"
-                    @click="
-                      positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(2));
-                      positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(2));
-                    "
-                    :disabled="!visualizationStore.halftimesExist"
-                  >
-                    <v-list-item-title>
-                      {{ $t("visualization.time_selection.second_half") }}
+                      {{ $t("position_data.display_settings.position_data.select") }}
                     </v-list-item-title>
                   </v-list-item>
                 </v-list>
               </v-menu>
-            </div>
-          </div>
+            </v-list>
+          </v-menu>
+          <ModalPositionDataUpload
+            v-if="showModalPositionDataUpload"
+            v-model="showModalPositionDataUpload"
+          />
+          <ModalPositionDataSelect
+            v-if="showModalPositionDataSelect"
+            v-model="showModalPositionDataSelect"
+          />
+          <ModalPositionDataEntityColors
+            v-if="showModalPositionDataEntityColors"
+            v-model="showModalPositionDataEntityColors"
+          />
+          <ModalPositionDataOffset
+            v-if="showModalPositionDataOffset"
+            v-model="showModalPositionDataOffset"
+          />
+
+          <v-btn v-if="viewMode === 'chart'" size="small" @click="kpiChartRef?.saveChart()">
+            <v-icon>mdi-download</v-icon>
+          </v-btn>
+
+          <v-menu location="bottom">
+            <template #activator="{ props }">
+              <v-btn v-bind="props" size="small" class="mr-2">
+                <v-icon size="small">mdi-timer-sync-outline</v-icon>
+              </v-btn>
+            </template>
+
+            <v-list class="py-0" density="compact" width="250px">
+              <v-list-item
+                class="menu-item"
+                @click="positionDataStore.setSelectedTimeRangeStart(playerStore.currentTime)"
+              >
+                <v-list-item-title>
+                  {{ $t("visualization.time_selection.sync_start") }}
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-list-item
+                class="menu-item"
+                @click="positionDataStore.setSelectedTimeRangeEnd(playerStore.currentTime)"
+              >
+                <v-list-item-title>
+                  {{ $t("visualization.time_selection.sync_end") }}
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-divider />
+
+              <v-list-item
+                class="menu-item"
+                @click="
+                  positionDataStore.setSelectedTimeRangeStart(allFrameKeys[0]);
+                  positionDataStore.setSelectedTimeRangeEnd(allFrameKeys[allFrameKeys.length - 1]);
+                "
+              >
+                <v-list-item-title>
+                  {{ $t("visualization.time_selection.full_match") }}
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-list-item
+                class="menu-item"
+                @click="
+                  positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(1));
+                  positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(1));
+                "
+                :disabled="!visualizationStore.halftimesExist"
+              >
+                <v-list-item-title>
+                  {{ $t("visualization.time_selection.first_half") }}
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-list-item
+                class="menu-item"
+                @click="
+                  positionDataStore.setSelectedTimeRangeStart(findFirstFrameWithHalftime(2));
+                  positionDataStore.setSelectedTimeRangeEnd(findLastFrameWithHalftime(2));
+                "
+                :disabled="!visualizationStore.halftimesExist"
+              >
+                <v-list-item-title>
+                  {{ $t("visualization.time_selection.second_half") }}
+                </v-list-item-title>
+              </v-list-item>
+            </v-list>
+          </v-menu>
         </v-col>
         <v-col class="pa-0">
           <VisualizationTimeSelector class="ml-n2" />
@@ -403,74 +527,77 @@
             </div>
           </div>
 
-          <v-data-table
-            color="primary"
-            :headers="playerHeaders"
-            :items="teamPlayers"
-            :items-per-page="-1"
-            class="elevation-2 kpi-table-fill"
-            hide-default-footer
-            density="compact"
-            :height="dense ? '100%' : undefined"
-            :fixed-header="dense"
-          >
-            <template #item="{ item, columns }">
-              <tr
-                :style="{
-                  backgroundColor: toRgb(visualizationStore.getTeamColor(item.team_id), 0.6),
-                }"
-              >
-                <td v-for="col in columns" :key="col.key">
-                  {{
-                    col.key === "player_id" ? getPlayerNumber(item[col.key]) : item[col.key] ?? "-"
-                  }}
-                </td>
-              </tr>
-            </template>
+          <div class="kpi-table-fill kpi-table-pad--half">
+            <v-data-table
+              color="primary"
+              :headers="playerHeaders"
+              :items="teamPlayers"
+              :items-per-page="-1"
+              class="elevation-2 kpi-table-grow kpi-table-sticky-first-col"
+              hide-default-footer
+              density="compact"
+              :fixed-header="dense"
+            >
+              <template #item="{ item, columns }">
+                <tr
+                  :style="{
+                    backgroundColor: toRgb(visualizationStore.getTeamColor(item.team_id), 0.6),
+                  }"
+                >
+                  <td v-for="col in columns" :key="col.key">
+                    {{
+                      col.key === "player_id"
+                        ? getPlayerNumber(item[col.key])
+                        : item[col.key] ?? "-"
+                    }}
+                  </td>
+                </tr>
+              </template>
 
-            <template #body.append>
-              <tr
-                :style="{
-                  fontWeight: 'bold',
-                  backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
-                }"
-              >
-                <td>{{ $t("visualization.kpi.player_view.best") }}</td>
-                <td v-for="col in playerHeaders.slice(1)" :key="col.key">
-                  {{ getColBest(teamPlayers, col.key) }}
-                </td>
-              </tr>
-              <tr
-                :style="{
-                  fontWeight: 'bold',
-                  backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
-                }"
-              >
-                <td>{{ $t("visualization.kpi.player_view.total") }}</td>
-                <td v-for="col in playerHeaders.slice(1)" :key="col.key">
-                  {{ getColTotal(teamPlayers, col.key) }}
-                </td>
-              </tr>
-            </template>
+              <template #body.append>
+                <tr
+                  :style="{
+                    fontWeight: 'bold',
+                    backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
+                  }"
+                >
+                  <td>{{ $t("visualization.kpi.player_view.best") }}</td>
+                  <td v-for="col in playerHeaders.slice(1)" :key="col.key">
+                    {{ getColBest(teamPlayers, col.key) }}
+                  </td>
+                </tr>
+                <tr
+                  :style="{
+                    fontWeight: 'bold',
+                    backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
+                  }"
+                >
+                  <td>{{ $t("visualization.kpi.player_view.total") }}</td>
+                  <td v-for="col in playerHeaders.slice(1)" :key="col.key">
+                    {{ getColTotal(teamPlayers, col.key) }}
+                  </td>
+                </tr>
+              </template>
 
-            <template #header.velocity_max="{ column }">
-              <span v-html="column.title" />
-            </template>
-            <template #header.metabolic_work="{ column }">
-              <span v-html="column.title" />
-            </template>
-            <template #header.centroid_distance_max="{ column }">
-              <span v-html="column.title" />
-            </template>
-          </v-data-table>
+              <template #header.velocity_max="{ column }">
+                <span v-html="column.title" />
+              </template>
+              <template #header.metabolic_work="{ column }">
+                <span v-html="column.title" />
+              </template>
+              <template #header.centroid_distance_max="{ column }">
+                <span v-html="column.title" />
+              </template>
+            </v-data-table>
+          </div>
         </v-card>
       </div>
 
-      <div v-else class="team-tables">
+      <div v-else class="team-tables mx-n2">
         <v-card
           v-for="teamRow in runningDistanceTeamAggregated"
           :key="teamRow.team_id"
-          class="team-card pa-4 ma-2"
+          class="team-card"
           outlined
           :style="{ backgroundColor: toRgb(visualizationStore.getTeamColor(teamRow.team_id), 0.8) }"
         >
@@ -496,29 +623,30 @@
             </div>
           </div>
 
-          <v-data-table
-            color="primary"
-            :headers="teamHeaders"
-            :items="teamRow.rows"
-            :items-per-page="-1"
-            class="elevation-2 kpi-table-fill"
-            hide-default-footer
-            density="compact"
-            :height="dense ? '100%' : undefined"
-            :fixed-header="dense"
-          >
-            <template #item="{ item }">
-              <tr
-                :style="{
-                  backgroundColor: toRgb(visualizationStore.getTeamColor(teamRow.team_id), 0.6),
-                }"
-              >
-                <td><span v-html="item.label" /></td>
-                <td>{{ item.total ?? "-" }}</td>
-                <td>{{ item.avg ?? "-" }}</td>
-              </tr>
-            </template>
-          </v-data-table>
+          <div class="kpi-table-fill kpi-table-pad">
+            <v-data-table
+              color="primary"
+              :headers="teamHeaders"
+              :items="teamRow.rows"
+              :items-per-page="-1"
+              class="elevation-2 kpi-table-grow"
+              hide-default-footer
+              density="compact"
+              :fixed-header="dense"
+            >
+              <template #item="{ item }">
+                <tr
+                  :style="{
+                    backgroundColor: toRgb(visualizationStore.getTeamColor(teamRow.team_id), 0.6),
+                  }"
+                >
+                  <td><span v-html="item.label" /></td>
+                  <td>{{ item.total ?? "-" }}</td>
+                  <td>{{ item.avg ?? "-" }}</td>
+                </tr>
+              </template>
+            </v-data-table>
+          </div>
         </v-card>
       </div>
     </div>
@@ -538,7 +666,7 @@
         :velocityUnit="velocityUnit"
       />
 
-      <div class="chart-legend mt-2">
+      <div class="chart-legend mt-7" :class="{ 'chart-legend--dense': dense }">
         <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
           <div
             class="team-dot"
@@ -593,6 +721,10 @@ import { useUserStore } from "@/stores/user";
 import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
 import KpiChart from "@/components/kpi/KpiChart.vue";
 import ZoneSelectorPicker from "@/components/kpi/ZoneSelectorPicker.vue";
+import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
+import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
+import ModalPositionDataEntityColors from "@/components/position-data/ModalPositionDataEntityColors.vue";
+import ModalPositionDataOffset from "@/components/position-data/ModalPositionDataOffset.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
 import { debounce } from "lodash";
@@ -604,10 +736,6 @@ defineProps({
   // side by side with horizontal scroll instead of wrapping to new lines,
   // and let each table scroll its own rows once it hits the cap.
   dense: { type: Boolean, default: false },
-  // True when this cell spans only one dashboard column (see DashboardCell)
-  // — the controls row has too little width to keep every button visible
-  // alongside the time selector, so collapse them behind a toggle instead.
-  narrow: { type: Boolean, default: false },
 });
 
 const topViewStore = useTopViewStore();
@@ -656,11 +784,17 @@ const viewMode = computed({
     tabStore.kpiViewMode = val;
   },
 });
-const groupMode = ref("player");
+const groupMode = computed({
+  get: () => visualizationStore.kpiGroupMode,
+  set: (val) => {
+    visualizationStore.kpiGroupMode = val;
+  },
+});
 
-// Narrow layout (see `narrow` prop): the button row starts collapsed behind
-// the hamburger toggle so the time selector gets its space by default.
-const controlsExpanded = ref(false);
+const showModalPositionDataSelect = ref(false);
+const showModalPositionDataUpload = ref(false);
+const showModalPositionDataEntityColors = ref(false);
+const showModalPositionDataOffset = ref(false);
 
 // Zone initialization based on current sport
 const LONG_BOUNDS = [0, 0.2025, 0.365, 0.635, 0.7955, 1];
@@ -681,7 +815,15 @@ function _defaultZonesForSport(sportKey) {
   if (sportKey === "handball" || sportKey === "basketball") return allSportZones(sportKey);
   return _soccerAllZones();
 }
-const selectedZones = ref(_defaultZonesForSport(topViewStore.currentSport?.key));
+if (visualizationStore.kpiSelectedZones === null) {
+  visualizationStore.kpiSelectedZones = _defaultZonesForSport(topViewStore.currentSport?.key);
+}
+const selectedZones = computed({
+  get: () => visualizationStore.kpiSelectedZones,
+  set: (val) => {
+    visualizationStore.kpiSelectedZones = val;
+  },
+});
 watch(
   () => topViewStore.currentSport?.key,
   (newKey) => {
@@ -703,7 +845,7 @@ const KPI_CONFIG = {
   },
   velocity: {
     labelKey: "visualization.kpi.kpi_selection.group_velocity",
-    chartWidth: "260px",
+    chartWidth: "190px",
     chart: [
       { id: "velocity_frame", kpi: "velocity", mode: "per_frame" },
       { id: "velocity_interval", kpi: "velocity", mode: "windowed" },
@@ -712,7 +854,7 @@ const KPI_CONFIG = {
   },
   metabolic_power: {
     labelKey: "visualization.kpi.kpi_selection.group_metabolic_work",
-    chartWidth: "290px",
+    chartWidth: "280px",
     chart: [
       { id: "metabolic_work_frame", kpi: "metabolic_work", mode: "per_frame" },
       { id: "metabolic_work_interval", kpi: "metabolic_work", mode: "windowed" },
@@ -722,7 +864,7 @@ const KPI_CONFIG = {
   },
   equivalent_distance: {
     labelKey: "visualization.kpi.kpi_selection.group_equivalent_distance",
-    chartWidth: "310px",
+    chartWidth: "260px",
     chart: [
       { id: "equivalent_distance_frame", kpi: "equivalent_distance", mode: "per_frame" },
       { id: "equivalent_distance_interval", kpi: "equivalent_distance", mode: "windowed" },
@@ -765,12 +907,29 @@ const chartKpiGroups = computed(() => {
 });
 
 // Chart mode: single selected option (includes mode + window info)
-const selectedKpiId = ref("running_distance_frame");
-// Table mode: set of KPI ids (independent selection)
-const selectedKpis = ref(new Set(["running_distance_cumulative"]));
+const selectedKpiId = computed({
+  get: () => visualizationStore.kpiSelectedKpiId,
+  set: (val) => {
+    visualizationStore.kpiSelectedKpiId = val;
+  },
+});
+// Table mode: set of KPI ids (independent selection) — stored as an array
+// (sessionStorage-serializable) and exposed here as a Set to match existing
+// usage (.has/.add/.delete).
+const selectedKpis = computed({
+  get: () => new Set(visualizationStore.kpiSelectedKpiIds),
+  set: (val) => {
+    visualizationStore.kpiSelectedKpiIds = [...val];
+  },
+});
 
 // User-configurable interval in frames (default: 10)
-const windowFrames = ref(10);
+const windowFrames = computed({
+  get: () => visualizationStore.kpiWindowFrames,
+  set: (val) => {
+    visualizationStore.kpiWindowFrames = val;
+  },
+});
 
 const onFrameInputBlur = () => {
   if (!windowFrames.value || windowFrames.value < 1 || isNaN(windowFrames.value)) {
@@ -812,7 +971,12 @@ const chartMode = computed(() => selectedKpiOption.value?.mode);
 
 const kpiMenuOpen = ref(false);
 
-const velocityUnit = ref("kmh"); // 'kmh' | 'ms'
+const velocityUnit = computed({
+  get: () => visualizationStore.kpiVelocityUnit,
+  set: (val) => {
+    visualizationStore.kpiVelocityUnit = val;
+  },
+});
 const velocityFactor = computed(() => (velocityUnit.value === "kmh" ? 3.6 : 1.0));
 const velocityUnitHtml = computed(() =>
   velocityUnit.value === "kmh" ? "km⋅h<sup>-1</sup>" : "m⋅s<sup>-1</sup>"
@@ -893,11 +1057,29 @@ const teamHeaders = computed(() => [
 ]);
 
 const playerOptions = computed(() => topViewStore.precomputedPlayerList);
-const selectedPlayerIds = ref(new Set());
+// Stored as an array (sessionStorage-serializable) and exposed here as a Set
+// to match existing usage (.has/.add/.delete).
+const selectedPlayerIds = computed({
+  get: () => new Set(visualizationStore.kpiSelectedPlayerIds ?? []),
+  set: (val) => {
+    visualizationStore.kpiSelectedPlayerIds = [...val];
+  },
+});
 watch(
   playerOptions,
   (list) => {
-    selectedPlayerIds.value = new Set(list.map((p) => p.playerId));
+    if (!list.length) return;
+    if (visualizationStore.kpiSelectedPlayerIds === null) {
+      // First time ever (nothing persisted/selected yet) — default to everyone.
+      selectedPlayerIds.value = new Set(list.map((p) => p.playerId));
+    } else {
+      // Keep the persisted/current selection, dropping any ids that no longer
+      // exist in this dataset (e.g. switched to a different video's tracking
+      // data) — falling back to "everyone" if that leaves nothing selected.
+      const available = new Set(list.map((p) => p.playerId));
+      const filtered = new Set([...selectedPlayerIds.value].filter((id) => available.has(id)));
+      selectedPlayerIds.value = filtered.size > 0 ? filtered : new Set(list.map((p) => p.playerId));
+    }
   },
   { immediate: true }
 );
@@ -1163,32 +1345,6 @@ const findLastFrameWithHalftime = (half) => {
   color: rgb(var(--v-theme-primary));
 }
 
-/* Narrow-layout button collapse (see `narrow` prop): grid-template-columns
-   animates 0fr -> 1fr so the button group grows/shrinks smoothly instead of
-   popping in/out, and the time selector next to it (a flex-grow sibling)
-   reclaims/cedes the space live as it happens — no JS width measuring
-   needed, and the buttons stay mounted throughout (never removed/re-added). */
-.toolbar-collapse {
-  display: grid;
-  grid-template-columns: 0fr;
-  min-width: 0;
-  transition: grid-template-columns 0.25s ease;
-}
-
-.toolbar-collapse--expanded {
-  grid-template-columns: 1fr;
-}
-
-.toolbar-collapse-inner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  overflow: hidden;
-  margin-top: -8px;
-  height: 32px;
-}
-
 .card-header-zone {
   height: 56px;
   display: flex;
@@ -1222,18 +1378,19 @@ const findLastFrameWithHalftime = (half) => {
   overflow-x: auto;
 }
 .player-dot {
-  width: 24px;
   height: 24px;
   border-radius: 50%;
+  padding: 0 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  font-size: 1rem;
+  font-size: 0.7rem;
   cursor: pointer;
   border: 2px solid;
   transition: background 0.2s, border 0.2s;
   user-select: none;
+  white-space: nowrap;
 }
 .player-dot.selected {
   border: 2px solid;
@@ -1283,7 +1440,13 @@ const findLastFrameWithHalftime = (half) => {
    below three shared row tracks (title / player-selector / table) instead
    of each card sizing those independently, which is what lets the rows
    line up across cards (see .team-card's subgrid) and lets the table row
-   fill exactly down to the same bottom edge in every column. */
+   fill exactly down to the same bottom edge in every column.
+   flex: 1 1 auto (only takes effect when dense, i.e. when the parent
+   .kpi-table-view--fill is actually a flex column) makes this grid claim
+   the rest of that column's height instead of sizing to its own content —
+   without it the team-aggregated table (a handful of KPI rows, far
+   shorter than the video/topview card it shares a row with) left a big
+   unused gap below the cards instead of growing to match. */
 .team-tables {
   display: grid;
   grid-auto-flow: column;
@@ -1292,6 +1455,8 @@ const findLastFrameWithHalftime = (half) => {
   column-gap: 16px;
   overflow-x: auto;
   padding-bottom: 4px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .team-card {
@@ -1299,33 +1464,152 @@ const findLastFrameWithHalftime = (half) => {
      title/player-selector/table rows independently — that's what makes
      the player-selector row (and therefore the table's start/end) line
      up across every team's card. min-height: 0 lets the table row (1fr)
-     actually shrink to the track size instead of growing with content. */
+     actually shrink to the track size instead of growing with content.
+     min-width: 0 does the equivalent on the column axis: without it a
+     grid item's automatic minimum size is its content's min-content width,
+     so a table with many KPI columns forces the card (and the whole
+     .team-tables track) wider instead of clipping — which is what silently
+     killed the table's own horizontal scrollbar (see .kpi-table-fill). */
   display: grid;
   grid-row: 1 / span 3;
   grid-template-rows: subgrid;
   min-height: 0;
+  min-width: 0;
   max-width: none;
 }
 
-/* The table itself is a grid item (team-card's 3rd row) — same min-height
-   reset so it actually shrinks to that row's height instead of forcing
-   the row (and every card sharing the subgrid track) to grow to fit its
-   un-scrolled content. */
+/* Wraps the <v-data-table> (team-card's 3rd subgrid row) instead of being
+   applied to the table itself — see .kpi-table-pad below for why. Same
+   min-height reset so it actually shrinks to that row's height instead of
+   forcing the row (and every card sharing the subgrid track) to grow to
+   fit its un-scrolled content. min-width: 0 is the matching fix on the
+   column axis: it lets the wrapper shrink to the card's width instead of
+   growing past its track.
+   display: flex (column): gives .kpi-table-grow a genuinely definite
+   height to cap against (see there) — a plain block wrapper's height,
+   even though itself made definite via subgrid stretch, doesn't reliably
+   keep propagating as "definite" to a nested child's percentage height
+   one level further down in every browser. Note the wrapper itself still
+   always fills the full subgrid row track (that's the point — every
+   team's row-3 track lines up at the same height across cards), it's
+   only the table *inside* it that's now allowed to be shorter (see
+   .kpi-table-grow's max-height, not height). */
 .kpi-table-fill {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
+  min-width: 0;
+}
+
+/* The <v-data-table> itself, inside the flex-column wrapper above.
+   Deliberately flex: 0 0 auto (no grow) + max-height: 100%, not
+   flex: 1 1 auto — grow would stretch every table to the wrapper's full
+   height regardless of content, so a team with fewer KPI rows than its
+   neighbor showed a big blank strip in the table's own opaque background
+   below its last row instead of just ending there and letting the card's
+   own tinted color show through. max-height still caps it at the
+   wrapper's height when content *would* overflow, which is what keeps
+   the table from pushing the card past the row's bounds and is what
+   makes Vuetify's own `.v-table__wrapper { overflow: auto }` actually
+   kick in and scroll (in both directions) once that cap is hit.
+   min-height/min-width: 0 let it shrink below content size at all (flex
+   items default to min-content otherwise). */
+.kpi-table-grow {
+  flex: 0 0 auto;
+  max-height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Minimal breathing room around the table only (not the whole card) —
+   keeps the team name / player-selector flush like the single-player
+   view while still giving the table itself a little space. Team view gets
+   the full amount, the player view half (see --half), per request.
+   Applied to .kpi-table-fill (a plain, background-less wrapper div around
+   <v-data-table>), not to the table itself: the table (.v-table) paints
+   its own opaque `--v-theme-surface` background all the way to its
+   border box, so padding directly on it would just add blank space still
+   filled by that background — the card's tinted color behind it would
+   never actually show through. On the transparent wrapper, padding
+   reveals it correctly, symmetrically on every side. */
+.kpi-table-pad {
+  padding: 0 8px 8px;
+}
+.kpi-table-pad--half {
+  padding: 0 4px 4px;
+}
+
+/* Player-view table only: with many KPI columns toggled on, the table now
+   scrolls horizontally on its own (see .kpi-table-fill's min-width fix) —
+   pin the player-number column so it stays visible as the KPI columns
+   scroll underneath it, the way a frozen row header works. :deep() is
+   needed for th because default header cells are rendered by v-data-table
+   itself, not by our template.
+
+   The header cell needs a *higher* z-index than the body's sticky column,
+   not the same one: Vuetify's own fixed-header CSS already gives thead
+   (and its th's) position: sticky + z-index, and with an equal z-index the
+   later-in-DOM element wins ties — tbody comes after thead, so on an equal
+   footing the scrolling body rows painted over the pinned header instead
+   of going behind it (vertical scroll), and sibling header cells (which
+   Vuetify also puts at z-index: 1 in fixed-header mode) painted over our
+   corner cell in DOM order too (horizontal scroll). Giving the corner th
+   a clearly higher z-index (with !important, since Vuetify's own
+   `.v-table--fixed-header th` rule targets the same element) fixes both:
+   the corner cell now always wins, whether stacked against body rows or
+   sibling header cells. */
+.kpi-table-sticky-first-col :deep(th:first-child),
+.kpi-table-sticky-first-col :deep(td:first-child) {
+  position: sticky;
+  left: 0;
+}
+.kpi-table-sticky-first-col :deep(td:first-child) {
+  z-index: 1;
+  /* Rows set their background via inline style on the <tr> — inherit picks
+     that dynamic color up so the sticky cell doesn't go transparent and
+     let scrolled-under cells show through. */
+  background-color: inherit;
+}
+.kpi-table-sticky-first-col :deep(th:first-child) {
+  z-index: 3 !important;
+  background-color: rgb(var(--v-theme-surface)) !important;
 }
 
 .chart-legend {
   display: flex;
   justify-content: center;
-  gap: 20px;
+  column-gap: 20px;
+  row-gap: 8px;
   flex-wrap: wrap;
+}
+
+/* Squeezed next to video/topview (see `dense` prop): one row, horizontal
+   scroll instead of wrapping to more lines than the capped height has
+   room for — mirrors TabWindowHeatmap's chart-legend--dense. */
+.chart-legend--dense {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
 .chart-legend-team {
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+/* Match TabWindowHeatmap's player-dot sizing (fixed 24px circle, no
+   padding) in both the chart legend and the table view's player-selector —
+   the base .player-dot above stays as a plain fallback, but without this
+   override the table view's dots grow into pills via their padding instead
+   of staying perfect circles like the other two locations. */
+.chart-legend .player-dot,
+.player-selector .player-dot {
+  width: 24px;
+  padding: 0;
+  font-size: 1rem;
+  white-space: normal;
 }
 
 .team-dot {

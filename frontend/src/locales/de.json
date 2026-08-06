@@ -197,11 +197,31 @@
       "first_half": "Erste Halbzeit auswählen",
       "second_half": "Zweite Halbzeit auswählen"
     },
+    "heatmap": {
+      "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führe das Bytetrack-Plugin aus oder lade Positionsdaten manuell hoch.",
+      "area_size": "Flächengröße",
+      "display_mode": {
+        "title": "Anzeigemodus",
+        "heatmap": "Heatmap",
+        "movement": "Bewegung"
+      }
+    },
     "kpi": {
       "posdata_not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führe das Bytetrack-Plugin aus oder lade Positionsdaten manuell hoch.",
       "kpi_not_selected": "Keine KPI-Daten verfügbar.<br>Bitte führe das KPI-Berechnungs-Plugin aus, um KPIs auf Basis der ausgewählten Positionsdaten zu berechnen.",
+      "view_mode": {
+        "title": "Ansicht",
+        "table": "Tabelle",
+        "chart": "Diagramm"
+      },
+      "group_mode": {
+        "title": "Gruppierung",
+        "player": "Spieler",
+        "team": "Team"
+      },
       "kpi_selection": {
         "title": "KPI",
+        "unit": "Einheit",
         "group_distance": "Distanz",
         "group_velocity": "Geschwindigkeit",
         "group_metabolic_work": "Metabolische Arbeit",
