@@ -1932,6 +1932,7 @@ export const useCalibrationAssetStore = defineStore(
         "calibrationAssetType",
         "calibrationAssetObjects",
         "calibrationMatrixPersisted",
+        "calibrationAssetId",
       ],
       storage: sessionStorage,
     },

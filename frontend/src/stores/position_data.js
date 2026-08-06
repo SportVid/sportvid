@@ -6,6 +6,7 @@ import config from "../../app.config";
 import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "./top_view";
 import { useBboxesStore } from "./bboxes";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { isInSportZone } from "@/plugins/sport_zones";
@@ -20,10 +21,18 @@ export const usePositionDataStore = defineStore(
     const playerStore = usePlayerStore();
     const topViewStore = useTopViewStore();
     const bboxesStore = useBboxesStore();
+    const calibrationAssetStore = useCalibrationAssetStore();
     const visualizationStore = useVisualizationStore();
 
     const positionDataList = ref([]);
     const positionDataId = ref(null);
+    // Which source ModalPositionDataSelect.vue's confirmSelection last picked —
+    // 'manual' | 'bytetrack' | 'object_tracker' | null (nothing chosen yet).
+    // Persisted (see this store's `persist` option) so restoreFromCache knows
+    // which of the two restore paths below to take after a reload; it's the
+    // only thing here that isn't itself a positionDataId, hence living in
+    // this store rather than bboxesStore/calibrationAssetStore.
+    const positionDataMode = ref(null);
     const isRestoringPosData = ref(false);
 
     const isUploading = ref(false);
@@ -307,28 +316,71 @@ export const usePositionDataStore = defineStore(
       }
     }
 
-    /**
-     * Restore posData after a reload, using the positionDataId persisted in
-     * sessionStorage (see this store's `persist` option below). Checks the
-     * worker's in-memory cache first, then falls back to the same chunked
-     * backend reload used for a manual selection — a reload never re-fetches
-     * everything, just the one previously-selected dataset.
-     */
-    async function restoreFromCache() {
+    async function _restoreManual() {
       const id = positionDataId.value;
       if (!id) return;
+      // positionDataList itself isn't persisted (it's just an index of what's
+      // available, cheap to refetch) — loadPositionData() looks the id up in
+      // it, so make sure it's populated before relying on a persisted id that
+      // may otherwise still be empty this early after a reload.
+      if (positionDataList.value.length === 0) {
+        await loadPositionDataList();
+      }
+      await loadPositionData(id);
+      await visualizationStore.loadKpiData(id);
+    }
+
+    // Mirrors ModalPositionDataSelect.vue's confirmSelection for the
+    // bytetrack/object_tracker branch, using the plugin run ids persisted on
+    // bboxesStore/topViewStore (see their `persist` options) instead of
+    // whatever the modal's own v-models held — those aren't persisted, the
+    // modal isn't even open across a reload. Deliberately does not touch
+    // selectedTimeRange (unlike confirmSelection): that's already persisted
+    // with whatever range was selected last, and re-deriving "full match"
+    // here would silently discard it on every reload.
+    async function _restoreTracker() {
+      const trackerPluginId = bboxesStore.bboxPluginRunId;
+      const calibrationAssetId = calibrationAssetStore.calibrationAssetId;
+      if (!trackerPluginId || !calibrationAssetId) return;
+
+      // calibrationAssetsList (unlike positionDataList) isn't fetched anywhere
+      // by the time AnalysisView.vue calls restoreFromCache on mount — normally
+      // ModalPositionDataSelect.vue's own mount populates it well before the
+      // user can click confirm, but that modal never opens on a reload.
+      // transformBBoxToPositionDataTopView -> loadCalibrationAsset does a
+      // synchronous .find() on it, so without this it throws on the still-
+      // default `{}`.
+      await calibrationAssetStore.loadCalibrationAssetsList();
+      await topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, trackerPluginId);
+      if (bboxesStore.bboxBallPluginRunId) {
+        await topViewStore.mergeBallTracking(calibrationAssetId, bboxesStore.bboxBallPluginRunId);
+      }
+      if (topViewStore.teamClusteringRunId) {
+        await topViewStore.mergeTeamAssignment(topViewStore.teamClusteringRunId);
+      }
+      if (topViewStore.reidRunId) {
+        await topViewStore.mergeReid(topViewStore.reidRunId);
+      }
+      await visualizationStore.loadKpiData(trackerPluginId);
+    }
+
+    /**
+     * Restore whichever position-data source was active before a reload,
+     * using positionDataMode plus the source-specific ids persisted on this
+     * store / bboxesStore / calibrationAssetStore / topViewStore (see each
+     * store's `persist` option) — a reload never re-fetches everything, just
+     * the one previously-selected dataset.
+     */
+    async function restoreFromCache() {
+      if (!positionDataMode.value) return;
       if (topViewStore.sortedFrameKeys.length > 0) return;
       isRestoringPosData.value = true;
       try {
-        // positionDataList itself isn't persisted (it's just an index of what's
-        // available, cheap to refetch) — loadPositionData() looks the id up in
-        // it, so make sure it's populated before relying on a persisted id that
-        // may otherwise still be empty this early after a reload.
-        if (positionDataList.value.length === 0) {
-          await loadPositionDataList();
+        if (positionDataMode.value === "manual") {
+          await _restoreManual();
+        } else {
+          await _restoreTracker();
         }
-        await loadPositionData(id);
-        await visualizationStore.loadKpiData(id);
       } finally {
         isRestoringPosData.value = false;
       }
@@ -337,6 +389,7 @@ export const usePositionDataStore = defineStore(
     return {
       positionDataList,
       positionDataId,
+      positionDataMode,
       positionDataUploadSuccess,
       positionDataRenameSuccess,
       positionDataDeleteSuccess,
@@ -358,7 +411,7 @@ export const usePositionDataStore = defineStore(
   },
   {
     persist: {
-      pick: ["positionDataId", "selectedTimeRange"],
+      pick: ["positionDataId", "positionDataMode", "selectedTimeRange"],
       storage: sessionStorage,
     },
   }

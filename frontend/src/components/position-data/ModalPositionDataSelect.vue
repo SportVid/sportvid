@@ -454,6 +454,11 @@ const isButtonDisabled = computed(() => {
 });
 
 const confirmSelection = async (calibrationAssetId, trackerPluginId, positionDataId, areaSize) => {
+  // Persisted (position_data.js) so a reload's restoreFromCache knows which
+  // of the two restore paths to take — see there for why bytetrack and
+  // object_tracker don't need to be told apart any further than that.
+  positionDataStore.positionDataMode = selectedMode.value;
+
   if (selectedMode.value === "bytetrack" || selectedMode.value === "object_tracker") {
     if (trackerPluginId) {
       await topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, trackerPluginId);

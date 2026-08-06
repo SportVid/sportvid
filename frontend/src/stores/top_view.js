@@ -336,6 +336,13 @@ export const useTopViewStore = defineStore(
     // Whether the current positionDataTopView is a CompactPositionData instance
     const _isCompact = ref(false);
 
+    // Plugin run ids of the last team_clustering/osnet_reid merges applied on top of the
+    // active tracker run (see mergeTeamAssignment/mergeReid below) — persisted (see this
+    // store's `persist` option) purely so a page reload can redo the same merges; they play
+    // no role in the merge logic itself.
+    const teamClusteringRunId = ref(null);
+    const reidRunId = ref(null);
+
     // Applies the calibration homography to a plain-object bbox dataset (time -> [tracklet, ...]),
     // matching the tracklet layout produced by bytetrack/object_tracker (b[3]/b[4] = x/y).
     function _applyHomographyToBboxData(bboxData) {
@@ -482,6 +489,11 @@ export const useTopViewStore = defineStore(
         bboxesStore.bboxDataActive = updatedBboxes;
         bboxesStore.bboxDataLoaded = true;
       } else {
+        // Fresh tracker run (not just a re-apply after a bbox edit) — any
+        // team_clustering/reid merge tracked below belonged to whichever run
+        // was active before, so it no longer applies here.
+        teamClusteringRunId.value = null;
+        reidRunId.value = null;
         await bboxesStore.loadBboxData(bytetrackPluginId);
       }
 
@@ -569,6 +581,7 @@ export const useTopViewStore = defineStore(
         }
       }
       bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
+      teamClusteringRunId.value = teamClusteringPluginRunId;
 
       _applyMergedBboxData();
       _recomputeAggregates(_combinedStoredMeta());
@@ -626,6 +639,7 @@ export const useTopViewStore = defineStore(
       }
       playerMeta.player_ids = { ...(playerMeta.player_ids ?? {}), ...rebuiltPlayerIds };
       bboxesStore.bboxMetaData = JSON.stringify(playerMeta);
+      reidRunId.value = reidPluginRunId;
 
       _applyMergedBboxData();
       _recomputeAggregates(_combinedStoredMeta());
@@ -819,6 +833,8 @@ export const useTopViewStore = defineStore(
       mergeBallTracking,
       mergeTeamAssignment,
       mergeReid,
+      teamClusteringRunId,
+      reidRunId,
       refreshBallBboxData,
       showPlayerId,
       viewPlayerId,
@@ -852,7 +868,15 @@ export const useTopViewStore = defineStore(
   },
   {
     persist: {
-      pick: ["currentSport", "currentAreaSize", "showSportZones", "gridLongitudinal", "gridTransverse"],
+      pick: [
+        "currentSport",
+        "currentAreaSize",
+        "showSportZones",
+        "gridLongitudinal",
+        "gridTransverse",
+        "teamClusteringRunId",
+        "reidRunId",
+      ],
       storage: sessionStorage,
     },
   }
