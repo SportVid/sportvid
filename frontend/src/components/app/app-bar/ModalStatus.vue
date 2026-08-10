@@ -241,12 +241,11 @@ import { ref, computed, watch, watchEffect, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePlayerStore } from "@/stores/player";
-import { usePositionDataStore } from "@/stores/position_data";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
+import { usePositionDataStatus } from "@/composables/usePositionDataStatus";
 
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
-const positionDataStore = usePositionDataStore();
 const pluginRunResultStore = usePluginRunResultStore();
 
 const props = defineProps({
@@ -313,44 +312,18 @@ const getStatusText = (status) => {
   return t(`modal.plugin.status.${status.toLowerCase()}`);
 };
 
-// Status overview (read-only), derived from raw plugin runs / position data.
-const rawPluginRuns = computed(() => pluginRunStore.forVideo(playerStore.videoId));
-
-// Once a plugin has succeeded, the overview should keep showing the most advanced state
-// reached so far (done) rather than flipping back to "running" just because a new run of
-// the same type was started afterwards. Hence "done" is checked before "running" here.
-const deriveState = (types) => {
-  const runs = rawPluginRuns.value.filter((run) => types.includes(run.type));
-  if (runs.length === 0) return "none";
-  if (runs.some((run) => run.status === "DONE")) return "done";
-  if (runs.some((run) => run.status === "RUNNING" || run.status === "QUEUED")) return "running";
-  if (runs.some((run) => run.status === "ERROR")) return "error";
-  return "none";
-};
-
-// AND: all given states must be "done" (e.g. player tracking + DLT belong together as one variant).
-const combineAll = (states) => {
-  if (states.every((s) => s === "done")) return "done";
-  if (states.some((s) => s === "running")) return "running";
-  if (states.some((s) => s === "error")) return "error";
-  return "none";
-};
-
-// OR: any one of the given states being "done" is enough (alternative variants).
-const combineAny = (states) => {
-  if (states.some((s) => s === "done")) return "done";
-  if (states.some((s) => s === "running")) return "running";
-  if (states.some((s) => s === "error")) return "error";
-  return "none";
-};
-
-const maxProgress = (types) => {
-  const runningRuns = rawPluginRuns.value.filter(
-    (run) => types.includes(run.type) && (run.status === "RUNNING" || run.status === "QUEUED")
-  );
-  if (!runningRuns.length) return null;
-  return Math.round(Math.max(...runningRuns.map((run) => parseFloat(run.progress) * 100)));
-};
+// Status overview (read-only), derived from raw plugin runs / position data -- shared with
+// PositionDataMenu's disabled-Select tooltip, see usePositionDataStatus.
+const {
+  playerTrackingState,
+  objectTrackingState,
+  dltState,
+  uploadState,
+  kpiState,
+  posdataOverallState,
+  posdataAvailable,
+  maxProgress,
+} = usePositionDataStatus();
 
 const stateColor = (state) => {
   if (state === "done") return progressColor("DONE");
@@ -381,52 +354,13 @@ const stateText = (state, types = null) => {
   return text;
 };
 
-const trackerTypes = ["bytetrack", "object_tracker"];
-const dltTypes = ["calibration_static_dlt"];
-const uploadTypes = ["posdata_convert"];
+// Just the type lists the template needs for stateText()'s progress lookup -- the actual
+// state derivation lives in usePositionDataStatus now.
+const posdataAllTypes = ["bytetrack", "object_tracker", "calibration_static_dlt", "posdata_convert"];
 const kpiTypes = ["kpi_computation"];
-const posdataAllTypes = [...trackerTypes, ...dltTypes, ...uploadTypes];
-
-// An object_tracker run without a tracker attached only detects the ball (result name
-// "bboxes_ball", see backend tasks/object_tracker.py); legacy bytetrack runs and
-// object_tracker runs with a tracker attached (result name "bboxes") track players. Same
-// check as Parameters.vue / ModalPositionDataSelect.vue's isBallTrackerRun.
-const isBallTrackerRun = (pluginRunId) =>
-  pluginRunResultStore.forPluginRun(pluginRunId).some((r) => r.name === "bboxes_ball");
-
-const deriveTrackerState = (wantBall) => {
-  const runs = rawPluginRuns.value.filter((run) => trackerTypes.includes(run.type));
-  if (runs.length === 0) return "none";
-  // Player vs. ball can only be told apart once a run is DONE (via its result name) - the
-  // parameters that decide this aren't available on non-finished runs. So a still-running or
-  // failed run of ambiguous kind is surfaced on both variants until it resolves to one of them.
-  if (runs.some((run) => run.status === "DONE" && isBallTrackerRun(run.id) === wantBall)) {
-    return "done";
-  }
-  if (runs.some((run) => run.status === "RUNNING" || run.status === "QUEUED")) return "running";
-  if (runs.some((run) => run.status === "ERROR")) return "error";
-  return "none";
-};
-
-const playerTrackingState = computed(() => deriveTrackerState(false));
-const objectTrackingState = computed(() => deriveTrackerState(true));
-const dltState = computed(() => deriveState(dltTypes));
-const uploadState = computed(() => deriveState(uploadTypes));
-const kpiState = computed(() => deriveState(kpiTypes));
-
-// Ball tracking (object tracking) is optional: position data only requires player
-// tracking + DLT calibration to count as available.
-const variantAutoState = computed(() => combineAll([playerTrackingState.value, dltState.value]));
-
-const posdataOverallState = computed(() => {
-  if (positionDataStore.positionDataList.length > 0) return "done";
-  return combineAny([variantAutoState.value, uploadState.value]);
-});
-
-const posdataAvailable = computed(() => posdataOverallState.value === "done");
 
 // Cheap call (no add_results) so tracker runs can be classified as player- vs.
-// object(ball)-tracking via their result name (see isBallTrackerRun above).
+// object(ball)-tracking via their result name (see usePositionDataStatus's isBallTrackerRun).
 onMounted(() => {
   pluginRunResultStore.fetchForVideo({ videoId: playerStore.videoId });
 });

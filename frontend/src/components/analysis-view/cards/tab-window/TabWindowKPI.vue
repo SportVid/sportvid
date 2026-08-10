@@ -1,43 +1,30 @@
 <template>
-  <div v-if="!hasPositionData && posdataWorkerStore.isLoading" class="kpi-loading-card">
+  <!-- Loading covers both stages: still loading position data itself (posdataWorkerStore), or
+       position data is there but a kpi_computation run for it is still in flight
+       (kpiComputationActive, triggered from PositionDataMenu's Compute KPIs button below). -->
+  <div
+    v-if="!hasKpiData && (posdataWorkerStore.isLoading || visualizationStore.isLoadingKpi || kpiComputationActive)"
+    class="kpi-loading-card"
+  >
     <div class="kpi-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
-    <div class="kpi-loading-text">
+    <div v-if="posdataWorkerStore.isLoading" class="kpi-loading-text">
       {{
         posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100
           ? `${posdataWorkerStore.loadProgress}%`
           : ""
       }}
     </div>
+    <div v-else-if="kpiComputationActive" class="kpi-loading-text">{{ kpiComputationProgressText }}</div>
   </div>
 
-  <v-row
-    v-else-if="!hasPositionData"
-    class="text-h6 text-grey font-weight-light mx-16 px-10"
-    style="
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      line-height: 1.5;
-      height: 25vh;
-    "
-    v-html="kpiPosdataNotSelectedText"
-  />
-
-  <div v-else-if="!hasKpiData && visualizationStore.isLoadingKpi" class="kpi-loading-card">
-    <div class="kpi-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
-  </div>
-
-  <v-row
+  <!-- Covers both "no position data yet" and "position data exists but no KPIs computed for it
+       yet" -- PositionDataMenu's own disabled-Select hover hint (see selectDisabled there)
+       already tells those two apart, no need for a second, separately-styled empty state here. -->
+  <PositionDataMenu
     v-else-if="!hasKpiData"
-    class="text-h6 text-grey font-weight-light mx-16 px-10"
-    style="
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      line-height: 1.5;
-      height: 25vh;
-    "
-    v-html="kpiNotSelectedText"
+    :title="$t('analysis_view.visualization_tabs.kpi')"
+    show-kpi-button
+    icon="mdi-speedometer"
   />
 
   <div v-else class="d-flex flex-column flex-nowrap pa-4" :class="{ 'kpi-fill-height': dense }">
@@ -718,6 +705,7 @@ import { useVideoStore } from "@/stores/video";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { useTabStore } from "@/stores/tabs";
 import { useUserStore } from "@/stores/user";
+import { usePluginRunStore } from "@/stores/plugin_run";
 import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
 import KpiChart from "@/components/kpi/KpiChart.vue";
 import ZoneSelectorPicker from "@/components/kpi/ZoneSelectorPicker.vue";
@@ -725,6 +713,7 @@ import ModalPositionDataSelect from "@/components/position-data/ModalPositionDat
 import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
 import ModalPositionDataEntityColors from "@/components/position-data/ModalPositionDataEntityColors.vue";
 import ModalPositionDataOffset from "@/components/position-data/ModalPositionDataOffset.vue";
+import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
 import { debounce } from "lodash";
@@ -746,6 +735,7 @@ const videoStore = useVideoStore();
 const posdataWorkerStore = usePosdataWorkerStore();
 const tabStore = useTabStore();
 const userStore = useUserStore();
+const pluginRunStore = usePluginRunStore();
 
 const { t } = useI18n();
 
@@ -754,16 +744,6 @@ const canWrite = computed(() => {
   const ownerUsername = playerStore.video?.owner_username;
   if (!ownerUsername) return true;
   return ownerUsername === userStore.username;
-});
-
-const kpiPosdataNotSelectedText = computed(() => {
-  const full = t("visualization.kpi.posdata_not_selected");
-  return canWrite.value ? full : full.split("<br>")[0];
-});
-
-const kpiNotSelectedText = computed(() => {
-  const full = t("visualization.kpi.kpi_not_selected");
-  return canWrite.value ? full : full.split("<br>")[0];
 });
 
 const kpiChartRef = ref(null);
@@ -1276,14 +1256,31 @@ const runningDistanceTeamAggregated = computed(() => {
   return result;
 });
 
-const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
-
 const hasKpiData = computed(
   () =>
     visualizationStore.kpiData != null &&
     typeof visualizationStore.kpiData === "object" &&
     Object.keys(visualizationStore.kpiData).length > 0
 );
+
+// Still needed for the loading-spinner branch above even though the Compute KPIs trigger
+// itself now lives in PositionDataMenu -- see usePositionDataStatus for the equivalent
+// disabled-Select-button state that drives PositionDataMenu's own empty state.
+const kpiRunsForVideo = computed(() =>
+  pluginRunStore.forVideo(playerStore.videoId).filter((e) => e.type === "kpi_computation")
+);
+const kpiComputationRun = computed(() => {
+  const runs = kpiRunsForVideo.value.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
+  return runs[0] || null;
+});
+const kpiComputationActive = computed(() =>
+  ["RUNNING", "QUEUED", "WAITING"].includes(kpiComputationRun.value?.status)
+);
+const kpiComputationProgressText = computed(() => {
+  const run = kpiComputationRun.value;
+  if (!run || run.progress == null) return "";
+  return `${Math.round(run.progress * 100)}%`;
+});
 
 const getTeamName = (teamId) => {
   const meta = topViewStore.metaDataTopView;

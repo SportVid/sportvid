@@ -155,7 +155,6 @@
       <UserMenu />
     </template>
 
-    <ModalPlugin v-if="showModalPlugin" v-model="showModalPlugin" :videoIds="[videoId]" />
     <ModalStatus
       v-if="showModalStatus"
       v-model="showModalStatus"
@@ -216,6 +215,15 @@ const termsOfUseView = computed(() => route.name === "TermsOfUseView");
 const guidelinesView = computed(() => route.name === "GuidelinesView");
 
 const showModalStatus = ref(false);
+watch(
+  () => pluginRunStore.openStatusModal,
+  (val) => {
+    if (val) {
+      showModalStatus.value = true;
+      pluginRunStore.openStatusModal = false;
+    }
+  }
+);
 const pluginRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)

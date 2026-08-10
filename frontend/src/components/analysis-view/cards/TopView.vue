@@ -13,7 +13,11 @@
     </div>
   </div>
 
-  <PositionDataMenu v-else-if="topViewStore.sortedFrameKeys.length === 0" />
+  <PositionDataMenu
+    v-else-if="topViewStore.sortedFrameKeys.length === 0"
+    :title="$t('analysis_view.dashboard.widgets.topview')"
+    icon="mdi-soccer-field"
+  />
 
   <div v-else class="d-flex flex-column pa-4">
     <div class="card-header-zone">

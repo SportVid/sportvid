@@ -187,11 +187,18 @@
   },
   "position_data": {
     "not_selected": "No position data available yet.",
+    "kpi_not_selected": "No KPIs computed yet.",
+    "select_disabled_hint_prefix": "Current status can be seen in the ",
+    "status_overview_link": "status overview",
+    "select_disabled_hint_suffix": ".",
     "generate": {
       "cv_heading": "Via computer vision",
       "or": "or",
       "bytetrack": "ByteTrack",
+      "object_tracker": "Object Tracker",
       "dlt": "DLT calibration",
+      "team_assignment": "Team Assignment",
+      "re_identification": "Re-Identification",
       "upload_heading": "Via file upload"
     },
     "display_settings": {
@@ -1231,13 +1238,12 @@
       "select": {
         "title": "Select Position Data",
         "modes": {
-          "bytetrack": "ByteTrack Plugin",
           "object_tracker": "Object Tracking Plugin",
           "manual": "Manual Upload"
         },
         "asset": "Select Calibration Asset",
         "not_calibrated": "not calibrated",
-        "bytetrack": "Select Bytetrack Plugin",
+        "optional": "Optional",
         "object_tracker": "Select Object Tracking Plugin",
         "ball_tracker": "Select Ball Tracking Run (optional)",
         "team_clustering": "Select Team Assignment (optional)",

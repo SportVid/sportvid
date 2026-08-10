@@ -10,17 +10,10 @@
     </div>
   </div>
 
-  <v-row
+  <PositionDataMenu
     v-else-if="!hasPositionData"
-    class="text-h6 text-grey font-weight-light mx-16 px-10"
-    style="
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      line-height: 1.5;
-      height: 25vh;
-    "
-    v-html="heatmapNotSelectedText"
+    :title="$t('analysis_view.visualization_tabs.heatmap')"
+    icon="mdi-fire"
   />
 
   <div v-else class="d-flex flex-column flex-nowrap pa-4">
@@ -431,7 +424,6 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, toRaw } from "vue";
-import { useI18n } from "vue-i18n";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
 import { usePlayerStore } from "@/stores/player";
@@ -444,6 +436,7 @@ import ModalPositionDataSelect from "@/components/position-data/ModalPositionDat
 import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
 import ModalPositionDataEntityColors from "@/components/position-data/ModalPositionDataEntityColors.vue";
 import ModalPositionDataOffset from "@/components/position-data/ModalPositionDataOffset.vue";
+import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import h337 from "heatmap.js";
 import { toRgb } from "@/plugins/helpers";
 import { resampleApprox } from "@/plugins/draw/utils";
@@ -457,7 +450,6 @@ defineProps({
   dense: { type: Boolean, default: false },
 });
 
-const { t } = useI18n();
 const topViewStore = useTopViewStore();
 const videoStore = useVideoStore();
 const visualizationStore = useVisualizationStore();
@@ -471,11 +463,6 @@ const canWrite = computed(() => {
   const ownerUsername = playerStore.video?.owner_username;
   if (!ownerUsername) return true;
   return ownerUsername === userStore.username;
-});
-
-const heatmapNotSelectedText = computed(() => {
-  const full = t("visualization.heatmap.not_selected");
-  return canWrite.value ? full : full.split("<br>")[0];
 });
 
 const currentArea = computed(

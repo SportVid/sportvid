@@ -143,11 +143,18 @@
   },
   "position_data": {
     "not_selected": "Keine Positionsdaten vorhanden.",
+    "kpi_not_selected": "Noch keine KPIs berechnet.",
+    "select_disabled_hint_prefix": "Der aktuelle Stand ist in der ",
+    "status_overview_link": "Statusübersicht",
+    "select_disabled_hint_suffix": " einsehbar.",
     "generate": {
       "cv_heading": "Über Computer Vision",
       "or": "oder",
       "bytetrack": "ByteTrack",
+      "object_tracker": "Object Tracker",
       "dlt": "DLT-Kalibrierung",
+      "team_assignment": "Team-Zuordnung",
+      "re_identification": "Re-Identification",
       "upload_heading": "Per Datei-Upload"
     },
     "display_settings": {
@@ -216,6 +223,8 @@
     "kpi": {
       "posdata_not_available": "Keine Positionsdaten vorhanden.<br>Erzeuge sie zuerst im TopView- oder Heatmap-Feld.",
       "no_kpi_computed": "Keine KPIs berechnet.",
+      "compute_kpis": "KPIs berechnen",
+      "select_kpis": "KPI-Daten auswählen",
       "compute": {
         "button": "KPI berechnen"
       },
@@ -980,11 +989,11 @@
       "select": {
         "title": "Positionsdaten auswählen",
         "modes": {
-          "bytetrack": "ByteTrack Plugin",
           "object_tracker": "Object Tracking Plugin",
           "manual": "Manueller Upload"
         },
         "not_calibrated": "nicht kalibriert",
+        "optional": "Optional",
         "object_tracker": "Object Tracking Plugin auswählen",
         "ball_tracker": "Ball-Tracking Lauf auswählen (optional)",
         "team_clustering": "Team-Zuordnung auswählen (optional)",
