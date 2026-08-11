@@ -3,7 +3,10 @@
        position data is there but a kpi_computation run for it is still in flight
        (kpiComputationActive, triggered from PositionDataMenu's Compute KPIs button below). -->
   <div
-    v-if="!hasKpiData && (posdataWorkerStore.isLoading || visualizationStore.isLoadingKpi || kpiComputationActive)"
+    v-if="
+      !hasKpiData &&
+      (posdataWorkerStore.isLoading || visualizationStore.isLoadingKpi || kpiComputationActive)
+    "
     class="kpi-loading-card"
   >
     <div class="kpi-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
@@ -14,7 +17,9 @@
           : ""
       }}
     </div>
-    <div v-else-if="kpiComputationActive" class="kpi-loading-text">{{ kpiComputationProgressText }}</div>
+    <div v-else-if="kpiComputationActive" class="kpi-loading-text">
+      {{ kpiComputationProgressText }}
+    </div>
   </div>
 
   <!-- Covers both "no position data yet" and "position data exists but no KPIs computed for it
@@ -480,10 +485,25 @@
 
     <div
       v-if="viewMode === 'table'"
+      ref="kpiTableFullscreenRoot"
       data-tour="kpi-table-view"
-      class="mt-n3"
+      class="mt-n3 kpi-fullscreen-root"
       :class="{ 'kpi-table-view--fill': dense }"
+      @mouseenter="hovering = true"
+      @mouseleave="hovering = false"
     >
+      <!-- Table view's "legend" already lives inline in each team-card's player-selector
+      (below), so unlike chart view there's nothing extra to duplicate here for fullscreen —
+      just the toggle icon itself (see TabWindowHeatmap.vue's fullscreen-controls for the
+      pattern this deliberately skips). -->
+      <v-icon
+        class="fullscreen-toggle fullscreen-toggle--table"
+        @click="toggleKpiFullscreen"
+        :class="{ visible: hovering }"
+      >
+        {{ isKpiFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
+      </v-icon>
+
       <div v-if="groupMode === 'player'" class="team-tables mx-n2">
         <v-card
           v-for="(teamPlayers, teamId) in runningDistanceTeamItems"
@@ -638,9 +658,21 @@
       </div>
     </div>
 
-    <div v-else-if="viewMode === 'chart'" class="px-2 mt-2" data-tour="kpi-chart-view">
+    <div
+      v-else-if="viewMode === 'chart'"
+      ref="kpiChartFullscreenRoot"
+      class="px-2 mt-2 kpi-fullscreen-root"
+      data-tour="kpi-chart-view"
+      @mouseenter="hovering = true"
+      @mouseleave="hovering = false"
+    >
+      <v-icon class="fullscreen-toggle" @click="toggleKpiFullscreen" :class="{ visible: hovering }">
+        {{ isKpiFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
+      </v-icon>
+
       <KpiChart
         ref="kpiChartRef"
+        :class="{ 'kpi-chart-grow': isKpiFullscreen }"
         :selectedPlayerIds="selectedPlayerIds"
         :selectedKpi="chartKpi"
         :groupMode="groupMode"
@@ -653,7 +685,56 @@
         :velocityUnit="velocityUnit"
       />
 
-      <div class="chart-legend mt-7" :class="{ 'chart-legend--dense': dense }">
+      <!-- Fullscreen-only legend: same team/player toggles as the normal .chart-legend below,
+      just shown instead of it (not additionally — see the v-if there) while fullscreen. Static,
+      not hover-fade, because .kpi-fullscreen-root:fullscreen turns this into a flex column
+      (see there) with KpiChart's kpi-chart-grow taking the rest — this sits below it as a
+      plain flex item instead of overlaying the chart, so there's nothing for it to obscure. -->
+      <div v-if="isKpiFullscreen" class="fullscreen-controls">
+        <div class="chart-legend" data-tour="kpi-chart-legend-fullscreen">
+          <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
+            <div
+              class="team-dot"
+              :style="{
+                backgroundColor: isTeamFullySelected(teamId)
+                  ? toRgb(visualizationStore.getTeamColor(teamId), 0)
+                  : 'transparent',
+                color: isTeamFullySelected(teamId)
+                  ? '#fff'
+                  : toRgb(visualizationStore.getTeamColor(teamId), 0),
+                borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
+              }"
+              @click="toggleTeam(teamId)"
+            >
+              {{ getTeamName(teamId) }}
+            </div>
+            <span class="chart-legend-sep">|</span>
+            <div
+              v-for="p in players"
+              :key="p.playerId"
+              class="player-dot"
+              :style="{
+                backgroundColor: selectedPlayerIds.has(p.playerId)
+                  ? toRgb(playerColors[p.playerId], 0)
+                  : toRgb(playerColors[p.playerId], 0.6),
+                color: selectedPlayerIds.has(p.playerId) ? '#fff' : '#222',
+                borderColor: selectedPlayerIds.has(p.playerId)
+                  ? toRgb(playerColors[p.playerId], 0)
+                  : toRgb(playerColors[p.playerId], 0.6),
+              }"
+              @click="togglePlayerId(p.playerId)"
+            >
+              {{ getPlayerNumber(p.playerId) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="!isKpiFullscreen"
+        class="chart-legend mt-7"
+        :class="{ 'chart-legend--dense': dense }"
+      >
         <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
           <div
             class="team-dot"
@@ -695,7 +776,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, toRaw, onBeforeUnmount } from "vue";
+import { ref, computed, watch, toRaw, onMounted, onBeforeUnmount } from "vue";
 // viewMode is driven by tabStore.kpiViewMode so the tutorial can switch views externally
 import { useVisualizationStore } from "@/stores/visualization";
 import { useTopViewStore } from "@/stores/top_view";
@@ -747,6 +828,41 @@ const canWrite = computed(() => {
 });
 
 const kpiChartRef = ref(null);
+
+// Fullscreen — same requestFullscreen()-on-a-wrapper pattern as VideoPlayer.vue /
+// TopView.vue / TabWindowHeatmap.vue. viewMode is mutually exclusive (table XOR chart),
+// so a single hovering/isKpiFullscreen pair is shared across both roots; only one of
+// kpiTableFullscreenRoot/kpiChartFullscreenRoot is ever actually mounted at a time.
+const hovering = ref(false);
+const isKpiFullscreen = ref(false);
+const kpiTableFullscreenRoot = ref(null);
+const kpiChartFullscreenRoot = ref(null);
+const toggleKpiFullscreen = () => {
+  const root =
+    viewMode.value === "chart" ? kpiChartFullscreenRoot.value : kpiTableFullscreenRoot.value;
+  if (!document.fullscreenElement) {
+    root?.requestFullscreen?.();
+  } else {
+    document.exitFullscreen?.();
+  }
+};
+const onFullscreenChange = () => {
+  // Guard on fullscreenElement being non-null first: whichever of the two roots isn't
+  // currently mounted (viewMode is mutually exclusive) holds .value === null, and
+  // "fullscreenchange" is a document-wide event — it also fires when some *other* card
+  // (video, top view, ...) exits fullscreen, at which point fullscreenElement is null too.
+  // Without this guard that null === null false-positives isKpiFullscreen to true.
+  isKpiFullscreen.value =
+    !!document.fullscreenElement &&
+    (document.fullscreenElement === kpiTableFullscreenRoot.value ||
+      document.fullscreenElement === kpiChartFullscreenRoot.value);
+};
+onMounted(() => {
+  document.addEventListener("fullscreenchange", onFullscreenChange);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener("fullscreenchange", onFullscreenChange);
+});
 
 // Split a windowed locale string at the {frames} placeholder so each half
 // can be rendered with v-html (preserving <sub>/<sup> tags).
@@ -1633,5 +1749,68 @@ const findLastFrameWithHalftime = (half) => {
   font-size: 18px;
   margin: 0 2px;
   user-select: none;
+}
+
+/* Fullscreen — same requestFullscreen()-on-a-wrapper pattern as VideoPlayer.vue /
+   TopView.vue / TabWindowHeatmap.vue. position: relative anchors the absolutely
+   positioned toggle icon without disturbing the wrapper's own flex/grid layout — see
+   toggleKpiFullscreen's comment for why table and chart share these rules despite
+   being mutually exclusive roots.
+   The native :fullscreen pseudo-class (not the isKpiFullscreen ref) drives the actual
+   layout switch: it's authoritative on whether this exact element is the fullscreened
+   one, sidestepping the null-vs-null false positive isKpiFullscreen itself had to guard
+   against (see onFullscreenChange). Turning it into a flex column here is what makes
+   .kpi-chart-grow's flex: 1 (on KpiChart, chart view only) actually able to grow into
+   the extra vertical space instead of staying squeezed to its own min-height: 48vh —
+   and, as a side effect, is what finally makes .team-tables' own pre-existing
+   flex: 1 1 auto (see there) take effect for table view too, even outside dense mode. */
+.kpi-fullscreen-root {
+  position: relative;
+}
+
+.kpi-fullscreen-root:fullscreen {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-chart-grow {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.fullscreen-toggle {
+  position: absolute;
+  top: 2px;
+  right: 8px;
+  color: black;
+  font-size: 28px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 20;
+}
+
+.fullscreen-toggle.visible {
+  opacity: 0.8;
+}
+
+/* team-tables' own mx-n2 (see there) lets its cards overflow 8px past this container's
+   edge on each side — nudge the icon out past its default right: 2px to line up with
+   that actual (wider) edge instead of the container's own, narrower one. */
+.fullscreen-toggle--table {
+  right: -2px;
+  color: white;
+}
+
+/* Chart view only (see the template's v-if there) — a plain flex item stacked below the
+   (grown) chart by .kpi-fullscreen-root:fullscreen, not an overlay: unlike
+   TabWindowHeatmap.vue's fullscreen-controls, there's nothing here for it to sit on top
+   of, so no hover-fade/background needed, it's just always visible while fullscreen. */
+.fullscreen-controls {
+  flex: 0 0 auto;
+  padding-top: 12px;
+}
+
+.fullscreen-controls .chart-legend {
+  margin: 0;
 }
 </style>

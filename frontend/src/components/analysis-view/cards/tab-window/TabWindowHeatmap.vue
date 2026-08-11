@@ -338,43 +338,106 @@
     </div>
 
     <v-row justify="center">
-      <div class="top-view-wrapper" data-tour="heatmap-pitch">
-        <img
-          ref="topViewElement"
-          class="visualizer-image"
-          :src="topViewStore.currentSport.areaImage"
-          @load="onImageLoad"
-          :style="{
-            height: videoStore.videoSize.height + 'px',
-            maxWidth: '100%',
-          }"
-        />
-
+      <div ref="heatmapFullscreenRoot" class="heatmap-fullscreen-root">
         <div
-          v-if="displayMode === 'heatmap'"
-          ref="heatmapContainer"
-          :style="{
-            position: 'absolute',
-            top: '0px',
-            left: '0px',
-            width: localSize.width + 'px',
-            height: localSize.height + 'px',
-          }"
-        ></div>
+          class="top-view-wrapper"
+          data-tour="heatmap-pitch"
+          @mouseenter="hovering = true"
+          @mouseleave="hovering = false"
+        >
+          <img
+            ref="topViewElement"
+            class="visualizer-image"
+            :src="topViewStore.currentSport.areaImage"
+            @load="onImageLoad"
+            :style="
+              isHeatmapFullscreen
+                ? { maxHeight: '100vh' }
+                : {
+                    height: videoStore.videoSize.height + 'px',
+                    maxWidth: '100%',
+                  }
+            "
+          />
 
-        <canvas
-          v-if="displayMode === 'movement'"
-          ref="movementCanvas"
-          :width="localSize.width"
-          :height="localSize.height"
-          :style="{
-            position: 'absolute',
-            top: '0px',
-            left: '0px',
-            width: localSize.width + 'px',
-            height: localSize.height + 'px',
-          }"
-        />
+          <v-icon
+            class="fullscreen-toggle"
+            @click="toggleHeatmapFullscreen"
+            :class="{ visible: hovering }"
+          >
+            {{ isHeatmapFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
+          </v-icon>
+
+          <!-- Fullscreen-only legend: the normal .chart-legend below the pitch (further down
+          this template) sits outside the fullscreened element and is therefore hidden once
+          fullscreen kicks in (see VideoPlayer.vue's fullscreen-controls for the same pattern) —
+          this duplicates just the team/player toggles so filtering still works while fullscreen. -->
+          <div v-if="isHeatmapFullscreen" class="fullscreen-controls" :class="{ visible: hovering }">
+            <div class="chart-legend" data-tour="heatmap-player-legend-fullscreen">
+              <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
+                <div
+                  class="team-dot"
+                  :style="{
+                    backgroundColor: isTeamFullySelected(teamId)
+                      ? toRgb(visualizationStore.getTeamColor(teamId), 0)
+                      : 'transparent',
+                    color: isTeamFullySelected(teamId)
+                      ? '#fff'
+                      : toRgb(visualizationStore.getTeamColor(teamId), 0),
+                    borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
+                  }"
+                  @click="toggleTeam(teamId)"
+                >
+                  {{ getTeamName(teamId) }}
+                </div>
+                <span class="chart-legend-sep">|</span>
+                <div
+                  v-for="p in players"
+                  :key="p.playerId"
+                  class="player-dot"
+                  :style="{
+                    backgroundColor: selectedPlayerIds.includes(p.playerId)
+                      ? toRgb(playerColors[p.playerId], 0)
+                      : toRgb(playerColors[p.playerId], 0.6),
+                    color: selectedPlayerIds.includes(p.playerId) ? '#fff' : '#222',
+                    borderColor: selectedPlayerIds.includes(p.playerId)
+                      ? toRgb(playerColors[p.playerId], 0)
+                      : toRgb(playerColors[p.playerId], 0.6),
+                  }"
+                  @click="togglePlayerId(p.playerId)"
+                >
+                  {{ getPlayerNumber(p.playerId) }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-if="displayMode === 'heatmap'"
+            ref="heatmapContainer"
+            :style="{
+              position: 'absolute',
+              top: '0px',
+              left: '0px',
+              width: localSize.width + 'px',
+              height: localSize.height + 'px',
+            }"
+          ></div>
+
+          <canvas
+            v-if="displayMode === 'movement'"
+            ref="movementCanvas"
+            :width="localSize.width"
+            :height="localSize.height"
+            :style="{
+              position: 'absolute',
+              top: '0px',
+              left: '0px',
+              width: localSize.width + 'px',
+              height: localSize.height + 'px',
+            }"
+          />
+        </div>
       </div>
     </v-row>
 
@@ -530,6 +593,29 @@ onBeforeUnmount(() => {
     resizeObserver.unobserve(topViewElement.value);
   }
   triggerHeatmapCalc.cancel();
+});
+
+const hovering = ref(false);
+const isHeatmapFullscreen = ref(false);
+const heatmapFullscreenRoot = ref(null);
+const toggleHeatmapFullscreen = () => {
+  const root = heatmapFullscreenRoot.value;
+  if (!document.fullscreenElement) {
+    root.requestFullscreen?.();
+  } else {
+    document.exitFullscreen?.();
+  }
+};
+const onFullscreenChange = async () => {
+  isHeatmapFullscreen.value = document.fullscreenElement === heatmapFullscreenRoot.value;
+  await nextTick();
+  measureImage();
+};
+onMounted(() => {
+  document.addEventListener("fullscreenchange", onFullscreenChange);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener("fullscreenchange", onFullscreenChange);
 });
 
 const allFrameKeys = computed(() => topViewStore.sortedFrameKeys);
@@ -967,5 +1053,48 @@ async function saveScreenshot() {
 
 .top-view-wrapper {
   position: relative;
+}
+
+.heatmap-fullscreen-root {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.fullscreen-toggle {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  color: white;
+  font-size: 28px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 20;
+}
+
+.fullscreen-toggle.visible {
+  opacity: 0.8;
+}
+
+.fullscreen-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 20;
+}
+
+.fullscreen-controls.visible {
+  opacity: 1;
+}
+
+.fullscreen-controls .chart-legend {
+  margin: 0;
 }
 </style>

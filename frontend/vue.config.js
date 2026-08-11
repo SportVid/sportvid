@@ -8,4 +8,12 @@ module.exports = {
       }),
     ],
   },
+  devServer: {
+    client: {
+      overlay: {
+        runtimeErrors: (error) =>
+          error.message !== "ResizeObserver loop completed with undelivered notifications.",
+      },
+    },
+  },
 };
