@@ -333,6 +333,26 @@ export const useTopViewStore = defineStore(
       return num != null ? num : entityId;
     };
 
+    // Display name for a team_id: the custom name from meta if one was set, otherwise a
+    // stable "Team A"/"Team B"/... fallback letter derived from ascending team_id order
+    // among real player teams (team_id >= 3). Shared so the matchup title and the
+    // toggle-entities overlays (TopView, VideoPlayer) always agree on which letter a given
+    // team_id maps to, instead of each falling back to the raw numeric id on its own.
+    const getTeamDisplayName = (teamId) => {
+      const meta = metaDataTopView.value;
+      const tid = Number(teamId);
+      const customName = meta?.team_ids?.[tid]?.name;
+      if (customName) return customName;
+      if (tid < 3) return String(teamId);
+      const realTeamIds = Object.keys(meta?.team_ids ?? {})
+        .map(Number)
+        .filter((id) => id >= 3)
+        .sort((a, b) => a - b);
+      const index = realTeamIds.indexOf(tid);
+      if (index === -1) return String(teamId);
+      return t("position_data.team_fallback_name", { letter: String.fromCharCode(65 + index) });
+    };
+
     // Whether the current positionDataTopView is a CompactPositionData instance
     const _isCompact = ref(false);
 
@@ -851,6 +871,7 @@ export const useTopViewStore = defineStore(
       toggleEntityKind,
       getEntityName,
       getEntityNumber,
+      getTeamDisplayName,
       currentFramePlayers,
       getSubsetObject,
       getFrameAt,

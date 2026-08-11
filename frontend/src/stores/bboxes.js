@@ -283,6 +283,28 @@ export const useBboxesStore = defineStore(
       showBoundingBox.value = !showBoundingBox.value;
     };
 
+    // Player-id label on the video overlay's bounding boxes. Deliberately its own flag
+    // rather than reusing topViewStore.showPlayerId — the video and top-view cards render
+    // fully separate entity overlays now, so showing ids in one shouldn't force them on in
+    // the other (see viewBoundingBox above, which already only ever affected this overlay).
+    // Defaults to on (unlike showBoundingBox/topViewStore.showPlayerId) since the id label
+    // is the main thing that makes the box overlay useful once it's switched on.
+    const showPlayerId = ref(true);
+    const viewPlayerId = () => {
+      showPlayerId.value = !showPlayerId.value;
+    };
+
+    // Which entity kinds render on the video overlay. Mirrors topViewStore's
+    // visibleEntityKinds/toggleEntityKind (same defaults), but kept as its own state for the
+    // same reason as showPlayerId above.
+    const visibleEntityKinds = ref({ player: true, ref: false, ball: true, rest: false });
+    const toggleEntityKind = (kind) => {
+      visibleEntityKinds.value = {
+        ...visibleEntityKinds.value,
+        [kind]: !visibleEntityKinds.value[kind],
+      };
+    };
+
     const bboxDataUpdateSuccess = ref(false);
     const bboxDataSingleUpdateSuccess = ref(false);
     const bboxDataDeleteSuccess = ref(false);
@@ -305,6 +327,10 @@ export const useBboxesStore = defineStore(
       bboxDataTopView,
       showBoundingBox,
       viewBoundingBox,
+      showPlayerId,
+      viewPlayerId,
+      visibleEntityKinds,
+      toggleEntityKind,
       bboxDataUpdateSuccess,
       bboxDataSingleUpdateSuccess,
       bboxDataDeleteSuccess,

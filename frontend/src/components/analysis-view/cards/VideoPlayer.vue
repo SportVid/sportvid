@@ -68,7 +68,7 @@
           ></div> -->
 
           <div
-            v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
+            v-for="position in visibleBboxPositions"
             v-show="bboxesStore.showBoundingBox"
             :key="position"
             :style="getEllipseSvg(position).style"
@@ -106,6 +106,7 @@
               </div>
             </v-tooltip>
             <div
+              v-show="bboxesStore.showPlayerId"
               class="bounding-box-player-id"
               :style="{
                 ...getEllipseSvg(position).labelStyle,
@@ -263,77 +264,255 @@
 
     <ModalBBoxUpdate v-model="editDialog" :bbox="editBBox" />
 
-    <v-row ref="videoControl" class="video-control mt-6">
-      <v-btn @click="deltaSeek(-1)" size="small">
-        <v-icon>mdi-skip-backward</v-icon>
-      </v-btn>
+    <div style="position: relative">
+      <v-row ref="videoControl" class="video-control mt-6">
+        <v-btn @click="deltaSeek(-1)" size="small">
+          <v-icon>mdi-skip-backward</v-icon>
+        </v-btn>
 
-      <v-btn @click="stepBackwardFrame" size="small">
-        <v-icon>mdi-skip-previous</v-icon>
-      </v-btn>
+        <v-btn @click="stepBackwardFrame" size="small">
+          <v-icon>mdi-skip-previous</v-icon>
+        </v-btn>
 
-      <v-btn @click="togglePlaying" size="small">
-        <v-icon v-if="videoEnded">mdi-restart</v-icon>
-        <v-icon v-else-if="videoPlaying">mdi-pause</v-icon>
-        <v-icon v-else>mdi-play</v-icon>
-      </v-btn>
+        <v-btn @click="togglePlaying" size="small">
+          <v-icon v-if="videoEnded">mdi-restart</v-icon>
+          <v-icon v-else-if="videoPlaying">mdi-pause</v-icon>
+          <v-icon v-else>mdi-play</v-icon>
+        </v-btn>
 
-      <v-btn @click="stepForwardFrame" size="small">
-        <v-icon> mdi-skip-next</v-icon>
-      </v-btn>
+        <v-btn @click="stepForwardFrame" size="small">
+          <v-icon> mdi-skip-next</v-icon>
+        </v-btn>
 
-      <v-btn @click="deltaSeek(1)" size="small">
-        <v-icon> mdi-skip-forward</v-icon>
-      </v-btn>
+        <v-btn @click="deltaSeek(1)" size="small">
+          <v-icon> mdi-skip-forward</v-icon>
+        </v-btn>
 
-      <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
-        {{ getTimecode(playerStore.currentTime) }}
-      </div>
+        <div class="time-code flex-grow-1 flex-shrink-0 ml-2">
+          {{ getTimecode(playerStore.currentTime) }}
+        </div>
 
-      <v-menu offset-y top>
-        <template #activator="{ props }">
-          <v-btn v-bind="props" size="small">
-            {{ currentSpeed.title }}
-          </v-btn>
-        </template>
-        <v-list>
-          <v-list-item v-for="(item, index) in speeds" :key="item" class="speed-item">
-            <v-list-item-title v-on:click="onSpeedChange(index)">
-              {{ item.title }}
-            </v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
+        <v-menu location="top">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" size="small" data-tour="video-display-settings-btn">
+              <v-icon>mdi-menu</v-icon>
+            </v-btn>
+          </template>
+          <v-list
+            class="py-0"
+            density="compact"
+            width="190px"
+            data-tour="video-display-settings-list"
+          >
+            <v-list-item
+              class="menu-item"
+              @click="bboxesStore.viewBoundingBox"
+              :disabled="noBboxData"
+            >
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.view_bounding_box") }}
+                <tab-window-icon
+                  :class="{
+                    'text-disabled': !bboxesStore.showBoundingBox || noBboxData,
+                    'text-red': bboxesStore.showBoundingBox,
+                  }"
+                >
+                  mdi-check
+                </tab-window-icon>
+              </v-list-item-title>
+            </v-list-item>
 
-      <v-btn @click="playerStore.toggleMute" size="small">
-        <v-icon>{{ playerStore.isMuted ? "mdi-volume-mute" : playerStore.volumeIcon }}</v-icon>
-      </v-btn>
+            <v-list-item
+              class="menu-item"
+              @click="bboxesStore.viewPlayerId"
+              :disabled="noBboxData"
+            >
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.view_player_id") }}
+                <tab-window-icon
+                  :class="{
+                    'text-disabled': !bboxesStore.showPlayerId || noBboxData,
+                    'text-red': bboxesStore.showPlayerId,
+                  }"
+                >
+                  mdi-check
+                </tab-window-icon>
+              </v-list-item-title>
+            </v-list-item>
 
-      <div style="width: 13%; min-width: 80px">
+            <v-list-item
+              class="menu-item"
+              @click="showModalToggleEntities = true"
+              :disabled="noBboxData"
+            >
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.toggle_entities") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-list-item
+              class="menu-item"
+              @click="showModalPositionDataEntityColors = true"
+              :disabled="noBboxData"
+            >
+              <v-list-item-title class="d-flex justify-space-between">
+                {{ $t("position_data.display_settings.entity_colors") }}
+              </v-list-item-title>
+            </v-list-item>
+
+            <v-divider />
+
+            <v-menu location="end" open-on-hover>
+              <template #activator="{ props }">
+                <v-list-item v-bind="props" class="menu-item">
+                  <v-list-item-title class="d-flex justify-space-between">
+                    {{ $t("position_data.display_settings.position_data.title") }}
+                    <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                  </v-list-item-title>
+                </v-list-item>
+              </template>
+              <v-list class="py-0" density="compact">
+                <v-list-item
+                  v-if="canWrite"
+                  class="menu-item"
+                  @click="showModalPositionDataUpload = true"
+                >
+                  <v-list-item-title>
+                    {{ $t("position_data.display_settings.position_data.upload") }}
+                  </v-list-item-title>
+                </v-list-item>
+                <v-list-item class="menu-item" @click="showModalPositionDataSelect = true">
+                  <v-list-item-title>
+                    {{ $t("position_data.display_settings.position_data.select") }}
+                  </v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+          </v-list>
+        </v-menu>
+        <ModalPositionDataUpload
+          v-if="showModalPositionDataUpload"
+          v-model="showModalPositionDataUpload"
+        />
+        <ModalPositionDataSelect
+          v-if="showModalPositionDataSelect"
+          v-model="showModalPositionDataSelect"
+        />
+        <ModalPositionDataEntityColors
+          v-if="showModalPositionDataEntityColors"
+          v-model="showModalPositionDataEntityColors"
+        />
+
+        <v-menu offset-y top>
+          <template #activator="{ props }">
+            <v-btn v-bind="props" size="small">
+              {{ currentSpeed.title }}
+            </v-btn>
+          </template>
+          <v-list>
+            <v-list-item v-for="(item, index) in speeds" :key="item" class="speed-item">
+              <v-list-item-title v-on:click="onSpeedChange(index)">
+                {{ item.title }}
+              </v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+
+        <v-btn @click="playerStore.toggleMute" size="small">
+          <v-icon>{{ playerStore.isMuted ? "mdi-volume-mute" : playerStore.volumeIcon }}</v-icon>
+        </v-btn>
+
+        <div style="width: 13%; min-width: 80px">
+          <v-slider
+            v-model="playerStore.volume"
+            @update:model-value="playerStore.changeVolume"
+            max="100"
+            min="0"
+            hide-details
+            color="primary"
+            :thumb-size="15"
+          />
+        </div>
+      </v-row>
+
+      <v-row ref="videoSlider">
         <v-slider
-          v-model="playerStore.volume"
-          @update:model-value="playerStore.changeVolume"
-          max="100"
-          min="0"
+          v-model="progress"
+          @update:model-value="onProgressChange"
           hide-details
           color="primary"
           :thumb-size="15"
+          :step="1000 / playerStore.videoFPS"
+          min="0"
+          :max="playerStore.videoDuration"
         />
-      </div>
-    </v-row>
+      </v-row>
 
-    <v-row ref="videoSlider">
-      <v-slider
-        v-model="progress"
-        @update:model-value="onProgressChange"
-        hide-details
-        color="primary"
-        :thumb-size="15"
-        :step="1000 / playerStore.videoFPS"
-        min="0"
-        :max="playerStore.videoDuration"
-      />
-    </v-row>
+      <div v-if="showModalToggleEntities" class="players-toggle-overlay">
+        <v-icon
+          variant="tonal"
+          color="error"
+          size="small"
+          class="players-toggle-close"
+          @click="showModalToggleEntities = false"
+        >
+          mdi-close
+        </v-icon>
+        <div class="players-toggle-content">
+          <div class="entity-kind-bar">
+            <div
+              v-for="kind in ENTITY_KINDS"
+              :key="kind.key"
+              class="entity-kind-chip"
+              :class="{ active: bboxesStore.visibleEntityKinds[kind.key] }"
+              @click="bboxesStore.toggleEntityKind(kind.key)"
+            >
+              {{ $t(kind.labelKey) }}
+            </div>
+          </div>
+          <div
+            v-for="(entities, teamId) in overlayTeamGroups"
+            :key="teamId"
+            class="chart-legend-team"
+          >
+            <div
+              class="team-dot"
+              :style="{
+                backgroundColor: overlayIsTeamFullySelected(teamId)
+                  ? toRgb(visualizationStore.getTeamColor(teamId), 0)
+                  : 'transparent',
+                color: overlayIsTeamFullySelected(teamId)
+                  ? '#fff'
+                  : toRgb(visualizationStore.getTeamColor(teamId), 0),
+                borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
+              }"
+              @click="overlayToggleTeam(teamId)"
+            >
+              <v-icon v-if="Number(teamId) === 0" size="14">mdi-soccer</v-icon>
+              <template v-else>{{ overlayGetTeamName(teamId) }}</template>
+            </div>
+            <span class="chart-legend-sep">|</span>
+            <div
+              v-for="e in entities"
+              :key="`${e.teamId}_${e.playerId}`"
+              class="player-dot"
+              :style="{
+                backgroundColor: includedEntities.has(`${e.teamId}_${e.playerId}`)
+                  ? toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0)
+                  : toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0.6),
+                color: includedEntities.has(`${e.teamId}_${e.playerId}`) ? '#fff' : '#222',
+                borderColor: includedEntities.has(`${e.teamId}_${e.playerId}`)
+                  ? toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0)
+                  : toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0.6),
+              }"
+              @click="toggleEntityInclusion(`${e.teamId}_${e.playerId}`)"
+            >
+              {{ overlayGetEntityLabel(e.playerId, e.teamId) }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -346,8 +525,12 @@ import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useTopViewStore } from "@/stores/top_view";
+import { useUserStore } from "@/stores/user";
 import { getTimecode } from "@/plugins/time";
 import ModalBBoxUpdate from "@/components/position-data/ModalBboxUpdate.vue";
+import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
+import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
+import ModalPositionDataEntityColors from "@/components/position-data/ModalPositionDataEntityColors.vue";
 import { toRgb } from "@/plugins/helpers";
 import Hls from "hls.js";
 
@@ -357,7 +540,136 @@ const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
 const visualizationStore = useVisualizationStore();
 const topViewStore = useTopViewStore();
+const userStore = useUserStore();
 const { t } = useI18n();
+
+const canWrite = computed(() => {
+  if (userStore.role === "admin") return true;
+  const ownerUsername = playerStore.video?.owner_username;
+  if (!ownerUsername) return true;
+  return ownerUsername === userStore.username;
+});
+
+const showModalPositionDataSelect = ref(false);
+const showModalPositionDataUpload = ref(false);
+const showModalPositionDataEntityColors = ref(false);
+const showModalToggleEntities = ref(false);
+
+// Gates every display-settings item that acts on the box overlay itself (view/id/entities/
+// colors) — with no bbox data loaded there's nothing for them to show or change. Position
+// Data (select/upload) stays enabled since that's how you'd load some in the first place.
+const noBboxData = computed(
+  () => !bboxesStore.bboxDataActive || Object.keys(bboxesStore.bboxDataActive).length === 0
+);
+
+// Toggle bar for visible entity kinds + individual entity toggling on the video overlay.
+// Roster (topViewStore.precomputed*List) is the shared entity list also used by TopView's
+// own toggle-entities overlay, but the selection itself (includedEntities) and the kind
+// filter (bboxesStore.visibleEntityKinds) are this card's own — see the comment on
+// bboxesStore.showPlayerId for why video/top-view are kept independent here.
+const ENTITY_KINDS = [
+  { key: "player", labelKey: "position_data.entity_kind.player" },
+  { key: "ref", labelKey: "position_data.entity_kind.ref" },
+  { key: "ball", labelKey: "position_data.entity_kind.ball" },
+  { key: "rest", labelKey: "position_data.entity_kind.rest" },
+];
+
+const includedEntities = ref(new Set());
+const _buildAllEntitySet = () => {
+  const ids = new Set();
+  for (const p of topViewStore.precomputedPlayerList) ids.add(`${p.teamId}_${p.playerId}`);
+  for (const p of topViewStore.precomputedRefList) ids.add(`${p.teamId}_${p.playerId}`);
+  for (const p of topViewStore.precomputedBallList) ids.add(`${p.teamId}_${p.playerId}`);
+  for (const p of topViewStore.precomputedInactiveList) ids.add(`${p.teamId}_${p.playerId}`);
+  return ids;
+};
+watch(
+  () => [
+    topViewStore.precomputedPlayerList,
+    topViewStore.precomputedRefList,
+    topViewStore.precomputedBallList,
+    topViewStore.precomputedInactiveList,
+  ],
+  () => {
+    includedEntities.value = _buildAllEntitySet();
+  },
+  { immediate: true }
+);
+const toggleEntityInclusion = (id) => {
+  const newSet = new Set(includedEntities.value);
+  if (newSet.has(id)) {
+    newSet.delete(id);
+  } else {
+    newSet.add(id);
+  }
+  includedEntities.value = newSet;
+};
+
+const overlayEntityOptions = computed(() => {
+  const visible = bboxesStore.visibleEntityKinds;
+  const lists = [];
+  if (visible.player) lists.push(...topViewStore.precomputedPlayerList);
+  if (visible.ref) lists.push(...topViewStore.precomputedRefList);
+  if (visible.ball) lists.push(...topViewStore.precomputedBallList);
+  if (visible.rest) lists.push(...topViewStore.precomputedInactiveList);
+  return lists.sort((a, b) => a.teamId - b.teamId || a.playerId - b.playerId);
+});
+
+const overlayTeamGroups = computed(() => {
+  const groups = {};
+  for (const p of overlayEntityOptions.value) {
+    if (!groups[p.teamId]) groups[p.teamId] = [];
+    groups[p.teamId].push(p);
+  }
+  return groups;
+});
+
+const overlayEntityColors = computed(() => {
+  const map = {};
+  for (const p of overlayEntityOptions.value) {
+    map[`${p.teamId}_${p.playerId}`] = visualizationStore.getTeamColor(p.teamId);
+  }
+  return map;
+});
+
+const overlayGetEntityLabel = (playerId, teamId) => {
+  if (Number(teamId) === 0 || Number(teamId) === 2) return playerId;
+  return topViewStore.getEntityNumber(playerId, teamId);
+};
+
+const overlayGetTeamName = (teamId) => topViewStore.getTeamDisplayName(teamId);
+
+const overlayIsTeamFullySelected = (teamId) => {
+  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) => `${p.teamId}_${p.playerId}`);
+  return teamKeys.length > 0 && teamKeys.every((key) => includedEntities.value.has(key));
+};
+
+const overlayToggleTeam = (teamId) => {
+  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) => `${p.teamId}_${p.playerId}`);
+  const allSelected = teamKeys.every((key) => includedEntities.value.has(key));
+  const newSet = new Set(includedEntities.value);
+  if (allSelected) {
+    teamKeys.forEach((key) => newSet.delete(key));
+  } else {
+    teamKeys.forEach((key) => newSet.add(key));
+  }
+  includedEntities.value = newSet;
+};
+
+// Entity-kind + individual-selection filtered view of the current frame's boxes. The
+// showBoundingBox toggle (v-show in the template) is deliberately separate from this —
+// it's "show boxes at all", this is "which ones".
+const visibleBboxPositions = computed(() => {
+  const positions = bboxesStore.bboxDataInterpolated[currentFrameKey.value];
+  if (!positions) return [];
+  const visible = bboxesStore.visibleEntityKinds;
+  return positions.filter((position) => {
+    const tid = position[1];
+    const kind = tid === 0 ? "ball" : tid === 2 ? "ref" : tid === 1 ? "rest" : "player";
+    if (!visible[kind]) return false;
+    return includedEntities.value.has(`${tid}_${position[0]}`);
+  });
+});
 
 const entityLabelKey = (teamId) => {
   const tid = Number(teamId);
@@ -1013,5 +1325,119 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   overflow: visible;
+}
+
+.players-toggle-overlay {
+  position: absolute;
+  top: 20px;
+  left: -15px;
+  right: -15px;
+  bottom: -10px;
+  background: rgb(var(--v-theme-surface));
+  border: 2px solid rgba(var(--v-theme-primary), 0.45);
+  transition: border-color 0.3s ease;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.players-toggle-close {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 11;
+}
+
+.players-toggle-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  margin: 0 32px 0 16px;
+  padding: 12px 0 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.chart-legend-team {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  max-width: 100%;
+}
+
+.chart-legend-sep {
+  color: #ccc;
+  font-size: 18px;
+  margin: 0 2px;
+  user-select: none;
+}
+
+.team-dot {
+  height: 20px;
+  border-radius: 10px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.7rem;
+  cursor: pointer;
+  border: 2px solid;
+  transition: background 0.2s, border 0.2s, color 0.2s;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.team-dot:hover {
+  opacity: 0.8;
+}
+
+.player-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.7rem;
+  cursor: pointer;
+  border: 2px solid;
+  transition: background 0.2s, border 0.2s;
+  user-select: none;
+}
+
+.entity-kind-bar {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.entity-kind-chip {
+  padding: 2px 10px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(var(--v-theme-primary), 0.6);
+  font-size: 0.7rem;
+  font-weight: bold;
+  cursor: pointer;
+  user-select: none;
+  color: rgba(var(--v-theme-primary), 1);
+  background: transparent;
+  transition: background 0.2s, color 0.2s;
+}
+
+.entity-kind-chip.active {
+  background: rgba(var(--v-theme-primary), 1);
+  color: #fff;
 }
 </style>

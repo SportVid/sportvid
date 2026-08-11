@@ -229,6 +229,7 @@
       }
     },
     "fps_deviation": "Downsampling & interpolation introduces a maximum frame-by-frame deviation of up to {interpErr}% compared to the original frame rate.",
+    "team_fallback_name": "Team {letter}",
     "entity_kind": {
       "player": "Players",
       "ref": "Referees",

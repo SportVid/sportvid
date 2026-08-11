@@ -184,29 +184,6 @@
 
             <v-divider />
 
-            <v-list-item
-              class="menu-item"
-              @click="bboxesStore.viewBoundingBox"
-              :disabled="
-                !bboxesStore.bboxDataActive || Object.keys(bboxesStore.bboxDataActive).length === 0
-              "
-            >
-              <v-list-item-title class="d-flex justify-space-between">
-                {{ $t("position_data.display_settings.view_bounding_box") }}
-                <tab-window-icon
-                  :class="{
-                    'text-disabled':
-                      !bboxesStore.showBoundingBox ||
-                      !bboxesStore.bboxDataActive ||
-                      Object.keys(bboxesStore.bboxDataActive).length === 0,
-                    'text-red': bboxesStore.showBoundingBox,
-                  }"
-                >
-                  mdi-check
-                </tab-window-icon>
-              </v-list-item-title>
-            </v-list-item>
-
             <v-list-item class="menu-item" @click="topViewStore.viewPlayerId">
               <v-list-item-title class="d-flex justify-space-between">
                 {{ $t("position_data.display_settings.view_player_id") }}
@@ -540,7 +517,6 @@ import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
 import { useVisualizationStore } from "@/stores/visualization";
-import { useBboxesStore } from "@/stores/bboxes";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { useUserStore } from "@/stores/user";
 import { getTimecode } from "@/plugins/time";
@@ -557,7 +533,6 @@ const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();
 const videoStore = useVideoStore();
 const visualizationStore = useVisualizationStore();
-const bboxesStore = useBboxesStore();
 const posdataWorkerStore = usePosdataWorkerStore();
 const userStore = useUserStore();
 const { t } = useI18n();
@@ -582,9 +557,9 @@ const matchupTeams = computed(() => {
   return Object.entries(meta.team_ids)
     .filter(([teamId]) => Number(teamId) >= 3)
     .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([teamId, info]) => ({
+    .map(([teamId]) => ({
       id: Number(teamId),
-      name: info.name,
+      name: topViewStore.getTeamDisplayName(Number(teamId)),
       color: visualizationStore.getTeamColor(Number(teamId)),
     }));
 });
@@ -829,11 +804,7 @@ const overlayGetEntityLabel = (playerId, teamId) => {
   return topViewStore.getEntityNumber(playerId, teamId);
 };
 
-const overlayGetTeamName = (teamId) => {
-  const meta = topViewStore.metaDataTopView;
-  if (meta?.team_ids?.[teamId]?.name) return meta.team_ids[teamId].name;
-  return teamId;
-};
+const overlayGetTeamName = (teamId) => topViewStore.getTeamDisplayName(teamId);
 
 const overlayIsTeamFullySelected = (teamId) => {
   const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) => `${p.teamId}_${p.playerId}`);
@@ -1695,38 +1666,44 @@ async function saveScreenshot() {
   left: -15px;
   right: -15px;
   bottom: -10px;
-  background: white;
+  background: rgb(var(--v-theme-surface));
   border: 2px solid rgba(var(--v-theme-primary), 0.45);
   transition: border-color 0.3s ease;
   border-radius: 4px;
   display: flex;
   flex-direction: column;
   z-index: 10;
+  overflow: hidden;
 }
 
 .players-toggle-close {
   position: absolute;
-  top: 5px;
-  right: 5px;
-  z-index: 10;
+  top: 2px;
+  right: 2px;
+  z-index: 11;
 }
 
 .players-toggle-content {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  flex-wrap: wrap;
-  column-gap: 20px;
-  row-gap: 2px;
+  gap: 6px;
   flex: 1;
-  margin: 0px 20px;
+  min-height: 0;
+  min-width: 0;
+  margin: 0 32px 0 16px;
+  padding: 12px 0 8px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .chart-legend-team {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 5px;
+  max-width: 100%;
 }
 
 .chart-legend-sep {
