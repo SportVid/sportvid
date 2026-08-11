@@ -17,6 +17,11 @@
     "last_updated": "<em>Last updated: February 4, 2026</em>",
     "confirmation": "Do you agree with the {title}?"
   },
+  "impressum": {
+    "title": "Legal Notice",
+    "text": "<h3>Information pursuant to § 5 German Digital Services Act (DDG)</h3><p>Deutsche Sporthochschule Köln (German Sport University Cologne)<br>Public body under German law (Körperschaft des öffentlichen Rechts)<br>Am Sportpark Müngersdorf 6<br>50933 Köln, Germany</p><p>Represented by the Rector:<br>Univ.-Prof. Dr. Ansgar Thiel</p><h3>Contact</h3><p>Phone: +49 221 4982-0<br>Fax: +49 221 4982-8330<br>Email: {'infopoint@dshs-koeln.de'}</p><h3>VAT ID</h3><p>VAT identification number pursuant to § 27a of the German VAT Act (UStG): DE 123 474 626</p><h3>Competent Supervisory Authority</h3><p>Ministry of Culture and Science of the State of North Rhine-Westphalia<br>Völklinger Straße 49<br>40221 Düsseldorf, Germany</p><h3>Responsible for Content pursuant to § 18 (2) German Interstate Media Treaty (MStV)</h3><p>Univ.-Prof. Dr. Daniel Memmert<br>Institute of Exercise Training and Sport Informatics<br>Deutsche Sporthochschule Köln<br>Am Sportpark Müngersdorf 6<br>50933 Köln, Germany<br>Email: {'its@dshs-koeln.de'}</p><h3>About the SportVid Project</h3><p>SportVid is a research project funded by the German Research Foundation (DFG), carried out in cooperation between the Deutsche Sporthochschule Köln and the Philipps-Universität Marburg.</p><p>Project leads:<br>Univ.-Prof. Dr. Daniel Memmert, Institute of Exercise Training and Sport Informatics, Deutsche Sporthochschule Köln<br>Prof. Dr. Ralph Ewerth, Philipps-Universität Marburg</p><h3>Liability for Content and Links</h3><p>Despite careful review, we assume no liability for the content of external links. The operators of linked pages are solely responsible for their content.</p>",
+    "last_updated": "<em>Last updated: August 11, 2026</em>"
+  },
   "guidelines": {
     "title": "Guidelines",
     "tutorial_hint_loggedin": "Interactive step-by-step tutorials are available for all major workflows.",

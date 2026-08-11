@@ -16,6 +16,11 @@
     "text": "Durch die Nutzung von SportVid erklären Sie sich mit den folgenden Bedingungen einverstanden: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Zustimmung zur Verwendung hochgeladener und eingereichter Videos und Daten zu wissenschaftlichen Forschungszwecken.</li><li>Zustimmung, dass andere Benutzer nach Videos suchen dürfen.</li><li>...</li></ol>",
     "confirmation": "Stimmen Sie den {title} zu?"
   },
+  "impressum": {
+    "title": "Impressum",
+    "text": "<h3>Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG)</h3><p>Deutsche Sporthochschule Köln<br>Körperschaft des öffentlichen Rechts<br>Am Sportpark Müngersdorf 6<br>50933 Köln</p><p>Vertreten durch den Rektor:<br>Univ.-Prof. Dr. Ansgar Thiel</p><h3>Kontakt</h3><p>Telefon: +49 221 4982-0<br>Telefax: +49 221 4982-8330<br>E-Mail: {'infopoint@dshs-koeln.de'}</p><h3>Umsatzsteuer-ID</h3><p>Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG: DE 123 474 626</p><h3>Zuständige Aufsichtsbehörde</h3><p>Ministerium für Kultur und Wissenschaft des Landes Nordrhein-Westfalen<br>Völklinger Straße 49<br>40221 Düsseldorf</p><h3>Verantwortlich für den Inhalt gemäß § 18 Abs. 2 Medienstaatsvertrag (MStV)</h3><p>Univ.-Prof. Dr. Daniel Memmert<br>Institut für Trainingswissenschaft und Sportinformatik<br>Deutsche Sporthochschule Köln<br>Am Sportpark Müngersdorf 6<br>50933 Köln<br>E-Mail: {'its@dshs-koeln.de'}</p><h3>Über das Projekt SportVid</h3><p>SportVid ist ein von der Deutschen Forschungsgemeinschaft (DFG) gefördertes Kooperationsprojekt der Deutschen Sporthochschule Köln und der Philipps-Universität Marburg.</p><p>Projektleitung:<br>Univ.-Prof. Dr. Daniel Memmert, Institut für Trainingswissenschaft und Sportinformatik, Deutsche Sporthochschule Köln<br>Prof. Dr. Ralph Ewerth, Philipps-Universität Marburg</p><h3>Haftung für Inhalte und Links</h3><p>Trotz sorgfältiger inhaltlicher Kontrolle übernehmen wir keine Haftung für die Inhalte externer Links. Für den Inhalt der verlinkten Seiten sind ausschließlich deren Betreiber verantwortlich.</p>",
+    "last_updated": "<em>Stand: 11. August 2026</em>"
+  },
   "user": {
     "name": "Benutzername",
     "password": "Passwort",

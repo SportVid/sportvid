@@ -4,6 +4,7 @@ import VideoView from "@/views/VideoView.vue";
 import AnalysisView from "@/views/AnalysisView.vue";
 import TermsOfUseView from "@/views/TermsOfUseView.vue";
 import GuidelinesView from "@/views/GuidelinesView.vue";
+import ImpressumView from "@/views/ImpressumView.vue";
 import AdminView from "@/views/AdminView.vue";
 
 const routes = [
@@ -26,6 +27,11 @@ const routes = [
     path: "/guidelines",
     name: "GuidelinesView",
     component: GuidelinesView,
+  },
+  {
+    path: "/impressum",
+    name: "ImpressumView",
+    component: ImpressumView,
   },
   {
     path: "/admin",

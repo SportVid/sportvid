@@ -15,6 +15,14 @@
             {{ $t("terms_of_use.title") }}
           </router-link>
         </div>
+
+        <v-divider vertical :thickness="2" inset></v-divider>
+
+        <div class="link-wrapper">
+          <router-link to="/impressum" class="router-link">
+            {{ $t("impressum.title") }}
+          </router-link>
+        </div>
       </div>
 
       <div class="text-center mt-2">
@@ -29,15 +37,6 @@
   display: flex;
   justify-content: center;
   gap: 20px;
-}
-
-.link-wrapper {
-  flex: 1;
-  text-align: right;
-}
-
-.link-wrapper:last-of-type {
-  text-align: left;
 }
 
 .router-link {
