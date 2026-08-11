@@ -289,6 +289,31 @@
         "movement": "Movement"
       }
     },
+    "events": {
+      "not_selected": "No position data selected.<br>Please run the Bytetrack plugin or upload position data manually.",
+      "no_events": "No events in the selected time range.",
+      "filter": {
+        "title": "Event types"
+      },
+      "event_type": {
+        "goal": "Goal",
+        "shot_on_target": "Shot on target",
+        "shot_off_target": "Shot off target",
+        "foul": "Foul",
+        "card_yellow": "Yellow card",
+        "card_red": "Red card",
+        "corner": "Corner",
+        "offside": "Offside",
+        "substitution": "Substitution"
+      },
+      "table": {
+        "time": "Time",
+        "type": "Event",
+        "player": "Player",
+        "team": "Team",
+        "confidence": "Confidence"
+      }
+    },
     "kpi": {
       "posdata_not_available": "No position data available yet.<br>Generate it first in the TopView or Heatmap tab.",
       "no_kpi_computed": "No KPIs computed.",

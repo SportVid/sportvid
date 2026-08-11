@@ -226,6 +226,31 @@
         "movement": "Bewegung"
       }
     },
+    "events": {
+      "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führe das Bytetrack-Plugin aus oder lade Positionsdaten manuell hoch.",
+      "no_events": "Keine Events im ausgewählten Zeitraum.",
+      "filter": {
+        "title": "Ereignistypen"
+      },
+      "event_type": {
+        "goal": "Tor",
+        "shot_on_target": "Schuss aufs Tor",
+        "shot_off_target": "Schuss vorbei",
+        "foul": "Foul",
+        "card_yellow": "Gelbe Karte",
+        "card_red": "Rote Karte",
+        "corner": "Ecke",
+        "offside": "Abseits",
+        "substitution": "Auswechslung"
+      },
+      "table": {
+        "time": "Zeit",
+        "type": "Ereignis",
+        "player": "Spieler",
+        "team": "Team",
+        "confidence": "Konfidenz"
+      }
+    },
     "kpi": {
       "posdata_not_available": "Keine Positionsdaten vorhanden.<br>Erzeuge sie zuerst im TopView- oder Heatmap-Feld.",
       "no_kpi_computed": "Keine KPIs berechnet.",
