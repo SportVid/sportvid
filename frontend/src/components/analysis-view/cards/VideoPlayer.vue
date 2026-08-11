@@ -56,24 +56,16 @@
             />
           </div>
 
+          <!-- DEBUG: plain rectangular bounding box, using the same x/y/w/h
+          indices (position[5..8]) as getEllipseSvg. Handy to sanity-check the
+          ellipse placement against the actual box again if it's ever revisited.
+          Kept but disabled. -->
           <!-- <div
-          v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
-          v-show="bboxesStore.showBoundingBox"
-          :key="position"
-          :style="{
-            position: 'absolute',
-            top: isVideoFullscreen
-              ? videoStore.videoSize.top + position[7] * videoStore.videoSize.height + 'px'
-              : position[7] * videoStore.videoSize.height + 'px',
-            left: isVideoFullscreen
-              ? videoStore.videoSize.left + position[6] * videoStore.videoSize.width + 'px'
-              : position[6] * videoStore.videoSize.width + 'px',
-            width: position[8] * videoStore.videoSize.width + 'px',
-            height: position[9] * videoStore.videoSize.height + 'px',
-            border: `2px solid ${visualizationStore.getTeamColor(position[1])}`,
-          }"
-        >
-        </div> -->
+            v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
+            v-show="bboxesStore.showBoundingBox"
+            :key="`rect-${position[0]}`"
+            :style="getBBoxRectStyle(position)"
+          ></div> -->
 
           <div
             v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
@@ -82,7 +74,7 @@
             :style="getEllipseSvg(position).style"
             @click="openEditBBox(position, currentFrameKey)"
           >
-            <svg class="player-ellipse">
+            <svg class="player-ellipse" :viewBox="getEllipseSvg(position).viewBox">
               <path
                 :d="getEllipseSvg(position).arc"
                 :stroke="getEllipseSvg(position).color"
@@ -116,6 +108,7 @@
             <div
               class="bounding-box-player-id"
               :style="{
+                ...getEllipseSvg(position).labelStyle,
                 color: visualizationStore.getTeamColor(position[1]),
               }"
             >
@@ -670,6 +663,44 @@ onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
 });
 
+// DEBUG helper: plain rectangular bounding box in pixel space, same x/y/w/h
+// indices as getEllipseSvg (position[5..8]).
+const getBBoxRectStyle = (position) => {
+  const x = position[5];
+  const y = position[6];
+  const w = position[7];
+  const h = position[8];
+
+  const vid = videoStore.videoSize;
+
+  const left = x * vid.width + (isVideoFullscreen.value ? vid.left : 0);
+  const top = y * vid.height + (isVideoFullscreen.value ? vid.top : 0);
+
+  return {
+    position: "absolute",
+    left: left + "px",
+    top: top + "px",
+    width: w * vid.width + "px",
+    height: h * vid.height + "px",
+    boxSizing: "border-box",
+    border: "2px solid blue",
+    pointerEvents: "none",
+    zIndex: 11,
+  };
+};
+
+// Ellipse arc under the player, SoccerNet-style opening (-45°..235°, gap left
+// at the top so the player isn't cut through by the line). Geometry is
+// entirely intrinsic to the box's own w/h — no position-dependent correction
+// term, which is what made the old formula drift for boxes high up in frame.
+//
+// - rx = full box width (ellipse is 2x as wide as the box), so limbs poking
+//   past a tight bounding box still end up inside the ellipse.
+// - sideHeight fixes where the ellipse's widest points (left/right) sit,
+//   relative to the box's own height.
+// - bellyDrop makes the ellipse rounder: the belly radius (ry) is bigger than
+//   sideHeight, so the bottom bulges a bit further down past the box's bottom
+//   edge, while cy (derived from sideHeight, not ry) keeps the sides fixed.
 const getEllipseSvg = (position) => {
   const x = position[5];
   const y = position[6];
@@ -680,48 +711,67 @@ const getEllipseSvg = (position) => {
 
   const color = visualizationStore.getTeamColor(position[1]);
 
-  // via SoccerNet
-  const ellipseWidth = w * vid.width;
-  const ellipseHeight = ellipseWidth * 0.35;
+  const boxWidth = w * vid.width;
+  const height = h * vid.height;
 
-  const centerX = (x + w / 2) * vid.width + (isVideoFullscreen.value ? vid.left : 0);
-  const centerY =
-    (y + h) * vid.height +
-    (isVideoFullscreen.value ? vid.top : 0) -
-    ellipseHeight * (0.1 + (1 - (y + h)) * 1.5);
+  const rx = boxWidth;
 
-  const left = centerX - ellipseWidth;
-  const top = centerY - ellipseHeight;
+  const sideHeight = height * 0.05;
+  const bellyDrop = height * 0.1;
+  const ry = sideHeight + bellyDrop;
 
-  const rx = ellipseWidth;
-  const ry = ellipseHeight;
+  const boxCenterX = (x + w / 2) * vid.width + (isVideoFullscreen.value ? vid.left : 0);
+  const top = y * vid.height + (isVideoFullscreen.value ? vid.top : 0);
+  const left = boxCenterX - rx;
+
+  const cx = rx;
+  const cy = height - sideHeight;
 
   const startAngle = (-45 * Math.PI) / 180;
   const endAngle = (235 * Math.PI) / 180;
 
-  const sx = rx + rx * Math.cos(startAngle);
-  const sy = ry + ry * Math.sin(startAngle);
-
-  const ex = rx + rx * Math.cos(endAngle);
-  const ey = ry + ry * Math.sin(endAngle);
+  const sx = cx + rx * Math.cos(startAngle);
+  const sy = cy + ry * Math.sin(startAngle);
+  const ex = cx + rx * Math.cos(endAngle);
+  const ey = cy + ry * Math.sin(endAngle);
 
   const arcPath = `M ${sx},${sy} A ${rx} ${ry} 0 1 1 ${ex},${ey}`;
+
+  // Player-id label: anchored to the ellipse's actual lowest rendered point
+  // (box bottom + bellyDrop), not to the plain box bottom — otherwise a fixed
+  // offset from the box edge either overlaps the ellipse on tall boxes (where
+  // bellyDrop is large) or leaves an oversized gap on tiny boxes (where
+  // bellyDrop is a couple of px). labelGap is then a genuinely constant,
+  // absolute pixel distance below the ellipse, regardless of box size.
+  const labelGap = 2;
+  const labelHeight = 16; // rough rendered height of the 0.8rem number
+
+  const frameBottom = (isVideoFullscreen.value ? vid.top : 0) + vid.height;
+  const ellipseBottomAbs = top + height + bellyDrop;
+  const fitsBelow = ellipseBottomAbs + labelGap + labelHeight <= frameBottom;
+
+  // Exception: no room below (box sits right at the bottom edge of the
+  // frame) — tuck the label above the box instead of letting it run off/get
+  // clipped.
+  const labelStyle = fitsBelow
+    ? { top: `${height + bellyDrop + labelGap}px`, bottom: "auto" }
+    : { top: `${-(labelHeight + labelGap)}px`, bottom: "auto" };
 
   return {
     style: {
       position: "absolute",
       left: left + "px",
       top: top + "px",
-      width: ellipseWidth * 2 + "px",
-      height: ellipseHeight * 2 + "px",
+      width: rx * 2 + "px",
+      height: height + "px",
       overflow: "visible",
       zIndex: 12,
       cursor: isVideoFullscreen.value ? "default" : "pointer",
     },
+    viewBox: `0 0 ${rx * 2} ${height}`,
     arc: arcPath,
     color,
-    centerX,
-    centerY,
+    labelStyle,
   };
 };
 
@@ -884,9 +934,11 @@ onBeforeUnmount(() => {
 }
 
 .bounding-box-player-id {
+  /* Vertical placement (top/bottom) comes from getEllipseSvg's labelStyle —
+     it accounts for the ellipse's bellyDrop and the video frame edge, which a
+     static offset here can't. */
   position: absolute;
   left: 50%;
-  bottom: -25px;
   transform: translateX(-50%);
   font-size: 0.8rem;
   pointer-events: none;
@@ -960,5 +1012,6 @@ onBeforeUnmount(() => {
 .player-ellipse {
   width: 100%;
   height: 100%;
+  overflow: visible;
 }
 </style>
