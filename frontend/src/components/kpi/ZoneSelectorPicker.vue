@@ -529,15 +529,29 @@ const imgSrc = computed(() => currentArea.value.image ?? props.sport.areaImage);
 const measurePitch = () => {
   const img = pitchImg.value;
   if (!img || !img.naturalWidth) return;
-  const rect = img.getBoundingClientRect();
-  if (!rect.width || !rect.height) return;
+  // Use the untransformed layout box (clientWidth/Height), not
+  // getBoundingClientRect(): the picker lives inside a v-menu whose default
+  // open transition applies a CSS transform: scale(...) to its content while
+  // animating in. The <img> "load" event can fire mid-transition, and
+  // getBoundingClientRect() reports the visually-scaled (shrunk) size at that
+  // moment. That undersized value would get baked into `am`/`pitchSize`
+  // permanently, since the ResizeObserver below only reacts to real layout
+  // changes (immune to ancestor transforms) and never fires again to correct
+  // it — while the canvas/buttons themselves are sized via CSS against the
+  // real, final layout box. The mismatch is what causes the blurry/oversized
+  // selection outline and the collapsed, corner-hugging band buttons.
+  // clientWidth/Height reflect that same real layout box, so staying
+  // consistent with them keeps everything aligned regardless of transition timing.
+  const width = img.clientWidth;
+  const height = img.clientHeight;
+  if (!width || !height) return;
 
-  const scaleX = rect.width / img.naturalWidth;
-  const scaleY = rect.height / img.naturalHeight;
+  const scaleX = width / img.naturalWidth;
+  const scaleY = height / img.naturalHeight;
   const wRel = currentArea.value.widthRel ?? 1;
   const hRel = currentArea.value.heightRel ?? 1;
 
-  pitchSize.value = { width: rect.width, height: rect.height };
+  pitchSize.value = { width, height };
   am.value = {
     left: ((1 - wRel) / 2) * img.naturalWidth * scaleX,
     top: ((1 - hRel) / 2) * img.naturalHeight * scaleY,

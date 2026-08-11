@@ -6,10 +6,9 @@
     @mouseleave="hideZoom"
   >
     <div style="position: relative; display: inline-block; transform: scale(1.15)">
-      <video
+      <canvas
         class="video-overlay"
         ref="videoOverlayElement"
-        @loadedmetadata="seekToCurrentTime"
         :style="{
           width: videoStore.videoSize.width + 'px',
           height: videoStore.videoSize.height + 'px',
@@ -127,7 +126,6 @@ import { ref, nextTick, watch, onBeforeUnmount } from "vue";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
-import Hls from "hls.js";
 
 const calibrationAssetStore = useCalibrationAssetStore();
 const playerStore = usePlayerStore();
@@ -135,10 +133,14 @@ const videoStore = useVideoStore();
 
 const videoOverlayElement = ref(null);
 
-const seekToCurrentTime = () => {
-  if (videoOverlayElement.value) {
-    videoOverlayElement.value.currentTime = playerStore.currentTime / 1000;
-  }
+const drawCurrentFrame = () => {
+  const canvas = videoOverlayElement.value;
+  const source = playerStore.videoElement;
+  if (!canvas || !source || !source.videoWidth) return;
+
+  canvas.width = source.videoWidth;
+  canvas.height = source.videoHeight;
+  canvas.getContext("2d").drawImage(source, 0, 0, canvas.width, canvas.height);
 };
 
 const currentSegmentPoints = ref([]);
@@ -188,6 +190,7 @@ watch(
   (active) => {
     if (active) {
       updateVideoSize();
+      nextTick(drawCurrentFrame);
     }
   },
   { immediate: true }
@@ -241,8 +244,8 @@ const drawZoom = () => {
 
   const rect = vid.getBoundingClientRect();
 
-  const videoW = vid.videoWidth || rect.width;
-  const videoH = vid.videoHeight || rect.height;
+  const videoW = vid.width || rect.width;
+  const videoH = vid.height || rect.height;
   const scaleFactorX = videoW / rect.width;
   const scaleFactorY = videoH / rect.height;
 
@@ -283,59 +286,6 @@ const hideZoom = () => {
 onBeforeUnmount(() => {
   hideZoom();
 });
-
-let hlsOverlay = null;
-function tarGzUrlToHlsUrl(tarUrl) {
-  const url = new URL(tarUrl);
-
-  // Dateiname extrahieren
-  const parts = url.pathname.split("/");
-  const fileName = parts.pop(); // <hash>.tar.gz
-  const id = fileName.replace(/\.tar\.gz$/, "");
-
-  // Neuer Pfad: nested id/<id>.m3u8 (HLS index)
-  parts.push(id, `${id}.m3u8`);
-  url.pathname = parts.join("/");
-
-  return url.toString();
-}
-watch(
-  () => playerStore.videoUrl,
-  async (url) => {
-    await nextTick();
-    if (!url || !videoOverlayElement.value) return;
-
-    const video = videoOverlayElement.value;
-    const hlsUrl = tarGzUrlToHlsUrl(url);
-
-    if (!hlsUrl) return;
-
-    if (hlsOverlay) {
-      try {
-        hlsOverlay.destroy();
-      } catch (e) {
-        console.error("Failed to destroy existing hls instance", e);
-      }
-      hlsOverlay = null;
-      try {
-        video.src = "";
-      } catch (e) {}
-    }
-
-    if (Hls.isSupported()) {
-      hlsOverlay = new Hls();
-      hlsOverlay.loadSource(hlsUrl);
-      hlsOverlay.attachMedia(video);
-
-      hlsOverlay.on(Hls.Events.MANIFEST_PARSED, () => {
-        updateVideoSize();
-      });
-    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = hlsUrl;
-    }
-  },
-  { immediate: true }
-);
 </script>
 
 <style scoped>

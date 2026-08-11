@@ -33,6 +33,13 @@ export const useTopViewStore = defineStore(
       topViewSize.value = size;
     };
 
+    // Kept as this store's own local (persisted) state rather than proxying
+    // through the visualization store: currentAreaSize is set together with
+    // currentSport.areaImage/widthRel/heightRel in the same onSportChange()
+    // call below, and those live here too — cross-store proxying introduced a
+    // circular import (top_view <-> visualization) that caused the two to
+    // desync after a reload (pitch image stuck on "full" while player/zone
+    // positions correctly used the restored area).
     const currentAreaSize = ref("full");
 
     const currentSport = ref({
@@ -249,9 +256,17 @@ export const useTopViewStore = defineStore(
       });
     };
 
-    const setSportFromVideo = (sportKey, areaSize = "full") => {
+    const setSportFromVideo = (sportKey, areaSize) => {
       const sport = sports.value.find((s) => s.key === sportKey);
-      if (sport) onSportChange(sport.title, areaSize);
+      if (!sport) return;
+      // Keep whatever area size was already selected (currentAreaSize is
+      // persisted across reloads, see its definition above) instead of always
+      // forcing it back to "full" on mount — but only if it's actually a
+      // valid area for this sport (a different video's sport might not define
+      // e.g. "halfLeft").
+      const effectiveAreaSize =
+        areaSize ?? (sport.areas?.[currentAreaSize.value] ? currentAreaSize.value : "full");
+      onSportChange(sport.title, effectiveAreaSize);
     };
 
     const showSpaceControl = ref(false);
@@ -337,8 +352,35 @@ export const useTopViewStore = defineStore(
       return num != null ? num : entityId;
     };
 
+    // Display name for a team_id: the custom name from meta if one was set, otherwise a
+    // stable "Team A"/"Team B"/... fallback letter derived from ascending team_id order
+    // among real player teams (team_id >= 3). Shared so the matchup title and the
+    // toggle-entities overlays (TopView, VideoPlayer) always agree on which letter a given
+    // team_id maps to, instead of each falling back to the raw numeric id on its own.
+    const getTeamDisplayName = (teamId) => {
+      const meta = metaDataTopView.value;
+      const tid = Number(teamId);
+      const customName = meta?.team_ids?.[tid]?.name;
+      if (customName) return customName;
+      if (tid < 3) return String(teamId);
+      const realTeamIds = Object.keys(meta?.team_ids ?? {})
+        .map(Number)
+        .filter((id) => id >= 3)
+        .sort((a, b) => a - b);
+      const index = realTeamIds.indexOf(tid);
+      if (index === -1) return String(teamId);
+      return t("position_data.team_fallback_name", { letter: String.fromCharCode(65 + index) });
+    };
+
     // Whether the current positionDataTopView is a CompactPositionData instance
     const _isCompact = ref(false);
+
+    // Plugin run ids of the last team_clustering/osnet_reid merges applied on top of the
+    // active tracker run (see mergeTeamAssignment/mergeReid below) — persisted (see this
+    // store's `persist` option) purely so a page reload can redo the same merges; they play
+    // no role in the merge logic itself.
+    const teamClusteringRunId = ref(null);
+    const reidRunId = ref(null);
 
     // Applies the calibration homography to a plain-object bbox dataset (time -> [tracklet, ...]),
     // matching the tracklet layout produced by bytetrack/object_tracker (b[3]/b[4] = x/y).
@@ -486,6 +528,11 @@ export const useTopViewStore = defineStore(
         bboxesStore.bboxDataActive = updatedBboxes;
         bboxesStore.bboxDataLoaded = true;
       } else {
+        // Fresh tracker run (not just a re-apply after a bbox edit) — any
+        // team_clustering/reid merge tracked below belonged to whichever run
+        // was active before, so it no longer applies here.
+        teamClusteringRunId.value = null;
+        reidRunId.value = null;
         await bboxesStore.loadBboxData(bytetrackPluginId);
       }
 
@@ -573,6 +620,7 @@ export const useTopViewStore = defineStore(
         }
       }
       bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
+      teamClusteringRunId.value = teamClusteringPluginRunId;
 
       _applyMergedBboxData();
       _recomputeAggregates(_combinedStoredMeta());
@@ -630,6 +678,7 @@ export const useTopViewStore = defineStore(
       }
       playerMeta.player_ids = { ...(playerMeta.player_ids ?? {}), ...rebuiltPlayerIds };
       bboxesStore.bboxMetaData = JSON.stringify(playerMeta);
+      reidRunId.value = reidPluginRunId;
 
       _applyMergedBboxData();
       _recomputeAggregates(_combinedStoredMeta());
@@ -823,6 +872,8 @@ export const useTopViewStore = defineStore(
       mergeBallTracking,
       mergeTeamAssignment,
       mergeReid,
+      teamClusteringRunId,
+      reidRunId,
       refreshBallBboxData,
       showPlayerId,
       viewPlayerId,
@@ -839,6 +890,7 @@ export const useTopViewStore = defineStore(
       toggleEntityKind,
       getEntityName,
       getEntityNumber,
+      getTeamDisplayName,
       currentFramePlayers,
       getSubsetObject,
       getFrameAt,
@@ -856,7 +908,15 @@ export const useTopViewStore = defineStore(
   },
   {
     persist: {
-      pick: ["currentSport", "currentAreaSize"],
+      pick: [
+        "currentSport",
+        "currentAreaSize",
+        "showSportZones",
+        "gridLongitudinal",
+        "gridTransverse",
+        "teamClusteringRunId",
+        "reidRunId",
+      ],
       storage: sessionStorage,
     },
   }

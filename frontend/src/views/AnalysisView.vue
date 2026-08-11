@@ -3,7 +3,7 @@
     <v-container fluid>
       <ModalObjectOverlay v-if="calibrationAssetStore.isAnyReferenceObjectActive" />
 
-      <v-row class="ma-n2">
+      <v-row v-if="calibrationAssetStore.calibrationMode" class="ma-n2">
         <v-col cols="6">
           <v-card
             elevation="2"
@@ -35,101 +35,68 @@
 
           <v-card
             v-else
-            class="d-flex flex-column flex-nowrap px-2 fill-height"
-            :class="{ 'calibration-card': calibrationAssetStore.calibrationMode }"
+            class="d-flex flex-column flex-nowrap px-2 fill-height calibration-card"
             elevation="2"
             ref="topViewCard"
             style="position: relative"
             data-tour="analysis-top-view"
           >
-            <template v-if="calibrationAssetStore.calibrationMode">
-              <v-row justify="center" class="position-relative">
-                <v-card-title class="mt-5 mb-n1">{{ $t("calibration_asset.title") }}</v-card-title>
-                <v-btn
-                  variant="tonal"
-                  color="error"
-                  size="small"
-                  prepend-icon="mdi-close"
-                  class="calibration-close-btn"
-                  @click="calibrationAssetStore.calibrationMode = false"
-                >
-                  {{ $t("button.exit") }}
-                </v-btn>
-              </v-row>
-
-              <v-row class="flex-grow-1">
-                <v-col>
-                  <TabWindowCalibration />
-                </v-col>
-              </v-row>
-            </template>
-
-            <template v-else>
-              <v-row justify="center">
-                <v-card-title class="mt-5 mb-n1">
-                  <div class="matchup-title">
-                    <template v-for="(team, index) in matchupTeams" :key="team.id">
-                      <span class="matchup-title-team">
-                        <span class="matchup-title-name">{{ team.name }}</span>
-                        <span class="matchup-title-line" :style="{ backgroundColor: team.color }" />
-                      </span>
-                      <span v-if="index < matchupTeams.length - 1" class="matchup-title-sep"
-                        >:</span
-                      >
-                    </template>
-                  </div>
-                </v-card-title>
-              </v-row>
-
-              <v-row class="flex-grow-1">
-                <v-col>
-                  <TabWindowPositionData />
-                </v-col>
-              </v-row>
-            </template>
-          </v-card>
-        </v-col>
-      </v-row>
-
-      <!-- <v-row class="ma-2">
-        <v-col>
-          <VisualizationMenu></VisualizationMenu>
-        </v-col>
-      </v-row> -->
-
-      <v-row v-if="!calibrationAssetStore.calibrationMode && !isLoading" class="ma-n2">
-        <v-col>
-          <v-card
-            class="d-flex flex-column flex-nowrap px-2"
-            elevation="2"
-            data-tour="analysis-visualization-tabs"
-          >
-            <v-tabs fixed-tabs slider-color="primary" v-model="tabStore.visualizationTabId">
-              <v-tab
-                v-for="visualizationTab in tabStore.visualizationTabs"
-                :key="visualizationTab.id"
-                :value="visualizationTab.id"
+            <v-row justify="center" class="position-relative">
+              <v-card-title class="mt-5 mb-n1">{{ $t("calibration_asset.title") }}</v-card-title>
+              <v-btn
+                variant="tonal"
+                color="error"
+                size="small"
+                prepend-icon="mdi-close"
+                class="calibration-close-btn"
+                @click="calibrationAssetStore.calibrationMode = false"
               >
-                {{ visualizationTab.name }}
-              </v-tab>
-            </v-tabs>
+                {{ $t("button.exit") }}
+              </v-btn>
+            </v-row>
 
-            <v-row class="flex-grow-1 my-0">
+            <v-row class="flex-grow-1">
               <v-col>
-                <v-tabs-window v-model="tabStore.visualizationTabId">
-                  <v-tabs-window-item
-                    v-for="visualizationTab in tabStore.visualizationTabs"
-                    :key="visualizationTab.id"
-                    :value="visualizationTab.id"
-                  >
-                    <component :is="getVisualizationTabComponent(visualizationTab.id)" />
-                  </v-tabs-window-item>
-                </v-tabs-window>
+                <TabWindowCalibration />
               </v-col>
             </v-row>
           </v-card>
         </v-col>
       </v-row>
+
+      <div v-else class="dashboard-view-wrapper">
+        <button
+          v-if="!dashboardStore.editMode"
+          type="button"
+          class="dashboard-edit-entry"
+          :class="[
+            `dashboard-edit-entry--${entryButtonCorner}`,
+            { 'dashboard-edit-entry--dragging': isDraggingEntry },
+          ]"
+          :style="entryDragStyle"
+          data-tour="dashboard-edit-toggle"
+          :title="$t('analysis_view.dashboard.edit_toggle')"
+          @pointerdown="onEntryPointerDown"
+          @click="onEntryClick"
+        >
+          <v-icon size="40" color="primary">mdi-view-dashboard-edit</v-icon>
+          <span class="dashboard-edit-entry-label text-primary">
+            {{ $t("analysis_view.dashboard.edit_toggle") }}
+          </span>
+        </button>
+
+        <button
+          v-else
+          type="button"
+          class="dashboard-edit-done"
+          :title="$t('analysis_view.dashboard.edit_done')"
+          @click="dashboardStore.toggleEditMode()"
+        >
+          <v-icon size="40" color="secondary">mdi-check</v-icon>
+        </button>
+
+        <DashboardGrid :is-loading="isLoading" />
+      </div>
       <!-- <ModalTimelineSegmentAnnotate :show.sync="annotationDialog.show" /> -->
     </v-container>
 
@@ -180,18 +147,14 @@ import { useShortcutStore } from "@/stores/shortcut";
 import { useAnnotationShortcutStore } from "@/stores/annotation_shortcut";
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 import { useShotStore } from "@/stores/shot";
-import { useTabStore } from "@/stores/tabs";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
+import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 // import * as Keyboard from "../plugins/keyboard";
-import VideoPlayer from "@/components/analysis-view/VideoPlayer.vue";
-import TabWindowPositionData from "@/components/analysis-view/TopView.vue";
+import VideoPlayer from "@/components/analysis-view/cards/VideoPlayer.vue";
 import TabWindowCalibration from "@/components/calibration-asset/CalibrationAsset.vue";
-import TabWindowHeatmap from "@/components/analysis-view/tab-window/TabWindowHeatmap.vue";
-import TabWindowTimeline from "@/components/analysis-view/tab-window/TabWindowTimeline.vue";
-import TabWindowEvents from "@/components/analysis-view/tab-window/TabWindowEvents.vue";
-import TabWindowKPI from "@/components/analysis-view/tab-window/TabWindowKPI.vue";
 import ModalObjectOverlay from "@/components/calibration-asset/ModalObjectOverlay.vue";
+import DashboardGrid from "@/components/analysis-view/dashboard/DashboardGrid.vue";
 // import TranscriptOverview from "@/components/TranscriptOverview.vue";
 // import CurrentEntitiesOverView from "@/components/CurrentEntitiesOverView.vue";
 // import ModalTimelineSegmentAnnotate from "@/components/ModalTimelineSegmentAnnotate.vue";
@@ -216,33 +179,22 @@ const shortcutStore = useShortcutStore();
 const annotationShortcutStore = useAnnotationShortcutStore();
 const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
-const tabStore = useTabStore();
 const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
-
-// Fallback label for active player teams (id ≥ 3) that have no name in the run's
-// team_ids meta -- e.g. team_clustering with K > 2 produces team_ids beyond the
-// TeamId enum's static "Team A"/"Team B" entries, or an older run predates them.
-// Derives "Team A"/"Team B"/"Team C"/... from the id offset, same scheme as
-// object_tracker.py's TeamId.TEAM_LEFT/TEAM_RIGHT labels.
-function fallbackTeamName(teamId) {
-  return `Team ${String.fromCharCode(65 + (teamId - 3))}`;
-}
+const dashboardStore = useDashboardLayoutStore();
 
 const matchupTeams = computed(() => {
   const meta = topViewStore.metaDataTopView;
-  // Derived from actually-assigned teams (precomputedPlayerList already only holds
-  // active players, team_id ≥ 3), not the static team_ids meta -- object_tracker.py
-  // always lists both "Team A"/"Team B" there even before team_clustering has run,
-  // so that dict alone can't tell us which teams are actually present.
-  const playerTeamIds = [...new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId))].sort(
-    (a, b) => a - b
-  );
-  return playerTeamIds.map((teamId) => ({
-    id: teamId,
-    name: meta?.team_ids?.[teamId]?.name ?? fallbackTeamName(teamId),
-    color: visualizationStore.getTeamColor(teamId),
-  }));
+  if (!meta?.team_ids) return [];
+  // New scheme: team_id ≥ 3 = active player teams (1=ball, 2=refs, 0=inactive — all hidden from matchup).
+  return Object.entries(meta.team_ids)
+    .filter(([teamId]) => Number(teamId) >= 3)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([teamId, info]) => ({
+      id: Number(teamId),
+      name: info.name,
+      color: visualizationStore.getTeamColor(Number(teamId)),
+    }));
 });
 
 function getVisualizationTabComponent(tabId) {
@@ -289,10 +241,17 @@ const fetchData = async ({ addResults = true }) => {
   } catch (error) {}
 };
 onMounted(async () => {
+  dashboardStore.initFromUser();
   try {
     await fetchData({ addResults: true });
     topViewStore.setSportFromVideo(playerStore.video?.sport);
-    // positionDataStore.restoreFromCache();
+    // Re-fetch the previously selected position/KPI data after a reload (id is
+    // persisted in sessionStorage — see position_data.js). Deliberately not
+    // awaited: it re-runs the same chunked backend load a manual selection
+    // would, so it can take a while on a big dataset, and the KPI/Heatmap tabs
+    // already show their own progress spinner (posdataWorkerStore.isLoading)
+    // while it's in flight instead of blocking the rest of the page.
+    positionDataStore.restoreFromCache();
   } catch (error) {
   } finally {
     isLoading.value = false;
@@ -681,15 +640,103 @@ watch(
   { immediate: true }
 );
 
+// --- Draggable "enter edit mode" button (snaps to a corner of the dashboard) ---
+const ENTRY_BUTTON_CORNER_STORAGE_KEY = "sportvid.dashboardEditEntryCorner";
+const ENTRY_BUTTON_CORNERS = ["top-right", "top-left", "bottom-right", "bottom-left"];
+
+function loadEntryButtonCorner() {
+  const stored = localStorage.getItem(ENTRY_BUTTON_CORNER_STORAGE_KEY);
+  return ENTRY_BUTTON_CORNERS.includes(stored) ? stored : "top-right";
+}
+
+const entryButtonCorner = ref(loadEntryButtonCorner());
+const isDraggingEntry = ref(false);
+const entryDragStyle = ref({});
+
+const ENTRY_DRAG_THRESHOLD = 6; // px of pointer movement before a press counts as a drag, not a click
+let entryDragStartX = 0;
+let entryDragStartY = 0;
+let entryPointerOffsetX = 0;
+let entryPointerOffsetY = 0;
+let entryDidDrag = false;
+
+function onEntryPointerDown(event) {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  const rect = event.currentTarget.getBoundingClientRect();
+  entryPointerOffsetX = event.clientX - rect.left;
+  entryPointerOffsetY = event.clientY - rect.top;
+  entryDragStartX = event.clientX;
+  entryDragStartY = event.clientY;
+  entryDidDrag = false;
+  window.addEventListener("pointermove", onEntryPointerMove);
+  window.addEventListener("pointerup", onEntryPointerUp, { once: true });
+}
+
+function onEntryPointerMove(event) {
+  const dx = event.clientX - entryDragStartX;
+  const dy = event.clientY - entryDragStartY;
+  if (!entryDidDrag && Math.hypot(dx, dy) > ENTRY_DRAG_THRESHOLD) {
+    entryDidDrag = true;
+    isDraggingEntry.value = true;
+  }
+  if (!entryDidDrag) return;
+  entryDragStyle.value = {
+    position: "fixed",
+    left: `${event.clientX - entryPointerOffsetX}px`,
+    top: `${event.clientY - entryPointerOffsetY}px`,
+    right: "auto",
+    bottom: "auto",
+  };
+}
+
+function onEntryPointerUp(event) {
+  window.removeEventListener("pointermove", onEntryPointerMove);
+  if (entryDidDrag) {
+    // Corners are relative to the viewport (not the dashboard wrapper) so the
+    // button stays reachable in a fixed screen corner no matter how far the
+    // page is scrolled — the wrapper itself can be far taller than the
+    // viewport.
+    const vertical = event.clientY < window.innerHeight / 2 ? "top" : "bottom";
+    const horizontal = event.clientX < window.innerWidth / 2 ? "left" : "right";
+    entryButtonCorner.value = `${vertical}-${horizontal}`;
+    localStorage.setItem(ENTRY_BUTTON_CORNER_STORAGE_KEY, entryButtonCorner.value);
+  }
+  isDraggingEntry.value = false;
+  entryDragStyle.value = {};
+}
+
+function onEntryClick(event) {
+  // A drag gesture ends with a click event right after pointerup — swallow
+  // that one so dragging the button doesn't also toggle edit mode.
+  if (entryDidDrag) {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+  dashboardStore.toggleEditMode();
+}
+
 onBeforeUnmount(() => {
+  window.removeEventListener("pointermove", onEntryPointerMove);
+  window.removeEventListener("pointerup", onEntryPointerUp);
   positionDataStore.positionDataId = null;
+  positionDataStore.positionDataMode = null;
   positionDataStore.selectedTimeRange = { start: 0, end: 0 };
   topViewStore.setPositionData(null, {});
   bboxesStore.bboxDataInterpolated = {};
+  // Also clear the persisted tracker-run ids (bboxPluginRunId/bboxBallPluginRunId,
+  // teamClusteringRunId/reidRunId) — otherwise they'd survive into a different
+  // video's AnalysisView and restoreFromCache (position_data.js) could try to
+  // restore this video's tracker run against that one.
+  bboxesStore.bboxPluginRunId = 0;
+  bboxesStore.bboxBallPluginRunId = null;
+  topViewStore.teamClusteringRunId = null;
+  topViewStore.reidRunId = null;
   calibrationAssetStore.resetCalibrationAsset();
   topViewStore.gridLongitudinal = 0;
   topViewStore.gridTransverse = 0;
   topViewStore.showSportZones = false;
+  visualizationStore.resetKpiData();
 });
 </script>
 
@@ -746,32 +793,110 @@ onBeforeUnmount(() => {
   transition: border-color 0.3s ease;
 }
 
-.matchup-title {
+.dashboard-view-wrapper {
+  position: relative;
+}
+
+.dashboard-edit-entry,
+.dashboard-edit-done {
+  position: absolute;
+  z-index: 20;
+  cursor: pointer;
+  background: rgb(var(--v-theme-surface));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: max-width 0.2s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-edit-done {
+  top: -10px;
+  right: -10px;
+}
+
+.dashboard-edit-entry {
+  /* Fixed to the viewport (not the dashboard wrapper) so the button stays in
+     its chosen corner no matter how far the page is scrolled. */
+  position: fixed;
+  touch-action: none;
+  user-select: none;
+}
+
+/* 64px = the app bar's height, so the top corners sit just below it instead
+   of overlapping. */
+.dashboard-edit-entry--top-right {
+  top: 74px;
+  right: 20px;
+}
+
+.dashboard-edit-entry--top-left {
+  top: 74px;
+  left: 20px;
+}
+
+.dashboard-edit-entry--bottom-right {
+  bottom: 20px;
+  right: 20px;
+}
+
+.dashboard-edit-entry--bottom-left {
+  bottom: 20px;
+  left: 20px;
+}
+
+.dashboard-edit-entry--dragging {
+  max-width: 68px !important;
+  cursor: grabbing;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  transition: none;
+}
+
+.dashboard-edit-entry:hover,
+.dashboard-edit-done:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+.dashboard-edit-entry:active,
+.dashboard-edit-done:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.dashboard-edit-entry {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  height: 68px;
+  max-width: 68px;
+  padding: 0 14px;
+  overflow: hidden;
+  border: 2px solid rgba(var(--v-theme-primary), 0.5);
+  border-radius: 34px;
 }
 
-.matchup-title-team {
+.dashboard-edit-entry:hover {
+  max-width: 260px;
+  padding: 0 18px;
+}
+
+.dashboard-edit-entry-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.dashboard-edit-entry:hover .dashboard-edit-entry-label {
+  opacity: 1;
+  transition-delay: 0.08s;
+}
+
+.dashboard-edit-done {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
-}
-
-.matchup-title-name {
-  font-size: 1rem;
-}
-
-.matchup-title-line {
-  display: block;
-  width: 100%;
-  height: 3px;
-  border-radius: 1px;
-  margin-top: -4px;
-}
-
-.matchup-title-sep {
-  font-size: 1.1rem;
+  justify-content: center;
+  width: 68px;
+  height: 68px;
+  border: 2px solid rgba(var(--v-theme-secondary), 0.6);
+  border-radius: 50%;
 }
 </style>

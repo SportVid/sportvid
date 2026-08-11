@@ -23,6 +23,11 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     return state.pluginRunList.map((id) => state.pluginRuns[id]);
   });
 
+  // Lets places outside the app bar (e.g. PositionDataMenu's disabled-Select tooltip) open
+  // ModalStatus, which the app bar owns/renders -- same remote-open pattern as
+  // tutorialStore.openTutorialModal: set true here, AppBar watches it and flips it back off.
+  const openStatusModal = ref(false);
+
   const forVideo = (videoId) => {
     return state.pluginRunList
       .map((id) => state.pluginRuns[id])
@@ -231,6 +236,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
   return {
     state,
     all,
+    openStatusModal,
     forVideo,
     submit,
     fetchAll,

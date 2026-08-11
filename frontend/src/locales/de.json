@@ -16,6 +16,11 @@
     "text": "Durch die Nutzung von SportVid erklären Sie sich mit den folgenden Bedingungen einverstanden: <ol style=\"margin-left:20px; line-height:1.5;\"><li>Zustimmung zur Verwendung hochgeladener und eingereichter Videos und Daten zu wissenschaftlichen Forschungszwecken.</li><li>Zustimmung, dass andere Benutzer nach Videos suchen dürfen.</li><li>...</li></ol>",
     "confirmation": "Stimmen Sie den {title} zu?"
   },
+  "legal_notice": {
+    "title": "Impressum",
+    "text": "<h3>Angaben gemäß § 5 Digitale-Dienste-Gesetz (DDG)</h3><p>Deutsche Sporthochschule Köln<br>Körperschaft des öffentlichen Rechts<br>Am Sportpark Müngersdorf 6<br>50933 Köln</p><p>Vertreten durch den Rektor:<br>Univ.-Prof. Dr. Ansgar Thiel</p><h3>Kontakt</h3><p>Telefon: +49 221 4982-0<br>Telefax: +49 221 4982-8330<br>E-Mail: {'infopoint@dshs-koeln.de'}</p><h3>Umsatzsteuer-ID</h3><p>Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG: DE 123 474 626</p><h3>Zuständige Aufsichtsbehörde</h3><p>Ministerium für Kultur und Wissenschaft des Landes Nordrhein-Westfalen<br>Völklinger Straße 49<br>40221 Düsseldorf</p><h3>Verantwortlich für den Inhalt gemäß § 18 Abs. 2 Medienstaatsvertrag (MStV)</h3><p>Univ.-Prof. Dr. Daniel Memmert<br>Institut für Trainingswissenschaft und Sportinformatik<br>Deutsche Sporthochschule Köln<br>Am Sportpark Müngersdorf 6<br>50933 Köln<br>E-Mail: {'its@dshs-koeln.de'}</p><h3>Über das Projekt SportVid</h3><p>SportVid ist ein von der Deutschen Forschungsgemeinschaft (DFG) gefördertes Kooperationsprojekt der Deutschen Sporthochschule Köln und der Philipps-Universität Marburg.</p><p>Projektleitung:<br>Univ.-Prof. Dr. Daniel Memmert, Institut für Trainingswissenschaft und Sportinformatik, Deutsche Sporthochschule Köln<br>Prof. Dr. Ralph Ewerth, Philipps-Universität Marburg</p><h3>Haftung für Inhalte und Links</h3><p>Trotz sorgfältiger inhaltlicher Kontrolle übernehmen wir keine Haftung für die Inhalte externer Links. Für den Inhalt der verlinkten Seiten sind ausschließlich deren Betreiber verantwortlich.</p>",
+    "last_updated": "<em>Stand: 11. August 2026</em>"
+  },
   "user": {
     "name": "Benutzername",
     "password": "Passwort",
@@ -105,7 +110,19 @@
       "timeline": "Timeline",
       "events": "Ereignisse",
       "heatmap": "Heatmap",
-      "running_distance": "Laufdistanz"
+      "kpi": "KPIs"
+    },
+    "dashboard": {
+      "edit_toggle": "Layout bearbeiten",
+      "edit_done": "Fertig",
+      "add_view": "Ansicht hinzufügen",
+      "remove": "Entfernen",
+      "toggle_width": "Breite umschalten",
+      "switch_view": "Ansicht wechseln",
+      "widgets": {
+        "video": "Video",
+        "topview": "Draufsicht"
+      }
     },
     "sports": {
       "soccer": "Fußball",
@@ -130,7 +147,21 @@
     "go_to_marker_time": "Zurück zu {time}"
   },
   "position_data": {
-    "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führen Sie das Bytetrack-Plugin aus oder laden Sie die Positionsdaten manuell hoch.",
+    "not_selected": "Keine Positionsdaten vorhanden.",
+    "kpi_not_selected": "Noch keine KPIs berechnet.",
+    "select_disabled_hint_prefix": "Der aktuelle Stand ist in der ",
+    "status_overview_link": "Statusübersicht",
+    "select_disabled_hint_suffix": " einsehbar.",
+    "generate": {
+      "cv_heading": "Über Computer Vision",
+      "or": "oder",
+      "bytetrack": "ByteTrack",
+      "object_tracker": "Object Tracker",
+      "dlt": "DLT-Kalibrierung",
+      "team_assignment": "Team-Zuordnung",
+      "re_identification": "Re-Identification",
+      "upload_heading": "Per Datei-Upload"
+    },
     "display_settings": {
       "title": "Anzeigeeinstellungen",
       "view_bounding_box": "Bounding-Boxen anzeigen",
@@ -148,6 +179,7 @@
       },
       "set_zones": "Zonen"
     },
+    "team_fallback_name": "Team {letter}",
     "entity_kind": {
       "player": "Spieler",
       "ref": "Schiris",
@@ -185,11 +217,36 @@
       "first_half": "Erste Halbzeit auswählen",
       "second_half": "Zweite Halbzeit auswählen"
     },
+    "heatmap": {
+      "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führe das Bytetrack-Plugin aus oder lade Positionsdaten manuell hoch.",
+      "area_size": "Flächengröße",
+      "display_mode": {
+        "title": "Anzeigemodus",
+        "heatmap": "Heatmap",
+        "movement": "Bewegung"
+      }
+    },
     "kpi": {
-      "posdata_not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führe das Bytetrack-Plugin aus oder lade Positionsdaten manuell hoch.",
-      "kpi_not_selected": "Keine KPI-Daten verfügbar.<br>Bitte führe das KPI-Berechnungs-Plugin aus, um KPIs auf Basis der ausgewählten Positionsdaten zu berechnen.",
+      "posdata_not_available": "Keine Positionsdaten vorhanden.<br>Erzeuge sie zuerst im TopView- oder Heatmap-Feld.",
+      "no_kpi_computed": "Keine KPIs berechnet.",
+      "compute_kpis": "KPIs berechnen",
+      "select_kpis": "KPI-Daten auswählen",
+      "compute": {
+        "button": "KPI berechnen"
+      },
+      "view_mode": {
+        "title": "Ansicht",
+        "table": "Tabelle",
+        "chart": "Diagramm"
+      },
+      "group_mode": {
+        "title": "Gruppierung",
+        "player": "Spieler",
+        "team": "Team"
+      },
       "kpi_selection": {
         "title": "KPI",
+        "unit": "Einheit",
         "group_distance": "Distanz",
         "group_velocity": "Geschwindigkeit",
         "group_metabolic_work": "Metabolische Arbeit",
@@ -871,7 +928,8 @@
         "kpi": "KPIs"
       },
       "source": {
-        "bytetrack": "ByteTrack",
+        "player_tracking": "Spieler-Tracking",
+        "object_tracking": "Objekt-Tracking (Ball)",
         "dlt": "DLT-Kalibrierung",
         "upload": "Upload"
       },
@@ -886,6 +944,7 @@
         "none": "Nicht vorhanden",
         "error": "Fehler"
       },
+      "optional": "optional",
       "kpi_requires_posdata": "Benötigt Positionsdaten",
       "plugin_name": "Plugin-Name",
       "date": "Datum",
@@ -936,11 +995,11 @@
       "select": {
         "title": "Positionsdaten auswählen",
         "modes": {
-          "bytetrack": "ByteTrack Plugin",
           "object_tracker": "Object Tracking Plugin",
           "manual": "Manueller Upload"
         },
         "not_calibrated": "nicht kalibriert",
+        "optional": "Optional",
         "object_tracker": "Object Tracking Plugin auswählen",
         "ball_tracker": "Ball-Tracking Lauf auswählen (optional)",
         "team_clustering": "Team-Zuordnung auswählen (optional)",

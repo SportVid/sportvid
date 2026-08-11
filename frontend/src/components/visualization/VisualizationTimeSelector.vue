@@ -15,12 +15,12 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
 import paper from "paper";
 import { getTimecode } from "@/plugins/time";
-import { useTabStore } from "@/stores/tabs";
+import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePlayerStore } from "@/stores/player";
 
-const tabStore = useTabStore();
+const dashboardStore = useDashboardLayoutStore();
 const positionDataStore = usePositionDataStore();
 const topViewStore = useTopViewStore();
 const playerStore = usePlayerStore();
@@ -32,7 +32,7 @@ const props = defineProps({
   },
   height: {
     type: String,
-    default: "50",
+    default: "40",
   },
   radius: {
     type: Number,
@@ -58,7 +58,14 @@ const canvasHeight = ref(null);
 const containerWidth = ref(null);
 const containerHeight = ref(null);
 
-const redraw = ref(false);
+let resizeRafId = null;
+function scheduleRedraw() {
+  if (resizeRafId !== null) return;
+  resizeRafId = requestAnimationFrame(() => {
+    resizeRafId = null;
+    draw();
+  });
+}
 
 const duration = computed(() => {
   const keys = topViewStore.sortedFrameKeys;
@@ -141,13 +148,20 @@ function draw() {
   scope.view.draw();
 }
 
+// Fewer major ticks once the canvas gets too narrow for the full set to
+// fit without overlapping (e.g. card squeezed into a single dashboard
+// column) — canvasWidth is already kept current by draw() on every
+// resize, so this just reads it fresh on each redraw.
+const TICK_OVERLAP_WIDTH = 750;
+
 function drawScale() {
   if (scaleLayer) scaleLayer.removeChildren();
   scope.activate();
   scaleLayer = new paper.Layer();
 
-  const interval = duration.value / 5;
-  const frames = linspace(0, 5, interval);
+  const numTicks = canvasWidth.value < TICK_OVERLAP_WIDTH ? 3 : 5;
+  const interval = duration.value / numTicks;
+  const frames = linspace(0, numTicks, interval);
 
   const mainStrokes = frames.map((frame) => {
     const x = frameToX(frame);
@@ -156,7 +170,7 @@ function drawScale() {
 
   const textList = frames.map((frame, index) => {
     const x = frameToX(frame);
-    const text = new paper.PointText(new paper.Point(x, 40));
+    const text = new paper.PointText(new paper.Point(x, 37));
     if (index === 0) {
       text.justification = "left";
     } else if (index === frames.length - 1) {
@@ -171,15 +185,15 @@ function drawScale() {
   new paper.Group(mainStrokes).strokeColor = "black";
   new paper.Group(textList).style = {
     fontFamily: "Courier New",
-    fontSize: 10,
+    fontSize: 12,
     fillColor: "black",
   };
 
   const minorInterval = interval / 4;
-  const minorFrames = linspace(0, 20, minorInterval);
+  const minorFrames = linspace(0, numTicks * 4, minorInterval);
   const minorStrokes = minorFrames.map((frame) => {
     const x = frameToX(frame);
-    return new paper.Path(new paper.Point(x, 25), new paper.Point(x, 30));
+    return new paper.Path(new paper.Point(x, 15), new paper.Point(x, 20));
   });
   new paper.Group(minorStrokes).strokeColor = "black";
 }
@@ -218,8 +232,8 @@ function drawSelection() {
   const radius = new paper.Size(props.radius, props.radius);
 
   const rect = new paper.Rectangle(
-    new paper.Point(frameToX(hiddenStart.value), 5),
-    new paper.Point(frameToX(hiddenEnd.value), canvasHeight.value - 5)
+    new paper.Point(frameToX(hiddenStart.value), 2),
+    new paper.Point(frameToX(hiddenEnd.value), canvasHeight.value - 2)
   );
 
   const path = new paper.Path.Rectangle(rect, radius);
@@ -229,7 +243,7 @@ function drawSelection() {
   const createHandle = (frame) => {
     const x = frameToX(frame);
     const handleRect = new paper.Rectangle(
-      new paper.Point(x - 5, 10),
+      new paper.Point(x - 2, 10),
       new paper.Point(x + 5, canvasHeight.value - 10)
     );
     const handle = new paper.Path.Rectangle(handleRect, radius);
@@ -242,8 +256,12 @@ function drawSelection() {
 
   handleGroup = new paper.Group([path, handleLeft, handleRight]);
 
-  const onDragStart = () => { isDragging = true; };
-  const onDragEnd = () => { isDragging = false; };
+  const onDragStart = () => {
+    isDragging = true;
+  };
+  const onDragEnd = () => {
+    isDragging = false;
+  };
 
   handleLeft.onMouseDown = onDragStart;
   handleLeft.onMouseUp = onDragEnd;
@@ -306,6 +324,7 @@ function onSelectionChange() {
   seg[7].point.x = posEnd - props.radius;
 }
 
+let resizeObserver = null;
 onMounted(() => {
   scope = new paper.PaperScope();
   scope.setup(canvas.value);
@@ -315,22 +334,27 @@ onMounted(() => {
       container.value.clientWidth !== containerWidth.value ||
       container.value.clientHeight !== containerHeight.value
     ) {
-      clearTimeout(redraw.value);
-      redraw.value = setTimeout(onResize, 100);
+      scheduleRedraw();
     }
   };
 
   scope.view.onResize = () => {
-    clearTimeout(redraw.value);
-    redraw.value = setTimeout(onResize, 100);
+    scheduleRedraw();
   };
 
   nextTick(() => draw());
 
   animFrameId = requestAnimationFrame(animLoop);
+
+  resizeObserver = new ResizeObserver(() => {
+    scheduleRedraw();
+  });
+  if (container.value) resizeObserver.observe(container.value);
 });
 onBeforeUnmount(() => {
   if (animFrameId) cancelAnimationFrame(animFrameId);
+  if (resizeRafId) cancelAnimationFrame(resizeRafId);
+  if (resizeObserver) resizeObserver.disconnect();
   if (scope) {
     scope.view.onFrame = null;
     scope.view.onResize = null;
@@ -339,7 +363,7 @@ onBeforeUnmount(() => {
   }
 });
 watch(
-  () => tabStore.visualizationTabId,
+  () => dashboardStore.groupActiveTick,
   () => {
     nextTick(() => draw());
   }

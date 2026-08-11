@@ -68,6 +68,32 @@ export const useVisualizationStore = defineStore(
     const kpiDataLoaded = ref(false);
     const isLoadingKpi = ref(false);
 
+    // Settings the user picks from the collapsible toolbar buttons on the KPI
+    // and Heatmap analysis tabs (TabWindowKPI.vue / TabWindowHeatmap.vue) —
+    // everything there except the one-shot "save/download" actions. Persisted
+    // (see below) so they survive a page reload for the rest of the session.
+    //
+    // Note: the pitch's area size (e.g. "full" vs a cropped half) is *not*
+    // here despite being one of these toolbar settings — it stays local to
+    // topViewStore (currentAreaSize, persisted there) since it's set together
+    // with currentSport.areaImage/widthRel/heightRel in the same
+    // onSportChange() call; splitting it out into this store required a
+    // circular import between the two stores that caused the pitch image and
+    // the actual selected area to desync after a reload.
+    const kpiGroupMode = ref("player"); // 'player' | 'team'
+    // null = not yet initialized; TabWindowKPI seeds this with the
+    // sport-appropriate "all zones" default on first use.
+    const kpiSelectedZones = ref(null);
+    const kpiSelectedKpiId = ref("running_distance_frame"); // chart mode: single selection
+    const kpiSelectedKpiIds = ref(["running_distance_cumulative"]); // table mode: multi selection
+    const kpiWindowFrames = ref(10);
+    const kpiVelocityUnit = ref("kmh"); // 'kmh' | 'ms'
+    // null = not yet initialized; TabWindowKPI seeds this with "everyone
+    // selected" on first use, same as its previous non-persisted default.
+    const kpiSelectedPlayerIds = ref(null);
+    const heatmapDisplayMode = ref("heatmap"); // 'heatmap' | 'movement'
+    const heatmapSelectedPlayerIds = ref([]);
+
     const loadKpiData = async (trackingDataId) => {
       kpiDataLoaded.value = false;
       isLoadingKpi.value = true;
@@ -118,6 +144,15 @@ export const useVisualizationStore = defineStore(
       }
     };
 
+    const resetKpiData = () => {
+      kpiData.value = {};
+      kpiNames.value = [];
+      kpiFramerate.value = null;
+      kpiMetaTeamIds.value = {};
+      kpiDataLoaded.value = false;
+      isLoadingKpi.value = false;
+    };
+
     return {
       halftimesExist,
       teamColorMapping,
@@ -132,11 +167,32 @@ export const useVisualizationStore = defineStore(
       kpiDataLoaded,
       isLoadingKpi,
       loadKpiData,
+      kpiGroupMode,
+      kpiSelectedZones,
+      kpiSelectedKpiId,
+      kpiSelectedKpiIds,
+      kpiWindowFrames,
+      kpiVelocityUnit,
+      kpiSelectedPlayerIds,
+      heatmapDisplayMode,
+      heatmapSelectedPlayerIds,
+      resetKpiData,
     };
   },
   {
     persist: {
-      pick: ["teamColorMapping"],
+      pick: [
+        "teamColorMapping",
+        "kpiGroupMode",
+        "kpiSelectedZones",
+        "kpiSelectedKpiId",
+        "kpiSelectedKpiIds",
+        "kpiWindowFrames",
+        "kpiVelocityUnit",
+        "kpiSelectedPlayerIds",
+        "heatmapDisplayMode",
+        "heatmapSelectedPlayerIds",
+      ],
       storage: sessionStorage,
     },
   }

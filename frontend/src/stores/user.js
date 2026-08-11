@@ -23,6 +23,7 @@ export const useUserStore = defineStore(
     const maxFileSize = ref(null);
     const csrfToken = ref(null);
     const isReady = ref(false);
+    const dashboardLayout = ref(null);
 
     function clearUserState() {
       userId.value = null;
@@ -35,6 +36,7 @@ export const useUserStore = defineStore(
       maxFileSize.value = 0;
       dateJoined.value = null;
       loggedIn.value = false;
+      dashboardLayout.value = null;
     }
 
     function getCookie(name) {
@@ -89,6 +91,7 @@ export const useUserStore = defineStore(
           maxVideoSize.value = res.data.data.max_video_size || 0;
           maxFileSize.value = res.data.data.max_file_size || 0;
           dateJoined.value = res.data.data.date_joined || null;
+          dashboardLayout.value = res.data.data.dashboard_layout || null;
           loggedIn.value = true;
         } else {
           clearUserState();
@@ -119,6 +122,7 @@ export const useUserStore = defineStore(
           maxVideoSize.value = res.data.data.max_video_size || 0;
           maxFileSize.value = res.data.data.max_file_size || 0;
           dateJoined.value = res.data.data.date_joined || null;
+          dashboardLayout.value = res.data.data.dashboard_layout || null;
           loggedIn.value = true;
           return res.data;
         }
@@ -185,6 +189,20 @@ export const useUserStore = defineStore(
       }
     }
 
+    async function saveDashboardLayout(layout) {
+      dashboardLayout.value = layout;
+
+      try {
+        const res = await axios.post(`${config.API_LOCATION}/user/update`, {
+          params: { update_type: "dashboard_layout", dashboard_layout: layout },
+        });
+        return res.data || { status: "error", message: "Invalid message." };
+      } catch (error) {
+        console.error("Error saving dashboard layout:", error);
+        return { status: "error" };
+      }
+    }
+
     async function deleteUser(params) {
       if (isLoading.value) return;
 
@@ -222,12 +240,14 @@ export const useUserStore = defineStore(
       maxVideoSize,
       maxFileSize,
       csrfToken,
+      dashboardLayout,
       getCSRFToken,
       getUserData,
       login,
       logout,
       register,
       updateUser,
+      saveDashboardLayout,
       deleteUser,
       showModalSettings,
       openSettings,

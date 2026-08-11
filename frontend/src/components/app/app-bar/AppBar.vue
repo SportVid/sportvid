@@ -21,11 +21,6 @@
       </v-btn>
 
       <div v-if="analysisView" class="d-flex align-center" data-tour="analysis-appbar-actions">
-        <v-btn v-if="canWrite" @click="showModalPlugin = true" data-tour="modal-plugin-open">
-          <app-bar-icon>mdi-puzzle-outline</app-bar-icon>
-          <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
-        </v-btn>
-
         <v-btn @click="showModalStatus = true" data-tour="modal-status-open">
           <app-bar-icon>mdi-format-list-checks</app-bar-icon>
           <v-badge
@@ -160,7 +155,6 @@
       <UserMenu />
     </template>
 
-    <ModalPlugin v-if="showModalPlugin" v-model="showModalPlugin" :videoIds="[videoId]" />
     <ModalStatus
       v-if="showModalStatus"
       v-model="showModalStatus"
@@ -220,10 +214,16 @@ const analysisView = computed(() => route.name === "AnalysisView");
 const termsOfUseView = computed(() => route.name === "termsOfUseView");
 const guidelinesView = computed(() => route.name === "GuidelinesView");
 
-const showModalPlugin = ref(false);
-const videoId = computed(() => playerStore.videoId);
-
 const showModalStatus = ref(false);
+watch(
+  () => pluginRunStore.openStatusModal,
+  (val) => {
+    if (val) {
+      showModalStatus.value = true;
+      pluginRunStore.openStatusModal = false;
+    }
+  }
+);
 const pluginRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)

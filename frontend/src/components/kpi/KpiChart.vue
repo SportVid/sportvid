@@ -1,5 +1,5 @@
 <template>
-  <div ref="plotContainer" style="width: 100%; min-height: 45vh"></div>
+  <div ref="plotContainer" style="width: 100%; min-height: 48vh"></div>
 </template>
 
 <script setup>
@@ -9,7 +9,7 @@ import { usePositionDataStore } from "@/stores/position_data";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePlayerStore } from "@/stores/player";
-import { useTabStore } from "@/stores/tabs";
+import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 import { useI18n } from "vue-i18n";
 import { toRgb } from "@/plugins/helpers";
 import { getTimecode } from "@/plugins/time";
@@ -19,7 +19,7 @@ const positionDataStore = usePositionDataStore();
 const topViewStore = useTopViewStore();
 const visualizationStore = useVisualizationStore();
 const playerStore = usePlayerStore();
-const tabStore = useTabStore();
+const dashboardStore = useDashboardLayoutStore();
 const { t } = useI18n();
 
 const props = defineProps({
@@ -43,6 +43,16 @@ const plotContainer = ref(null);
 let plotInitialized = false;
 let animFrameId = null;
 let lastCurrentTime = null;
+
+// Fewer x-axis ticks once the container gets too narrow for the full set
+// to fit without overlapping (e.g. card squeezed into a single dashboard
+// column) — measured via the same ResizeObserver already driving Plotly's
+// own resize, so it reacts live to drag/resize instead of only on mount.
+const TICK_OVERLAP_WIDTH = 800;
+const containerWidth = ref(0);
+const numTicks = computed(() =>
+  containerWidth.value > 0 && containerWidth.value < TICK_OVERLAP_WIDTH ? 3 : 5
+);
 
 const selectedStart = computed(() => positionDataStore.selectedTimeRange.start);
 const selectedEnd = computed(() => positionDataStore.selectedTimeRange.end);
@@ -420,10 +430,9 @@ function computeTickVals() {
   const start = selectedStart.value;
   const end = selectedEnd.value;
   const range = end - start;
-  const numTicks = 5;
-  const step = range / numTicks;
+  const step = range / numTicks.value;
   const vals = [];
-  for (let i = 0; i <= numTicks; i++) {
+  for (let i = 0; i <= numTicks.value; i++) {
     vals.push(start + step * i);
   }
   return vals;
@@ -474,14 +483,30 @@ function currentTimeShape() {
   ];
 }
 
-function renderPlot() {
+// Plotly.newPlot/react/relayout/Plots.resize all return a Promise that
+// rejects asynchronously on internal drawing errors — the call itself does
+// NOT throw synchronously. A plain try/catch around the call never sees
+// that rejection, so it surfaces as an unhandled "Uncaught (in promise)"
+// error instead of being caught here. Every call below must be awaited (or
+// have .catch attached) for the recovery logic to actually run.
+async function renderPlot() {
   if (!plotContainer.value) return;
-  Plotly.newPlot(plotContainer.value, chartData.value, chartLayout.value, {
-    responsive: true,
-    displayModeBar: false,
-    scrollZoom: false,
-    doubleClick: false,
-  });
+  try {
+    await Plotly.newPlot(plotContainer.value, chartData.value, chartLayout.value, {
+      responsive: true,
+      displayModeBar: false,
+      scrollZoom: false,
+      doubleClick: false,
+    });
+  } catch (e) {
+    // Leave plotInitialized false so nothing else tries to touch this div
+    // until the next successful render.
+    console.error("KpiChart: Plotly.newPlot failed", e, {
+      chartData: chartData.value,
+      chartLayout: chartLayout.value,
+    });
+    return;
+  }
   plotInitialized = true;
 
   plotContainer.value.on("plotly_click", (eventData) => {
@@ -492,14 +517,36 @@ function renderPlot() {
   });
 }
 
-function updatePlot() {
+async function updatePlot() {
   if (!plotContainer.value || !plotInitialized) return;
-  Plotly.react(plotContainer.value, chartData.value, chartLayout.value, {
-    responsive: true,
-    displayModeBar: false,
-    scrollZoom: false,
-    doubleClick: false,
-  });
+  try {
+    await Plotly.react(plotContainer.value, chartData.value, chartLayout.value, {
+      responsive: true,
+      displayModeBar: false,
+      scrollZoom: false,
+      doubleClick: false,
+    });
+  } catch (e) {
+    // Plotly's incremental diff (.react) can reject and leave the graph
+    // div's internals broken on some trace-shape changes (seen switching
+    // between position-data sources with very different player/trace
+    // counts, e.g. manual upload <-> object tracker) — every later call on
+    // that same div, including the per-frame time-marker relayout below,
+    // then keeps throwing the same cascading "emit is not a function"
+    // error. Recover by tearing the plot down and rebuilding it from
+    // scratch instead of leaving it permanently wedged.
+    console.error("KpiChart: Plotly.react failed, rebuilding plot", e, {
+      chartData: chartData.value,
+      chartLayout: chartLayout.value,
+    });
+    plotInitialized = false;
+    try {
+      await Plotly.purge(plotContainer.value);
+    } catch (_purgeErr) {
+      /* already broken, nothing to clean up */
+    }
+    await renderPlot();
+  }
 }
 
 function updateTimeMarker() {
@@ -507,7 +554,12 @@ function updateTimeMarker() {
   const time = playerStore.currentTime;
   if (time === lastCurrentTime) return;
   lastCurrentTime = time;
-  Plotly.relayout(plotContainer.value, { shapes: currentTimeShape() });
+  Plotly.relayout(plotContainer.value, { shapes: currentTimeShape() }).catch((e) => {
+    console.error("KpiChart: Plotly.relayout failed", e);
+    // Stop hammering a broken div every animation frame; the next data
+    // change will go through updatePlot()'s own rebuild path above.
+    plotInitialized = false;
+  });
 }
 
 function animLoop() {
@@ -524,24 +576,40 @@ watch(
   () => nextTick(() => updatePlot())
 );
 
+function safeResize() {
+  if (!plotContainer.value || !plotInitialized) return;
+  Plotly.Plots.resize(plotContainer.value).catch((e) => {
+    console.error("KpiChart: Plotly resize failed", e);
+    plotInitialized = false;
+  });
+}
+
 watch(
-  () => tabStore.visualizationTabId,
+  () => dashboardStore.groupActiveTick,
   () => {
-    nextTick(() => {
-      if (plotContainer.value && plotInitialized) {
-        Plotly.Plots.resize(plotContainer.value);
-      }
-    });
+    nextTick(() => safeResize());
   }
 );
 
+let resizeObserver = null;
 onMounted(() => {
   nextTick(() => renderPlot());
   animFrameId = requestAnimationFrame(animLoop);
+
+  resizeObserver = new ResizeObserver((entries) => {
+    const width = entries[0]?.contentRect?.width;
+    if (width) containerWidth.value = width;
+    safeResize();
+  });
+  if (plotContainer.value) {
+    containerWidth.value = plotContainer.value.clientWidth;
+    resizeObserver.observe(plotContainer.value);
+  }
 });
 
 onBeforeUnmount(() => {
   if (animFrameId) cancelAnimationFrame(animFrameId);
+  if (resizeObserver) resizeObserver.disconnect();
   if (plotContainer.value && plotInitialized) {
     Plotly.purge(plotContainer.value);
   }
