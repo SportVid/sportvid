@@ -40,10 +40,10 @@ export const useTutorialStore = defineStore("tutorial", () => {
       tutorial.requirements.forEach((req) => {
         switch (req) {
           case "video-uploaded":
-            if (videoStore.all.length === 0) missing.push(tutorialRequirements.value[req]);
+            if (videoStore.all.length === 0) missing.push(tutorialRequirements[req]);
             break;
           case "analysis-view-opened":
-            if (route.name !== "AnalysisView") missing.push(tutorialRequirements.value[req]);
+            if (route.name !== "AnalysisView") missing.push(tutorialRequirements[req]);
             break;
           case "position-data-selected":
             if (topViewStore.sortedFrameKeys.length === 0) missing.push(tutorialRequirements[req]);
@@ -60,7 +60,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     };
   }
 
-  const tutorials = computed(() => [
+  const tutorials = [
     {
       id: "upload-video",
       group: "basics",
@@ -178,9 +178,9 @@ export const useTutorialStore = defineStore("tutorial", () => {
       disabled: false,
       requirements: ["video-uploaded", "position-data-not-selected"],
     },
-  ]);
+  ];
   const availableTutorials = computed(() =>
-    tutorials.value.map((t) => {
+    tutorials.map((t) => {
       const result = evaluateRequirements(t);
       return {
         ...t,
@@ -190,7 +190,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     })
   );
 
-  const tutorialSteps = computed(() => ({
+  const tutorialSteps = {
     "upload-video": {
       steps: [
         {
@@ -512,10 +512,6 @@ export const useTutorialStore = defineStore("tutorial", () => {
             });
           },
         },
-      ],
-    },
-    "check-history": {
-      steps: [
         {
           id: "export-select",
           text: t("tutorials.export.export_select"),
@@ -1421,9 +1417,9 @@ export const useTutorialStore = defineStore("tutorial", () => {
         },
       ],
     },
-  }));
+  };
 
-  const tutorialRequirements = computed(() => ({
+  const tutorialRequirements = {
     "video-uploaded": {
       id: "video-uploaded",
       text: t("modal.tutorial.missing_requirements.video_uploaded"),
