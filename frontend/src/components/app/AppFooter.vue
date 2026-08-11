@@ -19,8 +19,8 @@
         <v-divider vertical :thickness="2" inset></v-divider>
 
         <div class="link-wrapper">
-          <router-link to="/impressum" class="router-link">
-            {{ $t("impressum.title") }}
+          <router-link to="/legal-notice" class="router-link">
+            {{ $t("legal_notice.title") }}
           </router-link>
         </div>
       </div>
