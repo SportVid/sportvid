@@ -149,6 +149,7 @@ import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 import { useShotStore } from "@/stores/shot";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
+import { useEventsStore } from "@/stores/events";
 import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
 // import * as Keyboard from "../plugins/keyboard";
 import VideoPlayer from "@/components/analysis-view/cards/VideoPlayer.vue";
@@ -181,6 +182,7 @@ const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
 const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
+const eventsStore = useEventsStore();
 const dashboardStore = useDashboardLayoutStore();
 
 const matchupTeams = computed(() => {
@@ -737,6 +739,11 @@ onBeforeUnmount(() => {
   topViewStore.gridTransverse = 0;
   topViewStore.showSportZones = false;
   visualizationStore.resetKpiData();
+  // Event data sets (see EventDataMenu.vue) are only ever uploaded/generated per video, not
+  // a reusable global list -- carrying them into the next video (persisted, see events.js)
+  // would show that other video's dummy/uploaded events tagged onto this one instead of a
+  // clean "no event data yet" state.
+  eventsStore.resetEventData();
 });
 </script>
 

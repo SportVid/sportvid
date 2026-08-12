@@ -187,6 +187,23 @@
       "rest": "Inaktiv"
     }
   },
+  "event_data": {
+    "not_selected": "Keine Event-Daten vorhanden.",
+    "generate": {
+      "cv_heading": "Über Computer Vision",
+      "detect_events": "Eventerkennung",
+      "coming_soon": "Demnächst verfügbar – es gibt noch kein Plugin zur automatischen Event-Erkennung.",
+      "or": "oder",
+      "upload_heading": "Per Datei-Upload"
+    },
+    "display_settings": {
+      "event_data": {
+        "title": "Event-Daten",
+        "upload": "Event-Daten hochladen",
+        "select": "Event-Daten auswählen"
+      }
+    }
+  },
   "visualization": {
     "title": "Visualisieren",
     "start": "Anwenden",
@@ -227,10 +244,12 @@
       }
     },
     "events": {
-      "not_selected": "Keine Positionsdaten ausgewählt.<br>Bitte führe das Bytetrack-Plugin aus oder lade Positionsdaten manuell hoch.",
       "no_events": "Keine Events im ausgewählten Zeitraum.",
       "filter": {
         "title": "Ereignistypen"
+      },
+      "kpi_columns": {
+        "title": "KPI-Spalten"
       },
       "event_type": {
         "goal": "Tor",
@@ -248,7 +267,10 @@
         "type": "Ereignis",
         "player": "Spieler",
         "team": "Team",
-        "confidence": "Konfidenz"
+        "xg": "xG",
+        "xsuccess": "xSuccess",
+        "vaep": "VAEP",
+        "ximpact": "xImpact"
       }
     },
     "kpi": {
@@ -1037,6 +1059,26 @@
         "entity_0": "Ball",
         "entity_1": "Rest / Inaktiv",
         "entity_2": "Schiedsrichter"
+      }
+    },
+    "event_data": {
+      "upload": {
+        "title": "Event-Daten hochladen",
+        "name": "Dateiname",
+        "format": "Datenanbieter auswählen",
+        "file": "Wählen Sie eine Datei",
+        "hint": "Maximale Dateigröße: {maxSize}",
+        "provider_manual": "Manueller Upload",
+        "upload_denied": "Sie haben den maximal verfügbaren Speicherplatz für den Upload von Videos und Dateien erreicht.",
+        "validate": {
+          "file_required": "Bitte wählen Sie eine Datei mit einer maximalen Dateigröße von {maxSize} aus",
+          "file_exceeds": "Datei überschreitet die maximale Dateigröße von {maxSize}"
+        }
+      },
+      "select": {
+        "title": "Event-Daten auswählen",
+        "empty": "Noch keine Event-Daten hochgeladen.",
+        "demo": "Demo-Event-Daten auswählen"
       }
     }
   },

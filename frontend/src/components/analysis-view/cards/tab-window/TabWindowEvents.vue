@@ -1,17 +1,6 @@
 <template>
-  <div v-if="!hasPositionData && posdataWorkerStore.isLoading" class="events-loading-card">
-    <div class="events-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
-    <div class="events-loading-text">
-      {{
-        posdataWorkerStore.loadProgress > 0 && posdataWorkerStore.loadProgress < 100
-          ? `${posdataWorkerStore.loadProgress}%`
-          : ""
-      }}
-    </div>
-  </div>
-
-  <PositionDataMenu
-    v-else-if="!hasPositionData"
+  <EventDataMenu
+    v-if="!eventsStore.hasEventData"
     :title="$t('analysis_view.visualization_tabs.events')"
     icon="mdi-flag-variant-outline"
   />
@@ -32,7 +21,12 @@
         >
           <v-menu location="bottom">
             <template #activator="{ props }">
-              <v-btn v-bind="props" size="small" data-tour="events-display-settings-btn">
+              <v-btn
+                v-bind="props"
+                size="small"
+                data-tour="events-display-settings-btn"
+                class="mt-n2"
+              >
                 <v-icon>mdi-menu</v-icon>
               </v-btn>
             </template>
@@ -81,13 +75,44 @@
                 </v-list>
               </v-menu>
 
+              <v-menu location="end" open-on-hover :close-on-content-click="false">
+                <template #activator="{ props }">
+                  <v-list-item v-bind="props" class="menu-item">
+                    <v-list-item-title class="d-flex justify-space-between">
+                      {{ $t("visualization.events.kpi_columns.title") }}
+                      <tab-window-icon>mdi-chevron-right</tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                </template>
+                <v-list class="py-0" density="compact" width="150px">
+                  <v-list-item
+                    v-for="colId in kpiColumnIds"
+                    :key="colId"
+                    class="menu-item"
+                    @click="eventsStore.toggleKpiColumn(colId)"
+                  >
+                    <v-list-item-title class="d-flex align-center justify-space-between">
+                      {{ $t(KPI_COLUMN_META[colId].labelKey) }}
+                      <tab-window-icon
+                        :class="{
+                          'text-disabled': !eventsStore.visibleKpiColumns.includes(colId),
+                          'text-red': eventsStore.visibleKpiColumns.includes(colId),
+                        }"
+                      >
+                        mdi-check
+                      </tab-window-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+
               <v-divider />
 
               <v-menu location="end" open-on-hover>
                 <template #activator="{ props }">
                   <v-list-item v-bind="props" class="menu-item">
                     <v-list-item-title class="d-flex justify-space-between">
-                      {{ $t("position_data.display_settings.position_data.title") }}
+                      {{ $t("event_data.display_settings.event_data.title") }}
                       <tab-window-icon>mdi-chevron-right</tab-window-icon>
                     </v-list-item-title>
                   </v-list-item>
@@ -96,28 +121,28 @@
                   <v-list-item
                     v-if="canWrite"
                     class="menu-item"
-                    @click="showModalPositionDataUpload = true"
+                    @click="showModalEventDataUpload = true"
                   >
                     <v-list-item-title>
-                      {{ $t("position_data.display_settings.position_data.upload") }}
+                      {{ $t("event_data.display_settings.event_data.upload") }}
                     </v-list-item-title>
                   </v-list-item>
-                  <v-list-item class="menu-item" @click="showModalPositionDataSelect = true">
+                  <v-list-item class="menu-item" @click="showModalEventDataSelect = true">
                     <v-list-item-title>
-                      {{ $t("position_data.display_settings.position_data.select") }}
+                      {{ $t("event_data.display_settings.event_data.select") }}
                     </v-list-item-title>
                   </v-list-item>
                 </v-list>
               </v-menu>
             </v-list>
           </v-menu>
-          <ModalPositionDataUpload
-            v-if="showModalPositionDataUpload"
-            v-model="showModalPositionDataUpload"
+          <ModalEventDataUpload
+            v-if="showModalEventDataUpload"
+            v-model="showModalEventDataUpload"
           />
-          <ModalPositionDataSelect
-            v-if="showModalPositionDataSelect"
-            v-model="showModalPositionDataSelect"
+          <ModalEventDataSelect
+            v-if="showModalEventDataSelect"
+            v-model="showModalEventDataSelect"
           />
           <ModalPositionDataEntityColors
             v-if="showModalPositionDataEntityColors"
@@ -126,7 +151,7 @@
 
           <v-menu location="bottom">
             <template #activator="{ props }">
-              <v-btn v-bind="props" size="small" class="mr-2">
+              <v-btn v-bind="props" size="small" class="mr-2 mt-n2">
                 <v-icon>mdi-timer-sync-outline</v-icon>
               </v-btn>
             </template>
@@ -212,7 +237,9 @@
             backgroundColor: isTeamFullySelected(teamId)
               ? toRgb(visualizationStore.getTeamColor(teamId), 0)
               : 'transparent',
-            color: isTeamFullySelected(teamId) ? '#fff' : toRgb(visualizationStore.getTeamColor(teamId), 0),
+            color: isTeamFullySelected(teamId)
+              ? '#fff'
+              : toRgb(visualizationStore.getTeamColor(teamId), 0),
             borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
           }"
           @click="toggleTeam(teamId)"
@@ -248,16 +275,21 @@ import { useTopViewStore } from "@/stores/top_view";
 import { usePlayerStore } from "@/stores/player";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
-import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { useUserStore } from "@/stores/user";
-import { useEventsStore, EVENT_TYPE_META, EVENT_TYPE_IDS } from "@/stores/events";
+import {
+  useEventsStore,
+  EVENT_TYPE_META,
+  EVENT_TYPE_IDS,
+  KPI_COLUMN_META,
+  KPI_COLUMN_IDS,
+} from "@/stores/events";
 import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
 import EventsTimeline from "@/components/events/EventsTimeline.vue";
 import EventsList from "@/components/events/EventsList.vue";
-import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
-import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
+import ModalEventDataSelect from "@/components/events/ModalEventDataSelect.vue";
+import ModalEventDataUpload from "@/components/events/ModalEventDataUpload.vue";
 import ModalPositionDataEntityColors from "@/components/position-data/ModalPositionDataEntityColors.vue";
-import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
+import EventDataMenu from "@/components/events/EventDataMenu.vue";
 import { toRgb } from "@/plugins/helpers";
 
 defineProps({
@@ -270,11 +302,11 @@ const topViewStore = useTopViewStore();
 const playerStore = usePlayerStore();
 const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
-const posdataWorkerStore = usePosdataWorkerStore();
 const userStore = useUserStore();
 const eventsStore = useEventsStore();
 
 const eventTypeIds = EVENT_TYPE_IDS;
+const kpiColumnIds = KPI_COLUMN_IDS;
 
 const canWrite = computed(() => {
   if (userStore.role === "admin") return true;
@@ -283,10 +315,8 @@ const canWrite = computed(() => {
   return ownerUsername === userStore.username;
 });
 
-const hasPositionData = computed(() => topViewStore.sortedFrameKeys.length > 0);
-
-const showModalPositionDataSelect = ref(false);
-const showModalPositionDataUpload = ref(false);
+const showModalEventDataSelect = ref(false);
+const showModalEventDataUpload = ref(false);
 const showModalPositionDataEntityColors = ref(false);
 
 const allFrameKeys = computed(() => topViewStore.sortedFrameKeys);
@@ -384,25 +414,6 @@ const getTeamName = (teamId) => {
 </script>
 
 <style scoped>
-.events-loading-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 25vh;
-}
-
-.events-spinner {
-  font-size: 48px;
-  color: rgb(var(--v-theme-primary));
-}
-
-.events-loading-text {
-  margin-top: 10px;
-  font-size: 18px;
-  color: rgb(var(--v-theme-primary));
-}
-
 .card-header-zone {
   height: 56px;
   display: flex;
@@ -425,8 +436,8 @@ const getTeamName = (teamId) => {
 /* Passed onto EventsList's root (see the class-passthrough-to-child-root
    pattern Vue's scoped CSS supports) only when dense — makes the list claim
    the rest of the column's height instead of stopping at its own small
-   content-based/capped size (see EventsList.vue's own `.events-list--dense`
-   for the matching change on its internal scroll area). */
+   content-based/capped size (see EventsList.vue's own `.events-list-wrapper--dense`
+   for the matching change on its scroll area). */
 .events-list-grow {
   flex: 1 1 auto;
   min-height: 0;
