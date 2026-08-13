@@ -32,7 +32,12 @@
         >
           <v-menu location="bottom">
             <template #activator="{ props }">
-              <v-btn v-bind="props" size="small" data-tour="heatmap-display-settings-btn">
+              <v-btn
+                v-bind="props"
+                size="small"
+                data-tour="heatmap-display-settings-btn"
+                class="mt-n2"
+              >
                 <v-icon>mdi-menu</v-icon>
               </v-btn>
             </template>
@@ -266,13 +271,13 @@
             v-model="showModalPositionDataOffset"
           />
 
-          <v-btn size="small" @click="saveScreenshot">
+          <v-btn size="small" @click="saveScreenshot" class="mt-n2">
             <v-icon>mdi-download</v-icon>
           </v-btn>
 
           <v-menu location="bottom">
             <template #activator="{ props }">
-              <v-btn v-bind="props" size="small" class="mr-2">
+              <v-btn v-bind="props" size="small" class="mr-2 mt-n2">
                 <v-icon>mdi-timer-sync-outline</v-icon>
               </v-btn>
             </template>
@@ -372,7 +377,11 @@
           this template) sits outside the fullscreened element and is therefore hidden once
           fullscreen kicks in (see VideoPlayer.vue's fullscreen-controls for the same pattern) —
           this duplicates just the team/player toggles so filtering still works while fullscreen. -->
-          <div v-if="isHeatmapFullscreen" class="fullscreen-controls" :class="{ visible: hovering }">
+          <div
+            v-if="isHeatmapFullscreen"
+            class="fullscreen-controls"
+            :class="{ visible: hovering }"
+          >
             <div class="chart-legend" data-tour="heatmap-player-legend-fullscreen">
               <div v-for="(players, teamId) in teamGroups" :key="teamId" class="chart-legend-team">
                 <div
