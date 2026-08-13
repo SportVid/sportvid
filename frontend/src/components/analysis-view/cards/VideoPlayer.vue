@@ -738,7 +738,15 @@ const onProgressChange = (time) => {
 };
 watch(targetTime, (newTargetTime) => {
   if (videoElement.value) {
-    playerStore.currentTime = Math.round(newTargetTime);
+    const rounded = Math.round(newTargetTime);
+    progress.value = rounded;
+    playerStore.setCurrentTime(rounded);
+    // This was missing -- the watcher only ever updated the store's displayed
+    // currentTime, never the actual <video> element, so every setTargetTime()
+    // caller (jumpToEvent, EventsTimeline click/drag, Timeline.vue) moved the
+    // timecode/playhead visually without the video itself seeking at all.
+    videoElement.value.currentTime = rounded / 1000;
+    lastReportedFrame.value = rounded;
   }
 });
 

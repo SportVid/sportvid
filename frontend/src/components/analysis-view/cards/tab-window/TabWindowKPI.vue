@@ -48,7 +48,7 @@
         >
           <v-menu location="bottom">
             <template #activator="{ props }">
-              <v-btn v-bind="props" size="small" data-tour="kpi-display-settings-btn">
+              <v-btn v-bind="props" size="small" data-tour="kpi-display-settings-btn" class="mt-n2">
                 <v-icon>mdi-menu</v-icon>
               </v-btn>
             </template>
@@ -405,13 +405,18 @@
             v-model="showModalPositionDataOffset"
           />
 
-          <v-btn v-if="viewMode === 'chart'" size="small" @click="kpiChartRef?.saveChart()">
+          <v-btn
+            v-if="viewMode === 'chart'"
+            size="small"
+            @click="kpiChartRef?.saveChart()"
+            class="mt-n2"
+          >
             <v-icon>mdi-download</v-icon>
           </v-btn>
 
           <v-menu location="bottom">
             <template #activator="{ props }">
-              <v-btn v-bind="props" size="small" class="mr-2">
+              <v-btn v-bind="props" size="small" class="mr-2 mt-n2">
                 <v-icon size="small">mdi-timer-sync-outline</v-icon>
               </v-btn>
             </template>

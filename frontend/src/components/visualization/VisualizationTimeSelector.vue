@@ -53,6 +53,16 @@ let timeBarLine;
 let animFrameId;
 let isDragging = false;
 
+// ew-resize cursor while hovering/dragging either edge handle -- paper.js draws to a
+// plain <canvas>, so there's no element to put a CSS `cursor` rule on; it has to be
+// set on the canvas directly from these hit-test callbacks instead.
+let hoveringHandle = false;
+let draggingHandle = false;
+function updateHandleCursor() {
+  if (!canvas.value) return;
+  canvas.value.style.cursor = hoveringHandle || draggingHandle ? "ew-resize" : "default";
+}
+
 const canvasWidth = ref(null);
 const canvasHeight = ref(null);
 const containerWidth = ref(null);
@@ -263,8 +273,24 @@ function drawSelection() {
     isDragging = false;
   };
 
-  handleLeft.onMouseDown = onDragStart;
-  handleLeft.onMouseUp = onDragEnd;
+  handleLeft.onMouseEnter = () => {
+    hoveringHandle = true;
+    updateHandleCursor();
+  };
+  handleLeft.onMouseLeave = () => {
+    hoveringHandle = false;
+    updateHandleCursor();
+  };
+  handleLeft.onMouseDown = () => {
+    onDragStart();
+    draggingHandle = true;
+    updateHandleCursor();
+  };
+  handleLeft.onMouseUp = () => {
+    onDragEnd();
+    draggingHandle = false;
+    updateHandleCursor();
+  };
   handleLeft.onMouseDrag = (event) => {
     let newStart = hiddenStart.value + xToFrame(event.delta.x);
 
@@ -276,8 +302,24 @@ function drawSelection() {
     onSelectionChange();
   };
 
-  handleRight.onMouseDown = onDragStart;
-  handleRight.onMouseUp = onDragEnd;
+  handleRight.onMouseEnter = () => {
+    hoveringHandle = true;
+    updateHandleCursor();
+  };
+  handleRight.onMouseLeave = () => {
+    hoveringHandle = false;
+    updateHandleCursor();
+  };
+  handleRight.onMouseDown = () => {
+    onDragStart();
+    draggingHandle = true;
+    updateHandleCursor();
+  };
+  handleRight.onMouseUp = () => {
+    onDragEnd();
+    draggingHandle = false;
+    updateHandleCursor();
+  };
   handleRight.onMouseDrag = (event) => {
     let newEnd = hiddenEnd.value + xToFrame(event.delta.x);
 

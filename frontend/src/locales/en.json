@@ -242,6 +242,23 @@
       "rest": "Rest"
     }
   },
+  "event_data": {
+    "not_selected": "No event data available yet.",
+    "generate": {
+      "cv_heading": "Via computer vision",
+      "detect_events": "Event detection",
+      "coming_soon": "Coming soon — there's no automatic event detection plugin yet.",
+      "or": "or",
+      "upload_heading": "Via file upload"
+    },
+    "display_settings": {
+      "event_data": {
+        "title": "Event data",
+        "upload": "Upload event data",
+        "select": "Select event data"
+      }
+    }
+  },
   "visualization": {
     "title": "Visualize",
     "start": "Apply",
@@ -287,6 +304,36 @@
         "title": "Display mode",
         "heatmap": "Heatmap",
         "movement": "Movement"
+      }
+    },
+    "events": {
+      "no_events": "No events in the selected time range.",
+      "filter": {
+        "title": "Event types"
+      },
+      "kpi_columns": {
+        "title": "KPI columns"
+      },
+      "event_type": {
+        "goal": "Goal",
+        "shot_on_target": "Shot on target",
+        "shot_off_target": "Shot off target",
+        "foul": "Foul",
+        "card_yellow": "Yellow card",
+        "card_red": "Red card",
+        "corner": "Corner",
+        "offside": "Offside",
+        "substitution": "Substitution"
+      },
+      "table": {
+        "time": "Time",
+        "type": "Event",
+        "player": "Player",
+        "team": "Team",
+        "xg": "xG",
+        "xsuccess": "xSuccess",
+        "vaep": "VAEP",
+        "ximpact": "xImpact"
       }
     },
     "kpi": {
@@ -1274,6 +1321,26 @@
       "offset": {
         "title": "Set offset",
         "label": "Offset value (ms)"
+      }
+    },
+    "event_data": {
+      "upload": {
+        "title": "Upload event data",
+        "name": "File name",
+        "format": "Select the data provider",
+        "file": "Select a file",
+        "hint": "Maximum file size: {maxSize}",
+        "provider_manual": "Manual upload",
+        "upload_denied": "You have reached the maximum storage available for uploading videos and files.",
+        "validate": {
+          "file_required": "Please select a file with a maximum file size of {maxSize}",
+          "file_exceeds": "File exceeds your maximum file size of {maxSize}"
+        }
+      },
+      "select": {
+        "title": "Select event data",
+        "empty": "No event data uploaded yet.",
+        "demo": "Select demo event data"
       }
     },
     "bounding_box": {
