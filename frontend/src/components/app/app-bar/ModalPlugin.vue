@@ -1744,7 +1744,7 @@ const plugins = ref([
             value: "kinexon",
             items: [
               ...positionDataStore.provider.map((p) => ({ title: p.name, value: p.id })),
-              { title: "SportVid (ByteTrack)", value: "sportvid" },
+              { title: "SportVid", value: "sportvid" },
             ],
             text: t("modal.plugin.kpi_computation.format"),
             dataTour: "kpi-format",
@@ -1759,11 +1759,11 @@ const plugins = ref([
             dataTour: "kpi-tracking-data",
           },
           {
-            field: "select_bytetrack_run",
-            name: "bytetrack_run_id",
+            field: "select_object_tracker_run",
+            name: "object_tracker_run_id",
             value: "",
-            text: t("modal.plugin.kpi_computation.bytetrack_run_id"),
-            hint: t("modal.plugin.kpi_computation.bytetrack_run_id_hint"),
+            text: t("modal.plugin.kpi_computation.object_tracker_run_id"),
+            hint: t("modal.plugin.kpi_computation.object_tracker_run_id_hint"),
             hidden: true,
             dataTour: "kpi-bytetrack-run",
           },
@@ -1862,7 +1862,7 @@ watch(
   { immediate: true }
 );
 
-// Toggle tracking_data_id / bytetrack_run_id visibility based on format
+// Toggle tracking_data_id / object_tracker_run_id visibility based on format
 const kpiParams = computed(() => {
   const group = plugins.value.find((g) => g.id === 7);
   const plugin = group?.children.find((p) => p.id === 703);
@@ -1873,7 +1873,7 @@ watch(
   () => kpiParams.value.find((p) => p.name === "format")?.value,
   (fmt) => {
     const trackingParam = kpiParams.value.find((p) => p.name === "tracking_data_id");
-    const bytetrackParam = kpiParams.value.find((p) => p.name === "bytetrack_run_id");
+    const bytetrackParam = kpiParams.value.find((p) => p.name === "object_tracker_run_id");
     const calibrationParam = kpiParams.value.find((p) => p.name === "calibration_id");
     if (trackingParam) {
       trackingParam.hidden = fmt === "sportvid";
@@ -2165,7 +2165,7 @@ const runPlugin = async (plugin, parameters, optional_parameters) => {
   }
 
   // `hidden` always means "not applicable to the current selection" (e.g.
-  // kpi_computation's format-dependent tracking_data_id / bytetrack_run_id /
+  // kpi_computation's format-dependent tracking_data_id / object_tracker_run_id /
   // calibration_id, or object_tracker's detector-dependent params) -- such
   // entries are dropped entirely rather than submitted with a stale/empty
   // value, so the backend falls back to its own defaults / conditional logic.

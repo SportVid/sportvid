@@ -161,15 +161,15 @@ export const useBboxesStore = defineStore(
       };
     };
 
-    const updateBboxData = async (bboxData) => {
+    const updateBboxData = async (bboxDataAsDisplayed) => {
       if (isLoading.value) return;
-      bboxData = translatePlayerId(bboxData);
+      const bboxData = translatePlayerId(bboxDataAsDisplayed);
       isLoading.value = true;
       const params = ref({});
 
       if (!bboxData.applyAllPlayerId && !bboxData.applyAllTeamId) {
         params.value = {
-          bytetrack_run_id: bboxData.bytetrackRunId,
+          object_tracker_run_id: bboxData.bytetrackRunId,
           bbox_id: bboxData.bboxId,
           player_id: bboxData.playerId,
           new_player_id: bboxData.newPlayerId,
@@ -178,7 +178,7 @@ export const useBboxesStore = defineStore(
         };
       } else if (bboxData.applyAllPlayerId) {
         params.value = {
-          bytetrack_run_id: bboxData.bytetrackRunId,
+          object_tracker_run_id: bboxData.bytetrackRunId,
           player_id: bboxData.playerId,
           new_player_id: bboxData.newPlayerId,
           team_id: bboxData.teamId?.id ?? bboxData.teamId,
@@ -187,7 +187,7 @@ export const useBboxesStore = defineStore(
         };
       } else if (bboxData.applyAllTeamId) {
         params.value = {
-          bytetrack_run_id: bboxData.bytetrackRunId,
+          object_tracker_run_id: bboxData.bytetrackRunId,
           team_id: bboxData.teamId?.id ?? bboxData.teamId,
           new_team_id: bboxData.newTeamId,
           update_all_team_id: bboxData.applyAllTeamId,
@@ -205,6 +205,15 @@ export const useBboxesStore = defineStore(
           // dropping the other run's data.
           if (bboxData.bytetrackRunId === bboxBallPluginRunId.value) {
             topViewStore.refreshBallBboxData(res.data.entry.bboxes, res.data.entry.meta_data);
+          } else if (topViewStore.teamClusteringRunId || topViewStore.reidRunId) {
+            // A team_clustering/reid merge is layered on top of this run client-side only
+            // (see topViewStore.mergeTeamAssignment/mergeReid) -- the server has no notion
+            // of it, so res.data.entry.bboxes is still the run's raw, un-merged data.
+            // Replacing bboxDataActive with it wholesale would drop the merge for every
+            // row except the one just edited. Patch the same edit directly onto the
+            // already-merged copy instead, using the as-displayed (pre-translation)
+            // request so ids line up with what's stored in bboxDataActive.
+            topViewStore.applyLocalBboxEdit(bboxDataAsDisplayed);
           } else {
             bboxMetaData.value = res.data.entry.meta_data ?? null;
             topViewStore.transformBBoxToPositionDataTopView(
@@ -225,26 +234,26 @@ export const useBboxesStore = defineStore(
       }
     };
 
-    const deleteBboxData = async (bboxData) => {
+    const deleteBboxData = async (bboxDataAsDisplayed) => {
       if (isLoading.value) return;
-      bboxData = translatePlayerId(bboxData);
+      const bboxData = translatePlayerId(bboxDataAsDisplayed);
       isLoading.value = true;
       const params = ref({});
 
       if (!bboxData.applyAllPlayerId && !bboxData.applyAllTeamId) {
         params.value = {
-          bytetrack_run_id: bboxData.bytetrackRunId,
+          object_tracker_run_id: bboxData.bytetrackRunId,
           bbox_id: bboxData.bboxId,
         };
       } else if (bboxData.applyAllPlayerId) {
         params.value = {
-          bytetrack_run_id: bboxData.bytetrackRunId,
+          object_tracker_run_id: bboxData.bytetrackRunId,
           player_id: bboxData.playerId,
           delete_all_player_id: bboxData.applyAllPlayerId,
         };
       } else if (bboxData.applyAllTeamId) {
         params.value = {
-          bytetrack_run_id: bboxData.bytetrackRunId,
+          object_tracker_run_id: bboxData.bytetrackRunId,
           team_id: bboxData.teamId?.id ?? bboxData.teamId,
           delete_all_team_id: bboxData.applyAllTeamId,
         };
@@ -258,6 +267,10 @@ export const useBboxesStore = defineStore(
         if (res.data.status === "ok") {
           if (bboxData.bytetrackRunId === bboxBallPluginRunId.value) {
             topViewStore.refreshBallBboxData(res.data.entry.bboxes, res.data.entry.meta_data);
+          } else if (topViewStore.teamClusteringRunId || topViewStore.reidRunId) {
+            // See the matching branch in updateBboxData above for why the merged copy is
+            // patched locally instead of being replaced by the server's raw response.
+            topViewStore.applyLocalBboxDelete(bboxDataAsDisplayed);
           } else {
             bboxMetaData.value = res.data.entry.meta_data ?? null;
             topViewStore.transformBBoxToPositionDataTopView(
@@ -276,6 +289,18 @@ export const useBboxesStore = defineStore(
       } finally {
         isLoading.value = false;
       }
+    };
+
+    // Persists a full, client-computed bboxes array as the new data for a tracker run --
+    // used by topViewStore.mergeTeamAssignment to permanently bake a team_clustering merge
+    // into the run itself (see that function's comment for why: team_clustering writes into
+    // its own separate plugin run and never touches the tracker's stored data on its own).
+    const replaceBboxData = async (objectTrackerRunId, bboxesJson) => {
+      const res = await axios.post(`${config.API_LOCATION}/position_data/bboxes/replace`, {
+        object_tracker_run_id: objectTrackerRunId,
+        bboxes: bboxesJson,
+      });
+      return res.data;
     };
 
     const showBoundingBox = ref(false);
@@ -314,6 +339,7 @@ export const useBboxesStore = defineStore(
       loadBboxData,
       updateBboxData,
       deleteBboxData,
+      replaceBboxData,
       interpolateBboxData,
       bboxDataActive,
       bboxMetaData,

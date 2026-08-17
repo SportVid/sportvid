@@ -73,11 +73,13 @@ def _compute_meta_data(bbd_data):
 class BoundingBoxesChange(View):
     @decode_and_authenticate(require_name=False)
     def post(self, request, data):
+        altered_bbx = None
+        manager = None
         try:
             bbox_id = data.get("bbox_id")
-            bytetrack_result_id = data.get("bytetrack_run_id")
-            
-            current_player_id = None; current_team_id = None 
+            bytetrack_result_id = data.get("object_tracker_run_id")
+
+            current_player_id = None; current_team_id = None
             new_player_id = None; new_team_id = None
             update_all_player_id = False; update_all_team_id = False
             
@@ -117,7 +119,6 @@ class BoundingBoxesChange(View):
             logging.info(f"Preparing to update data for {bytetrack_prr_db.id}... old data_id: {old_data_id}")
 
             manager = DataManager("/predictions/")
-            altered_bbx = None
 
             # prepare the new data on the file system
             # if this fails, we haven't touched the DB and can exit safely
@@ -193,12 +194,82 @@ class BoundingBoxesChange(View):
             )
 
  
+class BoundingBoxesReplace(View):
+    """
+    Persists a client-computed, full bboxes array (and freshly-derived meta_data) as the new
+    data for the given object_tracker run.
+
+    Used once by the frontend (topViewStore.mergeTeamAssignment) to permanently bake a
+    team_clustering merge into the tracker run: team_clustering writes its cluster labels into
+    its own, separate plugin run and never touches the tracker's stored bboxes, so without this
+    the merge only ever lived in the browser (a one-time mutation of bboxesStore.bboxDataActive).
+    That meant every edit through BoundingBoxesChange/-Delete above silently dropped the merge
+    again -- their response reflects the tracker run's own un-merged data, which used to get
+    written straight back over the merged copy -- and the merge had to be recomputed by hand on
+    every page reload. Baking it in here makes the tracker run itself carry the corrected team
+    ids, so both problems go away: edits and reloads all operate on one consistent copy.
+    """
+    @decode_and_authenticate(require_name=False)
+    def post(self, request, data):
+        altered_bbx = None
+        manager = None
+        try:
+            bytetrack_result_id = data.get("object_tracker_run_id")
+            bboxes_raw = data.get("bboxes")
+            if not bytetrack_result_id or bboxes_raw is None:
+                return JsonResponse({"status": "error", "type": "missing_args"})
+
+            bbd_data = json.loads(bboxes_raw) if isinstance(bboxes_raw, str) else bboxes_raw
+            if not isinstance(bbd_data, dict) or not bbd_data:
+                # Guard against a malformed/empty payload silently wiping out the run's data --
+                # a legitimate replace always carries at least the frames it started from.
+                raise ValueError("bboxes payload is empty or not a frame_time -> [...] dict")
+
+            bytetrack_prr_db = PluginRunResult.objects.get(
+                plugin_run_id=bytetrack_result_id
+            )
+            old_data_id = bytetrack_prr_db.data_id
+            logging.info(
+                f"Preparing to replace data for {bytetrack_prr_db.id}... old data_id: {old_data_id}"
+            )
+
+            manager = DataManager("/predictions/")
+            with manager.create_data("BboxesData") as altered_bbx:
+                altered_bbx.bboxes = json.dumps(bbd_data)
+                altered_bbx.meta_data = _compute_meta_data(bbd_data)
+            logging.info(f"Successfully created new temporary data with id: {altered_bbx.id}")
+
+            with transaction.atomic():
+                prr_to_update = PluginRunResult.objects.get(pk=bytetrack_prr_db.pk)
+                prr_to_update.data_id = altered_bbx.id
+                prr_to_update.save()
+
+            manager.delete(old_data_id)
+            cache_path = os.path.join(settings.DATA_CACHE_ROOT, f"{bytetrack_prr_db.pk}.json")
+            if os.path.exists(cache_path): os.remove(cache_path)
+            logging.info(f"Successfully updated DB and deleted old data {old_data_id}.")
+            return JsonResponse({"status": "ok", "entry": altered_bbx.to_dict()})
+        except Exception as e:
+            logging.error(f"Failed to replace bounding box data: {e}", exc_info=True)
+            if manager and altered_bbx and altered_bbx.id:
+                logging.warning(f"Rolling back: deleting temporary data {altered_bbx.id}")
+                manager.delete(altered_bbx.id)
+            return JsonResponse(
+                {'status': 'error',
+                 'message': ''
+                },
+                status=500
+            )
+
+
 class BoundingBoxesDelete(View):
     @decode_and_authenticate(require_name=False)
     def post(self, request, data):
+        altered_bbx = None
+        manager = None
         try:
             bbox_id = data.get("bbox_id")
-            bytetrack_result_id = data.get("bytetrack_run_id")
+            bytetrack_result_id = data.get("object_tracker_run_id")
             player_id_to_delete = None; team_id_to_delete = None
             if "player_id" in data: player_id_to_delete = int(data.get("player_id"))
             if "team_id" in data: team_id_to_delete = int(data.get("team_id"))
@@ -229,7 +300,6 @@ class BoundingBoxesDelete(View):
             logging.info(f"Preparing to delete data for {bytetrack_prr_db.id}... old data_id: {old_data_id}")
 
             manager = DataManager("/predictions/")
-            altered_bbx = None
 
             # NOTE: look for a more efficient solution;; right now recreates data entry by entry...
             with manager.load(old_data_id) as bboxes_data:

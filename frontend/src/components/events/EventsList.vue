@@ -3,6 +3,14 @@
     ref="wrapperRef"
     class="events-list-wrapper"
     :class="{ 'events-list-wrapper--dense': dense }"
+    :style="{
+      '--events-player-width': `${playerColumnWidth}px`,
+      '--events-team-width': `${teamColumnWidth}px`,
+      '--events-xg-width': `${xgColumnWidth}px`,
+      '--events-xsuccess-width': `${xsuccessColumnWidth}px`,
+      '--events-vaep-width': `${vaepColumnWidth}px`,
+      '--events-ximpact-width': `${ximpactColumnWidth}px`,
+    }"
   >
     <div ref="headerRef" class="events-list-header">
       <!-- Reserves the same space as .events-list-row's marker below so Time still lines
@@ -93,7 +101,10 @@
       <span class="events-list-team">
         <span
           class="events-list-team-badge"
-          :style="{ backgroundColor: visualizationStore.getTeamColor(event.team_id) }"
+          :style="{
+            backgroundColor: visualizationStore.getTeamColor(event.team_id),
+            color: getContrastColor(visualizationStore.getTeamColor(event.team_id)),
+          }"
         >
           {{ getTeamName(event.team_id) }}
         </span>
@@ -121,6 +132,7 @@ import { useTopViewStore } from "@/stores/top_view";
 import { usePlayerStore } from "@/stores/player";
 import { useVisualizationStore } from "@/stores/visualization";
 import { getTimecode } from "@/plugins/time";
+import { getContrastColor } from "@/plugins/helpers";
 import { debounce } from "lodash";
 
 defineProps({
@@ -166,6 +178,119 @@ const getTeamName = (teamId) => {
   return teamId;
 };
 
+const wrapperRef = ref(null);
+const headerRef = ref(null);
+
+// Every column but Marker/Time/Event(icon+type) gets its width measured from what's
+// actually in the list instead of a fixed guess. Marker is a decorative 3px bar with no
+// text; Time and Event each come from a small, bounded vocabulary (a fixed timecode
+// format; a fixed set of translated event-type labels) where "widest possible label" is
+// knowable and stable, so a hand-picked fixed width for those never goes wrong. Every
+// other column's content is open-ended (team/player names, KPI values with varying
+// decimal formatting -- "-" vs "12.345") and can't be bounded that way up front.
+// Each ref's initial value matches the column's old fixed width -- both the
+// pre-measurement fallback and the floor measurements never shrink below (see
+// measureColumnWidths' `floor` argument).
+const playerColumnWidth = ref(110);
+const teamColumnWidth = ref(50);
+const xgColumnWidth = ref(46);
+const xsuccessColumnWidth = ref(78);
+const vaepColumnWidth = ref(50);
+const ximpactColumnWidth = ref(64);
+
+// Clones an already-rendered element matching `selector` (so the probe carries that
+// element's exact classes -- and, since these are Vue SFC scoped styles compiled to
+// `.foo[data-v-xxxxx]`, its scoped-style attribute too -- rather than approximating its
+// font/padding by hand), forces it into a self-contained shrink-to-fit box regardless of
+// whatever fixed width/overflow-clipping/flex-item-blockification the original element
+// has in its normal table context, and returns the widest rendered width across `texts`
+// plus the template element's own current text (its header label for every column here
+// except Team's badge, which has no header counterpart -- see measureColumnWidths --
+// so the column never ends up narrower than its own header label needs). Returns null
+// if nothing matching `selector` has rendered yet (nothing to clone from).
+const measureMaxTextWidth = (selector, texts) => {
+  const wrapper = wrapperRef.value;
+  const templateEl = wrapper?.querySelector(selector);
+  if (!templateEl) return null;
+  const probe = templateEl.cloneNode(false);
+  Object.assign(probe.style, {
+    position: "absolute",
+    visibility: "hidden",
+    display: "inline-block",
+    width: "auto",
+    maxWidth: "none",
+    whiteSpace: "nowrap",
+    overflow: "visible",
+  });
+  document.body.appendChild(probe);
+  let maxWidth = 0;
+  for (const text of [templateEl.textContent.trim(), ...texts]) {
+    if (!text) continue;
+    probe.textContent = text;
+    maxWidth = Math.max(maxWidth, probe.offsetWidth);
+  }
+  document.body.removeChild(probe);
+  return maxWidth || null;
+};
+
+// +4px slack per column so its widest value doesn't sit flush against the pixel
+// boundary. `floor` is each column's old fixed width, both as the pre-measurement
+// fallback and as a lower bound afterwards (measured is never allowed to shrink a
+// column below what it used to reliably fit).
+const measureColumnWidths = () => {
+  const events = eventsStore.sortedEvents;
+  const setFrom = (widthRef, selector, texts, floor) => {
+    const measured = measureMaxTextWidth(selector, texts);
+    if (measured != null) widthRef.value = Math.max(floor, measured + 4);
+  };
+  setFrom(
+    playerColumnWidth,
+    ".events-list-player",
+    events.map((e) => getPlayerLabel(e.player_id, e.team_id)),
+    110
+  );
+  setFrom(
+    teamColumnWidth,
+    ".events-list-team-badge",
+    [...new Set(events.map((e) => getTeamName(e.team_id)))],
+    50
+  );
+  setFrom(
+    xgColumnWidth,
+    ".events-list-xg",
+    events.map((e) => (e.xg != null ? e.xg.toFixed(2) : "-")),
+    46
+  );
+  setFrom(
+    xsuccessColumnWidth,
+    ".events-list-xsuccess",
+    events.map((e) => e.xsuccess.toFixed(2)),
+    78
+  );
+  setFrom(
+    vaepColumnWidth,
+    ".events-list-vaep",
+    events.map((e) => e.vaep.toFixed(3)),
+    50
+  );
+  setFrom(
+    ximpactColumnWidth,
+    ".events-list-ximpact",
+    events.map((e) => e.ximpact.toFixed(3)),
+    64
+  );
+};
+
+// Names/labels come from the event list, the top-view metadata (id -> display name/
+// number, see getPlayerLabel/getTeamName), and which KPI columns are toggled visible
+// (a hidden column has nothing in the DOM yet to clone from) -- each can change
+// independently, so all three are watched.
+watch(
+  () => [eventsStore.sortedEvents, topViewStore.metaDataTopView, eventsStore.visibleKpiColumns],
+  () => nextTick(measureColumnWidths),
+  { immediate: true }
+);
+
 // Keeps the "next up" event pinned near the top of the scroll area as playback advances --
 // this is the "table that basically keeps running along" from the design notes, rather than
 // a plain static list the user has to scroll through manually.
@@ -174,9 +299,6 @@ const setRowRef = (el, idx) => {
   if (el) rowRefs.value[idx] = el;
   else delete rowRefs.value[idx];
 };
-
-const wrapperRef = ref(null);
-const headerRef = ref(null);
 
 const scrollToNext = debounce(() => {
   // rowRefs is keyed by position in the currently *rendered* (possibly sorted, see
@@ -416,31 +538,43 @@ watch(
   flex-shrink: 0;
   text-align: left;
 }
+/* Width set from measureColumnWidths (fitted to the widest player label actually in
+   the list) via the wrapper's :style binding -- shared by header and every row through
+   this one custom property, so they stay column-aligned instead of each auto-sizing to
+   its own row's content. 110px fallback matches the pre-measurement default. Growing
+   this is safe re: the sticky pin math below (.events-list-pin--player's left is fixed
+   and doesn't depend on this column's own width) -- unlike Time/Icon/Type, nothing
+   pinned comes *after* Player whose left would need to follow it. white-space/overflow/
+   text-overflow stay as a safety net for the brief pre-measurement window, not because
+   truncation is expected in steady state. */
 .events-list-player {
-  width: 110px;
+  width: var(--events-player-width, 110px);
   flex-shrink: 0;
   font-size: 0.85rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Width set the same way as Player above (see there for the general explanation) --
+   fitted to the widest team name actually in the list rather than a fixed guess. */
 .events-list-team {
   flex-shrink: 0;
-  width: 50px;
+  width: var(--events-team-width, 50px);
   overflow: hidden;
   text-align: center;
 }
 /* Same pill look as the team legend below the table (see TabWindowEvents.vue's
-   .team-dot) -- solid team color + white text reads faster at this size than the
-   plain colored text this used to be, which could get lost against the row's own
-   colors (icon, highlighted "next" row, ...). Fixed white rather than the dot's
-   selected/unselected two-tone since there's no selection state to reflect here. */
+   .team-dot) -- solid team color + contrasting text reads faster at this size than
+   the plain colored text this used to be, which could get lost against the row's
+   own colors (icon, highlighted "next" row, ...). Text color is picked per-team via
+   getContrastColor() (inline style above) rather than fixed white, since teamColorMapping
+   is user-editable and a light team color (white, yellow, ...) would make white text
+   unreadable. */
 .events-list-team-badge {
   display: inline-block;
   max-width: 100%;
   padding: 1px 8px;
   border-radius: 999px;
-  color: #fff;
   font-weight: bold;
   font-size: 0.7rem;
   white-space: nowrap;
@@ -467,16 +601,19 @@ watch(
      row cells since those aren't flex containers. */
   justify-content: center;
 }
+/* Widths set the same way as Player/Team above -- fitted to the widest formatted value
+   (e.g. "0.123" vs "-") actually in the list rather than a fixed guess. Not pinned, so
+   there's no sticky-offset math to worry about either way. */
 .events-list-xg {
-  width: 46px;
+  width: var(--events-xg-width, 46px);
 }
 .events-list-xsuccess {
-  width: 78px;
+  width: var(--events-xsuccess-width, 78px);
 }
 .events-list-vaep {
-  width: 50px;
+  width: var(--events-vaep-width, 50px);
 }
 .events-list-ximpact {
-  width: 64px;
+  width: var(--events-ximpact-width, 64px);
 }
 </style>

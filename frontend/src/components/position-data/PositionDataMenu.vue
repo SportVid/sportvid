@@ -1,5 +1,5 @@
 <template>
-  <div style="min-height: 60vh; position: relative" data-tour="position-data-menu">
+  <div class="position-data-menu-root" data-tour="position-data-menu">
     <!-- Large, very faint watermark behind the whole box (buttons included) -- purely so the
          card doesn't look bare while empty, same icon as the edit-mode WidgetPlaceholder uses
          for this widget. pointer-events: none keeps it from ever intercepting clicks even
@@ -8,185 +8,189 @@
       <v-icon :size="400">{{ icon }}</v-icon>
     </div>
 
-    <v-col style="position: relative">
+    <v-col class="position-data-menu-col" style="position: relative">
       <!-- Shown while this card has nothing else to display (see the various cards' own
            empty-state branches) -- with no other content around it here, this is the only
-           way to tell which card an empty box on the dashboard actually belongs to. -->
+           way to tell which card an empty box on the dashboard actually belongs to. Pinned to
+           the top -- only the button block below (.position-data-menu-body) is vertically
+           centered. -->
       <v-row v-if="title" class="position-data-menu-title mt-2" style="justify-content: center">
         {{ title }}
       </v-row>
 
-      <template v-if="canWrite">
-        <v-row style="justify-content: center" class="mt-8">
-          <v-col cols="10">
-            <v-sheet border rounded class="pa-4 bg-transparent">
-              <v-row
-                class="text-caption text-grey text-uppercase mt-4 mb-2"
-                style="justify-content: center"
-              >
-                {{ $t("position_data.generate.cv_heading") }}
-              </v-row>
-              <v-row style="justify-content: center" class="mt-1 ga-4">
-                <v-btn
-                  data-tour="posdata-generate-bytetrack"
-                  @click="showObjectTrackerModal = true"
+      <div class="position-data-menu-body">
+        <template v-if="canWrite">
+          <v-row style="justify-content: center" class="mt-8">
+            <v-col cols="10">
+              <v-sheet border rounded class="pa-4 bg-transparent">
+                <v-row
+                  class="text-caption text-grey text-uppercase mt-4 mb-2"
+                  style="justify-content: center"
                 >
-                  {{ $t("position_data.generate.object_tracker") }}
-                </v-btn>
+                  {{ $t("position_data.generate.cv_heading") }}
+                </v-row>
+                <v-row style="justify-content: center" class="mt-1 ga-4">
+                  <v-btn
+                    data-tour="posdata-generate-bytetrack"
+                    @click="showObjectTrackerModal = true"
+                  >
+                    {{ $t("position_data.generate.object_tracker") }}
+                  </v-btn>
 
-                <v-btn data-tour="posdata-generate-dlt" @click="showDltModal = true">
-                  {{ $t("position_data.generate.dlt") }}
-                </v-btn>
+                  <v-btn data-tour="posdata-generate-dlt" @click="showDltModal = true">
+                    {{ $t("position_data.generate.dlt") }}
+                  </v-btn>
 
-                <!-- Optional refinement on top of an existing (player-)Object Tracker run --
-                     both open their own run picker inside the modal, so they stay usable even
-                     before/without one, same as Object Tracker/DLT above don't gate on
-                     each other either. -->
-                <v-btn
-                  data-tour="posdata-generate-team-assignment"
-                  @click="showTeamAssignmentModal = true"
+                  <!-- Optional refinement on top of an existing (player-)Object Tracker run --
+                       both open their own run picker inside the modal, so they stay usable even
+                       before/without one, same as Object Tracker/DLT above don't gate on
+                       each other either. -->
+                  <v-btn
+                    data-tour="posdata-generate-team-assignment"
+                    @click="showTeamAssignmentModal = true"
+                  >
+                    {{ $t("position_data.generate.team_assignment") }}
+                  </v-btn>
+
+                  <v-btn
+                    data-tour="posdata-generate-re-identification"
+                    @click="showReIdentificationModal = true"
+                  >
+                    {{ $t("position_data.generate.re_identification") }}
+                  </v-btn>
+
+                  <!-- Only relevant when this box is the KPI card's empty state -- KPI
+                       computation has its own params (own tracking_data/calibration pickers,
+                       see kpiComputationParams), so it doesn't need position data to already be
+                       selected/loaded and can be triggered right from here too. -->
+                  <v-btn
+                    v-if="showKpiButton"
+                    data-tour="posdata-generate-kpi-computation"
+                    @click="showKpiComputationModal = true"
+                  >
+                    {{ $t("visualization.kpi.compute_kpis") }}
+                  </v-btn>
+                </v-row>
+
+                <v-row style="justify-content: center; align-items: center" class="mt-4 mb-n2">
+                  <v-col cols="4" class="d-flex align-center">
+                    <v-divider />
+                  </v-col>
+                  <v-col cols="auto" class="text-grey px-2">{{
+                    $t("position_data.generate.or")
+                  }}</v-col>
+                  <v-col cols="4" class="d-flex align-center">
+                    <v-divider />
+                  </v-col>
+                </v-row>
+
+                <v-row
+                  class="text-caption text-grey text-uppercase mb-2"
+                  style="justify-content: center"
                 >
-                  {{ $t("position_data.generate.team_assignment") }}
-                </v-btn>
+                  {{ $t("position_data.generate.upload_heading") }}
+                </v-row>
+                <v-row style="justify-content: center" class="mt-1 mb-4">
+                  <v-btn
+                    data-tour="posdata-manual-upload-open"
+                    @click="showModalPositionDataUpload = true"
+                    >{{ $t("position_data.display_settings.position_data.upload") }}</v-btn
+                  >
+                </v-row>
+              </v-sheet>
+            </v-col>
+          </v-row>
 
-                <v-btn
-                  data-tour="posdata-generate-re-identification"
-                  @click="showReIdentificationModal = true"
-                >
-                  {{ $t("position_data.generate.re_identification") }}
-                </v-btn>
+          <ModalPluginRun
+            v-if="showObjectTrackerModal"
+            v-model="showObjectTrackerModal"
+            plugin="object_tracker"
+            :name="$t('modal.plugin.object_tracker.plugin_name')"
+            :description="$t('modal.plugin.object_tracker.plugin_description')"
+            :paramsFactory="objectTrackerParams"
+            :videoId="playerStore.videoId"
+            runButtonDataTour="posdata-bytetrack-run"
+          />
+          <ModalPluginRun
+            v-if="showDltModal"
+            v-model="showDltModal"
+            plugin="calibration_static_dlt"
+            :name="$t('modal.plugin.calibration_static_dlt.plugin_name')"
+            :description="$t('modal.plugin.calibration_static_dlt.plugin_description')"
+            :paramsFactory="dltParams"
+            :videoId="playerStore.videoId"
+            runButtonDataTour="posdata-dlt-apply"
+          />
+          <ModalPluginRun
+            v-if="showTeamAssignmentModal"
+            v-model="showTeamAssignmentModal"
+            plugin="team_clustering"
+            :name="$t('modal.plugin.team_clustering.plugin_name')"
+            :description="$t('modal.plugin.team_clustering.plugin_description')"
+            :paramsFactory="teamClusteringParams"
+            :videoId="playerStore.videoId"
+            runButtonDataTour="posdata-team-assignment-run"
+          />
+          <ModalPluginRun
+            v-if="showReIdentificationModal"
+            v-model="showReIdentificationModal"
+            plugin="osnet_reid"
+            :name="$t('modal.plugin.osnet_reid.plugin_name')"
+            :description="$t('modal.plugin.osnet_reid.plugin_description')"
+            :paramsFactory="osnetReidParams"
+            :videoId="playerStore.videoId"
+            runButtonDataTour="posdata-re-identification-run"
+          />
+          <ModalPluginRun
+            v-if="showKpiComputationModal"
+            v-model="showKpiComputationModal"
+            plugin="kpi_computation"
+            :name="$t('modal.plugin.kpi_computation.plugin_name')"
+            :description="$t('modal.plugin.kpi_computation.plugin_description')"
+            :paramsFactory="kpiComputationParams"
+            :videoId="playerStore.videoId"
+            runButtonDataTour="posdata-kpi-computation-run"
+          />
+        </template>
 
-                <!-- Only relevant when this box is the KPI card's empty state -- KPI
-                     computation has its own params (own tracking_data/calibration pickers,
-                     see kpiComputationParams), so it doesn't need position data to already be
-                     selected/loaded and can be triggered right from here too. -->
-                <v-btn
-                  v-if="showKpiButton"
-                  data-tour="posdata-generate-kpi-computation"
-                  @click="showKpiComputationModal = true"
-                >
-                  {{ $t("visualization.kpi.compute_kpis") }}
-                </v-btn>
-              </v-row>
-
-              <v-row style="justify-content: center; align-items: center" class="mt-4 mb-n2">
-                <v-col cols="4" class="d-flex align-center">
-                  <v-divider />
-                </v-col>
-                <v-col cols="auto" class="text-grey px-2">{{
-                  $t("position_data.generate.or")
-                }}</v-col>
-                <v-col cols="4" class="d-flex align-center">
-                  <v-divider />
-                </v-col>
-              </v-row>
-
-              <v-row
-                class="text-caption text-grey text-uppercase mb-2"
-                style="justify-content: center"
-              >
-                {{ $t("position_data.generate.upload_heading") }}
-              </v-row>
-              <v-row style="justify-content: center" class="mt-1 mb-4">
-                <v-btn
-                  data-tour="posdata-manual-upload-open"
-                  @click="showModalPositionDataUpload = true"
-                  >{{ $t("position_data.display_settings.position_data.upload") }}</v-btn
-                >
-              </v-row>
+        <v-row style="justify-content: center" :class="showKpiButton ? 'mt-8 mb-4' : 'mt-10 mb-6'">
+          <v-menu v-if="selectDisabled" location="top center" open-on-hover>
+            <template #activator="{ props: menuProps }">
+              <!-- Disabled v-btn elements don't fire pointer events, so the hover activator has
+                   to sit on a plain (non-disabled) wrapper around it instead. -->
+              <span v-bind="menuProps">
+                <v-btn disabled>{{
+                  $t("position_data.display_settings.position_data.select")
+                }}</v-btn>
+              </span>
+            </template>
+            <v-sheet class="pa-3 select-disabled-hint" align="center" style="max-width: 350px">
+              {{
+                !hasAvailablePositionData
+                  ? $t("position_data.not_selected")
+                  : $t("position_data.kpi_not_selected")
+              }}
+              {{ $t("position_data.select_disabled_hint_prefix")
+              }}<a href="#" @click.prevent="openStatusOverview">{{
+                $t("position_data.status_overview_link")
+              }}</a
+              >{{ $t("position_data.select_disabled_hint_suffix") }}
             </v-sheet>
-          </v-col>
+          </v-menu>
+          <v-btn v-else :disabled="selectDisabled" @click="showModalPositionDataSelect = true">
+            {{ $t("position_data.display_settings.position_data.select") }}
+          </v-btn>
+          <ModalPositionDataSelect
+            v-if="showModalPositionDataSelect"
+            v-model="showModalPositionDataSelect"
+          />
         </v-row>
 
-        <ModalPluginRun
-          v-if="showObjectTrackerModal"
-          v-model="showObjectTrackerModal"
-          plugin="object_tracker"
-          :name="$t('modal.plugin.object_tracker.plugin_name')"
-          :description="$t('modal.plugin.object_tracker.plugin_description')"
-          :paramsFactory="objectTrackerParams"
-          :videoId="playerStore.videoId"
-          runButtonDataTour="posdata-bytetrack-run"
+        <ModalPositionDataUpload
+          v-if="showModalPositionDataUpload"
+          v-model="showModalPositionDataUpload"
         />
-        <ModalPluginRun
-          v-if="showDltModal"
-          v-model="showDltModal"
-          plugin="calibration_static_dlt"
-          :name="$t('modal.plugin.calibration_static_dlt.plugin_name')"
-          :description="$t('modal.plugin.calibration_static_dlt.plugin_description')"
-          :paramsFactory="dltParams"
-          :videoId="playerStore.videoId"
-          runButtonDataTour="posdata-dlt-apply"
-        />
-        <ModalPluginRun
-          v-if="showTeamAssignmentModal"
-          v-model="showTeamAssignmentModal"
-          plugin="team_clustering"
-          :name="$t('modal.plugin.team_clustering.plugin_name')"
-          :description="$t('modal.plugin.team_clustering.plugin_description')"
-          :paramsFactory="teamClusteringParams"
-          :videoId="playerStore.videoId"
-          runButtonDataTour="posdata-team-assignment-run"
-        />
-        <ModalPluginRun
-          v-if="showReIdentificationModal"
-          v-model="showReIdentificationModal"
-          plugin="osnet_reid"
-          :name="$t('modal.plugin.osnet_reid.plugin_name')"
-          :description="$t('modal.plugin.osnet_reid.plugin_description')"
-          :paramsFactory="osnetReidParams"
-          :videoId="playerStore.videoId"
-          runButtonDataTour="posdata-re-identification-run"
-        />
-        <ModalPluginRun
-          v-if="showKpiComputationModal"
-          v-model="showKpiComputationModal"
-          plugin="kpi_computation"
-          :name="$t('modal.plugin.kpi_computation.plugin_name')"
-          :description="$t('modal.plugin.kpi_computation.plugin_description')"
-          :paramsFactory="kpiComputationParams"
-          :videoId="playerStore.videoId"
-          runButtonDataTour="posdata-kpi-computation-run"
-        />
-      </template>
-
-      <v-row style="justify-content: center" :class="showKpiButton ? 'mt-8 mb-4' : 'mt-10 mb-6'">
-        <v-menu v-if="selectDisabled" location="top center" open-on-hover>
-          <template #activator="{ props: menuProps }">
-            <!-- Disabled v-btn elements don't fire pointer events, so the hover activator has
-                 to sit on a plain (non-disabled) wrapper around it instead. -->
-            <span v-bind="menuProps">
-              <v-btn disabled>{{
-                $t("position_data.display_settings.position_data.select")
-              }}</v-btn>
-            </span>
-          </template>
-          <v-sheet class="pa-3 select-disabled-hint" align="center" style="max-width: 350px">
-            {{
-              !hasAvailablePositionData
-                ? $t("position_data.not_selected")
-                : $t("position_data.kpi_not_selected")
-            }}
-            {{ $t("position_data.select_disabled_hint_prefix")
-            }}<a href="#" @click.prevent="openStatusOverview">{{
-              $t("position_data.status_overview_link")
-            }}</a
-            >{{ $t("position_data.select_disabled_hint_suffix") }}
-          </v-sheet>
-        </v-menu>
-        <v-btn v-else :disabled="selectDisabled" @click="showModalPositionDataSelect = true">
-          {{ $t("position_data.display_settings.position_data.select") }}
-        </v-btn>
-        <ModalPositionDataSelect
-          v-if="showModalPositionDataSelect"
-          v-model="showModalPositionDataSelect"
-        />
-      </v-row>
-
-      <ModalPositionDataUpload
-        v-if="showModalPositionDataUpload"
-        v-model="showModalPositionDataUpload"
-      />
+      </div>
     </v-col>
   </div>
 </template>
@@ -263,6 +267,38 @@ const openStatusOverview = () => {
 </script>
 
 <style scoped>
+/* Flex column so .position-data-menu-col (below) can grow to fill this box's whole height
+   (min-height: 60vh, or taller once the card gets more room). */
+.position-data-menu-root {
+  min-height: 60vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* v-col already flex-grows to fill the parent by Vuetify default -- that's what makes it fill
+   .position-data-menu-root's height. Making it a flex column of its own lets the title
+   (natural size, pinned to the top) and .position-data-menu-body (below) be laid out
+   independently, instead of naively centering title+body as one block. */
+.position-data-menu-col {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The actual button block -- grows to fill whatever's left under the title and centers its own
+   content in that space. Without this, on taller/larger screens the card grows well past the
+   60vh floor but the buttons just stayed pinned to the top via their own mt-* offsets, leaving
+   a large empty gap below. */
+.position-data-menu-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .position-data-menu-watermark {
   position: absolute;
   inset: 0;

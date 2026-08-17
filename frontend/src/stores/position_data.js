@@ -343,6 +343,14 @@ export const usePositionDataStore = defineStore(
       const calibrationAssetId = calibrationAssetStore.calibrationAssetId;
       if (!trackerPluginId || !calibrationAssetId) return;
 
+      // Snapshot before the reload below -- transformBBoxToPositionDataTopView treats any
+      // full (re)load of the tracker run as fresh and resets both of these to null (it can't
+      // tell "just restoring after a browser refresh" apart from "a genuinely new tracker run
+      // was picked"), so reading topViewStore.teamClusteringRunId/reidRunId *after* that call
+      // would always see null and skip redoing the merges below.
+      const teamClusteringRunId = topViewStore.teamClusteringRunId;
+      const reidRunId = topViewStore.reidRunId;
+
       // calibrationAssetsList (unlike positionDataList) isn't fetched anywhere
       // by the time AnalysisView.vue calls restoreFromCache on mount — normally
       // ModalPositionDataSelect.vue's own mount populates it well before the
@@ -355,11 +363,11 @@ export const usePositionDataStore = defineStore(
       if (bboxesStore.bboxBallPluginRunId) {
         await topViewStore.mergeBallTracking(calibrationAssetId, bboxesStore.bboxBallPluginRunId);
       }
-      if (topViewStore.teamClusteringRunId) {
-        await topViewStore.mergeTeamAssignment(topViewStore.teamClusteringRunId);
+      if (teamClusteringRunId) {
+        await topViewStore.mergeTeamAssignment(teamClusteringRunId);
       }
-      if (topViewStore.reidRunId) {
-        await topViewStore.mergeReid(topViewStore.reidRunId);
+      if (reidRunId) {
+        await topViewStore.mergeReid(reidRunId);
       }
       await visualizationStore.loadKpiData(trackerPluginId);
     }

@@ -95,26 +95,6 @@
 
       <v-select
         v-model="parameter.value"
-        :items="bytetrackRuns"
-        :label="parameter.text"
-        :hint="parameter.hint"
-        item-title="name"
-        item-value="id"
-        v-if="parameter.field == 'select_bytetrack_run'"
-        :key="parameter.name"
-        persistent-hint
-        variant="underlined"
-        class="mb-4"
-        :no-data-text="
-          parameter.no_data_text
-            ? $t(parameter.no_data_text)
-            : $t('modal.plugin.kpi_computation.bytetrack_run_none')
-        "
-        :data-tour="parameter.dataTour || undefined"
-      />
-
-      <v-select
-        v-model="parameter.value"
         :items="objectTrackerPlayerRuns"
         :label="parameter.text"
         :hint="parameter.hint"
@@ -128,7 +108,7 @@
         :no-data-text="
           parameter.no_data_text
             ? $t(parameter.no_data_text)
-            : $t('modal.plugin.kpi_computation.bytetrack_run_none')
+            : $t('modal.plugin.kpi_computation.object_tracker_run_none')
         "
         :data-tour="parameter.dataTour || undefined"
       />

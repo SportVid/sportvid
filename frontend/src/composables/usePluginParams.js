@@ -929,7 +929,7 @@ export function kpiComputationParams() {
       value: "kinexon",
       items: [
         ...positionDataStore.provider.map((p) => ({ title: p.name, value: p.id })),
-        { title: "SportVid (ByteTrack)", value: "sportvid" },
+        { title: "SportVid", value: "sportvid" },
       ],
       text: t("modal.plugin.kpi_computation.format"),
       dataTour: "kpi-format",
@@ -944,11 +944,11 @@ export function kpiComputationParams() {
       dataTour: "kpi-tracking-data",
     },
     {
-      field: "select_bytetrack_run",
-      name: "bytetrack_run_id",
+      field: "select_object_tracker_run",
+      name: "object_tracker_run_id",
       value: "",
-      text: t("modal.plugin.kpi_computation.bytetrack_run_id"),
-      hint: t("modal.plugin.kpi_computation.bytetrack_run_id_hint"),
+      text: t("modal.plugin.kpi_computation.object_tracker_run_id"),
+      hint: t("modal.plugin.kpi_computation.object_tracker_run_id_hint"),
       hidden: true,
       dataTour: "kpi-bytetrack-run",
     },
@@ -1037,12 +1037,12 @@ export function kpiComputationParams() {
     { immediate: true }
   );
 
-  // Toggle tracking_data_id / bytetrack_run_id / calibration_id visibility based on format
+  // Toggle tracking_data_id / object_tracker_run_id / calibration_id visibility based on format
   watch(
     () => parameters.value.find((p) => p.name === "format")?.value,
     (fmt) => {
       const trackingParam = parameters.value.find((p) => p.name === "tracking_data_id");
-      const bytetrackParam = parameters.value.find((p) => p.name === "bytetrack_run_id");
+      const bytetrackParam = parameters.value.find((p) => p.name === "object_tracker_run_id");
       const calibrationParam = parameters.value.find((p) => p.name === "calibration_id");
       if (trackingParam) {
         trackingParam.hidden = fmt === "sportvid";

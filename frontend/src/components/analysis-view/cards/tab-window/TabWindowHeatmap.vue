@@ -391,7 +391,7 @@
                       ? toRgb(visualizationStore.getTeamColor(teamId), 0)
                       : 'transparent',
                     color: isTeamFullySelected(teamId)
-                      ? '#fff'
+                      ? getContrastColor(visualizationStore.getTeamColor(teamId), 0)
                       : toRgb(visualizationStore.getTeamColor(teamId), 0),
                     borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
                   }"
@@ -408,7 +408,10 @@
                     backgroundColor: selectedPlayerIds.includes(p.playerId)
                       ? toRgb(playerColors[p.playerId], 0)
                       : toRgb(playerColors[p.playerId], 0.6),
-                    color: selectedPlayerIds.includes(p.playerId) ? '#fff' : '#222',
+                    color: getContrastColor(
+                      playerColors[p.playerId],
+                      selectedPlayerIds.includes(p.playerId) ? 0 : 0.6
+                    ),
                     borderColor: selectedPlayerIds.includes(p.playerId)
                       ? toRgb(playerColors[p.playerId], 0)
                       : toRgb(playerColors[p.playerId], 0.6),
@@ -463,7 +466,7 @@
               ? toRgb(visualizationStore.getTeamColor(teamId), 0)
               : 'transparent',
             color: isTeamFullySelected(teamId)
-              ? '#fff'
+              ? getContrastColor(visualizationStore.getTeamColor(teamId), 0)
               : toRgb(visualizationStore.getTeamColor(teamId), 0),
             borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
           }"
@@ -480,7 +483,10 @@
             backgroundColor: selectedPlayerIds.includes(p.playerId)
               ? toRgb(playerColors[p.playerId], 0)
               : toRgb(playerColors[p.playerId], 0.6),
-            color: selectedPlayerIds.includes(p.playerId) ? '#fff' : '#222',
+            color: getContrastColor(
+              playerColors[p.playerId],
+              selectedPlayerIds.includes(p.playerId) ? 0 : 0.6
+            ),
             borderColor: selectedPlayerIds.includes(p.playerId)
               ? toRgb(playerColors[p.playerId], 0)
               : toRgb(playerColors[p.playerId], 0.6),
@@ -510,7 +516,7 @@ import ModalPositionDataEntityColors from "@/components/position-data/ModalPosit
 import ModalPositionDataOffset from "@/components/position-data/ModalPositionDataOffset.vue";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import h337 from "heatmap.js";
-import { toRgb } from "@/plugins/helpers";
+import { toRgb, getContrastColor } from "@/plugins/helpers";
 import { resampleApprox } from "@/plugins/draw/utils";
 import { debounce } from "lodash";
 

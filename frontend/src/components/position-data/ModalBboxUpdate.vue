@@ -74,7 +74,7 @@
                         class="dot"
                         :style="{
                           backgroundColor: toRgb(playerColors[playerId], 0.7),
-                          color: '#222',
+                          color: getContrastColor(playerColors[playerId], 0.7),
                           borderColor: toRgb(playerColors[playerId], 0.7),
                         }"
                         @click="bboxData.playerId = playerId"
@@ -108,7 +108,7 @@
                         class="dot"
                         :style="{
                           backgroundColor: toRgb(visualizationStore.getTeamColor(teamId.id), 0.7),
-                          color: '#222',
+                          color: getContrastColor(visualizationStore.getTeamColor(teamId.id), 0.7),
                         }"
                         @click="bboxData.teamId = teamId"
                       >
@@ -215,7 +215,7 @@ import { useTopViewStore, BBOX_SOURCE_RUN_IDX } from "@/stores/top_view";
 import { useBboxesStore } from "@/stores/bboxes";
 import { usePlayerStore } from "@/stores/player";
 import { useVisualizationStore } from "@/stores/visualization";
-import { toRgb } from "@/plugins/helpers";
+import { toRgb, getContrastColor } from "@/plugins/helpers";
 
 const topViewStore = useTopViewStore();
 const bboxesStore = useBboxesStore();

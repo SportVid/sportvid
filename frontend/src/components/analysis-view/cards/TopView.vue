@@ -139,7 +139,7 @@
         <v-menu location="top">
           <template #activator="{ props }">
             <v-btn v-bind="props" size="small" data-tour="top-view-display-settings-btn">
-              {{ $t("position_data.display_settings.title") }}
+              <v-icon>mdi-menu</v-icon>
             </v-btn>
           </template>
           <v-list

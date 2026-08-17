@@ -379,7 +379,7 @@ const fetchPlugin = async () => {
 };
 const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
 watch(
-  () => pluginInProgress,
+  pluginInProgress,
   (newState) => {
     if (newState) {
       fetchPluginTimer = setInterval(() => {

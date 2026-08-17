@@ -497,15 +497,15 @@
               :key="`${e.teamId}_${e.playerId}`"
               class="player-dot"
               :style="{
-                backgroundColor: includedEntities.has(`${e.teamId}_${e.playerId}`)
+                backgroundColor: includedEntities.has(_entityInclusionKey(e.teamId, e.playerId))
                   ? toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0)
                   : toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0.6),
-                color: includedEntities.has(`${e.teamId}_${e.playerId}`) ? '#fff' : '#222',
-                borderColor: includedEntities.has(`${e.teamId}_${e.playerId}`)
+                color: includedEntities.has(_entityInclusionKey(e.teamId, e.playerId)) ? '#fff' : '#222',
+                borderColor: includedEntities.has(_entityInclusionKey(e.teamId, e.playerId))
                   ? toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0)
                   : toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0.6),
               }"
-              @click="toggleEntityInclusion(`${e.teamId}_${e.playerId}`)"
+              @click="toggleEntityInclusion(_entityInclusionKey(e.teamId, e.playerId))"
             >
               {{ overlayGetEntityLabel(e.playerId, e.teamId) }}
             </div>
@@ -574,13 +574,27 @@ const ENTITY_KINDS = [
   { key: "rest", labelKey: "position_data.entity_kind.rest" },
 ];
 
+// Entity-inclusion keys are namespaced by *kind* (ball / ref / player), not by the exact
+// team_id -- team_id 1 (rest) and 3+ (actual teams) all share the same person/"player_ids"
+// id space on the backend (see _compute_meta_data's comment in bounding_boxes.py), so a
+// player's key must stay stable across a team re-assignment. Without this, a per-frame team
+// edit (the "Bbox" tab in ModalBboxUpdate.vue, which only touches one frame) makes that
+// frame's box carry a team_id the aggregate-built includedEntities set never learned about
+// (precomputedPlayerList is one team_id per player for the *whole* video), so the edited
+// frame's box would silently disappear from visibleBboxPositions below.
+const _entityInclusionKey = (teamId, playerId) => {
+  const tid = Number(teamId);
+  const kind = tid === 0 ? "ball" : tid === 2 ? "ref" : "player";
+  return `${kind}_${playerId}`;
+};
+
 const includedEntities = ref(new Set());
 const _buildAllEntitySet = () => {
   const ids = new Set();
-  for (const p of topViewStore.precomputedPlayerList) ids.add(`${p.teamId}_${p.playerId}`);
-  for (const p of topViewStore.precomputedRefList) ids.add(`${p.teamId}_${p.playerId}`);
-  for (const p of topViewStore.precomputedBallList) ids.add(`${p.teamId}_${p.playerId}`);
-  for (const p of topViewStore.precomputedInactiveList) ids.add(`${p.teamId}_${p.playerId}`);
+  for (const p of topViewStore.precomputedPlayerList) ids.add(_entityInclusionKey(p.teamId, p.playerId));
+  for (const p of topViewStore.precomputedRefList) ids.add(_entityInclusionKey(p.teamId, p.playerId));
+  for (const p of topViewStore.precomputedBallList) ids.add(_entityInclusionKey(p.teamId, p.playerId));
+  for (const p of topViewStore.precomputedInactiveList) ids.add(_entityInclusionKey(p.teamId, p.playerId));
   return ids;
 };
 watch(
@@ -640,12 +654,16 @@ const overlayGetEntityLabel = (playerId, teamId) => {
 const overlayGetTeamName = (teamId) => topViewStore.getTeamDisplayName(teamId);
 
 const overlayIsTeamFullySelected = (teamId) => {
-  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) => `${p.teamId}_${p.playerId}`);
+  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) =>
+    _entityInclusionKey(p.teamId, p.playerId)
+  );
   return teamKeys.length > 0 && teamKeys.every((key) => includedEntities.value.has(key));
 };
 
 const overlayToggleTeam = (teamId) => {
-  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) => `${p.teamId}_${p.playerId}`);
+  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) =>
+    _entityInclusionKey(p.teamId, p.playerId)
+  );
   const allSelected = teamKeys.every((key) => includedEntities.value.has(key));
   const newSet = new Set(includedEntities.value);
   if (allSelected) {
@@ -667,7 +685,7 @@ const visibleBboxPositions = computed(() => {
     const tid = position[1];
     const kind = tid === 0 ? "ball" : tid === 2 ? "ref" : tid === 1 ? "rest" : "player";
     if (!visible[kind]) return false;
-    return includedEntities.value.has(`${tid}_${position[0]}`);
+    return includedEntities.value.has(_entityInclusionKey(tid, position[0]));
   });
 });
 

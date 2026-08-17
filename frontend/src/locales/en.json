@@ -483,8 +483,8 @@
     },
     "kpi_computation": {
       "intro": "Click here to open the KPI computation card. It calculates performance metrics such as distance covered, velocity, metabolic power, equivalent distance, and centroid distance based on player position data.",
-      "format_select": "Select the data format that matches your position data source. Choosing 'SportVid (ByteTrack)' enables the ByteTrack run and calibration selectors below. All other formats use an externally uploaded position data file.",
-      "tracking_data": "Select the position data to use for the computation. This dropdown lists the position data files that have been uploaded or generated for this video.<br><br>If you selected 'SportVid (ByteTrack)' as the format, you will instead see a ByteTrack run and calibration asset selector. Choose the corresponding run and the calibration asset used during tracking.",
+      "format_select": "Select the data format that matches your position data source. Choosing 'SportVid' enables the ByteTrack run and calibration selectors below. All other formats use an externally uploaded position data file.",
+      "tracking_data": "Select the position data to use for the computation. This dropdown lists the position data files that have been uploaded or generated for this video.<br><br>If you selected 'SportVid' as the format, you will instead see a ByteTrack run and calibration asset selector. Choose the corresponding run and the calibration asset used during tracking.",
       "advanced_options": "The 'Advanced Options' panel lets you configure an optional <em>smoothing filter</em> for the position data before computing KPIs. You can choose between a 'Butterworth lowpass' or a 'Savitzky-Golay lowpass' filter, and adjust their hyperparameters. If you are unsure, leaving this at 'None' is a good default.",
       "run_plugin": "Click 'Compute KPIs' to start the KPI computation. The progress can be tracked in the History panel. Once completed, KPI results will appear right here in the KPI tab."
     },
@@ -877,9 +877,9 @@
         "plugin_description": "This plugin computes selected key performance indicator (KPI) based on the position data. The computation is performed using the <a href=\"https://floodlight.readthedocs.io/en/latest/index.html\">floodlight</a> package. The following KPIs are currently available: <br><br> <em>Distance Covered, Velocity, Metabolic Power, Equivalent Distance, & Distance to the Team Centroid.</em>",
         "tracking_data_id": "Select Position Data",
         "tracking_data_id_hint": "Select a position dataset to use for the computation.",
-        "bytetrack_run_id": "Select ByteTrack Run",
-        "bytetrack_run_id_hint": "Select a completed ByteTrack run to use for the computation.",
-        "bytetrack_run_none": "No completed ByteTrack runs found.",
+        "object_tracker_run_id": "Select Object Tracker Run",
+        "object_tracker_run_id_hint": "Select a completed Object Tracker run to use for the computation.",
+        "object_tracker_run_none": "No completed Object Tracker runs found.",
         "calibration_id": "Select Calibration",
         "calibration_id_hint": "Select the calibration asset used to map video positions to top-view coordinates.",
         "format": "Select the data provider",
@@ -1195,7 +1195,7 @@
         "description": "Create, edit and save calibration assets"
       },
       "posdata_bytetrack": {
-        "name": "Position Data (ByteTrack)",
+        "name": "Position Data (Computer Vision)",
         "description": "Generate position data using the ByteTrack plugin"
       },
       "posdata_manual": {

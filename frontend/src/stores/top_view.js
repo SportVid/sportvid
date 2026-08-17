@@ -572,10 +572,12 @@ export const useTopViewStore = defineStore(
 
     // Applies a separately-run team_clustering result (TeamsData: {frame_time: {track_id:
     // cluster_label}}) onto the currently loaded player run by overwriting b[1] (team_id) in
-    // bboxesStore.bboxDataActive. This is a ONE-TIME mutation of the source, not a live
-    // overlay like mergeBallTracking -- ModalBboxUpdate.vue lets users manually correct
-    // individual team assignments afterwards, and those edits must not be reverted the next
-    // time _applyMergedBboxData() recomputes (e.g. after an unrelated bbox edit elsewhere).
+    // bboxesStore.bboxDataActive, then persists (bakes) that result back into the tracker run
+    // itself (see the bboxesStore.replaceBboxData call below) -- not a live overlay like
+    // mergeBallTracking. ModalBboxUpdate.vue lets users manually correct individual team
+    // assignments afterwards; baking ensures those edits land on -- and stay on -- the same
+    // data a reload sees, instead of a browser-only copy that a reload or an unrelated edit's
+    // server response would silently revert.
     async function mergeTeamAssignment(teamClusteringPluginRunId) {
       if (!teamClusteringPluginRunId) return;
 
@@ -600,11 +602,35 @@ export const useTopViewStore = defineStore(
           b[1] = label < 0 ? TEAM_CLUSTER_NOISE_TEAM_ID : label + TEAM_CLUSTER_LABEL_OFFSET;
         }
       }
-      bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
+      const bakedBboxes = JSON.stringify(playerRaw);
+      bboxesStore.bboxDataActive = bakedBboxes;
       teamClusteringRunId.value = teamClusteringPluginRunId;
 
       _applyMergedBboxData();
       _recomputeAggregates(_combinedStoredMeta());
+
+      // Bake the merge into the tracker run itself instead of leaving it as a browser-only
+      // overlay: without this, any bbox edit's response (the tracker run's own un-merged
+      // data) or a page reload had to reapply the merge from teamsMapping from scratch,
+      // silently clobbering any manual per-box team correction made afterward via
+      // ModalBboxUpdate.vue. Once persisted, the tracker run's own data already carries the
+      // team ids, so clear the flag -- _restoreTracker (position_data.js) and
+      // bboxesStore.updateBboxData/deleteBboxData then treat it like a plain tracker run,
+      // and further edits (including bulk "all team" ones) persist normally since the
+      // backend's team_id now genuinely matches what's displayed.
+      try {
+        const res = await bboxesStore.replaceBboxData(bboxesStore.bboxPluginRunId, bakedBboxes);
+        if (res.status === "ok") {
+          bboxesStore.bboxMetaData = res.entry.meta_data ?? bboxesStore.bboxMetaData;
+          teamClusteringRunId.value = null;
+          _recomputeAggregates(_combinedStoredMeta());
+        }
+      } catch (e) {
+        // Persist failed (e.g. offline) -- leave teamClusteringRunId set so the merge is
+        // retried client-side (and baking re-attempted) on the next reload/edit instead of
+        // being silently lost.
+        console.error("Failed to persist team assignment merge", e);
+      }
     }
 
     // Applies a separately-run osnet_reid result (ReIDData: {frame_time: {old_track_id:
@@ -661,6 +687,79 @@ export const useTopViewStore = defineStore(
       bboxesStore.bboxMetaData = JSON.stringify(playerMeta);
       reidRunId.value = reidPluginRunId;
 
+      _applyMergedBboxData();
+      _recomputeAggregates(_combinedStoredMeta());
+    }
+
+    // Mirrors what BoundingBoxesChange applies server-side (backend/.../views/bounding_boxes.py),
+    // but onto the client-only merged bboxDataActive instead of trusting the server's response as
+    // the new source of truth. Needed whenever a merge is still browser-only: an active
+    // mergeReid (never baked into the backend, unlike mergeTeamAssignment -- see its own
+    // comment), or the brief window before a fresh mergeTeamAssignment's own bake call has
+    // resolved. In both cases the server's response is still the run's raw (un-merged) data --
+    // replacing bboxDataActive with it would silently drop the merge for every row except the
+    // one just edited (bboxesStore.updateBboxData routes here instead of
+    // transformBBoxToPositionDataTopView whenever teamClusteringRunId/reidRunId is set).
+    // bboxData is the UN-translated (as-displayed) edit request -- i.e. before bboxesStore.translatePlayerId
+    // reverses a reid id back to its original track_id -- since the merged bboxDataActive already
+    // stores reid/cluster-translated ids that match what's shown on screen.
+    function applyLocalBboxEdit(bboxData) {
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+
+      if (!bboxData.applyAllPlayerId && !bboxData.applyAllTeamId) {
+        const [frameId] = String(bboxData.bboxId).split("-");
+        for (const bbx of playerRaw[frameId] ?? []) {
+          if (`${frameId}-${bbx[0]}` === bboxData.bboxId) {
+            bbx[0] = bboxData.newPlayerId;
+            bbx[1] = bboxData.newTeamId;
+            break;
+          }
+        }
+      } else if (bboxData.applyAllPlayerId) {
+        for (const boxes of Object.values(playerRaw)) {
+          for (const bbx of boxes) {
+            if (bbx[0] === bboxData.playerId) {
+              bbx[0] = bboxData.newPlayerId;
+              bbx[1] = bboxData.newTeamId;
+            }
+          }
+        }
+      } else if (bboxData.applyAllTeamId) {
+        const teamId = bboxData.teamId?.id ?? bboxData.teamId;
+        for (const boxes of Object.values(playerRaw)) {
+          for (const bbx of boxes) {
+            if (bbx[1] === teamId) bbx[1] = bboxData.newTeamId;
+          }
+        }
+      }
+
+      bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
+      _applyMergedBboxData();
+      _recomputeAggregates(_combinedStoredMeta());
+    }
+
+    // Delete counterpart of applyLocalBboxEdit above -- see that function's comment for why
+    // this local mirror is needed instead of trusting BoundingBoxesDelete's response.
+    function applyLocalBboxDelete(bboxData) {
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+
+      if (!bboxData.applyAllPlayerId && !bboxData.applyAllTeamId) {
+        const [frameId] = String(bboxData.bboxId).split("-");
+        playerRaw[frameId] = (playerRaw[frameId] ?? []).filter(
+          (bbx) => `${frameId}-${bbx[0]}` !== bboxData.bboxId
+        );
+      } else if (bboxData.applyAllPlayerId) {
+        for (const frameId of Object.keys(playerRaw)) {
+          playerRaw[frameId] = playerRaw[frameId].filter((bbx) => bbx[0] !== bboxData.playerId);
+        }
+      } else if (bboxData.applyAllTeamId) {
+        const teamId = bboxData.teamId?.id ?? bboxData.teamId;
+        for (const frameId of Object.keys(playerRaw)) {
+          playerRaw[frameId] = playerRaw[frameId].filter((bbx) => bbx[1] !== teamId);
+        }
+      }
+
+      bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
       _applyMergedBboxData();
       _recomputeAggregates(_combinedStoredMeta());
     }
@@ -856,6 +955,8 @@ export const useTopViewStore = defineStore(
       teamClusteringRunId,
       reidRunId,
       refreshBallBboxData,
+      applyLocalBboxEdit,
+      applyLocalBboxDelete,
       showPlayerId,
       viewPlayerId,
       mirrorXY,
