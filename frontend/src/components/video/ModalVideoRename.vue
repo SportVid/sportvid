@@ -1,15 +1,5 @@
 <template>
   <v-dialog v-model="dialog" width="700">
-    <template #activator="{ props }">
-      <v-tooltip :text="$t('button.rename')" location="top">
-        <template #activator="{ props: tooltipProps }">
-          <v-btn v-bind="{ ...props, ...tooltipProps }" variant="outlined">
-            <v-icon>mdi-pencil</v-icon>
-          </v-btn>
-        </template>
-      </v-tooltip>
-    </template>
-
     <v-card>
       <v-toolbar color="primary">
         <v-toolbar-title class="text-h6">
@@ -47,13 +37,20 @@ const props = defineProps({
     type: [String, Number],
     required: true,
   },
+  modelValue: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits();
+const emit = defineEmits(["update:modelValue", "close"]);
 
 const videoStore = useVideoStore();
 
-const dialog = ref(false);
+const dialog = computed({
+  get: () => props.modelValue,
+  set: (val) => emit("update:modelValue", val),
+});
 const isSubmitting = ref(false);
 const nameProxy = ref(null);
 

@@ -99,9 +99,10 @@
                 v-for="item in videos"
                 :loading="item.loading"
                 :key="item.id"
-                :class="item.processing ? 'processing-card' : ''"
+                :class="item.processing ? 'processing-card' : 'video-card-clickable'"
                 :data-tour="item.processing ? 'video-processing' : undefined"
                 width="370"
+                @click="!item.processing && showVideo(item.id)"
               >
                 <v-card-title class="video-overview-title mt-2 mb-n2">
                   <span class="title-name">{{ item.name }}</span>
@@ -112,6 +113,29 @@
                     class="ml-2 flex-shrink-0"
                     >{{ item.owner_username }}</v-chip
                   >
+                  <v-spacer />
+                  <v-menu v-if="canWrite(item) && !item.processing" location="bottom center">
+                    <template #activator="{ props }">
+                      <v-btn
+                        icon="mdi-menu"
+                        variant="text"
+                        density="comfortable"
+                        size="small"
+                        v-bind="props"
+                        @click.stop
+                      />
+                    </template>
+                    <v-list density="compact" class="py-0">
+                      <v-list-item @click="renameTargetId = item.id">
+                        <v-list-item-title>{{ $t("video_view.rename_video") }}</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="deleteVideo(item.id)">
+                        <v-list-item-title class="text-red">{{
+                          $t("video_view.delete_video")
+                        }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
                 </v-card-title>
                 <div v-if="item.processing" class="card-body card-body-processing">
                   <v-card-text class="d-flex flex-column align-center py-3">
@@ -124,7 +148,7 @@
                       color="red"
                       variant="outlined"
                       class="mt-3"
-                      @click="deleteVideo(item.id)"
+                      @click.stop="deleteVideo(item.id)"
                     >
                       <v-icon class="mr-1">mdi-trash-can-outline</v-icon>
                       {{ $t("button.cancel_and_delete") }}
@@ -138,42 +162,6 @@
                     <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
                     <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
                   </v-card-text>
-                  <div
-                    :class="
-                      canWrite(item) ? 'card-actions-row' : 'card-actions-row card-actions-row-solo'
-                    "
-                  >
-                    <v-tooltip :text="$t('button.analyse')" location="top">
-                      <template #activator="{ props }">
-                        <v-btn variant="outlined" v-bind="props" @click="showVideo(item.id)">
-                          <v-icon>mdi-movie-search-outline</v-icon>
-                        </v-btn>
-                      </template>
-                    </v-tooltip>
-
-                    <ModalVideoRename v-if="canWrite(item)" :video="item.id" />
-
-                    <v-tooltip v-if="canWrite(item)" :text="$t('button.delete')" location="top">
-                      <template #activator="{ props }">
-                        <v-btn
-                          color="red"
-                          variant="outlined"
-                          v-bind="props"
-                          @click="deleteVideo(item.id)"
-                        >
-                          <v-icon>mdi-trash-can-outline</v-icon>
-                        </v-btn>
-                      </template>
-                    </v-tooltip>
-
-                    <v-checkbox
-                      v-if="canWrite(item)"
-                      v-model="videoStore.selectedVideos[item.id]"
-                      color="primary"
-                      class="ml-n1"
-                      hide-details
-                    />
-                  </div>
                   <v-progress-linear v-model="videosProgress[item.id]" />
                 </div>
               </v-card>
@@ -232,6 +220,12 @@
     </v-snackbar>
 
     <ModalVideoUpload v-if="showModalVideoUpload" v-model="showModalVideoUpload" />
+
+    <ModalVideoRename
+      v-if="renameTargetId !== null"
+      :video="renameTargetId"
+      v-model="renameDialogOpen"
+    />
   </v-main>
 </template>
 
@@ -380,6 +374,14 @@ const canWrite = (item) => {
 const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
 const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
 
+const renameTargetId = ref(null);
+const renameDialogOpen = computed({
+  get: () => renameTargetId.value !== null,
+  set: (val) => {
+    if (!val) renameTargetId.value = null;
+  },
+});
+
 const showLogoutSnackbar = ref(false);
 watch(
   () => userStore.loggedIn,
@@ -468,8 +470,17 @@ watch(
   opacity: 0.6;
 }
 
+.video-card-clickable {
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+
+.video-card-clickable:hover {
+  box-shadow: 0 0 0 2px rgba(var(--v-theme-primary), 0.4) !important;
+}
+
 .card-body {
-  height: 174px;
+  height: 140px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -478,19 +489,6 @@ watch(
 .card-text-inner {
   flex: 1;
   padding-bottom: 4px !important;
-}
-
-.card-actions-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 0 8px 6px;
-  flex-shrink: 0;
-}
-
-.card-actions-row-solo {
-  padding-bottom: 14px;
 }
 
 .card-body-processing {

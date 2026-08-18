@@ -99,6 +99,8 @@
   },
   "video_view": {
     "video_processing": "Video is being processed",
+    "rename_video": "Rename Video",
+    "delete_video": "Delete Video",
     "video_id": "Video ID:",
     "length": "Length:",
     "uploaded": "Uploaded:",
