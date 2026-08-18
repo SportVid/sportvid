@@ -94,7 +94,9 @@
     "filter_all": "Alle",
     "sort_date_newest": "Neueste zuerst",
     "sort_date_oldest": "Älteste zuerst",
-    "filter_name": "Titel suchen..."
+    "filter_name": "Titel suchen...",
+    "empty_state_title": "Du möchtest dein erstes Video analysieren lassen?",
+    "empty_state_text": "Klicke jetzt auf das Plus, um dein erstes Video hochzuladen."
   },
   "analysis_view": {
     "tabs": {

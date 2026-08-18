@@ -108,7 +108,9 @@
     "filter_all": "All",
     "sort_date_newest": "Newest first",
     "sort_date_oldest": "Oldest first",
-    "filter_name": "Search title..."
+    "filter_name": "Search title...",
+    "empty_state_title": "Want to have your first video analysed?",
+    "empty_state_text": "Click the plus now to upload your first video."
   },
   "analysis_view": {
     "visualization_tabs": {
