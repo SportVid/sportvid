@@ -110,7 +110,7 @@
       "timeline": "Timeline",
       "events": "Ereignisse",
       "heatmap": "Heatmap",
-      "kpi": "KPIs"
+      "kpi": "Metriken"
     },
     "dashboard": {
       "edit_toggle": "Layout bearbeiten",
@@ -148,7 +148,7 @@
   },
   "position_data": {
     "not_selected": "Keine Positionsdaten vorhanden.",
-    "kpi_not_selected": "Noch keine KPIs berechnet.",
+    "kpi_not_selected": "Noch keine Metriken berechnet.",
     "select_disabled_hint_prefix": "Der aktuelle Stand ist in der ",
     "status_overview_link": "Statusübersicht",
     "select_disabled_hint_suffix": " einsehbar.",
@@ -168,7 +168,7 @@
       "video_sync": "Mit Video synchronisieren",
       "mirror_xy": "XY-Koordinaten spiegeln",
       "view_kpis": {
-        "title": "Leistungsindikator anzeigen",
+        "title": "Metriken anzeigen",
         "space_control": "Raumkontrolle",
         "eps": "Effektiver Spielraum"
       },
@@ -249,7 +249,7 @@
         "title": "Ereignistypen"
       },
       "kpi_columns": {
-        "title": "KPI-Spalten"
+        "title": "Metrik-Spalten"
       },
       "event_type": {
         "goal": "Tor",
@@ -275,11 +275,11 @@
     },
     "kpi": {
       "posdata_not_available": "Keine Positionsdaten vorhanden.<br>Erzeuge sie zuerst im TopView- oder Heatmap-Feld.",
-      "no_kpi_computed": "Keine KPIs berechnet.",
-      "compute_kpis": "KPIs berechnen",
-      "select_kpis": "KPI-Daten auswählen",
+      "no_kpi_computed": "Keine Metriken berechnet.",
+      "compute_kpis": "Metriken berechnen",
+      "select_kpis": "Metrik-Daten auswählen",
       "compute": {
-        "button": "KPI berechnen"
+        "button": "Metriken berechnen"
       },
       "view_mode": {
         "title": "Ansicht",
@@ -292,7 +292,7 @@
         "team": "Team"
       },
       "kpi_selection": {
-        "title": "KPI",
+        "title": "Metrik",
         "unit": "Einheit",
         "group_distance": "Distanz",
         "group_velocity": "Geschwindigkeit",
@@ -340,7 +340,7 @@
         "total": "Gesamt"
       },
       "team_view": {
-        "kpi": "KPI",
+        "kpi": "Metrik",
         "total": "Gesamt",
         "average": "Durchschnitt"
       },
@@ -367,7 +367,7 @@
         "second_half": "Zweite Halbzeit auswählen"
       },
       "kpi_selection": {
-        "title": "KPI-Auswahl",
+        "title": "Metrikauswahl",
         "running_distance": "Laufdistanz",
         "running_distance_cumulative": "Laufdistanz (kumulativ)",
         "running_distance_interval": "Laufdistanz (pro {frames} Frames)",
@@ -383,7 +383,7 @@
         "windowed": "Pro Sekunde"
       },
       "team_view": {
-        "kpi": "KPI",
+        "kpi": "Metrik",
         "total": "Gesamt",
         "average": "Durchschnitt"
       },
@@ -532,7 +532,7 @@
         "file_name": "positionsdaten"
       },
       "kpi": {
-        "export_name": "KPI",
+        "export_name": "Metriken",
         "teams": {
           "all": "Alle auswählen"
         },
@@ -551,7 +551,7 @@
         "file_name": "kpi_daten"
       },
       "kpi_aggregated": {
-        "export_name": "KPI (aggregiert)",
+        "export_name": "Metriken (aggregiert)",
         "teams": {
           "all": "Alle auswählen"
         },
@@ -610,8 +610,8 @@
       "position_data_attribute_hint": "Zeitstempel (ms), Spieler-ID, X und Y sind immer enthalten. Optional weitere Attribute hinzufügen.",
       "kpi_team_name": "Teams auswählen",
       "kpi_team_hint": "Exportiert die ausgewählten Teams.",
-      "kpi_names_name": "KPIs auswählen",
-      "kpi_names_hint": "Auswählen, welche KPIs enthalten sein sollen (min. 1 erforderlich).",
+      "kpi_names_name": "Metriken auswählen",
+      "kpi_names_hint": "Auswählen, welche Metriken enthalten sein sollen (min. 1 erforderlich).",
       "kpi_attribute_name": "Zusätzliche Attribute",
       "kpi_attribute_hint": "Zeitstempel (ms) und Spieler-ID sind immer enthalten. Optional weitere Attribute hinzufügen.",
       "kpi_start_frame_name": "Startframe auswählen",
@@ -736,8 +736,8 @@
         "plugin_name": "Positionsdaten konvertieren"
       },
       "kpi_computation": {
-        "plugin_name": "KPI-Berechnung",
-        "plugin_description": "Dieses Plugin berechnet ausgewählte Key Performance Indicators (KPIs) auf Basis der Positionsdaten. Die Berechnung erfolgt mithilfe des <a href=\"https://floodlight.readthedocs.io/en/latest/index.html\">floodlight</a>-Pakets. Verfügbare KPIs: <br><br> <em>Zurückgelegte Distanz, Geschwindigkeit & Metabolische Leistung</em>",
+        "plugin_name": "Metrik-Berechnung",
+        "plugin_description": "Dieses Plugin berechnet ausgewählte Leistungsmetriken auf Basis der Positionsdaten. Die Berechnung erfolgt mithilfe des <a href=\"https://floodlight.readthedocs.io/en/latest/index.html\">floodlight</a>-Pakets. Verfügbare Metriken: <br><br> <em>Zurückgelegte Distanz, Geschwindigkeit & Metabolische Leistung</em>",
         "tracking_data_id": "Positionsdaten auswählen",
         "tracking_data_id_hint": "Wählen Sie einen Positionsdatensatz für die Berechnung aus.",
         "format": "Datenanbieter auswählen",
@@ -972,7 +972,7 @@
       "title": "Status",
       "area": {
         "posdata": "Positionsdaten",
-        "kpi": "KPIs"
+        "kpi": "Metriken"
       },
       "source": {
         "player_tracking": "Spieler-Tracking",
