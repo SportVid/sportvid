@@ -16,7 +16,11 @@ class Thumbnail(Task):
     def __init__(self):
         self.config = {
             "fps": 5,
-            "max_resolution": 128,
+            # Long-edge px the analyser resizes extracted frames to. Used both for the
+            # video-gallery cover thumbnail and the per-shot thumbnails (ShotCard.vue /
+            # ClusterItemCard.vue); 128 read as visibly blurry once displayed at any
+            # real size, this is still small/cheap but noticeably sharper.
+            "max_resolution": 384,
             "output_path": "/predictions/",
             "base_url": "/sportvid/thumbnails/",
             "analyser_host": settings.GRPC_HOST,
@@ -44,6 +48,10 @@ class Thumbnail(Task):
             "thumbnail_generator",
             inputs={"video": video_id},
             downloads=["images"],
+            parameters={
+                "fps": self.config["fps"],
+                "max_dimension": self.config["max_resolution"],
+            },
         )
 
         if result is None: raise Exception

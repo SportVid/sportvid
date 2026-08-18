@@ -178,3 +178,22 @@ applications:
           uv:
             - pandas
             - lxml
+
+  - name: thumbnail_generator
+    route_prefix: /thumbnail_generator
+    import_path: inference_ray.main:app_builder
+    args:
+      model: thumbnail_generator
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0

@@ -213,6 +213,10 @@ watch(
 const pluginRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
+    // "thumbnail" is an internal asset (video-gallery cover image, see VideoView.vue),
+    // not a user-facing analysis result -- it has no place in the status overview, its
+    // delete pickers, or the running-plugins badge count.
+    .filter((run) => run.type !== "thumbnail")
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .map((pluginRun) => {
       return {

@@ -69,7 +69,8 @@ class UserGet(View):
                         "max_video_size": user.max_video_size,
                         "max_file_size": user.max_file_size,
                         "date_joined": user.date_joined,
-                        "dashboard_layout": user.dashboard_layout
+                        "dashboard_layout": user.dashboard_layout,
+                        "video_view_mode": user.video_view_mode
                     },
                 }
             )
@@ -121,7 +122,8 @@ def login(request):
                     "max_video_size": user.max_video_size,
                     "max_file_size": user.max_file_size,
                     "date_joined": user.date_joined,
-                    "dashboard_layout": user.dashboard_layout
+                    "dashboard_layout": user.dashboard_layout,
+                    "video_view_mode": user.video_view_mode
                 },
             }
         )
@@ -242,6 +244,17 @@ def user_update(request):
                     return JsonResponse({"status": "error", "message": "Invalid dashboard layout"})
 
                 user.dashboard_layout = dashboard_layout
+                user.save()
+
+                return JsonResponse({"status": "ok"})
+
+            elif update_type == "video_view_mode":
+                user = request.user
+                video_view_mode = params.get("video_view_mode")
+                if video_view_mode not in ("grid", "list"):
+                    return JsonResponse({"status": "error", "message": "Invalid video view mode"})
+
+                user.video_view_mode = video_view_mode
                 user.save()
 
                 return JsonResponse({"status": "ok"})

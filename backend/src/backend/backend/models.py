@@ -44,6 +44,7 @@ class SportVidUser(AbstractUser):
     max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB, 500MB: 500*1024*1024
     max_file_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB
     dashboard_layout = models.JSONField(default=dict, blank=True)
+    video_view_mode = models.CharField(max_length=16, default="grid", blank=True)
     objects = SportVidUserManager()
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
@@ -57,7 +58,8 @@ class SportVidUser(AbstractUser):
             "max_video_size": self.max_video_size,
             "max_file_size": self.max_file_size,
             "date_joined": self.date_joined,
-            "dashboard_layout": self.dashboard_layout
+            "dashboard_layout": self.dashboard_layout,
+            "video_view_mode": self.video_view_mode
         }
 
     def __str__(self):
@@ -121,6 +123,11 @@ class Video(models.Model):
             "height": self.height,
             "width": self.width,
             "num_timelines": len(Timeline.objects.filter(video=self)),
+            # Manually uploaded tracking data survives independently of the "posdata_convert"
+            # plugin run that processed it (e.g. once that run's history gets cleaned up via
+            # ModalStatus's delete panel), so the video-gallery status indicator needs this
+            # alongside plugin-run state to not flip back to "not done" for it.
+            "has_tracking_data": TrackingData.objects.filter(video=self).exists(),
             "field_length": self.field_length,
             "field_width": self.field_width,
             "division": self.division,

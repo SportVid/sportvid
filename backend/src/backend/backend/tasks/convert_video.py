@@ -208,9 +208,17 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         e = time.time()
         logger.info(f"HLS conversion took: {e-s}")
 
+        # Thumbnail generation always runs automatically once a video is playable,
+        # independent of any user-selected analyzers -- it powers the video card
+        # cover image in the frontend, not an opt-in analysis result.
+        plugin_manager = PluginManager()
+        try:
+            plugin_manager("thumbnail", video=video_db, user=video_db.owner)
+        except Exception:
+            logger.exception("Failed to schedule plugin 'thumbnail'")
+
         # NOTE: add comma-separated plugin names to run automatically on video upload.
-        # plugin_manager = PluginManager()
-        # plugins = [] 
+        # plugins = []
         # if analyzers:
         #     plugins += analyzers
         # for plugin in plugins:

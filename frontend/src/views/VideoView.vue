@@ -35,6 +35,7 @@
               prepend-inner-icon="mdi-magnify"
               style="max-width: 280px"
             />
+
             <v-select
               v-model="filterSport"
               :items="sportOptions"
@@ -47,6 +48,7 @@
               clearable
               style="max-width: 240px"
             />
+
             <v-select
               v-model="filterAgeGroup"
               :items="ageGroupOptions"
@@ -59,6 +61,7 @@
               clearable
               style="max-width: 240px"
             />
+
             <v-btn
               variant="outlined"
               color="primary"
@@ -67,7 +70,7 @@
               class="text-none"
               style="height: 40px"
             >
-              <v-icon size="18" class="mr-1">
+              <v-icon size="18" class="mr-2">
                 {{
                   sortDateDir === "desc"
                     ? "mdi-sort-calendar-descending"
@@ -80,11 +83,31 @@
                   : $t("video_view.sort_date_oldest")
               }}
             </v-btn>
+
+            <v-btn-toggle
+              v-model="viewMode"
+              mandatory
+              density="compact"
+              color="primary"
+              variant="outlined"
+              style="height: 40px"
+            >
+              <v-btn value="grid">
+                <v-icon size="18">mdi-view-grid-outline</v-icon>
+              </v-btn>
+              <v-btn value="list">
+                <v-icon size="18">mdi-view-sequential-outline</v-icon>
+              </v-btn>
+            </v-btn-toggle>
           </v-col>
         </v-row>
         <v-row>
           <v-col>
-            <v-container class="d-flex flex-wrap justify-center video-gallery pa-0" fluid>
+            <v-container
+              v-if="viewMode === 'grid'"
+              class="d-flex flex-wrap justify-center video-gallery pa-0"
+              fluid
+            >
               <v-card
                 elevation="2"
                 class="add-video-card"
@@ -99,10 +122,10 @@
                 v-for="item in videos"
                 :loading="item.loading"
                 :key="item.id"
-                :class="item.processing ? 'processing-card' : 'video-card-clickable'"
-                :data-tour="item.processing ? 'video-processing' : undefined"
+                :class="showProcessingCard(item) ? 'processing-card' : 'video-card-clickable'"
+                :data-tour="showProcessingCard(item) ? 'video-processing' : undefined"
                 width="370"
-                @click="!item.processing && showVideo(item.id)"
+                @click="!showProcessingCard(item) && showVideo(item.id)"
               >
                 <v-card-title class="video-overview-title mt-2 mb-n2">
                   <span class="title-name">{{ item.name }}</span>
@@ -114,7 +137,10 @@
                     >{{ item.owner_username }}</v-chip
                   >
                   <v-spacer />
-                  <v-menu v-if="canWrite(item) && !item.processing" location="bottom center">
+                  <v-menu
+                    v-if="canWrite(item) && !showProcessingCard(item)"
+                    location="bottom center"
+                  >
                     <template #activator="{ props }">
                       <v-btn
                         icon="mdi-menu"
@@ -137,7 +163,7 @@
                     </v-list>
                   </v-menu>
                 </v-card-title>
-                <div v-if="item.processing" class="card-body card-body-processing">
+                <div v-if="showProcessingCard(item)" class="card-body card-body-processing">
                   <v-card-text class="d-flex flex-column align-center py-3">
                     <i class="mdi mdi-loading mdi-spin" style="font-size: 40px" />
                     <div class="mt-2">
@@ -150,22 +176,193 @@
                       class="mt-3"
                       @click.stop="deleteVideo(item.id)"
                     >
-                      <v-icon class="mr-1">mdi-trash-can-outline</v-icon>
+                      <v-icon class="mr-2">mdi-trash-can-outline</v-icon>
                       {{ $t("button.cancel_and_delete") }}
                     </v-btn>
                   </v-card-text>
                 </div>
                 <div v-else class="card-body">
-                  <v-card-text class="card-text-inner">
-                    <div>{{ $t("video_view.video_id") }} {{ item.id }}</div>
-                    <div>{{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}</div>
-                    <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
-                    <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
-                  </v-card-text>
+                  <div class="flip-container">
+                    <div class="flip-inner" :class="{ flipped: flippedCards[item.id] }">
+                      <div class="flip-face flip-front">
+                        <img
+                          v-if="videoCoverUrl[item.id]"
+                          :src="videoCoverUrl[item.id]"
+                          class="video-thumbnail"
+                          alt=""
+                        />
+                        <div v-else class="video-thumbnail-placeholder">
+                          <v-icon size="40" color="grey">mdi-movie-outline</v-icon>
+                        </div>
+                      </div>
+                      <div class="flip-face flip-back">
+                        <div class="info-rows">
+                          <div class="info-row">{{ $t("video_view.video_id") }} {{ item.id }}</div>
+                          <div class="info-row">
+                            {{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}
+                          </div>
+                          <div class="info-row">
+                            {{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}
+                          </div>
+                          <div class="info-row">
+                            {{ $t("video_view.data") }}:
+                            <span class="data-badges">
+                              <span
+                                v-for="cat in videoDataCategories[item.id]"
+                                :key="cat.key"
+                                class="data-badge"
+                              >
+                                <v-icon size="16" :color="stateColor(cat.state)">
+                                  {{ stateIcon(cat.state) }}
+                                </v-icon>
+                                {{ cat.label }}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card-flip-toggle">
+                    <v-btn
+                      icon="mdi-dots-horizontal"
+                      variant="text"
+                      density="comfortable"
+                      size="small"
+                      @click.stop="toggleCardFlip(item.id)"
+                    />
+                  </div>
                   <v-progress-linear v-model="videosProgress[item.id]" />
                 </div>
               </v-card>
             </v-container>
+
+            <div v-else class="video-list">
+              <v-card
+                elevation="2"
+                class="add-video-card add-video-row"
+                data-tour="modal-video-upload-open"
+                @click="showModalVideoUpload = true"
+              >
+                <v-icon size="28" color="primary">mdi-plus</v-icon>
+              </v-card>
+              <v-card
+                elevation="2"
+                v-for="item in videos"
+                :loading="item.loading"
+                :key="item.id"
+                :class="[
+                  'video-row',
+                  showProcessingCard(item) ? 'processing-card' : 'video-card-clickable',
+                ]"
+                :data-tour="showProcessingCard(item) ? 'video-processing' : undefined"
+                @click="!showProcessingCard(item) && showVideo(item.id)"
+              >
+                <div class="video-row-main">
+                  <div class="row-thumb">
+                    <img
+                      v-if="videoCoverUrl[item.id] && !showProcessingCard(item)"
+                      :src="videoCoverUrl[item.id]"
+                      class="row-thumbnail"
+                      alt=""
+                    />
+                    <div v-else class="row-thumbnail-placeholder">
+                      <i
+                        v-if="showProcessingCard(item)"
+                        class="mdi mdi-loading mdi-spin"
+                        style="font-size: 26px"
+                      />
+                      <v-icon v-else size="26" color="grey">mdi-movie-outline</v-icon>
+                    </div>
+                  </div>
+
+                  <div class="row-title-block">
+                    <span class="title-name">{{ item.name }}</span>
+                    <v-chip
+                      v-if="item.owner_username && userStore.role === 'admin'"
+                      size="x-small"
+                      color="secondary"
+                      class="ml-2 flex-shrink-0"
+                      >{{ item.owner_username }}</v-chip
+                    >
+                  </div>
+
+                  <v-spacer />
+
+                  <template v-if="showProcessingCard(item)">
+                    <span class="row-processing-text">{{ $t("video_view.video_processing") }}</span>
+                    <v-btn
+                      size="small"
+                      color="red"
+                      variant="outlined"
+                      class="ml-3"
+                      @click.stop="deleteVideo(item.id)"
+                    >
+                      <v-icon class="mr-2">mdi-trash-can-outline</v-icon>
+                      {{ $t("button.cancel_and_delete") }}
+                    </v-btn>
+                  </template>
+                  <div v-else class="row-actions">
+                    <v-btn
+                      :icon="expandedRows[item.id] ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                      variant="text"
+                      density="comfortable"
+                      @click.stop="toggleRowExpand(item.id)"
+                    />
+                    <template v-if="canWrite(item)">
+                      <v-btn
+                        icon="mdi-pencil-outline"
+                        variant="text"
+                        density="comfortable"
+                        @click.stop="renameTargetId = item.id"
+                      />
+                      <v-btn
+                        icon="mdi-trash-can-outline"
+                        variant="text"
+                        density="comfortable"
+                        color="red"
+                        @click.stop="deleteVideo(item.id)"
+                      />
+                    </template>
+                  </div>
+                </div>
+
+                <div
+                  v-if="expandedRows[item.id] && !showProcessingCard(item)"
+                  class="row-info"
+                  @click.stop
+                >
+                  <v-divider class="mb-2" />
+                  <div class="info-row">{{ $t("video_view.video_id") }} {{ item.id }}</div>
+                  <div class="info-row">
+                    {{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}
+                  </div>
+                  <div class="info-row">
+                    {{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}
+                  </div>
+                  <div class="info-row">
+                    {{ $t("video_view.data") }}:
+                    <span class="data-badges">
+                      <span
+                        v-for="cat in videoDataCategories[item.id]"
+                        :key="cat.key"
+                        class="data-badge"
+                      >
+                        <v-icon size="16" :color="stateColor(cat.state)">
+                          {{ stateIcon(cat.state) }}
+                        </v-icon>
+                        {{ cat.label }}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+
+                <v-progress-linear
+                  v-if="!showProcessingCard(item)"
+                  v-model="videosProgress[item.id]"
+                />
+              </v-card>
+            </div>
           </v-col>
         </v-row>
       </template>
@@ -237,15 +434,18 @@ import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTimelineStore } from "@/stores/timeline";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { getDisplayTime } from "@/plugins/time";
 import ModalVideoRename from "@/components/video/ModalVideoRename.vue";
 import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
+import config from "../../app.config";
 
 const router = useRouter();
 const { t } = useI18n();
 const videoStore = useVideoStore();
 const userStore = useUserStore();
 const pluginRunStore = usePluginRunStore();
+const pluginRunResultStore = usePluginRunResultStore();
 const timelineStore = useTimelineStore();
 
 const showModalVideoUpload = ref(false);
@@ -256,6 +456,10 @@ const filterName = ref("");
 const filterSport = ref(null);
 const filterAgeGroup = ref(null);
 const sortDateDir = ref("desc");
+const viewMode = computed({
+  get: () => userStore.videoViewMode || "grid",
+  set: (val) => userStore.saveVideoViewMode(val),
+});
 
 const toggleDateSort = () => {
   sortDateDir.value = sortDateDir.value === "desc" ? "asc" : "desc";
@@ -299,6 +503,193 @@ const videosProgress = computed(() => {
   });
   return progress;
 });
+
+// Cover thumbnail shown on the front of a video card, sourced from the "thumbnail"
+// plugin run that now runs automatically once a video finishes processing.
+const latestThumbnailRun = (videoId) => {
+  const runs = pluginRunStore.forVideo(videoId).filter((r) => r.type === "thumbnail");
+  if (!runs.length) return null;
+  return [...runs].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+};
+
+const thumbnailRunForVideo = (videoId) => {
+  const run = latestThumbnailRun(videoId);
+  return run && run.status === "DONE" ? run : null;
+};
+
+// Videos we've personally watched go through Video.status===PROCESSING in this session --
+// only for those do we keep the "still processing" look alive while their automatic
+// thumbnail generation finishes, so a card doesn't flash an empty placeholder right after
+// upload. Pre-existing videos that loaded already-DONE show normally right away instead --
+// there's no way to tell "thumbnail is about to arrive" apart from "predates this feature
+// and never gets one" for those, so forcing the processing look on them would get stuck.
+const observedProcessing = ref({});
+watch(
+  videos,
+  (list) => {
+    // Both the "start tracking" and "stop tracking" writes live in this one watcher (not in
+    // isThumbnailPending below) so it stays a pure read -- safe to call from several places
+    // in the template per render without a mutation from one call leaking into the next.
+    list.forEach((item) => {
+      if (item.processing) {
+        observedProcessing.value[item.id] = true;
+        return;
+      }
+      if (!observedProcessing.value[item.id]) return;
+      const run = latestThumbnailRun(item.id);
+      if (run && run.status !== "RUNNING" && run.status !== "QUEUED") {
+        delete observedProcessing.value[item.id];
+      }
+    });
+  },
+  { immediate: true }
+);
+
+const isThumbnailPending = (item) => {
+  if (item.processing || !observedProcessing.value[item.id]) return false;
+  const run = latestThumbnailRun(item.id);
+  return !run || run.status === "RUNNING" || run.status === "QUEUED";
+};
+
+const showProcessingCard = (item) => item.processing || isThumbnailPending(item);
+
+watch(
+  videos,
+  (list) => {
+    list.forEach((item) => {
+      const run = thumbnailRunForVideo(item.id);
+      if (!run) return;
+      const existing = pluginRunResultStore.forPluginRun(run.id);
+      if (existing.length === 0 || existing.some((r) => r.data === undefined)) {
+        pluginRunResultStore.fetchForVideo({
+          videoId: item.id,
+          pluginRunId: run.id,
+          addResults: true,
+        });
+      }
+    });
+  },
+  { immediate: true }
+);
+
+const videoCoverUrl = computed(() => {
+  const urls = {};
+  videos.value.forEach((item) => {
+    const run = thumbnailRunForVideo(item.id);
+    const result =
+      run && pluginRunResultStore.forPluginRun(run.id).find((r) => r.data?.images?.length);
+    const image = result?.data.images[0];
+    urls[item.id] = image
+      ? `${config.THUMBNAIL_LOCATION}/${image.id.substr(0, 2)}/${image.id.substr(2, 2)}/${
+          image.id
+        }.${image.ext}`
+      : null;
+  });
+  return urls;
+});
+
+const flippedCards = ref({});
+const toggleCardFlip = (videoId) => {
+  flippedCards.value = { ...flippedCards.value, [videoId]: !flippedCards.value[videoId] };
+};
+
+const expandedRows = ref({});
+const toggleRowExpand = (videoId) => {
+  expandedRows.value = { ...expandedRows.value, [videoId]: !expandedRows.value[videoId] };
+};
+
+// Compact position-data / metrics status per card, back of ModalStatus's status derivation but
+// keyed by an arbitrary video id instead of the single currently-open player video. Manually
+// uploaded tracking data is checked via video.has_tracking_data (a cheap server-side aggregate,
+// see Video.to_dict()) rather than position_data.js's store, which only ever fetches for the
+// single currently-open player video.
+const POSDATA_TRACKER_TYPES = ["bytetrack", "object_tracker"];
+const POSDATA_DLT_TYPES = ["calibration_static_dlt"];
+const POSDATA_UPLOAD_TYPES = ["posdata_convert"];
+const METRICS_TYPES = ["kpi_computation"];
+
+const deriveRunState = (runs, types) => {
+  const filtered = runs.filter((r) => types.includes(r.type));
+  if (!filtered.length) return "none";
+  if (filtered.some((r) => r.status === "DONE")) return "done";
+  if (filtered.some((r) => r.status === "RUNNING" || r.status === "QUEUED")) return "running";
+  if (filtered.some((r) => r.status === "ERROR")) return "error";
+  return "none";
+};
+
+// AND: player tracking + DLT calibration belong together as one variant (ball tracking is
+// optional, same as ModalStatus). OR: that variant vs. a manual upload are alternatives.
+const combineAll = (states) => {
+  if (states.every((s) => s === "done")) return "done";
+  if (states.some((s) => s === "running")) return "running";
+  if (states.some((s) => s === "error")) return "error";
+  return "none";
+};
+
+const combineAny = (states) => {
+  if (states.some((s) => s === "done")) return "done";
+  if (states.some((s) => s === "running")) return "running";
+  if (states.some((s) => s === "error")) return "error";
+  return "none";
+};
+
+const posdataStates = computed(() => {
+  const map = {};
+  videos.value.forEach((item) => {
+    const runs = pluginRunStore.forVideo(item.id);
+    const autoState = combineAll([
+      deriveRunState(runs, POSDATA_TRACKER_TYPES),
+      deriveRunState(runs, POSDATA_DLT_TYPES),
+    ]);
+    const uploadState = item.has_tracking_data
+      ? "done"
+      : deriveRunState(runs, POSDATA_UPLOAD_TYPES);
+    map[item.id] = combineAny([autoState, uploadState]);
+  });
+  return map;
+});
+
+const metricsStates = computed(() => {
+  const map = {};
+  videos.value.forEach((item) => {
+    map[item.id] = deriveRunState(pluginRunStore.forVideo(item.id), METRICS_TYPES);
+  });
+  return map;
+});
+
+// Grouped under one "Daten:" row as a row of small status icons (see template) instead of one
+// row per category -- keeps the card a fixed height as more categories (e.g. events) join later.
+const videoDataCategories = computed(() => {
+  const map = {};
+  videos.value.forEach((item) => {
+    map[item.id] = [
+      {
+        key: "posdata",
+        label: t("modal.status.area.posdata"),
+        state: posdataStates.value[item.id],
+      },
+      { key: "metrics", label: t("modal.status.area.kpi"), state: metricsStates.value[item.id] },
+    ];
+  });
+  return map;
+});
+
+const stateColor = (state) => {
+  if (state === "done") return "green";
+  if (state === "running") return "blue";
+  if (state === "error") return "red";
+  return "grey";
+};
+
+const stateIcon = (state) => {
+  const icons = {
+    done: "mdi-checkbox-marked-circle-outline",
+    running: "mdi-progress-clock",
+    error: "mdi-alert-circle-outline",
+    none: "mdi-checkbox-blank-circle-outline",
+  };
+  return icons[state] || icons.none;
+};
 watch(
   videosProgress,
   (newState, oldState) => {
@@ -321,7 +712,7 @@ const fetchData = async (fetchTimelines = false) => {
 
 const processingPollTimer = ref(null);
 const hasProcessingVideos = computed(() => {
-  return videos.value.some((v) => v.processing === true);
+  return videos.value.some((v) => showProcessingCard(v));
 });
 watch(
   hasProcessingVideos,
@@ -451,6 +842,7 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  margin-left: 4px;
 }
 
 .video-gallery > * {
@@ -480,15 +872,98 @@ watch(
 }
 
 .card-body {
-  height: 140px;
+  height: 174px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-.card-text-inner {
+.flip-container {
   flex: 1;
-  padding-bottom: 4px !important;
+  min-height: 0;
+  perspective: 1000px;
+}
+
+.flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s;
+  transform-style: preserve-3d;
+}
+
+.flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.flip-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flip-front {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flip-back {
+  transform: rotateY(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-thumbnail {
+  height: 88%;
+  object-fit: contain;
+  border-radius: 5px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.video-thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-flip-toggle {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 28px;
+}
+
+.info-rows {
+  width: 100%;
+  padding: 0 16px;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+
+.data-badges {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: 6px;
+}
+
+.data-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
 }
 
 .card-body-processing {
@@ -520,5 +995,105 @@ watch(
 
 .empty-state-text {
   max-width: 380px;
+}
+
+.video-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.video-row {
+  width: 100%;
+}
+
+.video-row-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+}
+
+.row-thumb {
+  width: 110px;
+  height: 62px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.row-thumbnail {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 5px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.row-thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+
+.row-title-block {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.row-title-block .title-name {
+  font-size: 1.15rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.row-actions :deep(.v-btn) {
+  --v-btn-height: 36px;
+}
+
+.row-actions :deep(.v-icon) {
+  font-size: 22px;
+}
+
+.row-processing-text {
+  font-size: 1rem;
+  color: rgba(var(--v-theme-on-surface), 0.7);
+  white-space: nowrap;
+}
+
+.row-info {
+  padding: 0 12px 12px 134px;
+  cursor: default;
+}
+
+.row-info .info-row {
+  font-size: 1.05rem;
+}
+
+.add-video-row {
+  height: auto;
+  min-height: 60px;
+  padding: 8px 12px;
+  flex-direction: row;
 }
 </style>

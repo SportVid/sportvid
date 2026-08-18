@@ -101,6 +101,8 @@
     "video_processing": "Video is being processed",
     "rename_video": "Rename Video",
     "delete_video": "Delete Video",
+    "toggle_details": "Show/hide details",
+    "data": "Data",
     "video_id": "Video ID:",
     "length": "Length:",
     "uploaded": "Uploaded:",
@@ -110,6 +112,8 @@
     "filter_all": "All",
     "sort_date_newest": "Newest first",
     "sort_date_oldest": "Oldest first",
+    "view_grid": "Grid view",
+    "view_list": "List view",
     "filter_name": "Search title...",
     "empty_state_title": "Want to have your first video analysed?",
     "empty_state_text": "Click the plus now to upload your first video."
