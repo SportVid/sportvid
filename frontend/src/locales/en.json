@@ -267,11 +267,9 @@
     }
   },
   "transcript_data": {
-    "not_selected": "No transcript available for this video.",
+    "select": "Select transcript",
     "generate": {
-      "heading": "Via speech recognition",
-      "or": "or",
-      "demo": "Use demo transcript"
+      "heading": "Via speech recognition"
     }
   },
   "event_data": {
@@ -1403,6 +1401,13 @@
         "title": "Select event data",
         "empty": "No event data uploaded yet.",
         "demo": "Select demo event data"
+      }
+    },
+    "transcript_data": {
+      "select": {
+        "title": "Select transcript",
+        "empty": "No transcript generated yet.",
+        "demo": "Use demo transcript"
       }
     },
     "bounding_box": {

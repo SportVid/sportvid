@@ -212,11 +212,9 @@
     }
   },
   "transcript_data": {
-    "not_selected": "Für dieses Video ist kein Transkript vorhanden.",
+    "select": "Transkript auswählen",
     "generate": {
-      "heading": "Über Spracherkennung",
-      "or": "oder",
-      "demo": "Demo-Transkript verwenden"
+      "heading": "Über Spracherkennung"
     }
   },
   "event_data": {
@@ -1139,6 +1137,13 @@
         "title": "Event-Daten auswählen",
         "empty": "Noch keine Event-Daten hochgeladen.",
         "demo": "Demo-Event-Daten auswählen"
+      }
+    },
+    "transcript_data": {
+      "select": {
+        "title": "Transkript auswählen",
+        "empty": "Noch kein Transkript erstellt.",
+        "demo": "Demo-Transkript verwenden"
       }
     }
   },

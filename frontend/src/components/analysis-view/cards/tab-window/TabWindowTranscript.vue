@@ -11,6 +11,24 @@
     :class="{ 'transcript-fill-height': dense }"
   >
     <div class="card-header-zone">
+      <!-- Same mdi-menu -> dropdown pattern as the other tab windows (see TabWindowEvents.vue/
+           TabWindowHeatmap.vue's own display-settings menu) -- transcript only has the one
+           setting worth surfacing here (which whisper run to view), so the menu is a single
+           item rather than a submenu tree. -->
+      <v-menu location="bottom">
+        <template #activator="{ props }">
+          <v-btn v-bind="props" size="small" class="mt-0 mr-1">
+            <v-icon>mdi-menu</v-icon>
+          </v-btn>
+        </template>
+        <v-list class="py-0" density="compact" width="220px">
+          <v-list-item class="menu-item" @click="showModalTranscriptSelect = true">
+            <v-list-item-title>{{ $t("transcript_data.select") }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-menu>
+      <ModalTranscriptSelect v-if="showModalTranscriptSelect" v-model="showModalTranscriptSelect" />
+
       <v-text-field
         v-if="viewMode === 'list'"
         v-model="search"
@@ -87,6 +105,7 @@ import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_ann
 import { usePlayerStore } from "@/stores/player";
 import TranscriptDataMenu from "@/components/transcript/TranscriptDataMenu.vue";
 import TranscriptListItem from "@/components/transcript/TranscriptListItem.vue";
+import ModalTranscriptSelect from "@/components/transcript/ModalTranscriptSelect.vue";
 
 defineProps({
   // True when this widget's height is capped to share a row with another widget (see
@@ -105,6 +124,7 @@ const hasTranscriptData = computed(
 );
 
 const viewMode = ref("list");
+const showModalTranscriptSelect = ref(false);
 
 // ---------------------------------------------------------------------------
 // List view: live transcript, auto-scrolling to whatever's currently being spoken.
@@ -312,6 +332,18 @@ onBeforeUnmount(() => resizeObserver.disconnect());
 .transcript-view-toggle {
   flex-shrink: 0;
   margin-left: auto;
+}
+
+/* Matches the other tab windows' own .menu-item styling (see TabWindowEvents.vue/
+   TabWindowHeatmap.vue). */
+.menu-item {
+  cursor: pointer;
+}
+.menu-item:hover {
+  background-color: #f0f0f0;
+}
+.menu-item .v-list-item-title {
+  font-size: 12px;
 }
 
 .transcript-list {

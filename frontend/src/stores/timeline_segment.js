@@ -1,4 +1,5 @@
 import { ref, computed } from "vue";
+import { defineStore } from "pinia";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 
@@ -9,7 +10,12 @@ import { useTimelineStore } from "@/stores/timeline";
 import { useShotStore } from "@/stores/shot";
 import { usePlayerStore } from "@/stores/player";
 
-export const useTimelineSegmentStore = () => {
+// Was a bare factory function (no defineStore) -- every caller got its own isolated state
+// instead of sharing one Pinia store, so e.g. video.js's fetchForVideo populated an instance
+// nobody else could ever read from. Wrapping it in defineStore is the fix: same call syntax
+// everywhere (useTimelineSegmentStore()), now actually returns the same singleton every time,
+// matching every sibling store (timeline.js, timeline_segment_annotation.js, ...).
+export const useTimelineSegmentStore = defineStore("timelineSegment", () => {
   const timelineSegments = ref({});
   const timelineSegmentList = ref([]);
   const timelineSegmentListSelected = ref([]);
@@ -434,4 +440,4 @@ export const useTimelineSegmentStore = () => {
     deleteFromStore,
     updateTimeStore,
   };
-};
+});

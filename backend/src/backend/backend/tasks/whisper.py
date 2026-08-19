@@ -7,6 +7,7 @@ from backend.models import (
     Annotation,
     AnnotationCategory,
     PluginRun,
+    PluginRunResult,
     TimelineSegmentAnnotation,
     Video,
     SportVidUser,
@@ -90,6 +91,20 @@ class Whisper(Task):
 
         with transaction.atomic():
             with result[1]["annotations"] as data:
+                # Linking the timeline to a PluginRunResult (rather than leaving it
+                # unset, as before) is what lets the frontend tell separate whisper runs
+                # apart -- with advanced options (language, thresholds, ...) now exposed,
+                # re-running whisper is a real workflow, and every run reuses the same
+                # "Transcript" AnnotationCategory (see below), so the timeline is the only
+                # thing left to key a run's segments off of. See
+                # timeline_segment_annotation.js's transcriptSegments / ModalTranscriptSelect.vue.
+                plugin_run_result_db = PluginRunResult.objects.create(
+                    plugin_run=plugin_run,
+                    data_id=result[1]["annotations"].id,
+                    name="transcript",
+                    type=PluginRunResult.TYPE_LIST,
+                )
+
                 """
                 Create a timeline labeled
                 """
@@ -97,6 +112,7 @@ class Whisper(Task):
                     video=video,
                     name="Whisper Transcript",
                     type=Timeline.TYPE_TRANSCRIPT,
+                    plugin_run_result=plugin_run_result_db,
                 )
 
                 category_db, _ = AnnotationCategory.objects.get_or_create(
@@ -131,7 +147,7 @@ class Whisper(Task):
 
                 return {
                     "plugin_run": plugin_run.id.hex,
-                    "plugin_run_results": [],
+                    "plugin_run_results": [plugin_run_result_db.id.hex],
                     "timelines": {"annotations": annotation_timeline_db.id.hex},
                     "data": {"annotations": result[1]["annotations"].id}
                 }

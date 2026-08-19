@@ -735,6 +735,9 @@ onBeforeUnmount(() => {
   // Same reasoning as eventsStore.resetEventData() above, for the Transcript tab's demo
   // backdoor (see TranscriptDataMenu.vue).
   timelineSegmentAnnotationStore.resetDemoTranscript();
+  // And for which whisper run is selected (see ModalTranscriptSelect.vue) -- not a reusable
+  // global pick, just this video's.
+  timelineSegmentAnnotationStore.resetTranscriptSelection();
 });
 </script>
 

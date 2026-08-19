@@ -29,28 +29,6 @@
                     {{ $t("modal.plugin.whisper.plugin_name") }}
                   </v-btn>
                 </v-row>
-
-                <v-row style="justify-content: center; align-items: center" class="mt-4 mb-n2">
-                  <v-col cols="4" class="d-flex align-center">
-                    <v-divider />
-                  </v-col>
-                  <v-col cols="auto" class="text-grey px-2">{{
-                    $t("transcript_data.generate.or")
-                  }}</v-col>
-                  <v-col cols="4" class="d-flex align-center">
-                    <v-divider />
-                  </v-col>
-                </v-row>
-
-                <!-- Backdoor for testing the Transcript/Wordcloud tab without waiting on a
-                     real Whisper run -- same idea as EventDataMenu's demo button
-                     (eventsStore.loadDemoEventData), purely client-side (see
-                     timelineSegmentAnnotationStore.loadDemoTranscript). -->
-                <v-row style="justify-content: center" class="mt-1 mb-4">
-                  <v-btn data-tour="transcript-load-demo" @click="loadDemo">
-                    {{ $t("transcript_data.generate.demo") }}
-                  </v-btn>
-                </v-row>
               </v-sheet>
             </v-col>
           </v-row>
@@ -67,13 +45,23 @@
           />
         </template>
 
-        <!-- Unlike PositionDataMenu/EventDataMenu, there's no "select existing data" or
-             upload path here -- a video's transcript is always the single Whisper-generated
-             "Transcript" annotation category (see transcriptSegments in
-             timeline_segment_annotation.js), so a read-only viewer without canWrite just gets
-             told there's nothing yet instead of a dead-end action. -->
-        <v-row v-else style="justify-content: center" class="mt-10 mb-6">
-          <span class="text-grey">{{ $t("transcript_data.not_selected") }}</span>
+        <!-- Available regardless of canWrite, same as PositionDataMenu/EventDataMenu's own
+             Select -- a read-only viewer can still pick which of the video's whisper runs to
+             view. Unconditionally enabled (unlike PositionDataMenu's, which disables until
+             something exists) because ModalTranscriptSelect's own empty state offers the demo
+             transcript as a one-click way in, same reasoning as EventDataMenu's Select. Now
+             that whisper's advanced options (language, thresholds, ...) make re-running it a
+             real workflow, a video can have more than one whisper run -- see
+             transcriptSegments in timeline_segment_annotation.js for why the runs can't just
+             be merged the way EventDataMenu doesn't need to either. -->
+        <v-row style="justify-content: center" class="mt-10 mb-6">
+          <v-btn @click="showModalTranscriptSelect = true">
+            {{ $t("transcript_data.select") }}
+          </v-btn>
+          <ModalTranscriptSelect
+            v-if="showModalTranscriptSelect"
+            v-model="showModalTranscriptSelect"
+          />
         </v-row>
       </div>
     </v-col>
@@ -84,9 +72,9 @@
 import { ref, computed } from "vue";
 import { usePlayerStore } from "@/stores/player";
 import { useUserStore } from "@/stores/user";
-import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
 import { whisperParams } from "@/composables/usePluginParams";
 import ModalPluginRun from "@/components/app/app-bar/ModalPluginRun.vue";
+import ModalTranscriptSelect from "@/components/transcript/ModalTranscriptSelect.vue";
 
 const props = defineProps({
   // Shown as a heading while this box is up -- lets the user tell which (otherwise
@@ -99,7 +87,6 @@ const props = defineProps({
 
 const playerStore = usePlayerStore();
 const userStore = useUserStore();
-const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
 
 const canWrite = computed(() => {
   if (userStore.role === "admin") return true;
@@ -109,10 +96,7 @@ const canWrite = computed(() => {
 });
 
 const showWhisperModal = ref(false);
-
-const loadDemo = () => {
-  timelineSegmentAnnotationStore.loadDemoTranscript();
-};
+const showModalTranscriptSelect = ref(false);
 </script>
 
 <style scoped>

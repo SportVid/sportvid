@@ -6,6 +6,8 @@ import { useTimelineSegmentStore } from "@/stores/timeline_segment";
 import { useAnnotationCategoryStore } from "@/stores/annotation_category";
 import { useAnnotationStore } from "@/stores/annotation";
 import { usePlayerStore } from "@/stores/player";
+import { useTimelineStore } from "@/stores/timeline";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 
 // ~60s of mock dialogue for exercising the Transcript/Wordcloud tab without waiting on a
 // real Whisper run (see loadDemoTranscript below) -- same backdoor idea as
@@ -59,7 +61,11 @@ const DEMO_TRANSCRIPT_SEGMENTS = [
     end: 47000,
     text: "Die Zuschauer jubeln lautstark und feiern den Torschützen ausgiebig.",
   },
-  { start: 47500, end: 50000, text: "Der Ball liegt wieder im Anstoßkreis, das Spiel geht weiter." },
+  {
+    start: 47500,
+    end: 50000,
+    text: "Der Ball liegt wieder im Anstoßkreis, das Spiel geht weiter.",
+  },
   {
     start: 50500,
     end: 54000,
@@ -78,16 +84,33 @@ export const useTimelineSegmentAnnotationStore = defineStore("timelineSegmentAnn
   const isLoading = ref(false);
 
   // Backdoor for testing the Transcript/Wordcloud tab without a real Whisper run (see
-  // TranscriptDataMenu.vue's "demo transcript" button, the only place this is called from) --
-  // reset alongside the rest of the video-bound state in AnalysisView.vue's onBeforeUnmount
-  // (mirrors eventsStore.resetEventData), not on every store refetch, so it survives an
-  // unrelated plugin run finishing while it's being tested.
+  // ModalTranscriptSelect.vue's "demo transcript" button, its only caller) -- reset alongside
+  // the rest of the video-bound state in AnalysisView.vue's onBeforeUnmount (mirrors
+  // eventsStore.resetEventData), not on every store refetch, so it survives an unrelated
+  // plugin run finishing while it's being tested.
   const demoTranscriptActive = ref(false);
   const loadDemoTranscript = () => {
     demoTranscriptActive.value = true;
   };
   const resetDemoTranscript = () => {
     demoTranscriptActive.value = false;
+  };
+
+  // Which whisper run's segments count as "the" transcript. Whisper's advanced options
+  // (language, hallucination thresholds, ...) make re-running it on the same video a real
+  // workflow, and every run reuses the same shared "Transcript" AnnotationCategory (see
+  // backend tasks/whisper.py) purely for label bookkeeping -- so runs can't be told apart by
+  // category. They *can* be told apart by which Timeline their segments live on, since each
+  // run creates its own Timeline linked to a PluginRunResult (see plugin_run_result_id below).
+  // No auto-select on finish, same as PositionDataMenu's Object Tracker: the user always picks
+  // explicitly via ModalTranscriptSelect, which also covers the "which of several runs do I
+  // want" case a bare auto-pick can't.
+  const selectedTranscriptRunId = ref(null);
+  const selectTranscriptRun = (pluginRunId) => {
+    selectedTranscriptRunId.value = pluginRunId;
+  };
+  const resetTranscriptSelection = () => {
+    selectedTranscriptRunId.value = null;
   };
 
   const all = computed(() => Object.values(timelineSegmentAnnotations));
@@ -103,20 +126,36 @@ export const useTimelineSegmentAnnotationStore = defineStore("timelineSegmentAnn
       }));
     }
 
+    if (!selectedTranscriptRunId.value) return [];
+
     const annotationCategoryStore = useAnnotationCategoryStore();
     const segmentStore = useTimelineSegmentStore();
     const annotationStore = useAnnotationStore();
+    const pluginRunResultStore = usePluginRunResultStore();
+    const timelineStore = useTimelineStore();
+
+    // Timeline ids the selected whisper run produced -- see the plugin_run_result_db /
+    // Timeline linkage added in tasks/whisper.py.
+    const resultIds = new Set(
+      pluginRunResultStore.forPluginRun(selectedTranscriptRunId.value).map((r) => r.id)
+    );
+    const timelineIds = new Set(
+      timelineStore.all.filter((t) => resultIds.has(t.plugin_run_result_id)).map((t) => t.id)
+    );
+    if (timelineIds.size === 0) return [];
 
     return Object.values(timelineSegmentAnnotations)
       .map((segmentAnnotation, i) => {
         let segment = null;
         let start = 0;
         let end = 0;
+        let timelineId = null;
         if (segmentAnnotation.timeline_segment_id) {
           segment = segmentStore.get(segmentAnnotation.timeline_segment_id);
           if (segment) {
             start = segment.start;
             end = segment.end;
+            timelineId = segment.timeline_id;
           }
         }
 
@@ -132,9 +171,14 @@ export const useTimelineSegmentAnnotationStore = defineStore("timelineSegmentAnn
 
         let name = annotation ? annotation.name : "";
 
-        return { id: i + 1, category: cat, name, start, end };
+        return { id: i + 1, category: cat, name, start, end, timelineId };
       })
-      .filter((segment) => segment.category && segment.category.name === "Transcript")
+      .filter(
+        (segment) =>
+          segment.category &&
+          segment.category.name === "Transcript" &&
+          timelineIds.has(segment.timelineId)
+      )
       .sort((a, b) => a.start - b.start)
       .map((segment, i) => {
         segment.id = i + 1;
@@ -263,6 +307,9 @@ export const useTimelineSegmentAnnotationStore = defineStore("timelineSegmentAnn
     demoTranscriptActive,
     loadDemoTranscript,
     resetDemoTranscript,
+    selectedTranscriptRunId,
+    selectTranscriptRun,
+    resetTranscriptSelection,
     all,
     transcriptSegments,
     forTimelineSegment,
@@ -274,4 +321,16 @@ export const useTimelineSegmentAnnotationStore = defineStore("timelineSegmentAnn
     addToStore,
     updateStore,
   };
-});
+  },
+  {
+    // Same reasoning as events.js's own persist config: a reload of *this* video shouldn't
+    // dump you back on TranscriptDataMenu after you've already picked a run (or demo).
+    // sessionStorage (not localStorage) so it doesn't survive into an unrelated tab/session --
+    // AnalysisView.vue's onBeforeUnmount still clears both on leaving the video, since a
+    // reload and actually navigating away are different things.
+    persist: {
+      pick: ["selectedTranscriptRunId", "demoTranscriptActive"],
+      storage: sessionStorage,
+    },
+  }
+);
