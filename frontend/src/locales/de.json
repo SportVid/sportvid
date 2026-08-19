@@ -655,7 +655,7 @@
       },
       "object_tracker": {
         "plugin_name": "Objektverfolgung",
-        "plugin_description": "Dieses Plugin führt Multi-Object-Tracking (MOT) direkt auf dem Video durch. Es erkennt und verfolgt Spieler und den Ball Bild für Bild und erzeugt dabei Bounding-Boxen für jedes erkannte Objekt. Das für die zugrunde liegende Objekterkennung verwendete Detektor-Modell sowie dessen Parameter und die Tracker-Parameter lassen sich unter „Erweiterte Optionen“ frei konfigurieren.<br><br>Die Tracking-Ergebnisse können anschließend zusammen mit einer Kamerakalibrierung (DLT+RANSAC) verwendet werden, um reale Positionsdaten zu berechnen.",
+        "plugin_description": "Dieses Plugin führt Multi-Object-Tracking (MOT) direkt auf dem Video durch. Es erkennt und verfolgt Spieler und den Ball Bild für Bild und erzeugt dabei Bounding-Boxen für jedes erkannte Objekt. Das für die zugrunde liegende Objekterkennung verwendete Detektor-Modell sowie dessen Parameter und die Tracker-Parameter lassen sich frei konfigurieren.<br><br>Die Tracking-Ergebnisse können anschließend zusammen mit einer Kamerakalibrierung (DLT+RANSAC) verwendet werden, um reale Positionsdaten zu berechnen.",
         "timeline_name": "Objektverfolgung",
         "tracking_target": "Tracking-Ziel",
         "tracking_target_player": "Spieler",
@@ -683,7 +683,7 @@
       },
       "team_clustering": {
         "plugin_name": "Team-Zuordnung",
-        "plugin_description": "Dieses Plugin ordnet die in einem vorherigen Player-Tracking-Lauf erkannten Spieler-Tracks per Farb-Clustering (K-Means oder HDBSCAN) auf Basis von Trikotfarben Teams zu. Es benötigt keinen eigenen Tracker, sondern greift auf die Bounding-Boxen eines abgeschlossenen Objektverfolgung-Laufs zurück.<br><br>Die meisten Parameter sind unter „Erweiterte Optionen“ vorkonfiguriert und müssen in der Regel nicht angepasst werden.",
+        "plugin_description": "Dieses Plugin ordnet die in einem vorherigen Player-Tracking-Lauf erkannten Spieler-Tracks per Farb-Clustering (K-Means oder HDBSCAN) auf Basis von Trikotfarben Teams zu. Es benötigt keinen eigenen Tracker, sondern greift auf die Bounding-Boxen eines abgeschlossenen Objektverfolgung-Laufs zurück.",
         "timeline_name": "Team-Zuordnung",
         "object_tracker_id": "Objektverfolgung-Lauf auswählen",
         "object_tracker_id_hint": "Wähle einen abgeschlossenen Player-Tracking-Lauf (Objektverfolgung) dieses Videos aus.",
@@ -720,7 +720,7 @@
       },
       "osnet_reid": {
         "plugin_name": "Re-Identification (OSNet)",
-        "plugin_description": "Dieses Plugin führt Spieler-Tracks aus einem vorherigen Player-Tracking-Lauf über Track-ID-Wechsel hinweg (z. B. nach Verdeckungen oder wenn Spieler das Feld verlassen/wieder betreten) wieder zusammen. Dazu wird ein erscheinungsbasierter Feature-Extraktor (OSNet) zusammen mit einer Online-Gallerie von Identitäts-Prototypen genutzt. Es benötigt keinen eigenen Tracker, sondern greift auf die Bounding-Boxen eines abgeschlossenen Objektverfolgung-Laufs zurück.<br><br>Die meisten Parameter sind unter „Erweiterte Optionen“ vorkonfiguriert und müssen in der Regel nicht angepasst werden.",
+        "plugin_description": "Dieses Plugin führt Spieler-Tracks aus einem vorherigen Player-Tracking-Lauf über Track-ID-Wechsel hinweg (z. B. nach Verdeckungen oder wenn Spieler das Feld verlassen/wieder betreten) wieder zusammen. Dazu wird ein erscheinungsbasierter Feature-Extraktor (OSNet) zusammen mit einer Online-Gallerie von Identitäts-Prototypen genutzt. Es benötigt keinen eigenen Tracker, sondern greift auf die Bounding-Boxen eines abgeschlossenen Objektverfolgung-Laufs zurück.",
         "timeline_name": "Re-Identification",
         "object_tracker_id": "Objektverfolgung-Lauf auswählen",
         "object_tracker_id_hint": "Wähle einen abgeschlossenen Player-Tracking-Lauf (Objektverfolgung) dieses Videos aus.",

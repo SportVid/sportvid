@@ -7,6 +7,7 @@ import { useVideoStore } from "@/stores/video";
 import { useTopViewStore } from "@/stores/top_view";
 import { useTabStore } from "@/stores/tabs";
 import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
+import { useUserStore } from "@/stores/user";
 
 export const useTutorialStore = defineStore("tutorial", () => {
   const router = useRouter();
@@ -18,6 +19,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
   const topViewStore = useTopViewStore();
   const tabStore = useTabStore();
   const dashboardStore = useDashboardLayoutStore();
+  const userStore = useUserStore();
 
   const currentTutorialId = ref(null);
   const currentStepId = ref(null);
@@ -681,6 +683,9 @@ export const useTutorialStore = defineStore("tutorial", () => {
         },
         {
           id: "bytetrack-fps",
+          // fps is hidden (removed from the DOM, see Parameters.vue's simpleHidden filter) in
+          // simple experience mode, so this step's target never exists there -- skip it.
+          requiresComplexMode: true,
           text: t("tutorials.posdata_bytetrack.fps"),
           attachTo: {
             element: '[data-tour="bytetrack-fps"]',
@@ -841,6 +846,9 @@ export const useTutorialStore = defineStore("tutorial", () => {
         },
         {
           id: "kpi-advanced-options",
+          // The Advanced Options panel itself is v-if'd away in simple experience mode
+          // (ModalPluginRun.vue), so this step's target never exists there -- skip it.
+          requiresComplexMode: true,
           text: t("tutorials.kpi_computation.advanced_options"),
           attachTo: {
             element: '[data-tour="kpi-advanced-options"]',
@@ -1419,6 +1427,16 @@ export const useTutorialStore = defineStore("tutorial", () => {
     },
   };
 
+  // Drops steps flagged `requiresComplexMode` (e.g. ones targeting the Advanced Options
+  // panel or a field hidden via simpleHidden) while the user is in simple experience mode --
+  // their target elements don't exist in the DOM there, so showing them would leave the tour
+  // stuck. Use this instead of indexing tutorialSteps directly wherever steps are consumed.
+  function getTutorialSteps(id) {
+    const steps = tutorialSteps[id]?.steps || [];
+    if (userStore.experienceMode !== "simple") return steps;
+    return steps.filter((step) => !step.requiresComplexMode);
+  }
+
   const tutorialRequirements = {
     "video-uploaded": {
       id: "video-uploaded",
@@ -1554,6 +1572,7 @@ export const useTutorialStore = defineStore("tutorial", () => {
     tutorials,
     availableTutorials,
     tutorialSteps,
+    getTutorialSteps,
     modalPluginVisible,
     tutorialActivePluginId,
     tutorialPluginGroupOpen,
