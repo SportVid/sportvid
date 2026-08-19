@@ -90,6 +90,17 @@
               </div>
             </div>
           </div>
+
+          <div class="status-area mt-3 d-flex align-center" :class="`state-${transcriptState}`">
+            <v-icon :color="stateColor(transcriptState)" size="28" class="mr-5">
+              {{ stateIcon(transcriptState) }}
+              <v-tooltip activator="parent" location="top">{{
+                stateText(transcriptState, transcriptTypes)
+              }}</v-tooltip>
+            </v-icon>
+
+            <div class="font-weight-medium">{{ $t("modal.status.area.transcript") }}</div>
+          </div>
         </div>
 
         <v-divider class="mb-4" />
@@ -320,6 +331,7 @@ const {
   dltState,
   uploadState,
   kpiState,
+  transcriptState,
   posdataOverallState,
   posdataAvailable,
   maxProgress,
@@ -358,6 +370,7 @@ const stateText = (state, types = null) => {
 // state derivation lives in usePositionDataStatus now.
 const posdataAllTypes = ["bytetrack", "object_tracker", "calibration_static_dlt", "posdata_convert"];
 const kpiTypes = ["kpi_computation"];
+const transcriptTypes = ["whisper"];
 
 // Cheap call (no add_results) so tracker runs can be classified as player- vs.
 // object(ball)-tracking via their result name (see usePositionDataStatus's isBallTrackerRun).

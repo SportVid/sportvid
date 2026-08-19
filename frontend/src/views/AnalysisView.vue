@@ -732,6 +732,9 @@ onBeforeUnmount(() => {
   // would show that other video's dummy/uploaded events tagged onto this one instead of a
   // clean "no event data yet" state.
   eventsStore.resetEventData();
+  // Same reasoning as eventsStore.resetEventData() above, for the Transcript tab's demo
+  // backdoor (see TranscriptDataMenu.vue).
+  timelineSegmentAnnotationStore.resetDemoTranscript();
 });
 </script>
 

@@ -69,10 +69,16 @@ class Whisper(Task):
         if result is None:
             raise Exception
 
+        # Forwarded as-is (same as e.g. tasks/object_tracker.py) -- every UI-facing whisper
+        # parameter (see usePluginParams.js's whisperParams / ModalPlugin.vue's whisper
+        # entry) is meant for this analyser call. run_analyser drops None values (e.g.
+        # "language" left on auto-detect) before sending, so the inference_ray plugin falls
+        # back to its own default_parameters for anything not explicitly set here.
         result = self.run_analyser(
             client,
             "whisper",
             inputs={**result[0]},
+            parameters=parameters,
             downloads=["annotations"],
         )
         if result is None:

@@ -126,7 +126,8 @@
       "timeline": "Timeline",
       "events": "Ereignisse",
       "heatmap": "Heatmap",
-      "kpi": "Metriken"
+      "kpi": "Metriken",
+      "transcript": "Transkript"
     },
     "dashboard": {
       "edit_toggle": "Layout bearbeiten",
@@ -208,6 +209,14 @@
       "ref": "Schiris",
       "ball": "Ball",
       "rest": "Inaktiv"
+    }
+  },
+  "transcript_data": {
+    "not_selected": "Für dieses Video ist kein Transkript vorhanden.",
+    "generate": {
+      "heading": "Über Spracherkennung",
+      "or": "oder",
+      "demo": "Demo-Transkript verwenden"
     }
   },
   "event_data": {
@@ -379,6 +388,18 @@
         "centroid_distance": "Zentroiddistanz [m]",
         "centroid_distance_max": "Zentroiddist.<sub>max</sub> [m]"
       }
+    },
+    "transcript": {
+      "search": "Transkript durchsuchen",
+      "no_results": "Keine Transkript-Abschnitte entsprechen der Suche.",
+      "view_list": "Transkript",
+      "view_wordcloud": "Wortwolke"
+    },
+    "wordcloud": {
+      "stopwords_label": "Stoppwörter entfernen",
+      "stopwords_english": "Englisch",
+      "stopwords_german": "Deutsch",
+      "no_words": "Keine Wörter anzuzeigen – entferne ggf. eine Stoppwort-Sprache."
     }
   },
   "data": {
@@ -789,8 +810,19 @@
         "timeline_name": "RMS-Lautstärke"
       },
       "whisper": {
-        "plugin_name": "Spracherkennung (Whisper)",
-        "plugin_description": "Dieses Plugin nutzt <a href=\"https://openai.com/research/whisper\">OpenAI's Whisper-Modell</a>, um automatisch eine Transkription der gesprochenen Sprache im Video zu erstellen. Es unterstützt mehr als 100 Sprachen. Eine Liste der unterstützten Sprachen finden Sie <a href=\"https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages\">hier</a>. <br><br> Nach der Ausführung des Plugins finden Sie das Transkript im Tab \"Transcript\" und können darin nach Wörtern suchen."
+        "plugin_name": "Spracherkennung",
+        "plugin_description": "Dieses Plugin nutzt <a href=\"https://openai.com/research/whisper\">OpenAI's Whisper-Modell</a>, um automatisch eine Transkription der gesprochenen Sprache im Video zu erstellen. Es unterstützt mehr als 100 Sprachen. Eine Liste der unterstützten Sprachen finden Sie <a href=\"https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages\">hier</a>.",
+        "language": "Sprache",
+        "language_auto": "Automatisch erkennen",
+        "language_de": "Deutsch",
+        "language_en": "Englisch",
+        "condition_on_prev_tokens": "Auf vorherigen Text konditionieren",
+        "temperature_fallback": "Bei entartetem Ergebnis mit höherer Temperatur erneut versuchen",
+        "no_speech_threshold": "Schwellwert für \"keine Sprache\"",
+        "logprob_threshold": "Schwellwert für Log-Wahrscheinlichkeit",
+        "compression_ratio_threshold": "Schwellwert für Kompressionsverhältnis",
+        "no_repeat_ngram_size": "Wiederholung von Wortfolgen der Länge verbieten",
+        "repetition_penalty": "Wiederholungs-Strafe"
       },
       "audio_frequency": {
         "plugin_name": "Audio-Spektrogramm",
@@ -999,7 +1031,8 @@
       "title": "Status",
       "area": {
         "posdata": "Positionsdaten",
-        "kpi": "Metriken"
+        "kpi": "Metriken",
+        "transcript": "Transkript"
       },
       "source": {
         "player_tracking": "Spieler-Tracking",

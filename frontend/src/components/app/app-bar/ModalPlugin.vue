@@ -281,7 +281,82 @@ const plugins = ref([
         plugin: "whisper",
         id: 104,
         parameters: [],
-        optional_parameters: [],
+        optional_parameters: [
+          {
+            field: "select_options",
+            name: "language",
+            // null -> omitted from the submitted parameters (see submitPlugin/run_analyser's
+            // "if v is not None" filtering), which is what makes the backend fall back to
+            // auto-detect rather than sending an empty value.
+            value: null,
+            items: [
+              { title: t("modal.plugin.whisper.language_auto"), value: null },
+              { title: t("modal.plugin.whisper.language_de"), value: "de" },
+              { title: t("modal.plugin.whisper.language_en"), value: "en" },
+            ],
+            text: t("modal.plugin.whisper.language"),
+          },
+          // The rest are inference_ray's hallucination-guard defaults (see
+          // plugins/whisper.py's call()) made tunable -- see usePluginParams.js's
+          // whisperParams for the full reasoning, kept in sync with these.
+          {
+            field: "checkbox",
+            name: "condition_on_prev_tokens",
+            value: false,
+            text: t("modal.plugin.whisper.condition_on_prev_tokens"),
+          },
+          {
+            field: "checkbox",
+            name: "temperature_fallback",
+            value: true,
+            text: t("modal.plugin.whisper.temperature_fallback"),
+          },
+          {
+            field: "slider",
+            name: "no_speech_threshold",
+            min: 0,
+            max: 1,
+            step: 0.05,
+            value: 0.6,
+            text: t("modal.plugin.whisper.no_speech_threshold"),
+          },
+          {
+            field: "slider",
+            name: "logprob_threshold",
+            min: -3,
+            max: 0,
+            step: 0.1,
+            value: -1.0,
+            text: t("modal.plugin.whisper.logprob_threshold"),
+          },
+          {
+            field: "slider",
+            name: "compression_ratio_threshold",
+            min: 1,
+            max: 4,
+            step: 0.1,
+            value: 2.4,
+            text: t("modal.plugin.whisper.compression_ratio_threshold"),
+          },
+          {
+            field: "slider",
+            name: "no_repeat_ngram_size",
+            min: 0,
+            max: 5,
+            step: 1,
+            value: 3,
+            text: t("modal.plugin.whisper.no_repeat_ngram_size"),
+          },
+          {
+            field: "slider",
+            name: "repetition_penalty",
+            min: 1,
+            max: 2,
+            step: 0.05,
+            value: 1.3,
+            text: t("modal.plugin.whisper.repetition_penalty"),
+          },
+        ],
       },
     ],
   },

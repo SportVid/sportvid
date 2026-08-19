@@ -607,6 +607,7 @@ const POSDATA_TRACKER_TYPES = ["bytetrack", "object_tracker"];
 const POSDATA_DLT_TYPES = ["calibration_static_dlt"];
 const POSDATA_UPLOAD_TYPES = ["posdata_convert"];
 const METRICS_TYPES = ["kpi_computation"];
+const TRANSCRIPT_TYPES = ["whisper"];
 
 const deriveRunState = (runs, types) => {
   const filtered = runs.filter((r) => types.includes(r.type));
@@ -657,6 +658,14 @@ const metricsStates = computed(() => {
   return map;
 });
 
+const transcriptStates = computed(() => {
+  const map = {};
+  videos.value.forEach((item) => {
+    map[item.id] = deriveRunState(pluginRunStore.forVideo(item.id), TRANSCRIPT_TYPES);
+  });
+  return map;
+});
+
 // Grouped under one "Daten:" row as a row of small status icons (see template) instead of one
 // row per category -- keeps the card a fixed height as more categories (e.g. events) join later.
 const videoDataCategories = computed(() => {
@@ -669,6 +678,11 @@ const videoDataCategories = computed(() => {
         state: posdataStates.value[item.id],
       },
       { key: "metrics", label: t("modal.status.area.kpi"), state: metricsStates.value[item.id] },
+      {
+        key: "transcript",
+        label: t("modal.status.area.transcript"),
+        state: transcriptStates.value[item.id],
+      },
     ];
   });
   return map;

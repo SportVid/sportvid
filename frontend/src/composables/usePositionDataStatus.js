@@ -12,6 +12,7 @@ const TRACKER_TYPES = ["bytetrack", "object_tracker"];
 const DLT_TYPES = ["calibration_static_dlt"];
 const UPLOAD_TYPES = ["posdata_convert"];
 const KPI_TYPES = ["kpi_computation"];
+const TRANSCRIPT_TYPES = ["whisper"];
 
 export function usePositionDataStatus() {
   const playerStore = usePlayerStore();
@@ -75,6 +76,7 @@ export function usePositionDataStatus() {
   const dltState = computed(() => deriveState(DLT_TYPES));
   const uploadState = computed(() => deriveState(UPLOAD_TYPES));
   const kpiState = computed(() => deriveState(KPI_TYPES));
+  const transcriptState = computed(() => deriveState(TRANSCRIPT_TYPES));
 
   // Ball tracking (object tracking) is optional: position data only requires player
   // tracking + DLT calibration to count as available.
@@ -101,6 +103,7 @@ export function usePositionDataStatus() {
     dltState,
     uploadState,
     kpiState,
+    transcriptState,
     posdataOverallState,
     posdataAvailable,
     maxProgress,

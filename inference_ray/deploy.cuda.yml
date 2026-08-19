@@ -69,6 +69,50 @@ applications:
           env_vars:
             PYTHONPATH: "/app:/app/inference_ray/third_party/ByteTrack"
 
+  # ---------- AUDIO / TRANSCRIPT (whisper, GPU optional)
+  - name: video_to_audio
+    route_prefix: /video_to_audio
+    import_path: inference_ray.main:app_builder
+    args:
+      model: video_to_audio
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0
+
+  - name: whisper
+    route_prefix: /whisper
+    import_path: inference_ray.main:app_builder
+    args:
+      model: whisper
+      data_path: /data
+      # whisper-base hallucinates badly on non-studio audio (crowd noise, a whistle, a shout
+      # from far off mic) -- whisper-medium is a large quality step up for that, and with a
+      # GPU available here the extra cost is easily worth it. Bump to large-v3 for even
+      # better quality if the runtime is still acceptable.
+      params:
+        model: openai/whisper-medium
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
+        ray_actor_options:
+          # num_cpus: 1.0
+          num_gpus: 0.5
+
   # ---------- CRITICAL (GPU required)
   - name: bytetrack
     route_prefix: /bytetrack

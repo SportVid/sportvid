@@ -566,7 +566,7 @@ const drawAnnotationTimeline = (timeline, width, height) => {
   segments.forEach((s) => {
     let annotations = timelineSegmentAnnotationStore.forTimelineSegment(s.id);
     annotations.forEach((a) => {
-      a.annotation = annotationStore.get(a.annotation_id);
+      a.annotation = annotationStore.getAnnotation(a.annotation_id);
     });
     annotations.forEach((a) => {
       a.category = annotationCategoryStore.get(a.category_id);

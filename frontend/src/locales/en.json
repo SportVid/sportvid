@@ -132,7 +132,8 @@
       "timeline": "Timeline",
       "events": "Events",
       "heatmap": "Heatmap",
-      "kpi": "Metrics"
+      "kpi": "Metrics",
+      "transcript": "Transcript"
     },
     "dashboard": {
       "edit_toggle": "Edit Layout",
@@ -263,6 +264,14 @@
       "ref": "Referees",
       "ball": "Balls",
       "rest": "Rest"
+    }
+  },
+  "transcript_data": {
+    "not_selected": "No transcript available for this video.",
+    "generate": {
+      "heading": "Via speech recognition",
+      "or": "or",
+      "demo": "Use demo transcript"
     }
   },
   "event_data": {
@@ -438,6 +447,18 @@
         "centroid_distance": "Centroid Distance [m]",
         "centroid_distance_max": "Centroid Dist.<sub>max</sub> [m]"
       }
+    },
+    "transcript": {
+      "search": "Search transcript",
+      "no_results": "No transcript segments match your search.",
+      "view_list": "Transcript",
+      "view_wordcloud": "Word Cloud"
+    },
+    "wordcloud": {
+      "stopwords_label": "Remove stopwords",
+      "stopwords_english": "English",
+      "stopwords_german": "German",
+      "no_words": "No words to display — try removing fewer stopword languages."
     }
   },
   "timelineSegment": {
@@ -931,8 +952,19 @@
         "timeline_name": "RMS Volume"
       },
       "whisper": {
-        "plugin_name": "Speech Recognition (Whisper)",
-        "plugin_description": "This plugin uses <a href=\"https://openai.com/research/whisper\">OpenAI's Whisper model</a> to automatically provide a transcription of the spoken language in the video. It supports more than 100 languages. A list of supported languages can be found <a href=\"https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages\">here</a>. <br><br> After performing the plugin, the transcript can be found in the tab \"Transcript\" and you can search for words within it."
+        "plugin_name": "Speech Recognition",
+        "plugin_description": "This plugin uses <a href=\"https://openai.com/research/whisper\">OpenAI's Whisper model</a> to automatically provide a transcription of the spoken language in the video. It supports more than 100 languages. A list of supported languages can be found <a href=\"https://github.com/openai/whisper?tab=readme-ov-file#available-models-and-languages\">here</a>.",
+        "language": "Language",
+        "language_auto": "Auto-detect",
+        "language_de": "German",
+        "language_en": "English",
+        "condition_on_prev_tokens": "Condition on previous text",
+        "temperature_fallback": "Retry degenerate output at higher temperature",
+        "no_speech_threshold": "No-speech threshold",
+        "logprob_threshold": "Log-probability threshold",
+        "compression_ratio_threshold": "Compression ratio threshold",
+        "no_repeat_ngram_size": "Forbid repeating word sequences of length",
+        "repetition_penalty": "Repetition penalty"
       },
       "audio_frequency": {
         "plugin_name": "Audio Spectrogram",
@@ -1137,7 +1169,8 @@
       "title": "Status",
       "area": {
         "posdata": "Position data",
-        "kpi": "Metrics"
+        "kpi": "Metrics",
+        "transcript": "Transcript"
       },
       "source": {
         "player_tracking": "Player Tracking",

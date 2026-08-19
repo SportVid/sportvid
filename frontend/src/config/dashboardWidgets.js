@@ -4,6 +4,7 @@ import TabWindowTimeline from "@/components/analysis-view/cards/tab-window/TabWi
 import TabWindowEvents from "@/components/analysis-view/cards/tab-window/TabWindowEvents.vue";
 import TabWindowHeatmap from "@/components/analysis-view/cards/tab-window/TabWindowHeatmap.vue";
 import TabWindowKPI from "@/components/analysis-view/cards/tab-window/TabWindowKPI.vue";
+import TabWindowTranscript from "@/components/analysis-view/cards/tab-window/TabWindowTranscript.vue";
 
 // Central registry of all dashboard widgets. Replaces the old
 // getVisualizationTabComponent switch — the DashboardGrid/DashboardCell
@@ -56,6 +57,17 @@ export const dashboardWidgets = {
     permanent: false,
     taggable: true,
     icon: "mdi-speedometer",
+  },
+  // Covers both the live transcript list and the wordcloud -- same underlying data (see
+  // transcriptSegments), just two read modes switched inline via TabWindowTranscript.vue's
+  // own view toggle, rather than two separate cards for the same topic.
+  transcript: {
+    component: TabWindowTranscript,
+    labelKey: "analysis_view.visualization_tabs.transcript",
+    solo: false,
+    permanent: false,
+    taggable: true,
+    icon: "mdi-closed-caption-outline",
   },
 };
 

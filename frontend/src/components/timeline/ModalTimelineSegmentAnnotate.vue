@@ -208,7 +208,7 @@ export default {
         annotations = timelineSegments
           .map((s) => {
             return this.timelineSegmentAnnotationStore.forTimelineSegment(s.id).map((a) => {
-              const annotation = this.annotationStore.get(a.annotation_id);
+              const annotation = this.annotationStore.getAnnotation(a.annotation_id);
               let category = null;
               if ("category_id" in annotation) {
                 category = this.annotationCategoryStore.get(annotation.category_id);
@@ -226,7 +226,7 @@ export default {
         annotations = this.timelineSegments
           .map((s) => {
             return this.timelineSegmentAnnotationStore.forTimelineSegment(s.id).map((a) => {
-              const annotation = this.annotationStore.get(a.annotation_id);
+              const annotation = this.annotationStore.getAnnotation(a.annotation_id);
               let category = null;
               if ("category_id" in annotation) {
                 category = this.annotationCategoryStore.get(annotation.category_id);

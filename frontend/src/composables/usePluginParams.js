@@ -1095,6 +1095,101 @@ export function kpiComputationParams() {
   return { parameters, optionalParameters };
 }
 
+// Whisper (speech recognition/transcript). Auto-detect is the sensible default for most
+// videos -- forcing a language would silently mis-transcribe anything that isn't it -- but
+// commentary that's mostly one language with foreign terms mixed in (e.g. German with
+// English loanwords) is exactly the case where auto-detect can get confused, especially
+// early on if the video opens with a whistle/crowd noise rather than clean speech. So this
+// stays an advanced ("complex" experience mode) override, off (auto) by default.
+export function whisperParams() {
+  const { t } = useI18n();
+
+  const parameters = ref([]);
+  const optionalParameters = ref([
+    {
+      field: "select_options",
+      name: "language",
+      // null -> omitted from the submitted parameters entirely (see submitPlugin/
+      // run_analyser's `if v is not None` filtering), which is what makes the backend fall
+      // back to the plugin's own default (auto-detect) rather than sending an empty value
+      // Whisper would have to special-case.
+      value: null,
+      items: [
+        { title: t("modal.plugin.whisper.language_auto"), value: null },
+        { title: t("modal.plugin.whisper.language_de"), value: "de" },
+        { title: t("modal.plugin.whisper.language_en"), value: "en" },
+      ],
+      text: t("modal.plugin.whisper.language"),
+    },
+    // The rest are inference_ray's hallucination-guard defaults (see plugins/whisper.py's
+    // call()) made tunable -- a chunk with noisy/hard audio (crowd noise, a whistle, a shout
+    // off mic) can still come out garbled even with the defaults on, and these are exactly
+    // the knobs the openai-whisper CLI itself exposes for that.
+    {
+      field: "checkbox",
+      name: "condition_on_prev_tokens",
+      value: false,
+      text: t("modal.plugin.whisper.condition_on_prev_tokens"),
+    },
+    {
+      field: "checkbox",
+      name: "temperature_fallback",
+      value: true,
+      text: t("modal.plugin.whisper.temperature_fallback"),
+    },
+    {
+      field: "slider",
+      name: "no_speech_threshold",
+      min: 0,
+      max: 1,
+      step: 0.05,
+      value: 0.6,
+      text: t("modal.plugin.whisper.no_speech_threshold"),
+    },
+    {
+      field: "slider",
+      name: "logprob_threshold",
+      min: -3,
+      max: 0,
+      step: 0.1,
+      value: -1.0,
+      text: t("modal.plugin.whisper.logprob_threshold"),
+    },
+    {
+      field: "slider",
+      name: "compression_ratio_threshold",
+      min: 1,
+      max: 4,
+      step: 0.1,
+      value: 2.4,
+      text: t("modal.plugin.whisper.compression_ratio_threshold"),
+    },
+    // Generic (non-Whisper-specific) anti-repetition knobs -- see plugins/whisper.py's
+    // default_parameters comment. Most directly useful against a single phrase repeating
+    // over and over, which the thresholds above don't catch on their own.
+    {
+      field: "slider",
+      name: "no_repeat_ngram_size",
+      min: 0,
+      max: 5,
+      step: 1,
+      value: 3,
+      text: t("modal.plugin.whisper.no_repeat_ngram_size"),
+    },
+    {
+      field: "slider",
+      name: "repetition_penalty",
+      min: 1,
+      max: 2,
+      step: 0.05,
+      value: 1.3,
+      text: t("modal.plugin.whisper.repetition_penalty"),
+    },
+  ]);
+
+  return { parameters, optionalParameters };
+}
+
 export function submitPlugin(plugin, parameters, videoId) {
   const pluginRunStore = usePluginRunStore();
   parameters = [...parameters];
