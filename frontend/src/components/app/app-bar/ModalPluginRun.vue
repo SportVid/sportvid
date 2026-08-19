@@ -20,7 +20,11 @@
         />
 
         <v-expansion-panels
-          v-if="optionalParameters && optionalParameters.length > 0"
+          v-if="
+            optionalParameters &&
+            optionalParameters.length > 0 &&
+            userStore.experienceMode !== 'simple'
+          "
           class="mt-4"
           data-tour="kpi-advanced-options"
         >
@@ -51,11 +55,13 @@
 <script setup>
 import { ref, watch } from "vue";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import { useUserStore } from "@/stores/user";
 import { submitPlugin } from "@/composables/usePluginParams";
 import Parameters from "./Parameters.vue";
 import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 
 const calibrationAssetStore = useCalibrationAssetStore();
+const userStore = useUserStore();
 
 const props = defineProps({
   modelValue: {

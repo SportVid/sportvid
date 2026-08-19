@@ -45,6 +45,10 @@ class SportVidUser(AbstractUser):
     max_file_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB
     dashboard_layout = models.JSONField(default=dict, blank=True)
     video_view_mode = models.CharField(max_length=16, default="grid", blank=True)
+    # "simple" | "complex" -- controls how many parameters ModalPluginRun.vue exposes per
+    # plugin (see usePluginParams.js). Defaults to "complex" so nothing changes for accounts
+    # that predate this field; chosen explicitly at registration or switched later in settings.
+    experience_mode = models.CharField(max_length=16, default="complex", blank=True)
     objects = SportVidUserManager()
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
@@ -59,7 +63,8 @@ class SportVidUser(AbstractUser):
             "max_file_size": self.max_file_size,
             "date_joined": self.date_joined,
             "dashboard_layout": self.dashboard_layout,
-            "video_view_mode": self.video_view_mode
+            "video_view_mode": self.video_view_mode,
+            "experience_mode": self.experience_mode
         }
 
     def __str__(self):

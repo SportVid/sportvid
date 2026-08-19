@@ -25,6 +25,7 @@ export const useUserStore = defineStore(
     const isReady = ref(false);
     const dashboardLayout = ref(null);
     const videoViewMode = ref(null);
+    const experienceMode = ref(null);
 
     function clearUserState() {
       userId.value = null;
@@ -39,6 +40,7 @@ export const useUserStore = defineStore(
       loggedIn.value = false;
       dashboardLayout.value = null;
       videoViewMode.value = null;
+      experienceMode.value = null;
     }
 
     function getCookie(name) {
@@ -95,6 +97,7 @@ export const useUserStore = defineStore(
           dateJoined.value = res.data.data.date_joined || null;
           dashboardLayout.value = res.data.data.dashboard_layout || null;
           videoViewMode.value = res.data.data.video_view_mode || null;
+          experienceMode.value = res.data.data.experience_mode || "complex";
           loggedIn.value = true;
         } else {
           clearUserState();
@@ -127,6 +130,7 @@ export const useUserStore = defineStore(
           dateJoined.value = res.data.data.date_joined || null;
           dashboardLayout.value = res.data.data.dashboard_layout || null;
           videoViewMode.value = res.data.data.video_view_mode || null;
+          experienceMode.value = res.data.data.experience_mode || "complex";
           loggedIn.value = true;
           return res.data;
         }
@@ -221,6 +225,20 @@ export const useUserStore = defineStore(
       }
     }
 
+    async function saveExperienceMode(mode) {
+      experienceMode.value = mode;
+
+      try {
+        const res = await axios.post(`${config.API_LOCATION}/user/update`, {
+          params: { update_type: "experience_mode", experience_mode: mode },
+        });
+        return res.data || { status: "error", message: "Invalid message." };
+      } catch (error) {
+        console.error("Error saving experience mode:", error);
+        return { status: "error" };
+      }
+    }
+
     async function deleteUser(params) {
       if (isLoading.value) return;
 
@@ -260,6 +278,7 @@ export const useUserStore = defineStore(
       csrfToken,
       dashboardLayout,
       videoViewMode,
+      experienceMode,
       getCSRFToken,
       getUserData,
       login,
@@ -268,6 +287,7 @@ export const useUserStore = defineStore(
       updateUser,
       saveDashboardLayout,
       saveVideoViewMode,
+      saveExperienceMode,
       deleteUser,
       showModalSettings,
       openSettings,

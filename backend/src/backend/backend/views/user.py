@@ -70,7 +70,8 @@ class UserGet(View):
                         "max_file_size": user.max_file_size,
                         "date_joined": user.date_joined,
                         "dashboard_layout": user.dashboard_layout,
-                        "video_view_mode": user.video_view_mode
+                        "video_view_mode": user.video_view_mode,
+                        "experience_mode": user.experience_mode
                     },
                 }
             )
@@ -123,7 +124,8 @@ def login(request):
                     "max_file_size": user.max_file_size,
                     "date_joined": user.date_joined,
                     "dashboard_layout": user.dashboard_layout,
-                    "video_view_mode": user.video_view_mode
+                    "video_view_mode": user.video_view_mode,
+                    "experience_mode": user.experience_mode
                 },
             }
         )
@@ -168,8 +170,14 @@ def register(request):
         logger.warning("User already exists. Abort.")
         return JsonResponse({"status": "error", "message": "User already exists"})
 
+    experience_mode = data["params"].get("experience_mode", "complex")
+    if experience_mode not in ("simple", "complex"):
+        experience_mode = "complex"
+
     # TODO: add email register here
     user = auth.get_user_model().objects.create_user(username, email, password)
+    user.experience_mode = experience_mode
+    user.save()
     user = auth.authenticate(username=username, password=password)
     logger.info('New user registered')
 
@@ -255,6 +263,17 @@ def user_update(request):
                     return JsonResponse({"status": "error", "message": "Invalid video view mode"})
 
                 user.video_view_mode = video_view_mode
+                user.save()
+
+                return JsonResponse({"status": "ok"})
+
+            elif update_type == "experience_mode":
+                user = request.user
+                experience_mode = params.get("experience_mode")
+                if experience_mode not in ("simple", "complex"):
+                    return JsonResponse({"status": "error", "message": "Invalid experience mode"})
+
+                user.experience_mode = experience_mode
                 user.save()
 
                 return JsonResponse({"status": "ok"})

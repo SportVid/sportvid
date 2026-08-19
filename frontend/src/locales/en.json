@@ -53,6 +53,13 @@
         "max": "Max. 50 characters."
       }
     },
+    "experience_mode": {
+      "heading": "How do you want to use plugins?",
+      "simple_label": "Simple",
+      "complex_label": "Complex",
+      "simple_sentence": "I just want to get started without worrying about technical details. Show me only what's essential.",
+      "complex_sentence": "I know my way around machine learning / computer vision and want full control over every parameter."
+    },
     "delete": {}
   },
   "button": {
@@ -575,7 +582,10 @@
       "password_min": "New password must be at least {min} characters",
       "password_invalid": "Password does not meet the requirements",
       "no_changes": "No changes to save",
-      "update_failed": "Update failed"
+      "update_failed": "Update failed",
+      "experience_mode": {
+        "title": "Experience mode"
+      }
     },
     "delete_account": {
       "title": "Delete Account",
@@ -810,7 +820,7 @@
       },
       "team_clustering": {
         "plugin_name": "Team Assignment",
-        "plugin_description": "This plugin assigns the player tracks from a previous player-tracking run to teams via color clustering (K-Means or HDBSCAN) based on jersey colors. It doesn't run its own tracker but reuses the bounding boxes of a completed Object Tracking run.<br><br>Most parameters are pre-configured under 'Advanced Options' and usually don't need to be adjusted.",
+        "plugin_description": "This plugin assigns the player tracks from a previous player-tracking run to teams via color clustering (K-Means or HDBSCAN) based on jersey colors. It doesn't run its own tracker but reuses the bounding boxes of a completed Object Tracking run.",
         "timeline_name": "Team Assignment",
         "object_tracker_id": "Select Object Tracking Run",
         "object_tracker_id_hint": "Select a completed player-tracking (Object Tracking) run for this video.",
@@ -847,7 +857,7 @@
       },
       "osnet_reid": {
         "plugin_name": "Re-Identification (OSNet)",
-        "plugin_description": "This plugin re-identifies player tracks from a previous player-tracking run across track-ID switches (e.g. after occlusions or players leaving/re-entering the field), using an appearance-based feature extractor (OSNet) and an online gallery of identity prototypes. It doesn't run its own tracker but reuses the bounding boxes of a completed Object Tracking run.<br><br>Most parameters are pre-configured under 'Advanced Options' and usually don't need to be adjusted.",
+        "plugin_description": "This plugin re-identifies player tracks from a previous player-tracking run across track-ID switches (e.g. after occlusions or players leaving/re-entering the field), using an appearance-based feature extractor (OSNet) and an online gallery of identity prototypes. It doesn't run its own tracker but reuses the bounding boxes of a completed Object Tracking run.",
         "timeline_name": "Re-Identification",
         "object_tracker_id": "Select Object Tracking Run",
         "object_tracker_id_hint": "Select a completed player-tracking (Object Tracking) run for this video.",

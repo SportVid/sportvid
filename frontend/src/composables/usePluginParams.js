@@ -3,6 +3,31 @@ import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { usePositionDataStore } from "@/stores/position_data";
 import { usePluginRunStore } from "@/stores/plugin_run";
+import { useUserStore } from "@/stores/user";
+
+// Hides the given (always-required-until-now) parameter names from the UI in "simple"
+// experience mode, showing them all again in "complex" mode -- their current values (the
+// existing defaults) are left untouched either way. Uses a dedicated `simpleHidden` flag
+// rather than the existing `hidden` -- `hidden` also drops a parameter from submission
+// entirely (see submitPlugin below), which is only safe for genuinely inapplicable fields
+// (e.g. a detector-specific param for a different detector). These fields are still
+// required by the backend, just defaulted instead of user-editable, so they must keep being
+// submitted with whatever value they currently hold. Shared by objectTrackerParams/
+// teamClusteringParams/osnetReidParams below; kpi_computation and calibration_static_dlt are
+// already minimal enough not to need this.
+function hideInSimpleMode(parameters, names) {
+  const userStore = useUserStore();
+  watch(
+    () => userStore.experienceMode,
+    (mode) => {
+      const hide = mode === "simple";
+      for (const p of parameters.value) {
+        if (names.includes(p.name)) p.simpleHidden = hide;
+      }
+    },
+    { immediate: true }
+  );
+}
 
 // object_tracker replaces bytetrack as the generic detector+tracker plugin —
 // it additionally lets the user pick a tracking_target (player vs. ball),
@@ -356,6 +381,11 @@ export function objectTrackerParams() {
           detectorParam.value = "yolo11";
           return;
         }
+        // `hidden` (unlike simpleHidden below) also drops the field from submission
+        // (see submitPlugin) -- for "tracker" that's the actual signal the backend uses to
+        // tell ball- from player-tracking runs apart (object_tracker.py:
+        // `"bboxes" if parameters.get("tracker") else "bboxes_ball"`), so this must stay
+        // driven by tracking_target alone and never by experience mode.
         if (trackerParam) trackerParam.hidden = true;
         for (const p of trackerParamFields) p.hidden = true;
 
@@ -378,6 +408,8 @@ export function objectTrackerParams() {
     },
     { immediate: true }
   );
+
+  hideInSimpleMode(parameters, ["fps", "detector", "tracker"]);
 
   return { parameters, optionalParameters };
 }
@@ -682,6 +714,8 @@ export function teamClusteringParams() {
     { immediate: true }
   );
 
+  hideInSimpleMode(parameters, ["clustering_algo", "K"]);
+
   return { parameters, optionalParameters };
 }
 
@@ -898,6 +932,8 @@ export function osnetReidParams() {
     },
     { immediate: true }
   );
+
+  hideInSimpleMode(parameters, ["gallery_mode", "model_name"]);
 
   return { parameters, optionalParameters };
 }

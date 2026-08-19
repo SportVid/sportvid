@@ -45,6 +45,13 @@
         "min": "Mindestens 5 Zeichen.",
         "max": "Maximal 50 Zeichen."
       }
+    },
+    "experience_mode": {
+      "heading": "Wie möchten Sie Plugins nutzen?",
+      "simple_label": "Einfach",
+      "complex_label": "Komplex",
+      "simple_sentence": "Ich möchte einfach loslegen, ohne mich mit technischen Details zu beschäftigen — zeig mir nur das Nötigste.",
+      "complex_sentence": "Ich kenne mich mit Machine Learning / Computer Vision aus und möchte jeden Parameter selbst einstellen können."
     }
   },
   "button": {
@@ -497,7 +504,10 @@
       "update_failed": "Aktualisierung fehlgeschlagen",
       "theme": "Design",
       "theme_light": "Hell",
-      "theme_dark": "Dunkel"
+      "theme_dark": "Dunkel",
+      "experience_mode": {
+        "title": "Nutzungsmodus"
+      }
     },
     "export": {
       "title": "Ergebnisse exportieren",
