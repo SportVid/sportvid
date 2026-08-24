@@ -251,7 +251,15 @@ class KpiComputation(
                             x_m = pos_x_norm * field_length - field_length / 2.0
                             y_m = (1.0 - pos_y_norm) * field_width - field_width / 2.0
 
-                        col = player_col_idx[p_id]
+                        # A player's per-frame team id can occasionally differ from their
+                        # "home" team (the first non-skip team id they were ever seen with,
+                        # see player_team_map above) -- e.g. transient team_clustering noise.
+                        # player_col_idx only has columns for tid's home-team players, so
+                        # such a frame is simply dropped (stays NaN) rather than crashing on
+                        # a KeyError for a player who isn't a home-team member here.
+                        col = player_col_idx.get(p_id)
+                        if col is None:
+                            continue
                         xy_arr[fi, 2 * col] = x_m
                         xy_arr[fi, 2 * col + 1] = y_m
 

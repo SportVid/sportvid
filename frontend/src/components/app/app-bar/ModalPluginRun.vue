@@ -54,13 +54,12 @@
 
 <script setup>
 import { ref, watch } from "vue";
-import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useUserStore } from "@/stores/user";
 import { submitPlugin } from "@/composables/usePluginParams";
+import { useCalibrationCreateFlow } from "@/composables/useCalibrationCreateFlow";
 import Parameters from "./Parameters.vue";
 import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 
-const calibrationAssetStore = useCalibrationAssetStore();
 const userStore = useUserStore();
 
 const props = defineProps({
@@ -99,20 +98,8 @@ watch(
 
 const { parameters, optionalParameters } = props.paramsFactory();
 
-const showCalibrationCreate = ref(false);
-const onCreateCalibration = () => {
-  showCalibrationCreate.value = true;
-};
-const onSelectCalibration = () => {
-  dialog.value = false;
-  calibrationAssetStore.calibrationMode = true;
-};
-watch(showCalibrationCreate, (newVal, oldVal) => {
-  if (oldVal && !newVal && calibrationAssetStore.calibrationAssetObjects.length > 0) {
-    dialog.value = false;
-    calibrationAssetStore.calibrationMode = true;
-  }
-});
+const { showCalibrationCreate, onCreateCalibration, onSelectCalibration } =
+  useCalibrationCreateFlow(dialog);
 
 const run = () => {
   const allParams = [...parameters.value, ...optionalParameters.value];

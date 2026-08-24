@@ -5,7 +5,7 @@ from backend.plugin_manager import PluginManager
 class KPIComputationSerializer(serializers.Serializer):
     # Which of these is required depends on `format` -- see validate() below.
     tracking_data_id = serializers.UUIDField(required=False, allow_null=True)
-    bytetrack_run_id = serializers.UUIDField(required=False, allow_null=True)
+    object_tracker_run_id = serializers.UUIDField(required=False, allow_null=True)
     calibration_id = serializers.UUIDField(required=False, allow_null=True)
 
     format = serializers.ChoiceField(
@@ -42,9 +42,9 @@ class KPIComputationSerializer(serializers.Serializer):
     def validate(self, attrs):
         fmt = attrs.get("format")
         if fmt == "sportvid":
-            if not attrs.get("bytetrack_run_id"):
+            if not attrs.get("object_tracker_run_id"):
                 raise serializers.ValidationError({
-                    "bytetrack_run_id": ["This field is required when format is 'sportvid'."]
+                    "object_tracker_run_id": ["This field is required when format is 'sportvid'."]
                 })
             if not attrs.get("calibration_id"):
                 raise serializers.ValidationError({

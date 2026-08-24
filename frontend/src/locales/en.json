@@ -81,6 +81,7 @@
     "import": "Import",
     "run_batch_plugin": "Run Batch Plugin",
     "run_plugin": "Run Plugin",
+    "run_plugins": "Run Plugins",
     "delete_plugin_runs": "Delete all plugin runs",
     "upload_video": "Upload new Video",
     "settings": "Settings",
@@ -219,7 +220,13 @@
       "dlt": "DLT calibration",
       "team_assignment": "Team Assignment",
       "re_identification": "Re-Identification",
-      "upload_heading": "Via file upload"
+      "upload_heading": "Via file upload",
+      "create": "Create Position Data",
+      "create_description": "Generates position data for this video: pick a calibration asset and track the players. Ball tracking, team assignment and re-identification are optional, but enabling all of them is recommended for the best results.",
+      "player_tracking": "Player Tracking",
+      "ball_tracking": "Ball Tracking",
+      "new_run": "New run",
+      "waits_for_player_tracking": "Starts automatically once Player Tracking has finished."
     },
     "display_settings": {
       "title": "Display Settings",
@@ -354,7 +361,7 @@
     "kpi": {
       "posdata_not_available": "No position data available yet.<br>Generate it first in the TopView or Heatmap tab.",
       "no_kpi_computed": "No metrics computed.",
-      "compute_kpis": "Compute Metrics",
+      "compute_kpis": "Create KPIs",
       "select_kpis": "Select metric data",
       "view_mode": {
         "title": "Select View",

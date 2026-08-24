@@ -61,6 +61,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
       if (res.data.status === "ok") {
         state.pluginInProgress = true;
       }
+      return res.data;
     } finally {
       state.isLoading = false;
     }

@@ -72,6 +72,7 @@
     "save": "Speichern",
     "run_batch_plugin": "Batch-Plugin ausführen",
     "run_plugin": "Plugin ausführen",
+    "run_plugins": "Plugins ausführen",
     "upload_video": "Neues Video hochladen",
     "exit": "Beenden",
     "cancel_and_delete": "Abbrechen & Löschen"
@@ -175,7 +176,13 @@
       "dlt": "DLT-Kalibrierung",
       "team_assignment": "Team-Zuordnung",
       "re_identification": "Re-Identification",
-      "upload_heading": "Per Datei-Upload"
+      "upload_heading": "Per Datei-Upload",
+      "create": "Positionsdaten erstellen",
+      "create_description": "Erstellt Positionsdaten für dieses Video: Kalibrierungs-Asset auswählen und Spieler tracken. Ball-Tracking, Team-Zuordnung und Re-Identification sind optional, für die besten Ergebnisse empfiehlt es sich aber, alle davon zu aktivieren.",
+      "player_tracking": "Spieler-Tracking",
+      "ball_tracking": "Ball-Tracking",
+      "new_run": "Neuer Lauf",
+      "waits_for_player_tracking": "Startet automatisch, sobald das Spieler-Tracking abgeschlossen ist."
     },
     "display_settings": {
       "title": "Anzeigeeinstellungen",
@@ -291,7 +298,7 @@
     "kpi": {
       "posdata_not_available": "Keine Positionsdaten vorhanden.<br>Erzeuge sie zuerst im TopView- oder Heatmap-Feld.",
       "no_kpi_computed": "Keine Metriken berechnet.",
-      "compute_kpis": "Metriken berechnen",
+      "compute_kpis": "KPIs erstellen",
       "select_kpis": "Metrik-Daten auswählen",
       "compute": {
         "button": "Metriken berechnen"

@@ -45,34 +45,34 @@ class KpiComputation(Task):
         fmt = parameters.get("format")
 
         if fmt == "sportvid":
-            # --------> SPORTVID: load BboxesData from ByteTrack, apply calibration homography,
+            # --------> SPORTVID: load BboxesData from an Object Tracker run, apply calibration homography,
             # then build a PositionData object for the inference plugin.
-            bytetrack_run_id = parameters.get("bytetrack_run_id")
+            object_tracker_run_id = parameters.get("object_tracker_run_id")
             calibration_id = parameters.get("calibration_id")
-            if not bytetrack_run_id:
-                raise ValueError("bytetrack_run_id is required for format='sportvid'.")
+            if not object_tracker_run_id:
+                raise ValueError("object_tracker_run_id is required for format='sportvid'.")
             if not calibration_id:
                 raise ValueError("calibration_id is required for format='sportvid'.")
 
-            bytetrack_run_db = PluginRun.objects.get(id=bytetrack_run_id)
+            object_tracker_run_db = PluginRun.objects.get(id=object_tracker_run_id)
             if plugin_run is not None:
-                plugin_run.source_plugin_run = bytetrack_run_db
+                plugin_run.source_plugin_run = object_tracker_run_db
                 plugin_run.save()
 
-            # Load BboxesData from the ByteTrack run
+            # Load BboxesData from the Object Tracker run
             bbox_results = PluginRunResult.objects.filter(
-                plugin_run_id=bytetrack_run_id,
+                plugin_run_id=object_tracker_run_id,
                 type=PluginRunResult.TYPE_BBOXES,
             )
             if not bbox_results.exists():
                 raise ValueError(
-                    f"No bounding box data (TYPE_BBOXES) found for ByteTrack run {bytetrack_run_id}."
+                    f"No bounding box data (TYPE_BBOXES) found for Object Tracker run {object_tracker_run_id}."
                 )
 
             prr = bbox_results.first()
             bbox_obj = manager.load(prr.data_id)
             if bbox_obj is None:
-                raise ValueError(f"Could not load BboxesData for ByteTrack run {bytetrack_run_id}.")
+                raise ValueError(f"Could not load BboxesData for Object Tracker run {object_tracker_run_id}.")
 
             # Load homography matrix from CalibrationAssets
             calibration_db = CalibrationAssets.objects.get(id=calibration_id)
@@ -97,7 +97,7 @@ class KpiComputation(Task):
                 fps = 25
 
             # Build PositionData: apply homography to each bbox's center-bottom position.
-            # ByteTrack outputs team_id=3 by default (single team under new scheme).
+            # object_tracker outputs team_id=3 by default (single team under new scheme).
             pos_json = {}
             player_ids_meta = {}
             seen_team_ids = set()
@@ -136,7 +136,7 @@ class KpiComputation(Task):
             field_width = plugin_run.video.field_width or 68.0
 
             with manager.create_data("PositionData") as pos_data_obj:
-                pos_data_obj.tracking_data_id = bytetrack_run_id
+                pos_data_obj.tracking_data_id = object_tracker_run_id
                 pos_data_obj.meta_data = json.dumps(meta_data)
                 pos_data_obj.pos = json.dumps(pos_json)
 
@@ -151,10 +151,10 @@ class KpiComputation(Task):
                 "Wn": parameters.get("Wn"),
                 "window_length": parameters.get("window_length"),
                 "poly_order": parameters.get("poly_order"),
-                "tracking_data_id": bytetrack_run_id,
+                "tracking_data_id": object_tracker_run_id,
             }
             input_dict = {"pos_data": pos_data_id}
-            tracking_data_id_out = bytetrack_run_id
+            tracking_data_id_out = object_tracker_run_id
 
         else:
             # --------> KINEXON / DFL: use raw TrackingData file

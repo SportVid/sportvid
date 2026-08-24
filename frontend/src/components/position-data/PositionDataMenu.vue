@@ -29,7 +29,13 @@
                 >
                   {{ $t("position_data.generate.cv_heading") }}
                 </v-row>
-                <v-row style="justify-content: center" class="mt-1 ga-4">
+                <!-- Complex mode: full choice of individual plugins, each opening its own
+                     parameter modal. -->
+                <v-row
+                  v-if="userStore.experienceMode !== 'simple'"
+                  style="justify-content: center"
+                  class="mt-1 ga-4"
+                >
                   <v-btn
                     data-tour="posdata-generate-bytetrack"
                     @click="showObjectTrackerModal = true"
@@ -63,6 +69,29 @@
                        computation has its own params (own tracking_data/calibration pickers,
                        see kpiComputationParams), so it doesn't need position data to already be
                        selected/loaded and can be triggered right from here too. -->
+                  <v-btn
+                    v-if="showKpiButton"
+                    data-tour="posdata-generate-kpi-computation"
+                    @click="showKpiComputationModal = true"
+                  >
+                    {{ $t("visualization.kpi.compute_kpis") }}
+                  </v-btn>
+                </v-row>
+
+                <!-- Simple mode: one combined "Create Position Data" flow (calibration asset +
+                     player/ball tracking + team assignment/re-id as checkboxes, sequenced and
+                     run together, see ModalPositionDataCreate.vue) instead of picking each
+                     plugin separately. KPI computation still gets its own button/modal (same
+                     one Complex mode uses above) since it already bundles its own asset
+                     pickers and doesn't depend on anything else in this flow. -->
+                <v-row v-else style="justify-content: center" class="mt-1 ga-4">
+                  <v-btn
+                    data-tour="posdata-generate-create"
+                    @click="showPositionDataCreateModal = true"
+                  >
+                    {{ $t("position_data.generate.create") }}
+                  </v-btn>
+
                   <v-btn
                     v-if="showKpiButton"
                     data-tour="posdata-generate-kpi-computation"
@@ -151,6 +180,11 @@
             :videoId="playerStore.videoId"
             runButtonDataTour="posdata-kpi-computation-run"
           />
+          <ModalPositionDataCreate
+            v-if="showPositionDataCreateModal"
+            v-model="showPositionDataCreateModal"
+            :videoId="playerStore.videoId"
+          />
         </template>
 
         <v-row style="justify-content: center" :class="showKpiButton ? 'mt-8 mb-4' : 'mt-10 mb-6'">
@@ -211,6 +245,7 @@ import { usePositionDataStatus } from "@/composables/usePositionDataStatus";
 import ModalPluginRun from "@/components/app/app-bar/ModalPluginRun.vue";
 import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
 import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
+import ModalPositionDataCreate from "@/components/position-data/ModalPositionDataCreate.vue";
 
 const props = defineProps({
   // Shown as a heading while this box is up -- lets the user tell which (otherwise
@@ -242,6 +277,7 @@ const showDltModal = ref(false);
 const showTeamAssignmentModal = ref(false);
 const showReIdentificationModal = ref(false);
 const showKpiComputationModal = ref(false);
+const showPositionDataCreateModal = ref(false);
 
 const { posdataAvailable, kpiState } = usePositionDataStatus();
 const hasAvailablePositionData = posdataAvailable;

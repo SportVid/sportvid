@@ -5,6 +5,7 @@ import os
 import json
 import uuid
 from celery import shared_task
+from celery.exceptions import MaxRetriesExceededError
 from django.conf import settings
 from typing import Any, Dict, List, Optional, Type
 from rest_framework import serializers
@@ -147,7 +148,16 @@ class PluginManager:
                 type=plugin,
                 status=PluginRun.STATUS_QUEUED,
             )
-        
+            # Exposed to callers (see views/plugin_run.py::PluginRunNew) so the frontend can
+            # track/wait on this specific run without guessing which newly-appeared row is
+            # "the" one -- needed e.g. to sequence team_clustering/osnet_reid after their
+            # prerequisite object_tracker run finishes. Must be .hex (no dashes), matching
+            # PluginRun.to_dict()'s "id" (self.id.hex, see models.py) -- that's the id format
+            # /plugin/run/list actually keys pluginRunStore.state.pluginRuns by on the
+            # frontend; str(plugin_run.id) here would produce dashed-UUID keys that never
+            # match, so waitForDone() would wait on a key that's never populated.
+            result["plugin_run_id"] = plugin_run.id.hex
+
         task_payload = {
             "plugin": plugin,
             "parameters": validated_parameters,
@@ -251,11 +261,52 @@ def run_plugin(self, args):
     plugin_run_db = None
     if not dry_run and plugin_run is not None:
         plugin_run_db = PluginRun.objects.get(id=plugin_run)
-        
+
+        # Some plugins take another plugin_run's id as input (object_tracker_id for
+        # team_clustering/osnet_reid, object_tracker_run_id for kpi_computation) and need that
+        # run's *results*, not just its id -- submitting them while it's still QUEUED/RUNNING
+        # crashes. The frontend (ModalPositionDataCreate.vue) submits Team Assignment/Re-ID
+        # right alongside a freshly-started Object Tracker run rather than waiting around for
+        # it client-side, so this reschedules itself via Celery's own retry until the
+        # dependency is DONE (or gives up if it errors/never finishes). Checked *before* the
+        # in_scheduler guard below on purpose: that flag is a one-shot "already picked up"
+        # marker, so setting it first would make our own retry cancel itself the moment it
+        # fires back up.
+        dependency_id = next(
+            (
+                parameters[name]
+                for name in ("object_tracker_id", "object_tracker_run_id")
+                if parameters.get(name)
+            ),
+            None,
+        )
+        if dependency_id:
+            dependency_run = PluginRun.objects.filter(id=dependency_id).first()
+            if dependency_run is not None and dependency_run.status != PluginRun.STATUS_DONE:
+                if dependency_run.status in (PluginRun.STATUS_ERROR, PluginRun.STATUS_UNKNOWN):
+                    logger.error(
+                        "Dependency plugin run %s (%s) didn't finish -- aborting %s",
+                        dependency_id, dependency_run.status, plugin,
+                    )
+                    plugin_run_db.status = PluginRun.STATUS_ERROR
+                    plugin_run_db.save()
+                    return
+                try:
+                    # ~30 minutes total (360 * 5s) before giving up.
+                    self.retry(countdown=5, max_retries=360)
+                except MaxRetriesExceededError:
+                    logger.error(
+                        "Dependency plugin run %s never finished -- aborting %s",
+                        dependency_id, plugin,
+                    )
+                    plugin_run_db.status = PluginRun.STATUS_ERROR
+                    plugin_run_db.save()
+                    return
+
         if plugin_run_db.in_scheduler:
             logger.warning("Job was rescheduled and will be canceled")
             return
-        
+
         plugin_run_db.in_scheduler = True
         plugin_run_db.save()
 

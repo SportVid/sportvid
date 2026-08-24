@@ -87,7 +87,7 @@ class PluginRunNew(View):
                     status=500,
                 )
 
-            return JsonResponse({"status": "ok"})
+            return JsonResponse({"status": "ok", "plugin_run_id": result.get("plugin_run_id")})
 
         except serializers.ValidationError as e:
             return JsonResponse(

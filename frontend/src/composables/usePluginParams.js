@@ -1,6 +1,5 @@
 import { ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { usePlayerStore } from "@/stores/player";
 import { usePositionDataStore } from "@/stores/position_data";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useUserStore } from "@/stores/user";
@@ -127,14 +126,16 @@ const OBJECT_TRACKER_CLASSES_BY_TARGET = {
 
 export function objectTrackerParams() {
   const { t } = useI18n();
-  const playerStore = usePlayerStore();
 
   const parameters = ref([
     {
       field: "slider",
       min: 1,
       max: 30,
-      value: Math.round(playerStore.videoFPS),
+      // Defaults to 1 rather than the video's actual fps (usually 30) -- tracking every frame
+      // is a lot slower to test against than most trial runs need; still freely adjustable up
+      // to the real fps via this slider.
+      value: 1,
       step: 1,
       name: "fps",
       text: t("modal.plugin.fps"),

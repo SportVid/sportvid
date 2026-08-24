@@ -11,12 +11,9 @@
             class="fill-height"
             data-tour="analysis-video-player"
           >
-            <v-row justify="center">
-              <v-card-title class="mt-5 mb-n1">
-                {{ playerStore.videoName }}
-              </v-card-title>
-            </v-row>
-
+            <!-- No extra title row here -- VideoPlayer.vue already renders playerStore.videoName
+                 itself (its own .video-title), so wrapping it in a v-card-title too showed the
+                 name twice, stacked right on top of each other. -->
             <v-row class="flex-grow-1">
               <v-col>
                 <VideoPlayer />

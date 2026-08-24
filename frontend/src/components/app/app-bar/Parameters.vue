@@ -62,6 +62,9 @@
           v-model="showModalCalibrationAssetSelectForEdit"
           @selected="onCalibrationAssetSelected"
         />
+        <!-- Separates "create/edit an asset" (above) from "pick which saved asset this plugin
+             run uses" (below) -- otherwise both read as one undifferentiated block. -->
+        <v-divider v-if="!parameter.dlt" class="mb-4" />
         <v-select
           v-model="parameter.value"
           :items="calibrationAssets"
@@ -526,9 +529,9 @@ import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCal
 import { useExportStore } from "@/stores/export";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
-import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { usePlayerStore } from "@/stores/player";
+import { useObjectTrackerPlayerRuns } from "@/composables/useObjectTrackerPlayerRuns";
 
 const timelineStore = useTimelineStore();
 const calibrationAssetStore = useCalibrationAssetStore();
@@ -536,7 +539,6 @@ const topViewStore = useTopViewStore();
 const exportStore = useExportStore();
 const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
-const pluginRunStore = usePluginRunStore();
 const pluginRunResultStore = usePluginRunResultStore();
 const playerStore = usePlayerStore();
 
@@ -751,39 +753,7 @@ const trackingDatasets = computed(() => {
   return Object.values(positionDataStore.positionDataList);
 });
 
-const formatLocalDate = (dateString) => {
-  if (!dateString) return "";
-  let isoString = dateString.replace(" ", "T");
-  if (!isoString.endsWith("Z")) {
-    isoString += "Z";
-  }
-  const date = new Date(isoString);
-  const isoDate = date.toISOString().slice(0, 10);
-  const localTime = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  return `${isoDate} ${localTime}`;
-};
-
-const bytetrackRuns = computed(() => {
-  return pluginRunStore
-    .forVideo(playerStore.videoId)
-    .filter((e) => ["bytetrack", "object_tracker"].includes(e.type) && e.status === "DONE")
-    .map((e) => ({
-      id: e.id,
-      name: formatLocalDate(e.date),
-    }));
-});
-
-// A "real" player-tracking object_tracker run has a bytetrack tracker attached, so its
-// result is named "bboxes" (see backend tasks/object_tracker.py). Ball-only runs (no
-// tracker, ball-class filtered detections) are named "bboxes_ball" and don't make sense
-// as input for team assignment, so they're excluded here (same check as in
-// ModalPositionDataSelect.vue's isBallTrackerRun).
-const isBallTrackerRun = (pluginRunId) =>
-  pluginRunResultStore.forPluginRun(pluginRunId).some((r) => r.name === "bboxes_ball");
-
-const objectTrackerPlayerRuns = computed(() => {
-  return bytetrackRuns.value.filter((e) => !isBallTrackerRun(e.id));
-});
+const { objectTrackerPlayerRuns } = useObjectTrackerPlayerRuns();
 
 onMounted(() => {
   calibrationAssetStore.loadCalibrationAssetsList();
