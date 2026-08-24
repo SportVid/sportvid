@@ -3,6 +3,7 @@ networks:
     external: true
   dev:
     external: true
+    name: dev_dev
 
 volumes:
   assets:
