@@ -4,7 +4,24 @@
 import os
 import json
 import logging
+
 from celery.schedules import crontab
+from kombu import Queue
+
+# two separate celery workers for IO/gpu-bound processing
+CELERY_TASK_DEFAULT_QUEUE = "io"
+CELERY_TASK_QUEUES = (
+    Queue("io"),
+    Queue("gpu")
+)
+
+CELERY_TASK_ROUTES = {
+    "sportvid.tasks.convert_video_to_hls": {
+        "queue": "gpu",
+    }
+}
+
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
 # build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

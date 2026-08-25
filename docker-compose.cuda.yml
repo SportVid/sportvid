@@ -109,8 +109,54 @@ services:
       retries: 5
       start_period: 30s
   
-  celery:
-    container_name: celery
+  celery-io:
+    container_name: celery-io
+    user: "1000:1000"
+    image: sportvid-celery:latest
+    build:
+      context: .
+    env_file:
+      - ./.env
+    secrets:
+      - django_settings
+    volumes:
+      - ${DATA_PATH}/media/:/media
+      - ${DATA_PATH}/predictions:/predictions
+      - ${DATA_PATH}/backend_cache:/cache
+      - ./inference_ray:/app/inference_ray
+      - ./analyser:/app/analyser
+      - ./packages:/app/packages
+      - ./backend/:/app/backend
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./.python-version:/app/.python-version
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    tmpfs:
+      - /tmp
+      - /var
+    working_dir: /app/backend/src/backend/
+    command:
+      - "uv"
+      - "run"
+      - "--no-editable"
+      - "--package"
+      - "backend"
+      - "celery"
+      - "-A"
+      - "sportvid.celery:app"
+      - "worker"
+      - "--queues=io"
+      - "--pool=threads"
+      - "--concurrency=16"
+      - "--prefetch-multiplier=1"
+      - "--loglevel"
+      - "${LOG_LEVEL:-DEBUG}"
+
+  celery-gpu:
+    container_name: celery-gpu
     user: "1000:1000"
     image: sportvid-celery:latest
     build:
@@ -155,6 +201,10 @@ services:
       - "-A"
       - "sportvid.celery:app"
       - "worker"
+      - "--queues=gpu"
+      - "--pool=threads"
+      - "--concurrency=4"
+      - "--prefetch-multiplier=1"
       - "--loglevel"
       - "${LOG_LEVEL:-DEBUG}"
 
