@@ -6,6 +6,7 @@ import tarfile
 import logging
 import imageio
 from pathlib import Path
+from typing import Any
 from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
@@ -275,7 +276,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         upd = Video.objects.filter(id=video_id_hex).update(
             ext=ext,
             fps=fps,
-            duration=duration,
+            duration=duration_ms,
             width=size[0] if size else None,
             height=size[1] if size else None,
             status=Video.STATUS_DONE,
@@ -284,7 +285,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             media_path = media_path_for_db
         )
 
-        if not updated:
+        if not upd:
             raise RuntimeError(
                 f"Video disappeared before completion: {video_id_hex}"
             )

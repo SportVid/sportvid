@@ -16,7 +16,7 @@ CELERY_TASK_QUEUES = (
 )
 
 CELERY_TASK_ROUTES = {
-    "sportvid.tasks.convert_video_to_hls": {
+    "backend.tasks.convert_video.convert_video_to_hls": {
         "queue": "gpu",
     }
 }

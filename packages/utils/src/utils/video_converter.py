@@ -4,10 +4,10 @@ import logging
 import os
 import signal
 import subprocess
+import ffmpeg
 from collections.abc import Mapping
 from typing import Any
 
-import ffmpeg
 
 logger = logging.getLogger(__name__)
 
@@ -17,29 +17,21 @@ def terminate_process_group(
     grace_seconds: float = 10.0,
 ) -> None:
     """Terminate FFmpeg and any children started in its process group."""
-    if process.poll() is not None:
-        return
+    if process.poll() is not None: return
 
-    try:
-        os.killpg(process.pid, signal.SIGTERM)
-    except ProcessLookupError:
-        return
+    try: os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError: return
 
     try:
         process.wait(timeout=grace_seconds)
         return
-    except subprocess.TimeoutExpired:
-        pass
+    except subprocess.TimeoutExpired: pass
 
-    try:
-        os.killpg(process.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        return
+    try: os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError: return
 
-    try:
-        process.wait()
-    except ChildProcessError:
-        pass
+    try: process.wait()
+    except ChildProcessError: pass
 
 
 def _build_command(
@@ -55,11 +47,9 @@ def _build_command(
         "extra_hw_frames",
     ):
         value = kwargs.get(name)
-        if value is not None:
-            input_kwargs[name] = value
+        if value is not None: input_kwargs[name] = value
 
     input_stream = ffmpeg.input(file_in, **input_kwargs)
-
     output_kwargs = {
         "format": kwargs.get("format", "hls"),
         "threads": kwargs.get("threads"),
@@ -120,9 +110,7 @@ def _build_command(
     output_stream = ffmpeg.overwrite_output(output_stream)
 
     command = [str(value) for value in ffmpeg.compile(output_stream)]
-
-    if not command:
-        raise RuntimeError("FFmpeg command was empty")
+    if not command: raise RuntimeError("FFmpeg command was empty.")
 
     return [
         command[0],
@@ -145,7 +133,7 @@ def convert_to_hls(
     Asynchronous mode returns a running Popen instance. FFmpeg's stderr is
     inherited by the worker/container logger, avoiding a pipe-buffer
     deadlock. The process starts in its own session so callers can terminate
-    its entire process group using terminate_process_group.
+    its entire process group using `terminate_process_group()`.
     """
     command = _build_command(file_in, manifest_path, kwargs)
     logger.debug("FFmpeg command: %s", " ".join(command))

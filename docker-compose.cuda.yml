@@ -148,6 +148,7 @@ services:
       - "-A"
       - "sportvid.celery:app"
       - "worker"
+      - "--hostname=io@%h"
       - "--queues=io"
       - "--pool=threads"
       - "--concurrency=16"
@@ -201,6 +202,7 @@ services:
       - "-A"
       - "sportvid.celery:app"
       - "worker"
+      - "--hostname=gpu@%h"
       - "--queues=gpu"
       - "--pool=threads"
       - "--concurrency=4"
@@ -262,7 +264,9 @@ services:
         condition: service_healthy
       memcached:
         condition: service_started
-      celery:
+      celery-io:
+        condition: service_started
+      celery-gpu:
         condition: service_started
     # healthcheck:
     #   test: ["CMD-SHELL", "curl --fail http://localhost:${BACKEND_PORT}/api/readyz/ || exit 1"]
