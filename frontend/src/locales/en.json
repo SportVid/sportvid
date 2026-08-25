@@ -126,6 +126,14 @@
     "empty_state_title": "Want to have your first video analysed?",
     "empty_state_text": "Click the plus now to upload your first video."
   },
+  "video_player": {
+    "pip": {
+      "enter": "Picture-in-picture",
+      "exit": "Return to card",
+      "playing_in_pip": "Video is playing in picture-in-picture",
+      "return_to_card": "Return video to card"
+    }
+  },
   "analysis_view": {
     "visualization_tabs": {
       "select": "Select Visualization",
