@@ -5,7 +5,7 @@ import warnings
 
 from interface import analyser_pb2 as analyser__pb2
 
-GRPC_GENERATED_VERSION = '1.71.0'
+GRPC_GENERATED_VERSION = '1.70.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -84,6 +84,11 @@ class AnalyserStub(object):
                 request_serializer=analyser__pb2.GetPluginStatusRequest.SerializeToString,
                 response_deserializer=analyser__pb2.GetPluginStatusResponse.FromString,
                 _registered_method=True)
+        self.abort_plugin = channel.unary_unary(
+                '/sportvid.analyser.Analyser/abort_plugin',
+                request_serializer=analyser__pb2.AbortPluginRequest.SerializeToString,
+                response_deserializer=analyser__pb2.AbortPluginResponse.FromString,
+                _registered_method=True)
         self.run_pipeline = channel.unary_unary(
                 '/sportvid.analyser.Analyser/run_pipeline',
                 request_serializer=analyser__pb2.RunPipelineRequest.SerializeToString,
@@ -160,6 +165,12 @@ class AnalyserServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def abort_plugin(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def run_pipeline(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -224,6 +235,11 @@ def add_AnalyserServicer_to_server(servicer, server):
                     servicer.get_plugin_status,
                     request_deserializer=analyser__pb2.GetPluginStatusRequest.FromString,
                     response_serializer=analyser__pb2.GetPluginStatusResponse.SerializeToString,
+            ),
+            'abort_plugin': grpc.unary_unary_rpc_method_handler(
+                    servicer.abort_plugin,
+                    request_deserializer=analyser__pb2.AbortPluginRequest.FromString,
+                    response_serializer=analyser__pb2.AbortPluginResponse.SerializeToString,
             ),
             'run_pipeline': grpc.unary_unary_rpc_method_handler(
                     servicer.run_pipeline,
@@ -506,6 +522,33 @@ class Analyser(object):
             '/sportvid.analyser.Analyser/get_plugin_status',
             analyser__pb2.GetPluginStatusRequest.SerializeToString,
             analyser__pb2.GetPluginStatusResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def abort_plugin(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/sportvid.analyser.Analyser/abort_plugin',
+            analyser__pb2.AbortPluginRequest.SerializeToString,
+            analyser__pb2.AbortPluginResponse.FromString,
             options,
             channel_credentials,
             insecure,

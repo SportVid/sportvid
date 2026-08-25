@@ -173,6 +173,12 @@ class AnalyserClient:
         logging.error("Error while requesting run_plugin.")
         return None
 
+    def abort_plugin(self, job_id):
+        abort_request = analyser_pb2.AbortPluginRequest(id=job_id)
+        stub = analyser_pb2_grpc.AnalyserStub(self.channel)
+        response = stub.abort_plugin(abort_request)
+        return response.success
+
     def get_plugin_status(self, job_id):
         get_plugin_request = analyser_pb2.GetPluginStatusRequest(id=job_id)
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)

@@ -173,7 +173,9 @@ class PluginManager:
         }
         
         if run_async:
-            run_plugin.apply_async(args=[task_payload])
+            task = run_plugin.apply_async(args=[task_payload])
+            if plugin_run is not None:
+                PluginRun.objects.filter(id=plugin_run.id).update(task_id=task.id)
             return result
 
         try:
@@ -264,7 +266,14 @@ def run_plugin(self, args):
     
     plugin_run_db = None
     if not dry_run and plugin_run is not None:
-        plugin_run_db = PluginRun.objects.get(id=plugin_run)
+        try:
+            plugin_run_db = PluginRun.objects.get(id=plugin_run)
+        except PluginRun.DoesNotExist:
+            # Deleted (cancelled) before this task even got picked up -- e.g. it was
+            # still queued behind other Celery tasks when the user hit delete. Nothing
+            # to do or clean up: no analyser job was ever started for it.
+            logger.info("PluginRun %s deleted before it started, skipping", plugin_run)
+            return
 
         # Some plugins take another plugin_run's id as input (object_tracker_id for
         # team_clustering/osnet_reid, object_tracker_run_id for kpi_computation) and need that

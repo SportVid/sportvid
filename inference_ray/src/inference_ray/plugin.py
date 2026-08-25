@@ -205,7 +205,15 @@ class AnalyserPluginManager(Manager):
         data_manager: DataManager,
         parameters: Dict = None,
         callbacks: Callable = None,
+        cancel_event=None,
+        session=None,
     ):
+        # Checked before doing any work -- a run that was already aborted while still
+        # queued behind other jobs shouldn't waste a Ray Serve request at all.
+        if cancel_event is not None and cancel_event.is_set():
+            logging.info(f"[AnalyserPluginManager] '{plugin}' aborted before it started.")
+            return []
+
         plugins = {x["plugin"]: x for x in self.plugin_status()}
 
         if plugin not in plugins:
@@ -214,17 +222,26 @@ class AnalyserPluginManager(Manager):
 
         plugin_to_run = plugins[plugin]
 
+        # `session` (a requests.Session), when given, is what abort_plugin() closes
+        # from another thread to force this call to unblock -- see analyser/server.py.
+        # Falls back to the plain `requests` module for callers that don't need that
+        # (e.g. the CLI client), which behaves the same for a single call.
+        http = session if session is not None else requests
+
         # logging.info(f"{self.base_url}{plugin_to_run['route']}", flush=True)
         try:
-            results = requests.post(
+            results = http.post(
                 f"{self.base_url}{plugin_to_run['route']}",
                 json={
                     "inputs": {x: y.id for x, y in inputs.items()},
                     "parameters": parameters,
                 },
             )
-        except:
-            logging.error("[AnalyserPluginMananger]: Can't start plugin on the ray server.")
+        except Exception:
+            if cancel_event is not None and cancel_event.is_set():
+                logging.info(f"[AnalyserPluginManager] '{plugin}' aborted while running.")
+            else:
+                logging.error("[AnalyserPluginMananger]: Can't start plugin on the ray server.")
             return []
 
         try:

@@ -12,10 +12,15 @@ import os
 import json
 import logging
 import threading
+from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
 CHANNEL_PREFIX = "sportvid:events"
+# Separate namespace from the per-user event channels above -- one channel per
+# cancellable resource (a video conversion, a plugin run), so a running task can
+# subscribe to exactly its own id instead of filtering someone else's stream.
+CANCEL_CHANNEL_PREFIX = "sportvid:cancel"
 
 # How long a single SSE connection is kept open before it's closed on purpose. The
 # browser's EventSource reconnects on its own, which keeps proxies from silently
@@ -152,3 +157,95 @@ def subscribe(user_id):
             pubsub.close()
         except Exception:
             logger.debug("Failed to close pubsub cleanly", exc_info=True)
+
+
+# ---------------------------------------------------------------------------------
+# Cancellation: push, not poll.
+#
+# A long-running task (HLS conversion, a plugin run) subscribes to its own valkey
+# channel and reacts the instant a cancel message arrives, instead of periodically
+# re-querying the database to check whether it's still wanted. Uses the same valkey
+# instance/connection helper as the event stream above -- nothing new added to the
+# deployment.
+# ---------------------------------------------------------------------------------
+
+
+def cancel_channel(kind, resource_id) -> str:
+    return f"{CANCEL_CHANNEL_PREFIX}:{kind}:{resource_id}"
+
+
+def publish_cancel(kind, resource_id) -> None:
+    """Fire-and-forget, like publish() -- an unreachable valkey must never block a
+    delete. Whoever's listening (if anyone still is) reacts immediately; if nobody's
+    listening (already finished, or the subscribe/publish raced) there's simply
+    nothing left to cancel."""
+    try:
+        get_client().publish(cancel_channel(kind, resource_id), "cancel")
+    except Exception:
+        logger.warning("Failed to publish cancel for %s %s", kind, resource_id, exc_info=True)
+
+
+@contextmanager
+def cancellation_watcher(kind, resource_id, on_cancel=None):
+    """Yields a threading.Event that's set the moment publish_cancel(kind, resource_id)
+    is called, for the lifetime of the `with` block.
+
+    A dedicated background thread blocks on the valkey subscription and reacts as soon
+    as a message arrives -- the caller doesn't need to re-check anything on a timer.
+    `on_cancel`, if given, runs on that *listener thread* itself, right when the
+    message arrives, for callers that need to act immediately rather than waiting for
+    their own next loop iteration (e.g. killing a subprocess).
+
+    If valkey itself is unreachable, this degrades to an Event that simply never gets
+    set -- the caller falls back to whatever timeout/other checks it already has,
+    rather than crashing a running task over a broken cancel channel.
+    """
+    event = threading.Event()
+
+    try:
+        pubsub = get_client().pubsub(ignore_subscribe_messages=True)
+        pubsub.subscribe(cancel_channel(kind, resource_id))
+    except Exception:
+        logger.warning(
+            "Cancellation watcher unavailable for %s %s -- delete won't cancel it instantly",
+            kind, resource_id, exc_info=True,
+        )
+        yield event
+        return
+
+    stop = threading.Event()
+
+    def _listen():
+        try:
+            while not stop.is_set():
+                message = pubsub.get_message(timeout=1.0)
+                if message and message.get("type") == "message":
+                    event.set()
+                    if on_cancel is not None:
+                        try:
+                            on_cancel()
+                        except Exception:
+                            logger.exception(
+                                "on_cancel callback failed for %s %s", kind, resource_id
+                            )
+                    return
+        except Exception:
+            logger.warning(
+                "Cancellation listener crashed for %s %s", kind, resource_id, exc_info=True
+            )
+
+    thread = threading.Thread(
+        target=_listen, name=f"cancel-watch-{kind}-{resource_id}", daemon=True
+    )
+    thread.start()
+    try:
+        yield event
+    finally:
+        # Not joined on purpose -- the listener notices `stop` and exits within one
+        # get_message() timeout (<=1s) on its own; waiting for that here would make
+        # every normal (non-cancelled) completion pay up to a second for nothing.
+        stop.set()
+        try:
+            pubsub.close()
+        except Exception:
+            pass

@@ -253,6 +253,9 @@ class PluginRun(models.Model):
     type = models.CharField(max_length=256)
     progress = models.FloatField(default=0.0)
     in_scheduler = models.BooleanField(default=False)
+    # Celery task id of the run_plugin task processing this run -- lets a delete abort
+    # it the same way Video.task_id already does for HLS conversion (see views/video.py).
+    task_id = models.CharField(max_length=256, blank=True, null=True)
 
     STATUS_UNKNOWN = "U"
     STATUS_ERROR = "E"

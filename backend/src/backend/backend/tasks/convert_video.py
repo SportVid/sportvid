@@ -11,6 +11,7 @@ from celery import shared_task
 from django.conf import settings
 
 from backend.utils import media_dir_to_file, media_path_to_file, publish_video
+from backend.utils.events import cancellation_watcher
 from backend.models import Video
 from backend.plugin_manager import PluginManager
 from utils.video_converter import convert_to_hls
@@ -18,7 +19,6 @@ from utils.helper import remove_file, remove_dir
 
 
 logger = logging.getLogger(__name__)
-_POLL_INTERVAL = 2.0  # seconds between cancellation checks
 _PROGRESS_STEP = 0.01  # only report conversion progress once it moved by at least 1%
 
 # Keys of ffmpeg's "-progress" blocks -- machine-readable status, not error output.
@@ -156,62 +156,59 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 asynchronous=True,
                 **conversion_args
             )
-            cancelled = False
-            try:
-                # ffmpeg's stderr carries both its error output and the "-progress"
-                # key=value blocks (roughly twice a second), so draining it line by
-                # line drives both the progress reporting and the cancellation check.
-                last_checked = 0.0
-                last_reported = 0.0
-                while True:
-                    line = ffmpeg_proc.stderr.readline()
+            # Push, not poll: a listener thread reacts the instant VideoDelete
+            # publishes a cancel for this video and kills ffmpeg directly, instead of
+            # this loop having to re-query the DB itself on a timer (see
+            # utils/events.py::cancellation_watcher and views/video.py::VideoDelete).
+            with cancellation_watcher("video", video_id_hex, on_cancel=ffmpeg_proc.kill) as cancel_event:
+                try:
+                    # ffmpeg's stderr carries both its error output and the "-progress"
+                    # key=value blocks (roughly twice a second), so draining it line by
+                    # line drives the progress reporting.
+                    last_reported = 0.0
+                    while True:
+                        line = ffmpeg_proc.stderr.readline()
 
-                    if not line:
-                        if ffmpeg_proc.poll() is not None:
-                            break
-                        continue
-
-                    line = line.rstrip()
-                    is_progress_line = bool(_FFMPEG_PROGRESS_LINE.match(line))
-
-                    if not is_progress_line:
-                        if line:
-                            logger.debug("[ffmpeg] %s", line)
-                        continue
-
-                    if line.startswith("out_time_us=") and source_duration:
-                        try:
-                            elapsed = int(line.split("=", 1)[1]) / 1_000_000.0
-                        except ValueError:
-                            elapsed = None
-                        if elapsed is not None:
-                            # Reserve the last few percent for packing the archive and
-                            # writing the metadata, which happen after ffmpeg exits.
-                            progress = min(elapsed / float(source_duration), 1.0) * 0.95
-                            if progress - last_reported >= _PROGRESS_STEP:
-                                last_reported = progress
-                                _report_conversion_progress(video_id_hex, progress)
-
-                    if line.startswith("progress="):
-                        now = time.monotonic()
-                        if now - last_checked >= _POLL_INTERVAL:
-                            last_checked = now
-                            if not Video.objects.filter(id=video_id_hex).exists():
-                                logger.info(
-                                    "Video %s deleted during HLS conversion, killing ffmpeg.",
-                                    video_id_hex,
-                                )
-                                cancelled = True
-                                ffmpeg_proc.kill()
+                        if not line:
+                            if ffmpeg_proc.poll() is not None:
                                 break
+                            continue
 
-                rest = ffmpeg_proc.stderr.read()
-                if rest:
-                    for extra_line in rest.splitlines():
-                        if not _FFMPEG_PROGRESS_LINE.match(extra_line):
-                            logger.info("[ffmpeg] %s", extra_line)
-            finally:
-                if ffmpeg_proc.stderr: ffmpeg_proc.stderr.close()
+                        line = line.rstrip()
+                        is_progress_line = bool(_FFMPEG_PROGRESS_LINE.match(line))
+
+                        if not is_progress_line:
+                            if line:
+                                logger.debug("[ffmpeg] %s", line)
+                            continue
+
+                        if line.startswith("out_time_us=") and source_duration:
+                            try:
+                                elapsed = int(line.split("=", 1)[1]) / 1_000_000.0
+                            except ValueError:
+                                elapsed = None
+                            if elapsed is not None:
+                                # Reserve the last few percent for packing the archive
+                                # and writing the metadata, which happen after ffmpeg
+                                # exits.
+                                progress = min(elapsed / float(source_duration), 1.0) * 0.95
+                                if progress - last_reported >= _PROGRESS_STEP:
+                                    last_reported = progress
+                                    _report_conversion_progress(video_id_hex, progress)
+
+                    rest = ffmpeg_proc.stderr.read()
+                    if rest:
+                        for extra_line in rest.splitlines():
+                            if not _FFMPEG_PROGRESS_LINE.match(extra_line):
+                                logger.info("[ffmpeg] %s", extra_line)
+                finally:
+                    if ffmpeg_proc.stderr: ffmpeg_proc.stderr.close()
+
+                # Killing ffmpeg makes it exit with a nonzero/signal return code below,
+                # same as a genuine failure would -- cancel_event is what tells the two
+                # apart. Read inside the `with` so it reflects a cancel that arrived
+                # exactly while stderr was being drained above.
+                cancelled = cancel_event.is_set()
 
             rc = ffmpeg_proc.wait()
             if not cancelled and rc != 0:

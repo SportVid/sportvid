@@ -1,10 +1,12 @@
 import time
 import logging
 import grpc
+from contextlib import nullcontext
 
 from analyser.client import AnalyserClient
 from backend.models import PluginRun
 from backend.utils import RetryOnRpcErrorClientInterceptor, ExponentialBackoff
+from backend.utils.events import cancellation_watcher
 from interface import analyser_pb2
 from interface import analyser_pb2_grpc
 
@@ -109,6 +111,13 @@ class TaskAnalyserClient(AnalyserClient):
                 plugin_run_db.save()
         return None
 
+    def abort_plugin(self, *args, **kwargs):
+        try:
+            return super().abort_plugin(*args, **kwargs)
+        except grpc.RpcError as rpc_error:
+            logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
+        return None
+
     def get_plugin_status(self, *args, **kwargs):
         plugin_run_db = self.plugin_run_db
         try:
@@ -158,58 +167,92 @@ class TaskAnalyserClient(AnalyserClient):
         start_time = time.time()
         if status_fn is None:
             status_fn = analyser_status_to_task_status
-        while True:
-            if timeout:
-                if time.time() - start_time > timeout:
-                    logger.error(f"Timeout")
-                    if plugin_run_db:
-                        plugin_run_db.status = PluginRun.STATUS_ERROR
-                        plugin_run_db.save()
+
+        # Push, not poll: a listener thread reacts the instant the PluginRun is
+        # deleted (see views/plugin_run.py's publish_cancel), instead of this loop
+        # having to re-check the database itself on every tick. on_cancel fires the
+        # analyser abort straight away, from the listener thread, rather than waiting
+        # for this loop's next iteration to notice cancel_event and do it.
+        watch = (
+            nullcontext(None)
+            if plugin_run_db is None
+            else cancellation_watcher(
+                "plugin_run", plugin_run_db.id.hex, on_cancel=lambda: self.abort_plugin(job_id)
+            )
+        )
+        with watch as cancel_event:
+            while True:
+                if cancel_event is not None and cancel_event.is_set():
+                    logger.info(f"Plugin run {plugin_run_db.id.hex} cancelled")
                     return None
-            try:
-                result = self.get_plugin_status(job_id)
-            except grpc.RpcError as rpc_error:
-                logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
-                if plugin_run_db:
-                    plugin_run_db.status = PluginRun.STATUS_ERROR
-                    plugin_run_db.save()
 
-                return None
-            if result is None:
-                logger.error(f"GRPC error: not a valid return Ccode")
-                if plugin_run_db:
-                    plugin_run_db.status = PluginRun.STATUS_ERROR
-                    plugin_run_db.save()
+                if timeout:
+                    if time.time() - start_time > timeout:
+                        logger.error(f"Timeout")
+                        if plugin_run_db:
+                            # .update(), not .save(): plugin_run_db may already be gone
+                            # by the time this fires (deleted from under a still-running
+                            # task) -- .save() on a stale instance would re-insert the
+                            # row instead of leaving it deleted (same UUID-pk pitfall as
+                            # Video, see tasks/convert_video.py).
+                            PluginRun.objects.filter(id=plugin_run_db.id).update(
+                                status=PluginRun.STATUS_ERROR
+                            )
+                        return None
+                try:
+                    result = self.get_plugin_status(job_id)
+                except grpc.RpcError as rpc_error:
+                    logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
+                    if plugin_run_db:
+                        PluginRun.objects.filter(id=plugin_run_db.id).update(
+                            status=PluginRun.STATUS_ERROR
+                        )
+                    return None
+                if result is None:
+                    logger.error(f"GRPC error: not a valid return Ccode")
+                    if plugin_run_db:
+                        PluginRun.objects.filter(id=plugin_run_db.id).update(
+                            status=PluginRun.STATUS_ERROR
+                        )
+                    return None
 
-                return None
+                if plugin_run_db is not None:
+                    update_fields = {}
+                    status = status_fn(result.status)
+                    if status is not None:
+                        update_fields["status"] = status
 
-            if plugin_run_db is not None:
-                status = status_fn(result.status)
-                if status is not None:
-                    plugin_run_db.status = status
+                    # The analyser has been reporting fine-grained progress all along
+                    # (GetPluginStatusResponse.progress, filled from the plugin's
+                    # AnalyserProgressCallback) -- it just never made it into the
+                    # database, which is why the frontend only ever saw 0 or 1.
+                    progress = map_analyser_progress(result.progress, progress_range)
+                    if progress is not None and progress > (plugin_run_db.progress or 0.0):
+                        update_fields["progress"] = progress
+                        plugin_run_db.progress = progress  # keep the `>` comparison above correct across iterations
 
-                # The analyser has been reporting fine-grained progress all along
-                # (GetPluginStatusResponse.progress, filled from the plugin's
-                # AnalyserProgressCallback) -- it just never made it into the database,
-                # which is why the frontend only ever saw 0 or 1.
-                progress = map_analyser_progress(result.progress, progress_range)
-                if progress is not None and progress > (plugin_run_db.progress or 0.0):
-                    plugin_run_db.progress = progress
+                    if update_fields:
+                        PluginRun.objects.filter(id=plugin_run_db.id).update(**update_fields)
 
-                plugin_run_db.save()
+                if result.status == analyser_pb2.GetPluginStatusResponse.UNKNOWN:
+                    logger.error("Job is unknown for the analyser")
+                    return
+                elif result.status == analyser_pb2.GetPluginStatusResponse.WAITING:
+                    pass
+                elif result.status == analyser_pb2.GetPluginStatusResponse.RUNNING:
+                    pass
+                elif result.status == analyser_pb2.GetPluginStatusResponse.ERROR:
+                    logger.error("Job is crashing")
+                    return
+                elif result.status == analyser_pb2.GetPluginStatusResponse.DONE:
+                    break
 
-            if result.status == analyser_pb2.GetPluginStatusResponse.UNKNOWN:
-                logger.error("Job is unknown for the analyser")
-                return
-            elif result.status == analyser_pb2.GetPluginStatusResponse.WAITING:
-                pass
-            elif result.status == analyser_pb2.GetPluginStatusResponse.RUNNING:
-                pass
-            elif result.status == analyser_pb2.GetPluginStatusResponse.ERROR:
-                logger.error("Job is crashing")
-                return
-            elif result.status == analyser_pb2.GetPluginStatusResponse.DONE:
-                break
-            time.sleep(1.0)
+                # Event.wait(timeout) returns as soon as cancel_event is set, unlike a
+                # plain sleep -- the loop reacts on the next line above almost
+                # instantly instead of only after the full second is up.
+                if cancel_event is not None:
+                    cancel_event.wait(timeout=1.0)
+                else:
+                    time.sleep(1.0)
 
         return result
