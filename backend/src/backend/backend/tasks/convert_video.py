@@ -188,8 +188,8 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         output_root = Path(media_dir_to_file(video_id_hex))
         file_in = Path(media_path_to_file(video_id_hex, original_ext))
         
-        asset_dir = os.path.join(output_root,video_id_hex)
-        manifest = os.path.join(asset_dir, f'{video_id_hex}.m3u8')
+        asset_dir = Path(os.path.join(output_root,video_id_hex))
+        manifest = Path(os.path.join(asset_dir, f'{video_id_hex}.m3u8'))
         asset_dir.mkdir(parents=True, exist_ok=True)
 
         fps, duration_ms, size = _metadata(file_in)
@@ -309,8 +309,6 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         
         if fmp4:
             # init_path, segments = _manifest_references_segments(manifest)
-            asset_dir = Path(asset_dir)
-            manifest = asset_dir / f"{video_id_hex}.m3u8"
             media_path_for_db = _manifest_references_singlefile(asset_dir, manifest)
         else:
             segment_candidates = sorted(asset_dir.glob("*.ts"))
