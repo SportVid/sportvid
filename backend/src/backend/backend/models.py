@@ -94,6 +94,10 @@ class Video(models.Model):
         choices=[(k, v) for k, v in STATUS.items()],
         default=STATUS_DONE,
     )
+    # 0..1 progress of the HLS conversion, so the "still processing" card in the video
+    # gallery can show a real bar instead of an open-ended spinner (see
+    # tasks/convert_video.py, which parses it out of ffmpeg's own output).
+    progress = models.FloatField(default=0.0)
     date = models.DateTimeField(auto_now_add=True)
     # some extracted meta information
     fps = models.FloatField(blank=True, null=True)
@@ -141,6 +145,7 @@ class Video(models.Model):
             "age_group": self.age_group,
             "sport": self.sport,
             "status": self.status,
+            "progress": self.progress,
             "processing": True if self.status == self.STATUS_PROCESSING else False,
         }
 

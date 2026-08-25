@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import shutil
 import time
@@ -9,7 +10,7 @@ from pathlib import Path
 from celery import shared_task
 from django.conf import settings
 
-from backend.utils import media_dir_to_file, media_path_to_file
+from backend.utils import media_dir_to_file, media_path_to_file, publish_video
 from backend.models import Video
 from backend.plugin_manager import PluginManager
 from utils.video_converter import convert_to_hls
@@ -18,6 +19,27 @@ from utils.helper import remove_file, remove_dir
 
 logger = logging.getLogger(__name__)
 _POLL_INTERVAL = 2.0  # seconds between cancellation checks
+_PROGRESS_STEP = 0.01  # only report conversion progress once it moved by at least 1%
+
+# Keys of ffmpeg's "-progress" blocks -- machine-readable status, not error output.
+_FFMPEG_PROGRESS_KEYS = (
+    "frame", "fps", "stream", "bitrate", "total_size", "out_time_us", "out_time_ms",
+    "out_time", "dup_frames", "drop_frames", "speed", "progress",
+)
+_FFMPEG_PROGRESS_LINE = re.compile(
+    r"^(" + "|".join(_FFMPEG_PROGRESS_KEYS) + r")[\w_]*="
+)
+
+
+def _report_conversion_progress(video_id_hex, progress):
+    """Persist + push HLS conversion progress. Queryset update on purpose: the video may
+    have been deleted mid-conversion, and this must not resurrect the row."""
+    progress = max(0.0, min(1.0, progress))
+    updated = Video.objects.filter(id=video_id_hex).update(progress=progress)
+    if updated:
+        # .update() bypasses post_save, so the live event is sent explicitly.
+        publish_video(video_id_hex)
+    return updated
 
 
 def safe_delete(paths):
@@ -79,6 +101,9 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         with imageio.get_reader(str(file_in)) as reader:
             meta = reader.get_meta_data()
             fps = float(meta["fps"])
+            # Denominator for the conversion progress below. May be missing for some
+            # containers -- the bar then stays indeterminate instead of showing a lie.
+            source_duration = meta.get("duration")
 
         segment_time = 5
         gop = max(1, int(round(fps * segment_time)))
@@ -131,33 +156,66 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 asynchronous=True,
                 **conversion_args
             )
+            cancelled = False
             try:
+                # ffmpeg's stderr carries both its error output and the "-progress"
+                # key=value blocks (roughly twice a second), so draining it line by
+                # line drives both the progress reporting and the cancellation check.
+                last_checked = 0.0
+                last_reported = 0.0
                 while True:
-                    if not Video.objects.filter(id=video_id_hex).exists():
-                        logger.info(
-                            "Video %s deleted during HLS conversion, killing ffmpeg.",
-                            video_id_hex,
-                        )
-                        ffmpeg_proc.kill()
-                        break
                     line = ffmpeg_proc.stderr.readline()
 
-                    if line: logger.debug("[ffmpeg] %s", line.rstrip()) # consume line
+                    if not line:
+                        if ffmpeg_proc.poll() is not None:
+                            break
+                        continue
 
-                    if ffmpeg_proc.poll() is not None:
-                        # process exited; drain remaining stderr
-                        rest = ffmpeg_proc.stderr.read()
-                        if rest:
-                            for extra_line in rest.splitlines():
-                                logger.info("[ffmpeg] %s", extra_line)
-                        break
+                    line = line.rstrip()
+                    is_progress_line = bool(_FFMPEG_PROGRESS_LINE.match(line))
 
-                    time.sleep(_POLL_INTERVAL)
+                    if not is_progress_line:
+                        if line:
+                            logger.debug("[ffmpeg] %s", line)
+                        continue
 
-                    rc = ffmpeg_proc.wait()
-                    if rc != 0: raise RuntimeError(f"ffmpeg exited with code {rc}")
+                    if line.startswith("out_time_us=") and source_duration:
+                        try:
+                            elapsed = int(line.split("=", 1)[1]) / 1_000_000.0
+                        except ValueError:
+                            elapsed = None
+                        if elapsed is not None:
+                            # Reserve the last few percent for packing the archive and
+                            # writing the metadata, which happen after ffmpeg exits.
+                            progress = min(elapsed / float(source_duration), 1.0) * 0.95
+                            if progress - last_reported >= _PROGRESS_STEP:
+                                last_reported = progress
+                                _report_conversion_progress(video_id_hex, progress)
+
+                    if line.startswith("progress="):
+                        now = time.monotonic()
+                        if now - last_checked >= _POLL_INTERVAL:
+                            last_checked = now
+                            if not Video.objects.filter(id=video_id_hex).exists():
+                                logger.info(
+                                    "Video %s deleted during HLS conversion, killing ffmpeg.",
+                                    video_id_hex,
+                                )
+                                cancelled = True
+                                ffmpeg_proc.kill()
+                                break
+
+                rest = ffmpeg_proc.stderr.read()
+                if rest:
+                    for extra_line in rest.splitlines():
+                        if not _FFMPEG_PROGRESS_LINE.match(extra_line):
+                            logger.info("[ffmpeg] %s", extra_line)
             finally:
                 if ffmpeg_proc.stderr: ffmpeg_proc.stderr.close()
+
+            rc = ffmpeg_proc.wait()
+            if not cancelled and rc != 0:
+                raise RuntimeError(f"ffmpeg exited with code {rc}")
                 
         else: 
             ffmpeg_done = convert_to_hls(
@@ -200,10 +258,14 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             width=size[0] if size else None,
             height=size[1] if size else None,
             status=Video.STATUS_DONE,
+            progress=1.0,
             asset_dir = str(asset_dir),
             manifest_path = str(manifest_path),
             media_path = str(segment_path)
         )
+        # Queryset .update() doesn't fire post_save -- push the "done" state explicitly
+        # so the gallery card resolves itself without a reload.
+        publish_video(video_id_hex)
 
         e = time.time()
         logger.info(f"HLS conversion took: {e-s}")
@@ -231,6 +293,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         logger.exception("Video conversion failed")
         if video_db is not None:
             Video.objects.filter(id=video_id_hex).update(status=Video.STATUS_ERROR)
+            publish_video(video_id_hex)
         safe_delete([archive_path, asset_dir])
 
     finally:

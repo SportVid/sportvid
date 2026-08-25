@@ -52,8 +52,15 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
     # print("FFmpeg command:", " ".join(cmd))
 
     if asynchronous:
+        # "-progress pipe:2" makes ffmpeg emit machine-readable "key=value" blocks
+        # (out_time_us, progress, ...) on stderr, alongside its normal output. Unlike
+        # the human-readable stats line this is not suppressed by "-loglevel error",
+        # which is what lets the caller report real conversion progress.
+        async_cmd = list(cmd)
+        async_cmd.insert(1, "-progress")
+        async_cmd.insert(2, "pipe:2")
         return subprocess.Popen(
-            cmd,
+            async_cmd,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,

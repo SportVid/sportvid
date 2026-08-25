@@ -180,6 +180,11 @@
                       {{ $t("button.cancel_and_delete") }}
                     </v-btn>
                   </v-card-text>
+                  <v-progress-linear
+                    class="mt-auto"
+                    :model-value="conversionProgress[item.id]"
+                    :indeterminate="conversionIndeterminate(item)"
+                  />
                 </div>
                 <div v-else class="card-body">
                   <div class="flip-container">
@@ -232,7 +237,7 @@
                       @click.stop="toggleCardFlip(item.id)"
                     />
                   </div>
-                  <v-progress-linear v-model="videosProgress[item.id]" />
+                  <v-progress-linear :model-value="videosProgress[item.id]" />
                 </div>
               </v-card>
             </v-container>
@@ -358,8 +363,12 @@
                 </div>
 
                 <v-progress-linear
-                  v-if="!showProcessingCard(item)"
-                  v-model="videosProgress[item.id]"
+                  :model-value="
+                    showProcessingCard(item)
+                      ? conversionProgress[item.id]
+                      : videosProgress[item.id]
+                  "
+                  :indeterminate="showProcessingCard(item) && conversionIndeterminate(item)"
                 />
               </v-card>
             </div>
@@ -427,13 +436,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick, onUnmounted } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
-import { useTimelineStore } from "@/stores/timeline";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { getDisplayTime } from "@/plugins/time";
 import ModalVideoRename from "@/components/video/ModalVideoRename.vue";
@@ -446,7 +454,6 @@ const videoStore = useVideoStore();
 const userStore = useUserStore();
 const pluginRunStore = usePluginRunStore();
 const pluginRunResultStore = usePluginRunResultStore();
-const timelineStore = useTimelineStore();
 
 const showModalVideoUpload = ref(false);
 
@@ -489,20 +496,35 @@ const videos = computed(() => {
   });
 });
 
+// Progress of the plugin batch currently being worked on for a video -- the mean over
+// its runs, so three queued plugins with the first at 24% read as 8% instead of
+// jumping in whole-run steps. Runs from an earlier session aren't part of a batch and
+// therefore don't count (see pluginRunStore.batchProgress).
 const videosProgress = computed(() => {
   const progress = {};
   videos.value.forEach((video) => {
-    const runs = pluginRunStore.forVideo(video.id);
-    if (runs.length === 0) {
-      progress[video.id] = 0;
-    } else {
-      progress[video.id] =
-        (runs.filter((r) => r.status !== "RUNNING" && r.status !== "QUEUED").length / runs.length) *
-        100;
-    }
+    progress[video.id] = pluginRunStore.batchProgress(video.id);
   });
   return progress;
 });
+
+// Same slot, same meaning while a video is still being converted: how far along the
+// work on this video is. Conversion and plugin runs never overlap.
+const conversionProgress = computed(() => {
+  const progress = {};
+  videos.value.forEach((video) => {
+    progress[video.id] = (parseFloat(video.progress) || 0) * 100;
+  });
+  return progress;
+});
+
+// ffmpeg only reports progress once the source duration is known, and the automatic
+// thumbnail run afterwards has no percentage of its own -- show an indeterminate bar
+// rather than a number that would sit still or lie.
+const conversionIndeterminate = (item) => {
+  if (!item.processing) return true;
+  return !conversionProgress.value[item.id];
+};
 
 // Cover thumbnail shown on the front of a video card, sourced from the "thumbnail"
 // plugin run that now runs automatically once a video finishes processing.
@@ -517,6 +539,14 @@ const thumbnailRunForVideo = (videoId) => {
   return run && run.status === "DONE" ? run : null;
 };
 
+// Status of each video's latest thumbnail run. `videos` alone used to be enough as a
+// watch source only because the 2-second refetch replaced every video object on each
+// tick; with live updates the video object stays identical while only the run changes,
+// so the run status has to be part of the source or the watchers below never fire.
+const thumbnailRunStates = computed(() =>
+  videos.value.map((item) => `${item.id}:${latestThumbnailRun(item.id)?.status ?? ""}`).join(",")
+);
+
 // Videos we've personally watched go through Video.status===PROCESSING in this session --
 // only for those do we keep the "still processing" look alive while their automatic
 // thumbnail generation finishes, so a card doesn't flash an empty placeholder right after
@@ -525,8 +555,8 @@ const thumbnailRunForVideo = (videoId) => {
 // and never gets one" for those, so forcing the processing look on them would get stuck.
 const observedProcessing = ref({});
 watch(
-  videos,
-  (list) => {
+  [videos, thumbnailRunStates],
+  ([list]) => {
     // Both the "start tracking" and "stop tracking" writes live in this one watcher (not in
     // isThumbnailPending below) so it stays a pure read -- safe to call from several places
     // in the template per render without a mutation from one call leaking into the next.
@@ -554,8 +584,8 @@ const isThumbnailPending = (item) => {
 const showProcessingCard = (item) => item.processing || isThumbnailPending(item);
 
 watch(
-  videos,
-  (list) => {
+  [videos, thumbnailRunStates],
+  ([list]) => {
     list.forEach((item) => {
       const run = thumbnailRunForVideo(item.id);
       if (!run) return;
@@ -690,47 +720,13 @@ const stateIcon = (state) => {
   };
   return icons[state] || icons.none;
 };
-watch(
-  videosProgress,
-  (newState, oldState) => {
-    if (!oldState) return;
-    if (Object.keys(newState).some((k) => oldState[k] !== newState[k])) {
-      fetchData(true);
-    }
-  },
-  { deep: true }
-);
 
-const fetchPluginTimer = ref(null);
-const fetchData = async (fetchTimelines = false) => {
+// Initial load only -- conversion state and plugin run updates are pushed in over the
+// live event stream afterwards (see stores/event_stream.js).
+const fetchData = async () => {
   await videoStore.fetchAll();
   await pluginRunStore.fetchAll({ addResults: false });
-  if (fetchTimelines) {
-    await timelineStore.fetchAll({ addResultsType: true });
-  }
 };
-
-const processingPollTimer = ref(null);
-const hasProcessingVideos = computed(() => {
-  return videos.value.some((v) => showProcessingCard(v));
-});
-watch(
-  hasProcessingVideos,
-  (newVal) => {
-    if (newVal) {
-      if (processingPollTimer.value) clearInterval(processingPollTimer.value);
-      processingPollTimer.value = setInterval(() => fetchData(), 2000);
-    } else if (processingPollTimer.value) {
-      clearInterval(processingPollTimer.value);
-      processingPollTimer.value = null;
-    }
-  },
-  { immediate: true }
-);
-onUnmounted(() => {
-  if (processingPollTimer.value) clearInterval(processingPollTimer.value);
-  if (fetchPluginTimer.value) clearInterval(fetchPluginTimer.value);
-});
 
 onMounted(() => {
   fetchData();
@@ -742,19 +738,6 @@ watch(
       fetchData();
     }
   }
-);
-watch(
-  () => pluginRunStore.pluginInProgress,
-  (newState) => {
-    if (newState) {
-      fetchPluginTimer.value = setInterval(() => {
-        fetchData();
-      }, 2000);
-    } else if (fetchPluginTimer.value) {
-      clearInterval(fetchPluginTimer.value);
-    }
-  },
-  { immediate: true }
 );
 
 const canWrite = (item) => {

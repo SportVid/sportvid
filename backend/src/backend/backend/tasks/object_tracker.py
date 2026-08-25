@@ -52,6 +52,9 @@ class ObjectTracker(Task):
             manager=manager,
         )
         video_id = self.upload_video(client, video)
+        if plugin_run is not None:
+            plugin_run.progress = 0.05
+            plugin_run.save()
         
         logging.error(f'TASK PARAMS: {parameters}')
         tracker_result = self.run_analyser(
@@ -61,6 +64,10 @@ class ObjectTracker(Task):
             inputs={"video": video_id},
             outputs=["tracklets"],
             downloads=["tracklets"],
+            plugin_run=plugin_run,
+            # Detection/tracking is virtually all of the runtime -- the rest is upload
+            # and writing the result, so the analyser owns nearly the whole bar.
+            progress_range=(0.05, 0.95),
         )
 
         if plugin_run is not None:

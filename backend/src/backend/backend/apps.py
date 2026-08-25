@@ -12,6 +12,10 @@ class BackendConfig(AppConfig):
     name = "backend"
 
     def ready(self):
+        # Registered before the table check below -- on a fresh database that check
+        # returns early, and the live-event signals would silently never be connected.
+        import backend.signals  # noqa: F401
+
         if 'backend_pluginrun' not in connection.introspection.table_names():
             return
         # import here otherwise django complains

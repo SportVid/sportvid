@@ -34,7 +34,11 @@ class Task:
         outputs: List = None,
         downloads: List = None,
         plugin_run: PluginRun = None,
+        progress_range: tuple = None,
     ) -> str:
+        """`progress_range` is the (start, end) slice of the run's overall progress that
+        this analyser call owns -- its own 0..1 progress is mapped into it, so a task's
+        coarse milestones and the analyser's live progress don't overwrite each other."""
         if parameters is None: parameters = {}
         if inputs is None: inputs = {}
         if outputs is None: outputs = []
@@ -51,7 +55,11 @@ class Task:
             f"Plugin started: analyser job_id: {job_id} plugin_run_id: {plugin_run}"
         )
 
-        result = client.get_plugin_results(job_id=job_id, plugin_run_db=plugin_run)
+        result = client.get_plugin_results(
+            job_id=job_id,
+            plugin_run_db=plugin_run,
+            progress_range=progress_range,
+        )
         if result is None:
             logger.error(
                 f"Plugin is crashing: analyser job_id: {job_id} plugin_run_id: {plugin_run}"

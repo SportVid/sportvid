@@ -157,6 +157,10 @@ class PluginManager:
             # frontend; str(plugin_run.id) here would produce dashed-UUID keys that never
             # match, so waitForDone() would wait on a key that's never populated.
             result["plugin_run_id"] = plugin_run.id.hex
+            # Full entry so the frontend can drop the run straight into its store and
+            # show it in the status list/badge immediately, without waiting for the
+            # live event (and even if the event stream happens to be down).
+            result["entry"] = plugin_run.to_dict()
 
         task_payload = {
             "plugin": plugin,

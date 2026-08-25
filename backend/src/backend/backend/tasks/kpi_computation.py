@@ -213,6 +213,9 @@ class KpiComputation(Task):
             inputs={**input_dict},
             outputs=["kpi_data"],
             downloads=["kpi_data"],
+            plugin_run=plugin_run,
+            # Ends where the existing 0.6 milestone below picks up.
+            progress_range=(0.1, 0.6),
         )
 
         if plugin_run is not None:

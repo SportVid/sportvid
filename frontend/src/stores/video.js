@@ -46,8 +46,14 @@ export const useVideoStore = defineStore("video", () => {
   };
 
   const addToStore = (video) => {
-    videos.value[video.id] = video;
-    videoList.value.push(video.id);
+    // A "video.update" event for this same upload can already have arrived over the
+    // live stream (the row exists, and its post_save fires, the instant the upload
+    // view creates it) and inserted the id via upsert() before this response handler
+    // runs -- pushing unconditionally here would then list the same video twice.
+    if (!videoList.value.includes(video.id)) {
+      videoList.value.push(video.id);
+    }
+    videos.value = { ...videos.value, [video.id]: video };
     uploadSuccess.value = true;
   };
 
@@ -144,6 +150,16 @@ export const useVideoStore = defineStore("video", () => {
     });
   };
 
+  // Patch a single video in from the live event stream (upload -> conversion progress
+  // -> done). Reassigns the map so the gallery's computeds pick the change up.
+  const upsert = (video) => {
+    if (!video || !video.id) return;
+    if (!videos.value[video.id]) {
+      if (!videoList.value.includes(video.id)) videoList.value.push(video.id);
+    }
+    videos.value = { ...videos.value, [video.id]: video };
+  };
+
   const fetchAll = async () => {
     if (isLoading.value) return;
     if (userStore.loggedIn === false) return;
@@ -209,6 +225,7 @@ export const useVideoStore = defineStore("video", () => {
   );
 
   return {
+    upsert,
     videos,
     videoList,
     isLoading,
