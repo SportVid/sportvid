@@ -21,7 +21,21 @@
             <v-icon>mdi-menu</v-icon>
           </v-btn>
         </template>
-        <v-list class="py-0" density="compact" width="220px">
+        <v-list class="py-0" density="compact" width="160px">
+          <!-- Drops just the current selection (demo flag + selectedTranscriptRunId) so this
+               card falls back to its own TranscriptDataMenu -- lets the user generate a new
+               whisper run or pick a different one right here instead of having to go back to
+               VideoView and reopen the video just to get back to that empty state. -->
+          <v-list-item
+            v-if="canWrite"
+            class="menu-item"
+            @click="
+              timelineSegmentAnnotationStore.resetDemoTranscript();
+              timelineSegmentAnnotationStore.resetTranscriptSelection();
+            "
+          >
+            <v-list-item-title>{{ $t("transcript_data.create_new") }}</v-list-item-title>
+          </v-list-item>
           <v-list-item class="menu-item" @click="showModalTranscriptSelect = true">
             <v-list-item-title>{{ $t("transcript_data.select") }}</v-list-item-title>
           </v-list-item>
@@ -103,6 +117,7 @@ import cloud from "d3-cloud";
 import { removeStopwords, deu, eng } from "stopword";
 import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
 import { usePlayerStore } from "@/stores/player";
+import { useUserStore } from "@/stores/user";
 import TranscriptDataMenu from "@/components/transcript/TranscriptDataMenu.vue";
 import TranscriptListItem from "@/components/transcript/TranscriptListItem.vue";
 import ModalTranscriptSelect from "@/components/transcript/ModalTranscriptSelect.vue";
@@ -118,10 +133,18 @@ defineProps({
 const { t } = useI18n();
 const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
 const playerStore = usePlayerStore();
+const userStore = useUserStore();
 
 const hasTranscriptData = computed(
   () => timelineSegmentAnnotationStore.transcriptSegments.length > 0
 );
+
+const canWrite = computed(() => {
+  if (userStore.role === "admin") return true;
+  const ownerUsername = playerStore.video?.owner_username;
+  if (!ownerUsername) return true;
+  return ownerUsername === userStore.username;
+});
 
 const viewMode = ref("list");
 const showModalTranscriptSelect = ref(false);

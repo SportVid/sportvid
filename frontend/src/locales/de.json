@@ -213,6 +213,7 @@
   },
   "transcript_data": {
     "select": "Transkript auswählen",
+    "create_new": "Neues Transkript erstellen",
     "generate": {
       "heading": "Über Spracherkennung"
     }

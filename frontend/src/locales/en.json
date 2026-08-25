@@ -268,6 +268,7 @@
   },
   "transcript_data": {
     "select": "Select transcript",
+    "create_new": "Create new transcript",
     "generate": {
       "heading": "Via speech recognition"
     }
