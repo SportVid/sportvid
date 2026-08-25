@@ -367,6 +367,19 @@
                 </v-list-item>
               </template>
               <v-list class="py-0" density="compact">
+                <!-- Drops the current selection so this card falls back to its own
+                     PositionDataMenu (create/upload/select) -- lets the user generate a fresh
+                     run right here instead of having to go back to VideoView and reopen the
+                     video just to get back to that empty state. -->
+                <v-list-item
+                  v-if="canWrite"
+                  class="menu-item"
+                  @click="positionDataStore.resetPositionData()"
+                >
+                  <v-list-item-title>
+                    {{ $t("position_data.display_settings.position_data.create_new") }}
+                  </v-list-item-title>
+                </v-list-item>
                 <v-list-item
                   v-if="canWrite"
                   class="menu-item"
@@ -516,6 +529,7 @@ import { throttle } from "lodash";
 import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
+import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { useUserStore } from "@/stores/user";
@@ -532,6 +546,7 @@ import ModalPositionDataOffset from "@/components/position-data/ModalPositionDat
 const playerStore = usePlayerStore();
 const topViewStore = useTopViewStore();
 const videoStore = useVideoStore();
+const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
 const posdataWorkerStore = usePosdataWorkerStore();
 const userStore = useUserStore();

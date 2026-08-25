@@ -118,6 +118,19 @@
                   </v-list-item>
                 </template>
                 <v-list class="py-0" density="compact">
+                  <!-- Drops just the current selection (eventDataSets itself stays intact) so
+                       this card falls back to its own EventDataMenu -- lets the user upload or
+                       pick a different event data set right here instead of having to go back
+                       to VideoView and reopen the video just to get back to that empty state. -->
+                  <v-list-item
+                    v-if="canWrite"
+                    class="menu-item"
+                    @click="eventsStore.deselectEventData()"
+                  >
+                    <v-list-item-title>
+                      {{ $t("event_data.display_settings.event_data.create_new") }}
+                    </v-list-item-title>
+                  </v-list-item>
                   <v-list-item
                     v-if="canWrite"
                     class="menu-item"

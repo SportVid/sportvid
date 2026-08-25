@@ -372,6 +372,19 @@
                 </v-list-item>
               </template>
               <v-list class="py-0" density="compact">
+                <!-- Drops the current selection (bbox overlay + everything derived from it) so
+                     the TopView/Heatmap/KPI cards fall back to their own PositionDataMenu --
+                     lets the user generate a fresh run right away instead of having to go back
+                     to VideoView and reopen the video just to get back to that empty state. -->
+                <v-list-item
+                  v-if="canWrite"
+                  class="menu-item"
+                  @click="positionDataStore.resetPositionData()"
+                >
+                  <v-list-item-title>
+                    {{ $t("position_data.display_settings.position_data.create_new") }}
+                  </v-list-item-title>
+                </v-list-item>
                 <v-list-item
                   v-if="canWrite"
                   class="menu-item"
@@ -523,6 +536,7 @@ import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
+import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useTopViewStore } from "@/stores/top_view";
 import { useUserStore } from "@/stores/user";
@@ -538,6 +552,7 @@ const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
+const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
 const topViewStore = useTopViewStore();
 const userStore = useUserStore();

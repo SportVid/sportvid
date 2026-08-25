@@ -200,6 +200,17 @@ export const useEventsStore = defineStore(
       }
     }
 
+    // Clears just the current selection, leaving eventDataSets (the uploaded/demo entries
+    // themselves) intact -- unlike resetEventData below, which also wipes that list. Used by
+    // TabWindowEvents' "Create new event data" menu item so the card falls back to
+    // EventDataMenu with everything already uploaded/generated for this video still there to
+    // pick from via Select, instead of losing it.
+    function deselectEventData() {
+      selectedEventDataSetId.value = null;
+      selectedPlayerIds.value = null;
+      pinnedEventId.value = null;
+    }
+
     // Called from AnalysisView.vue's onBeforeUnmount (mirrors visualizationStore.resetKpiData /
     // calibrationAssetStore.resetCalibrationAsset there) -- event data sets are uploaded/
     // generated per video, not a reusable global list, so despite eventDataSets/
@@ -210,9 +221,7 @@ export const useEventsStore = defineStore(
     // alone -- those aren't video-bound data, same as resetKpiData leaves kpiGroupMode etc.
     function resetEventData() {
       eventDataSets.value = [];
-      selectedEventDataSetId.value = null;
-      selectedPlayerIds.value = null;
-      pinnedEventId.value = null;
+      deselectEventData();
     }
 
     // Backdoor for as long as there's neither a real detector nor a reason to make someone
@@ -382,6 +391,7 @@ export const useEventsStore = defineStore(
       deleteEventDataSet,
       selectEventDataSet,
       loadDemoEventData,
+      deselectEventData,
       resetEventData,
       toggleEventType,
       toggleKpiColumn,

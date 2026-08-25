@@ -718,24 +718,15 @@ function onEntryClick(event) {
 onBeforeUnmount(() => {
   window.removeEventListener("pointermove", onEntryPointerMove);
   window.removeEventListener("pointerup", onEntryPointerUp);
-  positionDataStore.positionDataId = null;
-  positionDataStore.positionDataMode = null;
-  positionDataStore.selectedTimeRange = { start: 0, end: 0 };
-  topViewStore.setPositionData(null, {});
-  bboxesStore.bboxDataInterpolated = {};
-  // Also clear the persisted tracker-run ids (bboxPluginRunId/bboxBallPluginRunId,
-  // teamClusteringRunId/reidRunId) — otherwise they'd survive into a different
-  // video's AnalysisView and restoreFromCache (position_data.js) could try to
-  // restore this video's tracker run against that one.
-  bboxesStore.bboxPluginRunId = 0;
-  bboxesStore.bboxBallPluginRunId = null;
-  topViewStore.teamClusteringRunId = null;
-  topViewStore.reidRunId = null;
+  // Also clears the persisted tracker-run ids (bboxPluginRunId/bboxBallPluginRunId,
+  // teamClusteringRunId/reidRunId) — otherwise they'd survive into a different video's
+  // AnalysisView and restoreFromCache (position_data.js) could try to restore this video's
+  // tracker run against that one.
+  positionDataStore.resetPositionData();
   calibrationAssetStore.resetCalibrationAsset();
   topViewStore.gridLongitudinal = 0;
   topViewStore.gridTransverse = 0;
   topViewStore.showSportZones = false;
-  visualizationStore.resetKpiData();
   // Event data sets (see EventDataMenu.vue) are only ever uploaded/generated per video, not
   // a reusable global list -- carrying them into the next video (persisted, see events.js)
   // would show that other video's dummy/uploaded events tagged onto this one instead of a

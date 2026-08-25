@@ -373,6 +373,29 @@ export const usePositionDataStore = defineStore(
     }
 
     /**
+     * Clears the currently selected/loaded position data and everything derived from it -- the
+     * topView pitch data, the bbox overlay + tracker-run ids, KPI data -- without touching
+     * anything else (calibration mode, pitch grid/zones, event data stay as they are, unlike a
+     * full AnalysisView unmount). Used by the "Position data" menu on TopView/VideoPlayer/
+     * Heatmap/KPI cards so their empty state (PositionDataMenu) comes back and the user can
+     * create/upload/select something new right there, without navigating back to VideoView.
+     */
+    function resetPositionData() {
+      positionDataId.value = null;
+      positionDataMode.value = null;
+      selectedTimeRange.value = { start: 0, end: 0 };
+      topViewStore.setPositionData(null, {});
+      bboxesStore.bboxDataInterpolated = {};
+      // Also clear the persisted tracker-run ids -- otherwise a later restoreFromCache (e.g. a
+      // reload right after this) would try to restore the just-cleared selection right back.
+      bboxesStore.bboxPluginRunId = 0;
+      bboxesStore.bboxBallPluginRunId = null;
+      topViewStore.teamClusteringRunId = null;
+      topViewStore.reidRunId = null;
+      visualizationStore.resetKpiData();
+    }
+
+    /**
      * Restore whichever position-data source was active before a reload,
      * using positionDataMode plus the source-specific ids persisted on this
      * store / bboxesStore / calibrationAssetStore / topViewStore (see each
@@ -413,6 +436,7 @@ export const usePositionDataStore = defineStore(
       selectedTimeRange,
       setSelectedTimeRangeStart,
       setSelectedTimeRangeEnd,
+      resetPositionData,
       restoreFromCache,
       isRestoringPosData,
     };

@@ -196,6 +196,7 @@
       },
       "position_data": {
         "title": "Positionsdaten",
+        "create_new": "Neue Positionsdaten erstellen",
         "upload": "Positionsdaten hochladen",
         "select": "Positionsdaten auswählen"
       },
@@ -221,6 +222,7 @@
     "display_settings": {
       "event_data": {
         "title": "Event-Daten",
+        "create_new": "Neue Event-Daten erstellen",
         "upload": "Event-Daten hochladen",
         "select": "Event-Daten auswählen"
       }

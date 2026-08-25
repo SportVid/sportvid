@@ -251,6 +251,7 @@
       },
       "position_data": {
         "title": "Position data",
+        "create_new": "Create new position data",
         "upload": "Upload position data",
         "select": "Select position data"
       }
@@ -276,6 +277,7 @@
     "display_settings": {
       "event_data": {
         "title": "Event data",
+        "create_new": "Create new event data",
         "upload": "Upload event data",
         "select": "Select event data"
       }
