@@ -164,6 +164,9 @@ services:
       - "worker"
       - "--loglevel"
       - "${LOG_LEVEL:-DEBUG}"
+      - "--concurrency=16"
+      - "--pool=threads"
+      - "--prefetch-multiplier=1"
     networks:
       - shared
       - dev
