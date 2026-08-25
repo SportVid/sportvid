@@ -32,79 +32,140 @@
       </div>
     </div>
 
-    <v-row justify="center">
-      <div ref="topViewFullscreenRoot" class="top-view-fullscreen-root">
+    <v-row justify="center" class="video-row">
+      <Teleport to="body" :disabled="!isPip">
         <div
-          class="top-view-wrapper"
-          data-tour="top-view-pitch"
-          @mouseenter="hovering = true"
-          @mouseleave="hovering = false"
+          ref="topViewFullscreenRoot"
+          class="top-view-fullscreen-root"
+          :class="{ 'pip-panel': isPip }"
+          :style="isPip ? pipPanelStyle : null"
         >
-          <img
-            ref="topViewElement"
-            class="visualizer-image"
-            :src="topViewStore.currentSport.areaImage"
-            @load="updateTopViewSize"
-            :style="
-              isTopViewFullscreen
-                ? {
-                    maxHeight: 100 + 'vh',
-                  }
-                : {
-                    maxHeight: maxVideoHeight * 100 + 'vh',
-                    height: videoStore.videoSize.height + 'px',
-                  }
-            "
-          />
-
-          <v-icon
-            class="fullscreen-toggle"
-            @click="toggleTopViewFullscreen"
-            :class="{ visible: hovering }"
-          >
-            {{ isTopViewFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
-          </v-icon>
-
           <div
-            v-if="isTopViewFullscreen"
-            class="fullscreen-controls"
-            :class="{ visible: hovering }"
+            class="top-view-wrapper"
+            :class="{ 'pip-content': isPip }"
+            data-tour="top-view-pitch"
+            @mouseenter="hovering = true"
+            @mouseleave="hovering = false"
+            @pointerdown="onPipDragStart"
           >
-            <div class="controls-top">
-              <v-icon @click="toggleTopView" class="control-icon">
-                <template v-if="topViewEnded">mdi-restart</template>
-                <template v-else-if="topViewPlaying">mdi-pause</template>
-                <template v-else>mdi-play</template>
-              </v-icon>
-              <div class="time-code">{{ getTimecode(currentTime) }}</div>
+            <img
+              ref="topViewElement"
+              class="visualizer-image"
+              :src="topViewStore.currentSport.areaImage"
+              @load="updateTopViewSize"
+              :style="
+                isTopViewFullscreen
+                  ? {
+                      maxHeight: 100 + 'vh',
+                    }
+                  : isPip
+                    ? {
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                      }
+                    : {
+                        maxHeight: maxVideoHeight * 100 + 'vh',
+                        height: videoStore.videoSize.height + 'px',
+                      }
+              "
+            />
+
+            <v-icon
+              v-if="!isPip"
+              class="fullscreen-toggle"
+              @click="toggleTopViewFullscreen"
+              :class="{ visible: hovering }"
+            >
+              {{ isTopViewFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
+            </v-icon>
+
+            <!-- Enter-PiP trigger, next to the fullscreen icon; only shown
+                 outside PiP -- own button rather than swapped via v-if/else
+                 with the close button below, since the two live in
+                 different corner slots once in PiP (fullscreen-toggle isn't
+                 rendered any more, so the close button can move all the way
+                 into the actual corner). -->
+            <v-icon
+              v-if="!isPip"
+              class="pip-toggle"
+              @click="openPip"
+              @pointerdown.stop
+              :class="{ visible: hovering }"
+              :title="$t('pip.enter')"
+            >
+              mdi-picture-in-picture-top-right
+            </v-icon>
+
+            <!-- Dedicated close button shown only inside the PiP panel,
+                 flush in the actual top-right corner. -->
+            <v-icon
+              v-if="isPip"
+              class="pip-close-button"
+              @click="closePip"
+              @pointerdown.stop
+              :title="$t('pip.exit')"
+            >
+              mdi-close
+            </v-icon>
+
+            <div
+              v-if="isTopViewFullscreen || isPip"
+              class="fullscreen-controls pip-no-drag"
+              :class="{ visible: hovering || isPip }"
+            >
+              <div class="controls-top">
+                <v-icon @click="toggleTopView" class="control-icon">
+                  <template v-if="topViewEnded">mdi-restart</template>
+                  <template v-else-if="topViewPlaying">mdi-pause</template>
+                  <template v-else>mdi-play</template>
+                </v-icon>
+                <div class="time-code">{{ getTimecode(currentTime) }}</div>
+              </div>
+
+              <v-slider
+                v-model="currentTime"
+                @update:model-value="onProgressChange"
+                hide-details
+                color="white"
+                :thumb-size="15"
+                :step="1000 / playerStore.videoFPS"
+                min="0"
+                :max="playerStore.videoDuration"
+              />
             </div>
 
-            <v-slider
-              v-model="currentTime"
-              @update:model-value="onProgressChange"
-              hide-details
-              color="white"
-              :thumb-size="15"
-              :step="1000 / playerStore.videoFPS"
-              min="0"
-              :max="playerStore.videoDuration"
+            <canvas
+              ref="playerCanvas"
+              v-show="topViewStore.showItems"
+              :style="{
+                position: 'absolute',
+                top: '0px',
+                left: '0px',
+                width: topViewSize.width + 'px',
+                height: topViewSize.height + 'px',
+              }"
+              @click="onCanvasClick"
+              @mousemove="onCanvasMouseMove"
             />
-          </div>
 
-          <canvas
-            ref="playerCanvas"
-            v-show="topViewStore.showItems"
-            :style="{
-              position: 'absolute',
-              top: '0px',
-              left: '0px',
-              width: topViewStore.topViewSize.width + 'px',
-              height: topViewStore.topViewSize.height + 'px',
-            }"
-            @click="onCanvasClick"
-            @mousemove="onCanvasMouseMove"
-          />
+            <v-icon v-if="isPip" class="pip-resize-handle" @pointerdown.stop="onPipResizeStart">
+              mdi-resize-bottom-right
+            </v-icon>
+          </div>
         </div>
+      </Teleport>
+
+      <div
+        v-if="isPip"
+        class="pip-placeholder"
+        :style="{ height: (lastCardTopViewHeight || 200) + 'px' }"
+      >
+        <v-icon size="40" class="pip-placeholder-icon">mdi-picture-in-picture-top-right</v-icon>
+        <div class="pip-placeholder-text">{{ $t("top_view.pip.playing_in_pip") }}</div>
+        <v-btn size="small" variant="flat" color="primary" @click="closePip">
+          {{ $t("pip.return_to_card") }}
+        </v-btn>
       </div>
     </v-row>
 
@@ -526,6 +587,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
 import { throttle } from "lodash";
+import { usePictureInPicture } from "@/composables/usePictureInPicture";
 import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "@/stores/top_view";
 import { useVideoStore } from "@/stores/video";
@@ -647,18 +709,44 @@ watch(
 );
 
 const topViewElement = ref(null);
+
+// Picture-in-picture (see usePictureInPicture): isPip/pipPanelStyle drive the
+// floating panel, topViewSize is what the canvas draw routine and all its
+// coordinate math read for pixel positioning -- it mirrors the shared
+// topViewStore.topViewSize (also read outside this card, e.g. by the
+// calibration-asset views) normally, but while in PiP falls back to the
+// panel-local pip.contentSize instead, so resizing the floating panel never
+// leaks into that shared value. See updateTopViewSize below for the other
+// half of that: it only writes to the store while docked.
+const pip = usePictureInPicture({ onResize: () => updateTopViewSize() });
+const isPip = pip.isPip;
+const lastCardTopViewHeight = pip.lastCardContentHeight;
+const pipPanelStyle = pip.panelStyle;
+const onPipResizeStart = pip.onResizeStart;
+const openPip = () => pip.open(topViewFullscreenRoot.value, topViewElement.value);
+const closePip = pip.close;
+
+const topViewSize = computed(() => (isPip.value ? pip.contentSize.value : topViewStore.topViewSize));
+
+// The canvas isn't uniformly clickable -- onCanvasMouseMove hit-tests actual
+// markers and only switches the cursor to a hand right over one (see
+// canvasHoverHit below) -- so unlike a plain `.pip-no-drag` class (which
+// would block dragging over the whole canvas, including empty pitch space),
+// panel-dragging here needs to defer to that same per-pixel hit-test.
+const canvasHoverHit = ref(false);
+const onPipDragStart = (event) => {
+  if (canvasHoverHit.value) return;
+  pip.onDragStart(event);
+};
+
 const updateTopViewSize = async () => {
   await nextTick();
   await waitForStableElement(topViewElement);
 
-  if (topViewElement.value) {
-    const rect = topViewElement.value.getBoundingClientRect();
-    topViewStore.setTopViewSize({
-      width: rect.width,
-      height: rect.height,
-      top: rect.top,
-      left: rect.left,
-    });
+  if (!topViewElement.value) return;
+  const size = pip.measure(topViewElement.value);
+  if (!isPip.value) {
+    topViewStore.setTopViewSize(size);
   }
 };
 function waitForStableElement(elRef) {
@@ -885,7 +973,7 @@ const computeConvexHull = (points) => {
   return lower.concat(upper);
 };
 const convexHullForCurrentFrame = computed(() => {
-  if (!topViewStore.topViewSize || !topViewStore.positionDataTopView) {
+  if (!topViewSize.value || !topViewStore.positionDataTopView) {
     return {};
   }
   const framePositions = topViewStore.currentFramePlayers;
@@ -909,11 +997,11 @@ const convexHullForCurrentFrame = computed(() => {
       const cx = topViewStore.mirrorXY ? 1 - transformed.x : transformed.x;
       const cy = topViewStore.mirrorXY ? 1 - transformed.y : transformed.y;
       const top =
-        cy * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
-        ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
+        cy * topViewSize.value.height * topViewStore.currentSport.heightRel +
+        ((1 - topViewStore.currentSport.heightRel) / 2) * topViewSize.value.height;
       const left =
-        cx * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
-        ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
+        cx * topViewSize.value.width * topViewStore.currentSport.widthRel +
+        ((1 - topViewStore.currentSport.widthRel) / 2) * topViewSize.value.width;
       if (!teams[position[1]]) {
         teams[position[1]] = [];
       }
@@ -932,15 +1020,15 @@ const computeVoronoi = (players) => {
 
   const delaunay = Delaunay.from(players.map((p) => [p.left, p.top]));
   const voronoi = delaunay.voronoi([
-    ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width,
+    ((1 - topViewStore.currentSport.widthRel) / 2) * topViewSize.value.width,
 
-    ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height,
+    ((1 - topViewStore.currentSport.heightRel) / 2) * topViewSize.value.height,
 
-    ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width +
-      topViewStore.topViewSize.width * topViewStore.currentSport.widthRel,
+    ((1 - topViewStore.currentSport.widthRel) / 2) * topViewSize.value.width +
+      topViewSize.value.width * topViewStore.currentSport.widthRel,
 
-    ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height +
-      topViewStore.topViewSize.height * topViewStore.currentSport.heightRel,
+    ((1 - topViewStore.currentSport.heightRel) / 2) * topViewSize.value.height +
+      topViewSize.value.height * topViewStore.currentSport.heightRel,
   ]);
 
   return players
@@ -951,7 +1039,7 @@ const computeVoronoi = (players) => {
     .filter((cell) => cell !== null);
 };
 const voronoiForCurrentFrame = computed(() => {
-  if (!topViewStore.topViewSize || !topViewStore.positionDataTopView) {
+  if (!topViewSize.value || !topViewStore.positionDataTopView) {
     return [];
   }
   const framePositions = topViewStore.currentFramePlayers;
@@ -977,11 +1065,11 @@ const voronoiForCurrentFrame = computed(() => {
       const vx = topViewStore.mirrorXY ? 1 - transformed.x : transformed.x;
       const vy = topViewStore.mirrorXY ? 1 - transformed.y : transformed.y;
       const top =
-        vy * topViewStore.topViewSize.height * topViewStore.currentSport.heightRel +
-        ((1 - topViewStore.currentSport.heightRel) / 2) * topViewStore.topViewSize.height;
+        vy * topViewSize.value.height * topViewStore.currentSport.heightRel +
+        ((1 - topViewStore.currentSport.heightRel) / 2) * topViewSize.value.height;
       const left =
-        vx * topViewStore.topViewSize.width * topViewStore.currentSport.widthRel +
-        ((1 - topViewStore.currentSport.widthRel) / 2) * topViewStore.topViewSize.width;
+        vx * topViewSize.value.width * topViewStore.currentSport.widthRel +
+        ((1 - topViewStore.currentSport.widthRel) / 2) * topViewSize.value.width;
       return { left, top, team_id: player[1] };
     });
   return computeVoronoi(allPlayers);
@@ -1029,8 +1117,8 @@ function scheduleCanvasDraw() {
 function drawCanvas(offscreenCanvas = null, offscreenScale = 1) {
   const canvas = offscreenCanvas ?? playerCanvas.value;
   if (!canvas) return;
-  const w = topViewStore.topViewSize.width;
-  const h = topViewStore.topViewSize.height;
+  const w = topViewSize.value.width;
+  const h = topViewSize.value.height;
   if (!w || !h) return;
 
   const dpr = offscreenCanvas ? offscreenScale : window.devicePixelRatio || 1;
@@ -1279,7 +1367,12 @@ function onCanvasMouseMove(event) {
   if (!canvas) return;
 
   if (!topViewStore.showSpaceControl && !topViewStore.showEffectivePlayingSpace) {
-    canvas.style.cursor = "default";
+    // The canvas covers virtually the whole pitch, so its own inline cursor
+    // always wins over the panel's inherited "move" -- fall back to it
+    // explicitly here while in PiP, so the cursor actually reflects that
+    // empty pitch space is still draggable.
+    canvas.style.cursor = isPip.value ? "move" : "default";
+    canvasHoverHit.value = false;
     return;
   }
 
@@ -1297,7 +1390,8 @@ function onCanvasMouseMove(event) {
       break;
     }
   }
-  canvas.style.cursor = hit ? "pointer" : "default";
+  canvas.style.cursor = hit ? "pointer" : isPip.value ? "move" : "default";
+  canvasHoverHit.value = hit;
 }
 
 // Redraw when frame or relevant state changes
@@ -1308,8 +1402,8 @@ watch(
     () => topViewStore.showSpaceControl,
     () => topViewStore.showEffectivePlayingSpace,
     () => topViewStore.showItems,
-    () => topViewStore.topViewSize.width,
-    () => topViewStore.topViewSize.height,
+    () => topViewSize.value.width,
+    () => topViewSize.value.height,
     () => topViewStore.currentAreaSize,
     () => topViewStore.gridLongitudinal,
     () => topViewStore.gridTransverse,
@@ -1426,12 +1520,12 @@ const onFullscreenChange = async () => {
 
   if (topViewElement.value) {
     const rect = topViewElement.value.getBoundingClientRect();
-    topViewStore.setTopViewSize({
-      width: rect.width,
-      height: rect.height,
-      top: 0,
-      left: 0,
-    });
+    const size = { width: rect.width, height: rect.height, top: 0, left: 0 };
+    if (isPip.value) {
+      pip.contentSize.value = size;
+    } else {
+      topViewStore.setTopViewSize(size);
+    }
   }
 };
 onMounted(() => {
@@ -1444,8 +1538,8 @@ onBeforeUnmount(() => {
 async function saveScreenshot() {
   const img = topViewElement.value;
   if (!img) return;
-  const w = topViewStore.topViewSize.width;
-  const h = topViewStore.topViewSize.height;
+  const w = topViewSize.value.width;
+  const h = topViewSize.value.height;
   if (!w || !h) return;
   const scale = 4;
   const offscreen = document.createElement("canvas");

@@ -112,12 +112,19 @@
     "empty_state_title": "Du möchtest dein erstes Video analysieren lassen?",
     "empty_state_text": "Klicke jetzt auf das Plus, um dein erstes Video hochzuladen."
   },
+  "pip": {
+    "enter": "Bild-im-Bild",
+    "exit": "Zurück zur Card",
+    "return_to_card": "Zurück in die Card holen"
+  },
   "video_player": {
     "pip": {
-      "enter": "Bild-im-Bild",
-      "exit": "Zurück zur Card",
-      "playing_in_pip": "Video läuft im Bild-im-Bild-Modus",
-      "return_to_card": "Video zurück in die Card holen"
+      "playing_in_pip": "Video läuft im Bild-im-Bild-Modus"
+    }
+  },
+  "top_view": {
+    "pip": {
+      "playing_in_pip": "Top View läuft im Bild-im-Bild-Modus"
     }
   },
   "analysis_view": {

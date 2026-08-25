@@ -126,12 +126,19 @@
     "empty_state_title": "Want to have your first video analysed?",
     "empty_state_text": "Click the plus now to upload your first video."
   },
+  "pip": {
+    "enter": "Picture-in-picture",
+    "exit": "Return to card",
+    "return_to_card": "Return to card"
+  },
   "video_player": {
     "pip": {
-      "enter": "Picture-in-picture",
-      "exit": "Return to card",
-      "playing_in_pip": "Video is playing in picture-in-picture",
-      "return_to_card": "Return video to card"
+      "playing_in_pip": "Video is playing in picture-in-picture"
+    }
+  },
+  "top_view": {
+    "pip": {
+      "playing_in_pip": "Top view is playing in picture-in-picture"
     }
   },
   "analysis_view": {

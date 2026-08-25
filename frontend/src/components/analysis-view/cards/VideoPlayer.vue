@@ -14,7 +14,7 @@
         >
           <div
             class="video-wrapper"
-            :class="{ 'pip-video-wrapper': isPip }"
+            :class="{ 'pip-content': isPip }"
             @mouseenter="hovering = true"
             @mouseleave="hovering = false"
             @pointerdown="onPipDragStart"
@@ -65,7 +65,7 @@
               @click="openPip"
               @pointerdown.stop
               :class="{ visible: hovering }"
-              :title="$t('video_player.pip.enter')"
+              :title="$t('pip.enter')"
             >
               mdi-picture-in-picture-top-right
             </v-icon>
@@ -77,7 +77,7 @@
               class="pip-close-button"
               @click="closePip"
               @pointerdown.stop
-              :title="$t('video_player.pip.exit')"
+              :title="$t('pip.exit')"
             >
               mdi-close
             </v-icon>
@@ -332,7 +332,7 @@
         <v-icon size="40" class="pip-placeholder-icon">mdi-picture-in-picture-top-right</v-icon>
         <div class="pip-placeholder-text">{{ $t("video_player.pip.playing_in_pip") }}</div>
         <v-btn size="small" variant="flat" color="primary" @click="closePip">
-          {{ $t("video_player.pip.return_to_card") }}
+          {{ $t("pip.return_to_card") }}
         </v-btn>
       </div>
     </v-row>
@@ -603,8 +603,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
+import { usePictureInPicture } from "@/composables/usePictureInPicture";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
@@ -960,28 +961,31 @@ const onSpeedChange = (idx) => {
   }
 };
 
-// Video pixel size/position used by all overlays (bbox ellipses, calibration
-// markers) and by the shared videoStore.videoSize that other cards (TopView,
-// etc.) read to match their own layout to the video. While in PiP, the
-// floating panel resizes independently of the card -- that resizing must
-// stay purely local to this component (tracked in pipVideoSize) rather than
-// leak into the shared store, so other cards stay pinned to the size the
-// video had while docked and only pick up its real size again once it's
-// docked back into the card (see updateVideoSize below).
-const isPip = ref(false);
-const pipVideoSize = ref({ width: 0, height: 0, top: 0, left: 0 });
-const videoSize = computed(() => (isPip.value ? pipVideoSize.value : videoStore.videoSize));
+// Picture-in-picture (see usePictureInPicture): isPip/pipPanelStyle drive the
+// floating panel, videoSize is what all overlays (bbox ellipses, calibration
+// markers) read for their own pixel positioning -- it mirrors the shared
+// videoStore.videoSize (also read by other cards, e.g. to match their own
+// layout to the video) normally, but while in PiP falls back to the
+// panel-local pip.contentSize instead, so resizing the floating panel never
+// leaks into that shared value. See updateVideoSize below for the other
+// half of that: it only writes to the store while docked.
+const pip = usePictureInPicture({ onResize: () => updateVideoSize() });
+const isPip = pip.isPip;
+const lastCardVideoHeight = pip.lastCardContentHeight;
+const pipPanelStyle = pip.panelStyle;
+const onPipDragStart = pip.onDragStart;
+const onPipResizeStart = pip.onResizeStart;
+const openPip = () => pip.open(videoFullscreenRoot.value, videoElement.value);
+const closePip = pip.close;
+
+const videoSize = computed(() => (isPip.value ? pip.contentSize.value : videoStore.videoSize));
 
 const updateVideoSize = () => {
   nextTick(() => {
-    if (videoElement.value) {
-      const rect = videoElement.value.getBoundingClientRect();
-      const size = { width: rect.width, height: rect.height, top: rect.top, left: rect.left };
-      if (isPip.value) {
-        pipVideoSize.value = size;
-      } else {
-        videoStore.setVideoSize(size);
-      }
+    if (!videoElement.value) return;
+    const size = pip.measure(videoElement.value);
+    if (!isPip.value) {
+      videoStore.setVideoSize(size);
     }
   });
 };
@@ -1076,7 +1080,7 @@ const onFullscreenChange = async () => {
     const rect = videoElement.value.getBoundingClientRect();
     const size = { width: rect.width, height: rect.height, top: 0, left: 0 };
     if (isPip.value) {
-      pipVideoSize.value = size;
+      pip.contentSize.value = size;
     } else {
       videoStore.setVideoSize(size);
     }
@@ -1103,172 +1107,6 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
-});
-
-// Picture-in-picture: a floating, draggable & resizable copy of the same
-// video-fullscreen-root DOM node, teleported to <body> so it can float above
-// everything else (and outside the card's own stacking/overflow context).
-// Teleport moves the existing DOM node rather than destroying/recreating it,
-// so the <video> keeps playing, its HLS attachment survives, and the bbox
-// overlay (bound to the videoSize computed above) keeps working unchanged --
-// it just needs a resize-triggered re-measure, same as any other size change.
-const PIP_MIN_WIDTH = 240;
-const PIP_MIN_HEIGHT = 135;
-const PIP_MARGIN = 24;
-const PIP_DRAG_THRESHOLD = 4; // px of pointer movement before a press counts as a drag, not a click
-
-const pipRect = reactive({ top: null, left: null, width: 400, height: 225 });
-
-// Height (px) the video was actually rendered at in the card right before PiP
-// was opened. The placeholder that replaces it re-uses this as a fixed
-// height so the card doesn't grow/shrink just because the video left it.
-const lastCardVideoHeight = ref(0);
-
-const pipPanelStyle = computed(() => ({
-  top: pipRect.top + "px",
-  left: pipRect.left + "px",
-  width: pipRect.width + "px",
-  height: pipRect.height + "px",
-}));
-
-const clampPipToViewport = () => {
-  if (pipRect.top === null) return;
-  pipRect.width = Math.min(pipRect.width, window.innerWidth - PIP_MARGIN);
-  pipRect.height = Math.min(pipRect.height, window.innerHeight - PIP_MARGIN);
-  pipRect.left = Math.min(Math.max(0, pipRect.left), window.innerWidth - pipRect.width);
-  pipRect.top = Math.min(Math.max(0, pipRect.top), window.innerHeight - pipRect.height);
-};
-
-const openPip = () => {
-  // The exact box the placeholder needs to fill is video-fullscreen-root's
-  // own footprint, not the <video> tag's -- that's the node the Teleport
-  // actually pulls out of the card, so measuring anything else (the video
-  // itself is usually the same size, but not guaranteed to be pixel-exact)
-  // could leave the card a pixel or two off once the video leaves it.
-  const rootRect = videoFullscreenRoot.value?.getBoundingClientRect();
-  if (rootRect && rootRect.height > 0) {
-    lastCardVideoHeight.value = rootRect.height;
-  }
-  // Only pick an initial size/position the first time PiP is ever opened --
-  // a later open keeps wherever the user last dragged/resized it to.
-  if (pipRect.top === null) {
-    const rect = videoElement.value?.getBoundingClientRect();
-    const aspect = rect && rect.width > 0 && rect.height > 0 ? rect.width / rect.height : 16 / 9;
-    pipRect.width = Math.min(400, rect?.width || 400) || 400;
-    pipRect.height = pipRect.width / aspect;
-    pipRect.top = window.innerHeight - pipRect.height - PIP_MARGIN;
-    pipRect.left = window.innerWidth - pipRect.width - PIP_MARGIN;
-  }
-  clampPipToViewport();
-  isPip.value = true;
-};
-const closePip = () => {
-  isPip.value = false;
-};
-
-let pipDrag = null;
-const onPipDragMove = (event) => {
-  if (!pipDrag) return;
-  const dx = event.clientX - pipDrag.startX;
-  const dy = event.clientY - pipDrag.startY;
-  if (!pipDrag.moving) {
-    // Stay a no-op until the pointer has actually moved -- lets a plain
-    // click on a control/bbox inside the panel fire normally instead of
-    // being swallowed as a drag.
-    if (Math.abs(dx) < PIP_DRAG_THRESHOLD && Math.abs(dy) < PIP_DRAG_THRESHOLD) return;
-    pipDrag.moving = true;
-  }
-  const maxLeft = Math.max(0, window.innerWidth - pipRect.width);
-  const maxTop = Math.max(0, window.innerHeight - pipRect.height);
-  pipRect.left = Math.min(Math.max(0, pipDrag.startLeft + dx), maxLeft);
-  pipRect.top = Math.min(Math.max(0, pipDrag.startTop + dy), maxTop);
-};
-const onPipDragEnd = () => {
-  pipDrag = null;
-  window.removeEventListener("pointermove", onPipDragMove);
-  window.removeEventListener("pointerup", onPipDragEnd);
-};
-const onPipDragStart = (event) => {
-  if (!isPip.value || event.button) return;
-  // Anything clickable in its own right (bbox hit-areas, the controls/
-  // timeline strip) opts out of panel-dragging entirely -- wherever the
-  // cursor turns into a hand, a press there should only ever click, never
-  // also drag the panel.
-  if (event.target.closest?.(".pip-no-drag")) return;
-  pipDrag = {
-    startX: event.clientX,
-    startY: event.clientY,
-    startLeft: pipRect.left,
-    startTop: pipRect.top,
-    moving: false,
-  };
-  window.addEventListener("pointermove", onPipDragMove);
-  window.addEventListener("pointerup", onPipDragEnd);
-};
-
-// Corner-handle resize, locked to the panel's own aspect ratio -- dragging
-// diagonally scales width+height together, it never distorts the video.
-let pipResize = null;
-const onPipResizeMove = (event) => {
-  if (!pipResize) return;
-  const dx = event.clientX - pipResize.startX;
-  const dy = event.clientY - pipResize.startY;
-  const delta = (dx + dy) / 2;
-
-  let newWidth = Math.max(PIP_MIN_WIDTH, pipResize.startWidth + delta);
-  let newHeight = newWidth / pipResize.aspect;
-  if (newHeight < PIP_MIN_HEIGHT) {
-    newHeight = PIP_MIN_HEIGHT;
-    newWidth = newHeight * pipResize.aspect;
-  }
-
-  const maxWidth = Math.max(PIP_MIN_WIDTH, window.innerWidth - pipRect.left);
-  const maxHeight = Math.max(PIP_MIN_HEIGHT, window.innerHeight - pipRect.top);
-  if (newWidth > maxWidth) {
-    newWidth = maxWidth;
-    newHeight = newWidth / pipResize.aspect;
-  }
-  if (newHeight > maxHeight) {
-    newHeight = maxHeight;
-    newWidth = newHeight * pipResize.aspect;
-  }
-
-  pipRect.width = newWidth;
-  pipRect.height = newHeight;
-  updateVideoSize();
-};
-const onPipResizeEnd = () => {
-  pipResize = null;
-  window.removeEventListener("pointermove", onPipResizeMove);
-  window.removeEventListener("pointerup", onPipResizeEnd);
-};
-const onPipResizeStart = (event) => {
-  event.stopPropagation();
-  pipResize = {
-    startX: event.clientX,
-    startY: event.clientY,
-    startWidth: pipRect.width,
-    startHeight: pipRect.height,
-    aspect: pipRect.width / pipRect.height,
-  };
-  window.addEventListener("pointermove", onPipResizeMove);
-  window.addEventListener("pointerup", onPipResizeEnd);
-};
-
-watch(isPip, async () => {
-  await nextTick();
-  updateVideoSize();
-});
-
-onMounted(() => {
-  window.addEventListener("resize", clampPipToViewport);
-});
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", clampPipToViewport);
-  window.removeEventListener("pointermove", onPipDragMove);
-  window.removeEventListener("pointerup", onPipDragEnd);
-  window.removeEventListener("pointermove", onPipResizeMove);
-  window.removeEventListener("pointerup", onPipResizeEnd);
 });
 
 // DEBUG helper: plain rectangular bounding box in pixel space, same x/y/w/h
@@ -1580,95 +1418,9 @@ onBeforeUnmount(() => {
   opacity: 0.8;
 }
 
-.pip-toggle {
-  position: absolute;
-  top: 2px;
-  right: 34px;
-  color: white;
-  font-size: 28px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  z-index: 20;
-  cursor: pointer;
-}
-
-.pip-toggle.visible {
-  opacity: 0.8;
-}
-
-/* Dedicated close button, only rendered inside the PiP panel. Sits flush in
-   the actual top-right corner (fullscreen-toggle isn't rendered while in
-   PiP, so this doesn't need to share the corner with it like pip-toggle
-   does) and a little lower than the other corner icons so it doesn't sit
-   flush against the panel's very edge. */
-.pip-close-button {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  color: white;
-  font-size: 24px;
-  opacity: 0.8;
-  z-index: 22;
-  cursor: pointer;
-}
-
-/* Floating, draggable & resizable panel the video-fullscreen-root is
-   teleported into while in picture-in-picture mode. Position/size come from
-   pipRect via the bound inline style (pipPanelStyle); this just supplies the
-   fixed positioning + chrome around it. */
-.video-fullscreen-root.pip-panel {
-  position: fixed;
-  z-index: 2000;
-  display: block;
-  background: #000;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  overflow: hidden;
-}
-
-/* Draggable from anywhere in the panel (see onPipDragStart) -- cursor hints
-   at that, buttons/slider/bbox elements still show their own pointer cursor
-   since they set it themselves and take precedence over the inherited one. */
-.pip-video-wrapper {
-  width: 100%;
-  height: 100%;
-  cursor: move;
-}
-
-.pip-resize-handle {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  color: white;
-  font-size: 18px;
-  opacity: 0.7;
-  cursor: nwse-resize;
-  z-index: 21;
-}
-
-/* Placeholder shown in the card in place of the video while it plays in the
-   floating pip-panel (teleported out to <body>, so this space would
-   otherwise sit empty). Height is pinned via inline style to whatever the
-   video was actually rendered at right before PiP opened, so the card
-   doesn't grow/shrink when the video leaves it. */
-.pip-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  color: rgba(var(--v-theme-on-surface), 0.6);
-  text-align: center;
-}
-
-.pip-placeholder-icon {
-  opacity: 0.6;
-}
-
-.pip-placeholder-text {
-  font-size: 0.9rem;
-}
+/* .pip-panel / .pip-content / .pip-toggle / .pip-close-button /
+   .pip-resize-handle / .pip-placeholder* live in styles/custom.css, shared
+   with TopView.vue via the usePictureInPicture composable. */
 
 .fullscreen-controls {
   position: absolute;
