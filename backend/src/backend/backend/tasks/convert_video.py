@@ -14,7 +14,7 @@ from django.conf import settings
 from backend.utils import media_dir_to_file, media_path_to_file
 from backend.models import Video
 from backend.plugin_manager import PluginManager
-from utils.video_converter import convert_to_hls,  terminate_process_group
+from utils.video_converter import convert_to_hls, terminate_process_group
 from utils.helper import remove_file, remove_dir
 
 
@@ -57,7 +57,64 @@ def cleanup_upload_orphans(self):
             safe_delete(file_path)
             logger.info(f"Removed orphan: {file_path}")
 
-def _manifest_references(manifest: Path) -> tuple[Path, list[Path]]:
+def _manifest_references_singlefile(asset_dir: Path, manifest: Path):
+    if not manifest.is_file() or manifest.stat().st_size == 0:
+        raise RuntimeError(
+            f"Missing or empty HLS manifest: {manifest}"
+        )
+
+    manifest_text = manifest.read_text(encoding="utf-8")
+
+    if "#EXTM3U" not in manifest_text:
+        raise RuntimeError(
+            f"Invalid HLS manifest header: {manifest}"
+        )
+
+    if "#EXT-X-ENDLIST" not in manifest_text:
+        raise RuntimeError(
+            f"Incomplete HLS manifest: {manifest}"
+        )
+
+    if "#EXT-X-MAP" not in manifest_text:
+        raise RuntimeError(
+            f"fMP4 manifest has no EXT-X-MAP: {manifest}"
+        )
+
+    media_uris = [
+        line.strip()
+        for line in manifest_text.splitlines()
+        if line.strip()
+        and not line.startswith("#")
+    ]
+
+    if not media_uris:
+        raise RuntimeError(
+            f"No media URI found in HLS manifest: {manifest}"
+        )
+
+    # single_file mode should reference one physical media resource
+    if len(set(media_uris)) != 1:
+        raise RuntimeError(
+            "Expected one single-file media resource, found: "
+            f"{sorted(set(media_uris))}"
+        )
+
+    media_path = (asset_dir / media_uris[0]).resolve()
+
+    if media_path.parent != asset_dir.resolve():
+        raise RuntimeError(
+            f"Manifest references a path outside asset directory: "
+            f"{media_path}"
+        )
+
+    if not media_path.is_file() or media_path.stat().st_size == 0:
+        raise RuntimeError(
+            f"Missing or empty HLS media file: {media_path}"
+        )
+
+    return str(media_path)
+
+def _manifest_references_segments(manifest: Path) -> tuple[Path, list[Path]]:
     """ Validate if all media files have been written properly to the asset dir. """
     text = manifest.read_text(encoding="utf-8")
     manifest_dir = manifest.parent.resolve()
@@ -130,8 +187,9 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
 
         output_root = Path(media_dir_to_file(video_id_hex))
         file_in = Path(media_path_to_file(video_id_hex, original_ext))
-        asset_dir = output_root / video_id_hex
-        manifest = asset_dir / f"{video_id_hex}.m3u8"
+        
+        asset_dir = os.path.join(output_root,video_id_hex)
+        manifest = os.path.join(asset_dir, f'{video_id_hex}.m3u8')
         asset_dir.mkdir(parents=True, exist_ok=True)
 
         fps, duration_ms, size = _metadata(file_in)
@@ -143,26 +201,26 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         
         conversion_args = {
             "format": "hls",
-            "threads": 1, # TODO: check thread count for HLS conversion. Queue 2-3 video uploads, check ffmpeg processes and CPU usage. 
+            "threads": 0, # TODO: check thread count for HLS conversion. Queue 2-3 video uploads, check ffmpeg processes and CPU usage. 
                 # ps -ef | grep ffmpeg
                 # top -H -p <ffmpeg_pid>
             "hls_playlist_type": "vod",
             "segment_time" : segment_time,
             # -------- input: hardware acceleration
             # NOTE: uncomment these lines if running without a GPU.
-            "hwaccel": "cuda",
-            "hwaccel_output_format": "cuda",
+            # "hwaccel": "cuda",
+            # "hwaccel_output_format": "cuda",
             # -------- output: video/audio options
-            "vcodec" : "h264_nvenc", # NOTE: use "h264_nvenc" for GPU conversion via NVENC.
+            "vcodec" : "libx264", # NOTE: Use "h264_nvenc" for GPU conversion via NVENC. Otherwise use "libx264".
             "acodec" : "aac",
             "audio_bitrate" : "128k",
             # -------- HLS stuff
             "g": gop, # GOP size should match segment duration
             "keyint_min": gop, # same as GOP
             # "sc_threshold": 0, # no unpredictable keyframe insertions
-            # "crf": 23,  # NOTE: comment in for "libx264". This is the constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
+            "crf": 23,  # NOTE: Comment this line in for "libx264". This is the constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
             # -------- NVENC tuning
-            "preset": "p4", # NOTE: uncomment if using GPU conversion. This controls encoding speed --vs.-- compression trade-off [p1-p7].
+            # "preset": "p4", # NOTE: Uncomment if using GPU conversion. This controls encoding speed --vs.-- compression trade-off [p1-p7].
             "rc": "vbr",
             "cq": 23,
             # -------- output compat
@@ -170,18 +228,18 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             "loglevel": "error"
         }
         
-        conversion_args.update({
-            "hls_flags" : "independent_segments",
-            "hls_segment_filename": os.path.join(asset_dir, "segment_%05d.m4s")
-        })
         if fmp4:
             conversion_args.update({ 
                 "hls_segment_type": "fmp4",
+                "hls_flags" : "single_file+independent_segments",
                 "hls_fmp4_init_filename": "init.mp4",
+                # "hls_flags" : "independent_segments", # TODO: Maybe switch to segmented files?
+                # "hls_segment_filename": os.path.join(asset_dir, "segment_%05d.m4s")
             })
         else:
             conversion_args.update({ 
                 "hls_segment_type": "mpegts",
+                "hls_flags" : "independent_segments"
             })
             
         logger.info(
@@ -190,7 +248,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             file_in,
             manifest,
         )
-            
+
         ffmpeg_proc = convert_to_hls(
             str(file_in),
             str(manifest),
@@ -249,17 +307,18 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         #     if ffmpeg_proc.stderr:
         #         ffmpeg_proc.stderr.close()                   
         
-        
         if fmp4:
-            init_path, _ = _manifest_references(manifest)
-            media_path_for_db = str(manifest)
+            # init_path, segments = _manifest_references_segments(manifest)
+            asset_dir = Path(asset_dir)
+            manifest = asset_dir / f"{video_id_hex}.m3u8"
+            media_path_for_db = _manifest_references_singlefile(asset_dir, manifest)
         else:
             segment_candidates = sorted(asset_dir.glob("*.ts"))
             if not segment_candidates:
                 raise RuntimeError(
                     f"No MPEG-TS segments generated in {asset_dir}."
                 )
-            media_path_for_db = str(manifest)
+            media_path_for_db = segment_candidates[0]
         
         # NOTE: Creates the archive to be transfered.
         # TODO: Eventually we can remove putting everything into archives to send them around via gRPC.

@@ -41,11 +41,14 @@ def _build_command(
 ) -> list[str]:
     input_kwargs: dict[str, Any] = {}
 
-    for name in (
-        "hwaccel",
-        "hwaccel_output_format",
-        "extra_hw_frames",
-    ):
+    # TODO: Defining these offloads encoding to the GPU via CUDA.
+    # Didn't work for me, so I disabled GPU-based encoding
+    input_args = [
+        # "hwaccel",
+        # "hwaccel_output_format",
+        # "extra_hw_frames",
+    ]
+    for name in input_args:
         value = kwargs.get(name)
         if value is not None: input_kwargs[name] = value
 
@@ -133,7 +136,7 @@ def convert_to_hls(
     Asynchronous mode returns a running Popen instance. FFmpeg's stderr is
     inherited by the worker/container logger, avoiding a pipe-buffer
     deadlock. The process starts in its own session so callers can terminate
-    its entire process group using `terminate_process_group()`.
+    its entire process group using `terminate_process_group`.
     """
     command = _build_command(file_in, manifest_path, kwargs)
     logger.debug("FFmpeg command: %s", " ".join(command))
