@@ -36,9 +36,6 @@ class Task:
         plugin_run: PluginRun = None,
         progress_range: tuple = None,
     ) -> str:
-        """`progress_range` is the (start, end) slice of the run's overall progress that
-        this analyser call owns -- its own 0..1 progress is mapped into it, so a task's
-        coarse milestones and the analyser's live progress don't overwrite each other."""
         if parameters is None: parameters = {}
         if inputs is None: inputs = {}
         if outputs is None: outputs = []

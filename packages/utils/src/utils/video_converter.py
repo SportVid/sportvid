@@ -2,7 +2,7 @@ import ffmpeg
 import subprocess
 import logging
 
-def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
+def convert_to_hls(file_in, manifest_path, **kwargs):
     """
     Start HLS conversion using the ffmpeg python wrapper.
     Returns a running subprocess (via Popen).
@@ -48,41 +48,16 @@ def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
     cmd.insert(1, "-nostdin")
     cmd.insert(2, "-loglevel")
     cmd.insert(3, "error")
-
     # print("FFmpeg command:", " ".join(cmd))
 
-    if asynchronous:
-        # "-progress pipe:2" makes ffmpeg emit machine-readable "key=value" blocks
-        # (out_time_us, progress, ...) on stderr, alongside its normal output. Unlike
-        # the human-readable stats line this is not suppressed by "-loglevel error",
-        # which is what lets the caller report real conversion progress.
-        async_cmd = list(cmd)
-        async_cmd.insert(1, "-progress")
-        async_cmd.insert(2, "pipe:2")
-        return subprocess.Popen(
-            async_cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        #     return ffmpeg.run_async(
-        #         output_stream, 
-        #         quiet=False,
-        #         pipe_stderr=True,
-        #         pipe_stdout=False,
-        #         pipe_stdin=False
-        #     )
-    else:
-        completed = subprocess.run(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=False,
-        )
-        if completed.returncode != 0:
-            raise RuntimeError(f"ffmpeg exited with code {completed.returncode}: {completed.stderr}")
-        return completed
-    
+    async_cmd = list(cmd)
+    # NOTE: makes ffmpeg emit key-value pairs on stderr. This is not suppresed by '-loglevel error'
+    async_cmd.insert(1, "-progress")
+    async_cmd.insert(2, "pipe:2")
+    return subprocess.Popen(
+        async_cmd,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+    )

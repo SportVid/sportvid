@@ -10,8 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 class EventStream(View):
-    """Server-sent events for the logged-in user (plugin run + video state changes).
-
+    """Implements server-sent events (SSE) that streams per-user events.
     Replaces the frontend's polling loops: the browser holds one connection open and
     the backend pushes whenever something actually changed.
     """
@@ -25,13 +24,13 @@ class EventStream(View):
             content_type="text/event-stream",
         )
         response["Cache-Control"] = "no-cache"
-        # Tell nginx not to buffer -- otherwise events pile up until the buffer flushes.
+        # tell nginx not to buffer -- otherwise events pile up until the buffer flushes.
         response["X-Accel-Buffering"] = "no"
         return response
 
     @staticmethod
     def _stream(user_id):
-        # A stream lives for minutes; holding this thread's database connection open
+        # A stream lives for minutes; holding this thread's DB connection open
         # for all of it would tie up a postgres backend for nothing.
         connection.close()
         try:

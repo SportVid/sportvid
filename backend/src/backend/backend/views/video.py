@@ -296,12 +296,11 @@ class VideoDelete(View):
             if not video:
                 return JsonResponse({"status": "error"}, status=500)
 
-            # Revoke the conversion task if it's still queued (hasn't started yet).
-            # terminate=False on purpose: SIGTERM/SIGKILL-ing an already-running task
-            # would take Celery's whole worker pool down with it and trigger a restart
-            # cascade. For an already-running task, publish_cancel below is what
-            # actually stops it -- the task's own listener thread reacts immediately
-            # and kills its ffmpeg subprocess (see tasks/convert_video.py).
+            # TODO: Add structured logging for video deletion (task_id, revoke vs cancel)
+            # and consider tracking "pending deletion" videos to avoid races with
+            # conversion tasks.
+            # NOTE: If a conversion is queued, Celery revoke prevents it from starting.
+            # If conversion is already running, the conversion task's watcher receives the message and kills the FFmpeg subprocess.
             if video.task_id:
                 celery_app.control.revoke(video.task_id, terminate=False)
             publish_cancel("video", video.id.hex)
@@ -309,6 +308,7 @@ class VideoDelete(View):
             file_size = video.file_size
             video_owner = video.owner
             video_id_hex = video.id.hex
+            # video row can then be deleted safely, without sending a termination signal to the Celery worker.
             if is_admin:
                 count, _ = Video.objects.filter(id=video.id).delete()
             else:

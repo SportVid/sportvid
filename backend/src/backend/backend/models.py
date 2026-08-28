@@ -94,9 +94,7 @@ class Video(models.Model):
         choices=[(k, v) for k, v in STATUS.items()],
         default=STATUS_DONE,
     )
-    # 0..1 progress of the HLS conversion, so the "still processing" card in the video
-    # gallery can show a real bar instead of an open-ended spinner (see
-    # tasks/convert_video.py, which parses it out of ffmpeg's own output).
+    # progress status for HLS conversion
     progress = models.FloatField(default=0.0)
     date = models.DateTimeField(auto_now_add=True)
     # some extracted meta information
@@ -132,10 +130,6 @@ class Video(models.Model):
             "height": self.height,
             "width": self.width,
             "num_timelines": len(Timeline.objects.filter(video=self)),
-            # Manually uploaded tracking data survives independently of the "posdata_convert"
-            # plugin run that processed it (e.g. once that run's history gets cleaned up via
-            # ModalStatus's delete panel), so the video-gallery status indicator needs this
-            # alongside plugin-run state to not flip back to "not done" for it.
             "has_tracking_data": TrackingData.objects.filter(video=self).exists(),
             "field_length": self.field_length,
             "field_width": self.field_width,
@@ -253,10 +247,10 @@ class PluginRun(models.Model):
     type = models.CharField(max_length=256)
     progress = models.FloatField(default=0.0)
     in_scheduler = models.BooleanField(default=False)
-    # Celery task id of the run_plugin task processing this run -- lets a delete abort
-    # it the same way Video.task_id already does for HLS conversion (see views/video.py).
-    task_id = models.CharField(max_length=256, blank=True, null=True)
-
+    # TODO: Consider adding db_index=True to task_id if we ever query by it, and
+    # optionally add a validator for Celery task ID format.
+    task_id = models.CharField(max_length=256, blank=True, null=True) # associate PluginRun DB entry with Celery run_plugin task.
+    
     STATUS_UNKNOWN = "U"
     STATUS_ERROR = "E"
     STATUS_DONE = "D"

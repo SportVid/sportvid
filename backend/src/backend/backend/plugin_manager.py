@@ -49,9 +49,10 @@ class PluginManager:
 
     @staticmethod
     def _stringify_uuids(value: Any) -> Any:
-        # DRF's UUIDField yields a native uuid.UUID in validated_data, but the
-        # analyser gRPC client only knows how to serialize bool/int/float/str/dict
-        # parameter values -- an unconverted UUID trips its "unsupported type" path.
+        """ DRF's UUIDField yields a native uuid.UUID in validated_data.
+        However, the analyser gRPC client only knows how to serialize bool/int/float/str/dict param values.
+        An unconverted UUID trips its "unsupported type" path.
+        """
         if isinstance(value, uuid.UUID):
             return value.hex
         if isinstance(value, dict):
@@ -63,15 +64,16 @@ class PluginManager:
     @classmethod
     def validate_parameters(cls, plugin: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         parameters = parameters or {}
+        
         # logging.error(f'pre validation params: {parameters}')
 
         serializer_cls = cls.get_serializer(plugin)
-        if serializer_cls is None:
-            return parameters
+        if serializer_cls is None: return parameters
 
         serializer = serializer_cls(data=parameters or {})
         serializer.is_valid(raise_exception=True)
         val_params = cls._stringify_uuids(dict(serializer.validated_data))
+        
         # logging.error(f'validated params: {val_params}')
 
         return val_params
@@ -148,18 +150,9 @@ class PluginManager:
                 type=plugin,
                 status=PluginRun.STATUS_QUEUED,
             )
-            # Exposed to callers (see views/plugin_run.py::PluginRunNew) so the frontend can
-            # track/wait on this specific run without guessing which newly-appeared row is
-            # "the" one -- needed e.g. to sequence team_clustering/osnet_reid after their
-            # prerequisite object_tracker run finishes. Must be .hex (no dashes), matching
-            # PluginRun.to_dict()'s "id" (self.id.hex, see models.py) -- that's the id format
-            # /plugin/run/list actually keys pluginRunStore.state.pluginRuns by on the
-            # frontend; str(plugin_run.id) here would produce dashed-UUID keys that never
-            # match, so waitForDone() would wait on a key that's never populated.
+            # Returns the plugin_run_id (hex) for the frontend to track the run.
             result["plugin_run_id"] = plugin_run.id.hex
-            # Full entry so the frontend can drop the run straight into its store and
-            # show it in the status list/badge immediately, without waiting for the
-            # live event (and even if the event stream happens to be down).
+            # API response for starting a plugin run includes full plugin_run entry.
             result["entry"] = plugin_run.to_dict()
 
         task_payload = {
@@ -264,27 +257,34 @@ def run_plugin(self, args):
     video_db = Video.objects.get(id=video)
     user_db = SportVidUser.objects.get(id=user)
     
+    # TODO: Race between task start and deletion. DoesNotExist guard is not enough.
+    # There is still a small window where the task starts, reads the run, and then the run is deleted before progress writes.
+    # Also, there is no explicit handling for "deleted but task started".
+    # Task will write progress to a non-existent run if it was deleted after the initial lookup.
+    # --> Consider checking existence periodically or before each progress write.
+    # --> Opt.: Mark runs as "cancelling" instead of deleting immediately, then clean up later.
     plugin_run_db = None
     if not dry_run and plugin_run is not None:
         try:
             plugin_run_db = PluginRun.objects.get(id=plugin_run)
         except PluginRun.DoesNotExist:
-            # Deleted (cancelled) before this task even got picked up -- e.g. it was
-            # still queued behind other Celery tasks when the user hit delete. Nothing
-            # to do or clean up: no analyser job was ever started for it.
+            # Handles race where plugin run is queued and the user deletes it.
+            # DB row is deleted and celery eventually starts the already-dispatched task.
+            # Instead of failing with DoesNotExist, task exits without starting analyser work.
             logger.info("PluginRun %s deleted before it started, skipping", plugin_run)
             return
-
-        # Some plugins take another plugin_run's id as input (object_tracker_id for
+        # NOTE: Some plugins take another plugin_run's id as input (object_tracker_id for
         # team_clustering/osnet_reid, object_tracker_run_id for kpi_computation) and need that
         # run's *results*, not just its id -- submitting them while it's still QUEUED/RUNNING
-        # crashes. The frontend (ModalPositionDataCreate.vue) submits Team Assignment/Re-ID
+        # crashes.
+        # The frontend (ModalPositionDataCreate.vue) submits Team Assignment/Re-ID
         # right alongside a freshly-started Object Tracker run rather than waiting around for
         # it client-side, so this reschedules itself via Celery's own retry until the
         # dependency is DONE (or gives up if it errors/never finishes). Checked *before* the
         # in_scheduler guard below on purpose: that flag is a one-shot "already picked up"
         # marker, so setting it first would make our own retry cancel itself the moment it
         # fires back up.
+        # TODO: Is there a better way to handle dependencies for a plugin run instead of hard-coding params names?
         dependency_id = next(
             (
                 parameters[name]

@@ -198,6 +198,8 @@ class AnalyserPluginManager(Manager):
 
         return plugin_to_run(config)
 
+    # TODO: Add explicit timeouts to http.post() and ensure long-running plugin
+    # implementations periodically check cancel_event to exit early.
     def __call__(
         self,
         plugin: str,
@@ -208,8 +210,7 @@ class AnalyserPluginManager(Manager):
         cancel_event=None,
         session=None,
     ):
-        # Checked before doing any work -- a run that was already aborted while still
-        # queued behind other jobs shouldn't waste a Ray Serve request at all.
+        # check cancellation before work
         if cancel_event is not None and cancel_event.is_set():
             logging.info(f"[AnalyserPluginManager] '{plugin}' aborted before it started.")
             return []
@@ -222,8 +223,9 @@ class AnalyserPluginManager(Manager):
 
         plugin_to_run = plugins[plugin]
 
-        # `session` (a requests.Session), when given, is what abort_plugin() closes
-        # from another thread to force this call to unblock -- see analyser/server.py.
+        # NOTE: Uses an injected HTTP session or the module-level requests object.
+        # `session` (a requests.Session), when given, is what `abort_plugin()` closes
+        # from another thread to force this call to unblock (see, analyser/server.py).
         # Falls back to the plain `requests` module for callers that don't need that
         # (e.g. the CLI client), which behaves the same for a single call.
         http = session if session is not None else requests

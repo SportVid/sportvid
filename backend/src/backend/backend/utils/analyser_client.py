@@ -15,12 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def map_analyser_progress(progress, progress_range=None):
-    """Map the analyser's 0..1 progress into the stage window a task reserved for it.
-
-    Backend tasks set their own coarse milestones around the analyser call (upload,
-    post-processing, ...). Without a window both would fight over the same field, so a
-    task hands in e.g. (0.1, 0.9) and the analyser's progress fills exactly that slice.
-    """
+    """ Helper function to map the analyser progress. """
     if progress is None:
         return None
     progress = max(0.0, min(1.0, float(progress)))
@@ -67,6 +62,7 @@ class TaskAnalyserClient(AnalyserClient):
             *interceptors,
         )
 
+    # TODO: error paths still use .save() on the instance --> should use: .filter(...).update(...) consistenly.
     def list_plugins(self, *args, **kwargs):
         plugin_run_db = self.plugin_run_db
         try:
@@ -151,13 +147,12 @@ class TaskAnalyserClient(AnalyserClient):
                 plugin_run_db.save()
         return None
 
-    # 24 hours timeout
     def get_plugin_results(
         self,
         job_id,
         plugin_run_db=None,
         status_fn=None,
-        timeout=86400,
+        timeout=86400, # 24 hours timeout
         progress_range=None,
     ):
         plugin_run_db = plugin_run_db if plugin_run_db is not None else self.plugin_run_db
@@ -168,11 +163,8 @@ class TaskAnalyserClient(AnalyserClient):
         if status_fn is None:
             status_fn = analyser_status_to_task_status
 
-        # Push, not poll: a listener thread reacts the instant the PluginRun is
-        # deleted (see views/plugin_run.py's publish_cancel), instead of this loop
-        # having to re-check the database itself on every tick. on_cancel fires the
-        # analyser abort straight away, from the listener thread, rather than waiting
-        # for this loop's next iteration to notice cancel_event and do it.
+        # Wraps the analyser polling into a cancellation watcher that is active for DB-backed plugin runs.
+        # This listener thread reacts immediately when a PluginRun is deleted (see, views/plugin_run.py's publish_cancel()).
         watch = (
             nullcontext(None)
             if plugin_run_db is None
@@ -190,11 +182,7 @@ class TaskAnalyserClient(AnalyserClient):
                     if time.time() - start_time > timeout:
                         logger.error(f"Timeout")
                         if plugin_run_db:
-                            # .update(), not .save(): plugin_run_db may already be gone
-                            # by the time this fires (deleted from under a still-running
-                            # task) -- .save() on a stale instance would re-insert the
-                            # row instead of leaving it deleted (same UUID-pk pitfall as
-                            # Video, see tasks/convert_video.py).
+                            # Timeout and gRPC-error paths now use .update() instead of possibly saving stale plugin_run_db instance.
                             PluginRun.objects.filter(id=plugin_run_db.id).update(
                                 status=PluginRun.STATUS_ERROR
                             )
@@ -217,19 +205,19 @@ class TaskAnalyserClient(AnalyserClient):
                     return None
 
                 if plugin_run_db is not None:
+                    # add status when available & progress when it advances
                     update_fields = {}
                     status = status_fn(result.status)
                     if status is not None:
                         update_fields["status"] = status
 
-                    # The analyser has been reporting fine-grained progress all along
-                    # (GetPluginStatusResponse.progress, filled from the plugin's
-                    # AnalyserProgressCallback) -- it just never made it into the
-                    # database, which is why the frontend only ever saw 0 or 1.
+                    # TODO: prevents regressions if a task uses multiple analyser calls with different progress_range, later phases may be suppressed
+                    # --> if tasks start using multiple analyser phases, add a phase/sequence field to PluginRun and enforce monotonic progress per phase instead of globally. 
+                    # maps analyser progress into the task's progress and persist it into the DB
                     progress = map_analyser_progress(result.progress, progress_range)
                     if progress is not None and progress > (plugin_run_db.progress or 0.0):
                         update_fields["progress"] = progress
-                        plugin_run_db.progress = progress  # keep the `>` comparison above correct across iterations
+                        plugin_run_db.progress = progress
 
                     if update_fields:
                         PluginRun.objects.filter(id=plugin_run_db.id).update(**update_fields)
@@ -248,7 +236,7 @@ class TaskAnalyserClient(AnalyserClient):
                     break
 
                 # Event.wait(timeout) returns as soon as cancel_event is set, unlike a
-                # plain sleep -- the loop reacts on the next line above almost
+                # plain sleep. The loop reacts on the next line above almost
                 # instantly instead of only after the full second is up.
                 if cancel_event is not None:
                     cancel_event.wait(timeout=1.0)

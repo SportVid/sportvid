@@ -29,15 +29,17 @@ class Deployment:
             data = self.data_manager.load(id)
             plugin_inputs[name] = data
 
-        # Run the (blocking, possibly GPU-bound) plugin call in an executor and await
-        # it, rather than calling it inline -- Ray Serve delivers request cancellation
-        # (the caller closing its connection, see analyser/server.py::abort_plugin) as
-        # an asyncio.CancelledError at the *next await point*. Calling self.plugin(...)
-        # directly here has no await point inside it, so a cancelled request would just
-        # run to completion unnoticed. This doesn't preempt the executor thread itself
-        # (Python can't do that), but it does let this replica stop waiting on it and
-        # become free for the next request immediately instead of only after the
-        # orphaned call finishes -- see https://docs.ray.io/en/latest/serve/http-guide.html#request-cancellation
+        # NOTE: Ray Deployment now uses asynchronous execution.
+        # Moved blocking plugin execution into an executor.
+        # When the analyser closes its HTTP connection --> Ray Serve detects the request cancellation.
+        # Request handler stops waiting for the plugin result.
+        # However, does not stop the executor thread itself.
+        # Plugin call may continue running in the executor unless the plugin has its own cancellation mechanism.
+        # https://docs.ray.io/en/latest/serve/http-guide.html#request-cancellation
+        
+        # TODO: Use a bounded executor (or Ray concurrency limits) and ensure plugins
+        # cooperate with cancel_event so long-running calls don’t keep running
+        # indefinitely after client disconnect.
         loop = asyncio.get_running_loop()
         try:
             results = await loop.run_in_executor(

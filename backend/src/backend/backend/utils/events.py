@@ -8,6 +8,36 @@ to the deployment.
 One channel per user keeps authorization trivial: a stream only ever subscribes to the
 channel of the user it authenticated as.
 """
+
+
+# ---------> Run Status
+# TODO: Owner cache has no TTL
+# `owner_id_for_video()`caches indefinitely; ownership changes or deletions can leave stale entries.
+# --> Add a TTL to the owner cache, e.g. cache.set(key, owner_id, timeout=300).
+
+# TODO: No retry/backoff for Valkey
+# `publish()` is fire-and-forget (good), but repeated failures are only logged.
+# --> Optionally add a simple backoff or counter for repeated publish failures.
+
+# TODO: No explicit timeout on cache operations
+# Cache get/set can block if the backend is misconfigured.
+# --> Document that this is best-effort and must not block tasks.
+
+# ---------> Cancellation
+# TODO: Listener thread not joined
+# The listener thread is intentionally not joined, which is fine, but there is no guard against many short-lived watchers creating many threads over time.
+# -- > Consider a bounded thread pool or a shared watcher per resource type.
+
+# TODO: No timeout on pubsub.get_message
+# Uses timeout=1.0, which is fine, but if Valkey is slow or the network is flaky, threads can pile up.
+# --> Consider a small per-process limit on active watchers if you expect very high churn.
+
+# TODO: No structured logging for cancellation
+# Cancellation events are logged, but without correlation IDs (job IDs, video IDs) in a structured way.
+# --> Add structured logging fields (e.g. kind, resource_id) consistently.
+
+
+
 import os
 import json
 import logging
@@ -17,14 +47,7 @@ from contextlib import contextmanager
 logger = logging.getLogger(__name__)
 
 CHANNEL_PREFIX = "sportvid:events"
-# Separate namespace from the per-user event channels above -- one channel per
-# cancellable resource (a video conversion, a plugin run), so a running task can
-# subscribe to exactly its own id instead of filtering someone else's stream.
 CANCEL_CHANNEL_PREFIX = "sportvid:cancel"
-
-# How long a single SSE connection is kept open before it's closed on purpose. The
-# browser's EventSource reconnects on its own, which keeps proxies from silently
-# dropping a socket we still believe in.
 STREAM_MAX_LIFETIME = 600.0
 STREAM_KEEPALIVE_INTERVAL = 20.0
 
@@ -37,14 +60,13 @@ def channel_for_user(user_id) -> str:
 
 
 def get_client():
-    """Lazily built valkey client, shared per process."""
+    """Lazy thread-safe valkey client, shared per process."""
     global _client
     if _client is not None:
         return _client
     with _client_lock:
         if _client is None:
             import valkey
-
             host = os.environ.get("VALKEY_CLIENT_HOST", "valkey")
             port = int(os.environ.get("VALKEY_INTERNAL_PORT", 6380))
             _client = valkey.Valkey(host=host, port=port, socket_keepalive=True)
@@ -52,14 +74,10 @@ def get_client():
 
 
 def publish(user_id, payload: dict) -> None:
-    """Fire-and-forget. A broken valkey must never take a running plugin down with it."""
+    """Publishes to channel_for_user(user_id) via Valkey. """
     if user_id is None:
         return
     try:
-        # Same encoder JsonResponse uses, so an entry arriving over the stream is byte
-        # for byte what the REST endpoints hand out -- in particular datetimes stay
-        # "...T...Z" instead of turning into str(datetime), which the frontend's date
-        # formatting would slice apart wrongly.
         from django.core.serializers.json import DjangoJSONEncoder
 
         get_client().publish(
@@ -70,16 +88,17 @@ def publish(user_id, payload: dict) -> None:
 
 
 def owner_id_for_video(video_id):
-    """Video owner behind a plugin run, cached -- this is hit on every progress tick."""
+    """Video owner behind a plugin run, may be cached.
+    This is hit on every progress tick.
+    Tries cache first; on miss, queries DB.
+    Finally caches the result on success.
+    """
     if video_id is None:
         return None
     from django.core.cache import cache
     from backend.models import Video
 
     key = f"event_video_owner:{video_id}"
-    # The cache is a convenience here, never a dependency -- this runs inside a post_save
-    # signal on every progress tick, and an unreachable memcached must not take a running
-    # plugin down with it.
     try:
         owner_id = cache.get(key)
     except Exception:
@@ -100,21 +119,20 @@ def owner_id_for_video(video_id):
 
 def publish_plugin_run(plugin_run) -> None:
     owner_id = owner_id_for_video(plugin_run.video_id)
-    if owner_id is None:
-        return
+    if owner_id is None: return
     publish(owner_id, {"type": "plugin_run.update", "entry": plugin_run.to_dict()})
 
 
 def publish_plugin_run_deleted(plugin_run) -> None:
     owner_id = owner_id_for_video(plugin_run.video_id)
-    if owner_id is None:
-        return
+    if owner_id is None: return
     publish(owner_id, {"type": "plugin_run.deleted", "id": plugin_run.id.hex})
 
 
 def publish_video(video) -> None:
-    """`video` may be a Video instance or an id -- the latter for the queryset-update
-    paths in convert_video.py, which don't hold a fresh instance."""
+    """Argument `video` may be a Video instance or an id.
+    The latter for the queryset-update paths in convert_video.py, which don't hold a fresh instance.
+    """
     from backend.models import Video
 
     if not isinstance(video, Video):
@@ -127,8 +145,7 @@ def publish_video(video) -> None:
 
 
 def subscribe(user_id):
-    """Yields raw event payload strings for `user_id` until the stream's lifetime is up.
-
+    """Generator instance that yields raw event payload strings for `user_id` until the stream's lifetime is up.
     Emits SSE keepalive comments so the connection isn't mistaken for dead by proxies,
     and closes itself after STREAM_MAX_LIFETIME -- the client reconnects.
     """
@@ -158,47 +175,37 @@ def subscribe(user_id):
         except Exception:
             logger.debug("Failed to close pubsub cleanly", exc_info=True)
 
-
-# ---------------------------------------------------------------------------------
-# Cancellation: push, not poll.
-#
-# A long-running task (HLS conversion, a plugin run) subscribes to its own valkey
-# channel and reacts the instant a cancel message arrives, instead of periodically
-# re-querying the database to check whether it's still wanted. Uses the same valkey
-# instance/connection helper as the event stream above -- nothing new added to the
-# deployment.
-# ---------------------------------------------------------------------------------
-
-
+# NOTE: A long-running task (HLS conversion, a plugin run) subscribes to its own valkey
+# channel and reacts the instant a cancel message arrives.
+# Uses the same valkey instance/connection helper as the event stream above.
 def cancel_channel(kind, resource_id) -> str:
     return f"{CANCEL_CHANNEL_PREFIX}:{kind}:{resource_id}"
 
-
 def publish_cancel(kind, resource_id) -> None:
-    """Fire-and-forget, like publish() -- an unreachable valkey must never block a
-    delete. Whoever's listening (if anyone still is) reacts immediately; if nobody's
-    listening (already finished, or the subscribe/publish raced) there's simply
-    nothing left to cancel."""
+    """ Publishes a (fire-and-forget) cancellation message for a specific resource, such as:
+        - video: <video_id>
+        - plugin_run: <plugin_run_id>
+    """
     try:
         get_client().publish(cancel_channel(kind, resource_id), "cancel")
     except Exception:
         logger.warning("Failed to publish cancel for %s %s", kind, resource_id, exc_info=True)
 
-
 @contextmanager
 def cancellation_watcher(kind, resource_id, on_cancel=None):
     """Yields a threading.Event that's set the moment publish_cancel(kind, resource_id)
     is called, for the lifetime of the `with` block.
-
-    A dedicated background thread blocks on the valkey subscription and reacts as soon
-    as a message arrives -- the caller doesn't need to re-check anything on a timer.
-    `on_cancel`, if given, runs on that *listener thread* itself, right when the
-    message arrives, for callers that need to act immediately rather than waiting for
-    their own next loop iteration (e.g. killing a subprocess).
-
-    If valkey itself is unreachable, this degrades to an Event that simply never gets
-    set -- the caller falls back to whatever timeout/other checks it already has,
-    rather than crashing a running task over a broken cancel channel.
+    
+    Cancellation is pushed immediately through Valkey.
+    
+    This context manager:
+        - Creates a threading.Event
+        - Opens a Valkey pub/sub connection
+        - Subscribes to the resource-specific cancellation channel
+        - Starts a daemon listener thread
+        - Sets the event when a cancellation message arrives
+        - Optionally executes `on_cancel()` on the listener thread
+        - Closes the pub/sub connection when the context exits
     """
     event = threading.Event()
 

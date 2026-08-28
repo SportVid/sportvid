@@ -149,29 +149,25 @@ class PluginRunDelete(View):
                     id__in=plugin_list,
                     video__owner=request.user,
                 )
-
-            # Stop anything still queued/running before deleting its row -- a DONE (or
-            # already ERROR'd) run has nothing left executing, so a plain delete below
-            # is enough for it (matches VideoDelete's pattern in views/video.py).
-            # Evaluated to a list up front since `runs` gets deleted further down.
+            
+            # before deleting plugin runs, build a list of active runs
             active_runs = list(
                 runs.exclude(status__in=[PluginRun.STATUS_DONE, PluginRun.STATUS_ERROR])
                 .values_list("id", "task_id")
             )
+            
+            # TODO: Add structured logging to distinguish revoked (queued) vs cancelled
+            # (running) plugin runs, and optionally verify that tasks actually stopped.
             for run_id, task_id in active_runs:
                 if task_id:
-                    # terminate=False: only stops it if still queued. For an
-                    # already-running one, publish_cancel below is what actually stops
-                    # it -- the task's listener thread reacts immediately and aborts
-                    # the analyser job (see utils/analyser_client.py::get_plugin_results).
+                    # for each active run with a task id -> revoke queued Celery task to prevent it from starting
                     celery_app.control.revoke(task_id, terminate=False)
+                # publish running-job cancellation for every active run -> cancellation event causes the task's watcher to abort analyser request
                 publish_cancel("plugin_run", run_id.hex)
 
-            # posdata_convert runs own the uploaded TrackingData they were
-            # created from -- deleting the run should delete that file too,
-            # so it doesn't keep showing up as available elsewhere. This
-            # also cascades away any kpi_computation run derived from the
-            # same file.
+            # NOTE: Cascaded deletion of uploaded TrackingData that were created from a `posdata_convert` PluginRun.
+            # Also deletes any `kpi_compution` runs derived from the same file.
+            # TODO: Should get rid of this here and implement a dedicated task for cleaning up orphaned plugins and files.
             tracking_data_ids = list(
                 runs.filter(type="posdata_convert", tracking_data__isnull=False)
                 .values_list("tracking_data_id", flat=True)
