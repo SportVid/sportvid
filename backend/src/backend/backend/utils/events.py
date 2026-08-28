@@ -37,7 +37,6 @@ channel of the user it authenticated as.
 # --> Add structured logging fields (e.g. kind, resource_id) consistently.
 
 
-
 import os
 import json
 import logging
@@ -225,7 +224,16 @@ def cancellation_watcher(kind, resource_id, on_cancel=None):
     def _listen():
         try:
             while not stop.is_set():
-                message = pubsub.get_message(timeout=1.0)
+                try:
+                    message = pubsub.get_message(timeout=1.0)
+                except Exception:
+                    # socket closed / bad descriptor / connection lost --> exit cleanly.
+                    logger.debug(
+                        "Cancellation listener lost connection for %s %s",
+                        kind, resource_id, exc_info=True,
+                    )
+                    return
+                
                 if message and message.get("type") == "message":
                     event.set()
                     if on_cancel is not None:
@@ -236,10 +244,11 @@ def cancellation_watcher(kind, resource_id, on_cancel=None):
                                 "on_cancel callback failed for %s %s", kind, resource_id
                             )
                     return
-        except Exception:
-            logger.warning(
-                "Cancellation listener crashed for %s %s", kind, resource_id, exc_info=True
-            )
+        finally:
+            try:
+                pubsub.close()
+            except Exception:
+                pass
 
     thread = threading.Thread(
         target=_listen, name=f"cancel-watch-{kind}-{resource_id}", daemon=True

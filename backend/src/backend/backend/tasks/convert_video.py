@@ -374,7 +374,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         #       See "video_asset_manager.py", and "video_asset_data.py", manifest_path & media_path.
         #       Would requires no packing/unpacking after each send/receive, however bad solution if using segmented fmp4.
         ext = ".tar.gz"
-        archive_path = Path(f"{output_root}{video_id_hex}{ext}")
+        archive_path = output_root / f"{video_id_hex}{ext}"
         temporary_archive = archive_path.with_suffix(".tar.gz.partial")
 
         with tarfile.open(temporary_archive, "w:gz") as tar:
