@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import shutil
 import time
@@ -11,7 +12,8 @@ from celery import shared_task
 from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 
-from backend.utils import media_dir_to_file, media_path_to_file
+from backend.utils import media_dir_to_file, media_path_to_file, publish_video
+from backend.utils.events import cancellation_watcher
 from backend.models import Video
 from backend.plugin_manager import PluginManager
 from utils.video_converter import convert_to_hls, terminate_process_group
@@ -337,6 +339,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             width=size[0] if size else None,
             height=size[1] if size else None,
             status=Video.STATUS_DONE,
+            progress=1.0,
             asset_dir = str(asset_dir),
             manifest_path = str(manifest),
             media_path = media_path_for_db

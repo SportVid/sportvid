@@ -200,11 +200,20 @@ services:
       - "1800"
       - "--workers"
       - "${GUNICORN_WORKERS:-4}"
+      # Threaded workers: the SSE endpoint (/api/events/stream) holds one request open
+      # per browser tab. With the default sync workers each of those would occupy a
+      # whole worker; a waiting thread costs next to nothing.
+      - "--worker-class"
+      - "gthread"
+      - "--threads"
+      - "${GUNICORN_THREADS:-16}"
     depends_on:
       # postgres: # NOTE: circular dependency?
       #   condition: service_healthy
       memcached:
         condition: service_started
+      valkey:
+        condition: service_healthy
       celery:
         condition: service_started
     # healthcheck:

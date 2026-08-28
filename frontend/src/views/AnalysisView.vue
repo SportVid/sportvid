@@ -367,26 +367,8 @@ const selectedPlaceClustering = computed({
 //   },
 // });
 
-const fetchPluginTimer = ref(null);
-const fetchPlugin = async () => {
-  await pluginRunStore.fetchForVideo({
-    videoId: route.params.id,
-    fetchResults: true,
-  });
-};
-const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
-watch(
-  pluginInProgress,
-  (newState) => {
-    if (newState) {
-      fetchPluginTimer = setInterval(() => {
-        fetchPlugin({ addResults: false });
-      }, 1000);
-    } else {
-      clearInterval(fetchPluginTimer);
-    }
-  }
-);
+// Plugin run updates (status, progress, freshly loaded results) arrive over the live
+// event stream now -- see stores/event_stream.js and pluginRunStore.applyRunEvent.
 
 const annotationDialog = ref({ show: false });
 const onAnnotateSegment = () => {

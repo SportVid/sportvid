@@ -287,6 +287,28 @@ class KpiComputation(
         all_frame_kpis = {}  # {absolute_frame_idx: [[player_id, dist, vel, metpow], ...]}
         frame_offset = 0
 
+        # ----------------- PROGRESS
+        # Flattening the KPI arrays into per-frame dicts is the bulk of the runtime for
+        # a full match, so progress is reported through it instead of only firing 1.0 at
+        # the very end. Throttled to once a second -- each call writes into the shared
+        # dict the analyser server polls. The last 5% stay for serializing the output.
+        import time as _time
+
+        _progress_state = {"last": 0.0}
+
+        def report_progress(done, total, window=(0.0, 1.0)):
+            if not total:
+                return
+            now = _time.time()
+            if now - _progress_state["last"] < 1.0:
+                return
+            _progress_state["last"] = now
+            fraction = min(max(done / total, 0.0), 1.0)
+            start, end = window
+            self.update_callbacks(
+                callbacks, progress=(start + fraction * (end - start)) * 0.95
+            )
+
 
         if fmt == "kinexon":
             # pos_data is List[XY], one entry per group/team (including ball if tracked).
@@ -330,8 +352,9 @@ class KpiComputation(
                     n_frames = dist_arr.shape[0]
 
             if n_frames is not None:
-                for i, (df_sorted, dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr) in team_kpi_arrays.items():
+                for team_pos, (i, (df_sorted, dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr)) in enumerate(team_kpi_arrays.items()):
                     n_players = dist_arr.shape[1]
+                    total_steps = len(team_kpi_arrays) * n_frames
 
                     dist_list = dist_arr.tolist()
                     dist_cumulative_list = dist_cumulative_arr.tolist()
@@ -343,6 +366,7 @@ class KpiComputation(
                     cent_dist_list = cent_dist_arr.tolist()
 
                     for frame_idx in range(n_frames):
+                        report_progress(team_pos * n_frames + frame_idx, total_steps)
                         if frame_idx not in all_frame_kpis:
                             all_frame_kpis[frame_idx] = []
                         for p in range(n_players):
@@ -408,8 +432,9 @@ class KpiComputation(
                     n_frames = dist_arr.shape[0]
 
             if n_frames is not None:
-                for tid, (df_sorted, dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr) in team_kpi_arrays.items():
+                for team_pos, (tid, (df_sorted, dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr)) in enumerate(team_kpi_arrays.items()):
                     n_players = dist_arr.shape[1]
+                    total_steps = len(team_kpi_arrays) * n_frames
 
                     dist_list = dist_arr.tolist()
                     dist_cumulative_list = dist_cumulative_arr.tolist()
@@ -421,6 +446,7 @@ class KpiComputation(
                     cent_dist_list = cent_dist_arr.tolist()
 
                     for frame_idx in range(n_frames):
+                        report_progress(team_pos * n_frames + frame_idx, total_steps)
                         if frame_idx not in all_frame_kpis:
                             all_frame_kpis[frame_idx] = []
                         for p in range(n_players):
@@ -453,9 +479,12 @@ class KpiComputation(
             # Halves are concatenated into a flat frame index using frame_offset.
             # Ball is included as a regular group; its player_id falls back to "Ball_p0"
             # since it has no teamsheet entry.
-            for half_name, teams_dict in pos_data.items():
+            for half_pos, (half_name, teams_dict) in enumerate(pos_data.items()):
                 team_kpi_arrays = {}
                 n_frames = None
+                # Total frame count across halves isn't known upfront, so each half gets
+                # its own equal slice of the bar rather than a guessed denominator.
+                half_window = (half_pos / len(pos_data), (half_pos + 1) / len(pos_data))
 
                 for team_name, xy_obj in teams_dict.items():
                     if team_name not in teamsheets:
@@ -497,8 +526,9 @@ class KpiComputation(
                 if n_frames is None:
                     continue
 
-                for team_name, (dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr) in team_kpi_arrays.items():
+                for team_pos, (team_name, (dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr)) in enumerate(team_kpi_arrays.items()):
                     n_players = dist_arr.shape[1]
+                    total_steps = len(team_kpi_arrays) * n_frames
                     df_sorted = teamsheets[team_name].teamsheet.sort_values("xID").reset_index(drop=True)
 
                     dist_list = dist_arr.tolist()
@@ -510,6 +540,9 @@ class KpiComputation(
                     equiv_dist_cumulative_list = equiv_dist_cumulative_arr.tolist()
                     cent_dist_list = cent_dist_arr.tolist()
                     for frame_idx in range(n_frames):
+                        report_progress(
+                            team_pos * n_frames + frame_idx, total_steps, half_window
+                        )
                         abs_frame = frame_offset + frame_idx
                         if abs_frame not in all_frame_kpis:
                             all_frame_kpis[abs_frame] = []

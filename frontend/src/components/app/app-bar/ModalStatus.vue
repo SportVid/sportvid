@@ -108,7 +108,7 @@
           </template>
           <template #item.progress="{ index }">
             <v-progress-linear
-              v-model="progressComputed[index]"
+              :model-value="progressComputed[index]"
               height="8"
               color="primary"
               rounded
@@ -237,7 +237,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, watchEffect, onMounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePlayerStore } from "@/stores/player";
@@ -365,10 +365,9 @@ onMounted(() => {
   pluginRunResultStore.fetchForVideo({ videoId: playerStore.videoId });
 });
 
-const progressComputed = ref([]);
-watchEffect(() => {
-  progressComputed.value = props.pluginRuns.map((run) => run.progress * 100);
-});
+// Fed straight from the live event stream now -- the analyser's own progress is carried
+// all the way through instead of only landing on 0 and 1 (see utils/analyser_client.py).
+const progressComputed = computed(() => props.pluginRuns.map((run) => run.progress * 100));
 
 const formatLocalDate = (dateString) => {
   if (!dateString) return "";

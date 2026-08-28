@@ -4,6 +4,7 @@ import os
 import argparse
 import time
 import uuid
+import threading
 
 import yaml
 import json
@@ -38,7 +39,7 @@ class AnalyserCacheWrapper:
     def plugins(self):
         return self.plugin._plugins
 
-    def __call__(self, plugin, inputs, parameters, data_manager, callbacks):
+    def __call__(self, plugin, inputs, parameters, data_manager, callbacks, cancel_event=None, session=None):
         cached = False
         if self.cache:
             plugins = {x["plugin"]: x for x in self.plugin.plugin_status()}
@@ -95,6 +96,8 @@ class AnalyserCacheWrapper:
                 data_manager=data_manager,
                 parameters=parameters,
                 callbacks=callbacks,
+                cancel_event=cancel_event,
+                session=session,
             )
             logging.info(
                 f"[AnalyserPluginManager] {run_id} results: {[{k:x} for k,x in results.items()]}"
@@ -123,15 +126,25 @@ class AnalyserCacheWrapper:
                 )
         return results
 
-
+# TODO: Add explicit timeouts to plugin HTTP calls and ensure session.close()
+# actually interrupts in-flight requests quickly enough.
+# TODO: Implement periodic cleanup of cancel_events and sessions dicts to
+# prevent unbounded growth in long-running analyser processes.
 def run_plugin(args):
     try:
         plugin_manager = globals().get("plugin_manager")
         data_manager = globals().get("data_manager")
         params = args.get("params")
         shared = args.get("shared")
+        cancel_event = args.get("cancel_event")
+        session_holder = args.get("session_holder")
         shared["progress"] = 0.0
         shared["status"] = analyser_pb2.GetPluginStatusResponse.RUNNING
+
+        if cancel_event is not None and cancel_event.is_set():
+            logging.info(f"[Analyser] {params.get('plugin')} aborted before it started")
+            return []
+
         plugin_inputs = {}
         if "inputs" in params:
             for data_in in params.get("inputs"):
@@ -166,12 +179,23 @@ def run_plugin(args):
                     )
         
         callbacks = [AnalyserProgressCallback(shared)]
+
+        # Before invoking the plugin_manager the worker creates a dedicated HTTP session.
+        # Cancellation ahndler can later close this exact session from another thread.
+        # Closing it is intended to interrupt the HTTP request from the analyser service to Ray Serve.
+        import requests
+        session = requests.Session()
+        if session_holder is not None:
+            session_holder["session"] = session
+
         results = plugin_manager(
             plugin=params.get("plugin"),
             inputs=plugin_inputs,
             parameters=plugin_parameters,
             data_manager=data_manager,
             callbacks=callbacks,
+            cancel_event=cancel_event,
+            session=session,
         )
         if results is None:
             logging.error(f"[Analyser] {params.get('plugin')} without results")
@@ -247,7 +271,11 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
         self.shared_manager = mp.Manager()
         self.futures = []
 
-        # self.max_results = config.get("Analyser", {}).get("max_results", 100)
+        # Cancellation bookkeeping, deliberately uses ordinary dicts rather than mp.Manager objects.
+        # This is because the jobs run through a ThreadPoolExecutor, not a process pool.
+        self._cancel_lock = threading.Lock()
+        self.cancel_events = {}
+        self.sessions = {}
 
     def list_plugins(self, request, context):
         reply = analyser_pb2.ListPluginsReply()
@@ -266,7 +294,6 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
             data_id = None
             with data:
                 data_id = data.id
-
             return analyser_pb2.UploadDataResponse(success=True, id=data_id, hash=hash)
 
         except Exception as e:
@@ -324,11 +351,64 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
         d["status"] = analyser_pb2.GetPluginStatusResponse.WAITING
         variable["shared"] = d
         process_args["shared"] = d
+
+        # Objects must remain shared references and must not be copied with deepcopy.
+        # Event/dict has to stay the *same* object in both self.cancel_events/self.sessions (for abort_plugin to reach) 
+        # & process_args (for the worker thread to see), which deepcopy would break.
+        cancel_event = threading.Event()
+        session_holder = {}
+        with self._cancel_lock:
+            self.cancel_events[job_id] = cancel_event
+            self.sessions[job_id] = session_holder
+        process_args["cancel_event"] = cancel_event
+        process_args["session_holder"] = session_holder
+
         future = self.process_pool.submit(run_plugin, process_args)
         variable["future"] = future
         self.futures.append(variable)
 
         return analyser_pb2.RunPluginResponse(success=True, id=job_id)
+
+    def abort_plugin(self, request, context):
+        job_id = request.id
+        # find the job
+        futures_lut = {x["id"]: i for i, x in enumerate(self.futures)}
+        if job_id not in futures_lut:
+            logging.warning(f"[Analyser] abort_plugin: unknown job {job_id}")
+            return analyser_pb2.AbortPluginResponse(success=False)
+
+        job_data = self.futures[futures_lut[job_id]]
+        # retrieve the cancellation status
+        with self._cancel_lock:
+            cancel_event = self.cancel_events.get(job_id)
+            session_holder = self.sessions.get(job_id)
+        if cancel_event is not None:
+            cancel_event.set() # set cancellation event -> inform worker and plugin that cancellation was requested
+
+        # cancel jobs that have not started -> if the future is still queued, shared status is set to ERROR, method returns
+        if job_data["future"].cancel():
+            job_data["shared"]["status"] = analyser_pb2.GetPluginStatusResponse.ERROR
+            logging.info(f"[Analyser] job {job_id} cancelled before it started")
+            return analyser_pb2.AbortPluginResponse(success=True)
+
+        # 1. Close the analyser-to-Ray HTTP session:
+        #   - retrieve the dedicated HTTP session for a running job
+        #   - forces blocked HTTP call to the ray serve deployment to unblock
+        # 2. Cause the Ray Serve request to be cancelled.
+        #   - worker thread notices cancel_event and returns
+        #   - closing the connection from here is also what makes Ray Serve's own request cancellation kick in on the
+        #   - deployment side (see inference_ray/main.py's run_in_executor + CancelledError).
+        # 3. Make the analyser-side plugin request return.
+        # 4. Let cancel_event terminate the backend polling loop.
+        session = (session_holder or {}).get("session")
+        if session is not None:
+            try:
+                session.close()
+            except Exception:
+                logging.exception(f"[Analyser] failed to close session for job {job_id}")
+
+        logging.info(f"[Analyser] abort requested for running job {job_id}")
+        return analyser_pb2.AbortPluginResponse(success=True)
 
     def get_plugin_status(self, request, context):
         futures_lut = {x["id"]: i for i, x in enumerate(self.futures)}
