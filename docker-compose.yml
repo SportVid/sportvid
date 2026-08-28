@@ -109,8 +109,8 @@ services:
       retries: 5
       start_period: 30s
   
-  celery:
-    container_name: celery
+  celery-io:
+    container_name: celery-io
     user: "1000:1000"
     image: sportvid-celery:latest
     build:
@@ -148,6 +148,66 @@ services:
       - "-A"
       - "sportvid.celery:app"
       - "worker"
+      - "--hostname=io@%h"
+      - "--queues=io"
+      - "--pool=threads"
+      - "--concurrency=16"
+      - "--prefetch-multiplier=1"
+      - "--loglevel"
+      - "${LOG_LEVEL:-DEBUG}"
+
+  celery-gpu:
+    container_name: celery-gpu
+    user: "1000:1000"
+    image: sportvid-celery:latest
+    build:
+      context: .
+    env_file:
+      - ./.env
+    secrets:
+      - django_settings
+    volumes:
+      - ${DATA_PATH}/media/:/media
+      - ${DATA_PATH}/predictions:/predictions
+      - ${DATA_PATH}/backend_cache:/cache
+      - ./inference_ray:/app/inference_ray
+      - ./analyser:/app/analyser
+      - ./packages:/app/packages
+      - ./backend/:/app/backend
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./.python-version:/app/.python-version
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    tmpfs:
+      - /tmp
+      - /var
+    working_dir: /app/backend/src/backend/
+    # NOTE: This service just mimicks the GPU-bound service for testing/compat.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [ gpu ]
+    command:
+      - "uv"
+      - "run"
+      - "--no-editable"
+      - "--package"
+      - "backend"
+      - "celery"
+      - "-A"
+      - "sportvid.celery:app"
+      - "worker"
+      - "--hostname=gpu@%h"
+      - "--queues=gpu"
+      - "--pool=threads"
+      - "--concurrency=4"
+      - "--prefetch-multiplier=1"
       - "--loglevel"
       - "${LOG_LEVEL:-DEBUG}"
 
@@ -200,21 +260,19 @@ services:
       - "1800"
       - "--workers"
       - "${GUNICORN_WORKERS:-4}"
-      # Threaded workers: the SSE endpoint (/api/events/stream) holds one request open
-      # per browser tab. With the default sync workers each of those would occupy a
-      # whole worker; a waiting thread costs next to nothing.
+      # SSE requires threaded workers so /events/stream does not occupy a whole worker per connection.
       - "--worker-class"
       - "gthread"
       - "--threads"
       - "${GUNICORN_THREADS:-16}"
     depends_on:
-      # postgres: # NOTE: circular dependency?
-      #   condition: service_healthy
+      postgres:
+        condition: service_healthy
       memcached:
         condition: service_started
-      valkey:
-        condition: service_healthy
-      celery:
+      celery-io:
+        condition: service_started
+      celery-gpu:
         condition: service_started
     # healthcheck:
     #   test: ["CMD-SHELL", "curl --fail http://localhost:${BACKEND_PORT}/api/readyz/ || exit 1"]

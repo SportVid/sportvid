@@ -21,16 +21,28 @@ from utils.helper import remove_file, remove_dir
 
 
 logger = logging.getLogger(__name__)
-_POLL_INTERVAL = 2.0  # seconds between cancellation checks
-_DELETE_CHECK_INTERVAL = 5.0 
+
+_POLL_INTERVAL = 2.0  # seconds between cancellation checks (fallback)
+_DELETE_CHECK_INTERVAL = 5.0
+_PROGRESS_STEP = 0.01  # only report conversion progress once it moved by at least 1%
+
+# adds constants & regex for parsing FFmpeg progress
+_FFMPEG_PROGRESS_KEYS = (
+    "frame", "fps", "stream", "bitrate", "total_size", "out_time_us", "out_time_ms",
+    "out_time", "dup_frames", "drop_frames", "speed", "progress",
+)
+_FFMPEG_PROGRESS_LINE = re.compile(
+    r"^(" + "|".join(_FFMPEG_PROGRESS_KEYS) + r")[\w_]*="
+)
 
 
 def safe_delete(paths):
     if not isinstance(paths, (list, tuple, set)):
         paths = [paths]
-    
+
     for fp in paths:
-        if not fp: continue
+        if not fp:
+            continue
         path = Path(fp)
         try:
             if path.is_file():
@@ -59,24 +71,32 @@ def cleanup_upload_orphans(self):
             safe_delete(file_path)
             logger.info(f"Removed orphan: {file_path}")
 
+def _report_conversion_progress(video_id_hex, progress):
+    """Persist & push HLS conversion progress. 
+    Uses the Queryset update on purpose, since the video may have been deleted mid-conversion.
+    """
+    progress = max(0.0, min(1.0, progress))
+    updated = Video.objects.filter(id=video_id_hex).update(progress=progress)
+    if updated:
+        # .update() bypasses post_save, so the live event is sent explicitly.
+        publish_video(video_id_hex)
+    return updated
+
 def _manifest_references_singlefile(asset_dir: Path, manifest: Path):
     if not manifest.is_file() or manifest.stat().st_size == 0:
         raise RuntimeError(
             f"Missing or empty HLS manifest: {manifest}"
         )
-
+        
     manifest_text = manifest.read_text(encoding="utf-8")
-
     if "#EXTM3U" not in manifest_text:
         raise RuntimeError(
             f"Invalid HLS manifest header: {manifest}"
         )
-
     if "#EXT-X-ENDLIST" not in manifest_text:
         raise RuntimeError(
             f"Incomplete HLS manifest: {manifest}"
         )
-
     if "#EXT-X-MAP" not in manifest_text:
         raise RuntimeError(
             f"fMP4 manifest has no EXT-X-MAP: {manifest}"
@@ -88,12 +108,10 @@ def _manifest_references_singlefile(asset_dir: Path, manifest: Path):
         if line.strip()
         and not line.startswith("#")
     ]
-
     if not media_uris:
         raise RuntimeError(
             f"No media URI found in HLS manifest: {manifest}"
         )
-
     # single_file mode should reference one physical media resource
     if len(set(media_uris)) != 1:
         raise RuntimeError(
@@ -102,13 +120,11 @@ def _manifest_references_singlefile(asset_dir: Path, manifest: Path):
         )
 
     media_path = (asset_dir / media_uris[0]).resolve()
-
     if media_path.parent != asset_dir.resolve():
         raise RuntimeError(
             f"Manifest references a path outside asset directory: "
             f"{media_path}"
         )
-
     if not media_path.is_file() or media_path.stat().st_size == 0:
         raise RuntimeError(
             f"Missing or empty HLS media file: {media_path}"
@@ -121,12 +137,11 @@ def _manifest_references_segments(manifest: Path) -> tuple[Path, list[Path]]:
     text = manifest.read_text(encoding="utf-8")
     manifest_dir = manifest.parent.resolve()
 
-    import re
-
     map_match = re.search(
         r'#EXT-X-MAP:URI="([^"]+)"',
         text,
     )
+
     if not map_match:
         raise RuntimeError(
             f"fMP4 manifest has no EXT-X-MAP: {manifest}"
@@ -166,16 +181,17 @@ def _metadata(file_in: Path) -> tuple[float, float | None, Any]:
     with imageio.get_reader(str(file_in)) as reader:
         meta = reader.get_meta_data()
 
-    fps = float(meta["fps"])
-    duration = meta.get("duration")
-    duration_ms = (
-        float(duration) * 1000.0
-        if duration is not None
-        else None
-    )
-    return fps, duration_ms, meta.get("size")
+        fps = float(meta["fps"])
+        duration = meta.get("duration")
+        duration_ms = (
+            float(duration) * 1000.0
+            if duration is not None
+            else None
+        )
 
-@shared_task(bind=True, time_limit=7200, soft_time_limit=5400)
+        return fps, duration_ms, meta.get("size")
+
+@shared_task(bind=True, time_limit=7200, soft_time_limit=5400, queue="gpu")
 def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
     started = time.monotonic()
     video_db = None
@@ -203,9 +219,9 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         
         conversion_args = {
             "format": "hls",
-            "threads": 0, # TODO: check thread count for HLS conversion. Queue 2-3 video uploads, check ffmpeg processes and CPU usage. 
-                # ps -ef | grep ffmpeg
-                # top -H -p <ffmpeg_pid>
+            "threads": 0, # TODO: Check thread count for HLS conversion.
+                # $ ps -ef | grep ffmpeg
+                # $ top -H -p <ffmpeg_pid>
             "hls_playlist_type": "vod",
             "segment_time" : segment_time,
             # -------- input: hardware acceleration
@@ -213,16 +229,17 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             # "hwaccel": "cuda",
             # "hwaccel_output_format": "cuda",
             # -------- output: video/audio options
-            "vcodec" : "libx264", # NOTE: Use "h264_nvenc" for GPU conversion via NVENC. Otherwise use "libx264".
+            "vcodec" : "libx264", # NOTE: use "libx264" for CPU conversion.
+            # "vcodec" : "h264_nvenc" # NOTE: Use "h264_nvenc" for GPU conversion via NVENC
             "acodec" : "aac",
             "audio_bitrate" : "128k",
             # -------- HLS stuff
             "g": gop, # GOP size should match segment duration
             "keyint_min": gop, # same as GOP
             # "sc_threshold": 0, # no unpredictable keyframe insertions
-            "crf": 23,  # NOTE: Comment this line in for "libx264". This is the constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
+            "crf": 23,  # NOTE: Comment this line in for "libx264". Constant rate factor [0-51] --> lower: higher quality & larger file; higher: more compression & lower quality. 
             # -------- NVENC tuning
-            # "preset": "p4", # NOTE: Uncomment if using GPU conversion. This controls encoding speed --vs.-- compression trade-off [p1-p7].
+            # "preset": "p4", # NOTE: Uncomment if using GPU conversion. Controls encoding speed --vs.-- compression trade-off [p1-p7].
             "rc": "vbr",
             "cq": 23,
             # -------- output compat
@@ -251,6 +268,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             manifest,
         )
 
+        # FFmpeg conversion uses a dedicated progress pipe so stderr can remain inherited
         ffmpeg_proc = convert_to_hls(
             str(file_in),
             str(manifest),
@@ -258,58 +276,89 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             **conversion_args,
         )
         
-        last_delete_check = 0.
-        while True:
-            rc = ffmpeg_proc.poll()
-            if rc is not None: break
+        # denominator for the conversion progress --> may be missing for some containers
+        source_duration = duration_ms / 1000. if duration_ms is not None else None
         
-            now = time.monotonic()
-            if now - last_delete_check >= _DELETE_CHECK_INTERVAL:
-                last_delete_check = now
-                if not Video.objects.filter(id=video_id_hex).exists():
-                    logger.info(
-                        "Video %s deleted; terminating FFmpeg",
-                        video_id_hex,
-                    )
-                    terminate_process_group(ffmpeg_proc)
-                    return
-
-            time.sleep(_POLL_INTERVAL)
+        last_delete_check = 0.0
+        last_reported = 0.0
+        cancelled = False
         
-        if rc != 0:
+        # listener thread reacts to VideoDelete and publishes a cancel request for this video to kill ffmpeg immediately
+        # TODO: cancellation relies on Valkey
+        # --> add a fallback timeout to kill FFmpeg if it appears stuck.
+        with cancellation_watcher(
+            "video",
+            video_id_hex,
+            on_cancel=lambda: terminate_process_group(ffmpeg_proc),
+        ) as cancel_event:
+            try:
+                # drains ffmpeg's error & "-progress" output line by line
+                while True:
+                    # TODO: can block indefinitely if FFmpeg stops writing but hasn’t exited
+                    # --> use a non-blocking reader (e.g. a separate thread or select/queue) for stderr
+                    line = ffmpeg_proc.stdout.readline()
+                    if not line:
+                        if ffmpeg_proc.poll() is not None:
+                            break
+                        continue
+        
+                    line = line.rstrip()
+                    is_progress_line = bool(_FFMPEG_PROGRESS_LINE.match(line)) # identifies progress lines
+                    
+                    if not is_progress_line:
+                        # non-progress lines on stdout are unexpected; ignore quietly.
+                        continue
+                    
+                    if line.startswith("out_time_us=") and source_duration:
+                        try:
+                            elapsed = int(line.split("=", 1)[1]) / 1_000_000.0
+                        except ValueError:
+                            elapsed = None
+                        if elapsed is not None:
+                            # reserves the last few percent for archive packing and writing metadata
+                            progress = min(elapsed / float(source_duration), 1.0) * 0.95
+                            if progress - last_reported >= _PROGRESS_STEP:
+                                last_reported = progress
+                                _report_conversion_progress(video_id_hex, progress)
+                    
+                    if line.startswith("progress="):
+                        now = time.monotonic()
+                        if now - last_delete_check >= _DELETE_CHECK_INTERVAL:
+                            last_delete_check = now
+                            # fallback existence check in case Valkey is unavailable.
+                            if not Video.objects.filter(id=video_id_hex).exists():
+                                logger.info(
+                                    "Video %s deleted; terminating FFmpeg (fallback).",
+                                    video_id_hex,
+                                )
+                                cancelled = True
+                                terminate_process_group(ffmpeg_proc)
+                                break
+                                # Drain any remaining stdout after FFmpeg exits.
+                # drains any remaining stdout after FFmpeg exits.
+                rest = ffmpeg_proc.stdout.read()
+                if rest:
+                    for extra_line in rest.splitlines():
+                        if not _FFMPEG_PROGRESS_LINE.match(extra_line):
+                            logger.debug("[ffmpeg progress] %s", extra_line)    
+            finally:
+                if ffmpeg_proc.stdout:
+                    ffmpeg_proc.stdout.close() 
+                    
+            cancelled = cancelled or cancel_event.is_set()
+        
+        # waits for the return code and raises on error if not cancelled
+        rc = ffmpeg_proc.wait()
+        if not cancelled and rc != 0:
             raise RuntimeError(
                 f"FFmpeg exited with code {rc}"
-            )
+            )        
             
         if not manifest.is_file() or manifest.stat().st_size == 0:
             raise RuntimeError(f"Missing or empty HLS manifest: {manifest}")
-        
-        # try:
-        #     while True:
-        #         try:
-        #             _, stderr = ffmpeg_proc.communicate(timeout=_POLL_INTERVAL)
-        #             if ffmpeg_proc.returncode != 0:
-        #                 raise RuntimeError(
-        #                     f"ffmpeg exited with code {ffmpeg_proc.returncode}"
-        #                 )
-        #             if stderr:
-        #                 for line in stderr.splitlines():
-        #                     logger.error("[ffmpeg] %s", line)
-        #             break
-        #         except subprocess.TimeoutExpired:
-        #             if not Video.objects.filter(id=video_id_hex).exists():
-        #                 logger.info(
-        #                     "Video %s deleted during HLS conversion, killing ffmpeg.",
-        #                     video_id_hex,
-        #                 )
-        #                 ffmpeg_proc.kill()
-        #                 ffmpeg_proc.wait()
-        #                 return
-        # finally:
-        #     if ffmpeg_proc.stderr:
-        #         ffmpeg_proc.stderr.close()                   
-        
+                        
         if fmp4:
+            # NOTE: below line only relevant for segmented fmp4.
             # init_path, segments = _manifest_references_segments(manifest)
             media_path_for_db = _manifest_references_singlefile(asset_dir, manifest)
         else:
@@ -321,9 +370,9 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             media_path_for_db = segment_candidates[0]
         
         # NOTE: Creates the archive to be transfered.
-        # TODO: Eventually we can remove putting everything into archives to send them around via gRPC.
-        #       See "video_asset_manager.py", and "video_asset_data.py" -> use manifest_path & media_path.
-        #       Requires no packing/unpacking after each send/receive.
+        # TODO: Eventually we can avoid wrapping everything into an .tar archive to send it around via gRPC.
+        #       See "video_asset_manager.py", and "video_asset_data.py", manifest_path & media_path.
+        #       Would requires no packing/unpacking after each send/receive, however bad solution if using segmented fmp4.
         ext = ".tar.gz"
         archive_path = Path(f"{output_root}{video_id_hex}{ext}")
         temporary_archive = archive_path.with_suffix(".tar.gz.partial")
@@ -340,15 +389,19 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             height=size[1] if size else None,
             status=Video.STATUS_DONE,
             progress=1.0,
-            asset_dir = str(asset_dir),
-            manifest_path = str(manifest),
-            media_path = media_path_for_db
+            asset_dir=str(asset_dir),
+            manifest_path=str(manifest),
+            media_path=media_path_for_db,
         )
 
         if not upd:
             raise RuntimeError(
                 f"Video disappeared before completion: {video_id_hex}"
             )
+
+        # Queryset .update() doesn't fire post_save --> push the "done" state explicitly
+        # so the gallery card resolves itself without a reload.
+        publish_video(video_id_hex)
 
         logger.info(
             "HLS conversion took %.2f seconds for %s",
@@ -372,23 +425,34 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             "Soft time limit exceeded for video %s",
             video_id_hex,
         )
+        
         if ffmpeg_proc is not None:
             terminate_process_group(ffmpeg_proc)
+            
         if video_db is not None:
             Video.objects.filter(id=video_id_hex).update(
                 status=Video.STATUS_ERROR,
             )
+            publish_video(video_id_hex)
+            
         safe_delete([archive_path, asset_dir])
         raise
 
     except Exception:
-        logger.exception("Video conversion failed: %s", video_id_hex)
+        logger.exception(
+            "Video conversion failed: %s", 
+            video_id_hex
+        )
+        
         if video_db is not None:
             Video.objects.filter(id=video_id_hex).update(
                 status=Video.STATUS_ERROR,
             )
+            publish_video(video_id_hex)
+            
         if ffmpeg_proc is not None:
             terminate_process_group(ffmpeg_proc)
+
         safe_delete([archive_path, asset_dir])
         raise
 

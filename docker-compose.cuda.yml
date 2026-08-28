@@ -42,7 +42,6 @@ services:
       bash -c "
       uv run --package inference_ray ray start --head --dashboard-host=0.0.0.0 --dashboard-port=8265 &&
       uv run --package inference_ray serve run /app/inference_ray/deploy.cuda.yml
-      "
 
   analyser:
     container_name: analyser
@@ -81,10 +80,10 @@ services:
       - "${VALKEY_INTERNAL_HOST}"
       - "--port"
       - "${VALKEY_INTERNAL_PORT}"
-      # - "--requirepass"
-      # - "${VALKEY_PASSWD}"
-      # - "--protected-mode"
-      # - "yes"
+    # - "--requirepass"
+    # - "${VALKEY_PASSWD}"
+    # - "--protected-mode"
+    # - "yes"
     ports:
       - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT} # remap port
     healthcheck:
@@ -101,14 +100,14 @@ services:
       - ./.env
     volumes:
       - ${DATA_PATH}/shared/db/:/var/lib/postgresql/data
-      - ./postgres:/docker-entrypoint-initdb.d  # init.sh is invoked automatically
+      - ./postgres:/docker-entrypoint-initdb.d # init.sh is invoked automatically
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
-  
+
   celery-io:
     container_name: celery-io
     user: "1000:1000"
@@ -259,9 +258,7 @@ services:
       - "1800"
       - "--workers"
       - "${GUNICORN_WORKERS:-4}"
-      # Threaded workers: the SSE endpoint (/api/events/stream) holds one request open
-      # per browser tab. With the default sync workers each of those would occupy a
-      # whole worker; a waiting thread costs next to nothing.
+      # SSE requires threaded workers so /events/stream does not occupy a whole worker per connection.
       - "--worker-class"
       - "gthread"
       - "--threads"
@@ -271,9 +268,9 @@ services:
         condition: service_healthy
       memcached:
         condition: service_started
-      valkey:
-        condition: service_healthy
-      celery:
+      celery-io:
+        condition: service_started
+      celery-gpu:
         condition: service_started
     # healthcheck:
     #   test: ["CMD-SHELL", "curl --fail http://localhost:${BACKEND_PORT}/api/readyz/ || exit 1"]

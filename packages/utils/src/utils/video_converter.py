@@ -42,7 +42,7 @@ def _build_command(
     input_kwargs: dict[str, Any] = {}
 
     # TODO: Defining these offloads encoding to the GPU via CUDA.
-    # Didn't work for me, so I disabled GPU-based encoding
+    # Didn't work for me, so I disabled GPU-based encoding.
     input_args = [
         # "hwaccel",
         # "hwaccel_output_format",
@@ -57,29 +57,21 @@ def _build_command(
         "format": kwargs.get("format", "hls"),
         "threads": kwargs.get("threads"),
         "start_number": 0,
-        "hls_time": kwargs.get(
-            "hls_time",
+        "hls_time": kwargs.get("hls_time",
             kwargs.get("segment_time", 5),
         ),
         "hls_list_size": kwargs.get("hls_list_size", 0),
-        "hls_playlist_type": kwargs.get(
-            "hls_playlist_type",
+        "hls_playlist_type": kwargs.get("hls_playlist_type",
             "vod",
         ),
-        "hls_segment_type": kwargs.get(
-            "hls_segment_type",
+        "hls_segment_type": kwargs.get("hls_segment_type",
             "mpegts",
         ),
-        "hls_flags": kwargs.get(
-            "hls_flags",
+        "hls_flags": kwargs.get("hls_flags",
             "independent_segments",
         ),
-        "hls_segment_filename": kwargs.get(
-            "hls_segment_filename"
-        ),
-        "hls_fmp4_init_filename": kwargs.get(
-            "hls_fmp4_init_filename"
-        ),
+        "hls_segment_filename": kwargs.get("hls_segment_filename"),
+        "hls_fmp4_init_filename": kwargs.get("hls_fmp4_init_filename"),
         "vcodec": kwargs.get("vcodec"),
         "acodec": kwargs.get("acodec"),
         "audio_bitrate": kwargs.get("audio_bitrate"),
@@ -88,8 +80,7 @@ def _build_command(
         "rc": kwargs.get("rc"),
         "cq": kwargs.get("cq"),
         "g": kwargs.get("g", kwargs.get("gop")),
-        "keyint_min": kwargs.get(
-            "keyint_min",
+        "keyint_min": kwargs.get("keyint_min",
             kwargs.get("g", kwargs.get("gop")),
         ),
         "sc_threshold": kwargs.get("sc_threshold"),
@@ -115,56 +106,42 @@ def _build_command(
     command = [str(value) for value in ffmpeg.compile(output_stream)]
     if not command: raise RuntimeError("FFmpeg command was empty.")
 
-    return [
+    base = [
         command[0],
+        "-progress",
+        "pipe:1",
         "-nostdin",
         "-hide_banner",
         "-loglevel",
         str(kwargs.get("loglevel", "warning")),
-        *command[1:],
+        *command[1:]   
     ]
+    
+    return base
 
 
 def convert_to_hls(
     file_in: str,
     manifest_path: str,
-    asynchronous: bool = True,
     **kwargs: Any,
 ) -> subprocess.Popen[str] | subprocess.CompletedProcess[str]:
     """Convert a media file to HLS using FFmpeg.
 
-    Asynchronous mode returns a running Popen instance. FFmpeg's stderr is
-    inherited by the worker/container logger, avoiding a pipe-buffer
+    Returns a running Popen instance. 
+    FFmpeg's stderr is inherited by the worker/container logger, avoiding a pipe-buffer
     deadlock. The process starts in its own session so callers can terminate
     its entire process group using `terminate_process_group`.
+    
+    Caller must drain stdout to avoid blocking FFmpeg.
     """
     command = _build_command(file_in, manifest_path, kwargs)
     logger.debug("FFmpeg command: %s", " ".join(command))
 
-    if asynchronous:
-        return subprocess.Popen(
-            command,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=None,
-            start_new_session=True,
-            text=True,
-        )
-
-    completed = subprocess.run(
+    return subprocess.Popen(
         command,
         stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=None,
+        start_new_session=True,
         text=True,
-        check=False,
     )
-
-    if completed.returncode != 0:
-        stderr = (completed.stderr or "").strip()
-        raise RuntimeError(
-            f"FFmpeg exited with code {completed.returncode}: "
-            f"{stderr[-4000:]}"
-        )
-
-    return completed
