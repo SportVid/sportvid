@@ -128,7 +128,6 @@
               :key="position"
               class="pip-no-drag"
               :style="getEllipseSvg(position).style"
-              @click="openEditBBox(position, currentFrameKey)"
             >
               <svg class="player-ellipse" :viewBox="getEllipseSvg(position).viewBox">
                 <path
@@ -336,8 +335,6 @@
         </v-btn>
       </div>
     </v-row>
-
-    <ModalBBoxUpdate v-model="editDialog" :bbox="editBBox" />
 
     <div style="position: relative">
       <v-row ref="videoControl" class="video-control mt-6">
@@ -615,12 +612,11 @@ import { useVisualizationStore } from "@/stores/visualization";
 import { useTopViewStore } from "@/stores/top_view";
 import { useUserStore } from "@/stores/user";
 import { getTimecode } from "@/plugins/time";
-import ModalBBoxUpdate from "@/components/position-data/ModalBboxUpdate.vue";
 import ModalPositionDataSelect from "@/components/position-data/ModalPositionDataSelect.vue";
 import ModalPositionDataUpload from "@/components/position-data/ModalPositionDataUpload.vue";
 import ModalPositionDataEntityColors from "@/components/position-data/ModalPositionDataEntityColors.vue";
 import { toRgb } from "@/plugins/helpers";
-import Hls from "hls.js";
+import { useHlsVideo } from "@/composables/useHlsVideo";
 
 const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
@@ -667,7 +663,7 @@ const ENTITY_KINDS = [
 // team_id -- team_id 1 (rest) and 3+ (actual teams) all share the same person/"player_ids"
 // id space on the backend (see _compute_meta_data's comment in bounding_boxes.py), so a
 // player's key must stay stable across a team re-assignment. Without this, a per-frame team
-// edit (the "Bbox" tab in ModalBboxUpdate.vue, which only touches one frame) makes that
+// edit (the "single box" scope in BboxIdentityPanel.vue, which only touches one frame) makes that
 // frame's box carry a team_id the aggregate-built includedEntities set never learned about
 // (precomputedPlayerList is one team_id per player for the *whole* video), so the edited
 // frame's box would silently disappear from visibleBboxPositions below.
@@ -1029,13 +1025,6 @@ onBeforeUnmount(() => {
 });
 watch(() => window.innerHeight, updateMaxHeight);
 
-const editDialog = ref(false);
-const editBBox = ref(null);
-function openEditBBox(bbox, frameKey) {
-  editBBox.value = { box: bbox, bboxId: `${frameKey}-${bbox[0]}` };
-  editDialog.value = true;
-}
-
 const bboxSortedKeys = computed(() =>
   Object.keys(bboxesStore.bboxDataInterpolated)
     .map(Number)
@@ -1212,7 +1201,9 @@ const getEllipseSvg = (position) => {
       height: height + "px",
       overflow: "visible",
       zIndex: 12,
-      cursor: isVideoFullscreen.value ? "default" : "pointer",
+      // Display-only now -- correcting a box moved to AnnotationToolView, where the frame is
+      // shown as a still image large enough to actually drag box edges around.
+      cursor: "default",
     },
     viewBox: `0 0 ${rx * 2} ${height}`,
     arc: arcPath,
@@ -1243,70 +1234,7 @@ const getEllipseSvg = (position) => {
 //   }
 // );
 
-let hls = null;
-function tarGzUrlToHlsUrl(tarUrl) {
-  const url = new URL(tarUrl);
-
-  // Dateiname extrahieren
-  const parts = url.pathname.split("/");
-  const fileName = parts.pop(); // <hash>.tar.gz
-  const id = fileName.replace(/\.tar\.gz$/, "");
-
-  // Neuer Pfad: nested id/<id>.m3u8 (HLS index)
-  parts.push(id, `${id}.m3u8`);
-  url.pathname = parts.join("/");
-
-  return url.toString();
-}
-watch(
-  [() => playerStore.videoUrl, videoElement],
-  ([url, el]) => {
-    if (!url || !el) return;
-
-    const video = el;
-    const hlsUrl = tarGzUrlToHlsUrl(url);
-
-    if (!hlsUrl) return;
-
-    if (hls) {
-      try {
-        hls.destroy();
-      } catch (e) {
-        console.error("Failed to destroy existing hls instance", e);
-      }
-      hls = null;
-      try {
-        video.src = "";
-      } catch (e) {}
-    }
-
-    if (Hls.isSupported()) {
-      hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: false,
-        backBufferLength: 30,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-      });
-
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        updateVideoSize();
-      });
-    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = hlsUrl;
-    }
-  },
-  { immediate: true }
-);
-onBeforeUnmount(() => {
-  if (hls) {
-    hls.destroy();
-    hls = null;
-  }
-});
+useHlsVideo(videoElement, { onManifestParsed: () => updateVideoSize() });
 </script>
 
 <style scoped>

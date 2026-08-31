@@ -45,7 +45,17 @@
           <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
           <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
         </v-btn>
+
+        <v-btn @click="openAnnotationTool" data-tour="annotation-tool-open">
+          <app-bar-icon>mdi-vector-square-edit</app-bar-icon>
+          <span class="text-primary">{{ $t("app_bar.annotation_tool") }}</span>
+        </v-btn>
       </div>
+
+      <v-btn v-if="annotationToolView" @click="backToAnalysis">
+        <app-bar-icon>mdi-view-dashboard-outline</app-bar-icon>
+        <span class="text-primary">{{ $t("app_bar.back_to_analysis") }}</span>
+      </v-btn>
 
       <v-btn
         v-if="videoView && loggedIn"
@@ -166,7 +176,7 @@
 import { ref, computed, watch } from "vue";
 import logoLight from "@/assets/logo_dshs_marburg_light.png";
 import logoDark from "@/assets/logo_dshs_marburg_dark.png";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { useUserStore } from "@/stores/user";
@@ -183,6 +193,7 @@ import UserMenu from "@/components/user/UserMenu.vue";
 import ModalTutorial from "@/components/app/app-bar/ModalTutorial.vue";
 
 const route = useRoute();
+const router = useRouter();
 const { t } = useI18n();
 
 const playerStore = usePlayerStore();
@@ -197,6 +208,12 @@ const loggedIn = computed(() => userStore.loggedIn);
 
 const videoView = computed(() => route.name === "VideoView");
 const analysisView = computed(() => route.name === "AnalysisView");
+const annotationToolView = computed(() => route.name === "AnnotationToolView");
+
+const openAnnotationTool = () =>
+  router.push({ name: "AnnotationToolView", params: { id: playerStore.videoId } });
+const backToAnalysis = () =>
+  router.push({ name: "AnalysisView", params: { id: route.params.id } });
 const termsOfUseView = computed(() => route.name === "TermsOfUseView");
 const guidelinesView = computed(() => route.name === "GuidelinesView");
 
@@ -222,6 +239,9 @@ const pluginRuns = computed(() => {
       return {
         id: pluginRun.id,
         type: pluginName(pluginRun.type),
+        // The untranslated type as well: ModalStatus needs it to look the run up in the
+        // annotation-tool registry, which keys off the backend's plugin type.
+        rawType: pluginRun.type,
         date: pluginRun.date
           .replace("T", " ")
           .replace("Z", "")

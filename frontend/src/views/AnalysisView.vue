@@ -146,8 +146,8 @@ import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 import { useShotStore } from "@/stores/shot";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
-import { useEventsStore } from "@/stores/events";
 import { useDashboardLayoutStore } from "@/stores/dashboard_layout";
+import { useAnalysisScopeCleanup } from "@/composables/useAnalysisScopeCleanup";
 // import * as Keyboard from "../plugins/keyboard";
 import VideoPlayer from "@/components/analysis-view/cards/VideoPlayer.vue";
 import TabWindowCalibration from "@/components/calibration-asset/CalibrationAsset.vue";
@@ -179,7 +179,6 @@ const clusterTimelineItemStore = useClusterTimelineItemStore();
 const shotStore = useShotStore();
 const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
-const eventsStore = useEventsStore();
 const dashboardStore = useDashboardLayoutStore();
 
 const matchupTeams = computed(() => {
@@ -718,21 +717,12 @@ function onEntryClick(event) {
 onBeforeUnmount(() => {
   window.removeEventListener("pointermove", onEntryPointerMove);
   window.removeEventListener("pointerup", onEntryPointerUp);
-  // Also clears the persisted tracker-run ids (bboxPluginRunId/bboxBallPluginRunId,
-  // teamClusteringRunId/reidRunId) — otherwise they'd survive into a different video's
-  // AnalysisView and restoreFromCache (position_data.js) could try to restore this video's
-  // tracker run against that one.
-  positionDataStore.resetPositionData();
-  calibrationAssetStore.resetCalibrationAsset();
-  topViewStore.gridLongitudinal = 0;
-  topViewStore.gridTransverse = 0;
-  topViewStore.showSportZones = false;
-  // Event data sets (see EventDataMenu.vue) are only ever uploaded/generated per video, not
-  // a reusable global list -- carrying them into the next video (persisted, see events.js)
-  // would show that other video's dummy/uploaded events tagged onto this one instead of a
-  // clean "no event data yet" state.
-  eventsStore.resetEventData();
 });
+
+// Tears the analysis state (position data, calibration, events) down on the way out -- but
+// deliberately not when moving to the annotation tool for this same video, which works on
+// exactly that state. See useAnalysisScopeCleanup for the full reasoning.
+useAnalysisScopeCleanup();
 </script>
 
 <style scoped>

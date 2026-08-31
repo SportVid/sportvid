@@ -89,7 +89,9 @@
     "export_menu": "Exportieren",
     "user_menu": "Anmelden",
     "batch_plugin_menu": "Batch-Plugin ausführen",
-    "video_upload_menu": "Neues Video hochladen"
+    "video_upload_menu": "Neues Video hochladen",
+    "annotation_tool": "Annotation",
+    "back_to_analysis": "Analyse"
   },
   "video_view": {
     "video_id": "Video-ID:",
@@ -160,6 +162,38 @@
       "handball": "Handball",
       "basketball": "Basketball",
       "climbing": "Klettern"
+    }
+  },
+  "annotation_tool": {
+    "back_to_analysis": "Zurück zur Analyse",
+    "run_select": "Plugin-Lauf",
+    "frame_count": "Bilder",
+    "discard_frame": "Korrekturen dieses Bildes verwerfen",
+    "tools": {
+      "bbox": {
+        "name": "Bounding-Box-Korrektur",
+        "description": "Die Boxen eines Objekttrackers korrigieren: verschieben, in der Größe ändern, ergänzen oder entfernen sowie Spieler- und Teamzuordnung richtigstellen."
+      }
+    },
+    "mode": {
+      "select": "Auswählen und verschieben",
+      "draw": "Neue Box zeichnen",
+      "delete": "Ausgewählte Box entfernen"
+    },
+    "identity": {
+      "title": "Ausgewählte Box",
+      "no_selection": "Wähle eine Box im Bild aus, um sie zu bearbeiten.",
+      "scope": "Anwenden auf",
+      "geometry": "Geometrie (relativ zum Bild)",
+      "remove_from_draft": "Nur aus der Korrektur entfernen"
+    },
+    "empty_state": {
+      "title": "Noch keine Plugin-Ergebnisse zum Korrigieren"
+    },
+    "export": {
+      "button": "Trainingsdaten abgeben",
+      "file_name": "annotationskorrekturen",
+      "success": "Korrekturen für {count} Bilder exportiert"
     }
   },
   "calibration_asset": {
@@ -1050,6 +1084,52 @@
           "selected": "Ausgewählte Plugin-Läufe erfolgreich gelöscht"
         },
         "confirm": "Plugin-Läufe löschen? Dies kann nicht rückgängig gemacht werden."
+      },
+      "annotate": "Ergebnis prüfen und korrigieren"
+    },
+    "bounding_box": {
+      "tooltip": {
+        "box_id": "Box-ID",
+        "player_id": "Spieler-ID",
+        "ref_id": "Schiedsrichter-ID",
+        "ball_id": "Ball-ID",
+        "team_id": "Team-ID"
+      },
+      "edit": {
+        "title": "Bounding Box bearbeiten",
+        "modes": {
+          "bbox": "Einzelne Box",
+          "info_bbox": "Nur auf diese eine Bounding Box anwenden",
+          "all_player": "Alle Boxen des Spielers",
+          "info_all_player": "Auf alle Bounding Boxes mit derselben Spieler-ID anwenden",
+          "all_team": "Alle Boxen des Teams",
+          "info_all_team": "Auf alle Bounding Boxes mit derselben Team-ID anwenden"
+        },
+        "rules": {
+          "player_min": "Kleinster zulässiger Wert ist 0",
+          "player_max": "Größter zulässiger Wert ist 999",
+          "player_duplicate": "Diese Spieler-ID gehört im aktuellen Bild bereits zu einem anderen Spieler"
+        },
+        "current_box_id": "Aktuelle Box-ID",
+        "current_player_id": "Aktuelle Spieler-ID",
+        "current_team_id": "Aktuelle Team-ID",
+        "new_player_id": "Neue Spieler-ID",
+        "new_team_id": "Neue Team-ID",
+        "team": {
+          "unknown": "-1 (Unbekannt)",
+          "rest": "1 (Sonstige)",
+          "ball": "0 (Ball)",
+          "referee": "2 (Schiedsrichter)",
+          "team": "{id} (Team)",
+          "new_team": "{id} (Neues Team)"
+        },
+        "new_team_id_picker": "Farbauswahl",
+        "single_success": "Bounding Box erfolgreich aktualisiert",
+        "all_success": "Bounding Boxes erfolgreich aktualisiert"
+      },
+      "delete": {
+        "single_success": "Bounding Box erfolgreich gelöscht",
+        "all_success": "Bounding Boxes erfolgreich gelöscht"
       }
     },
     "calibration_asset": {

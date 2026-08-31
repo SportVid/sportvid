@@ -103,7 +103,9 @@
     "export_menu": "Export",
     "user_menu": "Login",
     "batch_plugin_menu": "Run Batch Plugin",
-    "video_upload_menu": "Upload new Video"
+    "video_upload_menu": "Upload new Video",
+    "annotation_tool": "Annotation",
+    "back_to_analysis": "Analysis"
   },
   "video_view": {
     "video_processing": "Video is being processed",
@@ -160,6 +162,38 @@
         "video": "Video",
         "topview": "Top View"
       }
+    }
+  },
+  "annotation_tool": {
+    "back_to_analysis": "Back to analysis",
+    "run_select": "Plugin run",
+    "frame_count": "Frames",
+    "discard_frame": "Discard corrections for this frame",
+    "tools": {
+      "bbox": {
+        "name": "Bounding box correction",
+        "description": "Correct the boxes an object tracker produced: move, resize, add or remove them, and fix player and team assignment."
+      }
+    },
+    "mode": {
+      "select": "Select and move",
+      "draw": "Draw new box",
+      "delete": "Remove selected box"
+    },
+    "identity": {
+      "title": "Selected box",
+      "no_selection": "Select a box in the image to edit it.",
+      "scope": "Apply to",
+      "geometry": "Geometry (relative to frame)",
+      "remove_from_draft": "Remove from correction only"
+    },
+    "empty_state": {
+      "title": "No plugin output to correct yet"
+    },
+    "export": {
+      "button": "Submit training data",
+      "file_name": "annotation_corrections",
+      "success": "Corrections for {count} frames exported"
     }
   },
   "sports": {
@@ -1188,7 +1222,8 @@
           "selected": "Selected plugin runs successfully deleted"
         },
         "confirm": "Delete plugin runs? This cannot be undone."
-      }
+      },
+      "annotate": "Review and correct this result"
     },
     "tutorial": {
       "title": "Tutorials",

@@ -140,7 +140,7 @@ export const useBboxesStore = defineStore(
     // object_tracker run's original ids) still finds the right row. Bulk "apply to all
     // player id" edits are intentionally left untranslated -- a single reid identity can map
     // to several different original track_ids over time, so a global rename is ambiguous; that
-    // mode is hidden in the UI whenever a ReID merge is active (see ModalBboxUpdate.vue).
+    // mode is hidden in the UI whenever a ReID merge is active (see BboxIdentityPanel.vue).
     const translatePlayerId = (bboxData) => {
       if (!bboxReidMapping.value || bboxData.applyAllPlayerId || bboxData.applyAllTeamId) {
         return bboxData;

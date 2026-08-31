@@ -11,7 +11,7 @@ import { fromPosDataObject } from "../plugins/compact_posdata";
 // loaded from (see _mergeRawBboxSources below). team_id is a mutable field that edits can
 // freely change -- including across the "0 = ball" boundary -- so it can no longer be used
 // to infer which backend PluginRunResult a bbox entry lives in once it's been reassigned.
-// Consumers (e.g. ModalBboxUpdate.vue) should read bbox[BBOX_SOURCE_RUN_IDX] to know which
+// Consumers (e.g. BboxIdentityPanel.vue) should read bbox[BBOX_SOURCE_RUN_IDX] to know which
 // plugin run to send edits/deletes to. Only ever set in-memory on the merged copies; never
 // sent back to the backend, which re-reads its own stored blob by run id.
 export const BBOX_SOURCE_RUN_IDX = 10;
@@ -574,7 +574,7 @@ export const useTopViewStore = defineStore(
     // cluster_label}}) onto the currently loaded player run by overwriting b[1] (team_id) in
     // bboxesStore.bboxDataActive, then persists (bakes) that result back into the tracker run
     // itself (see the bboxesStore.replaceBboxData call below) -- not a live overlay like
-    // mergeBallTracking. ModalBboxUpdate.vue lets users manually correct individual team
+    // mergeBallTracking. BboxIdentityPanel.vue lets users manually correct individual team
     // assignments afterwards; baking ensures those edits land on -- and stay on -- the same
     // data a reload sees, instead of a browser-only copy that a reload or an unrelated edit's
     // server response would silently revert.
@@ -613,7 +613,7 @@ export const useTopViewStore = defineStore(
       // overlay: without this, any bbox edit's response (the tracker run's own un-merged
       // data) or a page reload had to reapply the merge from teamsMapping from scratch,
       // silently clobbering any manual per-box team correction made afterward via
-      // ModalBboxUpdate.vue. Once persisted, the tracker run's own data already carries the
+      // BboxIdentityPanel.vue. Once persisted, the tracker run's own data already carries the
       // team ids, so clear the flag -- _restoreTracker (position_data.js) and
       // bboxesStore.updateBboxData/deleteBboxData then treat it like a plain tracker run,
       // and further edits (including bulk "all team" ones) persist normally since the

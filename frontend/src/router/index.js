@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import VideoView from "@/views/VideoView.vue";
 import AnalysisView from "@/views/AnalysisView.vue";
+import AnnotationToolView from "@/views/AnnotationToolView.vue";
 import TermsOfUseView from "@/views/TermsOfUseView.vue";
 import GuidelinesView from "@/views/GuidelinesView.vue";
 import LegalNoticeView from "@/views/LegalNoticeView.vue";
@@ -17,6 +18,15 @@ const routes = [
     path: "/video-analysis/:id",
     name: "AnalysisView",
     component: AnalysisView,
+  },
+  {
+    // Sibling of AnalysisView rather than a nested child route: the router is flat
+    // everywhere else, and the reason one would nest (keeping AnalysisView mounted so its
+    // state survives) is handled by useAnalysisScopeCleanup instead -- the state lives in
+    // pinia, not in the component.
+    path: "/video-analysis/:id/annotate",
+    name: "AnnotationToolView",
+    component: AnnotationToolView,
   },
   {
     path: "/terms-of-use",

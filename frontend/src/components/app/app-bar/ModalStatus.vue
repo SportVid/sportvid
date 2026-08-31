@@ -119,6 +119,23 @@
               {{ getStatusText(value) }}
             </v-chip>
           </template>
+          <!-- Offered right where the green check appears: the moment a run finishes is the
+               natural point to ask whether its output needs correcting. -->
+          <template #item.annotate="{ item }">
+            <v-btn
+              v-if="canAnnotate(item)"
+              icon
+              variant="text"
+              size="small"
+              density="comfortable"
+              @click="openAnnotationTool(item)"
+            >
+              <v-icon>mdi-vector-square-edit</v-icon>
+              <v-tooltip activator="parent" location="top">
+                {{ $t("modal.status.annotate") }}
+              </v-tooltip>
+            </v-btn>
+          </template>
         </v-data-table>
 
         <v-expansion-panels v-if="props.canWrite" data-tour="status-delete-panel">
@@ -238,15 +255,22 @@
 
 <script setup>
 import { ref, computed, watch, watchEffect, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
+import { useBboxesStore } from "@/stores/bboxes";
+import { useAnnotationToolStore } from "@/stores/annotation_tool";
 import { usePositionDataStatus } from "@/composables/usePositionDataStatus";
+import { annotatablePluginTypes, toolIdForPluginType } from "@/config/annotationTools";
 
+const router = useRouter();
 const pluginRunStore = usePluginRunStore();
 const playerStore = usePlayerStore();
 const pluginRunResultStore = usePluginRunResultStore();
+const bboxesStore = useBboxesStore();
+const annotationToolStore = useAnnotationToolStore();
 
 const props = defineProps({
   modelValue: {
@@ -295,11 +319,29 @@ watch(
 );
 
 const headers = [
-  { title: t("modal.status.plugin_name"), align: "start", key: "type", width: "40%" },
-  { title: t("modal.status.date"), align: "start", key: "date", width: "25%" },
-  { title: t("modal.status.progress"), align: "start", key: "progress", width: "20%" },
+  { title: t("modal.status.plugin_name"), align: "start", key: "type", width: "35%" },
+  { title: t("modal.status.date"), align: "start", key: "date", width: "22%" },
+  { title: t("modal.status.progress"), align: "start", key: "progress", width: "18%" },
   { title: t("modal.status.status"), align: "start", key: "status", width: "15%" },
+  { title: "", align: "center", key: "annotate", width: "10%", sortable: false },
 ];
+
+// A run can be reviewed when some annotation tool knows how to correct its output AND it is
+// the run currently loaded for this video. The second half matters: the tool shows whatever
+// sits in bboxDataInterpolated, so offering the action on some *other* finished run would
+// hand the user a tool that silently corrects a different run than the row they clicked.
+// Switching runs stays where it belongs, in the position-data picker.
+const canAnnotate = (item) =>
+  item.status === "DONE" &&
+  annotatablePluginTypes.includes(item.rawType) &&
+  item.id === bboxesStore.bboxPluginRunId;
+
+const openAnnotationTool = (item) => {
+  const toolId = toolIdForPluginType(item.rawType);
+  if (toolId) annotationToolStore.activeToolId = toolId;
+  dialog.value = false;
+  router.push({ name: "AnnotationToolView", params: { id: playerStore.videoId } });
+};
 
 const progressColor = (status) => {
   if (status === "ERROR") return "red";
