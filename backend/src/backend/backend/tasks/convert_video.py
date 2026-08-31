@@ -409,16 +409,33 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             video_id_hex,
         )
 
-        # NOTE: Add comma-separated plugin names to run automatically on video upload.
-        # plugin_manager = PluginManager()
-        # plugins = [] 
-        # if analyzers:
-        #     plugins += analyzers
-        # for plugin in plugins:
-        #     try:
-        #         plugin_manager(plugin, video=video_db, user=video_db.owner)
-        #     except Exception:
-        #         logger.exception(f"Failed to schedule plugin {plugin}")
+        # Kick off the automatic cover-thumbnail run now that the video is playable.
+        # The gallery card stays in its "processing" look until a "thumbnail" plugin
+        # run exists and finishes (VideoView.vue), so without this trigger the card
+        # gets stuck on "video is being processed" until a manual reload.
+        # These go through run_plugin on the default "io" queue -- thumbnail_generator
+        # is CPU-only on the analyser side (inference_ray/deploy*.yml), so there is
+        # nothing to gain from the "gpu" queue the conversion itself runs on.
+        if video_db is not None and video_db.owner_id is not None:
+            plugin_manager = PluginManager()
+            # "thumbnail" always; plus any analyzers the upload asked for. dict.fromkeys
+            # dedupes while keeping order in case "thumbnail" is passed explicitly.
+            for plugin in dict.fromkeys(["thumbnail", *(analyzers or [])]):
+                if not plugin:
+                    continue
+                try:
+                    plugin_manager.run(
+                        plugin,
+                        video=video_db,
+                        user=video_db.owner,
+                        run_async=True,
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to schedule automatic plugin %s for %s",
+                        plugin,
+                        video_id_hex,
+                    )
 
     except SoftTimeLimitExceeded:
         logger.warning(
