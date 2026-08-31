@@ -227,6 +227,7 @@ const pluginRuns = computed(() => {
           .replace("Z", "")
           .substring(0, pluginRun.date.length - 8),
         progress: parseFloat(pluginRun.progress),
+        eta_seconds: pluginRun.eta_seconds,
         status: pluginRun.status,
       };
     });

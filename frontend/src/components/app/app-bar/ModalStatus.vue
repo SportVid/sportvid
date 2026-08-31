@@ -106,13 +106,22 @@
           <template #item.date="{ item }">
             {{ formatLocalDate(item.date) }}
           </template>
-          <template #item.progress="{ index }">
-            <v-progress-linear
-              :model-value="progressComputed[index]"
-              height="8"
-              color="primary"
-              rounded
-            />
+          <template #item.progress="{ item, index }">
+            <div class="d-flex align-center" style="gap: 8px; min-width: 120px">
+              <v-progress-linear
+                :model-value="progressComputed[index]"
+                :indeterminate="runIndeterminate(item)"
+                height="8"
+                color="primary"
+                rounded
+                class="flex-grow-1"
+              />
+              <span
+                v-if="runEtaText(item)"
+                class="text-caption text-medium-emphasis text-no-wrap"
+                >{{ runEtaText(item) }}</span
+              >
+            </div>
           </template>
           <template #item.status="{ value }">
             <v-chip :color="progressColor(value)" variant="flat">
@@ -239,6 +248,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
+import { getEtaDisplay } from "@/plugins/time";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
@@ -368,6 +378,19 @@ onMounted(() => {
 // Fed straight from the live event stream now -- the analyser's own progress is carried
 // all the way through instead of only landing on 0 and 1 (see utils/analyser_client.py).
 const progressComputed = computed(() => props.pluginRuns.map((run) => run.progress * 100));
+
+// The sweeping bar is shown in exactly one case: the run is actually RUNNING but has
+// no number to show yet (no progress, no ETA). QUEUED / WAITING / ERROR / DONE all get
+// a plain static bar -- a sweeping bar on a queued or failed row is just noise.
+const runIndeterminate = (run) =>
+  run.status === "RUNNING" && !(run.progress > 0) && run.eta_seconds == null;
+
+// "time remaining" next to the bar, from the backend's eta_seconds; only while RUNNING.
+const runEtaText = (run) => {
+  if (run.status !== "RUNNING") return "";
+  const display = getEtaDisplay(run.eta_seconds);
+  return display ? t("progress.eta", { time: display }) : "";
+};
 
 const formatLocalDate = (dateString) => {
   if (!dateString) return "";

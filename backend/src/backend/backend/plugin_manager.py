@@ -7,19 +7,40 @@ import uuid
 from celery import shared_task
 from celery.exceptions import MaxRetriesExceededError
 from django.conf import settings
+from django.utils import timezone
 from typing import Any, Dict, List, Optional, Type
 from rest_framework import serializers
 
 from backend.models import (
     PluginRun,
     PluginRunResult,
-    Video, 
+    Video,
     SportVidUser,
 )
+from backend.utils.events import publish_plugin_run
 from data import DataManager
 
 
 logger = logging.getLogger(__name__)
+
+
+def _mark_running(plugin_run):
+    """Move a still-queued run to RUNNING with a sliver of progress and push it live.
+    Uses .update() (no post_save) so the event has to be sent explicitly.
+    """
+    if plugin_run is None or plugin_run.status == PluginRun.STATUS_RUNNING:
+        return
+    PluginRun.objects.filter(id=plugin_run.id).update(
+        status=PluginRun.STATUS_RUNNING,
+        progress=max(plugin_run.progress or 0.0, 0.01),
+        update_date=timezone.now(),
+    )
+    plugin_run.status = PluginRun.STATUS_RUNNING
+    plugin_run.progress = max(plugin_run.progress or 0.0, 0.01)
+    try:
+        publish_plugin_run(plugin_run)
+    except Exception:
+        logger.warning("Failed to publish plugin run RUNNING event", exc_info=True)
 
 
 class PluginManager:
@@ -171,6 +192,7 @@ class PluginManager:
                 PluginRun.objects.filter(id=plugin_run.id).update(task_id=task.id)
             return result
 
+        _mark_running(plugin_run)
         try:
             plugin_result = self._plugins[plugin]()(
                 parameters,
@@ -182,6 +204,7 @@ class PluginManager:
             )
             if plugin_run is not None:
                 plugin_run.progress = 1.0
+                plugin_run.eta_seconds = None
                 plugin_run.status = PluginRun.STATUS_DONE
                 plugin_run.save()
 
@@ -196,6 +219,7 @@ class PluginManager:
         except Exception:
             logger.exception(f"Failed to run plugin {plugin_run.type}")
             if plugin_run is not None:
+                plugin_run.eta_seconds = None
                 plugin_run.status = PluginRun.STATUS_ERROR
                 plugin_run.save()
             result["status"] = False
@@ -330,7 +354,12 @@ def run_plugin(self, args):
             plugin_run_db.status = PluginRun.STATUS_ERROR
             plugin_run_db.save()
         return
-    
+
+    # The worker has the job now -- flip it to RUNNING before the (possibly slow) video
+    # upload to the analyser, so the UI shows a moving bar instead of sitting on QUEUED
+    # the whole time. Analyser-side progress is pushed from here on (analyser_client.py).
+    _mark_running(plugin_run_db)
+
     try:
         plugin_result = plugin_cls()(
             parameters=parameters,
@@ -349,11 +378,13 @@ def run_plugin(self, args):
 
         if plugin_run_db is not None:
             plugin_run_db.progress = 1.0
+            plugin_run_db.eta_seconds = None
             plugin_run_db.status = PluginRun.STATUS_DONE
             plugin_run_db.save()
 
     except Exception:
         logger.exception("Plugin run failed for %s", plugin)
         if plugin_run_db is not None:
+            plugin_run_db.eta_seconds = None
             plugin_run_db.status = PluginRun.STATUS_ERROR
             plugin_run_db.save()

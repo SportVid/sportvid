@@ -163,8 +163,11 @@ class TeamClustering(
                     if frame_count is not None:
                         self.update_callbacks(callbacks, progress=0.5 * ((frame_id + 1) / max(frame_count, 1)))
 
-        # PASS 2: aggregate + cluster + assign back
+        # PASS 2: aggregate + cluster + assign back (frame decoding above is pass 1 and
+        # covers 0..0.5; this tail is the KMeans over track features).
+        self.update_callbacks(callbacks, progress=0.6)
         track_features = self._finalize_track_features()
+        self.update_callbacks(callbacks, progress=0.8)
 
         if not track_features:
             logging.warning("No valid track-level features available for team clustering.")

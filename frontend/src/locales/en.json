@@ -1439,5 +1439,8 @@
       "actions": "Actions"
     }
   },
-  "loading_screen": "Loading ..."
+  "loading_screen": "Loading ...",
+  "progress": {
+    "eta": "{time} left"
+  }
 }

@@ -36,6 +36,35 @@ class AnalyserProgressCallback(AnalyserPluginCallback):
         self.shared_memory["progress"] = progress
 
 
+class ValkeyProgressCallback(AnalyserPluginCallback):
+    """Publishes plugin progress to the shared valkey channel keyed by job_id, so the
+    analyser's GetPluginStatus can report it back to the backend (utils.progress_channel).
+
+    Throttled on the value delta so a per-frame callback on a long video doesn't hammer
+    valkey; 1.0 is always flushed.
+    """
+
+    def __init__(self, job_id, min_delta: float = 0.01) -> None:
+        self._job_id = job_id
+        self._min_delta = min_delta
+        self._last = -1.0
+
+    def update(self, progress=0.0, **kwargs):
+        try:
+            progress = max(0.0, min(1.0, float(progress)))
+        except (TypeError, ValueError):
+            return
+        if progress < 1.0 and progress - self._last < self._min_delta:
+            return
+        self._last = progress
+        try:
+            from utils.progress_channel import publish_progress
+
+            publish_progress(self._job_id, progress)
+        except Exception:
+            logging.debug("ValkeyProgressCallback publish failed", exc_info=True)
+
+
 class AnalyserPlugin(Plugin):
     @classmethod
     def __init_subclass__(
@@ -209,6 +238,7 @@ class AnalyserPluginManager(Manager):
         callbacks: Callable = None,
         cancel_event=None,
         session=None,
+        job_id=None,
     ):
         # check cancellation before work
         if cancel_event is not None and cancel_event.is_set():
@@ -237,6 +267,9 @@ class AnalyserPluginManager(Manager):
                 json={
                     "inputs": {x: y.id for x, y in inputs.items()},
                     "parameters": parameters,
+                    # carried so the Ray deployment can report progress back over
+                    # valkey under this id (see main.py / utils.progress_channel).
+                    "job_id": job_id,
                 },
             )
         except Exception:

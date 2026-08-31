@@ -6,7 +6,11 @@ from typing import Dict
 from ray.serve import Application
 
 from data import DataManager
-from inference_ray.plugin import AnalyserPluginManager, AnalyserPlugin
+from inference_ray.plugin import (
+    AnalyserPluginManager,
+    AnalyserPlugin,
+    ValkeyProgressCallback,
+)
 
 
 @serve.deployment
@@ -19,10 +23,15 @@ class Deployment:
         data = await request.json()
         inputs = data.get("inputs")
         parameters = data.get("parameters")
+        job_id = data.get("job_id")
         logging.error("###############")
         logging.error(inputs)
         logging.error(parameters)
         logging.error("###############")
+
+        # Progress reported by the plugin (self.update_callbacks(progress=...)) is pushed
+        # to valkey under job_id; the analyser reads it back in GetPluginStatus.
+        callbacks = [ValkeyProgressCallback(job_id)] if job_id else None
 
         plugin_inputs = {}
         for name, id in inputs.items():
@@ -45,7 +54,11 @@ class Deployment:
             results = await loop.run_in_executor(
                 None,
                 functools.partial(
-                    self.plugin, plugin_inputs, data_manager=self.data_manager, parameters=parameters
+                    self.plugin,
+                    plugin_inputs,
+                    data_manager=self.data_manager,
+                    parameters=parameters,
+                    callbacks=callbacks,
                 ),
             )
         except asyncio.CancelledError:

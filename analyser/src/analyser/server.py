@@ -26,6 +26,7 @@ from inference_ray.plugin import AnalyserPluginManager
 from data import DataManager, Data
 from utils.cache import get_hash_for_plugin
 from utils.cache import CacheManager
+from utils.progress_channel import read_progress, clear_progress
 
 
 class AnalyserCacheWrapper:
@@ -39,7 +40,7 @@ class AnalyserCacheWrapper:
     def plugins(self):
         return self.plugin._plugins
 
-    def __call__(self, plugin, inputs, parameters, data_manager, callbacks, cancel_event=None, session=None):
+    def __call__(self, plugin, inputs, parameters, data_manager, callbacks, cancel_event=None, session=None, job_id=None):
         cached = False
         if self.cache:
             plugins = {x["plugin"]: x for x in self.plugin.plugin_status()}
@@ -98,6 +99,7 @@ class AnalyserCacheWrapper:
                 callbacks=callbacks,
                 cancel_event=cancel_event,
                 session=session,
+                job_id=job_id,
             )
             logging.info(
                 f"[AnalyserPluginManager] {run_id} results: {[{k:x} for k,x in results.items()]}"
@@ -196,6 +198,7 @@ def run_plugin(args):
             callbacks=callbacks,
             cancel_event=cancel_event,
             session=session,
+            job_id=args.get("id"),
         )
         if results is None:
             logging.error(f"[Analyser] {params.get('plugin')} without results")
@@ -423,9 +426,16 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
             response.status = status
 
             progress = job_data["shared"].get("progress", 0.0)
+            # The plugin runs inside a Ray deployment; its incremental progress comes
+            # back over valkey (see main.py / utils.progress_channel) rather than the
+            # in-process `shared` dict, which stays at 0 until the blocking call returns.
+            bridged = read_progress(request.id)
+            if bridged is not None:
+                progress = max(progress, bridged)
             response.progress = progress
             if not done:
                 return response
+            clear_progress(request.id)
 
             try:
                 results = job_data["future"].result()

@@ -96,6 +96,9 @@ class Video(models.Model):
     )
     # progress status for HLS conversion
     progress = models.FloatField(default=0.0)
+    # smoothed estimate (seconds) of the conversion time still remaining; null while
+    # nothing has been reported yet or once the video is no longer being converted.
+    eta_seconds = models.FloatField(blank=True, null=True)
     date = models.DateTimeField(auto_now_add=True)
     # some extracted meta information
     fps = models.FloatField(blank=True, null=True)
@@ -140,6 +143,7 @@ class Video(models.Model):
             "sport": self.sport,
             "status": self.status,
             "progress": self.progress,
+            "eta_seconds": self.eta_seconds,
             "processing": True if self.status == self.STATUS_PROCESSING else False,
         }
 
@@ -243,9 +247,14 @@ class PluginRun(models.Model):
     )
     
     date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now_add=True)
+    # auto_now so it actually moves on every .save(); the queryset-update progress path
+    # in analyser_client.py sets it explicitly since auto_now doesn't fire there.
+    update_date = models.DateTimeField(auto_now=True)
     type = models.CharField(max_length=256)
     progress = models.FloatField(default=0.0)
+    # smoothed estimate (seconds) of the run's remaining time; null until the analyser
+    # reports enough to extrapolate, and reset to null on QUEUED / DONE / ERROR.
+    eta_seconds = models.FloatField(blank=True, null=True)
     in_scheduler = models.BooleanField(default=False)
     # TODO: Consider adding db_index=True to task_id if we ever query by it, and
     # optionally add a validator for Celery task ID format.
@@ -278,6 +287,7 @@ class PluginRun(models.Model):
             "date": self.date,
             "update_date": self.update_date,
             "progress": self.progress,
+            "eta_seconds": self.eta_seconds,
             "status": self.STATUS[self.status],
         }
         if include_refs_hashes:

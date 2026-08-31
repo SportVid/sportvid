@@ -267,6 +267,8 @@ class PosDataConvert(
                     df = pd.DataFrame()
                     logging.error(f"Failed to parse tracking data due to an exception: {e}", exc_info=True)
                 # -----------------
+        self.update_callbacks(callbacks, progress=0.25)  # raw tracking data parsed
+
         def post_process_df(df):
             # ----------------- POST PROCESS
             # optimize dtypes
@@ -340,7 +342,14 @@ class PosDataConvert(
                         include_groups=False
                     )
                     actualp, subsampled = None, None
-                    for player_id in df["player_id"].unique():
+                    _player_ids = list(df["player_id"].unique())
+                    _n_players = max(len(_player_ids), 1)
+                    for _p_idx, player_id in enumerate(_player_ids):
+                        # resampling error estimation per player -- the main iterative
+                        # cost of this plugin; map it into the 0.30..0.80 band.
+                        self.update_callbacks(
+                            callbacks, progress=0.30 + 0.50 * (_p_idx / _n_players)
+                        )
                         actualp = np.array(df_players[player_id], dtype=np.float32)  # [[x,y]]
                         ap_idx = np.arange(actualp.shape[0])
                         subs_idx = ap_idx[::step_size]
@@ -474,6 +483,7 @@ class PosDataConvert(
             #     py_dict[corrected_series[i]] = py_dict.pop(k)
             
             # --- new dict conversion
+            self.update_callbacks(callbacks, progress=0.85)
             df = df.dropna(subset=['pos_x', 'pos_y'])
             grouped_data = {}
             for timestamp, group in df.groupby('timestamp', group_keys=False):

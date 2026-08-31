@@ -139,12 +139,19 @@
             </template>
           </v-text-field>
 
-          <v-progress-linear
+          <div
             v-if="isUploading"
-            v-model="uploadingProgress"
-            class="mt-1 ml-10 mb-n2"
-            style="max-width: calc(100% - 40px)"
-          />
+            class="d-flex align-center mt-1 ml-10 mb-n2"
+            style="max-width: calc(100% - 40px); gap: 10px"
+          >
+            <v-progress-linear v-model="uploadingProgress" class="flex-grow-1" />
+            <span
+              v-if="uploadEtaText"
+              class="text-caption text-medium-emphasis text-no-wrap"
+            >
+              {{ uploadEtaText }}
+            </span>
+          </div>
 
           <v-checkbox v-model="checkbox" required class="ml-n2">
             <template #label>
@@ -185,6 +192,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { getEtaDisplay } from "@/plugins/time";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useUserStore } from "@/stores/user";
 
@@ -274,6 +282,10 @@ const remainingStorageSize = computed(() => userStore.remainingStorageSize);
 
 const isUploading = computed(() => positionDataStore.isUploading);
 const uploadingProgress = computed(() => positionDataStore.progress);
+const uploadEtaText = computed(() => {
+  const display = getEtaDisplay(positionDataStore.uploadEtaSeconds);
+  return display ? t("progress.eta", { time: display }) : "";
+});
 
 const canUpload = computed(() => {
   return remainingStorageSize.value > 0;

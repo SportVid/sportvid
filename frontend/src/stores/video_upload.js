@@ -1,13 +1,13 @@
-import { ref } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
 import { useVideoStore } from "@/stores/video";
 import { useErrorStore } from "@/stores/error";
 import { defineStore } from "pinia";
+import { useUploadTracker } from "@/composables/useUploadTracker";
 
 export const useVideoUploadStore = defineStore("videoUpload", () => {
-  const isUploading = ref(false);
-  const progress = ref(0.0);
+  const { isUploading, progress, etaSeconds: uploadEtaSeconds, start, finish, onUploadProgress } =
+    useUploadTracker();
 
   const upload = async (params) => {
     const videoStore = useVideoStore();
@@ -23,22 +23,12 @@ export const useVideoUploadStore = defineStore("videoUpload", () => {
     formData.append("ageGroup", params.video.ageGroup);
     formData.append("sport", params.video.sport);
 
-    isUploading.value = true;
+    start();
 
     try {
       const res = await axios.post(`${config.API_LOCATION}/video/upload`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        onUploadProgress: (event) => {
-          const totalLength = event.lengthComputable
-            ? event.total
-            : event.target.getResponseHeader("content-length") ||
-              event.target.getResponseHeader("x-decompressed-content-length");
-
-          if (totalLength !== null) {
-            const progressValue = Math.round((event.loaded * 100) / totalLength);
-            progress.value = progressValue;
-          }
-        },
+        onUploadProgress,
       });
 
       if (res.data.status === "ok") {
@@ -56,14 +46,14 @@ export const useVideoUploadStore = defineStore("videoUpload", () => {
         errorStore.setError("video_upload", "unknown");
       }
     } finally {
-      isUploading.value = false;
-      progress.value = 0;
+      finish();
     }
   };
 
   return {
     isUploading,
     progress,
+    uploadEtaSeconds,
     upload,
   };
 });

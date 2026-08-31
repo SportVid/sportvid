@@ -180,9 +180,10 @@
                       {{ $t("button.cancel_and_delete") }}
                     </v-btn>
                   </v-card-text>
+                  <div v-if="etaText(item)" class="eta-caption">{{ etaText(item) }}</div>
                   <v-progress-linear
                     class="mt-auto"
-                    :model-value="conversionProgress[item.id]"
+                    :model-value="processingProgress(item)"
                     :indeterminate="conversionIndeterminate(item)"
                   />
                 </div>
@@ -237,7 +238,11 @@
                       @click.stop="toggleCardFlip(item.id)"
                     />
                   </div>
-                  <v-progress-linear :model-value="videosProgress[item.id]" />
+                  <div v-if="etaText(item)" class="eta-caption">{{ etaText(item) }}</div>
+                  <v-progress-linear
+                    :model-value="videosProgress[item.id]"
+                    :indeterminate="batchIndeterminate(item.id)"
+                  />
                 </div>
               </v-card>
             </v-container>
@@ -295,7 +300,10 @@
                   <v-spacer />
 
                   <template v-if="showProcessingCard(item)">
-                    <span class="row-processing-text">{{ $t("video_view.video_processing") }}</span>
+                    <span class="row-processing-text">
+                      {{ $t("video_view.video_processing")
+                      }}<span v-if="etaText(item)" class="row-eta"> · {{ etaText(item) }}</span>
+                    </span>
                     <v-btn
                       size="small"
                       color="red"
@@ -364,11 +372,13 @@
 
                 <v-progress-linear
                   :model-value="
-                    showProcessingCard(item)
-                      ? conversionProgress[item.id]
-                      : videosProgress[item.id]
+                    showProcessingCard(item) ? processingProgress(item) : videosProgress[item.id]
                   "
-                  :indeterminate="showProcessingCard(item) && conversionIndeterminate(item)"
+                  :indeterminate="
+                    showProcessingCard(item)
+                      ? conversionIndeterminate(item)
+                      : batchIndeterminate(item.id)
+                  "
                 />
               </v-card>
             </div>
@@ -443,7 +453,7 @@ import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
-import { getDisplayTime } from "@/plugins/time";
+import { getDisplayTime, getEtaDisplay } from "@/plugins/time";
 import ModalVideoRename from "@/components/video/ModalVideoRename.vue";
 import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 import config from "../../app.config";
@@ -518,14 +528,6 @@ const conversionProgress = computed(() => {
   return progress;
 });
 
-// ffmpeg only reports progress once the source duration is known, and the automatic
-// thumbnail run afterwards has no percentage of its own -- show an indeterminate bar
-// rather than a number that would sit still or lie.
-const conversionIndeterminate = (item) => {
-  if (!item.processing) return true;
-  return !conversionProgress.value[item.id];
-};
-
 // Cover thumbnail shown on the front of a video card, sourced from the "thumbnail"
 // plugin run that now runs automatically once a video finishes processing.
 const latestThumbnailRun = (videoId) => {
@@ -582,6 +584,67 @@ const isThumbnailPending = (item) => {
 };
 
 const showProcessingCard = (item) => item.processing || isThumbnailPending(item);
+
+// The sweeping (indeterminate) bar is shown in exactly one situation: work is actually
+// running but there's no number to show yet (no progress, no ETA). A queued / errored /
+// done job gets a plain static bar. Once any real signal arrives it stays solid.
+const conversionIndeterminate = (item) => {
+  if (item.processing) {
+    // ffmpeg hasn't emitted its first progress line yet (e.g. duration still unknown).
+    return !(conversionProgress.value[item.id] > 0) && item.eta_seconds == null;
+  }
+  if (isThumbnailPending(item)) {
+    const run = latestThumbnailRun(item.id);
+    return (
+      !!run &&
+      run.status === "RUNNING" &&
+      !(run.progress > 0) &&
+      run.eta_seconds == null
+    );
+  }
+  return false;
+};
+
+// Bar value while the card is in its "processing" look: the conversion percentage
+// while ffmpeg runs, then the pending thumbnail run's own percentage (usually ~0 until
+// it's done) -- never a stale 100% from the finished conversion.
+const processingProgress = (item) => {
+  if (!item.processing && isThumbnailPending(item)) {
+    return (parseFloat(latestThumbnailRun(item.id)?.progress) || 0) * 100;
+  }
+  return conversionProgress.value[item.id];
+};
+
+// Same rule for the post-conversion plugin batch bar on the card front: sweep only
+// while a run is actually RUNNING with nothing to show yet; a purely queued batch just
+// sits at 0.
+const batchIndeterminate = (videoId) => {
+  if (videosProgress.value[videoId] > 0) return false;
+  return pluginRunStore
+    .forVideo(videoId)
+    .some(
+      (r) =>
+        r.type !== "thumbnail" &&
+        r.status === "RUNNING" &&
+        !(r.progress > 0) &&
+        r.eta_seconds == null
+    );
+};
+
+// One "time remaining" string for whichever phase the card is in (conversion, the
+// pending thumbnail run, or a plugin batch). "" when nothing useful is known yet.
+const etaText = (item) => {
+  let seconds = null;
+  if (item.processing) {
+    seconds = item.eta_seconds;
+  } else if (isThumbnailPending(item)) {
+    seconds = latestThumbnailRun(item.id)?.eta_seconds ?? null;
+  } else {
+    seconds = pluginRunStore.batchEta(item.id);
+  }
+  const display = getEtaDisplay(seconds);
+  return display ? t("progress.eta", { time: display }) : "";
+};
 
 watch(
   [videos, thumbnailRunStates],
@@ -859,6 +922,25 @@ watch(
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* Small "time remaining" tag pinned just above the card's progress bar. Own
+   background so it stays readable over a cover thumbnail. */
+.eta-caption {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 1;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.row-eta {
+  color: rgba(var(--v-theme-on-surface), 0.55);
 }
 
 .flip-container {

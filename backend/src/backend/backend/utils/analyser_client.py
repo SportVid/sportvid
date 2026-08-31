@@ -3,10 +3,13 @@ import logging
 import grpc
 from contextlib import nullcontext
 
+from django.utils import timezone
+
 from analyser.client import AnalyserClient
 from backend.models import PluginRun
 from backend.utils import RetryOnRpcErrorClientInterceptor, ExponentialBackoff
-from backend.utils.events import cancellation_watcher
+from backend.utils.eta import EtaEstimator
+from backend.utils.events import cancellation_watcher, publish_plugin_run
 from interface import analyser_pb2
 from interface import analyser_pb2_grpc
 
@@ -160,6 +163,7 @@ class TaskAnalyserClient(AnalyserClient):
         result = None
 
         start_time = time.time()
+        eta_estimator = EtaEstimator()
         if status_fn is None:
             status_fn = analyser_status_to_task_status
 
@@ -184,7 +188,7 @@ class TaskAnalyserClient(AnalyserClient):
                         if plugin_run_db:
                             # Timeout and gRPC-error paths now use .update() instead of possibly saving stale plugin_run_db instance.
                             PluginRun.objects.filter(id=plugin_run_db.id).update(
-                                status=PluginRun.STATUS_ERROR
+                                status=PluginRun.STATUS_ERROR, eta_seconds=None
                             )
                         return None
                 try:
@@ -193,14 +197,14 @@ class TaskAnalyserClient(AnalyserClient):
                     logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
                     if plugin_run_db:
                         PluginRun.objects.filter(id=plugin_run_db.id).update(
-                            status=PluginRun.STATUS_ERROR
+                            status=PluginRun.STATUS_ERROR, eta_seconds=None
                         )
                     return None
                 if result is None:
                     logger.error(f"GRPC error: not a valid return Ccode")
                     if plugin_run_db:
                         PluginRun.objects.filter(id=plugin_run_db.id).update(
-                            status=PluginRun.STATUS_ERROR
+                            status=PluginRun.STATUS_ERROR, eta_seconds=None
                         )
                     return None
 
@@ -217,10 +221,24 @@ class TaskAnalyserClient(AnalyserClient):
                     progress = map_analyser_progress(result.progress, progress_range)
                     if progress is not None and progress > (plugin_run_db.progress or 0.0):
                         update_fields["progress"] = progress
+                        update_fields["eta_seconds"] = eta_estimator.update(progress)
                         plugin_run_db.progress = progress
 
                     if update_fields:
+                        # auto_now doesn't fire on a queryset .update(), so bump it here
+                        # -- the frontend uses update_date as a change signal.
+                        update_fields.setdefault("update_date", timezone.now())
                         PluginRun.objects.filter(id=plugin_run_db.id).update(**update_fields)
+                        # .update() skips post_save, so push the live event ourselves --
+                        # otherwise the status list only ever sees QUEUED then DONE.
+                        for field, value in update_fields.items():
+                            setattr(plugin_run_db, field, value)
+                        try:
+                            publish_plugin_run(plugin_run_db)
+                        except Exception:
+                            logger.warning(
+                                "Failed to publish plugin run progress event", exc_info=True
+                            )
 
                 if result.status == analyser_pb2.GetPluginStatusResponse.UNKNOWN:
                     logger.error("Job is unknown for the analyser")

@@ -19,6 +19,8 @@ from backend.plugin_manager import PluginManager
 from utils.video_converter import convert_to_hls, terminate_process_group
 from utils.helper import remove_file, remove_dir
 
+from backend.utils.eta import EtaEstimator
+
 
 logger = logging.getLogger(__name__)
 
@@ -71,12 +73,14 @@ def cleanup_upload_orphans(self):
             safe_delete(file_path)
             logger.info(f"Removed orphan: {file_path}")
 
-def _report_conversion_progress(video_id_hex, progress):
-    """Persist & push HLS conversion progress. 
+def _report_conversion_progress(video_id_hex, progress, eta_seconds=None):
+    """Persist & push HLS conversion progress (and the estimated time remaining).
     Uses the Queryset update on purpose, since the video may have been deleted mid-conversion.
     """
     progress = max(0.0, min(1.0, progress))
-    updated = Video.objects.filter(id=video_id_hex).update(progress=progress)
+    updated = Video.objects.filter(id=video_id_hex).update(
+        progress=progress, eta_seconds=eta_seconds
+    )
     if updated:
         # .update() bypasses post_save, so the live event is sent explicitly.
         publish_video(video_id_hex)
@@ -282,7 +286,10 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         last_delete_check = 0.0
         last_reported = 0.0
         cancelled = False
-        
+        # Times the encode from here (the moment ffmpeg actually starts producing
+        # output), not from task pickup, so the ETA isn't skewed by queue wait.
+        eta_estimator = EtaEstimator()
+
         # listener thread reacts to VideoDelete and publishes a cancel request for this video to kill ffmpeg immediately
         # TODO: cancellation relies on Valkey
         # --> add a fallback timeout to kill FFmpeg if it appears stuck.
@@ -315,11 +322,19 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                         except ValueError:
                             elapsed = None
                         if elapsed is not None:
+                            encoded_fraction = min(elapsed / float(source_duration), 1.0)
                             # reserves the last few percent for archive packing and writing metadata
-                            progress = min(elapsed / float(source_duration), 1.0) * 0.95
+                            progress = encoded_fraction * 0.95
                             if progress - last_reported >= _PROGRESS_STEP:
                                 last_reported = progress
-                                _report_conversion_progress(video_id_hex, progress)
+                                # ETA is estimated against the true encode fraction so it
+                                # predicts when ffmpeg finishes, not when the scaled bar
+                                # would reach 100%.
+                                _report_conversion_progress(
+                                    video_id_hex,
+                                    progress,
+                                    eta_estimator.update(encoded_fraction),
+                                )
                     
                     if line.startswith("progress="):
                         now = time.monotonic()
@@ -369,6 +384,11 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 )
             media_path_for_db = segment_candidates[0]
         
+        # Encode is done; archive packing has no progress of its own. Nudge the bar off
+        # the 95% it stalled at and drop the ETA so the frontend shows "finishing up"
+        # (a solid bar near full) rather than a frozen number.
+        _report_conversion_progress(video_id_hex, 0.97, None)
+
         # NOTE: Creates the archive to be transfered.
         # TODO: Eventually we can avoid wrapping everything into an .tar archive to send it around via gRPC.
         #       See "video_asset_manager.py", and "video_asset_data.py", manifest_path & media_path.
@@ -389,6 +409,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             height=size[1] if size else None,
             status=Video.STATUS_DONE,
             progress=1.0,
+            eta_seconds=None,
             asset_dir=str(asset_dir),
             manifest_path=str(manifest),
             media_path=media_path_for_db,
@@ -449,6 +470,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         if video_db is not None:
             Video.objects.filter(id=video_id_hex).update(
                 status=Video.STATUS_ERROR,
+                eta_seconds=None,
             )
             publish_video(video_id_hex)
             
@@ -464,6 +486,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         if video_db is not None:
             Video.objects.filter(id=video_id_hex).update(
                 status=Video.STATUS_ERROR,
+                eta_seconds=None,
             )
             publish_video(video_id_hex)
             

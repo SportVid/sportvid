@@ -75,6 +75,20 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     return (total / runs.length) * 100;
   };
 
+  // Seconds until the current batch for this video finishes: the largest remaining ETA
+  // among its still-active runs (they run in parallel on the io worker, so the batch is
+  // done when the slowest one is). null while no run reports an ETA yet -- caller then
+  // keeps showing the indeterminate bar.
+  const batchEta = (videoId) => {
+    const batch = activeBatches[videoId];
+    if (!batch || !batch.length) return null;
+    const etas = batch
+      .map((id) => state.pluginRuns[id])
+      .filter((run) => run && isActive(run) && run.eta_seconds != null)
+      .map((run) => run.eta_seconds);
+    return etas.length ? Math.max(...etas) : null;
+  };
+
   // Lets places outside the app bar (e.g. PositionDataMenu's disabled-Select tooltip) open
   // ModalStatus, which the app bar owns/renders -- same remote-open pattern as
   // tutorialStore.openTutorialModal: set true here, AppBar watches it and flips it back off.
@@ -246,6 +260,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
         if (
           e.status !== currPlugin.status ||
           e.progress !== currPlugin.progress ||
+          e.eta_seconds !== currPlugin.eta_seconds ||
           e.update_date !== currPlugin.update_date
         ) {
           state.pluginRuns = { ...state.pluginRuns, [e.id]: e };
@@ -307,6 +322,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     all,
     pluginInProgress,
     batchProgress,
+    batchEta,
     openStatusModal,
     forVideo,
     submit,
