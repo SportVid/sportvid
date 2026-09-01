@@ -28,6 +28,20 @@
         <div class="events-timeline-current" />
       </div>
 
+      <!-- Where a moved event originally sat (annotation view only, see the `events` prop):
+           a hollow marker plus a bar back to where it is now, so the size and the direction
+           of a timing correction stay visible instead of the event just silently jumping. -->
+      <template v-for="event in movedEvents" :key="'ghost-' + event.id">
+        <div
+          class="events-timeline-shift"
+          :style="{
+            left: Math.min(event.percent, event.originalPercent) + '%',
+            width: Math.abs(event.percent - event.originalPercent) + '%',
+          }"
+        />
+        <div class="events-timeline-ghost" :style="{ left: event.originalPercent + '%' }" />
+      </template>
+
       <v-tooltip
         v-for="event in positionedEvents"
         :key="event.id"
@@ -40,8 +54,14 @@
             v-bind="tooltipProps"
             type="button"
             class="events-timeline-marker"
+            :class="{
+              'events-timeline-marker--editable': editable,
+              'events-timeline-marker--selected': event.id === selectedId,
+              'events-timeline-marker--changed': event.edited || event.added,
+            }"
             :style="{ left: event.percent + '%', backgroundColor: event.color }"
-            @click.stop="eventsStore.jumpToEvent(event)"
+            @mousedown="onMarkerMouseDown($event, event)"
+            @click.stop="onMarkerClick(event)"
           >
             <v-icon size="12" color="white">{{ event.icon }}</v-icon>
           </button>
@@ -64,6 +84,21 @@ import { useVisualizationStore } from "@/stores/visualization";
 import { useEventsStore, EVENT_TYPE_META } from "@/stores/events";
 import { getTimecode } from "@/plugins/time";
 import { toRgb } from "@/plugins/helpers";
+
+// Defaults reproduce exactly what the Events card has always done: the store's own filtered
+// events, a click on a marker seeking to it. The annotation view (AnnotationView.vue) passes
+// its review list in instead and takes over selection, so the same timeline can be read-only
+// in the analysis view and an editor in the correction workspace.
+const props = defineProps({
+  // Overrides eventsStore.filteredEvents. Entries may carry the review flags reviewEvents
+  // (annotation_tool.js) attaches: `edited`, `added`, `originalTimestamp`.
+  events: { type: Array, default: null },
+  selectedId: { type: [String, Number], default: null },
+  // Markers can be picked and dragged along the track to correct their timing.
+  editable: { type: Boolean, default: false },
+});
+
+const emit = defineEmits(["select", "move"]);
 
 const positionDataStore = usePositionDataStore();
 const playerStore = usePlayerStore();
@@ -116,8 +151,10 @@ const currentTimePercent = computed(() => {
   return percentFor(t);
 });
 
+const sourceEvents = computed(() => props.events ?? eventsStore.filteredEvents);
+
 const positionedEvents = computed(() =>
-  eventsStore.filteredEvents
+  sourceEvents.value
     .filter((e) => e.timestamp >= rangeStart.value && e.timestamp <= rangeEnd.value)
     .map((e) => ({
       ...e,
@@ -128,12 +165,54 @@ const positionedEvents = computed(() =>
     }))
 );
 
+// Only ever non-empty for a caller that passes review events in (originalTimestamp is null
+// for everything else), so the analysis view draws exactly what it always did.
+const movedEvents = computed(() =>
+  positionedEvents.value
+    .filter((e) => e.originalTimestamp != null && e.originalTimestamp !== e.timestamp)
+    .map((e) => ({ ...e, originalPercent: percentFor(e.originalTimestamp) }))
+);
+
 // "#10 Max Mustermann" -- same number+name pattern as EventsList.vue's getPlayerLabel.
 function playerLabel(event) {
   const meta = topViewStore.metaDataTopView;
   const num = meta?.player_ids?.[event.player_id]?.number;
   const name = topViewStore.getEntityName(event.player_id, event.team_id);
   return num != null ? `#${num} ${name}` : `#${event.player_id} ${name}`;
+}
+
+// A marker is a plain "seek to this event" in the analysis view, and the selection handle in
+// the annotation view -- where it can additionally be dragged along the track to correct the
+// event's timing. The drag emits continuously so the parent can scrub the video along with
+// it: seeing the frame the event is being dropped on is the whole point of the correction.
+function onMarkerClick(event) {
+  if (props.editable) return; // already selected on mousedown, and a drag must not re-seek
+  eventsStore.jumpToEvent(event);
+}
+
+function onMarkerMouseDown(mouseEvent, event) {
+  if (!props.editable) return;
+  mouseEvent.preventDefault();
+  mouseEvent.stopPropagation();
+  emit("select", event.id);
+
+  const startX = mouseEvent.clientX;
+  let dragging = false;
+  const onMouseMove = (moveEvent) => {
+    // Small threshold so picking a marker doesn't nudge its timestamp by a pixel's worth of
+    // milliseconds on the way down.
+    if (!dragging && Math.abs(moveEvent.clientX - startX) < 3) return;
+    dragging = true;
+    document.body.style.cursor = "ew-resize";
+    emit("move", { id: event.id, timestamp: timeFromClientX(moveEvent.clientX) });
+  };
+  const onMouseUp = () => {
+    document.body.style.cursor = "";
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("mouseup", onMouseUp);
+  };
+  window.addEventListener("mousemove", onMouseMove);
+  window.addEventListener("mouseup", onMouseUp);
 }
 
 // Click-to-seek and drag-the-current-time-line, mirroring the
@@ -323,6 +402,47 @@ function onCurrentTimeMouseDown(event) {
 .events-timeline-marker:hover {
   transform: translate(-50%, -50%) scale(1.25);
   z-index: 4;
+}
+
+/* Annotation view only (see the `editable` prop) -- a marker is a handle there, not a link. */
+.events-timeline-marker--editable {
+  cursor: ew-resize;
+}
+
+/* The one event the properties panel is editing. Ring rather than a size change, so a
+   selected marker still sits exactly on its own timestamp. */
+.events-timeline-marker--selected {
+  border-color: rgb(var(--v-theme-primary));
+  box-shadow: 0 0 0 3px rgba(var(--v-theme-primary), 0.55);
+  z-index: 3;
+}
+
+/* Corrected or newly added in this session -- dashed, the same "draft, not submitted" cue
+   the frame chips use for a touched frame. */
+.events-timeline-marker--changed {
+  border-style: dashed;
+}
+
+/* Where a moved event used to sit, and the distance it was moved (see movedEvents). */
+.events-timeline-ghost {
+  position: absolute;
+  top: 18px;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.events-timeline-shift {
+  position: absolute;
+  top: 17px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Team-colored instead of Vuetify's default gray tooltip -- same lightly-tinted-toward-white

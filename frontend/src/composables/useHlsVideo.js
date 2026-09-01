@@ -18,7 +18,7 @@ export function tarGzUrlToHlsUrl(tarUrl) {
 }
 
 // Attaches playerStore.videoUrl's HLS stream to a <video> element ref and tears the hls.js
-// instance down again on unmount. Used by VideoPlayer.vue and by AnnotationToolView.vue --
+// instance down again on unmount. Used by VideoPlayer.vue and by AnnotationView.vue --
 // the latter needs its own <video> because playerStore.videoElement only exists while
 // VideoPlayer.vue itself is mounted, which it isn't on the annotation route.
 export function useHlsVideo(videoElementRef, { onManifestParsed } = {}) {

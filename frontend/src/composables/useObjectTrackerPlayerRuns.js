@@ -30,13 +30,22 @@ export function useObjectTrackerPlayerRuns() {
   const isBallTrackerRun = (pluginRunId) =>
     pluginRunResultStore.forPluginRun(pluginRunId).some((r) => r.name === "bboxes_ball");
 
-  const objectTrackerPlayerRuns = computed(() => {
-    return pluginRunStore
+  const allTrackerRuns = computed(() =>
+    pluginRunStore
       .forVideo(playerStore.videoId)
       .filter((e) => ["bytetrack", "object_tracker"].includes(e.type) && e.status === "DONE")
       .map((e) => ({ id: e.id, name: formatLocalDate(e.date) }))
-      .filter((e) => !isBallTrackerRun(e.id));
-  });
+  );
 
-  return { objectTrackerPlayerRuns, formatLocalDate };
+  const objectTrackerPlayerRuns = computed(() =>
+    allTrackerRuns.value.filter((e) => !isBallTrackerRun(e.id))
+  );
+
+  // The other half of the same split -- ball-only runs. AnnotationView offers both, because a
+  // ball run's boxes are corrected exactly like a player run's.
+  const objectTrackerBallRuns = computed(() =>
+    allTrackerRuns.value.filter((e) => isBallTrackerRun(e.id))
+  );
+
+  return { objectTrackerPlayerRuns, objectTrackerBallRuns, formatLocalDate };
 }

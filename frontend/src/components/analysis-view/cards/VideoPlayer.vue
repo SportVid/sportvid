@@ -1201,7 +1201,7 @@ const getEllipseSvg = (position) => {
       height: height + "px",
       overflow: "visible",
       zIndex: 12,
-      // Display-only now -- correcting a box moved to AnnotationToolView, where the frame is
+      // Display-only now -- correcting a box moved to AnnotationView, where the frame is
       // shown as a still image large enough to actually drag box edges around.
       cursor: "default",
     },

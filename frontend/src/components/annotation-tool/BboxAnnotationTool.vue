@@ -2,6 +2,7 @@
   <div
     ref="layerElement"
     class="bbox-layer"
+    data-annotation-layer
     :class="{ 'bbox-layer--draw': mode === 'draw' }"
     @pointerdown="onLayerPointerDown"
   >
@@ -240,6 +241,14 @@ function onLayerPointerDown(event) {
   position: absolute;
   inset: 0;
   touch-action: none;
+
+  /* Everything drawn on top of the frame is sized against the stage's zoom (set as
+     --stage-zoom by AnnotationView), so grips and outlines keep their on-screen size instead
+     of growing into the picture as the user zooms in on a small box. */
+  --handle-size: calc(7px / var(--stage-zoom, 1));
+  --handle-inset: calc(var(--handle-size) / -2);
+  --handle-center: calc(50% - var(--handle-size) / 2);
+  --hairline: calc(1px / var(--stage-zoom, 1));
 }
 
 .bbox-layer--draw {
@@ -248,20 +257,23 @@ function onLayerPointerDown(event) {
 
 .bbox-rect {
   position: absolute;
-  border: 2px solid;
+  border: calc(2px / var(--stage-zoom, 1)) solid;
   box-sizing: border-box;
   cursor: move;
 }
 
 .bbox-rect--selected {
-  border-width: 3px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9);
+  border-width: calc(3px / var(--stage-zoom, 1));
+  box-shadow: 0 0 0 var(--hairline) rgba(255, 255, 255, 0.9);
 }
 
 .bbox-label {
   position: absolute;
-  top: -18px;
-  left: -2px;
+  top: calc(-18px / var(--stage-zoom, 1));
+  left: calc(-2px / var(--stage-zoom, 1));
+  /* Counter-scaled as well, so a zoomed-in box isn't buried under its own label. */
+  transform: scale(calc(1 / var(--stage-zoom, 1)));
+  transform-origin: bottom left;
   padding: 0 5px;
   height: 16px;
   line-height: 16px;
@@ -276,57 +288,57 @@ function onLayerPointerDown(event) {
 
 .bbox-handle {
   position: absolute;
-  width: 10px;
-  height: 10px;
+  width: var(--handle-size);
+  height: var(--handle-size);
   background: #fff;
-  border: 1px solid #222;
-  border-radius: 2px;
+  border: var(--hairline) solid #222;
+  border-radius: calc(2px / var(--stage-zoom, 1));
 }
 
 .bbox-handle--nw {
-  top: -5px;
-  left: -5px;
+  top: var(--handle-inset);
+  left: var(--handle-inset);
   cursor: nwse-resize;
 }
 .bbox-handle--n {
-  top: -5px;
-  left: calc(50% - 5px);
+  top: var(--handle-inset);
+  left: var(--handle-center);
   cursor: ns-resize;
 }
 .bbox-handle--ne {
-  top: -5px;
-  right: -5px;
+  top: var(--handle-inset);
+  right: var(--handle-inset);
   cursor: nesw-resize;
 }
 .bbox-handle--e {
-  top: calc(50% - 5px);
-  right: -5px;
+  top: var(--handle-center);
+  right: var(--handle-inset);
   cursor: ew-resize;
 }
 .bbox-handle--se {
-  bottom: -5px;
-  right: -5px;
+  bottom: var(--handle-inset);
+  right: var(--handle-inset);
   cursor: nwse-resize;
 }
 .bbox-handle--s {
-  bottom: -5px;
-  left: calc(50% - 5px);
+  bottom: var(--handle-inset);
+  left: var(--handle-center);
   cursor: ns-resize;
 }
 .bbox-handle--sw {
-  bottom: -5px;
-  left: -5px;
+  bottom: var(--handle-inset);
+  left: var(--handle-inset);
   cursor: nesw-resize;
 }
 .bbox-handle--w {
-  top: calc(50% - 5px);
-  left: -5px;
+  top: var(--handle-center);
+  left: var(--handle-inset);
   cursor: ew-resize;
 }
 
 .bbox-marquee {
   position: absolute;
-  border: 2px dashed rgb(var(--v-theme-primary));
+  border: calc(2px / var(--stage-zoom, 1)) dashed rgb(var(--v-theme-primary));
   background: rgba(var(--v-theme-primary), 0.15);
   pointer-events: none;
   z-index: 40;

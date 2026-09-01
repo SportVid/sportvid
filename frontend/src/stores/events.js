@@ -34,9 +34,10 @@ export const KPI_COLUMN_META = {
 };
 export const KPI_COLUMN_IDS = Object.keys(KPI_COLUMN_META);
 
-// No real detector exists yet, so there's no point mocking a full 90 minutes of events --
-// the dummy generator only ever covers the first two minutes of the video (or, absent any
-// position data to size a window against -- see eventsData below -- this fixed fallback).
+// Last-resort span for the mocked events, used only when nothing else says how long the video
+// is (see eventsData below). The video's own duration is what the generator normally spreads
+// them over: demo events that stop two minutes in leave the rest of the timeline empty and
+// make every timecode read next to it look wrong.
 const DUMMY_WINDOW_MS = 2 * 60 * 1000;
 
 // Dummy events still need a plausible player/team to attach to. Normally that's
@@ -155,10 +156,13 @@ export const useEventsStore = defineStore(
       const players = topViewStore.precomputedPlayerList.length
         ? topViewStore.precomputedPlayerList
         : fallbackPlayerList();
+      // The video's length is the window: the events are spread across all of it, and none of
+      // them can land past its end, where there would be no frame to review them on. Position
+      // data's own span stands in only while the duration is unknown -- and the fixed fallback
+      // only when neither is there.
       const keys = topViewStore.sortedFrameKeys;
-      const windowEnd = keys.length
-        ? Math.min(keys[keys.length - 1], DUMMY_WINDOW_MS)
-        : DUMMY_WINDOW_MS;
+      const windowEnd =
+        playerStore.videoDuration || (keys.length ? keys[keys.length - 1] : DUMMY_WINDOW_MS);
       return _dummyEventsForSeed(selectedEventDataSetId.value, players, windowEnd);
     });
 
@@ -248,8 +252,13 @@ export const useEventsStore = defineStore(
       // position data) untouched.
       const range = positionDataStore.selectedTimeRange;
       if (range.start === 0 && range.end === 0) {
+        // The video's length when it is known: a timeline that ends with the video is what
+        // every timecode on it can actually be checked against. Only without a duration does
+        // the event span have to stand in for it.
         const timestamps = eventsData.value.map((e) => e.timestamp);
-        const end = timestamps.length ? Math.max(...timestamps) + 5000 : DUMMY_WINDOW_MS;
+        const end =
+          playerStore.videoDuration ||
+          (timestamps.length ? Math.max(...timestamps) + 5000 : DUMMY_WINDOW_MS);
         positionDataStore.selectedTimeRange = { start: 0, end };
       }
     }

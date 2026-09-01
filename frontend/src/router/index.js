@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useUserStore } from "@/stores/user";
 import VideoView from "@/views/VideoView.vue";
 import AnalysisView from "@/views/AnalysisView.vue";
-import AnnotationToolView from "@/views/AnnotationToolView.vue";
+import AnnotationView from "@/views/AnnotationView.vue";
 import TermsOfUseView from "@/views/TermsOfUseView.vue";
 import GuidelinesView from "@/views/GuidelinesView.vue";
 import LegalNoticeView from "@/views/LegalNoticeView.vue";
@@ -25,8 +25,8 @@ const routes = [
     // state survives) is handled by useAnalysisScopeCleanup instead -- the state lives in
     // pinia, not in the component.
     path: "/video-analysis/:id/annotate",
-    name: "AnnotationToolView",
-    component: AnnotationToolView,
+    name: "AnnotationView",
+    component: AnnotationView,
   },
   {
     path: "/terms-of-use",

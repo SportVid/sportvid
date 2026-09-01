@@ -7,42 +7,34 @@
     </div>
 
     <template v-else>
-      <div class="d-flex flex-wrap mb-3" style="gap: 6px">
-        <v-chip size="small" color="#666666">
-          {{ $t("modal.bounding_box.edit.current_box_id") }}: {{ bboxId }}
-        </v-chip>
-        <v-chip size="small" :color="currentColor">
-          {{ $t("modal.bounding_box.edit.current_player_id") }}: {{ box[0] }}
-        </v-chip>
-        <v-chip size="small" color="#666666">
-          {{ $t("modal.bounding_box.edit.current_team_id") }}: {{ box[1] }}
-        </v-chip>
+      <!-- What this box currently is, side by side -- three short readouts rather than three
+           chips that wrap in a panel this narrow. -->
+      <div class="id-row">
+        <div class="id-cell">
+          <span class="id-label">{{ $t("annotation_tool.identity.box") }}</span>
+          <span class="id-value">{{ bboxId }}</span>
+        </div>
+        <div class="id-cell">
+          <span class="id-label">{{ $t("annotation_tool.identity.player") }}</span>
+          <span class="id-value">{{ box[0] }}</span>
+        </div>
+        <div class="id-cell" :style="{ backgroundColor: currentColor }">
+          <span class="id-label">{{ $t("annotation_tool.identity.team") }}</span>
+          <span class="id-value">{{ box[1] }}</span>
+        </div>
       </div>
 
       <div class="panel-subheading">{{ $t("annotation_tool.identity.scope") }}</div>
-      <v-btn-toggle
-        v-model="selectedMode"
-        mandatory
-        density="compact"
-        color="primary"
-        variant="outlined"
-        class="mb-2 scope-toggle"
-      >
-        <v-btn v-for="mode in updateModes" :key="mode.id" :value="mode.id" size="small">
-          {{ mode.name }}
-        </v-btn>
-      </v-btn-toggle>
-
-      <v-alert
-        color="primary"
-        density="compact"
-        variant="tonal"
-        icon="mdi-alert-circle-outline"
-        class="mb-3"
-        style="font-size: 0.8rem"
-      >
-        {{ scopeHint }}
-      </v-alert>
+      <!-- Stacked: a three-way toggle laid side by side was unreadable at this width. -->
+      <v-radio-group v-model="selectedMode" density="compact" hide-details class="scope-group">
+        <v-radio
+          v-for="mode in updateModes"
+          :key="mode.id"
+          :value="mode.id"
+          :label="mode.name"
+          density="compact"
+        />
+      </v-radio-group>
 
       <v-text-field
         v-if="selectedMode !== 'allTeam'"
@@ -70,44 +62,20 @@
         :rules="[checkTeamId]"
       />
 
-      <div class="d-flex mt-3" style="gap: 8px">
-        <v-btn
-          size="small"
-          color="primary"
-          variant="flat"
-          :loading="bboxesStore.isLoading"
-          :disabled="!canSubmit"
-          @click="applyUpdate"
-        >
-          {{ $t("button.update") }}
-        </v-btn>
-        <v-btn
-          size="small"
-          color="error"
-          variant="outlined"
-          :loading="bboxesStore.isLoading"
-          @click="applyDelete"
-        >
-          {{ $t("button.delete") }}
-        </v-btn>
-      </div>
-
-      <v-divider class="my-4" />
-
-      <div class="panel-subheading">{{ $t("annotation_tool.identity.geometry") }}</div>
-      <div class="geometry-readout text-medium-emphasis">
-        <div>x: {{ box[5].toFixed(4) }} &nbsp; y: {{ box[6].toFixed(4) }}</div>
-        <div>w: {{ box[7].toFixed(4) }} &nbsp; h: {{ box[8].toFixed(4) }}</div>
-      </div>
+      <!-- Local, like every other correction here: the change lands in the draft and reaches
+           the backend only when the session is submitted (see AnnotationView's
+           submitCorrections). Disabled until something actually differs, same as the
+           toolbox's delete and discard actions. -->
       <v-btn
+        block
         size="small"
-        color="error"
-        variant="text"
-        class="mt-2"
-        prepend-icon="mdi-vector-square-remove"
-        @click="removeFromDraft"
+        color="primary"
+        variant="flat"
+        class="mt-4"
+        :disabled="!canSubmit"
+        @click="applyUpdate"
       >
-        {{ $t("annotation_tool.identity.remove_from_draft") }}
+        {{ $t("button.update") }}
       </v-btn>
     </template>
   </div>
@@ -118,7 +86,7 @@ import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useAnnotationToolStore } from "@/stores/annotation_tool";
 import { useBboxesStore } from "@/stores/bboxes";
-import { useTopViewStore, BBOX_SOURCE_RUN_IDX } from "@/stores/top_view";
+import { useTopViewStore } from "@/stores/top_view";
 import { useVisualizationStore } from "@/stores/visualization";
 import { toRgb } from "@/plugins/helpers";
 
@@ -183,13 +151,6 @@ watch(updateModes, (modes) => {
   if (!modes.some((m) => m.id === selectedMode.value)) selectedMode.value = "bbox";
 });
 
-const scopeHint = computed(() => {
-  if (selectedMode.value === "bbox") return t("modal.bounding_box.edit.modes.info_bbox");
-  if (selectedMode.value === "allPlayer")
-    return t("modal.bounding_box.edit.modes.info_all_player");
-  return t("modal.bounding_box.edit.modes.info_all_team");
-});
-
 const teamOptions = computed(() => {
   const existing = [...new Set(topViewStore.precomputedPlayerList.map((p) => p.teamId))]
     .filter((id) => id >= 3)
@@ -231,54 +192,32 @@ const checkTeamId = (value) => {
   return true;
 };
 
-// Unlike ModalBboxUpdate, which only checked for non-null, the buttons here also wait for the
-// rules to actually pass -- submitting a duplicate id silently did nothing useful before.
-const canSubmit = computed(() => {
+// Unlike ModalBboxUpdate, which only checked for non-null, the button here also waits for the
+// rules to actually pass -- submitting a duplicate id silently did nothing useful before --
+// and for the fields to actually differ from what the box already says.
+const hasChange = computed(() => {
   if (!box.value) return false;
+  if (Number(newTeamId.value) !== Number(box.value[1])) return true;
+  if (selectedMode.value === "allTeam") return false;
+  return Number(newPlayerId.value) !== Number(box.value[0]);
+});
+
+const canSubmit = computed(() => {
+  if (!box.value || !hasChange.value) return false;
   if (checkTeamId(newTeamId.value) !== true) return false;
   if (selectedMode.value === "allTeam") return true;
   return checkPlayerId(newPlayerId.value) === true;
 });
 
-// The payload bboxesStore expects. applyAll* are derived from the active scope rather than
-// kept as state -- in ModalBboxUpdate they were set but never reset, so switching scope
-// within one open dialog could carry a stale flag into the next request.
-const buildPayload = () => ({
-  bytetrackRunId: box.value[BBOX_SOURCE_RUN_IDX] ?? bboxesStore.bboxPluginRunId,
-  bboxId: bboxId.value,
-  playerId: box.value[0],
-  teamId: box.value[1],
-  newPlayerId: newPlayerId.value,
-  newTeamId: newTeamId.value,
-  applyAllPlayerId: selectedMode.value === "allPlayer",
-  applyAllTeamId: selectedMode.value === "allTeam",
-});
-
-// Goes through bboxesStore rather than posting directly: that store carries the three-way
-// refresh (ball run / active team-clustering-or-reid merge / plain tracker run) that keeps a
-// client-side merge from being dropped by the server's un-merged response.
-const applyUpdate = async () => {
-  const frameKey = store.currentFrameKey;
-  await bboxesStore.updateBboxData(buildPayload());
-  // A drafted frame holds its own copy of the boxes, so pull the just-written identity back
-  // into it -- otherwise the draft (and with it the export) would keep the stale ids.
-  store.syncDraftIdentities(frameKey);
-};
-
-const applyDelete = async () => {
-  const frameKey = store.currentFrameKey;
-  await bboxesStore.deleteBboxData(buildPayload());
-  if (store.drafts[frameKey]) {
-    store.removeBox(frameKey, store.selectedBoxIdx);
-  }
-  store.selectedBoxIdx = null;
-};
-
-// Local-only removal: drops the box from the correction draft without touching the stored
-// plugin output. For "the tracker invented a player that isn't there" without also rewriting
-// the run everyone else is looking at.
-const removeFromDraft = () => {
-  store.removeBox(store.currentFrameKey, store.selectedBoxIdx);
+// Local only -- the store keeps the change together with the scope it was made with, and
+// AnnotationView's submit replays it against the backend, where "all boxes of this player"
+// can mean the whole run rather than just the sampled review frames.
+const applyUpdate = () => {
+  store.applyIdentity(store.currentFrameKey, store.selectedBoxIdx, {
+    newPlayerId: selectedMode.value === "allTeam" ? null : newPlayerId.value,
+    newTeamId: newTeamId.value,
+    scope: selectedMode.value,
+  });
 };
 </script>
 
@@ -286,6 +225,62 @@ const removeFromDraft = () => {
 .identity-panel {
   padding: 12px 14px;
   min-width: 0;
+}
+
+.id-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.id-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background-color: rgba(var(--v-theme-on-surface), 0.06);
+}
+
+.id-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+.id-value {
+  font-size: 0.82rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.scope-group {
+  /* Same breathing room below as the id readouts leave above the scope section. */
+  margin: -4px 0 24px;
+}
+
+.scope-group :deep(.v-label) {
+  font-size: 0.8rem;
+  opacity: 1;
+}
+
+/* Vuetify's radio is sized for a form, not for a 280px side panel. */
+.scope-group :deep(.v-selection-control) {
+  --v-selection-control-size: 26px;
+  min-height: 26px;
+}
+
+.scope-group :deep(.v-selection-control__input) {
+  width: 26px;
+  height: 26px;
+}
+
+.scope-group :deep(.v-selection-control__input .v-icon) {
+  font-size: 17px;
 }
 
 .panel-heading {
@@ -307,19 +302,4 @@ const removeFromDraft = () => {
   padding: 12px 0;
 }
 
-.scope-toggle {
-  width: 100%;
-}
-
-.scope-toggle :deep(.v-btn) {
-  flex: 1 1 0;
-  font-size: 0.7rem;
-  min-width: 0;
-}
-
-.geometry-readout {
-  font-family: monospace;
-  font-size: 0.75rem;
-  line-height: 1.6;
-}
 </style>

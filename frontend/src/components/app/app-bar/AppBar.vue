@@ -20,6 +20,13 @@
         <span class="text-primary">{{ $t("app_bar.video_view") }}</span>
       </v-btn>
 
+      <v-divider
+        v-if="loggedIn && (analysisView || annotationView)"
+        vertical
+        inset
+        class="mx-2"
+      />
+
       <div v-if="analysisView" class="d-flex align-center" data-tour="analysis-appbar-actions">
         <v-btn @click="showModalStatus = true" data-tour="modal-status-open">
           <app-bar-icon>mdi-format-list-checks</app-bar-icon>
@@ -41,19 +48,19 @@
           <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
         </v-btn>
 
-        <v-btn @click="showModalExport = true" data-tour="modal-export-open">
-          <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
-          <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
-        </v-btn>
-
         <v-btn @click="openAnnotationTool" data-tour="annotation-tool-open">
           <app-bar-icon>mdi-vector-square-edit</app-bar-icon>
           <span class="text-primary">{{ $t("app_bar.annotation_tool") }}</span>
         </v-btn>
+
+        <v-btn @click="showModalExport = true" data-tour="modal-export-open">
+          <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
+          <span class="text-primary">{{ $t("app_bar.export_menu") }}</span>
+        </v-btn>
       </div>
 
-      <v-btn v-if="annotationToolView" @click="backToAnalysis">
-        <app-bar-icon>mdi-view-dashboard-outline</app-bar-icon>
+      <v-btn v-if="annotationView" @click="backToAnalysis">
+        <app-bar-icon>mdi-view-grid-outline</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.back_to_analysis") }}</span>
       </v-btn>
 
@@ -208,12 +215,11 @@ const loggedIn = computed(() => userStore.loggedIn);
 
 const videoView = computed(() => route.name === "VideoView");
 const analysisView = computed(() => route.name === "AnalysisView");
-const annotationToolView = computed(() => route.name === "AnnotationToolView");
+const annotationView = computed(() => route.name === "AnnotationView");
 
 const openAnnotationTool = () =>
-  router.push({ name: "AnnotationToolView", params: { id: playerStore.videoId } });
-const backToAnalysis = () =>
-  router.push({ name: "AnalysisView", params: { id: route.params.id } });
+  router.push({ name: "AnnotationView", params: { id: playerStore.videoId } });
+const backToAnalysis = () => router.push({ name: "AnalysisView", params: { id: route.params.id } });
 const termsOfUseView = computed(() => route.name === "TermsOfUseView");
 const guidelinesView = computed(() => route.name === "GuidelinesView");
 
@@ -228,28 +234,27 @@ watch(
   }
 );
 const pluginRuns = computed(() => {
-  return pluginRunStore
-    .forVideo(playerStore.videoId)
-    // "thumbnail" is an internal asset (video-gallery cover image, see VideoView.vue),
-    // not a user-facing analysis result -- it has no place in the status overview, its
-    // delete pickers, or the running-plugins badge count.
-    .filter((run) => run.type !== "thumbnail")
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .map((pluginRun) => {
-      return {
-        id: pluginRun.id,
-        type: pluginName(pluginRun.type),
-        // The untranslated type as well: ModalStatus needs it to look the run up in the
-        // annotation-tool registry, which keys off the backend's plugin type.
-        rawType: pluginRun.type,
-        date: pluginRun.date
-          .replace("T", " ")
-          .replace("Z", "")
-          .substring(0, pluginRun.date.length - 8),
-        progress: parseFloat(pluginRun.progress),
-        status: pluginRun.status,
-      };
-    });
+  return (
+    pluginRunStore
+      .forVideo(playerStore.videoId)
+      // "thumbnail" is an internal asset (video-gallery cover image, see VideoView.vue),
+      // not a user-facing analysis result -- it has no place in the status overview, its
+      // delete pickers, or the running-plugins badge count.
+      .filter((run) => run.type !== "thumbnail")
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .map((pluginRun) => {
+        return {
+          id: pluginRun.id,
+          type: pluginName(pluginRun.type),
+          date: pluginRun.date
+            .replace("T", " ")
+            .replace("Z", "")
+            .substring(0, pluginRun.date.length - 8),
+          progress: parseFloat(pluginRun.progress),
+          status: pluginRun.status,
+        };
+      })
+  );
 });
 const numRunningPlugins = computed(() => {
   return pluginRuns.value.filter((e) => e.status !== "DONE" && e.status !== "ERROR").length;

@@ -165,14 +165,20 @@
     }
   },
   "annotation_tool": {
-    "back_to_analysis": "Zurück zur Analyse",
-    "run_select": "Plugin-Lauf",
     "frame_count": "Bilder",
     "discard_frame": "Korrekturen dieses Bildes verwerfen",
     "tools": {
       "bbox": {
         "name": "Bounding-Box-Korrektur",
         "description": "Die Boxen eines Objekttrackers korrigieren: verschieben, in der Größe ändern, ergänzen oder entfernen sowie Spieler- und Teamzuordnung richtigstellen."
+      },
+      "events": {
+        "name": "Event-Zeitpunkte",
+        "description": "Korrigiere, wo ein Event auf der Timeline sitzt: auf das Bild verschieben, in dem es tatsächlich passiert, und die Spielerzuordnung richtigstellen."
+      },
+      "calibration": {
+        "name": "Kalibrierungs-Korrektur",
+        "description": "Korrigiere die Landmarken, aus denen eine DLT-Kalibrierung geschätzt wurde: Marker auf die echten Spielfeldlinien ziehen und falsch zugeordnete Segmente richtigstellen."
       }
     },
     "mode": {
@@ -184,16 +190,63 @@
       "title": "Ausgewählte Box",
       "no_selection": "Wähle eine Box im Bild aus, um sie zu bearbeiten.",
       "scope": "Anwenden auf",
-      "geometry": "Geometrie (relativ zum Bild)",
-      "remove_from_draft": "Nur aus der Korrektur entfernen"
-    },
-    "empty_state": {
-      "title": "Noch keine Plugin-Ergebnisse zum Korrigieren"
+      "box": "Box-ID",
+      "player": "Spieler-ID",
+      "team": "Team-ID"
     },
     "export": {
       "button": "Trainingsdaten abgeben",
       "file_name": "annotationskorrekturen",
-      "success": "Korrekturen für {count} Bilder exportiert"
+      "success": "Korrekturen für {count} Bilder exportiert",
+      "failed": "Korrekturen konnten nicht übermittelt werden",
+      "success_events": "{count} Event-Korrekturen exportiert"
+    },
+    "target": {
+      "no_data": "Noch keine Daten vorhanden",
+      "load_demo": "Demo-Events laden",
+      "empty_run": "Dieser Lauf enthält keine Boxen zum Korrigieren",
+      "select_tool": "Auswählen"
+    },
+    "preview": {
+      "badge": "Vorschau",
+      "title": "Noch nicht bearbeitbar"
+    },
+    "actions": {
+      "move_marker": "Marker verschieben",
+      "add_marker": "Marker hinzufügen",
+      "fix_segment": "Segment korrigieren",
+      "move_event": "Event zeitlich verschieben",
+      "reassign_event": "Spieler neu zuordnen",
+      "delete_event": "Event löschen",
+      "add_event": "Event an der Abspielposition hinzufügen",
+      "discard_events": "Alle Event-Korrekturen verwerfen",
+      "restore_event": "Event wiederherstellen"
+    },
+    "zoom": {
+      "in": "Vergrößern",
+      "out": "Verkleinern"
+    },
+    "transport": {
+      "play": "Abspielen",
+      "pause": "Pause",
+      "step_back": "Ein Bild zurück",
+      "step_forward": "Ein Bild vor",
+      "previous_event": "Vorheriges Event",
+      "next_event": "Nächstes Event",
+      "speed": "Abspielgeschwindigkeit",
+      "mute": "Ton aus",
+      "unmute": "Ton an",
+      "second_back": "Eine Sekunde zurück",
+      "second_forward": "Eine Sekunde vor"
+    },
+    "event": {
+      "title": "Ausgewähltes Event",
+      "list_title": "Events",
+      "no_selection": "Wähle ein Event in der Timeline oder in der Liste aus, um es zu bearbeiten.",
+      "no_type": "Kein Event-Typ",
+      "no_player": "Kein Spieler zugeordnet",
+      "timing": "Zeitpunkt",
+      "changed": "{count} geändert"
     }
   },
   "calibration_asset": {
@@ -1084,8 +1137,7 @@
           "selected": "Ausgewählte Plugin-Läufe erfolgreich gelöscht"
         },
         "confirm": "Plugin-Läufe löschen? Dies kann nicht rückgängig gemacht werden."
-      },
-      "annotate": "Ergebnis prüfen und korrigieren"
+      }
     },
     "bounding_box": {
       "tooltip": {

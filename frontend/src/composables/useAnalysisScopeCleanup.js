@@ -11,7 +11,7 @@ import { useEventsStore } from "@/stores/events";
 // down: reloading them means re-running transformBBoxToPositionDataTopView plus the ball /
 // team-clustering / reid merges plus the KPI load (see position_data.js's _restoreTracker),
 // which is the single most expensive thing in the app.
-export const ANALYSIS_SCOPED_ROUTES = ["AnalysisView", "AnnotationToolView"];
+export const ANALYSIS_SCOPED_ROUTES = ["AnalysisView", "AnnotationView"];
 
 // The teardown itself, formerly inline in AnalysisView.vue's onBeforeUnmount.
 export function resetAnalysisScope() {

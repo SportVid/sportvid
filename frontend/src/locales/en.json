@@ -165,18 +165,24 @@
     }
   },
   "annotation_tool": {
-    "back_to_analysis": "Back to analysis",
-    "run_select": "Plugin run",
     "frame_count": "Frames",
     "discard_frame": "Discard corrections for this frame",
     "tools": {
       "bbox": {
         "name": "Bounding box correction",
         "description": "Correct the boxes an object tracker produced: move, resize, add or remove them, and fix player and team assignment."
+      },
+      "events": {
+        "name": "Event timing",
+        "description": "Correct when an event sits on the timeline: move it to the frame it actually happens on, and fix which player it belongs to."
+      },
+      "calibration": {
+        "name": "Calibration correction",
+        "description": "Correct the landmarks a DLT calibration was estimated from: move markers onto the real pitch lines and fix mismatched segments."
       }
     },
     "mode": {
-      "select": "Select and move",
+      "select": "Select",
       "draw": "Draw new box",
       "delete": "Remove selected box"
     },
@@ -184,16 +190,63 @@
       "title": "Selected box",
       "no_selection": "Select a box in the image to edit it.",
       "scope": "Apply to",
-      "geometry": "Geometry (relative to frame)",
-      "remove_from_draft": "Remove from correction only"
-    },
-    "empty_state": {
-      "title": "No plugin output to correct yet"
+      "box": "Box ID",
+      "player": "Player ID",
+      "team": "Team ID"
     },
     "export": {
       "button": "Submit training data",
       "file_name": "annotation_corrections",
-      "success": "Corrections for {count} frames exported"
+      "success": "Corrections for {count} frames exported",
+      "failed": "Could not submit the corrections",
+      "success_events": "{count} event corrections exported"
+    },
+    "target": {
+      "no_data": "No data available yet",
+      "load_demo": "Load demo events",
+      "select_tool": "Select",
+      "empty_run": "This run holds no boxes to correct"
+    },
+    "preview": {
+      "badge": "Preview",
+      "title": "Not editable yet"
+    },
+    "actions": {
+      "move_marker": "Move marker",
+      "add_marker": "Add marker",
+      "fix_segment": "Correct segment",
+      "move_event": "Move event in time",
+      "reassign_event": "Reassign player",
+      "delete_event": "Delete event",
+      "add_event": "Add event at the playhead",
+      "discard_events": "Discard all event corrections",
+      "restore_event": "Restore event"
+    },
+    "zoom": {
+      "in": "Zoom in",
+      "out": "Zoom out"
+    },
+    "transport": {
+      "play": "Play",
+      "pause": "Pause",
+      "step_back": "One frame back",
+      "step_forward": "One frame forward",
+      "previous_event": "Previous event",
+      "next_event": "Next event",
+      "speed": "Playback speed",
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "second_back": "One second back",
+      "second_forward": "One second forward"
+    },
+    "event": {
+      "title": "Selected event",
+      "list_title": "Events",
+      "no_selection": "Select an event in the timeline or in the list to edit it.",
+      "no_type": "No event type",
+      "no_player": "No player assigned",
+      "timing": "Timing",
+      "changed": "{count} changed"
     }
   },
   "sports": {
@@ -1222,8 +1275,7 @@
           "selected": "Selected plugin runs successfully deleted"
         },
         "confirm": "Delete plugin runs? This cannot be undone."
-      },
-      "annotate": "Review and correct this result"
+      }
     },
     "tutorial": {
       "title": "Tutorials",

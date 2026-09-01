@@ -439,14 +439,19 @@ export const useTopViewStore = defineStore(
     // Rebuilds metaDataTopView and the four precomputed*List aggregates from the current
     // positionDataTopView.value (plain-object path only). Shared by the initial bbox load
     // and by mergeBallTracking, so both end up with consistent aggregates.
-    function _recomputeAggregates(storedMeta) {
+    //
+    // `source` overrides where the aggregates are read from. Only the bbox review path passes
+    // it (see loadBboxDataForReview): with no calibration loaded there is no pitch data to
+    // derive players/teams from, while the raw merged boxes carry the same b[0]/b[1]/b[2]
+    // layout and describe the run that is actually on screen.
+    function _recomputeAggregates(storedMeta, source = null) {
       const playerMap = new Map();
       const refMap = new Map();
       const ballMap = new Map();
       const inactiveMap = new Map();
       const sections = new Set();
       const boundaries = {};
-      for (const [timeKey, boxes] of Object.entries(positionDataTopView.value ?? {})) {
+      for (const [timeKey, boxes] of Object.entries(source ?? positionDataTopView.value ?? {})) {
         const t = Number(timeKey);
         for (const b of boxes) {
           const tid = b[1];
@@ -521,6 +526,45 @@ export const useTopViewStore = defineStore(
         _applyMergedBboxData();
         _recomputeAggregates(_combinedStoredMeta());
       }
+    }
+
+    // Loads one tracker run's boxes for review in AnnotationView. Deliberately not
+    // transformBBoxToPositionDataTopView: correcting boxes needs nothing but the boxes drawn
+    // over the video, so no calibration asset is picked here and the pitch view is left out of
+    // it. _applyMergedBboxData still rebuilds positionDataTopView when a calibration happens to
+    // be loaded already, and quietly leaves it alone when there is none (see
+    // _applyHomographyToBboxData, which returns null without a matrix).
+    //
+    // A ball run goes into the ball fields rather than the player ones, same split
+    // mergeBallTracking makes -- that is what keeps bboxesStore.updateBboxData/deleteBboxData
+    // routing an edit back to the run it came from.
+    async function loadBboxDataForReview(pluginRunId, { ball = false } = {}) {
+      if (!pluginRunId) return;
+
+      if (ball) {
+        const results = await pluginRunResultStore.forPluginRunWithData(
+          pluginRunId,
+          playerStore.videoId
+        );
+        const ballResult = results.find((r) => r.data?.bboxes !== undefined);
+        if (!ballResult) return;
+
+        bboxesStore.bboxBallPluginRunId = pluginRunId;
+        bboxesStore.bboxBallDataActive = ballResult.data.bboxes;
+        bboxesStore.bboxBallMetaData = ballResult.data.meta_data ?? null;
+      } else {
+        // Same reset a fresh run gets in transformBBoxToPositionDataTopView: any
+        // team_clustering/reid merge tracked here belonged to the run being replaced.
+        teamClusteringRunId.value = null;
+        reidRunId.value = null;
+        await bboxesStore.loadBboxData(pluginRunId);
+      }
+
+      _applyMergedBboxData();
+      _recomputeAggregates(
+        _combinedStoredMeta(),
+        calibrationAssetStore.calibrationMatrix ? null : bboxesStore.bboxDataInterpolated
+      );
     }
 
     // Merges an optional, separately-run ball-tracking result (object_tracker plugin run
@@ -949,6 +993,7 @@ export const useTopViewStore = defineStore(
       metaDataTopView,
       setPositionData,
       transformBBoxToPositionDataTopView,
+      loadBboxDataForReview,
       mergeBallTracking,
       mergeTeamAssignment,
       mergeReid,
