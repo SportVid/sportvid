@@ -10,6 +10,7 @@ import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { isInSportZone } from "@/plugins/sport_zones";
+import { useUploadTracker } from "@/composables/useUploadTracker";
 
 function isInSportZoneUtil(z, x, y) {
   return isInSportZone(z.sportKey, z.zoneId, x, y, z.half);
@@ -35,8 +36,14 @@ export const usePositionDataStore = defineStore(
     const positionDataMode = ref(null);
     const isRestoringPosData = ref(false);
 
-    const isUploading = ref(false);
-    const progress = ref(0);
+    const {
+      isUploading,
+      progress,
+      etaSeconds: uploadEtaSeconds,
+      start: startUploadTracking,
+      finish: finishUploadTracking,
+      onUploadProgress: onUploadProgressTracked,
+    } = useUploadTracker();
 
     const positionDataUploadSuccess = ref(false);
     const positionDataRenameSuccess = ref(false);
@@ -103,7 +110,7 @@ export const usePositionDataStore = defineStore(
 
     const uploadPositionData = async (params) => {
       if (!params) return;
-      isUploading.value = true;
+      startUploadTracking();
       try {
         const formData = new FormData();
         formData.append("video_id", playerStore.videoId);
@@ -119,11 +126,7 @@ export const usePositionDataStore = defineStore(
 
         const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
-          onUploadProgress: (event) => {
-            if (event.lengthComputable) {
-              progress.value = Math.round((event.loaded * 100) / event.total);
-            }
-          },
+          onUploadProgress: onUploadProgressTracked,
         });
 
         if (res.data.status === "ok") {
@@ -133,8 +136,7 @@ export const usePositionDataStore = defineStore(
       } catch (error) {
         console.error("Failed to upload position data:", error);
       } finally {
-        isUploading.value = false;
-        progress.value = 0;
+        finishUploadTracking();
       }
     };
 
@@ -431,6 +433,7 @@ export const usePositionDataStore = defineStore(
       deletePositionData,
       isUploading,
       progress,
+      uploadEtaSeconds,
       provider,
       calculateRunningDistances,
       selectedTimeRange,

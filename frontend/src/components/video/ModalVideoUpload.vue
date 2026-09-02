@@ -167,12 +167,19 @@
 
             <v-divider class="mb-6 mx-16" />
 
-            <v-progress-linear
+            <div
               v-if="isUploading"
-              v-model="uploadingProgress"
-              class="mt-n1 ml-16"
-              style="max-width: calc(100% - 128px)"
-            />
+              class="d-flex align-center mt-n1 ml-16"
+              style="max-width: calc(100% - 128px); gap: 10px"
+            >
+              <v-progress-linear v-model="uploadingProgress" class="flex-grow-1" />
+              <span
+                v-if="uploadEtaText"
+                class="text-caption text-medium-emphasis text-no-wrap"
+              >
+                {{ uploadEtaText }}
+              </span>
+            </div>
             <div v-else class="mt-n6" />
 
             <v-checkbox v-model="checkbox" required class="ml-n2">
@@ -215,6 +222,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { getEtaDisplay } from "@/plugins/time";
 import { useVideoUploadStore } from "@/stores/video_upload";
 import { useUserStore } from "@/stores/user";
 import { useTopViewStore } from "@/stores/top_view";
@@ -317,6 +325,10 @@ const ageGroups = computed(() =>
 
 const isUploading = computed(() => videoUploadStore.isUploading);
 const uploadingProgress = computed(() => videoUploadStore.progress);
+const uploadEtaText = computed(() => {
+  const display = getEtaDisplay(videoUploadStore.uploadEtaSeconds);
+  return display ? t("progress.eta", { time: display }) : "";
+});
 
 const checkbox = ref(false);
 const fileValid = ref(false);

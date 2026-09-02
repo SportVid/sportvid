@@ -3,6 +3,7 @@ import { ref, computed, watch } from "vue";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePlayerStore } from "@/stores/player";
 import { usePositionDataStore } from "@/stores/position_data";
+import { useUploadTracker } from "@/composables/useUploadTracker";
 
 // Placeholder for the event types a future CV pipeline (action spotting, with xG/VAEP scoring
 // layered on top later -- see TabWindowEvents.vue) would emit. Keyed the same way a real
@@ -184,6 +185,18 @@ export const useEventsStore = defineStore(
     // positionDataStore.uploadPositionData's role, minus the actual network round-trip. Doesn't
     // auto-select the new entry -- picking it is still a separate step via ModalEventDataSelect
     // (mirrors positionDataStore.uploadPositionData, which likewise only refreshes the list).
+    // Upload progress + ETA plumbing, ready for when a real /event_data/upload endpoint
+    // lands: pass `onEventUploadProgress` to that axios call and wrap it in
+    // startEventUpload()/finishEventUpload(). Inert for the current client-only dummy.
+    const {
+      isUploading: isUploadingEventData,
+      progress: eventUploadProgress,
+      etaSeconds: eventUploadEtaSeconds,
+      start: startEventUpload,
+      finish: finishEventUpload,
+      onUploadProgress: onEventUploadProgress,
+    } = useUploadTracker();
+
     function uploadEventDataSet({ title, format }) {
       const id = `manual-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
       eventDataSets.value = [
@@ -388,6 +401,12 @@ export const useEventsStore = defineStore(
       nextEventIndex,
       nextEventId,
       uploadEventDataSet,
+      isUploadingEventData,
+      eventUploadProgress,
+      eventUploadEtaSeconds,
+      startEventUpload,
+      finishEventUpload,
+      onEventUploadProgress,
       deleteEventDataSet,
       selectEventDataSet,
       loadDemoEventData,

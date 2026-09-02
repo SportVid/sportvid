@@ -10,6 +10,21 @@ export function getDisplayTime(time) {
   return hDisplay + mDisplay + sDisplay;
 }
 
+// Compact "time remaining" for progress bars, from the backend's `eta_seconds`.
+// Returns "" for null / non-finite / negative so callers can `v-if` it away and fall
+// back to the indeterminate bar. Locale-neutral ("~3 min"); wrap with an i18n string
+// for the "left / remaining" phrasing.
+export function getEtaDisplay(seconds) {
+  if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return "";
+  const s = Math.round(seconds);
+  if (s < 60) return `~${Math.max(s, 1)} sec`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `~${m} min`;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  return rem ? `~${h} h ${rem} min` : `~${h} h`;
+}
+
 export function getTimecode(time, numDigitsMs = 3) {
   const h = Math.floor(time / 3600_000);
   const m = Math.floor((time % 3600_000) / 60_000);

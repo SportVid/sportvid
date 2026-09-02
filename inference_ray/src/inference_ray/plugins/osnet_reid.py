@@ -206,6 +206,9 @@ class OSNetReID(
                         extension=f".{video_input_data.ext}",
                         ref_id=video_input_data.id,
                     )
+                    total_frames = (
+                        len(video_decoder) if hasattr(video_decoder, "__len__") else None
+                    )
                     # main processing loop
                     with data_manager.create_data("ReIDData") as reids:
                         mapping = {}
@@ -224,8 +227,13 @@ class OSNetReID(
                                 if type(arr) is np.ndarray:
                                     reids.add_array(str(frame_id), name, arr)
                             mapping[frame_time] = per_frame_reids['mapping']
+                            if total_frames:
+                                self.update_callbacks(
+                                    callbacks,
+                                    progress=min((frame_id + 1) / total_frames, 1.0) * 0.98,
+                                )
                         reids.mapping = mapping
-                        self.update_callbacks(callbacks, progress=1.0) 
+                        self.update_callbacks(callbacks, progress=1.0)
 
                     return { "reids" : reids }
 

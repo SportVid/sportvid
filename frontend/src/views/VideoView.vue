@@ -180,6 +180,12 @@
                       {{ $t("button.cancel_and_delete") }}
                     </v-btn>
                   </v-card-text>
+                  <div v-if="etaText(item)" class="eta-caption">{{ etaText(item) }}</div>
+                  <v-progress-linear
+                    class="mt-auto"
+                    :model-value="processingProgress(item)"
+                    :indeterminate="conversionIndeterminate(item)"
+                  />
                 </div>
                 <div v-else class="card-body">
                   <div class="flip-container">
@@ -232,7 +238,11 @@
                       @click.stop="toggleCardFlip(item.id)"
                     />
                   </div>
-                  <v-progress-linear v-model="videosProgress[item.id]" />
+                  <div v-if="etaText(item)" class="eta-caption">{{ etaText(item) }}</div>
+                  <v-progress-linear
+                    :model-value="videosProgress[item.id]"
+                    :indeterminate="batchIndeterminate(item.id)"
+                  />
                 </div>
               </v-card>
             </v-container>
@@ -290,7 +300,10 @@
                   <v-spacer />
 
                   <template v-if="showProcessingCard(item)">
-                    <span class="row-processing-text">{{ $t("video_view.video_processing") }}</span>
+                    <span class="row-processing-text">
+                      {{ $t("video_view.video_processing")
+                      }}<span v-if="etaText(item)" class="row-eta"> · {{ etaText(item) }}</span>
+                    </span>
                     <v-btn
                       size="small"
                       color="red"
@@ -358,8 +371,14 @@
                 </div>
 
                 <v-progress-linear
-                  v-if="!showProcessingCard(item)"
-                  v-model="videosProgress[item.id]"
+                  :model-value="
+                    showProcessingCard(item) ? processingProgress(item) : videosProgress[item.id]
+                  "
+                  :indeterminate="
+                    showProcessingCard(item)
+                      ? conversionIndeterminate(item)
+                      : batchIndeterminate(item.id)
+                  "
                 />
               </v-card>
             </div>
@@ -427,15 +446,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick, onUnmounted } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
-import { useTimelineStore } from "@/stores/timeline";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
-import { getDisplayTime } from "@/plugins/time";
+import { getDisplayTime, getEtaDisplay } from "@/plugins/time";
 import ModalVideoRename from "@/components/video/ModalVideoRename.vue";
 import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 import config from "../../app.config";
@@ -446,7 +464,6 @@ const videoStore = useVideoStore();
 const userStore = useUserStore();
 const pluginRunStore = usePluginRunStore();
 const pluginRunResultStore = usePluginRunResultStore();
-const timelineStore = useTimelineStore();
 
 const showModalVideoUpload = ref(false);
 
@@ -489,17 +506,24 @@ const videos = computed(() => {
   });
 });
 
+// Progress of the plugin batch currently being worked on for a video -- the mean over
+// its runs, so three queued plugins with the first at 24% read as 8% instead of
+// jumping in whole-run steps. Runs from an earlier session aren't part of a batch and
+// therefore don't count (see pluginRunStore.batchProgress).
 const videosProgress = computed(() => {
   const progress = {};
   videos.value.forEach((video) => {
-    const runs = pluginRunStore.forVideo(video.id);
-    if (runs.length === 0) {
-      progress[video.id] = 0;
-    } else {
-      progress[video.id] =
-        (runs.filter((r) => r.status !== "RUNNING" && r.status !== "QUEUED").length / runs.length) *
-        100;
-    }
+    progress[video.id] = pluginRunStore.batchProgress(video.id);
+  });
+  return progress;
+});
+
+// Same slot, same meaning while a video is still being converted: how far along the
+// work on this video is. Conversion and plugin runs never overlap.
+const conversionProgress = computed(() => {
+  const progress = {};
+  videos.value.forEach((video) => {
+    progress[video.id] = (parseFloat(video.progress) || 0) * 100;
   });
   return progress;
 });
@@ -517,6 +541,14 @@ const thumbnailRunForVideo = (videoId) => {
   return run && run.status === "DONE" ? run : null;
 };
 
+// Status of each video's latest thumbnail run. `videos` alone used to be enough as a
+// watch source only because the 2-second refetch replaced every video object on each
+// tick; with live updates the video object stays identical while only the run changes,
+// so the run status has to be part of the source or the watchers below never fire.
+const thumbnailRunStates = computed(() =>
+  videos.value.map((item) => `${item.id}:${latestThumbnailRun(item.id)?.status ?? ""}`).join(",")
+);
+
 // Videos we've personally watched go through Video.status===PROCESSING in this session --
 // only for those do we keep the "still processing" look alive while their automatic
 // thumbnail generation finishes, so a card doesn't flash an empty placeholder right after
@@ -525,8 +557,8 @@ const thumbnailRunForVideo = (videoId) => {
 // and never gets one" for those, so forcing the processing look on them would get stuck.
 const observedProcessing = ref({});
 watch(
-  videos,
-  (list) => {
+  [videos, thumbnailRunStates],
+  ([list]) => {
     // Both the "start tracking" and "stop tracking" writes live in this one watcher (not in
     // isThumbnailPending below) so it stays a pure read -- safe to call from several places
     // in the template per render without a mutation from one call leaking into the next.
@@ -553,9 +585,70 @@ const isThumbnailPending = (item) => {
 
 const showProcessingCard = (item) => item.processing || isThumbnailPending(item);
 
+// The sweeping (indeterminate) bar is shown in exactly one situation: work is actually
+// running but there's no number to show yet (no progress, no ETA). A queued / errored /
+// done job gets a plain static bar. Once any real signal arrives it stays solid.
+const conversionIndeterminate = (item) => {
+  if (item.processing) {
+    // ffmpeg hasn't emitted its first progress line yet (e.g. duration still unknown).
+    return !(conversionProgress.value[item.id] > 0) && item.eta_seconds == null;
+  }
+  if (isThumbnailPending(item)) {
+    const run = latestThumbnailRun(item.id);
+    return (
+      !!run &&
+      run.status === "RUNNING" &&
+      !(run.progress > 0) &&
+      run.eta_seconds == null
+    );
+  }
+  return false;
+};
+
+// Bar value while the card is in its "processing" look: the conversion percentage
+// while ffmpeg runs, then the pending thumbnail run's own percentage (usually ~0 until
+// it's done) -- never a stale 100% from the finished conversion.
+const processingProgress = (item) => {
+  if (!item.processing && isThumbnailPending(item)) {
+    return (parseFloat(latestThumbnailRun(item.id)?.progress) || 0) * 100;
+  }
+  return conversionProgress.value[item.id];
+};
+
+// Same rule for the post-conversion plugin batch bar on the card front: sweep only
+// while a run is actually RUNNING with nothing to show yet; a purely queued batch just
+// sits at 0.
+const batchIndeterminate = (videoId) => {
+  if (videosProgress.value[videoId] > 0) return false;
+  return pluginRunStore
+    .forVideo(videoId)
+    .some(
+      (r) =>
+        r.type !== "thumbnail" &&
+        r.status === "RUNNING" &&
+        !(r.progress > 0) &&
+        r.eta_seconds == null
+    );
+};
+
+// One "time remaining" string for whichever phase the card is in (conversion, the
+// pending thumbnail run, or a plugin batch). "" when nothing useful is known yet.
+const etaText = (item) => {
+  let seconds = null;
+  if (item.processing) {
+    seconds = item.eta_seconds;
+  } else if (isThumbnailPending(item)) {
+    seconds = latestThumbnailRun(item.id)?.eta_seconds ?? null;
+  } else {
+    seconds = pluginRunStore.batchEta(item.id);
+  }
+  const display = getEtaDisplay(seconds);
+  return display ? t("progress.eta", { time: display }) : "";
+};
+
 watch(
-  videos,
-  (list) => {
+  [videos, thumbnailRunStates],
+  ([list]) => {
     list.forEach((item) => {
       const run = thumbnailRunForVideo(item.id);
       if (!run) return;
@@ -690,47 +783,13 @@ const stateIcon = (state) => {
   };
   return icons[state] || icons.none;
 };
-watch(
-  videosProgress,
-  (newState, oldState) => {
-    if (!oldState) return;
-    if (Object.keys(newState).some((k) => oldState[k] !== newState[k])) {
-      fetchData(true);
-    }
-  },
-  { deep: true }
-);
 
-const fetchPluginTimer = ref(null);
-const fetchData = async (fetchTimelines = false) => {
+// Initial load only -- conversion state and plugin run updates are pushed in over the
+// live event stream afterwards (see stores/event_stream.js).
+const fetchData = async () => {
   await videoStore.fetchAll();
   await pluginRunStore.fetchAll({ addResults: false });
-  if (fetchTimelines) {
-    await timelineStore.fetchAll({ addResultsType: true });
-  }
 };
-
-const processingPollTimer = ref(null);
-const hasProcessingVideos = computed(() => {
-  return videos.value.some((v) => showProcessingCard(v));
-});
-watch(
-  hasProcessingVideos,
-  (newVal) => {
-    if (newVal) {
-      if (processingPollTimer.value) clearInterval(processingPollTimer.value);
-      processingPollTimer.value = setInterval(() => fetchData(), 2000);
-    } else if (processingPollTimer.value) {
-      clearInterval(processingPollTimer.value);
-      processingPollTimer.value = null;
-    }
-  },
-  { immediate: true }
-);
-onUnmounted(() => {
-  if (processingPollTimer.value) clearInterval(processingPollTimer.value);
-  if (fetchPluginTimer.value) clearInterval(fetchPluginTimer.value);
-});
 
 onMounted(() => {
   fetchData();
@@ -742,19 +801,6 @@ watch(
       fetchData();
     }
   }
-);
-watch(
-  () => pluginRunStore.pluginInProgress,
-  (newState) => {
-    if (newState) {
-      fetchPluginTimer.value = setInterval(() => {
-        fetchData();
-      }, 2000);
-    } else if (fetchPluginTimer.value) {
-      clearInterval(fetchPluginTimer.value);
-    }
-  },
-  { immediate: true }
 );
 
 const canWrite = (item) => {
@@ -876,6 +922,25 @@ watch(
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* Small "time remaining" tag pinned just above the card's progress bar. Own
+   background so it stays readable over a cover thumbnail. */
+.eta-caption {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 1;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.row-eta {
+  color: rgba(var(--v-theme-on-surface), 0.55);
 }
 
 .flip-container {

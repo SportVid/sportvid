@@ -94,6 +94,11 @@ class Video(models.Model):
         choices=[(k, v) for k, v in STATUS.items()],
         default=STATUS_DONE,
     )
+    # progress status for HLS conversion
+    progress = models.FloatField(default=0.0)
+    # smoothed estimate (seconds) of the conversion time still remaining; null while
+    # nothing has been reported yet or once the video is no longer being converted.
+    eta_seconds = models.FloatField(blank=True, null=True)
     date = models.DateTimeField(auto_now_add=True)
     # some extracted meta information
     fps = models.FloatField(blank=True, null=True)
@@ -128,10 +133,6 @@ class Video(models.Model):
             "height": self.height,
             "width": self.width,
             "num_timelines": len(Timeline.objects.filter(video=self)),
-            # Manually uploaded tracking data survives independently of the "posdata_convert"
-            # plugin run that processed it (e.g. once that run's history gets cleaned up via
-            # ModalStatus's delete panel), so the video-gallery status indicator needs this
-            # alongside plugin-run state to not flip back to "not done" for it.
             "has_tracking_data": TrackingData.objects.filter(video=self).exists(),
             "field_length": self.field_length,
             "field_width": self.field_width,
@@ -141,6 +142,8 @@ class Video(models.Model):
             "age_group": self.age_group,
             "sport": self.sport,
             "status": self.status,
+            "progress": self.progress,
+            "eta_seconds": self.eta_seconds,
             "processing": True if self.status == self.STATUS_PROCESSING else False,
         }
 
@@ -244,11 +247,19 @@ class PluginRun(models.Model):
     )
     
     date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now_add=True)
+    # auto_now so it actually moves on every .save(); the queryset-update progress path
+    # in analyser_client.py sets it explicitly since auto_now doesn't fire there.
+    update_date = models.DateTimeField(auto_now=True)
     type = models.CharField(max_length=256)
     progress = models.FloatField(default=0.0)
+    # smoothed estimate (seconds) of the run's remaining time; null until the analyser
+    # reports enough to extrapolate, and reset to null on QUEUED / DONE / ERROR.
+    eta_seconds = models.FloatField(blank=True, null=True)
     in_scheduler = models.BooleanField(default=False)
-
+    # TODO: Consider adding db_index=True to task_id if we ever query by it, and
+    # optionally add a validator for Celery task ID format.
+    task_id = models.CharField(max_length=256, blank=True, null=True) # associate PluginRun DB entry with Celery run_plugin task.
+    
     STATUS_UNKNOWN = "U"
     STATUS_ERROR = "E"
     STATUS_DONE = "D"
@@ -276,6 +287,7 @@ class PluginRun(models.Model):
             "date": self.date,
             "update_date": self.update_date,
             "progress": self.progress,
+            "eta_seconds": self.eta_seconds,
             "status": self.STATUS[self.status],
         }
         if include_refs_hashes:

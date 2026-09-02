@@ -7,19 +7,40 @@ import uuid
 from celery import shared_task
 from celery.exceptions import MaxRetriesExceededError
 from django.conf import settings
+from django.utils import timezone
 from typing import Any, Dict, List, Optional, Type
 from rest_framework import serializers
 
 from backend.models import (
     PluginRun,
     PluginRunResult,
-    Video, 
+    Video,
     SportVidUser,
 )
+from backend.utils.events import publish_plugin_run
 from data import DataManager
 
 
 logger = logging.getLogger(__name__)
+
+
+def _mark_running(plugin_run):
+    """Move a still-queued run to RUNNING with a sliver of progress and push it live.
+    Uses .update() (no post_save) so the event has to be sent explicitly.
+    """
+    if plugin_run is None or plugin_run.status == PluginRun.STATUS_RUNNING:
+        return
+    PluginRun.objects.filter(id=plugin_run.id).update(
+        status=PluginRun.STATUS_RUNNING,
+        progress=max(plugin_run.progress or 0.0, 0.01),
+        update_date=timezone.now(),
+    )
+    plugin_run.status = PluginRun.STATUS_RUNNING
+    plugin_run.progress = max(plugin_run.progress or 0.0, 0.01)
+    try:
+        publish_plugin_run(plugin_run)
+    except Exception:
+        logger.warning("Failed to publish plugin run RUNNING event", exc_info=True)
 
 
 class PluginManager:
@@ -49,9 +70,10 @@ class PluginManager:
 
     @staticmethod
     def _stringify_uuids(value: Any) -> Any:
-        # DRF's UUIDField yields a native uuid.UUID in validated_data, but the
-        # analyser gRPC client only knows how to serialize bool/int/float/str/dict
-        # parameter values -- an unconverted UUID trips its "unsupported type" path.
+        """ DRF's UUIDField yields a native uuid.UUID in validated_data.
+        However, the analyser gRPC client only knows how to serialize bool/int/float/str/dict param values.
+        An unconverted UUID trips its "unsupported type" path.
+        """
         if isinstance(value, uuid.UUID):
             return value.hex
         if isinstance(value, dict):
@@ -63,15 +85,16 @@ class PluginManager:
     @classmethod
     def validate_parameters(cls, plugin: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         parameters = parameters or {}
+        
         # logging.error(f'pre validation params: {parameters}')
 
         serializer_cls = cls.get_serializer(plugin)
-        if serializer_cls is None:
-            return parameters
+        if serializer_cls is None: return parameters
 
         serializer = serializer_cls(data=parameters or {})
         serializer.is_valid(raise_exception=True)
         val_params = cls._stringify_uuids(dict(serializer.validated_data))
+        
         # logging.error(f'validated params: {val_params}')
 
         return val_params
@@ -148,15 +171,10 @@ class PluginManager:
                 type=plugin,
                 status=PluginRun.STATUS_QUEUED,
             )
-            # Exposed to callers (see views/plugin_run.py::PluginRunNew) so the frontend can
-            # track/wait on this specific run without guessing which newly-appeared row is
-            # "the" one -- needed e.g. to sequence team_clustering/osnet_reid after their
-            # prerequisite object_tracker run finishes. Must be .hex (no dashes), matching
-            # PluginRun.to_dict()'s "id" (self.id.hex, see models.py) -- that's the id format
-            # /plugin/run/list actually keys pluginRunStore.state.pluginRuns by on the
-            # frontend; str(plugin_run.id) here would produce dashed-UUID keys that never
-            # match, so waitForDone() would wait on a key that's never populated.
+            # Returns the plugin_run_id (hex) for the frontend to track the run.
             result["plugin_run_id"] = plugin_run.id.hex
+            # API response for starting a plugin run includes full plugin_run entry.
+            result["entry"] = plugin_run.to_dict()
 
         task_payload = {
             "plugin": plugin,
@@ -169,9 +187,12 @@ class PluginManager:
         }
         
         if run_async:
-            run_plugin.apply_async(args=[task_payload])
+            task = run_plugin.apply_async(args=[task_payload])
+            if plugin_run is not None:
+                PluginRun.objects.filter(id=plugin_run.id).update(task_id=task.id)
             return result
 
+        _mark_running(plugin_run)
         try:
             plugin_result = self._plugins[plugin]()(
                 parameters,
@@ -183,6 +204,7 @@ class PluginManager:
             )
             if plugin_run is not None:
                 plugin_run.progress = 1.0
+                plugin_run.eta_seconds = None
                 plugin_run.status = PluginRun.STATUS_DONE
                 plugin_run.save()
 
@@ -197,6 +219,7 @@ class PluginManager:
         except Exception:
             logger.exception(f"Failed to run plugin {plugin_run.type}")
             if plugin_run is not None:
+                plugin_run.eta_seconds = None
                 plugin_run.status = PluginRun.STATUS_ERROR
                 plugin_run.save()
             result["status"] = False
@@ -258,20 +281,34 @@ def run_plugin(self, args):
     video_db = Video.objects.get(id=video)
     user_db = SportVidUser.objects.get(id=user)
     
+    # TODO: Race between task start and deletion. DoesNotExist guard is not enough.
+    # There is still a small window where the task starts, reads the run, and then the run is deleted before progress writes.
+    # Also, there is no explicit handling for "deleted but task started".
+    # Task will write progress to a non-existent run if it was deleted after the initial lookup.
+    # --> Consider checking existence periodically or before each progress write.
+    # --> Opt.: Mark runs as "cancelling" instead of deleting immediately, then clean up later.
     plugin_run_db = None
     if not dry_run and plugin_run is not None:
-        plugin_run_db = PluginRun.objects.get(id=plugin_run)
-
-        # Some plugins take another plugin_run's id as input (object_tracker_id for
+        try:
+            plugin_run_db = PluginRun.objects.get(id=plugin_run)
+        except PluginRun.DoesNotExist:
+            # Handles race where plugin run is queued and the user deletes it.
+            # DB row is deleted and celery eventually starts the already-dispatched task.
+            # Instead of failing with DoesNotExist, task exits without starting analyser work.
+            logger.info("PluginRun %s deleted before it started, skipping", plugin_run)
+            return
+        # NOTE: Some plugins take another plugin_run's id as input (object_tracker_id for
         # team_clustering/osnet_reid, object_tracker_run_id for kpi_computation) and need that
         # run's *results*, not just its id -- submitting them while it's still QUEUED/RUNNING
-        # crashes. The frontend (ModalPositionDataCreate.vue) submits Team Assignment/Re-ID
+        # crashes.
+        # The frontend (ModalPositionDataCreate.vue) submits Team Assignment/Re-ID
         # right alongside a freshly-started Object Tracker run rather than waiting around for
         # it client-side, so this reschedules itself via Celery's own retry until the
         # dependency is DONE (or gives up if it errors/never finishes). Checked *before* the
         # in_scheduler guard below on purpose: that flag is a one-shot "already picked up"
         # marker, so setting it first would make our own retry cancel itself the moment it
         # fires back up.
+        # TODO: Is there a better way to handle dependencies for a plugin run instead of hard-coding params names?
         dependency_id = next(
             (
                 parameters[name]
@@ -317,7 +354,12 @@ def run_plugin(self, args):
             plugin_run_db.status = PluginRun.STATUS_ERROR
             plugin_run_db.save()
         return
-    
+
+    # The worker has the job now -- flip it to RUNNING before the (possibly slow) video
+    # upload to the analyser, so the UI shows a moving bar instead of sitting on QUEUED
+    # the whole time. Analyser-side progress is pushed from here on (analyser_client.py).
+    _mark_running(plugin_run_db)
+
     try:
         plugin_result = plugin_cls()(
             parameters=parameters,
@@ -336,11 +378,13 @@ def run_plugin(self, args):
 
         if plugin_run_db is not None:
             plugin_run_db.progress = 1.0
+            plugin_run_db.eta_seconds = None
             plugin_run_db.status = PluginRun.STATUS_DONE
             plugin_run_db.save()
 
     except Exception:
         logger.exception("Plugin run failed for %s", plugin)
         if plugin_run_db is not None:
+            plugin_run_db.eta_seconds = None
             plugin_run_db.status = PluginRun.STATUS_ERROR
             plugin_run_db.save()

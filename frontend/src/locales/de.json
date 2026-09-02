@@ -1147,5 +1147,8 @@
         "three_bottom": "Dreipunkt Unten"
       }
     }
+  },
+  "progress": {
+    "eta": "noch {time}"
   }
 }

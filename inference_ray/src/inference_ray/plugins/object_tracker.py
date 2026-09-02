@@ -120,16 +120,29 @@ class ObjectTracker(
                         device="cuda",
                     )
                 # -------> detect & track
-                #for frame_id, _frame in enumerate(video_batcher, start=0):
+                total_frames = len(video_decoder)
+                last_reported = 0.0
+
                 for frame_id, _frame in enumerate(video_decoder):
                     preproced_outputs = self.detector.preprocess(_frame)
                     _ = self.detector.run_inference(preproced_outputs)
+                    # NOTE: Since detection dominates the runtime, it owns almost the whole progress bar.
+                    if total_frames:
+                        now = time.time()
+                        if now - last_reported >= 1.0: # reported at most once a second
+                            last_reported = now
+                            # every write crosses into the shared-memory dict the analyser server polls
+                            self.update_callbacks(
+                                callbacks,
+                                progress=min((frame_id + 1) / total_frames, 1.0) * 0.9,
+                            )
 
                 tracker_inputs = {
                     'detections': self.detector.state,
                     'image_shape': (self.detector.h, self.detector.w), 
                     'det_shape': self.detector.det_shape,
                 }
+                self.update_callbacks(callbacks, progress=0.9)
                 if self.tracker:
                     _ = self.tracker.process(tracker_inputs)  # TODO: check performance for 90m+ video footage.
                     # NOTE: Creates a tracklet to detection class mapping.

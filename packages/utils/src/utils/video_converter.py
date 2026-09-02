@@ -1,81 +1,147 @@
-import ffmpeg
-import subprocess
-import logging
+from __future__ import annotations
 
-def convert_to_hls(file_in, manifest_path, asynchronous = True, **kwargs):
-    """
-    Start HLS conversion using the ffmpeg python wrapper.
-    Returns a running subprocess (via Popen).
-    Caller is responsible for waiting on the subprocess & handling termination.
-    """
-    input_stream = ffmpeg.input(
-        file_in,
-        # NOTE: offloads encoding to the GPU via CUDA.
-        # hwaccel=kwargs.get("hwaccel"),
-        # hwaccel_output_format=kwargs.get("hwaccel_output_format"),    
-    )  
-    
+import logging
+import os
+import signal
+import subprocess
+import ffmpeg
+from collections.abc import Mapping
+from typing import Any
+
+
+logger = logging.getLogger(__name__)
+
+
+def terminate_process_group(
+    process: subprocess.Popen[str],
+    grace_seconds: float = 10.0,
+) -> None:
+    """Terminate FFmpeg and any children started in its process group."""
+    if process.poll() is not None: return
+
+    try: os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError: return
+
+    try:
+        process.wait(timeout=grace_seconds)
+        return
+    except subprocess.TimeoutExpired: pass
+
+    try: os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError: return
+
+    try: process.wait()
+    except ChildProcessError: pass
+
+
+def _build_command(
+    file_in: str,
+    manifest_path: str,
+    kwargs: Mapping[str, Any],
+) -> list[str]:
+    input_kwargs: dict[str, Any] = {}
+
+    # TODO: Defining these offloads encoding to the GPU via CUDA.
+    # Didn't work for me, so I disabled GPU-based encoding.
+    input_args = [
+        # "hwaccel",
+        # "hwaccel_output_format",
+        # "extra_hw_frames",
+    ]
+    for name in input_args:
+        value = kwargs.get(name)
+        if value is not None: input_kwargs[name] = value
+
+    input_stream = ffmpeg.input(file_in, **input_kwargs)
     output_kwargs = {
         "format": kwargs.get("format", "hls"),
         "threads": kwargs.get("threads"),
         "start_number": 0,
-        "hls_time": kwargs.get("hls_time", kwargs.get("segment_time", 5)),
+        "hls_time": kwargs.get("hls_time",
+            kwargs.get("segment_time", 5),
+        ),
         "hls_list_size": kwargs.get("hls_list_size", 0),
-        "hls_playlist_type": kwargs.get("hls_playlist_type", "vod"),
-        "hls_segment_type": kwargs.get("hls_segment_type", "mpegts"),
-        "hls_flags": kwargs.get("hls_flags", "independent_segments"),
+        "hls_playlist_type": kwargs.get("hls_playlist_type",
+            "vod",
+        ),
+        "hls_segment_type": kwargs.get("hls_segment_type",
+            "mpegts",
+        ),
+        "hls_flags": kwargs.get("hls_flags",
+            "independent_segments",
+        ),
         "hls_segment_filename": kwargs.get("hls_segment_filename"),
+        "hls_fmp4_init_filename": kwargs.get("hls_fmp4_init_filename"),
         "vcodec": kwargs.get("vcodec"),
         "acodec": kwargs.get("acodec"),
         "audio_bitrate": kwargs.get("audio_bitrate"),
         "preset": kwargs.get("preset"),
-        "crf": kwargs.get("crf", 23),
-        "rc": kwargs.get("rc", "vbr"),
-        "cq": kwargs.get("cq", 23),
+        "crf": kwargs.get("crf"),
+        "rc": kwargs.get("rc"),
+        "cq": kwargs.get("cq"),
         "g": kwargs.get("g", kwargs.get("gop")),
-        "keyint_min": kwargs.get("keyint_min", kwargs.get("g", kwargs.get("gop"))),
-        "sc_threshold": kwargs.get("sc_threshold", 0), # NOTE: x264 encoder lib option
+        "keyint_min": kwargs.get("keyint_min",
+            kwargs.get("g", kwargs.get("gop")),
+        ),
+        "sc_threshold": kwargs.get("sc_threshold"),
         "pix_fmt": kwargs.get("pix_fmt"),
         "movflags": kwargs.get("movflags"),
+        "bf": kwargs.get("bf"),
+        "surfaces": kwargs.get("surfaces"),
     }
-    
-    output_kwargs = {k: v for k, v in output_kwargs.items() if v is not None}
 
-    output_stream = ffmpeg.output(input_stream, manifest_path, **output_kwargs)
+    output_kwargs = {
+        key: value
+        for key, value in output_kwargs.items()
+        if value is not None
+    }
+
+    output_stream = ffmpeg.output(
+        input_stream,
+        manifest_path,
+        **output_kwargs,
+    )
     output_stream = ffmpeg.overwrite_output(output_stream)
-    
-    cmd = [str(x) for x in ffmpeg.compile(output_stream)]
-    cmd.insert(1, "-nostdin")
-    cmd.insert(2, "-loglevel")
-    cmd.insert(3, "error")
 
-    # print("FFmpeg command:", " ".join(cmd))
+    command = [str(value) for value in ffmpeg.compile(output_stream)]
+    if not command: raise RuntimeError("FFmpeg command was empty.")
 
-    if asynchronous:
-        return subprocess.Popen(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        #     return ffmpeg.run_async(
-        #         output_stream, 
-        #         quiet=False,
-        #         pipe_stderr=True,
-        #         pipe_stdout=False,
-        #         pipe_stdin=False
-        #     )
-    else:
-        completed = subprocess.run(
-            cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=False,
-        )
-        if completed.returncode != 0:
-            raise RuntimeError(f"ffmpeg exited with code {completed.returncode}: {completed.stderr}")
-        return completed
+    base = [
+        command[0],
+        "-progress",
+        "pipe:1",
+        "-nostdin",
+        "-hide_banner",
+        "-loglevel",
+        str(kwargs.get("loglevel", "warning")),
+        *command[1:]   
+    ]
     
+    return base
+
+
+def convert_to_hls(
+    file_in: str,
+    manifest_path: str,
+    **kwargs: Any,
+) -> subprocess.Popen[str] | subprocess.CompletedProcess[str]:
+    """Convert a media file to HLS using FFmpeg.
+
+    Returns a running Popen instance. 
+    FFmpeg's stderr is inherited by the worker/container logger, avoiding a pipe-buffer
+    deadlock. The process starts in its own session so callers can terminate
+    its entire process group using `terminate_process_group`.
+    
+    Caller must drain stdout to avoid blocking FFmpeg.
+    """
+    command = _build_command(file_in, manifest_path, kwargs)
+    logger.debug("FFmpeg command: %s", " ".join(command))
+
+    return subprocess.Popen(
+        command,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=None,
+        start_new_session=True,
+        text=True,
+    )

@@ -1,5 +1,5 @@
-from typing import Dict, List
 import logging
+from typing import Dict, List
 
 from backend.models import (
     PluginRun,
@@ -7,25 +7,12 @@ from backend.models import (
     Video
 )
 from backend.plugin_manager import PluginManager
-
 from ..utils.analyser_client import TaskAnalyserClient
 from data import DataManager
 from backend.utils.task import Task
 from django.db import transaction
 from django.conf import settings
 
-
-""" NOTE: Frontend should send params as a JSON body in this format:
-    {
-        "fps": 30,
-        "detector": "yolox",
-        "tracker": "bytetrack",
-        "parameters" : { 
-            "detector_params":  {"option1": "foo", "option2": "bar", ...},
-            "tracker_params":   {"option1" : "foo", "option2": "bar", ...}
-        }
-    }
-"""
 
 @PluginManager.export_plugin("object_tracker")
 class ObjectTracker(Task):
@@ -52,8 +39,10 @@ class ObjectTracker(Task):
             manager=manager,
         )
         video_id = self.upload_video(client, video)
+        if plugin_run is not None:
+            plugin_run.progress = 0.05
+            plugin_run.save()
         
-        logging.error(f'TASK PARAMS: {parameters}')
         tracker_result = self.run_analyser(
             client,
             "object_tracker",
@@ -61,6 +50,8 @@ class ObjectTracker(Task):
             inputs={"video": video_id},
             outputs=["tracklets"],
             downloads=["tracklets"],
+            plugin_run=plugin_run,
+            progress_range=(0.05, 0.95),
         )
 
         if plugin_run is not None:
