@@ -1,17 +1,10 @@
 """Cross-service plugin-progress channel.
 
 The analyser gRPC server hands each plugin run a ``job_id`` and then can only make a
-single blocking HTTP call to Ray Serve for the result -- there is no return path for
-incremental progress. This bridges that gap over the valkey instance that is already
-in the stack (celery broker + SSE bus):
+single blocking HTTP call to Ray Serve for the result.
 
-    Ray deployment  --write-->  valkey  key: analyser:progress:<job_id>
-    analyser GetPluginStatus  --read-->  reports it to the backend
-
-Every function here is best-effort and never raises: a progress channel hiccup must
-not break a plugin run or the status endpoint.
+Valkey is used in to store the progress of each ray deployment.
 """
-
 import os
 import logging
 
@@ -41,10 +34,8 @@ def _get_client():
     )
     return _client
 
-
 def progress_key(job_id: str) -> str:
     return f"{_KEY_PREFIX}:{job_id}"
-
 
 def publish_progress(job_id: str, progress) -> None:
     """Store 0..1 progress for ``job_id`` (with a TTL so stale keys expire)."""
@@ -55,7 +46,6 @@ def publish_progress(job_id: str, progress) -> None:
         _get_client().set(progress_key(job_id), repr(value), ex=_TTL_SECONDS)
     except Exception:
         logger.debug("progress publish failed for %s", job_id, exc_info=True)
-
 
 def read_progress(job_id: str):
     """Return stored progress as a 0..1 float, or ``None`` if unknown/unavailable."""
@@ -71,7 +61,6 @@ def read_progress(job_id: str):
     except Exception:
         logger.debug("progress read failed for %s", job_id, exc_info=True)
         return None
-
 
 def clear_progress(job_id: str) -> None:
     if not job_id:

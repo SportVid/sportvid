@@ -425,10 +425,8 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
             )
             response.status = status
 
-            progress = job_data["shared"].get("progress", 0.0)
-            # The plugin runs inside a Ray deployment; its incremental progress comes
-            # back over valkey (see main.py / utils.progress_channel) rather than the
-            # in-process `shared` dict, which stays at 0 until the blocking call returns.
+            progress = job_data["shared"].get("progress", 0.0) # read via valkey (see, utils.progress_channel.py)
+            
             bridged = read_progress(request.id)
             if bridged is not None:
                 progress = max(progress, bridged)

@@ -24,7 +24,6 @@ from backend.utils.eta import EtaEstimator
 
 logger = logging.getLogger(__name__)
 
-_POLL_INTERVAL = 2.0  # seconds between cancellation checks (fallback)
 _DELETE_CHECK_INTERVAL = 5.0
 _PROGRESS_STEP = 0.01  # only report conversion progress once it moved by at least 1%
 
@@ -74,7 +73,7 @@ def cleanup_upload_orphans(self):
             logger.info(f"Removed orphan: {file_path}")
 
 def _report_conversion_progress(video_id_hex, progress, eta_seconds=None):
-    """Persist & push HLS conversion progress (and the estimated time remaining).
+    """Persist & push HLS conversion progress (including ETA).
     Uses the Queryset update on purpose, since the video may have been deleted mid-conversion.
     """
     progress = max(0.0, min(1.0, progress))
@@ -286,9 +285,8 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         last_delete_check = 0.0
         last_reported = 0.0
         cancelled = False
-        # Times the encode from here (the moment ffmpeg actually starts producing
-        # output), not from task pickup, so the ETA isn't skewed by queue wait.
-        eta_estimator = EtaEstimator()
+    
+        eta_estimator = EtaEstimator() # time ETA from here
 
         # listener thread reacts to VideoDelete and publishes a cancel request for this video to kill ffmpeg immediately
         # TODO: cancellation relies on Valkey
@@ -328,8 +326,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                             if progress - last_reported >= _PROGRESS_STEP:
                                 last_reported = progress
                                 # ETA is estimated against the true encode fraction so it
-                                # predicts when ffmpeg finishes, not when the scaled bar
-                                # would reach 100%.
+                                # predicts when ffmpeg finishes, not when the scaled bar would reach 100%.
                                 _report_conversion_progress(
                                     video_id_hex,
                                     progress,
@@ -349,7 +346,6 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                                 cancelled = True
                                 terminate_process_group(ffmpeg_proc)
                                 break
-                                # Drain any remaining stdout after FFmpeg exits.
                 # drains any remaining stdout after FFmpeg exits.
                 rest = ffmpeg_proc.stdout.read()
                 if rest:
@@ -384,9 +380,6 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 )
             media_path_for_db = segment_candidates[0]
         
-        # Encode is done; archive packing has no progress of its own. Nudge the bar off
-        # the 95% it stalled at and drop the ETA so the frontend shows "finishing up"
-        # (a solid bar near full) rather than a frozen number.
         _report_conversion_progress(video_id_hex, 0.97, None)
 
         # NOTE: Creates the archive to be transfered.
@@ -420,7 +413,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 f"Video disappeared before completion: {video_id_hex}"
             )
 
-        # Queryset .update() doesn't fire post_save --> push the "done" state explicitly
+        # Queryset .update() doesn't fire post_save --> push the "done" state explicitly,
         # so the gallery card resolves itself without a reload.
         publish_video(video_id_hex)
 
@@ -430,17 +423,9 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             video_id_hex,
         )
 
-        # Kick off the automatic cover-thumbnail run now that the video is playable.
-        # The gallery card stays in its "processing" look until a "thumbnail" plugin
-        # run exists and finishes (VideoView.vue), so without this trigger the card
-        # gets stuck on "video is being processed" until a manual reload.
-        # These go through run_plugin on the default "io" queue -- thumbnail_generator
-        # is CPU-only on the analyser side (inference_ray/deploy*.yml), so there is
-        # nothing to gain from the "gpu" queue the conversion itself runs on.
         if video_db is not None and video_db.owner_id is not None:
             plugin_manager = PluginManager()
-            # "thumbnail" always; plus any analyzers the upload asked for. dict.fromkeys
-            # dedupes while keeping order in case "thumbnail" is passed explicitly.
+            # always runs "thumbnail"; plus any analyzers the upload asked for.
             for plugin in dict.fromkeys(["thumbnail", *(analyzers or [])]):
                 if not plugin:
                     continue
