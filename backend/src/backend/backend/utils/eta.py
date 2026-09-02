@@ -1,14 +1,3 @@
-"""Shared "time remaining" estimator for long-running jobs (HLS conversion, plugin runs).
-
-The backend never gets a per-iteration tick from ffmpeg or the analyser -- only a
-coarse 0..1 progress fraction every second or so. This turns that into a smoothed
-seconds-remaining number the same way tqdm does: keep an exponential moving average of
-the progress *rate* and extrapolate it over the remaining fraction. Feed it whenever
-progress moves; it returns ``None`` until the estimate is meaningful, so callers can
-persist ``eta_seconds = None`` and the frontend knows to keep showing the
-indeterminate ("starting up") bar.
-"""
-
 import time
 
 
@@ -33,14 +22,12 @@ class EtaEstimator:
         progress = max(0.0, min(1.0, float(progress)))
         now = self._clock()
         if self._last_progress is None:
-            # First observation is only a starting point -- a rate needs two.
             self._last_t = now
             self._last_progress = progress
             return None
         dt = now - self._last_t
         dp = progress - self._last_progress
-        # Only learn from genuine forward motion -- progress is monotonic upstream, and
-        # a zero/negative delta would just be noise from an unchanged poll.
+
         if dt > 0 and dp > 0:
             inst_rate = dp / dt
             if self._rate is None:
