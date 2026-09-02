@@ -1,12 +1,10 @@
 <template>
-  <!-- Loading covers both stages: still loading position data itself (posdataWorkerStore), or
-       position data is there but a kpi_computation run for it is still in flight
-       (kpiComputationActive, triggered from PositionDataMenu's Compute KPIs button below). -->
+  <!-- Loading position data itself -- same pattern as TabWindowHeatmap.vue. A kpi_computation
+       run still in flight (triggered from PositionDataMenu's Compute KPIs button below) is
+       deliberately NOT tracked here -- that's what ModalStatus is for; this card just stays on
+       its PositionDataMenu empty state below until hasKpiData flips true. -->
   <div
-    v-if="
-      !hasKpiData &&
-      (posdataWorkerStore.isLoading || visualizationStore.isLoadingKpi || kpiComputationActive)
-    "
+    v-if="!hasKpiData && (posdataWorkerStore.isLoading || visualizationStore.isLoadingKpi)"
     class="kpi-loading-card"
   >
     <div class="kpi-spinner"><i class="mdi mdi-loading mdi-spin" /></div>
@@ -16,9 +14,6 @@
           ? `${posdataWorkerStore.loadProgress}%`
           : ""
       }}
-    </div>
-    <div v-else-if="kpiComputationActive" class="kpi-loading-text">
-      {{ kpiComputationProgressText }}
     </div>
   </div>
 
@@ -370,6 +365,19 @@
                   </v-list-item>
                 </template>
                 <v-list class="py-0" density="compact">
+                  <!-- Drops the current selection so this card falls back to its own
+                       PositionDataMenu (create/upload/select) -- lets the user generate a
+                       fresh run right here instead of having to go back to VideoView and
+                       reopen the video just to get back to that empty state. -->
+                  <v-list-item
+                    v-if="canWrite"
+                    class="menu-item"
+                    @click="positionDataStore.resetPositionData()"
+                  >
+                    <v-list-item-title>
+                      {{ $t("position_data.display_settings.position_data.create_new") }}
+                    </v-list-item-title>
+                  </v-list-item>
                   <v-list-item
                     v-if="canWrite"
                     class="menu-item"
@@ -515,7 +523,10 @@
           :key="teamId"
           class="team-card"
           outlined
-          :style="{ backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.8) }"
+          :style="{
+            backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.8),
+            color: getContrastColor(visualizationStore.getTeamColor(teamId), 0.8),
+          }"
         >
           <v-card-title class="text-center mt-n1">{{ getTeamName(teamId) }}</v-card-title>
 
@@ -528,7 +539,10 @@
                 backgroundColor: selectedPlayerIds.has(p.playerId)
                   ? toRgb(playerColors[p.playerId], 0)
                   : toRgb(playerColors[p.playerId], 0.6),
-                color: selectedPlayerIds.has(p.playerId) ? '#fff' : '#222',
+                color: getContrastColor(
+                  playerColors[p.playerId],
+                  selectedPlayerIds.has(p.playerId) ? 0 : 0.6
+                ),
                 borderColor: selectedPlayerIds.has(p.playerId)
                   ? toRgb(playerColors[p.playerId], 0)
                   : toRgb(playerColors[p.playerId], 0.6),
@@ -554,6 +568,7 @@
                 <tr
                   :style="{
                     backgroundColor: toRgb(visualizationStore.getTeamColor(item.team_id), 0.6),
+                    color: getContrastColor(visualizationStore.getTeamColor(item.team_id), 0.6),
                   }"
                 >
                   <td v-for="col in columns" :key="col.key">
@@ -571,6 +586,7 @@
                   :style="{
                     fontWeight: 'bold',
                     backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
+                    color: getContrastColor(visualizationStore.getTeamColor(teamId), 0.45),
                   }"
                 >
                   <td>{{ $t("visualization.kpi.player_view.best") }}</td>
@@ -582,6 +598,7 @@
                   :style="{
                     fontWeight: 'bold',
                     backgroundColor: toRgb(visualizationStore.getTeamColor(teamId), 0.45),
+                    color: getContrastColor(visualizationStore.getTeamColor(teamId), 0.45),
                   }"
                 >
                   <td>{{ $t("visualization.kpi.player_view.total") }}</td>
@@ -611,7 +628,10 @@
           :key="teamRow.team_id"
           class="team-card"
           outlined
-          :style="{ backgroundColor: toRgb(visualizationStore.getTeamColor(teamRow.team_id), 0.8) }"
+          :style="{
+            backgroundColor: toRgb(visualizationStore.getTeamColor(teamRow.team_id), 0.8),
+            color: getContrastColor(visualizationStore.getTeamColor(teamRow.team_id), 0.8),
+          }"
         >
           <v-card-title class="text-center mt-n1">{{ getTeamName(teamRow.team_id) }}</v-card-title>
 
@@ -624,7 +644,10 @@
                 backgroundColor: selectedPlayerIds.has(p.playerId)
                   ? toRgb(playerColors[p.playerId], 0)
                   : toRgb(playerColors[p.playerId], 0.6),
-                color: selectedPlayerIds.has(p.playerId) ? '#fff' : '#222',
+                color: getContrastColor(
+                  playerColors[p.playerId],
+                  selectedPlayerIds.has(p.playerId) ? 0 : 0.6
+                ),
                 borderColor: selectedPlayerIds.has(p.playerId)
                   ? toRgb(playerColors[p.playerId], 0)
                   : toRgb(playerColors[p.playerId], 0.6),
@@ -650,6 +673,7 @@
                 <tr
                   :style="{
                     backgroundColor: toRgb(visualizationStore.getTeamColor(teamRow.team_id), 0.6),
+                    color: getContrastColor(visualizationStore.getTeamColor(teamRow.team_id), 0.6),
                   }"
                 >
                   <td><span v-html="item.label" /></td>
@@ -705,7 +729,7 @@
                   ? toRgb(visualizationStore.getTeamColor(teamId), 0)
                   : 'transparent',
                 color: isTeamFullySelected(teamId)
-                  ? '#fff'
+                  ? getContrastColor(visualizationStore.getTeamColor(teamId), 0)
                   : toRgb(visualizationStore.getTeamColor(teamId), 0),
                 borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
               }"
@@ -722,7 +746,10 @@
                 backgroundColor: selectedPlayerIds.has(p.playerId)
                   ? toRgb(playerColors[p.playerId], 0)
                   : toRgb(playerColors[p.playerId], 0.6),
-                color: selectedPlayerIds.has(p.playerId) ? '#fff' : '#222',
+                color: getContrastColor(
+                  playerColors[p.playerId],
+                  selectedPlayerIds.has(p.playerId) ? 0 : 0.6
+                ),
                 borderColor: selectedPlayerIds.has(p.playerId)
                   ? toRgb(playerColors[p.playerId], 0)
                   : toRgb(playerColors[p.playerId], 0.6),
@@ -748,7 +775,7 @@
                 ? toRgb(visualizationStore.getTeamColor(teamId), 0)
                 : 'transparent',
               color: isTeamFullySelected(teamId)
-                ? '#fff'
+                ? getContrastColor(visualizationStore.getTeamColor(teamId), 0)
                 : toRgb(visualizationStore.getTeamColor(teamId), 0),
               borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
             }"
@@ -765,7 +792,10 @@
               backgroundColor: selectedPlayerIds.has(p.playerId)
                 ? toRgb(playerColors[p.playerId], 0)
                 : toRgb(playerColors[p.playerId], 0.6),
-              color: selectedPlayerIds.has(p.playerId) ? '#fff' : '#222',
+              color: getContrastColor(
+                playerColors[p.playerId],
+                selectedPlayerIds.has(p.playerId) ? 0 : 0.6
+              ),
               borderColor: selectedPlayerIds.has(p.playerId)
                 ? toRgb(playerColors[p.playerId], 0)
                 : toRgb(playerColors[p.playerId], 0.6),
@@ -791,7 +821,6 @@ import { useVideoStore } from "@/stores/video";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { useTabStore } from "@/stores/tabs";
 import { useUserStore } from "@/stores/user";
-import { usePluginRunStore } from "@/stores/plugin_run";
 import VisualizationTimeSelector from "@/components/visualization/VisualizationTimeSelector.vue";
 import KpiChart from "@/components/kpi/KpiChart.vue";
 import ZoneSelectorPicker from "@/components/kpi/ZoneSelectorPicker.vue";
@@ -801,7 +830,7 @@ import ModalPositionDataEntityColors from "@/components/position-data/ModalPosit
 import ModalPositionDataOffset from "@/components/position-data/ModalPositionDataOffset.vue";
 import PositionDataMenu from "@/components/position-data/PositionDataMenu.vue";
 import { useI18n } from "vue-i18n";
-import { toRgb } from "@/plugins/helpers";
+import { toRgb, getContrastColor } from "@/plugins/helpers";
 import { debounce } from "lodash";
 import { isInSportZone, allSportZones } from "@/plugins/sport_zones";
 
@@ -821,7 +850,6 @@ const videoStore = useVideoStore();
 const posdataWorkerStore = usePosdataWorkerStore();
 const tabStore = useTabStore();
 const userStore = useUserStore();
-const pluginRunStore = usePluginRunStore();
 
 const { t } = useI18n();
 
@@ -1383,25 +1411,6 @@ const hasKpiData = computed(
     typeof visualizationStore.kpiData === "object" &&
     Object.keys(visualizationStore.kpiData).length > 0
 );
-
-// Still needed for the loading-spinner branch above even though the Compute KPIs trigger
-// itself now lives in PositionDataMenu -- see usePositionDataStatus for the equivalent
-// disabled-Select-button state that drives PositionDataMenu's own empty state.
-const kpiRunsForVideo = computed(() =>
-  pluginRunStore.forVideo(playerStore.videoId).filter((e) => e.type === "kpi_computation")
-);
-const kpiComputationRun = computed(() => {
-  const runs = kpiRunsForVideo.value.slice().sort((a, b) => new Date(b.date) - new Date(a.date));
-  return runs[0] || null;
-});
-const kpiComputationActive = computed(() =>
-  ["RUNNING", "QUEUED", "WAITING"].includes(kpiComputationRun.value?.status)
-);
-const kpiComputationProgressText = computed(() => {
-  const run = kpiComputationRun.value;
-  if (!run || run.progress == null) return "";
-  return `${Math.round(run.progress * 100)}%`;
-});
 
 const getTeamName = (teamId) => {
   const meta = topViewStore.metaDataTopView;

@@ -36,6 +36,35 @@ class AnalyserProgressCallback(AnalyserPluginCallback):
         self.shared_memory["progress"] = progress
 
 
+class ValkeyProgressCallback(AnalyserPluginCallback):
+    """Publishes plugin progress to the shared valkey channel keyed by job_id, so the
+    analyser's GetPluginStatus can report it back to the backend (utils.progress_channel).
+
+    Throttled on the value delta so a per-frame callback on a long video doesn't hammer
+    valkey; 1.0 is always flushed.
+    """
+
+    def __init__(self, job_id, min_delta: float = 0.01) -> None:
+        self._job_id = job_id
+        self._min_delta = min_delta
+        self._last = -1.0
+
+    def update(self, progress=0.0, **kwargs):
+        try:
+            progress = max(0.0, min(1.0, float(progress)))
+        except (TypeError, ValueError):
+            return
+        if progress < 1.0 and progress - self._last < self._min_delta:
+            return
+        self._last = progress
+        try:
+            from utils.progress_channel import publish_progress
+
+            publish_progress(self._job_id, progress)
+        except Exception:
+            logging.debug("ValkeyProgressCallback publish failed", exc_info=True)
+
+
 class AnalyserPlugin(Plugin):
     @classmethod
     def __init_subclass__(
@@ -198,6 +227,8 @@ class AnalyserPluginManager(Manager):
 
         return plugin_to_run(config)
 
+    # TODO: Add explicit timeouts to http.post() and ensure long-running plugin
+    # implementations periodically check cancel_event to exit early.
     def __call__(
         self,
         plugin: str,
@@ -205,7 +236,15 @@ class AnalyserPluginManager(Manager):
         data_manager: DataManager,
         parameters: Dict = None,
         callbacks: Callable = None,
+        cancel_event=None,
+        session=None,
+        job_id=None,
     ):
+        # check cancellation before work
+        if cancel_event is not None and cancel_event.is_set():
+            logging.info(f"[AnalyserPluginManager] '{plugin}' aborted before it started.")
+            return []
+
         plugins = {x["plugin"]: x for x in self.plugin_status()}
 
         if plugin not in plugins:
@@ -214,17 +253,30 @@ class AnalyserPluginManager(Manager):
 
         plugin_to_run = plugins[plugin]
 
+        # NOTE: Uses an injected HTTP session or the module-level requests object.
+        # `session` (a requests.Session), when given, is what `abort_plugin()` closes
+        # from another thread to force this call to unblock (see, analyser/server.py).
+        # Falls back to the plain `requests` module for callers that don't need that
+        # (e.g. the CLI client), which behaves the same for a single call.
+        http = session if session is not None else requests
+
         # logging.info(f"{self.base_url}{plugin_to_run['route']}", flush=True)
         try:
-            results = requests.post(
+            results = http.post(
                 f"{self.base_url}{plugin_to_run['route']}",
                 json={
                     "inputs": {x: y.id for x, y in inputs.items()},
                     "parameters": parameters,
+                    # carried so the Ray deployment can report progress back over
+                    # valkey under this id (see main.py / utils.progress_channel).
+                    "job_id": job_id,
                 },
             )
-        except:
-            logging.error("[AnalyserPluginMananger]: Can't start plugin on the ray server.")
+        except Exception:
+            if cancel_event is not None and cancel_event.is_set():
+                logging.info(f"[AnalyserPluginManager] '{plugin}' aborted while running.")
+            else:
+                logging.error("[AnalyserPluginMananger]: Can't start plugin on the ray server.")
             return []
 
         try:

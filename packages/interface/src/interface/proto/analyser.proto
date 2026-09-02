@@ -22,6 +22,7 @@ service Analyser {
   rpc run_plugin(RunPluginRequest) returns (RunPluginResponse);
   rpc get_plugin_status(GetPluginStatusRequest)
       returns (GetPluginStatusResponse);
+  rpc abort_plugin(AbortPluginRequest) returns (AbortPluginResponse);
   rpc run_pipeline(RunPipelineRequest) returns (RunPipelineResponse);
   rpc get_pipeline_status(GetPipelineStatusRequest)
       returns (GetPipelineStatusResponse);
@@ -226,6 +227,9 @@ message GetPluginStatusResponse {
   repeated RunPluginData outputs = 2;
   float progress = 3;
 }
+
+message AbortPluginRequest { string id = 1; }
+message AbortPluginResponse { bool success = 1; }
 
 // -----------------------------------------------------------------------------
 // Pipeline

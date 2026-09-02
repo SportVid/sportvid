@@ -4,120 +4,178 @@
       <div class="video-title">{{ playerStore.videoName }}</div>
     </div>
 
-    <v-row justify="center">
-      <div ref="videoFullscreenRoot" class="video-fullscreen-root">
-        <div class="video-wrapper" @mouseenter="hovering = true" @mouseleave="hovering = false">
-          <video
-            ref="videoElement"
-            @play="onPlay"
-            @pause="onPause"
-            @ended="onEnded"
-            @timeupdate="onTimeUpdate"
-            @loadedmetadata="updateVideoSize"
-            :style="
-              isVideoFullscreen
-                ? {
-                    maxHeight: 100 + 'vh',
-                  }
-                : {
-                    maxHeight: maxVideoHeight * 100 + 'vh',
-                    maxWidth: '100%',
-                  }
-            "
-          />
-
-          <v-icon
-            class="fullscreen-toggle"
-            @click="toggleVideoFullscreen"
-            :class="{ visible: hovering }"
+    <v-row justify="center" class="video-row">
+      <Teleport to="body" :disabled="!isPip">
+        <div
+          ref="videoFullscreenRoot"
+          class="video-fullscreen-root"
+          :class="{ 'pip-panel': isPip }"
+          :style="isPip ? pipPanelStyle : null"
+        >
+          <div
+            class="video-wrapper"
+            :class="{ 'pip-content': isPip }"
+            @mouseenter="hovering = true"
+            @mouseleave="hovering = false"
+            @pointerdown="onPipDragStart"
           >
-            {{ isVideoFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
-          </v-icon>
+            <video
+              ref="videoElement"
+              @play="onPlay"
+              @pause="onPause"
+              @ended="onEnded"
+              @timeupdate="onTimeUpdate"
+              @loadedmetadata="updateVideoSize"
+              :style="
+                isVideoFullscreen
+                  ? {
+                      maxHeight: 100 + 'vh',
+                    }
+                  : isPip
+                  ? {
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                    }
+                  : {
+                      maxHeight: maxVideoHeight * 100 + 'vh',
+                      maxWidth: '100%',
+                    }
+              "
+            />
 
-          <div v-if="isVideoFullscreen" class="fullscreen-controls" :class="{ visible: hovering }">
-            <div class="controls-top">
-              <v-icon @click="togglePlaying" class="control-icon">
-                <template v-if="videoEnded">mdi-restart</template>
-                <template v-else-if="videoPlaying">mdi-pause</template>
-                <template v-else>mdi-play</template>
-              </v-icon>
-              <div class="time-code">{{ getTimecode(playerStore.currentTime) }}</div>
+            <v-icon
+              v-if="!isPip"
+              class="fullscreen-toggle"
+              @click="toggleVideoFullscreen"
+              :class="{ visible: hovering }"
+            >
+              {{ isVideoFullscreen ? "mdi-fullscreen-exit" : "mdi-fullscreen" }}
+            </v-icon>
+
+            <!-- Enter-PiP trigger, next to the fullscreen icon; only shown
+                 outside PiP. Kept as its own button rather than swapped via
+                 v-if/else with the close button below, since the two live in
+                 different corner slots once in PiP (fullscreen-toggle isn't
+                 rendered any more, so the close button can move all the way
+                 into the actual corner). -->
+            <v-icon
+              v-if="!isPip"
+              class="pip-toggle"
+              @click="openPip"
+              @pointerdown.stop
+              :class="{ visible: hovering }"
+              :title="$t('pip.enter')"
+            >
+              mdi-picture-in-picture-top-right
+            </v-icon>
+
+            <!-- Dedicated close button shown only inside the PiP panel,
+                 flush in the actual top-right corner. -->
+            <v-icon
+              v-if="isPip"
+              class="pip-close-button"
+              @click="closePip"
+              @pointerdown.stop
+              :title="$t('pip.exit')"
+            >
+              mdi-close
+            </v-icon>
+
+            <div
+              v-if="isVideoFullscreen || isPip"
+              class="fullscreen-controls pip-no-drag"
+              :class="{ visible: hovering || isPip }"
+            >
+              <div class="controls-top">
+                <v-icon @click="togglePlaying" class="control-icon">
+                  <template v-if="videoEnded">mdi-restart</template>
+                  <template v-else-if="videoPlaying">mdi-pause</template>
+                  <template v-else>mdi-play</template>
+                </v-icon>
+                <div class="time-code">{{ getTimecode(playerStore.currentTime) }}</div>
+                <v-icon v-if="isPip" @click="playerStore.toggleMute" class="control-icon ml-auto">
+                  {{ playerStore.isMuted ? "mdi-volume-mute" : playerStore.volumeIcon }}
+                </v-icon>
+              </div>
+
+              <v-slider
+                v-model="progress"
+                @update:model-value="onProgressChange"
+                hide-details
+                color="white"
+                :thumb-size="15"
+                :step="1000 / playerStore.videoFPS"
+                min="0"
+                :max="playerStore.videoDuration"
+              />
             </div>
 
-            <v-slider
-              v-model="progress"
-              @update:model-value="onProgressChange"
-              hide-details
-              color="white"
-              :thumb-size="15"
-              :step="1000 / playerStore.videoFPS"
-              min="0"
-              :max="playerStore.videoDuration"
-            />
-          </div>
-
-          <!-- DEBUG: plain rectangular bounding box, using the same x/y/w/h
+            <!-- DEBUG: plain rectangular bounding box, using the same x/y/w/h
           indices (position[5..8]) as getEllipseSvg. Handy to sanity-check the
           ellipse placement against the actual box again if it's ever revisited.
           Kept but disabled. -->
-          <!-- <div
+            <!-- <div
             v-for="position in bboxesStore.bboxDataInterpolated[currentFrameKey]"
             v-show="bboxesStore.showBoundingBox"
             :key="`rect-${position[0]}`"
             :style="getBBoxRectStyle(position)"
           ></div> -->
 
-          <div
-            v-for="position in visibleBboxPositions"
-            v-show="bboxesStore.showBoundingBox"
-            :key="position"
-            :style="getEllipseSvg(position).style"
-            @click="openEditBBox(position, currentFrameKey)"
-          >
-            <svg class="player-ellipse" :viewBox="getEllipseSvg(position).viewBox">
-              <path
-                :d="getEllipseSvg(position).arc"
-                :stroke="getEllipseSvg(position).color"
-                stroke-width="2"
-                fill="none"
-                stroke-linecap="round"
-              />
-            </svg>
-            <v-tooltip
-              activator="parent"
-              location="top"
-              class="bounding-box-tooltip"
-              :style="{ '--tooltip-bg': toRgb(visualizationStore.getTeamColor(position[1]), 0.7) }"
-              interactive
-            >
-              <div>
-                <div>
-                  <strong
-                    >{{ $t("modal.bounding_box.tooltip.box_id") }}:
-                    {{ `${currentFrameKey}-${position[0]}` }}</strong
-                  >
-                </div>
-                <v-divider class="my-1" />
-                <div>
-                  {{ entityLabelKey(position[1]) }}:
-                  {{ topViewStore.getEntityName(position[0], position[1]) }}
-                </div>
-                <div>{{ $t("modal.bounding_box.tooltip.team_id") }}: {{ position[1] }}</div>
-              </div>
-            </v-tooltip>
             <div
-              v-show="bboxesStore.showPlayerId"
-              class="bounding-box-player-id"
-              :style="{
-                ...getEllipseSvg(position).labelStyle,
-                color: visualizationStore.getTeamColor(position[1]),
-              }"
+              v-for="position in visibleBboxPositions"
+              v-show="bboxesStore.showBoundingBox"
+              :key="position"
+              class="pip-no-drag"
+              :style="getEllipseSvg(position).style"
+              @click="openEditBBox(position, currentFrameKey)"
             >
-              {{ topViewStore.getEntityNumber(position[0], position[1]) }}
+              <svg class="player-ellipse" :viewBox="getEllipseSvg(position).viewBox">
+                <path
+                  :d="getEllipseSvg(position).arc"
+                  :stroke="getEllipseSvg(position).color"
+                  stroke-width="2"
+                  fill="none"
+                  stroke-linecap="round"
+                />
+              </svg>
+              <v-tooltip
+                activator="parent"
+                location="top"
+                class="bounding-box-tooltip"
+                :style="{
+                  '--tooltip-bg': toRgb(visualizationStore.getTeamColor(position[1]), 0.7),
+                }"
+                interactive
+              >
+                <div>
+                  <div>
+                    <strong
+                      >{{ $t("modal.bounding_box.tooltip.box_id") }}:
+                      {{ `${currentFrameKey}-${position[0]}` }}</strong
+                    >
+                  </div>
+                  <v-divider class="my-1" />
+                  <div>
+                    {{ entityLabelKey(position[1]) }}:
+                    {{ topViewStore.getEntityName(position[0], position[1]) }}
+                  </div>
+                  <div>{{ $t("modal.bounding_box.tooltip.team_id") }}: {{ position[1] }}</div>
+                </div>
+              </v-tooltip>
+              <div
+                v-show="bboxesStore.showPlayerId"
+                class="bounding-box-player-id"
+                :style="{
+                  ...getEllipseSvg(position).labelStyle,
+                  color: visualizationStore.getTeamColor(position[1]),
+                }"
+              >
+                {{ topViewStore.getEntityNumber(position[0], position[1]) }}
+              </div>
             </div>
-          </div>
 
-          <!-- <div
+            <!-- <div
           v-for="o in calibrationAssetStore.filteredVideoObject"
           v-show="calibrationAssetStore.showVideoAsset"
           :key="o.id"
@@ -129,136 +187,153 @@
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
             top: isVideoFullscreen
-              ? videoStore.videoSize.top + o.videoCoordsRel.y * videoStore.videoSize.height + 'px'
-              : o.videoCoordsRel.y * videoStore.videoSize.height + 'px',
+              ? videoSize.top + o.videoCoordsRel.y * videoSize.height + 'px'
+              : o.videoCoordsRel.y * videoSize.height + 'px',
             left: isVideoFullscreen
-              ? videoStore.videoSize.left + o.videoCoordsRel.x * videoStore.videoSize.width + 'px'
-              : o.videoCoordsRel.x * videoStore.videoSize.width + 'px',
+              ? videoSize.left + o.videoCoordsRel.x * videoSize.width + 'px'
+              : o.videoCoordsRel.x * videoSize.width + 'px',
           }"
           @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
           @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
         /> -->
-          <svg
-            :width="videoStore.videoSize.width"
-            :height="videoStore.videoSize.height"
-            style="position: absolute; top: 0; left: 0; pointer-events: none"
-          >
-            <template v-for="o in calibrationAssetStore.filteredVideoObject">
-              <circle
-                v-if="o.videoCoordsRel.length === 1"
-                v-show="calibrationAssetStore.showVideoAsset"
-                :key="o.id"
-                :cx="o.videoCoordsRel[0].x * videoStore.videoSize.width"
-                :cy="o.videoCoordsRel[0].y * videoStore.videoSize.height"
-                r="6"
-                :fill="calibrationAssetStore.objectColorMap[o.id] ?? 'red'"
-                fill-opacity="0.8"
-                style="pointer-events: all"
-                @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
-                @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
-              />
+            <svg
+              :width="videoSize.width"
+              :height="videoSize.height"
+              style="position: absolute; top: 0; left: 0; pointer-events: none"
+            >
+              <template v-for="o in calibrationAssetStore.filteredVideoObject">
+                <circle
+                  v-if="o.videoCoordsRel.length === 1"
+                  v-show="calibrationAssetStore.showVideoAsset"
+                  :key="o.id"
+                  :cx="o.videoCoordsRel[0].x * videoSize.width"
+                  :cy="o.videoCoordsRel[0].y * videoSize.height"
+                  r="6"
+                  :fill="calibrationAssetStore.objectColorMap[o.id] ?? 'red'"
+                  fill-opacity="0.8"
+                  style="pointer-events: all"
+                  @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+                  @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+                />
 
-              <line
-                v-if="o.videoCoordsRel.length === 2"
-                v-show="calibrationAssetStore.showVideoAsset"
-                :key="o.id"
-                :x1="o.videoCoordsRel[0].x * videoStore.videoSize.width"
-                :y1="o.videoCoordsRel[0].y * videoStore.videoSize.height"
-                :x2="o.videoCoordsRel[1].x * videoStore.videoSize.width"
-                :y2="o.videoCoordsRel[1].y * videoStore.videoSize.height"
-                stroke-width="4"
-                :stroke="calibrationAssetStore.objectColorMap[o.id] ?? 'red'"
-                stroke-opacity="0.8"
-                fill="none"
-                style="pointer-events: all"
-                @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
-                @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
-              />
+                <line
+                  v-if="o.videoCoordsRel.length === 2"
+                  v-show="calibrationAssetStore.showVideoAsset"
+                  :key="o.id"
+                  :x1="o.videoCoordsRel[0].x * videoSize.width"
+                  :y1="o.videoCoordsRel[0].y * videoSize.height"
+                  :x2="o.videoCoordsRel[1].x * videoSize.width"
+                  :y2="o.videoCoordsRel[1].y * videoSize.height"
+                  stroke-width="4"
+                  :stroke="calibrationAssetStore.objectColorMap[o.id] ?? 'red'"
+                  stroke-opacity="0.8"
+                  fill="none"
+                  style="pointer-events: all"
+                  @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+                  @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+                />
 
-              <path
-                v-if="o.videoCoordsRel.length > 2"
-                v-show="calibrationAssetStore.showVideoAsset"
-                :key="o.id"
-                :d="
-                  (() => {
-                    const points = o.videoCoordsRel.map((p) => ({
-                      x: p.x * videoStore.videoSize.width,
-                      y: p.y * videoStore.videoSize.height,
-                    }));
-                    let d = `M ${points[0].x} ${points[0].y}`;
-                    for (let i = 1; i < points.length; i++) {
-                      d += ` L ${points[i].x} ${points[i].y}`;
-                    }
-                    return d;
-                  })()
-                "
-                :stroke="calibrationAssetStore.objectColorMap[o.id] ?? 'red'"
-                stroke-width="4"
-                stroke-opacity="0.8"
-                fill="none"
-                style="pointer-events: all"
-                @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
-                @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
-              />
-            </template>
-          </svg>
+                <path
+                  v-if="o.videoCoordsRel.length > 2"
+                  v-show="calibrationAssetStore.showVideoAsset"
+                  :key="o.id"
+                  :d="
+                    (() => {
+                      const points = o.videoCoordsRel.map((p) => ({
+                        x: p.x * videoSize.width,
+                        y: p.y * videoSize.height,
+                      }));
+                      let d = `M ${points[0].x} ${points[0].y}`;
+                      for (let i = 1; i < points.length; i++) {
+                        d += ` L ${points[i].x} ${points[i].y}`;
+                      }
+                      return d;
+                    })()
+                  "
+                  :stroke="calibrationAssetStore.objectColorMap[o.id] ?? 'red'"
+                  stroke-width="4"
+                  stroke-opacity="0.8"
+                  fill="none"
+                  style="pointer-events: all"
+                  @mouseenter="calibrationAssetStore.hoveredVideoObject = o.id"
+                  @mouseleave="calibrationAssetStore.hoveredVideoObject = null"
+                />
+              </template>
+            </svg>
 
-          <svg
-            :width="videoStore.videoSize.width"
-            :height="videoStore.videoSize.height"
-            style="position: absolute; top: 0; left: 0; pointer-events: none"
-          >
-            <template v-for="o in calibrationAssetStore.videoObjectReprojection">
-              <circle
-                v-if="o.length === 1"
-                v-show="calibrationAssetStore.showVideoAsset"
-                :key="o.id"
-                :cx="o[0].x * videoStore.videoSize.width + 'px'"
-                :cy="o[0].y * videoStore.videoSize.height + 'px'"
-                r="3"
-                fill="blue"
-                style="pointer-events: none"
-              />
+            <svg
+              :width="videoSize.width"
+              :height="videoSize.height"
+              style="position: absolute; top: 0; left: 0; pointer-events: none"
+            >
+              <template v-for="o in calibrationAssetStore.videoObjectReprojection">
+                <circle
+                  v-if="o.length === 1"
+                  v-show="calibrationAssetStore.showVideoAsset"
+                  :key="o.id"
+                  :cx="o[0].x * videoSize.width + 'px'"
+                  :cy="o[0].y * videoSize.height + 'px'"
+                  r="3"
+                  fill="blue"
+                  style="pointer-events: none"
+                />
 
-              <line
-                v-if="o.length === 2"
-                v-show="calibrationAssetStore.showVideoAsset"
-                :key="o.id"
-                :x1="o[0].x * videoStore.videoSize.width + 'px'"
-                :y1="o[0].y * videoStore.videoSize.height + 'px'"
-                :x2="o[1].x * videoStore.videoSize.width + 'px'"
-                :y2="o[1].y * videoStore.videoSize.height + 'px'"
-                stroke-width="3"
-                stroke="blue"
-                fill="none"
-                style="pointer-events: none"
-              />
+                <line
+                  v-if="o.length === 2"
+                  v-show="calibrationAssetStore.showVideoAsset"
+                  :key="o.id"
+                  :x1="o[0].x * videoSize.width + 'px'"
+                  :y1="o[0].y * videoSize.height + 'px'"
+                  :x2="o[1].x * videoSize.width + 'px'"
+                  :y2="o[1].y * videoSize.height + 'px'"
+                  stroke-width="3"
+                  stroke="blue"
+                  fill="none"
+                  style="pointer-events: none"
+                />
 
-              <path
-                v-if="o.length > 2"
-                v-show="calibrationAssetStore.showVideoAsset"
-                :key="o.id"
-                :d="
-                  (() => {
-                    const points = o.map((p) => ({
-                      x: p.x * videoStore.videoSize.width,
-                      y: p.y * videoStore.videoSize.height,
-                    }));
-                    let d = `M ${points[0].x} ${points[0].y}`;
-                    for (let i = 1; i < points.length; i++) {
-                      d += ` L ${points[i].x} ${points[i].y}`;
-                    }
-                    return d;
-                  })()
-                "
-                stroke="blue"
-                stroke-width="3"
-                fill="none"
-                style="pointer-events: none"
-              />
-            </template>
-          </svg>
+                <path
+                  v-if="o.length > 2"
+                  v-show="calibrationAssetStore.showVideoAsset"
+                  :key="o.id"
+                  :d="
+                    (() => {
+                      const points = o.map((p) => ({
+                        x: p.x * videoSize.width,
+                        y: p.y * videoSize.height,
+                      }));
+                      let d = `M ${points[0].x} ${points[0].y}`;
+                      for (let i = 1; i < points.length; i++) {
+                        d += ` L ${points[i].x} ${points[i].y}`;
+                      }
+                      return d;
+                    })()
+                  "
+                  stroke="blue"
+                  stroke-width="3"
+                  fill="none"
+                  style="pointer-events: none"
+                />
+              </template>
+            </svg>
+
+            <v-icon v-if="isPip" class="pip-resize-handle" @pointerdown.stop="onPipResizeStart">
+              mdi-resize-bottom-right
+            </v-icon>
+          </div>
         </div>
+      </Teleport>
+
+      <div
+        v-if="isPip"
+        class="pip-placeholder"
+        :style="{ height: (lastCardVideoHeight || 200) + 'px' }"
+      >
+        <v-icon size="40" class="pip-placeholder-icon">mdi-picture-in-picture-top-right</v-icon>
+        <div class="pip-placeholder-text">{{ $t("video_player.pip.playing_in_pip") }}</div>
+        <v-btn size="small" variant="flat" color="primary" @click="closePip">
+          {{ $t("pip.return_to_card") }}
+        </v-btn>
       </div>
     </v-row>
 
@@ -322,11 +397,7 @@
               </v-list-item-title>
             </v-list-item>
 
-            <v-list-item
-              class="menu-item"
-              @click="bboxesStore.viewPlayerId"
-              :disabled="noBboxData"
-            >
+            <v-list-item class="menu-item" @click="bboxesStore.viewPlayerId" :disabled="noBboxData">
               <v-list-item-title class="d-flex justify-space-between">
                 {{ $t("position_data.display_settings.view_player_id") }}
                 <tab-window-icon
@@ -372,6 +443,19 @@
                 </v-list-item>
               </template>
               <v-list class="py-0" density="compact">
+                <!-- Drops the current selection (bbox overlay + everything derived from it) so
+                     the TopView/Heatmap/KPI cards fall back to their own PositionDataMenu --
+                     lets the user generate a fresh run right away instead of having to go back
+                     to VideoView and reopen the video just to get back to that empty state. -->
+                <v-list-item
+                  v-if="canWrite"
+                  class="menu-item"
+                  @click="positionDataStore.resetPositionData()"
+                >
+                  <v-list-item-title>
+                    {{ $t("position_data.display_settings.position_data.create_new") }}
+                  </v-list-item-title>
+                </v-list-item>
                 <v-list-item
                   v-if="canWrite"
                   class="menu-item"
@@ -497,15 +581,17 @@
               :key="`${e.teamId}_${e.playerId}`"
               class="player-dot"
               :style="{
-                backgroundColor: includedEntities.has(`${e.teamId}_${e.playerId}`)
+                backgroundColor: includedEntities.has(_entityInclusionKey(e.teamId, e.playerId))
                   ? toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0)
                   : toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0.6),
-                color: includedEntities.has(`${e.teamId}_${e.playerId}`) ? '#fff' : '#222',
-                borderColor: includedEntities.has(`${e.teamId}_${e.playerId}`)
+                color: includedEntities.has(_entityInclusionKey(e.teamId, e.playerId))
+                  ? '#fff'
+                  : '#222',
+                borderColor: includedEntities.has(_entityInclusionKey(e.teamId, e.playerId))
                   ? toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0)
                   : toRgb(overlayEntityColors[`${e.teamId}_${e.playerId}`], 0.6),
               }"
-              @click="toggleEntityInclusion(`${e.teamId}_${e.playerId}`)"
+              @click="toggleEntityInclusion(_entityInclusionKey(e.teamId, e.playerId))"
             >
               {{ overlayGetEntityLabel(e.playerId, e.teamId) }}
             </div>
@@ -519,10 +605,12 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
+import { usePictureInPicture } from "@/composables/usePictureInPicture";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useBboxesStore } from "@/stores/bboxes";
+import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
 import { useTopViewStore } from "@/stores/top_view";
 import { useUserStore } from "@/stores/user";
@@ -538,6 +626,7 @@ const playerStore = usePlayerStore();
 const videoStore = useVideoStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const bboxesStore = useBboxesStore();
+const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
 const topViewStore = useTopViewStore();
 const userStore = useUserStore();
@@ -574,13 +663,31 @@ const ENTITY_KINDS = [
   { key: "rest", labelKey: "position_data.entity_kind.rest" },
 ];
 
+// Entity-inclusion keys are namespaced by *kind* (ball / ref / player), not by the exact
+// team_id -- team_id 1 (rest) and 3+ (actual teams) all share the same person/"player_ids"
+// id space on the backend (see _compute_meta_data's comment in bounding_boxes.py), so a
+// player's key must stay stable across a team re-assignment. Without this, a per-frame team
+// edit (the "Bbox" tab in ModalBboxUpdate.vue, which only touches one frame) makes that
+// frame's box carry a team_id the aggregate-built includedEntities set never learned about
+// (precomputedPlayerList is one team_id per player for the *whole* video), so the edited
+// frame's box would silently disappear from visibleBboxPositions below.
+const _entityInclusionKey = (teamId, playerId) => {
+  const tid = Number(teamId);
+  const kind = tid === 0 ? "ball" : tid === 2 ? "ref" : "player";
+  return `${kind}_${playerId}`;
+};
+
 const includedEntities = ref(new Set());
 const _buildAllEntitySet = () => {
   const ids = new Set();
-  for (const p of topViewStore.precomputedPlayerList) ids.add(`${p.teamId}_${p.playerId}`);
-  for (const p of topViewStore.precomputedRefList) ids.add(`${p.teamId}_${p.playerId}`);
-  for (const p of topViewStore.precomputedBallList) ids.add(`${p.teamId}_${p.playerId}`);
-  for (const p of topViewStore.precomputedInactiveList) ids.add(`${p.teamId}_${p.playerId}`);
+  for (const p of topViewStore.precomputedPlayerList)
+    ids.add(_entityInclusionKey(p.teamId, p.playerId));
+  for (const p of topViewStore.precomputedRefList)
+    ids.add(_entityInclusionKey(p.teamId, p.playerId));
+  for (const p of topViewStore.precomputedBallList)
+    ids.add(_entityInclusionKey(p.teamId, p.playerId));
+  for (const p of topViewStore.precomputedInactiveList)
+    ids.add(_entityInclusionKey(p.teamId, p.playerId));
   return ids;
 };
 watch(
@@ -640,12 +747,16 @@ const overlayGetEntityLabel = (playerId, teamId) => {
 const overlayGetTeamName = (teamId) => topViewStore.getTeamDisplayName(teamId);
 
 const overlayIsTeamFullySelected = (teamId) => {
-  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) => `${p.teamId}_${p.playerId}`);
+  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) =>
+    _entityInclusionKey(p.teamId, p.playerId)
+  );
   return teamKeys.length > 0 && teamKeys.every((key) => includedEntities.value.has(key));
 };
 
 const overlayToggleTeam = (teamId) => {
-  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) => `${p.teamId}_${p.playerId}`);
+  const teamKeys = (overlayTeamGroups.value[teamId] || []).map((p) =>
+    _entityInclusionKey(p.teamId, p.playerId)
+  );
   const allSelected = teamKeys.every((key) => includedEntities.value.has(key));
   const newSet = new Set(includedEntities.value);
   if (allSelected) {
@@ -667,7 +778,7 @@ const visibleBboxPositions = computed(() => {
     const tid = position[1];
     const kind = tid === 0 ? "ball" : tid === 2 ? "ref" : tid === 1 ? "rest" : "player";
     if (!visible[kind]) return false;
-    return includedEntities.value.has(`${tid}_${position[0]}`);
+    return includedEntities.value.has(_entityInclusionKey(tid, position[0]));
   });
 });
 
@@ -850,16 +961,31 @@ const onSpeedChange = (idx) => {
   }
 };
 
+// Picture-in-picture (see usePictureInPicture): isPip/pipPanelStyle drive the
+// floating panel, videoSize is what all overlays (bbox ellipses, calibration
+// markers) read for their own pixel positioning -- it mirrors the shared
+// videoStore.videoSize (also read by other cards, e.g. to match their own
+// layout to the video) normally, but while in PiP falls back to the
+// panel-local pip.contentSize instead, so resizing the floating panel never
+// leaks into that shared value. See updateVideoSize below for the other
+// half of that: it only writes to the store while docked.
+const pip = usePictureInPicture({ onResize: () => updateVideoSize() });
+const isPip = pip.isPip;
+const lastCardVideoHeight = pip.lastCardContentHeight;
+const pipPanelStyle = pip.panelStyle;
+const onPipDragStart = pip.onDragStart;
+const onPipResizeStart = pip.onResizeStart;
+const openPip = () => pip.open(videoFullscreenRoot.value, videoElement.value);
+const closePip = pip.close;
+
+const videoSize = computed(() => (isPip.value ? pip.contentSize.value : videoStore.videoSize));
+
 const updateVideoSize = () => {
   nextTick(() => {
-    if (videoElement.value) {
-      const rect = videoElement.value.getBoundingClientRect();
-      videoStore.setVideoSize({
-        width: rect.width,
-        height: rect.height,
-        top: rect.top,
-        left: rect.left,
-      });
+    if (!videoElement.value) return;
+    const size = pip.measure(videoElement.value);
+    if (!isPip.value) {
+      videoStore.setVideoSize(size);
     }
   });
 };
@@ -952,12 +1078,12 @@ const onFullscreenChange = async () => {
 
   if (videoElement.value) {
     const rect = videoElement.value.getBoundingClientRect();
-    videoStore.setVideoSize({
-      width: rect.width,
-      height: rect.height,
-      top: 0,
-      left: 0,
-    });
+    const size = { width: rect.width, height: rect.height, top: 0, left: 0 };
+    if (isPip.value) {
+      pip.contentSize.value = size;
+    } else {
+      videoStore.setVideoSize(size);
+    }
   }
 };
 // const toggleVideoFullscreen = () => {
@@ -991,7 +1117,7 @@ const getBBoxRectStyle = (position) => {
   const w = position[7];
   const h = position[8];
 
-  const vid = videoStore.videoSize;
+  const vid = videoSize.value;
 
   const left = x * vid.width + (isVideoFullscreen.value ? vid.left : 0);
   const top = y * vid.height + (isVideoFullscreen.value ? vid.top : 0);
@@ -1027,7 +1153,7 @@ const getEllipseSvg = (position) => {
   const w = position[7];
   const h = position[8];
 
-  const vid = videoStore.videoSize;
+  const vid = videoSize.value;
 
   const color = visualizationStore.getTeamColor(position[1]);
 
@@ -1291,6 +1417,10 @@ onBeforeUnmount(() => {
 .fullscreen-toggle.visible {
   opacity: 0.8;
 }
+
+/* .pip-panel / .pip-content / .pip-toggle / .pip-close-button /
+   .pip-resize-handle / .pip-placeholder* live in styles/custom.css, shared
+   with TopView.vue via the usePictureInPicture composable. */
 
 .fullscreen-controls {
   position: absolute;

@@ -162,6 +162,11 @@ services:
       - "-A"
       - "sportvid.celery:app"
       - "worker"
+      - "--hostname=gpu@%h"
+      - "--queues=gpu"
+      - "--pool=threads"
+      - "--concurrency=4"
+      - "--prefetch-multiplier=1"
       - "--loglevel"
       - "${LOG_LEVEL:-DEBUG}"
       - "--concurrency=16"
@@ -219,13 +224,20 @@ services:
       - "--timeout"
       - "${GUNICORN_TIMEOUT:-1800}"
       - "--workers"
-      - "${GUNICORN_WORKERS:-16}"
+      - "${GUNICORN_WORKERS:-4}"
+      # SSE requires threaded workers so /events/stream does not occupy a whole worker per connection.
+      - "--worker-class"
+      - "gthread"
+      - "--threads"
+      - "${GUNICORN_THREADS:-16}"
     depends_on:
       # postgres:
       #   condition: service_healthy
       memcached:
         condition: service_started
-      celery:
+      celery-io:
+        condition: service_started
+      celery-gpu:
         condition: service_started
     networks:
       - shared

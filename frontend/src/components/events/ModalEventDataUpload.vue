@@ -51,6 +51,16 @@
             variant="underlined"
           />
 
+          <div v-if="isUploading" class="d-flex align-center mt-3" style="gap: 10px">
+            <v-progress-linear v-model="uploadingProgress" class="flex-grow-1" />
+            <span
+              v-if="uploadEtaText"
+              class="text-caption text-medium-emphasis text-no-wrap"
+            >
+              {{ uploadEtaText }}
+            </span>
+          </div>
+
           <v-checkbox v-model="checkbox" required class="ml-n2 mt-4">
             <template #label>
               <i18n-t keypath="terms_of_use.confirmation" tag="span">
@@ -90,6 +100,7 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { getEtaDisplay } from "@/plugins/time";
 import { useEventsStore } from "@/stores/events";
 import { useUserStore } from "@/stores/user";
 
@@ -159,6 +170,15 @@ const validateFile = (file) => {
   fileValid.value = true;
   return true;
 };
+
+// Wired to the events store's upload tracker -- inert until a real /event_data/upload
+// endpoint feeds it (see events.js), then the bar + ETA light up like the other modals.
+const isUploading = computed(() => eventsStore.isUploadingEventData);
+const uploadingProgress = computed(() => eventsStore.eventUploadProgress);
+const uploadEtaText = computed(() => {
+  const display = getEtaDisplay(eventsStore.eventUploadEtaSeconds);
+  return display ? t("progress.eta", { time: display }) : "";
+});
 
 const canUpload = computed(() => userStore.remainingStorageSize > 0);
 const disabled = computed(() => {

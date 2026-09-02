@@ -5,3 +5,11 @@ from .communication import RetryOnRpcErrorClientInterceptor, ExponentialBackoff
 from .dicts import unflat_dict, flat_dict
 from .archive import TarArchive, ZipArchive
 from .color import rgb_to_hex, hsv_to_rgb, random_rgb
+from .events import (
+    publish_plugin_run,
+    publish_plugin_run_deleted,
+    publish_video,
+    subscribe,
+    STREAM_MAX_LIFETIME,
+    STREAM_KEEPALIVE_INTERVAL,
+)

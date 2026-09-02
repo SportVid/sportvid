@@ -34,6 +34,7 @@ class Task:
         outputs: List = None,
         downloads: List = None,
         plugin_run: PluginRun = None,
+        progress_range: tuple = None,
     ) -> str:
         if parameters is None: parameters = {}
         if inputs is None: inputs = {}
@@ -51,7 +52,11 @@ class Task:
             f"Plugin started: analyser job_id: {job_id} plugin_run_id: {plugin_run}"
         )
 
-        result = client.get_plugin_results(job_id=job_id, plugin_run_db=plugin_run)
+        result = client.get_plugin_results(
+            job_id=job_id,
+            plugin_run_db=plugin_run,
+            progress_range=progress_range,
+        )
         if result is None:
             logger.error(
                 f"Plugin is crashing: analyser job_id: {job_id} plugin_run_id: {plugin_run}"

@@ -23,6 +23,7 @@ from backend.utils import (
     media_path_to_file
 )
 from backend.models import Video
+from backend.utils.events import publish_cancel
 from utils.helper import remove_file, remove_dir
 from backend.tasks.convert_video import convert_video_to_hls
 
@@ -295,16 +296,19 @@ class VideoDelete(View):
             if not video:
                 return JsonResponse({"status": "error"}, status=500)
 
-            # Revoke the conversion task if still running.
-            # terminate=False: just mark as revoked; the task polls the DB and
-            # exits cleanly when it sees the video is gone (avoids SIGTERM/SIGKILL
-            # causing Celery's pool to enter a restart cascade).
+            # TODO: Add structured logging for video deletion (task_id, revoke vs cancel)
+            # and consider tracking "pending deletion" videos to avoid races with
+            # conversion tasks.
+            # NOTE: If a conversion is queued, Celery revoke prevents it from starting.
+            # If conversion is already running, the conversion task's watcher receives the message and kills the FFmpeg subprocess.
             if video.task_id:
                 celery_app.control.revoke(video.task_id, terminate=False)
+            publish_cancel("video", video.id.hex)
 
             file_size = video.file_size
             video_owner = video.owner
             video_id_hex = video.id.hex
+            # video row can then be deleted safely, without sending a termination signal to the Celery worker.
             if is_admin:
                 count, _ = Video.objects.filter(id=video.id).delete()
             else:

@@ -5,7 +5,24 @@
 import os
 import json
 import logging
+
 from celery.schedules import crontab
+from kombu import Queue
+
+# now using two separate celery workers for IO/gpu-bound processing
+CELERY_TASK_DEFAULT_QUEUE = "io"
+CELERY_TASK_QUEUES = (
+    Queue("io"),
+    Queue("gpu")
+)
+
+CELERY_TASK_ROUTES = {
+    "sportvid.tasks.convert_video_to_hls": {
+        "queue": "gpu",
+    }
+}
+
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
 
 # build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -40,7 +57,7 @@ CORS_ALLOW_CREDENTIALS = True  # include cookies in cross-sitze HTTP requests
 
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": False,  # NOTE: True?
+    "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
             "format": "[%(asctime)s][%(levelname)s][%(name)s.%(funcName)s:%(lineno)d] %(message)s",
@@ -53,7 +70,7 @@ LOGGING = {
             "formatter": "verbose",
         },
     },
-    # NOTE: comment in "root" logger to see stack trace.
+    # NOTE: comment in "root" logger to see full stack trace.
     "root": {
         "handlers": ["console"],
         "level": "INFO",
@@ -146,16 +163,6 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"}
 ]
-
-# Celery beat (crontab)
-# TODO: not detecting task, fix this....
-# CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
-# CELERY_BEAT_SCHEDULE = {
-#     'cleanup-orphans': {
-#         'task': 'tibava.backend.tasks.convert_video.cleanup_upload_orphans',
-#         'schedule': crontab(hour='*/1'),  # hourly schedule for cleanup
-#     },
-# }
 
 # Celery beat (crontab)
 # TODO: not detecting task, fix this....

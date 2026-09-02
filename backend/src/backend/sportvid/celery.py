@@ -17,29 +17,10 @@ app = Celery("sportvid", broker=broker_url) # type: ignore
 # the configuration object to child processes.
 # - namespace='CELERY' means all celery-related configuration keys
 #   should have a `CELERY_` prefix.
-app.config_from_object("django.conf:settings", namespace="CELERY")
-
-# if ENVIRONMENT == 'production':
-#     app.conf.update(
-#         task_serializer='json',
-#         accept_content=['json'],
-#         result_serializer='json',
-#         result_expires=3600,
-#         enable_utc=True,
-#         timezone='Europe/Berlin',
-#         task_soft_time_limit=30,
-#         task_time_limit=120,
-#         worker_prefetch_multiplier=4,
-#         task_acks_late=False,
-#         worker_disable_rate_limits=False,
-#     )
-# else:
-#     app.conf.update(
-#         task_always_eager=True,  # sync execution
-#         task_eager_propagates=True,
-#         worker_prefetch_multiplier=1,
-#         task_acks_late=False,
-#     )
+app.config_from_object(
+    "django.conf:settings",
+    namespace="CELERY",
+)
 
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()

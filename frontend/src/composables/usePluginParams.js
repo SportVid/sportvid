@@ -1,8 +1,32 @@
 import { ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { usePlayerStore } from "@/stores/player";
 import { usePositionDataStore } from "@/stores/position_data";
 import { usePluginRunStore } from "@/stores/plugin_run";
+import { useUserStore } from "@/stores/user";
+
+// Hides the given (always-required-until-now) parameter names from the UI in "simple"
+// experience mode, showing them all again in "complex" mode -- their current values (the
+// existing defaults) are left untouched either way. Uses a dedicated `simpleHidden` flag
+// rather than the existing `hidden` -- `hidden` also drops a parameter from submission
+// entirely (see submitPlugin below), which is only safe for genuinely inapplicable fields
+// (e.g. a detector-specific param for a different detector). These fields are still
+// required by the backend, just defaulted instead of user-editable, so they must keep being
+// submitted with whatever value they currently hold. Shared by objectTrackerParams/
+// teamClusteringParams/osnetReidParams below; kpi_computation and calibration_static_dlt are
+// already minimal enough not to need this.
+function hideInSimpleMode(parameters, names) {
+  const userStore = useUserStore();
+  watch(
+    () => userStore.experienceMode,
+    (mode) => {
+      const hide = mode === "simple";
+      for (const p of parameters.value) {
+        if (names.includes(p.name)) p.simpleHidden = hide;
+      }
+    },
+    { immediate: true }
+  );
+}
 
 // object_tracker replaces bytetrack as the generic detector+tracker plugin —
 // it additionally lets the user pick a tracking_target (player vs. ball),
@@ -102,14 +126,16 @@ const OBJECT_TRACKER_CLASSES_BY_TARGET = {
 
 export function objectTrackerParams() {
   const { t } = useI18n();
-  const playerStore = usePlayerStore();
 
   const parameters = ref([
     {
       field: "slider",
       min: 1,
       max: 30,
-      value: Math.round(playerStore.videoFPS),
+      // Defaults to 1 rather than the video's actual fps (usually 30) -- tracking every frame
+      // is a lot slower to test against than most trial runs need; still freely adjustable up
+      // to the real fps via this slider.
+      value: 1,
       step: 1,
       name: "fps",
       text: t("modal.plugin.fps"),
@@ -356,6 +382,11 @@ export function objectTrackerParams() {
           detectorParam.value = "yolo11";
           return;
         }
+        // `hidden` (unlike simpleHidden below) also drops the field from submission
+        // (see submitPlugin) -- for "tracker" that's the actual signal the backend uses to
+        // tell ball- from player-tracking runs apart (object_tracker.py:
+        // `"bboxes" if parameters.get("tracker") else "bboxes_ball"`), so this must stay
+        // driven by tracking_target alone and never by experience mode.
         if (trackerParam) trackerParam.hidden = true;
         for (const p of trackerParamFields) p.hidden = true;
 
@@ -378,6 +409,8 @@ export function objectTrackerParams() {
     },
     { immediate: true }
   );
+
+  hideInSimpleMode(parameters, ["fps", "detector", "tracker"]);
 
   return { parameters, optionalParameters };
 }
@@ -682,6 +715,8 @@ export function teamClusteringParams() {
     { immediate: true }
   );
 
+  hideInSimpleMode(parameters, ["clustering_algo", "K"]);
+
   return { parameters, optionalParameters };
 }
 
@@ -899,6 +934,8 @@ export function osnetReidParams() {
     { immediate: true }
   );
 
+  hideInSimpleMode(parameters, ["gallery_mode", "model_name"]);
+
   return { parameters, optionalParameters };
 }
 
@@ -929,7 +966,7 @@ export function kpiComputationParams() {
       value: "kinexon",
       items: [
         ...positionDataStore.provider.map((p) => ({ title: p.name, value: p.id })),
-        { title: "SportVid (ByteTrack)", value: "sportvid" },
+        { title: "SportVid", value: "sportvid" },
       ],
       text: t("modal.plugin.kpi_computation.format"),
       dataTour: "kpi-format",
@@ -944,11 +981,11 @@ export function kpiComputationParams() {
       dataTour: "kpi-tracking-data",
     },
     {
-      field: "select_bytetrack_run",
-      name: "bytetrack_run_id",
+      field: "select_object_tracker_run",
+      name: "object_tracker_run_id",
       value: "",
-      text: t("modal.plugin.kpi_computation.bytetrack_run_id"),
-      hint: t("modal.plugin.kpi_computation.bytetrack_run_id_hint"),
+      text: t("modal.plugin.kpi_computation.object_tracker_run_id"),
+      hint: t("modal.plugin.kpi_computation.object_tracker_run_id_hint"),
       hidden: true,
       dataTour: "kpi-bytetrack-run",
     },
@@ -1037,12 +1074,12 @@ export function kpiComputationParams() {
     { immediate: true }
   );
 
-  // Toggle tracking_data_id / bytetrack_run_id / calibration_id visibility based on format
+  // Toggle tracking_data_id / object_tracker_run_id / calibration_id visibility based on format
   watch(
     () => parameters.value.find((p) => p.name === "format")?.value,
     (fmt) => {
       const trackingParam = parameters.value.find((p) => p.name === "tracking_data_id");
-      const bytetrackParam = parameters.value.find((p) => p.name === "bytetrack_run_id");
+      const bytetrackParam = parameters.value.find((p) => p.name === "object_tracker_run_id");
       const calibrationParam = parameters.value.find((p) => p.name === "calibration_id");
       if (trackingParam) {
         trackingParam.hidden = fmt === "sportvid";

@@ -118,6 +118,19 @@
                   </v-list-item>
                 </template>
                 <v-list class="py-0" density="compact">
+                  <!-- Drops just the current selection (eventDataSets itself stays intact) so
+                       this card falls back to its own EventDataMenu -- lets the user upload or
+                       pick a different event data set right here instead of having to go back
+                       to VideoView and reopen the video just to get back to that empty state. -->
+                  <v-list-item
+                    v-if="canWrite"
+                    class="menu-item"
+                    @click="eventsStore.deselectEventData()"
+                  >
+                    <v-list-item-title>
+                      {{ $t("event_data.display_settings.event_data.create_new") }}
+                    </v-list-item-title>
+                  </v-list-item>
                   <v-list-item
                     v-if="canWrite"
                     class="menu-item"
@@ -238,7 +251,7 @@
               ? toRgb(visualizationStore.getTeamColor(teamId), 0)
               : 'transparent',
             color: isTeamFullySelected(teamId)
-              ? '#fff'
+              ? getContrastColor(visualizationStore.getTeamColor(teamId), 0)
               : toRgb(visualizationStore.getTeamColor(teamId), 0),
             borderColor: toRgb(visualizationStore.getTeamColor(teamId), 0),
           }"
@@ -255,7 +268,10 @@
             backgroundColor: selectedPlayerIds.includes(p.playerId)
               ? toRgb(playerColors[p.playerId], 0)
               : toRgb(playerColors[p.playerId], 0.6),
-            color: selectedPlayerIds.includes(p.playerId) ? '#fff' : '#222',
+            color: getContrastColor(
+              playerColors[p.playerId],
+              selectedPlayerIds.includes(p.playerId) ? 0 : 0.6
+            ),
             borderColor: selectedPlayerIds.includes(p.playerId)
               ? toRgb(playerColors[p.playerId], 0)
               : toRgb(playerColors[p.playerId], 0.6),
@@ -290,7 +306,7 @@ import ModalEventDataSelect from "@/components/events/ModalEventDataSelect.vue";
 import ModalEventDataUpload from "@/components/events/ModalEventDataUpload.vue";
 import ModalPositionDataEntityColors from "@/components/position-data/ModalPositionDataEntityColors.vue";
 import EventDataMenu from "@/components/events/EventDataMenu.vue";
-import { toRgb } from "@/plugins/helpers";
+import { toRgb, getContrastColor } from "@/plugins/helpers";
 
 defineProps({
   // True when this widget shares its row with video/topview and has been height-capped to

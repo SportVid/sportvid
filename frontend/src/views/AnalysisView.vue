@@ -11,12 +11,9 @@
             class="fill-height"
             data-tour="analysis-video-player"
           >
-            <v-row justify="center">
-              <v-card-title class="mt-5 mb-n1">
-                {{ playerStore.videoName }}
-              </v-card-title>
-            </v-row>
-
+            <!-- No extra title row here -- VideoPlayer.vue already renders playerStore.videoName
+                 itself (its own .video-title), so wrapping it in a v-card-title too showed the
+                 name twice, stacked right on top of each other. -->
             <v-row class="flex-grow-1">
               <v-col>
                 <VideoPlayer />
@@ -370,26 +367,8 @@ const selectedPlaceClustering = computed({
 //   },
 // });
 
-const fetchPluginTimer = ref(null);
-const fetchPlugin = async () => {
-  await pluginRunStore.fetchForVideo({
-    videoId: route.params.id,
-    fetchResults: true,
-  });
-};
-const pluginInProgress = computed(() => pluginRunStore.pluginInProgress);
-watch(
-  () => pluginInProgress,
-  (newState) => {
-    if (newState) {
-      fetchPluginTimer = setInterval(() => {
-        fetchPlugin({ addResults: false });
-      }, 1000);
-    } else {
-      clearInterval(fetchPluginTimer);
-    }
-  }
-);
+// Plugin run updates (status, progress, freshly loaded results) arrive over the live
+// event stream now -- see stores/event_stream.js and pluginRunStore.applyRunEvent.
 
 const annotationDialog = ref({ show: false });
 const onAnnotateSegment = () => {
@@ -721,24 +700,15 @@ function onEntryClick(event) {
 onBeforeUnmount(() => {
   window.removeEventListener("pointermove", onEntryPointerMove);
   window.removeEventListener("pointerup", onEntryPointerUp);
-  positionDataStore.positionDataId = null;
-  positionDataStore.positionDataMode = null;
-  positionDataStore.selectedTimeRange = { start: 0, end: 0 };
-  topViewStore.setPositionData(null, {});
-  bboxesStore.bboxDataInterpolated = {};
-  // Also clear the persisted tracker-run ids (bboxPluginRunId/bboxBallPluginRunId,
-  // teamClusteringRunId/reidRunId) — otherwise they'd survive into a different
-  // video's AnalysisView and restoreFromCache (position_data.js) could try to
-  // restore this video's tracker run against that one.
-  bboxesStore.bboxPluginRunId = 0;
-  bboxesStore.bboxBallPluginRunId = null;
-  topViewStore.teamClusteringRunId = null;
-  topViewStore.reidRunId = null;
+  // Also clears the persisted tracker-run ids (bboxPluginRunId/bboxBallPluginRunId,
+  // teamClusteringRunId/reidRunId) — otherwise they'd survive into a different video's
+  // AnalysisView and restoreFromCache (position_data.js) could try to restore this video's
+  // tracker run against that one.
+  positionDataStore.resetPositionData();
   calibrationAssetStore.resetCalibrationAsset();
   topViewStore.gridLongitudinal = 0;
   topViewStore.gridTransverse = 0;
   topViewStore.showSportZones = false;
-  visualizationStore.resetKpiData();
   // Event data sets (see EventDataMenu.vue) are only ever uploaded/generated per video, not
   // a reusable global list -- carrying them into the next video (persisted, see events.js)
   // would show that other video's dummy/uploaded events tagged onto this one instead of a

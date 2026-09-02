@@ -44,6 +44,11 @@ class SportVidUser(AbstractUser):
     max_video_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB, 500MB: 500*1024*1024
     max_file_size = models.BigIntegerField(default=5 * 1024 * 1024 * 1024)  # GB
     dashboard_layout = models.JSONField(default=dict, blank=True)
+    video_view_mode = models.CharField(max_length=16, default="grid", blank=True)
+    # "simple" | "complex" -- controls how many parameters ModalPluginRun.vue exposes per
+    # plugin (see usePluginParams.js). Defaults to "complex" so nothing changes for accounts
+    # that predate this field; chosen explicitly at registration or switched later in settings.
+    experience_mode = models.CharField(max_length=16, default="complex", blank=True)
     objects = SportVidUserManager()
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
@@ -57,7 +62,9 @@ class SportVidUser(AbstractUser):
             "max_video_size": self.max_video_size,
             "max_file_size": self.max_file_size,
             "date_joined": self.date_joined,
-            "dashboard_layout": self.dashboard_layout
+            "dashboard_layout": self.dashboard_layout,
+            "video_view_mode": self.video_view_mode,
+            "experience_mode": self.experience_mode
         }
 
     def __str__(self):
@@ -87,6 +94,11 @@ class Video(models.Model):
         choices=[(k, v) for k, v in STATUS.items()],
         default=STATUS_DONE,
     )
+    # progress status for HLS conversion
+    progress = models.FloatField(default=0.0)
+    # smoothed estimate (seconds) of the conversion time still remaining; null while
+    # nothing has been reported yet or once the video is no longer being converted.
+    eta_seconds = models.FloatField(blank=True, null=True)
     date = models.DateTimeField(auto_now_add=True)
     # some extracted meta information
     fps = models.FloatField(blank=True, null=True)
@@ -121,6 +133,7 @@ class Video(models.Model):
             "height": self.height,
             "width": self.width,
             "num_timelines": len(Timeline.objects.filter(video=self)),
+            "has_tracking_data": TrackingData.objects.filter(video=self).exists(),
             "field_length": self.field_length,
             "field_width": self.field_width,
             "division": self.division,
@@ -129,6 +142,8 @@ class Video(models.Model):
             "age_group": self.age_group,
             "sport": self.sport,
             "status": self.status,
+            "progress": self.progress,
+            "eta_seconds": self.eta_seconds,
             "processing": True if self.status == self.STATUS_PROCESSING else False,
         }
 
@@ -232,11 +247,19 @@ class PluginRun(models.Model):
     )
     
     date = models.DateTimeField(auto_now_add=True)
-    update_date = models.DateTimeField(auto_now_add=True)
+    # auto_now so it actually moves on every .save(); the queryset-update progress path
+    # in analyser_client.py sets it explicitly since auto_now doesn't fire there.
+    update_date = models.DateTimeField(auto_now=True)
     type = models.CharField(max_length=256)
     progress = models.FloatField(default=0.0)
+    # smoothed estimate (seconds) of the run's remaining time; null until the analyser
+    # reports enough to extrapolate, and reset to null on QUEUED / DONE / ERROR.
+    eta_seconds = models.FloatField(blank=True, null=True)
     in_scheduler = models.BooleanField(default=False)
-
+    # TODO: Consider adding db_index=True to task_id if we ever query by it, and
+    # optionally add a validator for Celery task ID format.
+    task_id = models.CharField(max_length=256, blank=True, null=True) # associate PluginRun DB entry with Celery run_plugin task.
+    
     STATUS_UNKNOWN = "U"
     STATUS_ERROR = "E"
     STATUS_DONE = "D"
@@ -264,6 +287,7 @@ class PluginRun(models.Model):
             "date": self.date,
             "update_date": self.update_date,
             "progress": self.progress,
+            "eta_seconds": self.eta_seconds,
             "status": self.STATUS[self.status],
         }
         if include_refs_hashes:

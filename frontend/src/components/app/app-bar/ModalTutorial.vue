@@ -159,8 +159,8 @@ const toggleTutorial = async (id) => {
     return;
   }
 
-  const config = tutorialStore.tutorialSteps[id];
-  if (!config) return;
+  const steps = tutorialStore.getTutorialSteps(id);
+  if (!steps.length) return;
 
   tutorialStore.tour = new Shepherd.Tour({
     defaultStepOptions: {
@@ -171,9 +171,9 @@ const toggleTutorial = async (id) => {
     keyboardNavigation: false,
   });
 
-  const totalSteps = config.steps.length;
+  const totalSteps = steps.length;
 
-  config.steps.forEach((step, index) => {
+  steps.forEach((step, index) => {
     const stepNum = index + 1;
     const titleWithCount = `${stepNum}/${totalSteps}`;
 
@@ -202,7 +202,7 @@ const showStepsOverview = (tutorialId) => {
   const tutorial = tutorialStore.availableTutorials.find((t) => t.id === tutorialId);
   if (!tutorial) return;
 
-  const steps = tutorialStore.tutorialSteps[tutorialId]?.steps || [];
+  const steps = tutorialStore.getTutorialSteps(tutorialId);
 
   overviewSteps.value = steps;
   overviewTitle.value = tutorial.name;

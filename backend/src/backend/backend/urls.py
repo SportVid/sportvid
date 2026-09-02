@@ -53,6 +53,11 @@ urlpatterns = [
          views.BoundingBoxesChange.as_view(), name="position_data_bboxes_edit"),
     path("position_data/bboxes/delete",
         views.BoundingBoxesDelete.as_view(), name="position_data_bboxes_delete"),
+    path("position_data/bboxes/replace",
+        views.BoundingBoxesReplace.as_view(), name="position_data_bboxes_replace"),
+    # ---------- EVENTS
+    path("events/stream",
+        views.EventStream.as_view(), name="event_stream"),
     # ---------- PLUGIN
     path("plugin/list",
         views.PluginList.as_view(), name="plugin_list"),

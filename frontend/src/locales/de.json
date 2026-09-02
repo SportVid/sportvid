@@ -45,6 +45,13 @@
         "min": "Mindestens 5 Zeichen.",
         "max": "Maximal 50 Zeichen."
       }
+    },
+    "experience_mode": {
+      "heading": "Wie möchten Sie Plugins nutzen?",
+      "simple_label": "Einfach",
+      "complex_label": "Komplex",
+      "simple_sentence": "Ich möchte einfach loslegen, ohne mich mit technischen Details zu beschäftigen — zeig mir nur das Nötigste.",
+      "complex_sentence": "Ich kenne mich mit Machine Learning / Computer Vision aus und möchte jeden Parameter selbst einstellen können."
     }
   },
   "button": {
@@ -65,6 +72,7 @@
     "save": "Speichern",
     "run_batch_plugin": "Batch-Plugin ausführen",
     "run_plugin": "Plugin ausführen",
+    "run_plugins": "Plugins ausführen",
     "upload_video": "Neues Video hochladen",
     "exit": "Beenden",
     "cancel_and_delete": "Abbrechen & Löschen"
@@ -89,12 +97,35 @@
     "uploaded": "Hochgeladen:",
     "timelines": "Zeitleisten:",
     "video_processing": "Video wird verarbeitet",
+    "rename_video": "Video umbenennen",
+    "delete_video": "Video löschen",
+    "toggle_details": "Details anzeigen/ausblenden",
+    "data": "Daten",
     "filter_sport": "Sportart",
     "filter_age_group": "Altersklasse",
     "filter_all": "Alle",
     "sort_date_newest": "Neueste zuerst",
     "sort_date_oldest": "Älteste zuerst",
-    "filter_name": "Titel suchen..."
+    "view_grid": "Kachelansicht",
+    "view_list": "Listenansicht",
+    "filter_name": "Titel suchen...",
+    "empty_state_title": "Du möchtest dein erstes Video analysieren lassen?",
+    "empty_state_text": "Klicke jetzt auf das Plus, um dein erstes Video hochzuladen."
+  },
+  "pip": {
+    "enter": "Bild-im-Bild",
+    "exit": "Zurück zur Card",
+    "return_to_card": "Zurück in die Card holen"
+  },
+  "video_player": {
+    "pip": {
+      "playing_in_pip": "Video läuft im Bild-im-Bild-Modus"
+    }
+  },
+  "top_view": {
+    "pip": {
+      "playing_in_pip": "Top View läuft im Bild-im-Bild-Modus"
+    }
   },
   "analysis_view": {
     "tabs": {
@@ -110,7 +141,7 @@
       "timeline": "Timeline",
       "events": "Ereignisse",
       "heatmap": "Heatmap",
-      "kpi": "KPIs"
+      "kpi": "Metriken"
     },
     "dashboard": {
       "edit_toggle": "Layout bearbeiten",
@@ -148,7 +179,7 @@
   },
   "position_data": {
     "not_selected": "Keine Positionsdaten vorhanden.",
-    "kpi_not_selected": "Noch keine KPIs berechnet.",
+    "kpi_not_selected": "Noch keine Metriken berechnet.",
     "select_disabled_hint_prefix": "Der aktuelle Stand ist in der ",
     "status_overview_link": "Statusübersicht",
     "select_disabled_hint_suffix": " einsehbar.",
@@ -160,7 +191,13 @@
       "dlt": "DLT-Kalibrierung",
       "team_assignment": "Team-Zuordnung",
       "re_identification": "Re-Identification",
-      "upload_heading": "Per Datei-Upload"
+      "upload_heading": "Per Datei-Upload",
+      "create": "Positionsdaten erstellen",
+      "create_description": "Erstellt Positionsdaten für dieses Video: Kalibrierungs-Asset auswählen und Spieler tracken. Ball-Tracking, Team-Zuordnung und Re-Identification sind optional, für die besten Ergebnisse empfiehlt es sich aber, alle davon zu aktivieren.",
+      "player_tracking": "Spieler-Tracking",
+      "ball_tracking": "Ball-Tracking",
+      "new_run": "Neuer Lauf",
+      "waits_for_player_tracking": "Startet automatisch, sobald das Spieler-Tracking abgeschlossen ist."
     },
     "display_settings": {
       "title": "Anzeigeeinstellungen",
@@ -168,12 +205,13 @@
       "video_sync": "Mit Video synchronisieren",
       "mirror_xy": "XY-Koordinaten spiegeln",
       "view_kpis": {
-        "title": "Leistungsindikator anzeigen",
+        "title": "Metriken anzeigen",
         "space_control": "Raumkontrolle",
         "eps": "Effektiver Spielraum"
       },
       "position_data": {
         "title": "Positionsdaten",
+        "create_new": "Neue Positionsdaten erstellen",
         "upload": "Positionsdaten hochladen",
         "select": "Positionsdaten auswählen"
       },
@@ -199,6 +237,7 @@
     "display_settings": {
       "event_data": {
         "title": "Event-Daten",
+        "create_new": "Neue Event-Daten erstellen",
         "upload": "Event-Daten hochladen",
         "select": "Event-Daten auswählen"
       }
@@ -249,7 +288,7 @@
         "title": "Ereignistypen"
       },
       "kpi_columns": {
-        "title": "KPI-Spalten"
+        "title": "Metrik-Spalten"
       },
       "event_type": {
         "goal": "Tor",
@@ -275,11 +314,11 @@
     },
     "kpi": {
       "posdata_not_available": "Keine Positionsdaten vorhanden.<br>Erzeuge sie zuerst im TopView- oder Heatmap-Feld.",
-      "no_kpi_computed": "Keine KPIs berechnet.",
-      "compute_kpis": "KPIs berechnen",
-      "select_kpis": "KPI-Daten auswählen",
+      "no_kpi_computed": "Keine Metriken berechnet.",
+      "compute_kpis": "KPIs erstellen",
+      "select_kpis": "Metrik-Daten auswählen",
       "compute": {
-        "button": "KPI berechnen"
+        "button": "Metriken berechnen"
       },
       "view_mode": {
         "title": "Ansicht",
@@ -292,7 +331,7 @@
         "team": "Team"
       },
       "kpi_selection": {
-        "title": "KPI",
+        "title": "Metrik",
         "unit": "Einheit",
         "group_distance": "Distanz",
         "group_velocity": "Geschwindigkeit",
@@ -340,7 +379,7 @@
         "total": "Gesamt"
       },
       "team_view": {
-        "kpi": "KPI",
+        "kpi": "Metrik",
         "total": "Gesamt",
         "average": "Durchschnitt"
       },
@@ -367,7 +406,7 @@
         "second_half": "Zweite Halbzeit auswählen"
       },
       "kpi_selection": {
-        "title": "KPI-Auswahl",
+        "title": "Metrikauswahl",
         "running_distance": "Laufdistanz",
         "running_distance_cumulative": "Laufdistanz (kumulativ)",
         "running_distance_interval": "Laufdistanz (pro {frames} Frames)",
@@ -383,7 +422,7 @@
         "windowed": "Pro Sekunde"
       },
       "team_view": {
-        "kpi": "KPI",
+        "kpi": "Metrik",
         "total": "Gesamt",
         "average": "Durchschnitt"
       },
@@ -489,7 +528,10 @@
       "update_failed": "Aktualisierung fehlgeschlagen",
       "theme": "Design",
       "theme_light": "Hell",
-      "theme_dark": "Dunkel"
+      "theme_dark": "Dunkel",
+      "experience_mode": {
+        "title": "Nutzungsmodus"
+      }
     },
     "export": {
       "title": "Ergebnisse exportieren",
@@ -532,7 +574,7 @@
         "file_name": "positionsdaten"
       },
       "kpi": {
-        "export_name": "KPI",
+        "export_name": "Metriken",
         "teams": {
           "all": "Alle auswählen"
         },
@@ -551,7 +593,7 @@
         "file_name": "kpi_daten"
       },
       "kpi_aggregated": {
-        "export_name": "KPI (aggregiert)",
+        "export_name": "Metriken (aggregiert)",
         "teams": {
           "all": "Alle auswählen"
         },
@@ -610,8 +652,8 @@
       "position_data_attribute_hint": "Zeitstempel (ms), Spieler-ID, X und Y sind immer enthalten. Optional weitere Attribute hinzufügen.",
       "kpi_team_name": "Teams auswählen",
       "kpi_team_hint": "Exportiert die ausgewählten Teams.",
-      "kpi_names_name": "KPIs auswählen",
-      "kpi_names_hint": "Auswählen, welche KPIs enthalten sein sollen (min. 1 erforderlich).",
+      "kpi_names_name": "Metriken auswählen",
+      "kpi_names_hint": "Auswählen, welche Metriken enthalten sein sollen (min. 1 erforderlich).",
       "kpi_attribute_name": "Zusätzliche Attribute",
       "kpi_attribute_hint": "Zeitstempel (ms) und Spieler-ID sind immer enthalten. Optional weitere Attribute hinzufügen.",
       "kpi_start_frame_name": "Startframe auswählen",
@@ -637,7 +679,7 @@
       },
       "object_tracker": {
         "plugin_name": "Objektverfolgung",
-        "plugin_description": "Dieses Plugin führt Multi-Object-Tracking (MOT) direkt auf dem Video durch. Es erkennt und verfolgt Spieler und den Ball Bild für Bild und erzeugt dabei Bounding-Boxen für jedes erkannte Objekt. Das für die zugrunde liegende Objekterkennung verwendete Detektor-Modell sowie dessen Parameter und die Tracker-Parameter lassen sich unter „Erweiterte Optionen“ frei konfigurieren.<br><br>Die Tracking-Ergebnisse können anschließend zusammen mit einer Kamerakalibrierung (DLT+RANSAC) verwendet werden, um reale Positionsdaten zu berechnen.",
+        "plugin_description": "Dieses Plugin führt Multi-Object-Tracking (MOT) direkt auf dem Video durch. Es erkennt und verfolgt Spieler und den Ball Bild für Bild und erzeugt dabei Bounding-Boxen für jedes erkannte Objekt. Das für die zugrunde liegende Objekterkennung verwendete Detektor-Modell sowie dessen Parameter und die Tracker-Parameter lassen sich frei konfigurieren.<br><br>Die Tracking-Ergebnisse können anschließend zusammen mit einer Kamerakalibrierung (DLT+RANSAC) verwendet werden, um reale Positionsdaten zu berechnen.",
         "timeline_name": "Objektverfolgung",
         "tracking_target": "Tracking-Ziel",
         "tracking_target_player": "Spieler",
@@ -665,7 +707,7 @@
       },
       "team_clustering": {
         "plugin_name": "Team-Zuordnung",
-        "plugin_description": "Dieses Plugin ordnet die in einem vorherigen Player-Tracking-Lauf erkannten Spieler-Tracks per Farb-Clustering (K-Means oder HDBSCAN) auf Basis von Trikotfarben Teams zu. Es benötigt keinen eigenen Tracker, sondern greift auf die Bounding-Boxen eines abgeschlossenen Objektverfolgung-Laufs zurück.<br><br>Die meisten Parameter sind unter „Erweiterte Optionen“ vorkonfiguriert und müssen in der Regel nicht angepasst werden.",
+        "plugin_description": "Dieses Plugin ordnet die in einem vorherigen Player-Tracking-Lauf erkannten Spieler-Tracks per Farb-Clustering (K-Means oder HDBSCAN) auf Basis von Trikotfarben Teams zu. Es benötigt keinen eigenen Tracker, sondern greift auf die Bounding-Boxen eines abgeschlossenen Objektverfolgung-Laufs zurück.",
         "timeline_name": "Team-Zuordnung",
         "object_tracker_id": "Objektverfolgung-Lauf auswählen",
         "object_tracker_id_hint": "Wähle einen abgeschlossenen Player-Tracking-Lauf (Objektverfolgung) dieses Videos aus.",
@@ -702,7 +744,7 @@
       },
       "osnet_reid": {
         "plugin_name": "Re-Identification (OSNet)",
-        "plugin_description": "Dieses Plugin führt Spieler-Tracks aus einem vorherigen Player-Tracking-Lauf über Track-ID-Wechsel hinweg (z. B. nach Verdeckungen oder wenn Spieler das Feld verlassen/wieder betreten) wieder zusammen. Dazu wird ein erscheinungsbasierter Feature-Extraktor (OSNet) zusammen mit einer Online-Gallerie von Identitäts-Prototypen genutzt. Es benötigt keinen eigenen Tracker, sondern greift auf die Bounding-Boxen eines abgeschlossenen Objektverfolgung-Laufs zurück.<br><br>Die meisten Parameter sind unter „Erweiterte Optionen“ vorkonfiguriert und müssen in der Regel nicht angepasst werden.",
+        "plugin_description": "Dieses Plugin führt Spieler-Tracks aus einem vorherigen Player-Tracking-Lauf über Track-ID-Wechsel hinweg (z. B. nach Verdeckungen oder wenn Spieler das Feld verlassen/wieder betreten) wieder zusammen. Dazu wird ein erscheinungsbasierter Feature-Extraktor (OSNet) zusammen mit einer Online-Gallerie von Identitäts-Prototypen genutzt. Es benötigt keinen eigenen Tracker, sondern greift auf die Bounding-Boxen eines abgeschlossenen Objektverfolgung-Laufs zurück.",
         "timeline_name": "Re-Identification",
         "object_tracker_id": "Objektverfolgung-Lauf auswählen",
         "object_tracker_id_hint": "Wähle einen abgeschlossenen Player-Tracking-Lauf (Objektverfolgung) dieses Videos aus.",
@@ -736,8 +778,8 @@
         "plugin_name": "Positionsdaten konvertieren"
       },
       "kpi_computation": {
-        "plugin_name": "KPI-Berechnung",
-        "plugin_description": "Dieses Plugin berechnet ausgewählte Key Performance Indicators (KPIs) auf Basis der Positionsdaten. Die Berechnung erfolgt mithilfe des <a href=\"https://floodlight.readthedocs.io/en/latest/index.html\">floodlight</a>-Pakets. Verfügbare KPIs: <br><br> <em>Zurückgelegte Distanz, Geschwindigkeit & Metabolische Leistung</em>",
+        "plugin_name": "Metrik-Berechnung",
+        "plugin_description": "Dieses Plugin berechnet ausgewählte Leistungsmetriken auf Basis der Positionsdaten. Die Berechnung erfolgt mithilfe des <a href=\"https://floodlight.readthedocs.io/en/latest/index.html\">floodlight</a>-Pakets. Verfügbare Metriken: <br><br> <em>Zurückgelegte Distanz, Geschwindigkeit & Metabolische Leistung</em>",
         "tracking_data_id": "Positionsdaten auswählen",
         "tracking_data_id_hint": "Wählen Sie einen Positionsdatensatz für die Berechnung aus.",
         "format": "Datenanbieter auswählen",
@@ -972,7 +1014,7 @@
       "title": "Status",
       "area": {
         "posdata": "Positionsdaten",
-        "kpi": "KPIs"
+        "kpi": "Metriken"
       },
       "source": {
         "player_tracking": "Spieler-Tracking",
@@ -1105,5 +1147,8 @@
         "three_bottom": "Dreipunkt Unten"
       }
     }
+  },
+  "progress": {
+    "eta": "noch {time}"
   }
 }

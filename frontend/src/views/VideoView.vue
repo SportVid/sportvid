@@ -1,156 +1,390 @@
 <template>
   <v-main>
     <v-container v-if="userStore.loggedIn" fluid data-tour="video-select">
-      <v-row class="mb-n2">
-        <v-col class="d-flex flex-wrap justify-center align-center pb-0" style="gap: 8px">
-          <v-text-field
-            v-model="filterName"
-            :label="$t('video_view.filter_name')"
-            density="compact"
-            variant="outlined"
-            color="primary"
-            base-color="primary"
-            hide-details
-            clearable
-            prepend-inner-icon="mdi-magnify"
-            style="max-width: 280px"
-          />
-          <v-select
-            v-model="filterSport"
-            :items="sportOptions"
-            :label="$t('video_view.filter_sport')"
-            density="compact"
-            variant="outlined"
-            color="primary"
-            base-color="primary"
-            hide-details
-            clearable
-            style="max-width: 240px"
-          />
-          <v-select
-            v-model="filterAgeGroup"
-            :items="ageGroupOptions"
-            :label="$t('video_view.filter_age_group')"
-            density="compact"
-            variant="outlined"
-            color="primary"
-            base-color="primary"
-            hide-details
-            clearable
-            style="max-width: 240px"
-          />
-          <v-btn
-            variant="outlined"
-            color="primary"
-            density="compact"
-            @click="toggleDateSort"
-            class="text-none"
-            style="height: 40px"
-          >
-            <v-icon size="18" class="mr-1">
-              {{
-                sortDateDir === "desc"
-                  ? "mdi-sort-calendar-descending"
-                  : "mdi-sort-calendar-ascending"
-              }}
-            </v-icon>
-            {{
-              sortDateDir === "desc"
-                ? $t("video_view.sort_date_newest")
-                : $t("video_view.sort_date_oldest")
-            }}
-          </v-btn>
-        </v-col>
-      </v-row>
-      <v-row>
-        <v-col>
-          <v-container class="d-flex flex-wrap justify-center video-gallery pa-0" fluid>
+      <template v-if="hasNoVideos">
+        <v-row class="empty-state-row" align="center">
+          <v-col class="d-flex flex-column align-center justify-center">
             <v-card
               elevation="2"
-              v-for="item in videos"
-              :loading="item.loading"
-              :key="item.id"
-              :class="item.processing ? 'processing-card' : ''"
-              :data-tour="item.processing ? 'video-processing' : undefined"
+              class="add-video-card"
               width="370"
+              data-tour="modal-video-upload-open"
+              @click="showModalVideoUpload = true"
             >
-              <v-card-title class="video-overview-title mt-2 mb-n2">
-                <span class="title-name">{{ item.name }}</span>
-                <v-chip
-                  v-if="item.owner_username && userStore.role === 'admin'"
-                  size="x-small"
-                  color="secondary"
-                  class="ml-2 flex-shrink-0"
-                  >{{ item.owner_username }}</v-chip
-                >
-              </v-card-title>
-              <div v-if="item.processing" class="card-body card-body-processing">
-                <v-card-text class="d-flex flex-column align-center py-3">
-                  <i class="mdi mdi-loading mdi-spin" style="font-size: 40px" />
-                  <div class="mt-2">
-                    {{ $t("video_view.video_processing") }}
-                  </div>
-                  <v-btn
-                    size="small"
-                    color="red"
-                    variant="outlined"
-                    class="mt-3"
-                    @click="deleteVideo(item.id)"
+              <v-icon size="48" color="primary">mdi-plus</v-icon>
+            </v-card>
+            <div class="text-center mt-4 empty-state-text">
+              <div class="text-h6 mb-1">{{ $t("video_view.empty_state_title") }}</div>
+              <div class="text-body-2">{{ $t("video_view.empty_state_text") }}</div>
+            </div>
+          </v-col>
+        </v-row>
+      </template>
+      <template v-else>
+        <v-row class="mb-n2">
+          <v-col class="d-flex flex-wrap justify-center align-center pb-0" style="gap: 8px">
+            <v-text-field
+              v-model="filterName"
+              :label="$t('video_view.filter_name')"
+              density="compact"
+              variant="outlined"
+              color="primary"
+              base-color="primary"
+              hide-details
+              clearable
+              prepend-inner-icon="mdi-magnify"
+              style="max-width: 280px"
+            />
+
+            <v-select
+              v-model="filterSport"
+              :items="sportOptions"
+              :label="$t('video_view.filter_sport')"
+              density="compact"
+              variant="outlined"
+              color="primary"
+              base-color="primary"
+              hide-details
+              clearable
+              style="max-width: 240px"
+            />
+
+            <v-select
+              v-model="filterAgeGroup"
+              :items="ageGroupOptions"
+              :label="$t('video_view.filter_age_group')"
+              density="compact"
+              variant="outlined"
+              color="primary"
+              base-color="primary"
+              hide-details
+              clearable
+              style="max-width: 240px"
+            />
+
+            <v-btn
+              variant="outlined"
+              color="primary"
+              density="compact"
+              @click="toggleDateSort"
+              class="text-none"
+              style="height: 40px"
+            >
+              <v-icon size="18" class="mr-2">
+                {{
+                  sortDateDir === "desc"
+                    ? "mdi-sort-calendar-descending"
+                    : "mdi-sort-calendar-ascending"
+                }}
+              </v-icon>
+              {{
+                sortDateDir === "desc"
+                  ? $t("video_view.sort_date_newest")
+                  : $t("video_view.sort_date_oldest")
+              }}
+            </v-btn>
+
+            <v-btn-toggle
+              v-model="viewMode"
+              mandatory
+              density="compact"
+              color="primary"
+              variant="outlined"
+              style="height: 40px"
+            >
+              <v-btn value="grid">
+                <v-icon size="18">mdi-view-grid-outline</v-icon>
+              </v-btn>
+              <v-btn value="list">
+                <v-icon size="18">mdi-view-sequential-outline</v-icon>
+              </v-btn>
+            </v-btn-toggle>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <v-container
+              v-if="viewMode === 'grid'"
+              class="d-flex flex-wrap justify-center video-gallery pa-0"
+              fluid
+            >
+              <v-card
+                elevation="2"
+                class="add-video-card"
+                width="370"
+                data-tour="modal-video-upload-open"
+                @click="showModalVideoUpload = true"
+              >
+                <v-icon size="48" color="primary">mdi-plus</v-icon>
+              </v-card>
+              <v-card
+                elevation="2"
+                v-for="item in videos"
+                :loading="item.loading"
+                :key="item.id"
+                :class="showProcessingCard(item) ? 'processing-card' : 'video-card-clickable'"
+                :data-tour="showProcessingCard(item) ? 'video-processing' : undefined"
+                width="370"
+                @click="!showProcessingCard(item) && showVideo(item.id)"
+              >
+                <v-card-title class="video-overview-title mt-2 mb-n2">
+                  <span class="title-name">{{ item.name }}</span>
+                  <v-chip
+                    v-if="item.owner_username && userStore.role === 'admin'"
+                    size="x-small"
+                    color="secondary"
+                    class="ml-2 flex-shrink-0"
+                    >{{ item.owner_username }}</v-chip
                   >
-                    <v-icon class="mr-1">mdi-trash-can-outline</v-icon>
-                    {{ $t("button.cancel_and_delete") }}
-                  </v-btn>
-                </v-card-text>
-              </div>
-              <div v-else class="card-body">
-                <v-card-text class="card-text-inner">
-                  <div>{{ $t("video_view.video_id") }} {{ item.id }}</div>
-                  <div>{{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}</div>
-                  <div>{{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}</div>
-                  <div>{{ $t("video_view.timelines") }} {{ item.num_timelines }}</div>
-                </v-card-text>
-                <div
-                  :class="
-                    canWrite(item) ? 'card-actions-row' : 'card-actions-row card-actions-row-solo'
-                  "
-                >
-                  <v-tooltip :text="$t('button.analyse')" location="top">
-                    <template #activator="{ props }">
-                      <v-btn variant="outlined" v-bind="props" @click="showVideo(item.id)">
-                        <v-icon>mdi-movie-search-outline</v-icon>
-                      </v-btn>
-                    </template>
-                  </v-tooltip>
-
-                  <ModalVideoRename v-if="canWrite(item)" :video="item.id" />
-
-                  <v-tooltip v-if="canWrite(item)" :text="$t('button.delete')" location="top">
+                  <v-spacer />
+                  <v-menu
+                    v-if="canWrite(item) && !showProcessingCard(item)"
+                    location="bottom center"
+                  >
                     <template #activator="{ props }">
                       <v-btn
-                        color="red"
-                        variant="outlined"
+                        icon="mdi-menu"
+                        variant="text"
+                        density="comfortable"
+                        size="small"
                         v-bind="props"
-                        @click="deleteVideo(item.id)"
-                      >
-                        <v-icon>mdi-trash-can-outline</v-icon>
-                      </v-btn>
+                        @click.stop
+                      />
                     </template>
-                  </v-tooltip>
-
-                  <v-checkbox
-                    v-if="canWrite(item)"
-                    v-model="videoStore.selectedVideos[item.id]"
-                    color="primary"
-                    class="ml-n1"
-                    hide-details
+                    <v-list density="compact" class="py-0">
+                      <v-list-item @click="renameTargetId = item.id">
+                        <v-list-item-title>{{ $t("video_view.rename_video") }}</v-list-item-title>
+                      </v-list-item>
+                      <v-list-item @click="deleteVideo(item.id)">
+                        <v-list-item-title class="text-red">{{
+                          $t("video_view.delete_video")
+                        }}</v-list-item-title>
+                      </v-list-item>
+                    </v-list>
+                  </v-menu>
+                </v-card-title>
+                <div v-if="showProcessingCard(item)" class="card-body card-body-processing">
+                  <v-card-text class="d-flex flex-column align-center py-3">
+                    <i class="mdi mdi-loading mdi-spin" style="font-size: 40px" />
+                    <div class="mt-2">
+                      {{ $t("video_view.video_processing") }}
+                    </div>
+                    <v-btn
+                      size="small"
+                      color="red"
+                      variant="outlined"
+                      class="mt-3"
+                      @click.stop="deleteVideo(item.id)"
+                    >
+                      <v-icon class="mr-2">mdi-trash-can-outline</v-icon>
+                      {{ $t("button.cancel_and_delete") }}
+                    </v-btn>
+                  </v-card-text>
+                  <div v-if="etaText(item)" class="eta-caption">{{ etaText(item) }}</div>
+                  <v-progress-linear
+                    class="mt-auto"
+                    :model-value="processingProgress(item)"
+                    :indeterminate="conversionIndeterminate(item)"
                   />
                 </div>
-                <v-progress-linear v-model="videosProgress[item.id]" />
-              </div>
-            </v-card>
-          </v-container>
-        </v-col>
-      </v-row>
+                <div v-else class="card-body">
+                  <div class="flip-container">
+                    <div class="flip-inner" :class="{ flipped: flippedCards[item.id] }">
+                      <div class="flip-face flip-front">
+                        <img
+                          v-if="videoCoverUrl[item.id]"
+                          :src="videoCoverUrl[item.id]"
+                          class="video-thumbnail"
+                          alt=""
+                        />
+                        <div v-else class="video-thumbnail-placeholder">
+                          <v-icon size="40" color="grey">mdi-movie-outline</v-icon>
+                        </div>
+                      </div>
+                      <div class="flip-face flip-back">
+                        <div class="info-rows">
+                          <div class="info-row">{{ $t("video_view.video_id") }} {{ item.id }}</div>
+                          <div class="info-row">
+                            {{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}
+                          </div>
+                          <div class="info-row">
+                            {{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}
+                          </div>
+                          <div class="info-row">
+                            {{ $t("video_view.data") }}:
+                            <span class="data-badges">
+                              <span
+                                v-for="cat in videoDataCategories[item.id]"
+                                :key="cat.key"
+                                class="data-badge"
+                              >
+                                <v-icon size="16" :color="stateColor(cat.state)">
+                                  {{ stateIcon(cat.state) }}
+                                </v-icon>
+                                {{ cat.label }}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card-flip-toggle">
+                    <v-btn
+                      icon="mdi-dots-horizontal"
+                      variant="text"
+                      density="comfortable"
+                      size="small"
+                      @click.stop="toggleCardFlip(item.id)"
+                    />
+                  </div>
+                  <div v-if="etaText(item)" class="eta-caption">{{ etaText(item) }}</div>
+                  <v-progress-linear
+                    :model-value="videosProgress[item.id]"
+                    :indeterminate="batchIndeterminate(item.id)"
+                  />
+                </div>
+              </v-card>
+            </v-container>
+
+            <div v-else class="video-list">
+              <v-card
+                elevation="2"
+                class="add-video-card add-video-row"
+                data-tour="modal-video-upload-open"
+                @click="showModalVideoUpload = true"
+              >
+                <v-icon size="28" color="primary">mdi-plus</v-icon>
+              </v-card>
+              <v-card
+                elevation="2"
+                v-for="item in videos"
+                :loading="item.loading"
+                :key="item.id"
+                :class="[
+                  'video-row',
+                  showProcessingCard(item) ? 'processing-card' : 'video-card-clickable',
+                ]"
+                :data-tour="showProcessingCard(item) ? 'video-processing' : undefined"
+                @click="!showProcessingCard(item) && showVideo(item.id)"
+              >
+                <div class="video-row-main">
+                  <div class="row-thumb">
+                    <img
+                      v-if="videoCoverUrl[item.id] && !showProcessingCard(item)"
+                      :src="videoCoverUrl[item.id]"
+                      class="row-thumbnail"
+                      alt=""
+                    />
+                    <div v-else class="row-thumbnail-placeholder">
+                      <i
+                        v-if="showProcessingCard(item)"
+                        class="mdi mdi-loading mdi-spin"
+                        style="font-size: 26px"
+                      />
+                      <v-icon v-else size="26" color="grey">mdi-movie-outline</v-icon>
+                    </div>
+                  </div>
+
+                  <div class="row-title-block">
+                    <span class="title-name">{{ item.name }}</span>
+                    <v-chip
+                      v-if="item.owner_username && userStore.role === 'admin'"
+                      size="x-small"
+                      color="secondary"
+                      class="ml-2 flex-shrink-0"
+                      >{{ item.owner_username }}</v-chip
+                    >
+                  </div>
+
+                  <v-spacer />
+
+                  <template v-if="showProcessingCard(item)">
+                    <span class="row-processing-text">
+                      {{ $t("video_view.video_processing")
+                      }}<span v-if="etaText(item)" class="row-eta"> · {{ etaText(item) }}</span>
+                    </span>
+                    <v-btn
+                      size="small"
+                      color="red"
+                      variant="outlined"
+                      class="ml-3"
+                      @click.stop="deleteVideo(item.id)"
+                    >
+                      <v-icon class="mr-2">mdi-trash-can-outline</v-icon>
+                      {{ $t("button.cancel_and_delete") }}
+                    </v-btn>
+                  </template>
+                  <div v-else class="row-actions">
+                    <v-btn
+                      :icon="expandedRows[item.id] ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                      variant="text"
+                      density="comfortable"
+                      @click.stop="toggleRowExpand(item.id)"
+                    />
+                    <template v-if="canWrite(item)">
+                      <v-btn
+                        icon="mdi-pencil-outline"
+                        variant="text"
+                        density="comfortable"
+                        @click.stop="renameTargetId = item.id"
+                      />
+                      <v-btn
+                        icon="mdi-trash-can-outline"
+                        variant="text"
+                        density="comfortable"
+                        color="red"
+                        @click.stop="deleteVideo(item.id)"
+                      />
+                    </template>
+                  </div>
+                </div>
+
+                <div
+                  v-if="expandedRows[item.id] && !showProcessingCard(item)"
+                  class="row-info"
+                  @click.stop
+                >
+                  <v-divider class="mb-2" />
+                  <div class="info-row">{{ $t("video_view.video_id") }} {{ item.id }}</div>
+                  <div class="info-row">
+                    {{ $t("video_view.uploaded") }} {{ item.date.slice(0, 10) }}
+                  </div>
+                  <div class="info-row">
+                    {{ $t("video_view.length") }} {{ getDisplayTime(item.duration) }}
+                  </div>
+                  <div class="info-row">
+                    {{ $t("video_view.data") }}:
+                    <span class="data-badges">
+                      <span
+                        v-for="cat in videoDataCategories[item.id]"
+                        :key="cat.key"
+                        class="data-badge"
+                      >
+                        <v-icon size="16" :color="stateColor(cat.state)">
+                          {{ stateIcon(cat.state) }}
+                        </v-icon>
+                        {{ cat.label }}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+
+                <v-progress-linear
+                  :model-value="
+                    showProcessingCard(item) ? processingProgress(item) : videosProgress[item.id]
+                  "
+                  :indeterminate="
+                    showProcessingCard(item)
+                      ? conversionIndeterminate(item)
+                      : batchIndeterminate(item.id)
+                  "
+                />
+              </v-card>
+            </div>
+          </v-col>
+        </v-row>
+      </template>
     </v-container>
 
     <v-container v-else>
@@ -200,31 +434,49 @@
         <span class="text-h6">{{ videoActionMessage }}</span>
       </div>
     </v-snackbar>
+
+    <ModalVideoUpload v-if="showModalVideoUpload" v-model="showModalVideoUpload" />
+
+    <ModalVideoRename
+      v-if="renameTargetId !== null"
+      :video="renameTargetId"
+      v-model="renameDialogOpen"
+    />
   </v-main>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick, onUnmounted } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
-import { useTimelineStore } from "@/stores/timeline";
-import { getDisplayTime } from "@/plugins/time";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
+import { getDisplayTime, getEtaDisplay } from "@/plugins/time";
 import ModalVideoRename from "@/components/video/ModalVideoRename.vue";
+import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
+import config from "../../app.config";
 
 const router = useRouter();
 const { t } = useI18n();
 const videoStore = useVideoStore();
 const userStore = useUserStore();
 const pluginRunStore = usePluginRunStore();
-const timelineStore = useTimelineStore();
+const pluginRunResultStore = usePluginRunResultStore();
+
+const showModalVideoUpload = ref(false);
+
+const hasNoVideos = computed(() => videoStore.all.length === 0);
 
 const filterName = ref("");
 const filterSport = ref(null);
 const filterAgeGroup = ref(null);
 const sortDateDir = ref("desc");
+const viewMode = computed({
+  get: () => userStore.videoViewMode || "grid",
+  set: (val) => userStore.saveVideoViewMode(val),
+});
 
 const toggleDateSort = () => {
   sortDateDir.value = sortDateDir.value === "desc" ? "asc" : "desc";
@@ -254,61 +506,290 @@ const videos = computed(() => {
   });
 });
 
+// Progress of the plugin batch currently being worked on for a video -- the mean over
+// its runs, so three queued plugins with the first at 24% read as 8% instead of
+// jumping in whole-run steps. Runs from an earlier session aren't part of a batch and
+// therefore don't count (see pluginRunStore.batchProgress).
 const videosProgress = computed(() => {
   const progress = {};
   videos.value.forEach((video) => {
-    const runs = pluginRunStore.forVideo(video.id);
-    if (runs.length === 0) {
-      progress[video.id] = 0;
-    } else {
-      progress[video.id] =
-        (runs.filter((r) => r.status !== "RUNNING" && r.status !== "QUEUED").length / runs.length) *
-        100;
-    }
+    progress[video.id] = pluginRunStore.batchProgress(video.id);
   });
   return progress;
 });
-watch(
-  videosProgress,
-  (newState, oldState) => {
-    if (!oldState) return;
-    if (Object.keys(newState).some((k) => oldState[k] !== newState[k])) {
-      fetchData(true);
-    }
-  },
-  { deep: true }
-);
 
-const fetchPluginTimer = ref(null);
-const fetchData = async (fetchTimelines = false) => {
-  await videoStore.fetchAll();
-  await pluginRunStore.fetchAll({ addResults: false });
-  if (fetchTimelines) {
-    await timelineStore.fetchAll({ addResultsType: true });
-  }
+// Same slot, same meaning while a video is still being converted: how far along the
+// work on this video is. Conversion and plugin runs never overlap.
+const conversionProgress = computed(() => {
+  const progress = {};
+  videos.value.forEach((video) => {
+    progress[video.id] = (parseFloat(video.progress) || 0) * 100;
+  });
+  return progress;
+});
+
+// Cover thumbnail shown on the front of a video card, sourced from the "thumbnail"
+// plugin run that now runs automatically once a video finishes processing.
+const latestThumbnailRun = (videoId) => {
+  const runs = pluginRunStore.forVideo(videoId).filter((r) => r.type === "thumbnail");
+  if (!runs.length) return null;
+  return [...runs].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
 };
 
-const processingPollTimer = ref(null);
-const hasProcessingVideos = computed(() => {
-  return videos.value.some((v) => v.processing === true);
-});
+const thumbnailRunForVideo = (videoId) => {
+  const run = latestThumbnailRun(videoId);
+  return run && run.status === "DONE" ? run : null;
+};
+
+// Status of each video's latest thumbnail run. `videos` alone used to be enough as a
+// watch source only because the 2-second refetch replaced every video object on each
+// tick; with live updates the video object stays identical while only the run changes,
+// so the run status has to be part of the source or the watchers below never fire.
+const thumbnailRunStates = computed(() =>
+  videos.value.map((item) => `${item.id}:${latestThumbnailRun(item.id)?.status ?? ""}`).join(",")
+);
+
+// Videos we've personally watched go through Video.status===PROCESSING in this session --
+// only for those do we keep the "still processing" look alive while their automatic
+// thumbnail generation finishes, so a card doesn't flash an empty placeholder right after
+// upload. Pre-existing videos that loaded already-DONE show normally right away instead --
+// there's no way to tell "thumbnail is about to arrive" apart from "predates this feature
+// and never gets one" for those, so forcing the processing look on them would get stuck.
+const observedProcessing = ref({});
 watch(
-  hasProcessingVideos,
-  (newVal) => {
-    if (newVal) {
-      if (processingPollTimer.value) clearInterval(processingPollTimer.value);
-      processingPollTimer.value = setInterval(() => fetchData(), 2000);
-    } else if (processingPollTimer.value) {
-      clearInterval(processingPollTimer.value);
-      processingPollTimer.value = null;
-    }
+  [videos, thumbnailRunStates],
+  ([list]) => {
+    // Both the "start tracking" and "stop tracking" writes live in this one watcher (not in
+    // isThumbnailPending below) so it stays a pure read -- safe to call from several places
+    // in the template per render without a mutation from one call leaking into the next.
+    list.forEach((item) => {
+      if (item.processing) {
+        observedProcessing.value[item.id] = true;
+        return;
+      }
+      if (!observedProcessing.value[item.id]) return;
+      const run = latestThumbnailRun(item.id);
+      if (run && run.status !== "RUNNING" && run.status !== "QUEUED") {
+        delete observedProcessing.value[item.id];
+      }
+    });
   },
   { immediate: true }
 );
-onUnmounted(() => {
-  if (processingPollTimer.value) clearInterval(processingPollTimer.value);
-  if (fetchPluginTimer.value) clearInterval(fetchPluginTimer.value);
+
+const isThumbnailPending = (item) => {
+  if (item.processing || !observedProcessing.value[item.id]) return false;
+  const run = latestThumbnailRun(item.id);
+  return !run || run.status === "RUNNING" || run.status === "QUEUED";
+};
+
+const showProcessingCard = (item) => item.processing || isThumbnailPending(item);
+
+// The sweeping (indeterminate) bar is shown in exactly one situation: work is actually
+// running but there's no number to show yet (no progress, no ETA). A queued / errored /
+// done job gets a plain static bar. Once any real signal arrives it stays solid.
+const conversionIndeterminate = (item) => {
+  if (item.processing) {
+    // ffmpeg hasn't emitted its first progress line yet (e.g. duration still unknown).
+    return !(conversionProgress.value[item.id] > 0) && item.eta_seconds == null;
+  }
+  if (isThumbnailPending(item)) {
+    const run = latestThumbnailRun(item.id);
+    return (
+      !!run &&
+      run.status === "RUNNING" &&
+      !(run.progress > 0) &&
+      run.eta_seconds == null
+    );
+  }
+  return false;
+};
+
+// Bar value while the card is in its "processing" look: the conversion percentage
+// while ffmpeg runs, then the pending thumbnail run's own percentage (usually ~0 until
+// it's done) -- never a stale 100% from the finished conversion.
+const processingProgress = (item) => {
+  if (!item.processing && isThumbnailPending(item)) {
+    return (parseFloat(latestThumbnailRun(item.id)?.progress) || 0) * 100;
+  }
+  return conversionProgress.value[item.id];
+};
+
+// Same rule for the post-conversion plugin batch bar on the card front: sweep only
+// while a run is actually RUNNING with nothing to show yet; a purely queued batch just
+// sits at 0.
+const batchIndeterminate = (videoId) => {
+  if (videosProgress.value[videoId] > 0) return false;
+  return pluginRunStore
+    .forVideo(videoId)
+    .some(
+      (r) =>
+        r.type !== "thumbnail" &&
+        r.status === "RUNNING" &&
+        !(r.progress > 0) &&
+        r.eta_seconds == null
+    );
+};
+
+// One "time remaining" string for whichever phase the card is in (conversion, the
+// pending thumbnail run, or a plugin batch). "" when nothing useful is known yet.
+const etaText = (item) => {
+  let seconds = null;
+  if (item.processing) {
+    seconds = item.eta_seconds;
+  } else if (isThumbnailPending(item)) {
+    seconds = latestThumbnailRun(item.id)?.eta_seconds ?? null;
+  } else {
+    seconds = pluginRunStore.batchEta(item.id);
+  }
+  const display = getEtaDisplay(seconds);
+  return display ? t("progress.eta", { time: display }) : "";
+};
+
+watch(
+  [videos, thumbnailRunStates],
+  ([list]) => {
+    list.forEach((item) => {
+      const run = thumbnailRunForVideo(item.id);
+      if (!run) return;
+      const existing = pluginRunResultStore.forPluginRun(run.id);
+      if (existing.length === 0 || existing.some((r) => r.data === undefined)) {
+        pluginRunResultStore.fetchForVideo({
+          videoId: item.id,
+          pluginRunId: run.id,
+          addResults: true,
+        });
+      }
+    });
+  },
+  { immediate: true }
+);
+
+const videoCoverUrl = computed(() => {
+  const urls = {};
+  videos.value.forEach((item) => {
+    const run = thumbnailRunForVideo(item.id);
+    const result =
+      run && pluginRunResultStore.forPluginRun(run.id).find((r) => r.data?.images?.length);
+    const image = result?.data.images[0];
+    urls[item.id] = image
+      ? `${config.THUMBNAIL_LOCATION}/${image.id.substr(0, 2)}/${image.id.substr(2, 2)}/${
+          image.id
+        }.${image.ext}`
+      : null;
+  });
+  return urls;
 });
+
+const flippedCards = ref({});
+const toggleCardFlip = (videoId) => {
+  flippedCards.value = { ...flippedCards.value, [videoId]: !flippedCards.value[videoId] };
+};
+
+const expandedRows = ref({});
+const toggleRowExpand = (videoId) => {
+  expandedRows.value = { ...expandedRows.value, [videoId]: !expandedRows.value[videoId] };
+};
+
+// Compact position-data / metrics status per card, back of ModalStatus's status derivation but
+// keyed by an arbitrary video id instead of the single currently-open player video. Manually
+// uploaded tracking data is checked via video.has_tracking_data (a cheap server-side aggregate,
+// see Video.to_dict()) rather than position_data.js's store, which only ever fetches for the
+// single currently-open player video.
+const POSDATA_TRACKER_TYPES = ["bytetrack", "object_tracker"];
+const POSDATA_DLT_TYPES = ["calibration_static_dlt"];
+const POSDATA_UPLOAD_TYPES = ["posdata_convert"];
+const METRICS_TYPES = ["kpi_computation"];
+
+const deriveRunState = (runs, types) => {
+  const filtered = runs.filter((r) => types.includes(r.type));
+  if (!filtered.length) return "none";
+  if (filtered.some((r) => r.status === "DONE")) return "done";
+  if (filtered.some((r) => r.status === "RUNNING" || r.status === "QUEUED")) return "running";
+  if (filtered.some((r) => r.status === "ERROR")) return "error";
+  return "none";
+};
+
+// AND: player tracking + DLT calibration belong together as one variant (ball tracking is
+// optional, same as ModalStatus). OR: that variant vs. a manual upload are alternatives.
+const combineAll = (states) => {
+  if (states.every((s) => s === "done")) return "done";
+  if (states.some((s) => s === "running")) return "running";
+  if (states.some((s) => s === "error")) return "error";
+  return "none";
+};
+
+const combineAny = (states) => {
+  if (states.some((s) => s === "done")) return "done";
+  if (states.some((s) => s === "running")) return "running";
+  if (states.some((s) => s === "error")) return "error";
+  return "none";
+};
+
+const posdataStates = computed(() => {
+  const map = {};
+  videos.value.forEach((item) => {
+    const runs = pluginRunStore.forVideo(item.id);
+    const autoState = combineAll([
+      deriveRunState(runs, POSDATA_TRACKER_TYPES),
+      deriveRunState(runs, POSDATA_DLT_TYPES),
+    ]);
+    const uploadState = item.has_tracking_data
+      ? "done"
+      : deriveRunState(runs, POSDATA_UPLOAD_TYPES);
+    map[item.id] = combineAny([autoState, uploadState]);
+  });
+  return map;
+});
+
+const metricsStates = computed(() => {
+  const map = {};
+  videos.value.forEach((item) => {
+    map[item.id] = deriveRunState(pluginRunStore.forVideo(item.id), METRICS_TYPES);
+  });
+  return map;
+});
+
+// Grouped under one "Daten:" row as a row of small status icons (see template) instead of one
+// row per category -- keeps the card a fixed height as more categories (e.g. events) join later.
+const videoDataCategories = computed(() => {
+  const map = {};
+  videos.value.forEach((item) => {
+    map[item.id] = [
+      {
+        key: "posdata",
+        label: t("modal.status.area.posdata"),
+        state: posdataStates.value[item.id],
+      },
+      { key: "metrics", label: t("modal.status.area.kpi"), state: metricsStates.value[item.id] },
+    ];
+  });
+  return map;
+});
+
+const stateColor = (state) => {
+  if (state === "done") return "green";
+  if (state === "running") return "blue";
+  if (state === "error") return "red";
+  return "grey";
+};
+
+const stateIcon = (state) => {
+  const icons = {
+    done: "mdi-checkbox-marked-circle-outline",
+    running: "mdi-progress-clock",
+    error: "mdi-alert-circle-outline",
+    none: "mdi-checkbox-blank-circle-outline",
+  };
+  return icons[state] || icons.none;
+};
+
+// Initial load only -- conversion state and plugin run updates are pushed in over the
+// live event stream afterwards (see stores/event_stream.js).
+const fetchData = async () => {
+  await videoStore.fetchAll();
+  await pluginRunStore.fetchAll({ addResults: false });
+};
 
 onMounted(() => {
   fetchData();
@@ -321,19 +802,6 @@ watch(
     }
   }
 );
-watch(
-  () => pluginRunStore.pluginInProgress,
-  (newState) => {
-    if (newState) {
-      fetchPluginTimer.value = setInterval(() => {
-        fetchData();
-      }, 2000);
-    } else if (fetchPluginTimer.value) {
-      clearInterval(fetchPluginTimer.value);
-    }
-  },
-  { immediate: true }
-);
 
 const canWrite = (item) => {
   if (userStore.role === "admin") return true;
@@ -342,6 +810,14 @@ const canWrite = (item) => {
 
 const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
 const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
+
+const renameTargetId = ref(null);
+const renameDialogOpen = computed({
+  get: () => renameTargetId.value !== null,
+  set: (val) => {
+    if (!val) renameTargetId.value = null;
+  },
+});
 
 const showLogoutSnackbar = ref(false);
 watch(
@@ -412,6 +888,7 @@ watch(
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  margin-left: 4px;
 }
 
 .video-gallery > * {
@@ -431,29 +908,127 @@ watch(
   opacity: 0.6;
 }
 
+.video-card-clickable {
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+
+.video-card-clickable:hover {
+  box-shadow: 0 0 0 2px rgba(var(--v-theme-primary), 0.4) !important;
+}
+
 .card-body {
   height: 174px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
-.card-text-inner {
+/* Small "time remaining" tag pinned just above the card's progress bar. Own
+   background so it stays readable over a cover thumbnail. */
+.eta-caption {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 1;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.row-eta {
+  color: rgba(var(--v-theme-on-surface), 0.55);
+}
+
+.flip-container {
   flex: 1;
-  padding-bottom: 4px !important;
+  min-height: 0;
+  perspective: 1000px;
 }
 
-.card-actions-row {
+.flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.5s;
+  transform-style: preserve-3d;
+}
+
+.flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.flip-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flip-front {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 0 8px 6px;
-  flex-shrink: 0;
 }
 
-.card-actions-row-solo {
-  padding-bottom: 14px;
+.flip-back {
+  transform: rotateY(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-thumbnail {
+  height: 88%;
+  object-fit: contain;
+  border-radius: 5px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.video-thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-flip-toggle {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  height: 28px;
+}
+
+.info-rows {
+  width: 100%;
+  padding: 0 16px;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+
+.data-badges {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: 6px;
+}
+
+.data-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
 }
 
 .card-body-processing {
@@ -461,5 +1036,129 @@ watch(
   flex-direction: column;
   justify-content: center;
   align-items: center;
+}
+
+.add-video-card {
+  cursor: pointer;
+  height: 222px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(var(--v-theme-primary), 0.5);
+  background: transparent;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.add-video-card:hover {
+  border-color: rgb(var(--v-theme-primary));
+  background: rgba(var(--v-theme-primary), 0.05);
+}
+
+.empty-state-row {
+  min-height: 70vh;
+}
+
+.empty-state-text {
+  max-width: 380px;
+}
+
+.video-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.video-row {
+  width: 100%;
+}
+
+.video-row-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 12px;
+}
+
+.row-thumb {
+  width: 110px;
+  height: 62px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.row-thumbnail {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 5px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.12);
+}
+
+.row-thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+}
+
+.row-title-block {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.row-title-block .title-name {
+  font-size: 1.15rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.row-actions :deep(.v-btn) {
+  --v-btn-height: 36px;
+}
+
+.row-actions :deep(.v-icon) {
+  font-size: 22px;
+}
+
+.row-processing-text {
+  font-size: 1rem;
+  color: rgba(var(--v-theme-on-surface), 0.7);
+  white-space: nowrap;
+}
+
+.row-info {
+  padding: 0 12px 12px 134px;
+  cursor: default;
+}
+
+.row-info .info-row {
+  font-size: 1.05rem;
+}
+
+.add-video-row {
+  height: auto;
+  min-height: 60px;
+  padding: 8px 12px;
+  flex-direction: row;
 }
 </style>

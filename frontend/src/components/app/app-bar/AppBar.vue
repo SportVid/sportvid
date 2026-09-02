@@ -49,16 +49,6 @@
 
       <v-btn
         v-if="videoView && loggedIn"
-        @click="showModalVideoUpload = true"
-        :disabled="videoUploadStore.isUploading"
-        data-tour="modal-video-upload-open"
-      >
-        <app-bar-icon>mdi-plus</app-bar-icon>
-        <span class="text-primary">{{ $t("app_bar.video_upload_menu") }}</span>
-      </v-btn>
-
-      <!-- <v-btn
-        v-if="videoView && loggedIn"
         @click="showModalBatchPlugin = true"
         :videoIds="selectedVideosIds"
         :disabled="selectedVideosIds.length == 0"
@@ -163,7 +153,6 @@
     />
     <ModalShortcut v-if="showModalShortcut" v-model="showModalShortcut" />
     <ModalExport v-if="showModalExport" v-model="showModalExport" />
-    <ModalVideoUpload v-if="showModalVideoUpload" v-model="showModalVideoUpload" />
     <ModalPlugin
       v-if="showModalBatchPlugin"
       v-model="showModalBatchPlugin"
@@ -185,7 +174,6 @@ import { useVideoStore } from "@/stores/video";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useLanguageStore } from "@/stores/languages";
-import { useVideoUploadStore } from "@/stores/video_upload";
 import { useThemeStore } from "@/stores/theme";
 import ModalStatus from "@/components/app/app-bar/ModalStatus.vue";
 import ModalPlugin from "@/components/app/app-bar/ModalPlugin.vue";
@@ -193,7 +181,6 @@ import ModalShortcut from "@/components/app/app-bar/ModalShortcut.vue";
 import ModalExport from "@/components/app/app-bar/ModalExport.vue";
 import UserMenu from "@/components/user/UserMenu.vue";
 import ModalTutorial from "@/components/app/app-bar/ModalTutorial.vue";
-import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 
 const route = useRoute();
 const { t } = useI18n();
@@ -204,7 +191,6 @@ const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 const tutorialStore = useTutorialStore();
 const languageStore = useLanguageStore();
-const videoUploadStore = useVideoUploadStore();
 const themeStore = useThemeStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
@@ -227,6 +213,10 @@ watch(
 const pluginRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
+    // "thumbnail" is an internal asset (video-gallery cover image, see VideoView.vue),
+    // not a user-facing analysis result -- it has no place in the status overview, its
+    // delete pickers, or the running-plugins badge count.
+    .filter((run) => run.type !== "thumbnail")
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .map((pluginRun) => {
       return {
@@ -237,6 +227,7 @@ const pluginRuns = computed(() => {
           .replace("Z", "")
           .substring(0, pluginRun.date.length - 8),
         progress: parseFloat(pluginRun.progress),
+        eta_seconds: pluginRun.eta_seconds,
         status: pluginRun.status,
       };
     });
@@ -284,8 +275,6 @@ const pluginName = (type) => {
 const showModalShortcut = ref(false);
 
 const showModalExport = ref(false);
-
-const showModalVideoUpload = ref(false);
 
 const canWrite = computed(() => {
   if (userStore.role === "admin") return true;

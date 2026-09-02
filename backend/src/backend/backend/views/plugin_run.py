@@ -10,9 +10,13 @@ from django.views import View
 from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 from rest_framework import serializers
+
+from sportvid.celery import app as celery_app
+
 from backend.models import Video, PluginRun, TrackingData
 from backend.plugin_manager import PluginManager
 from backend.utils import download_url, download_file, media_url_to_file
+from backend.utils.events import publish_cancel
 
 from backend.serializers import PluginRunRequestSerializer
 
@@ -87,7 +91,13 @@ class PluginRunNew(View):
                     status=500,
                 )
 
-            return JsonResponse({"status": "ok"})
+            return JsonResponse(
+                {
+                    "status": "ok",
+                    "plugin_run_id": result.get("plugin_run_id"),
+                    "entry": result.get("entry"),
+                }
+            )
 
         except serializers.ValidationError as e:
             return JsonResponse(
@@ -139,12 +149,25 @@ class PluginRunDelete(View):
                     id__in=plugin_list,
                     video__owner=request.user,
                 )
+            
+            # before deleting plugin runs, build a list of active runs
+            active_runs = list(
+                runs.exclude(status__in=[PluginRun.STATUS_DONE, PluginRun.STATUS_ERROR])
+                .values_list("id", "task_id")
+            )
+            
+            # TODO: Add structured logging to distinguish revoked (queued) vs cancelled
+            # (running) plugin runs, and optionally verify that tasks actually stopped.
+            for run_id, task_id in active_runs:
+                if task_id:
+                    # for each active run with a task id -> revoke queued Celery task to prevent it from starting
+                    celery_app.control.revoke(task_id, terminate=False)
+                # publish running-job cancellation for every active run -> cancellation event causes the task's watcher to abort analyser request
+                publish_cancel("plugin_run", run_id.hex)
 
-            # posdata_convert runs own the uploaded TrackingData they were
-            # created from -- deleting the run should delete that file too,
-            # so it doesn't keep showing up as available elsewhere. This
-            # also cascades away any kpi_computation run derived from the
-            # same file.
+            # NOTE: Cascaded deletion of uploaded TrackingData that were created from a `posdata_convert` PluginRun.
+            # Also deletes any `kpi_compution` runs derived from the same file.
+            # TODO: Should get rid of this here and implement a dedicated task for cleaning up orphaned plugins and files.
             tracking_data_ids = list(
                 runs.filter(type="posdata_convert", tracking_data__isnull=False)
                 .values_list("tracking_data_id", flat=True)

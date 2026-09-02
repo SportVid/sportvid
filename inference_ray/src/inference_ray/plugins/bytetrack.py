@@ -147,7 +147,7 @@ class ByteTrack(
                 model.eval()
                 predictor = Predictor(model, exp, None, self.device, fp16=args.fp16)
 
-                results, img_info = self.track(video_decoder, predictor, args)
+                results, img_info = self.track(video_decoder, predictor, args, callbacks=callbacks)
                 
                 DEFAULT_TEAM_ID = 3
                 bboxes_dict = defaultdict(list)
@@ -200,6 +200,7 @@ class ByteTrack(
         video_decoder: VideoDecoder,
         predictor: Predictor,
         args: argparse.Namespace,
+        callbacks: Callable = None,
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """Performs object tracking
 
@@ -222,6 +223,8 @@ class ByteTrack(
         from yolox.tracker.byte_tracker import BYTETracker
 
         tracker = BYTETracker(args, frame_rate=args.fps)
+
+        total_frames = len(video_decoder) if hasattr(video_decoder, "__len__") else None
 
         results = []
         for frame_id, _frame in enumerate(video_decoder):
@@ -254,4 +257,11 @@ class ByteTrack(
                     "track_boxes": online_tlwhs,
                 }
             )
+            if total_frames:
+                # detection+tracking is the whole cost here; leave a sliver for the
+                # bbox post-processing / serialisation the caller does afterwards.
+                self.update_callbacks(
+                    callbacks,
+                    progress=min((frame_id + 1) / total_frames, 1.0) * 0.95,
+                )
         return results, img_info

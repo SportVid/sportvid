@@ -51,6 +51,39 @@
             :rules="[checkLength]"
             variant="underlined"
           />
+
+          <p class="text-caption text-medium-emphasis mb-1 mt-4">
+            {{ $t("user.experience_mode.heading") }}
+          </p>
+          <!-- One continuous border around toggle + sentence together (v-divider between the
+               two rather than each getting its own border) so it reads as a single connected
+               group instead of the sentence looking like a stray, unrelated box underneath. -->
+          <v-sheet border rounded class="experience-mode-group">
+            <v-btn-toggle
+              v-model="user.experience_mode"
+              mandatory
+              divided
+              rounded="0"
+              density="comfortable"
+              class="d-flex"
+            >
+              <v-btn
+                v-for="mode in ['simple', 'complex']"
+                :key="mode"
+                :value="mode"
+                class="flex-grow-1"
+              >
+                {{ $t(`user.experience_mode.${mode}_label`) }}
+              </v-btn>
+            </v-btn-toggle>
+            <v-divider />
+            <div
+              class="pa-2 text-caption text-medium-emphasis"
+              :class="user.experience_mode === 'complex' ? 'text-right' : 'text-left'"
+            >
+              {{ $t(`user.experience_mode.${user.experience_mode}_sentence`) }}
+            </div>
+          </v-sheet>
         </form>
 
         <p
@@ -131,6 +164,9 @@ const user = ref({
   name: "",
   password: "",
   email: "",
+  // Preselected to "complex" -- the platform's current (unchanged) behavior -- rather than
+  // nudging new users toward "simple" by default.
+  experience_mode: "complex",
 });
 const dialog = ref(props.modelValue);
 const showPassword = ref(false);
@@ -163,9 +199,10 @@ const checkLength = (value) => {
 };
 
 const disabled = computed(() => {
-  const total = Object.keys(user.value).length
-    ? Object.values(user.value).reduce((t, value) => t + (checkLength(value) === true), 0)
-    : 0;
+  const total = ["name", "password", "email"].reduce(
+    (t, field) => t + (checkLength(user.value[field]) === true),
+    0
+  );
   return total !== 3;
 });
 
@@ -192,5 +229,11 @@ watch(
 .scrollable-content {
   max-height: 500px;
   overflow-y: auto;
+}
+
+/* Clips the toggle buttons' own square corners to the outer v-sheet's rounded ones, so the
+   border reads as one seamless shape around the whole toggle+sentence group. */
+.experience-mode-group {
+  overflow: hidden;
 }
 </style>

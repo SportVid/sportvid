@@ -10,6 +10,7 @@ import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { isInSportZone } from "@/plugins/sport_zones";
+import { useUploadTracker } from "@/composables/useUploadTracker";
 
 function isInSportZoneUtil(z, x, y) {
   return isInSportZone(z.sportKey, z.zoneId, x, y, z.half);
@@ -35,8 +36,14 @@ export const usePositionDataStore = defineStore(
     const positionDataMode = ref(null);
     const isRestoringPosData = ref(false);
 
-    const isUploading = ref(false);
-    const progress = ref(0);
+    const {
+      isUploading,
+      progress,
+      etaSeconds: uploadEtaSeconds,
+      start: startUploadTracking,
+      finish: finishUploadTracking,
+      onUploadProgress: onUploadProgressTracked,
+    } = useUploadTracker();
 
     const positionDataUploadSuccess = ref(false);
     const positionDataRenameSuccess = ref(false);
@@ -103,7 +110,7 @@ export const usePositionDataStore = defineStore(
 
     const uploadPositionData = async (params) => {
       if (!params) return;
-      isUploading.value = true;
+      startUploadTracking();
       try {
         const formData = new FormData();
         formData.append("video_id", playerStore.videoId);
@@ -119,11 +126,7 @@ export const usePositionDataStore = defineStore(
 
         const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
-          onUploadProgress: (event) => {
-            if (event.lengthComputable) {
-              progress.value = Math.round((event.loaded * 100) / event.total);
-            }
-          },
+          onUploadProgress: onUploadProgressTracked,
         });
 
         if (res.data.status === "ok") {
@@ -133,8 +136,7 @@ export const usePositionDataStore = defineStore(
       } catch (error) {
         console.error("Failed to upload position data:", error);
       } finally {
-        isUploading.value = false;
-        progress.value = 0;
+        finishUploadTracking();
       }
     };
 
@@ -343,6 +345,14 @@ export const usePositionDataStore = defineStore(
       const calibrationAssetId = calibrationAssetStore.calibrationAssetId;
       if (!trackerPluginId || !calibrationAssetId) return;
 
+      // Snapshot before the reload below -- transformBBoxToPositionDataTopView treats any
+      // full (re)load of the tracker run as fresh and resets both of these to null (it can't
+      // tell "just restoring after a browser refresh" apart from "a genuinely new tracker run
+      // was picked"), so reading topViewStore.teamClusteringRunId/reidRunId *after* that call
+      // would always see null and skip redoing the merges below.
+      const teamClusteringRunId = topViewStore.teamClusteringRunId;
+      const reidRunId = topViewStore.reidRunId;
+
       // calibrationAssetsList (unlike positionDataList) isn't fetched anywhere
       // by the time AnalysisView.vue calls restoreFromCache on mount — normally
       // ModalPositionDataSelect.vue's own mount populates it well before the
@@ -355,13 +365,36 @@ export const usePositionDataStore = defineStore(
       if (bboxesStore.bboxBallPluginRunId) {
         await topViewStore.mergeBallTracking(calibrationAssetId, bboxesStore.bboxBallPluginRunId);
       }
-      if (topViewStore.teamClusteringRunId) {
-        await topViewStore.mergeTeamAssignment(topViewStore.teamClusteringRunId);
+      if (teamClusteringRunId) {
+        await topViewStore.mergeTeamAssignment(teamClusteringRunId);
       }
-      if (topViewStore.reidRunId) {
-        await topViewStore.mergeReid(topViewStore.reidRunId);
+      if (reidRunId) {
+        await topViewStore.mergeReid(reidRunId);
       }
       await visualizationStore.loadKpiData(trackerPluginId);
+    }
+
+    /**
+     * Clears the currently selected/loaded position data and everything derived from it -- the
+     * topView pitch data, the bbox overlay + tracker-run ids, KPI data -- without touching
+     * anything else (calibration mode, pitch grid/zones, event data stay as they are, unlike a
+     * full AnalysisView unmount). Used by the "Position data" menu on TopView/VideoPlayer/
+     * Heatmap/KPI cards so their empty state (PositionDataMenu) comes back and the user can
+     * create/upload/select something new right there, without navigating back to VideoView.
+     */
+    function resetPositionData() {
+      positionDataId.value = null;
+      positionDataMode.value = null;
+      selectedTimeRange.value = { start: 0, end: 0 };
+      topViewStore.setPositionData(null, {});
+      bboxesStore.bboxDataInterpolated = {};
+      // Also clear the persisted tracker-run ids -- otherwise a later restoreFromCache (e.g. a
+      // reload right after this) would try to restore the just-cleared selection right back.
+      bboxesStore.bboxPluginRunId = 0;
+      bboxesStore.bboxBallPluginRunId = null;
+      topViewStore.teamClusteringRunId = null;
+      topViewStore.reidRunId = null;
+      visualizationStore.resetKpiData();
     }
 
     /**
@@ -400,11 +433,13 @@ export const usePositionDataStore = defineStore(
       deletePositionData,
       isUploading,
       progress,
+      uploadEtaSeconds,
       provider,
       calculateRunningDistances,
       selectedTimeRange,
       setSelectedTimeRangeStart,
       setSelectedTimeRangeEnd,
+      resetPositionData,
       restoreFromCache,
       isRestoringPosData,
     };

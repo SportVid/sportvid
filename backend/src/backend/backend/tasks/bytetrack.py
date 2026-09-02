@@ -38,6 +38,9 @@ class ByteTrack(Task):
             manager=manager,
         )
         video_id = self.upload_video(client, video)
+        if plugin_run is not None:
+            plugin_run.progress = 0.05
+            plugin_run.save()
 
         bytetrack_result = self.run_analyser(
             client,
@@ -48,6 +51,8 @@ class ByteTrack(Task):
             inputs={"video": video_id},
             outputs=["tracklets"],
             downloads=["tracklets"],
+            plugin_run=plugin_run,
+            progress_range=(0.05, 0.95),
         )
 
         if plugin_run is not None:
