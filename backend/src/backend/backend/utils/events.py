@@ -68,7 +68,8 @@ def get_client():
             import valkey
             host = os.environ.get("VALKEY_CLIENT_HOST", "valkey")
             port = int(os.environ.get("VALKEY_INTERNAL_PORT", 6380))
-            _client = valkey.Valkey(host=host, port=port, socket_keepalive=True)
+            passwd = os.environ.get("VALKEY_PASSWD", None)
+            _client = valkey.Valkey(host=host, port=port, password=passwd, socket_keepalive=True)
     return _client
 
 
