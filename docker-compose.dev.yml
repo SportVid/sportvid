@@ -162,6 +162,9 @@ services:
       - "--prefetch-multiplier=1"
       - "--loglevel"
       - "${LOG_LEVEL:-DEBUG}"
+    networks:
+      - shared
+      - dev
 
   celery-gpu:
     container_name: celery-gpu_dev
