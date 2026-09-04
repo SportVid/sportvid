@@ -184,8 +184,10 @@ services:
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
     depends_on:
-      postgres:
-        condition: service_healthy
+      # TODO: This doesn't work since it is not defined in the same compose file.
+      #       Need to integrate this into the CI pipeline somehow...!
+      # postgres:
+      #   condition: service_healthy
       valkey:
         condition: service_healthy
     tmpfs:
