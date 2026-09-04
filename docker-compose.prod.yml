@@ -12,16 +12,19 @@ volumes:
   assets:
     external: true
     name: frontend-assets
-  # netdataconfig:
-  # netdatalib:
-  # netdatacache:
 
 services:
   inference_ray:
     container_name: inference_ray_prod
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     build:
       context: .
     init: true
+    # ports:        # TODO: only 1 service (either dev or prod) can bind to this port.
+    #   - "127.0.0.1:8265:8265"
     shm_size: "12g" # TODO: should be 30% of total available memory?
     environment:
       - HF_HOME=/models
@@ -45,7 +48,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 3
+              device_ids: ["0", "1", "2"] #TODO: dev uses ["3"]; change to all 4 later on production.
               capabilities: [gpu]
     command:
       - "uv"
@@ -55,6 +58,12 @@ services:
       - "serve"
       - "run"
       - "/app/inference_ray/deploy.cuda.yml"
+    # NOTE: use this command if exposing ray dashboard for prod app.
+    # command: >
+    #   bash -c "
+    #   uv run --package inference_ray ray start --head --dashboard-host=0.0.0.0 --dashboard-port=8265 &&
+    #   uv run --package inference_ray serve run /app/inference_ray/deploy.cuda.yml
+    #   "
     networks:
       - prod
 

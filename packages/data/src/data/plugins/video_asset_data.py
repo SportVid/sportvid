@@ -14,6 +14,8 @@ from utils import VideoDecoder
 class VideoAssetData(Data):
     type: str = field(default="VideoAssetData")
     manifest_filename: str = field(default="stream.m3u8")
+    # TODO: media_filename could potentially be more than 1 segment file!
+    #       Make this a list?
     media_filename: str = field(default="media.m4s")
     manifest_text: str | None = field(default=None)
 

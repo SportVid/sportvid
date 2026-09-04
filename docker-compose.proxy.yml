@@ -1,6 +1,9 @@
 networks:
   shared:
     external: true
+  dev:
+    external: true
+    name: dev_dev
 
 volumes:
   assets:
@@ -25,3 +28,4 @@ services:
       - assets:/var/www/html:ro  # mounts shared vol.
     networks:
       - shared
+      - dev
