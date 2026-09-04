@@ -170,7 +170,7 @@ services:
     build:
       context: .
     env_file:
-      - ./.env
+      - /opt/deploy/.env.dev
     secrets:
       - django_settings
     volumes:
