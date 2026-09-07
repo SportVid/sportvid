@@ -3,7 +3,7 @@ from typing import Callable, Optional, Dict
 
 from data import (
     DataManager, Data,
-    ImageData, VideoAssetData, ImagesData
+    ImageData, VideoData, ImagesData
 )
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 from utils import VideoDecoder
