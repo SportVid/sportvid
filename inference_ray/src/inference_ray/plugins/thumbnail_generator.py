@@ -19,7 +19,7 @@ default_parameters = {
 }
 
 requires = {
-    "video": VideoAssetData,
+    "video": VideoData,
 }
 
 provides = {
@@ -46,59 +46,47 @@ class ThumbnailGenerator(
         parameters: Dict = None,
         callbacks: Callable = None,
     ) -> Dict[str, Data]:
-        with inputs["video"] as input_data, data_manager.create_data("ImagesData") as output_data:
+        with inputs["video"] as input_data:
             f_video = input_data.open_video()
-            
-            logging.error("ThumbnailGenerator.call started")
-            logging.error("inputs keys: %s", list(inputs.keys()))
-            logging.error("parameters: %s", parameters)
-
-            video_data = inputs["video"]
-            logging.error("video_data type: %s", type(video_data))
-            logging.error("video_data fields: id=%s, type=%s, ref_id=%s, filename=%s, ext=%s",
-                            getattr(video_data, "id", None),
-                            getattr(video_data, "type", None),
-                            getattr(video_data, "ref_id", None),
-                            getattr(video_data, "filename", None),
-                            getattr(video_data, "ext", None))
-            
             try:
                 video_decoder = VideoDecoder(
-                    video_object=f_video,
+                    f_video,
                     fps=parameters.get("fps"),
-                    max_dimension=parameters.get("max_dimension"),
                     extension=f".{input_data.ext}",
+                    ref_id=input_data.id,
                 )
-                logging.error("Opened video object: %r", f_video)
-                num_frames = (video_decoder.duration() / 1000.) * video_decoder.fps()
-                logging.error("VideoDecoder created: duration_ms=%s, fps=%s", video_decoder.duration(), video_decoder.fps())
-                for i, frame in enumerate(video_decoder):
-                    self.update_callbacks(callbacks, progress=i / num_frames)
-                    output_data.save_image(
-                        frame.get("frame"), ext="jpg", time=frame.get("time"), delta_time=1000 / parameters.get("fps")
+
+                duration_ms = video_decoder.duration()
+                sample_fps = video_decoder.fps()
+
+                if duration_ms is None or sample_fps is None or duration_ms <= 0 or sample_fps <= 0:
+                    raise RuntimeError(
+                        f"Invalid video metadata: duration_ms={duration_ms}, fps={sample_fps}"
                     )
+
+                num_frames = int((duration_ms / 1000.0) * sample_fps)
+                if num_frames <= 0:
+                    raise RuntimeError(
+                        f"Video has no decodable frames: duration_ms={duration_ms}, fps={sample_fps}"
+                    )
+
+                with data_manager.create_data("ImagesData") as output_data:
+                    for i, frame in enumerate(video_decoder):
+                        self.update_callbacks(callbacks, progress=i / num_frames)
+                        output_data.save_image(
+                            frame.get("frame"),
+                            ext="jpg",
+                            time=frame.get("time"),
+                            delta_time=1000 / parameters.get("fps"),
+                        )
                 self.update_callbacks(callbacks, progress=1.0)
+                
+                return {"images": output_data}
             finally:
-                if hasattr(f_video, 'close'):
-                    f_video.close()
+                if hasattr(f_video, "close"):
+                    try:
+                        f_video.close()
+                    except Exception:
+                        pass
 
-            """
-            with input_data.open_video() as f_video:
-                video_decoder = VideoDecoder(
-                    video_object=f_video,
-                    fps=parameters.get("fps"),
-                    max_dimension=parameters.get("max_dimension"),
-                    extension=f".{input_data.ext}",
-                )
-
-                num_frames = (video_decoder.duration() / 1000.) * video_decoder.fps()
-                for i, frame in enumerate(video_decoder):
-                    self.update_callbacks(callbacks, progress=i / num_frames)
-
-                    output_data.save_image(
-                        frame.get("frame"), ext="jpg", time=frame.get("time"), delta_time=1000 / parameters.get("fps")
-                    )
-
-                self.update_callbacks(callbacks, progress=1.0)
-            """
-            return {"images": output_data}
+            
