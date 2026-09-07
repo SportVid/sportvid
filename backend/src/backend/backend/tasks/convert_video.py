@@ -426,6 +426,11 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             plugin_manager = PluginManager()
             # always runs "thumbnail"; plus any analyzers the upload asked for.
             for plugin in dict.fromkeys(["thumbnail", *(analyzers or [])]):
+                logging.debug("#####################")
+                logging.debug(video_db.asset_dir)
+                logging.debug(video_db.manifest_path)
+                logging.debug(video_db.media_path)
+                logging.debug("#####################")
                 if not plugin:
                     continue
                 try:
