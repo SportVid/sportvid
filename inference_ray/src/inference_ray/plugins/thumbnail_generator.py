@@ -48,6 +48,20 @@ class ThumbnailGenerator(
     ) -> Dict[str, Data]:
         with inputs["video"] as input_data, data_manager.create_data("ImagesData") as output_data:
             f_video = input_data.open_video()
+            
+            logging.error("ThumbnailGenerator.call started")
+            logging.error("inputs keys: %s", list(inputs.keys()))
+            logging.error("parameters: %s", parameters)
+
+            video_data = inputs["video"]
+            logging.error("video_data type: %s", type(video_data))
+            logging.error("video_data fields: id=%s, type=%s, ref_id=%s, filename=%s, ext=%s",
+                            getattr(video_data, "id", None),
+                            getattr(video_data, "type", None),
+                            getattr(video_data, "ref_id", None),
+                            getattr(video_data, "filename", None),
+                            getattr(video_data, "ext", None))
+            
             try:
                 video_decoder = VideoDecoder(
                     video_object=f_video,
@@ -55,7 +69,9 @@ class ThumbnailGenerator(
                     max_dimension=parameters.get("max_dimension"),
                     extension=f".{input_data.ext}",
                 )
+                logging.error("Opened video object: %r", f_video)
                 num_frames = (video_decoder.duration() / 1000.) * video_decoder.fps()
+                logging.error("VideoDecoder created: duration_ms=%s, fps=%s", video_decoder.duration(), video_decoder.fps())
                 for i, frame in enumerate(video_decoder):
                     self.update_callbacks(callbacks, progress=i / num_frames)
                     output_data.save_image(

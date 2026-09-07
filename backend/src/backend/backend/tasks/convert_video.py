@@ -415,6 +415,8 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         # Queryset .update() doesn't fire post_save --> push the "done" state explicitly,
         # so the gallery card resolves itself without a reload.
         publish_video(video_id_hex)
+        
+        video_db = Video.objects.get(id=video_id_hex) # refresh local db instance
 
         logger.info(
             "HLS conversion took %.2f seconds for %s",
