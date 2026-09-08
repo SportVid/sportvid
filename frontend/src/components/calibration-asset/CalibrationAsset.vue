@@ -567,7 +567,7 @@
             }}
           </v-btn>
         </template>
-        <v-list class="py-0" density="compact" width="200px">
+        <v-list class="py-0" density="compact" width="180px">
           <v-list-item
             class="menu-item"
             @click="

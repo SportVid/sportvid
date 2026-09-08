@@ -36,10 +36,10 @@
           </span>
         </v-btn>
 
-        <!-- <v-btn @click="showModalShortcut = true">
+        <v-btn @click="showModalShortcut = true">
           <app-bar-icon>mdi-label-multiple-outline</app-bar-icon>
           <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
-        </v-btn> -->
+        </v-btn>
 
         <v-btn @click="showModalExport = true" data-tour="modal-export-open">
           <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
@@ -55,7 +55,7 @@
       >
         <app-bar-icon>mdi-plus</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.batch_plugin_menu") }}</span>
-      </v-btn> -->
+      </v-btn>
 
       <v-divider vertical inset class="mx-2" />
 
@@ -197,7 +197,7 @@ const loggedIn = computed(() => userStore.loggedIn);
 
 const videoView = computed(() => route.name === "VideoView");
 const analysisView = computed(() => route.name === "AnalysisView");
-const termsOfUseView = computed(() => route.name === "termsOfUseView");
+const termsOfUseView = computed(() => route.name === "TermsOfUseView");
 const guidelinesView = computed(() => route.name === "GuidelinesView");
 
 const showModalStatus = ref(false);

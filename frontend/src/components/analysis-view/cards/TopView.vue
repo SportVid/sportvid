@@ -329,7 +329,7 @@
                   @click="topViewStore.onSportChange(topViewStore.currentSport.title, areaSize)"
                 >
                   <v-list-item-title class="my-0">
-                    {{ $t(areaData.titleKey) }}
+                    {{ areaData.title }}
                   </v-list-item-title>
                 </v-list-item>
               </v-list>

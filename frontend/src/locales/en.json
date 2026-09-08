@@ -7,7 +7,7 @@
     "demo_title": "Video Demonstration",
     "demo_text": "We are currently preparing a video that demonstrates the features of SportVid and explains how to use it to simplify the onboarding process. It is expected to be available by 2027 at the latest.",
     "login_title": "Need an account?",
-    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an email to {'y.paul@dshs-koeln.de'} with a short explanation of your intended usecase.",
+    "login_text": "If you do not have an account yet, you can create an account at the top right (\"Login\" → \"Register\") or request one by writing an email to {'xyz@123.de'} with a short explanation of your intended usecase.",
     "format_title": "Video File Support",
     "format_text": "Please note that SportVid currently only supports the analysis of <b>mp4</b> video files to avoid long processing times due to transcoding videos on our server."
   },
@@ -671,7 +671,7 @@
       }
     },
     "export": {
-      "title": "Export",
+      "title": "Export Results",
       "merged_csv": {
         "export_name": "Merged CSV",
         "timeline_merge": "Merge annotations",
@@ -1187,9 +1187,7 @@
           "all": "All plugin runs successfully deleted",
           "selected": "Selected plugin runs successfully deleted"
         },
-        "confirm": "Delete plugin runs? This cannot be undone.",
-        "select_plugin": "Select plugin",
-        "select_individual": "Select individual plugin runs"
+        "confirm": "Delete plugin runs? This cannot be undone."
       }
     },
     "tutorial": {
@@ -1197,6 +1195,10 @@
       "show_steps": "Show Steps",
       "show_missing_requirements": "Show missing requirements",
       "step": "Step",
+      "tabs": {
+        "pipelines": "Pipelines",
+        "singles": "Single Steps"
+      },
       "groups": {
         "basics": "Basics",
         "position_data": "Position Data",

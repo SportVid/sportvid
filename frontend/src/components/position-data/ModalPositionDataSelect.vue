@@ -414,7 +414,7 @@ const areaOptions = computed(() => {
   const s = currentSportObj.value;
   if (!s || !s.areas) return [];
   return Object.keys(s.areas).map((areaKey) => ({
-    title: s.areas[areaKey].titleKey ? t(s.areas[areaKey].titleKey) : areaKey,
+    title: s.areas[areaKey].title || areaKey,
     value: areaKey,
   }));
 });

@@ -95,12 +95,12 @@ onMounted(() => {
 
 const search = ref("");
 const roleFilter = ref(null);
-const roleOptions = computed(() => [
+const roleOptions = [
   { title: t("admin_panel.role.all"), value: null },
   { title: t("admin_panel.role.admin"), value: "admin" },
   { title: t("admin_panel.role.researcher"), value: "researcher" },
   { title: t("admin_panel.role.user"), value: "user" },
-]);
+];
 const filteredUsers = computed(() => {
   let list = adminStore.users;
 
@@ -118,7 +118,7 @@ const filteredUsers = computed(() => {
   return list;
 });
 
-const headers = computed(() => [
+const headers = [
   { title: t("admin_panel.user.id"), value: "id", sortable: true },
   { title: t("admin_panel.user.username"), value: "username", sortable: true },
   { title: t("admin_panel.user.email"), value: "email", sortable: true },
@@ -135,7 +135,7 @@ const headers = computed(() => [
     width: "8%",
     align: "center",
   },
-]);
+];
 
 const editingUser = ref(null);
 const showModalUpdate = ref(false);
