@@ -12,17 +12,6 @@ from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-# @PluginManager.export_parser("clip")
-# class CLIPParser(Parser):
-#     def __init__(self):
-#         self.valid_parameter = {
-#             "timeline": {"parser": str, "default": "clip"},
-#             "search_term": {"parser": str, "required": True},
-#             "fps": {"parser": float, "default": 2.0},
-#             "normalize": {"parser": float, "default": 1},
-#         }
-
-
 @PluginManager.export_plugin("clip")
 class CLIP(Task):
     def __init__(self):

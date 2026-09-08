@@ -13,6 +13,7 @@ from backend.utils.task import Task
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
+
 @PluginManager.export_plugin("bytetrack")
 class ByteTrack(Task):
     def __init__(self):

@@ -22,15 +22,6 @@ from ..utils.analyser_client import TaskAnalyserClient
 logger = logging.getLogger(__name__)
 
 
-# @PluginManager.export_parser("cluster_to_scalar")
-# class ClusterToScalarParser(Parser):
-#     def __init__(self):
-#         self.valid_parameter = {
-#             "timeline": {"parser": str, "default": "Cluster Similarity"},
-#             "cluster_timeline_item_id": {"parser": str},
-#         }
-
-
 @PluginManager.export_plugin("cluster_to_scalar")
 class ClusterToScalar(Task):
     def __init__(self):
