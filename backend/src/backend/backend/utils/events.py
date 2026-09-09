@@ -55,7 +55,9 @@ _client_lock = threading.Lock()
 
 
 def channel_for_user(user_id) -> str:
-    return f"{CHANNEL_PREFIX}:{user_id}"
+    user_channel = f"{CHANNEL_PREFIX}:{user_id}"
+    logging.error('user_channel: {user_channel}')
+    return user_channel
 
 
 def get_client():
@@ -70,11 +72,13 @@ def get_client():
             port = int(os.environ.get("VALKEY_INTERNAL_PORT", 6380))
             passwd = os.environ.get("VALKEY_PASSWD", None)
             _client = valkey.Valkey(host=host, port=port, password=passwd, socket_keepalive=True)
+    logging.error(_client)
     return _client
 
 
 def publish(user_id, payload: dict) -> None:
     """Publishes to channel_for_user(user_id) via Valkey. """
+    logging.error(f'publishing event for user {user_id}')
     if user_id is None:
         return
     try:

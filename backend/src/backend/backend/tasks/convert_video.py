@@ -81,6 +81,7 @@ def _report_conversion_progress(video_id_hex, progress, eta_seconds=None):
         progress=progress, eta_seconds=eta_seconds
     )
     if updated:
+        logging.error('updating ETA (p {progress}, eta {eta_seconds}) on {video_id_hex}')
         # .update() bypasses post_save, so the live event is sent explicitly.
         publish_video(video_id_hex)
     return updated
@@ -309,6 +310,8 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                     line = line.rstrip()
                     is_progress_line = bool(_FFMPEG_PROGRESS_LINE.match(line)) # identifies progress lines
                     
+                    logging.error(f'{is_progress_line} - {line}')
+                    
                     if not is_progress_line:
                         # non-progress lines on stdout are unexpected; ignore quietly.
                         continue
@@ -326,6 +329,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                                 last_reported = progress
                                 # ETA is estimated against the true encode fraction so it
                                 # predicts when ffmpeg finishes, not when the scaled bar would reach 100%.
+                                logging.error(f'reporting conversion progress -> {progress}')
                                 _report_conversion_progress(
                                     video_id_hex,
                                     progress,
