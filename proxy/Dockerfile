@@ -1,5 +1,8 @@
 FROM nginx:1.28.0-alpine-slim
 
+# curl for in-container debugging (Range/SSE checks against nginx, bypassing the edge F5)
+RUN apk add --no-cache curl
+
 # ensure nginx user:group exist
 RUN addgroup -S nginx || true && adduser -S -G nginx nginx || true
 

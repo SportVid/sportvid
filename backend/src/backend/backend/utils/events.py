@@ -56,7 +56,7 @@ _client_lock = threading.Lock()
 
 def channel_for_user(user_id) -> str:
     user_channel = f"{CHANNEL_PREFIX}:{user_id}"
-    logging.error('user_channel: {user_channel}')
+    logging.error(f'user_channel: {user_channel}')
     return user_channel
 
 

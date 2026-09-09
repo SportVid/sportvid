@@ -81,7 +81,7 @@ def _report_conversion_progress(video_id_hex, progress, eta_seconds=None):
         progress=progress, eta_seconds=eta_seconds
     )
     if updated:
-        logging.error('updating ETA (p {progress}, eta {eta_seconds}) on {video_id_hex}')
+        logging.error(f'updating ETA (p {progress}, eta {eta_seconds}) on {video_id_hex}')
         # .update() bypasses post_save, so the live event is sent explicitly.
         publish_video(video_id_hex)
     return updated
