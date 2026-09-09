@@ -1295,6 +1295,9 @@ watch(
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         updateVideoSize();
       });
+      hls.on(Hls.Events.ERROR, (_e, d) =>
+        console.error("[hls]", d.type, d.details, "fatal:", d.fatal, "http:", d.response?.code)
+      );
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = hlsUrl;
     }
