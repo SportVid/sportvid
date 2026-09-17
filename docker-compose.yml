@@ -153,6 +153,7 @@ services:
       - "--pool=threads"
       - "--concurrency=16"
       - "--prefetch-multiplier=1"
+      - "--task-events"
       - "--loglevel"
       - "${LOG_LEVEL:-DEBUG}"
 
@@ -208,6 +209,7 @@ services:
       - "--pool=threads"
       - "--concurrency=4"
       - "--prefetch-multiplier=1"
+      - "--task-events"
       - "--loglevel"
       - "${LOG_LEVEL:-DEBUG}"
 
@@ -225,6 +227,7 @@ services:
       - django_settings
     environment:
       - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
     env_file:
       - ./.env
     volumes:
@@ -241,30 +244,22 @@ services:
       - /tmp
       - /var/tmp
     working_dir: /app/
-    command:
-      - "uv"
-      - "run"
-      - "--no-editable"
-      - "--package"
-      - "backend"
-      - "gunicorn"
-      - "--bind"
-      - "0.0.0.0:${BACKEND_PORT}"
-      - "--env"
-      - "SCRIPT_NAME=/api"
-      - "sportvid.wsgi"
-      - "--capture-output"
-      - "--log-level"
-      - "${LOG_LEVEL:-DEBUG}"
-      - "--timeout"
-      - "1800"
-      - "--workers"
-      - "${GUNICORN_WORKERS:-4}"
-      # SSE requires threaded workers so /events/stream does not occupy a whole worker per connection.
-      - "--worker-class"
-      - "gthread"
-      - "--threads"
-      - "${GUNICORN_THREADS:-16}"
+    # SSE requires threaded workers so /events/stream does not occupy a whole worker per connection.
+    # PROMETHEUS_MULTIPROC_DIR must exist before gunicorn forks its workers, hence the mkdir.
+    command: >
+      bash -c "
+      mkdir -p /tmp/prometheus_multiproc &&
+      uv run --no-editable --package backend gunicorn
+      --bind 0.0.0.0:${BACKEND_PORT}
+      --env SCRIPT_NAME=/api
+      sportvid.wsgi
+      --capture-output
+      --log-level ${LOG_LEVEL:-DEBUG}
+      --timeout 1800
+      --workers ${GUNICORN_WORKERS:-4}
+      --worker-class gthread
+      --threads ${GUNICORN_THREADS:-16}
+      "
     depends_on:
       postgres:
         condition: service_healthy
@@ -280,6 +275,17 @@ services:
     #   timeout: 5s
     #   retries: 5
     #   start_period: 90s
+
+  celery-exporter:
+    container_name: celery-exporter
+    image: danihodovic/celery-exporter:latest
+    command:
+      - "--broker-url=redis://valkey:${VALKEY_INTERNAL_PORT}"
+    ports:
+      - "127.0.0.1:9808:9808"
+    depends_on:
+      valkey:
+        condition: service_healthy
 
   frontend:
     container_name: frontend

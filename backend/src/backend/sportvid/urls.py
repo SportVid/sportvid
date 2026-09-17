@@ -18,7 +18,8 @@ def healthy(request):
     return JsonResponse({"status": "ok"}, status=200)
 
 urlpatterns = [
-    path("", include("backend.urls")), 
+    path("", include("backend.urls")),
     path("admin/", admin.site.urls),
     path("healthy/", healthy),
+    path("", include("django_prometheus.urls")),
 ]

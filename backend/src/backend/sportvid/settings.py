@@ -82,6 +82,7 @@ LOGGING = {
 }
 
 INSTALLED_APPS = [
+    "django_prometheus",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
@@ -98,6 +99,7 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "backend.SportVidUser"
 
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -107,6 +109,7 @@ MIDDLEWARE = [
     # "mozilla_django_oidc.middleware.SessionRefresh",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "sportvid.urls"
