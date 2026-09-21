@@ -90,7 +90,7 @@ services:
   valkey:
     container_name: valkey_dev
     image: valkey/valkey:8.1.1-alpine
-    env_file: 
+    env_file:
       - /opt/deploy/.env.dev
     command:
       - "/usr/local/bin/valkey-server"
