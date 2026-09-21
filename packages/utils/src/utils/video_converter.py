@@ -43,6 +43,10 @@ def _build_command(
 
     # TODO: Defining these offloads encoding to the GPU via CUDA.
     # Didn't work for me, so I disabled GPU-based encoding.
+    # NOTE: with every entry commented out this list is empty, so nothing the
+    # caller passes as an input option ever reaches FFmpeg and decoding always
+    # runs on the CPU -- regardless of what convert_video.py's conversion_args
+    # say about "hwaccel". Worth knowing before trusting those settings.
     input_args = [
         # "hwaccel",
         # "hwaccel_output_format",
@@ -145,3 +149,14 @@ def convert_to_hls(
         start_new_session=True,
         text=True,
     )
+
+
+def probe_media_start(file_path: str) -> float:
+    """First presentation timestamp of a media file, in seconds.
+
+    Used to verify that a converted HLS asset actually starts at the timeline
+    position its playlist advertises -- see the guard in convert_video.py.
+    """
+    info = ffmpeg.probe(file_path)
+    start = info.get("format", {}).get("start_time")
+    return float(start) if start is not None else 0.0
