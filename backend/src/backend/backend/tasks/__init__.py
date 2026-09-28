@@ -4,6 +4,7 @@ from .audio_freq import *
 from .color_analysis import *
 from .insightface_identification import *
 from .shot_type_classification import *
+from .camera_motion_classification import *
 from .shotdetection import *
 from .thumbnail import *
 from .clip import *

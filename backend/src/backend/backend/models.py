@@ -117,6 +117,25 @@ class Video(models.Model):
     asset_dir = models.CharField(max_length=1024, blank=True, null=True)
     manifest_path = models.CharField(max_length=1024, blank=True, null=True)
     media_path = models.CharField(max_length=1024, blank=True, null=True)
+    # camera motion category, set by the camera_motion_classification plugin
+    CAMERA_MOTION_STATIC = "static"
+    CAMERA_MOTION_PAN = "pan"
+    CAMERA_MOTION_ZOOM = "zoom"
+    CAMERA_MOTION_PAN_ZOOM = "pan_zoom"
+    CAMERA_MOTION_UNKNOWN = "unknown"
+    CAMERA_MOTION = {
+        CAMERA_MOTION_STATIC: "STATIC",
+        CAMERA_MOTION_PAN: "PAN",
+        CAMERA_MOTION_ZOOM: "ZOOM",
+        CAMERA_MOTION_PAN_ZOOM: "PAN_ZOOM",
+        CAMERA_MOTION_UNKNOWN: "UNKNOWN",
+    }
+    camera_motion = models.CharField(
+        max_length=16,
+        choices=[(k, v) for k, v in CAMERA_MOTION.items()],
+        blank=True,
+        null=True,
+    )
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {
@@ -141,6 +160,7 @@ class Video(models.Model):
             "total_number_of_teams": self.total_number_of_teams,
             "age_group": self.age_group,
             "sport": self.sport,
+            "camera_motion": self.camera_motion,
             "status": self.status,
             "progress": self.progress,
             "eta_seconds": self.eta_seconds,
