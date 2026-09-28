@@ -136,6 +136,9 @@ class Video(models.Model):
         blank=True,
         null=True,
     )
+    lens_profile = models.ForeignKey(
+        "LensProfile", blank=True, null=True, on_delete=models.SET_NULL, related_name="videos"
+    )
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {
@@ -161,6 +164,7 @@ class Video(models.Model):
             "age_group": self.age_group,
             "sport": self.sport,
             "camera_motion": self.camera_motion,
+            "lens_profile_id": self.lens_profile_id.hex if self.lens_profile_id else None,
             "status": self.status,
             "progress": self.progress,
             "eta_seconds": self.eta_seconds,
@@ -823,6 +827,11 @@ class CalibrationAssets(models.Model):
     # store 3x3 matrix as JSON array of arrays, default to identity matrix
     homography_matrix = models.JSONField(default=default_homography_matrix)
     object_type = models.CharField(max_length=1024, null=True)
+    # intrinsics (scaled to the video) the point correspondences were undistorted with before
+    # the homography fit; null means the homography works on raw (distorted) video coordinates
+    lens_intrinsics = models.JSONField(blank=True, null=True)
+    # camera position/orientation recovered from the homography and lens_intrinsics
+    camera_pose = models.JSONField(blank=True, null=True)
 
     def to_dict(self, include_refs_hashes=True, include_refs=True, **kwargs):
         result = {
@@ -830,7 +839,9 @@ class CalibrationAssets(models.Model):
             "name": self.name,
             "sport": self.sport,
             "homography_matrix": self.homography_matrix,
-            "object_type": self.object_type
+            "object_type": self.object_type,
+            "lens_intrinsics": self.lens_intrinsics,
+            "camera_pose": self.camera_pose,
         }
         if include_refs:
             result["object_data"] = [x.to_dict() for x in self.object_data.all()]
@@ -858,3 +869,64 @@ class PointCorrespondence(models.Model):
             "videoCoordsRel": self.video_coords_rel
         }
 
+
+class LensProfile(models.Model):
+    """A lens profile imported from Gyroflow's lens profile database (OpenCV fisheye model)."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # path of the profile inside the lens_profiles repository, stable across re-imports
+    key = models.CharField(max_length=512, unique=True)
+    name = models.CharField(max_length=512)
+    group = models.CharField(max_length=128)
+    brand = models.CharField(max_length=128, db_index=True)
+    model = models.CharField(max_length=256, db_index=True)
+    lens_model = models.CharField(max_length=256, blank=True, default="")
+    camera_setting = models.CharField(max_length=256, blank=True, default="")
+    note = models.CharField(max_length=1024, blank=True, default="")
+    calib_width = models.IntegerField()
+    calib_height = models.IntegerField()
+    fps = models.FloatField(blank=True, null=True)
+    camera_matrix = models.JSONField()
+    distortion_coeffs = models.JSONField()
+    rms_error = models.FloatField(blank=True, null=True)
+    official = models.BooleanField(default=False)
+
+    EIS_ON = "on"
+    EIS_OFF = "off"
+    EIS_UNKNOWN = "unknown"
+    EIS = {
+        EIS_ON: "ON",
+        EIS_OFF: "OFF",
+        EIS_UNKNOWN: "UNKNOWN",
+    }
+    # in-camera stabilization during calibration, parsed from the profile's free-text fields
+    eis = models.CharField(
+        max_length=8,
+        choices=[(k, v) for k, v in EIS.items()],
+        default=EIS_UNKNOWN,
+    )
+    # set when the profile needs more than the plain fisheye model (e.g. GoPro SuperView)
+    unsupported_reason = models.CharField(max_length=256, blank=True, null=True)
+    source_commit = models.CharField(max_length=64)
+    raw = models.JSONField()
+
+    class Meta: ordering = ["brand", "model", "lens_model", "calib_width"]
+
+    def to_dict(self, **kwargs):
+        return {
+            "id": self.id.hex,
+            "name": self.name,
+            "group": self.group,
+            "brand": self.brand,
+            "model": self.model,
+            "lens_model": self.lens_model,
+            "camera_setting": self.camera_setting,
+            "note": self.note,
+            "calib_width": self.calib_width,
+            "calib_height": self.calib_height,
+            "fps": self.fps,
+            "rms_error": self.rms_error,
+            "official": self.official,
+            "eis": self.eis,
+            "supported": self.unsupported_reason is None,
+            "unsupported_reason": self.unsupported_reason,
+        }

@@ -11,6 +11,11 @@ from backend.models import (
 )
 from backend.plugin_manager import PluginManager
 from backend.utils.task import Task
+from backend.utils.lens import (
+    camera_pose_from_homography,
+    lens_intrinsics_snapshot,
+    undistort_with_snapshot,
+)
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
@@ -66,6 +71,24 @@ class CalibrationStaticDlt(Task):
                     "y": point.video_coords_rel[0]["y"]
                 }
             })
+        # with a lens profile the homography is fitted on undistorted video coordinates
+        video_db = data_db.video or video
+        lens_intrinsics = None
+        if video_db is not None and video_db.lens_profile is not None:
+            lens_intrinsics = lens_intrinsics_snapshot(video_db.lens_profile, video_db.width, video_db.height)
+            undistorted = undistort_with_snapshot(
+                [[p["src"]["x"], p["src"]["y"]] for p in point_correspondences_dict], lens_intrinsics
+            )
+            valid = []
+            for point, (x, y) in zip(point_correspondences_dict, undistorted):
+                # NaN: beyond the lens model's valid range
+                if x == x and y == y:
+                    point["src"] = {"x": float(x), "y": float(y)}
+                    valid.append(point)
+            if len(valid) < 4:
+                raise Exception("Not enough valid point correspondences after undistortion (min 4 required)")
+            point_correspondences_dict = valid
+
         # all parameters are serialized based on strings when calling run_analyser
         plugin_parameters = {
             "point_correspondences": json.dumps(point_correspondences_dict),
@@ -91,6 +114,22 @@ class CalibrationStaticDlt(Task):
             with result[1]["homography"] as homography_data:
                 homography_matrix = homography_data.y.tolist()
                 data_db.homography_matrix = homography_matrix
+                data_db.lens_intrinsics = lens_intrinsics
+                data_db.camera_pose = None
+                if lens_intrinsics is not None:
+                    try:
+                        data_db.camera_pose = camera_pose_from_homography(
+                            homography_matrix,
+                            lens_intrinsics["camera_matrix"],
+                            lens_intrinsics["width"],
+                            lens_intrinsics["height"],
+                            field_length=video_db.field_length or 105.0,
+                            field_width=video_db.field_width or 68.0,
+                            src_points_rel=[[p["src"]["x"], p["src"]["y"]] for p in point_correspondences_dict],
+                            dst_points_rel=[[p["dst"]["x"], p["dst"]["y"]] for p in point_correspondences_dict],
+                        )
+                    except Exception:
+                        logging.exception(f"Camera pose estimation failed for calibration asset {data_db.id}")
                 data_db.save()
                 logging.debug(f"Updated homography matrix {homography_matrix} for calibration asset {data_db.id}")
 

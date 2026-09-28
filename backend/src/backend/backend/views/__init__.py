@@ -12,6 +12,7 @@ from .annotation import *
 from .shortcut import *
 from .annotation_shortcut import *
 from .calibration_assets import *
+from .lens_profile import *
 from .bounding_boxes import *
 from .tracking_data import *
 from .tracking_data_chunks import *

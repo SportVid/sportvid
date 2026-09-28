@@ -211,5 +211,18 @@ urlpatterns = [
         name="calibration_assets_change"),
     path("calibration_assets/delete", 
         views.CalibrationAssetsDelete.as_view(), 
-        name="calibration_assets_delete")
+        name="calibration_assets_delete"),
+    # ---------- LENS PROFILES
+    path("lens_profile/brands",
+        views.LensProfileBrandList.as_view(),
+        name="lens_profile_brands"),
+    path("lens_profile/models",
+        views.LensProfileModelList.as_view(),
+        name="lens_profile_models"),
+    path("lens_profile/list",
+        views.LensProfileList.as_view(),
+        name="lens_profile_list"),
+    path("video/lens_profile/set",
+        views.VideoSetLensProfile.as_view(),
+        name="video_lens_profile_set"),
 ]

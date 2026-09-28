@@ -13,6 +13,7 @@ from backend.models import (
 from backend.plugin_manager import PluginManager
 from backend.utils.parser import Parser
 from backend.utils.task import Task
+from backend.utils.lens import undistort_with_snapshot
 from data import DataManager, Data
 from ..utils.analyser_client import TaskAnalyserClient
 
@@ -77,6 +78,8 @@ class KpiComputation(Task):
             # Load homography matrix from CalibrationAssets
             calibration_db = CalibrationAssets.objects.get(id=calibration_id)
             H = calibration_db.homography_matrix  # 3x3 list of lists
+            # set if the homography was fitted on undistorted coordinates -> undistort foot points the same way
+            lens_intrinsics = calibration_db.lens_intrinsics
 
             def _apply_homography(H, x, y):
                 X = H[0][0] * x + H[0][1] * y + H[0][2]
@@ -103,12 +106,14 @@ class KpiComputation(Task):
             seen_team_ids = set()
             for ts_str, boxes in bboxes_raw.items():
                 frame_players = []
-                for b in boxes:
+                # center-x / bottom-y normalized in video space
+                foot_points = undistort_with_snapshot([[b[3], b[4]] for b in boxes], lens_intrinsics)
+                for b, (top_x, top_y) in zip(boxes, foot_points.tolist()):
+                    if top_x != top_x or top_y != top_y:  # NaN: beyond the lens model's valid range
+                        continue
                     pid = b[0]
                     tid = b[1]
                     section = b[2]
-                    top_x = b[3]  # center-x normalized in video space
-                    top_y = b[4]  # bottom-y normalized in video space
                     hx, hy = _apply_homography(H, top_x, top_y)
                     frame_players.append([pid, tid, section, hx, hy])
                     seen_team_ids.add(tid)
