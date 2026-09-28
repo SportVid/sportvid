@@ -2,7 +2,7 @@
     "debug": true,
     "secret_key": "default_secret",
     "force_script_name": "/api",
-    "allowed_hosts": ["localhost", "backend"],
+    "allowed_hosts": ["localhost"],
     "language_code": "en-us",
     "data_cache_root": "/cache/",
     "data_output_path": "/predictions",
