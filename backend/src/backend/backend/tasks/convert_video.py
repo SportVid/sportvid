@@ -16,7 +16,7 @@ from backend.utils import media_dir_to_file, media_path_to_file, publish_video
 from backend.utils.events import cancellation_watcher
 from backend.models import Video
 from backend.plugin_manager import PluginManager
-from utils.video_converter import convert_to_hls, terminate_process_group
+from utils.video_converter import convert_to_hls, probe_media_start, terminate_process_group
 from utils.helper import remove_file, remove_dir
 
 from backend.utils.eta import EtaEstimator
@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 
 _DELETE_CHECK_INTERVAL = 5.0
 _PROGRESS_STEP = 0.01  # only report conversion progress once it moved by at least 1%
+# The converted asset's own timeline must line up with the one its playlist
+# advertises (see the guard in convert_video_to_hls). A few frames of slack are
+# normal; anything beyond this is the muxer writing nonsense.
+_MAX_MEDIA_START_SECONDS = 1.0
 
 # adds constants & regex for parsing FFmpeg progress
 _FFMPEG_PROGRESS_KEYS = (
@@ -246,6 +250,21 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             "rc": "vbr",
             "cq": 23,
             # -------- output compat
+            # No B-frames. Their reordering makes FFmpeg's HLS/fMP4 muxer write a
+            # bogus baseMediaDecodeTime into the fragments, so the media carries
+            # timestamps starting somewhere else entirely while the playlist still
+            # claims the stream starts at 0. hls.js passes fMP4 straight through to
+            # MSE, so the browser buffers the data out at that offset, the playhead
+            # at 0 finds nothing, and the video never renders -- no error anywhere,
+            # while the byte ranges keep loading happily.
+            #
+            # How far off it lands depends on the encoder: libx264 produces a
+            # harmless ~66 ms that hls.js' gap controller skips over, h264_nvenc
+            # produced 100.2 s on a 60 s clip. Which is why this stayed invisible
+            # on the CPU path and broke the moment deploy-dev switched to NVENC.
+            # Keep this at 0 on every encoder so the branches behave alike; it
+            # costs roughly 4 % bitrate on libx264 and nothing measurable on NVENC.
+            "bf": 0,
             # "pix_fmt": "yuv420p", # pixel format of the output
             "loglevel": "error"
         }
@@ -379,7 +398,19 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                     f"No MPEG-TS segments generated in {asset_dir}."
                 )
             media_path_for_db = segment_candidates[0]
-        
+
+        # The playlist and the media it points at have to agree on where the
+        # timeline begins -- a mismatch produces an asset that downloads
+        # perfectly and renders nothing (see the "bf" note above). Checking it
+        # here turns that into a failed conversion the user can actually see,
+        # instead of a STATUS_DONE video that silently refuses to play.
+        media_start = probe_media_start(str(media_path_for_db))
+        if abs(media_start) > _MAX_MEDIA_START_SECONDS:
+            raise RuntimeError(
+                f"HLS media timeline starts at {media_start:.3f}s instead of 0, "
+                f"playlist would be out of sync: {media_path_for_db}"
+            )
+
         _report_conversion_progress(video_id_hex, 0.97, None)
 
         # NOTE: Creates the archive to be transfered.
