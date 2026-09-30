@@ -14,6 +14,7 @@ from backend.utils.task import Task
 from backend.utils.lens import (
     camera_pose_from_homography,
     lens_intrinsics_snapshot,
+    reprojection_rmse,
     undistort_with_snapshot,
 )
 from data import DataManager
@@ -115,6 +116,15 @@ class CalibrationStaticDlt(Task):
                 homography_matrix = homography_data.y.tolist()
                 data_db.homography_matrix = homography_matrix
                 data_db.lens_intrinsics = lens_intrinsics
+                field_length = (video_db.field_length if video_db else None) or 105.0
+                field_width = (video_db.field_width if video_db else None) or 68.0
+                data_db.reprojection_error = reprojection_rmse(
+                    homography_matrix,
+                    [[p["src"]["x"], p["src"]["y"]] for p in point_correspondences_dict],
+                    [[p["dst"]["x"], p["dst"]["y"]] for p in point_correspondences_dict],
+                    field_length,
+                    field_width,
+                )
                 data_db.camera_pose = None
                 if lens_intrinsics is not None:
                     try:
@@ -123,10 +133,8 @@ class CalibrationStaticDlt(Task):
                             lens_intrinsics["camera_matrix"],
                             lens_intrinsics["width"],
                             lens_intrinsics["height"],
-                            field_length=video_db.field_length or 105.0,
-                            field_width=video_db.field_width or 68.0,
-                            src_points_rel=[[p["src"]["x"], p["src"]["y"]] for p in point_correspondences_dict],
-                            dst_points_rel=[[p["dst"]["x"], p["dst"]["y"]] for p in point_correspondences_dict],
+                            field_length=field_length,
+                            field_width=field_width,
                         )
                     except Exception:
                         logging.exception(f"Camera pose estimation failed for calibration asset {data_db.id}")

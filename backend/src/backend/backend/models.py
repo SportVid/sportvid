@@ -832,6 +832,9 @@ class CalibrationAssets(models.Model):
     lens_intrinsics = models.JSONField(blank=True, null=True)
     # camera position/orientation recovered from the homography and lens_intrinsics
     camera_pose = models.JSONField(blank=True, null=True)
+    # RMS error (metres on the pitch) of the point correspondences under the homography; these
+    # are the points it was fitted on, so it is a lower bound (always 0 with exactly 4 points)
+    reprojection_error = models.FloatField(blank=True, null=True)
 
     def to_dict(self, include_refs_hashes=True, include_refs=True, **kwargs):
         result = {
@@ -842,6 +845,7 @@ class CalibrationAssets(models.Model):
             "object_type": self.object_type,
             "lens_intrinsics": self.lens_intrinsics,
             "camera_pose": self.camera_pose,
+            "reprojection_error": self.reprojection_error,
         }
         if include_refs:
             result["object_data"] = [x.to_dict() for x in self.object_data.all()]

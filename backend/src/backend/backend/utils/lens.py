@@ -143,8 +143,6 @@ def camera_pose_from_homography(
     height: int,
     field_length: float,
     field_width: float,
-    src_points_rel: Optional[Sequence[Sequence[float]]] = None,
-    dst_points_rel: Optional[Sequence[Sequence[float]]] = None,
 ) -> Dict:
     """Recover the camera pose from an (undistorted) image -> pitch homography and known intrinsics.
 
@@ -188,15 +186,21 @@ def camera_pose_from_homography(
             "orthogonality": float(abs(np.dot(r1, r2)) / (np.linalg.norm(r1) * np.linalg.norm(r2))),
         },
     }
-
-    if src_points_rel is not None and dst_points_rel is not None:
-        src = np.asarray(src_points_rel, dtype=np.float64).reshape(-1, 2)
-        dst = np.asarray(dst_points_rel, dtype=np.float64).reshape(-1, 2)
-        projected = apply_homography(H, src)
-        error_m = (projected - dst) * [field_length, field_width]
-        pose["reprojection_rmse_m"] = float(np.sqrt(np.mean(np.sum(error_m**2, axis=1))))
-
     return pose
+
+
+def reprojection_rmse(
+    homography: Sequence[Sequence[float]],
+    src_points_rel: Sequence[Sequence[float]],
+    dst_points_rel: Sequence[Sequence[float]],
+    field_length: float,
+    field_width: float,
+) -> float:
+    """RMS distance in metres between the pitch points and the video points mapped by the homography."""
+    src = np.asarray(src_points_rel, dtype=np.float64).reshape(-1, 2)
+    dst = np.asarray(dst_points_rel, dtype=np.float64).reshape(-1, 2)
+    error_m = (apply_homography(homography, src) - dst) * [field_length, field_width]
+    return float(np.sqrt(np.mean(np.sum(error_m**2, axis=1))))
 
 
 def apply_homography(homography: Sequence[Sequence[float]], points: Sequence[Sequence[float]]) -> np.ndarray:
