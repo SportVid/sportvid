@@ -149,10 +149,28 @@ services:
       - "-A"
       - "sportvid"
       - "worker"
+      - "--task-events"
       - "--loglevel"
       - "${LOG_LEVEL:-INFO}"
     networks:
       - shared
+      - prod
+
+  celery-exporter:
+    container_name: celery-exporter_prod
+    image: danihodovic/celery-exporter:latest
+    env_file:
+      - /opt/deploy/.env.prod
+    command:
+      - "--broker-url=redis://:${VALKEY_PASSWD}@valkey:${VALKEY_INTERNAL_PORT}"
+    ports:
+      # Host-Port 9809 statt 9808 - celery-exporter_dev belegt 9808 bereits
+      # auf demselben Host (sportvid01 faehrt dev+prod gleichzeitig).
+      - "127.0.0.1:9809:9808"
+    depends_on:
+      valkey:
+        condition: service_started
+    networks:
       - prod
 
   backend:
@@ -173,6 +191,7 @@ services:
       - django_settings
     environment:
       - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/prometheus_multiproc
     env_file:
       - /opt/deploy/.env.prod
     volumes:
@@ -189,24 +208,20 @@ services:
       - /tmp
       - /var/tmp
     working_dir: /app/
-    command:
-      - "uv"
-      - "run"
-      - "--package"
-      - "backend"
-      - "gunicorn"
-      - "--bind"
-      - "0.0.0.0:${BACKEND_PORT}"
-      - "--env"
-      - "SCRIPT_NAME=/api"
-      - "sportvid.wsgi"
-      - "--capture-output"
-      - "--log-level"
-      - "${LOG_LEVEL:-INFO}"
-      - "--timeout"
-      - "${GUNICORN_TIMEOUT:-1800}"
-      - "--workers"
-      - "${GUNICORN_WORKERS:-16}"
+    # PROMETHEUS_MULTIPROC_DIR muss existieren, bevor gunicorn seine Worker
+    # forkt, daher das mkdir.
+    command: >
+      bash -c "
+      mkdir -p /tmp/prometheus_multiproc &&
+      uv run --package backend gunicorn
+      --bind 0.0.0.0:${BACKEND_PORT}
+      --env SCRIPT_NAME=/api
+      sportvid.wsgi
+      --capture-output
+      --log-level ${LOG_LEVEL:-INFO}
+      --timeout ${GUNICORN_TIMEOUT:-1800}
+      --workers ${GUNICORN_WORKERS:-16}
+      "
     depends_on:
       # NOTE: could use a sleep script until PSQL is reachable (see /postgres/wait.sh)
       # postgres:

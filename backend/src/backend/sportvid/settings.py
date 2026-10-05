@@ -21,6 +21,16 @@ SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
+# Code-Defaults, werden zur Laufzeit von der Secrets-Datei (django_settings)
+# ueberschrieben, falls dort gesetzt - dienen hier nur als Fallback. "backend"
+# ist der Compose-Servicename, den Prometheus zum internen Scrapen von
+# /api/metrics braucht (siehe Servermonitoring-Repo).
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "backend"]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+]
+
 if ENVIRONMENT == 'prod':
     CORS_ALLOWED_ORIGINS = [  # define allowed origins
         # "http://www.sportvid.dshs-koeln.de",
@@ -73,6 +83,7 @@ LOGGING = {
 }
 
 INSTALLED_APPS = [
+    "django_prometheus",
     "corsheaders",
     "rest_framework",
     "rest_framework.authtoken",
@@ -89,6 +100,7 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "backend.SportVidUser"
 
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -97,6 +109,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "sportvid.urls"
