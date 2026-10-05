@@ -231,8 +231,17 @@ services:
       celery:
         condition: service_started
     networks:
-      - shared
-      - prod
+      shared: {}
+      # Eigener Alias "backend-prod" (Bindestrich statt Unterstrich!) fuer
+      # Prometheus' internen Scrape von /api/metrics: der Compose-Servicename
+      # "backend" ist mehrdeutig, weil Prometheus gleichzeitig am dev_dev-
+      # UND prod_prod-Netz haengt und beide Umgebungen "backend" heissen -
+      # der Container-NAME "backend_prod" waere eindeutig, aber Django lehnt
+      # Hostnamen mit Unterstrich grundsaetzlich ab (RFC 1034/1035, vor dem
+      # ALLOWED_HOSTS-Check). Verifiziert auf sportvid01 am 05.10.
+      prod:
+        aliases:
+          - backend-prod
 
   frontend:
     container_name: frontend_prod

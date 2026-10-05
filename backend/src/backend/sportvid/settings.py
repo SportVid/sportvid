@@ -25,7 +25,7 @@ SECURE_HSTS_PRELOAD = True
 # ueberschrieben, falls dort gesetzt - dienen hier nur als Fallback. "backend"
 # ist der Compose-Servicename, den Prometheus zum internen Scrapen von
 # /api/metrics braucht (siehe Servermonitoring-Repo).
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "backend", "backend_prod"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "backend", "backend-prod"]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
