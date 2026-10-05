@@ -171,7 +171,8 @@ services:
       args:
         - BACKEND_PORT=${BACKEND_PORT}
     ports:
-      - ${BACKEND_PORT}:${BACKEND_PORT}
+      # Nur localhost - siehe docker-compose.prod.yml fuer die Begruendung.
+      - "127.0.0.1:${BACKEND_PORT}:${BACKEND_PORT}"
     secrets:
       - django_settings
     environment:
