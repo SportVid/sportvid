@@ -36,7 +36,7 @@ SESSION_COOKIE_SECURE = True
 
 # Code-Defaults, werden zur Laufzeit von der Secrets-Datei (django_settings)
 # ueberschrieben, falls dort gesetzt - dienen hier nur als Fallback.
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "backend"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "backend", "backend_dev"]
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
