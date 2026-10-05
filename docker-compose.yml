@@ -222,7 +222,13 @@ services:
       args:
         - BACKEND_PORT=${BACKEND_PORT}
     ports:
-      - ${BACKEND_PORT}:${BACKEND_PORT}
+      # Nur localhost - /api/metrics liegt ungeschuetzt auf diesem Port (wie
+      # der Rest der API), soll aber nicht von ausserhalb des Hosts erreichbar
+      # sein. Die anderen Sidecars (celery-exporter etc.) binden genauso.
+      # Prometheus/andere Container erreichen das weiterhin unveraendert ueber
+      # das interne Docker-Netz (Service-Name "backend"), nicht ueber diesen
+      # Host-Port.
+      - "127.0.0.1:${BACKEND_PORT}:${BACKEND_PORT}"
     secrets:
       - django_settings
     environment:
