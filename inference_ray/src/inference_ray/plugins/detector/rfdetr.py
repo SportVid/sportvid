@@ -46,14 +46,16 @@ class RFDetr():
         
         self.detector_params = detector_params
     
-        self.classes = self.cfg.get('classes', [])
+        # NOTE: classes may be given as names (see CLASS_MAP) or as raw class ids.
+        self.classes = detector_params.get('classes', [])
         self.classes_to_detect = []
-        if len(self.classes) >= 1:
-            self.classes_to_detect = [
-                class_id
-                for class_name, class_id in CLASS_MAP.items()
-                if class_name in self.classes
-            ]
+        for c in self.classes:
+            if isinstance(c, str):
+                if c not in CLASS_MAP:
+                    raise RuntimeError(f"Unknown RF-DETR class '{c}', expected one of {list(CLASS_MAP)}.")
+                c = CLASS_MAP[c]
+            if int(c) not in self.classes_to_detect:
+                self.classes_to_detect.append(int(c))
         self.num_classes = len(self.classes_to_detect)
         if self.num_classes == 0:
             raise RuntimeError("Expected at least 1 class to detect, please check the 'classes' args.")
@@ -70,12 +72,13 @@ class RFDetr():
         # TODO: instantiate from model_path string representation.
         self.model = RFDETRLarge(
             device=self.device,
-            pretrain_weights=pretrain_weights
+            pretrain_weights=pretrain_weights,
+            resolution=self.resolution,
         )
         self.model.model.model.to(self.device)
         self.model.model.model.eval()
-        
-        logging.info(f"Model loaded successfully from checkpoint '{self.checkpoint}'...")
+
+        logging.info(f"Model loaded successfully from checkpoint '{self.checkpoint}' (resolution={self.model.model.resolution})...")
         try:
             self.model.optimize_for_inference(
                 compile=False,
