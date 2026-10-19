@@ -43,7 +43,8 @@ dependencies = [
     "thop",
     "Pillow",
     "loguru",
-    "scikit-image"
+    "scikit-image",
+    "gpustat>=1.1.1",
 ]
 
 [tool.uv]
