@@ -10,6 +10,7 @@ from backend.models import (
     TimelineSegment, TimelineSegmentAnnotation, 
     Annotation, AnnotationCategory
 )
+from backend.permissions import readable, writable
 
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,8 @@ logger = logging.getLogger(__name__)
 class TimelineSegmentAnnoatationCreate(View):
     def post(self, request):
         try:
+            if not request.user.is_authenticated:
+                return JsonResponse({"status": "error", "type": "not_authenticated"})
             # decode data
             try:
                 body = request.body.decode("utf-8")
@@ -29,13 +32,13 @@ class TimelineSegmentAnnoatationCreate(View):
                 return JsonResponse({"status": "error", "type": "wrong_request_body"})
             # get segment
             try:
-                segment_db = TimelineSegment.objects.get(id=data.get("timeline_segment_id"))
+                segment_db = writable(TimelineSegment, request.user).get(id=data.get("timeline_segment_id"))
             except TimelineSegment.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
             # link existing annotation
             if "annotation_id" in data:
                 try:
-                    annotation_db = Annotation.objects.get(id=data.get("annotation_id"))
+                    annotation_db = writable(Annotation, request.user).get(id=data.get("annotation_id"))
                 except Annotation.DoesNotExist:
                     return JsonResponse({"status": "error", "type": "not_exist"})
                 if (
@@ -52,7 +55,7 @@ class TimelineSegmentAnnoatationCreate(View):
             # create a annotation from exisitng categories
             elif "annotation_name" in data and "annotation_category_id" in data:
                 try:
-                    annotation_category_db = AnnotationCategory.objects.get(id=data.get("annotation_category_id"))
+                    annotation_category_db = writable(AnnotationCategory, request.user).get(id=data.get("annotation_category_id"))
                 except AnnotationCategory.DoesNotExist:
                     return JsonResponse({"status": "error", "type": "not_exist"})
                 if "annotation_color" in data:
@@ -104,7 +107,7 @@ class TimelineSegmentAnnoatationCreate(View):
 
 
 class TimelineSegmentAnnoatationToggle(View):
-    def parse_timeline_segment_ids(self, data):
+    def parse_timeline_segment_ids(self, data, user):
         timeline_segment_ids = []
         if "timeline_segment_ids" in data:
             if not isinstance(data.get("timeline_segment_ids"), (list, set)):
@@ -126,20 +129,20 @@ class TimelineSegmentAnnoatationToggle(View):
         timeline_segment_dbs = []
         for timeline_segment_id in timeline_segment_ids:
             try:
-                timeline_segment_db = TimelineSegment.objects.get(id=timeline_segment_id)
+                timeline_segment_db = writable(TimelineSegment, user).get(id=timeline_segment_id)
                 timeline_segment_dbs.append(timeline_segment_db)
             except TimelineSegment.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
 
         return timeline_segment_dbs
 
-    def parse_and_create_annotation(self, data):
+    def parse_and_create_annotation(self, data, user):
         annotation_added = []
         annotation_category_added = []
         # link existing annotation
         if "annotation_id" in data:
             try:
-                annotation_db = Annotation.objects.get(id=data.get("annotation_id"))
+                annotation_db = writable(Annotation, user).get(id=data.get("annotation_id"))
             except Annotation.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
             
@@ -147,7 +150,7 @@ class TimelineSegmentAnnoatationToggle(View):
         # create a annotation from exisitng categories
         elif "annotation_name" in data and "annotation_category_id" in data:
             try:
-                annotation_category_db = AnnotationCategory.objects.get(id=data.get("annotation_category_id"))
+                annotation_category_db = writable(AnnotationCategory, user).get(id=data.get("annotation_category_id"))
             except AnnotationCategory.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
             if "annoation_color" in data:
@@ -196,6 +199,8 @@ class TimelineSegmentAnnoatationToggle(View):
 
     def post(self, request):
         try:
+            if not request.user.is_authenticated:
+                return JsonResponse({"status": "error", "type": "not_authenticated"})
             # decode data
             try:
                 body = request.body.decode("utf-8")
@@ -207,12 +212,12 @@ class TimelineSegmentAnnoatationToggle(View):
                 return JsonResponse({"status": "error", "type": "wrong_request_body"})
 
             # get segment
-            timeline_segment_dbs = self.parse_timeline_segment_ids(data)
+            timeline_segment_dbs = self.parse_timeline_segment_ids(data, request.user)
             if isinstance(timeline_segment_dbs, JsonResponse):
                 return timeline_segment_dbs
 
             # get or create annotation
-            result = self.parse_and_create_annotation(data)
+            result = self.parse_and_create_annotation(data, request.user)
             if isinstance(result, JsonResponse):
                 return result
             annotation_db, annotation_added, annotation_category_added = result
@@ -256,6 +261,8 @@ class TimelineSegmentAnnoatationToggle(View):
 class TimelineSegmentAnnoatationList(View):
     def get(self, request):
         try:
+            if not request.user.is_authenticated:
+                return JsonResponse({"status": "error", "type": "not_authenticated"})
             query_args = {}
 
             if "timeline_segment_id" in request.GET:
@@ -264,7 +271,7 @@ class TimelineSegmentAnnoatationList(View):
                 query_args["timeline_segment__timeline__video__id"] = request.GET.get("video_id")
 
             query_results = (
-                TimelineSegmentAnnotation.objects.filter(**query_args)
+                readable(TimelineSegmentAnnotation, request.user).filter(**query_args)
                 .select_related("timeline_segment")
                 .select_related("annotation")
             )
@@ -282,6 +289,8 @@ class TimelineSegmentAnnoatationList(View):
 class TimelineSegmentAnnoatationDelete(View):
     def post(self, request):
         try:
+            if not request.user.is_authenticated:
+                return JsonResponse({"status": "error", "type": "not_authenticated"})
             # decode data
             try:
                 body = request.body.decode("utf-8")
@@ -294,7 +303,7 @@ class TimelineSegmentAnnoatationDelete(View):
             # get segment
             num_deleted = 0
             try:
-                num_deleted, _ = TimelineSegmentAnnotation.objects.get(
+                num_deleted, _ = writable(TimelineSegmentAnnotation, request.user).get(
                     id=data.get("timeline_segment_annotation_id")
                 ).delete()
             except TimelineSegment.DoesNotExist:

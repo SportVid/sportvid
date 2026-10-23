@@ -9,6 +9,7 @@ from backend.models import (
     AnnotationCategory, Annotation, 
     TimelineSegment, TimelineSegmentAnnotation, Timeline
 )
+from backend.permissions import writable
 
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class TimelineSegmentAnnotate(View):
 
             timeline_segment_ids = data.get("timeline_segment_ids")
             try:
-                segment_dbs = TimelineSegment.objects.filter(id__in=timeline_segment_ids)
+                segment_dbs = writable(TimelineSegment, request.user).filter(id__in=timeline_segment_ids)
                 if len(segment_dbs) != len(timeline_segment_ids):
                     return JsonResponse({"status": "error", "type": "not_exist"})
 
@@ -43,7 +44,8 @@ class TimelineSegmentAnnotate(View):
             except TimelineSegment.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
 
-            # TODO: check if it is the same video
+            if len({segment.timeline.video_id for segment in segment_dbs}) != 1:
+                return JsonResponse({"status": "error", "type": "wrong_request_body"})
             video_db = segment_dbs[0].timeline.video
 
             # delete all existing annotation for this segment
@@ -133,12 +135,11 @@ class TimelineSegmentAnnotateRange(View):
                 return JsonResponse({"status": "error", "type": "missing_values"})
 
             try:
-                timeline_db = Timeline.objects.get(id=data.get("timeline_id"))
+                timeline_db = writable(Timeline, request.user).get(id=data.get("timeline_id"))
 
             except Timeline.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
 
-            # TODO: check if it is the same video
             video_db = timeline_db.video
 
             # first find everything between
@@ -336,7 +337,7 @@ class TimelineSegmentMerge(View):
             timeline_segments = []
             for id in data.get("timeline_segment_ids"):
                 try:
-                    timeline_segment_db = TimelineSegment.objects.get(id=id)
+                    timeline_segment_db = writable(TimelineSegment, request.user).get(id=id)
                     timeline_segments.append(timeline_segment_db)
                 except TimelineSegment.DoesNotExist:
                     return JsonResponse({"status": "error", "type": "not_exist"})
@@ -431,7 +432,7 @@ class TimelineSegmentSplit(View):
             timeline_segment_annotation_added = []
 
             try:
-                timeline_segment_db = TimelineSegment.objects.get(id=data.get("timeline_segment_id"))
+                timeline_segment_db = writable(TimelineSegment, request.user).get(id=data.get("timeline_segment_id"))
             except TimelineSegment.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
 

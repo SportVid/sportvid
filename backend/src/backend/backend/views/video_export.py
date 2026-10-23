@@ -26,6 +26,7 @@ from backend.models import (
     PluginRunResult,
 )
 from data import DataManager, Shot
+from backend.permissions import readable
 
 
 logger = logging.getLogger(__name__)
@@ -82,7 +83,7 @@ class VideoExport(View):
     ) -> List[TimeExport]:
         times = []
         if timeline_id:
-            timeline_db = Timeline.objects.get(id=timeline_id)
+            timeline_db = Timeline.objects.get(id=timeline_id, video=video)
             timeline_segments = timeline_db.timelinesegment_set.all()
             for index, segment_db in enumerate(timeline_segments):
                 times.append(TimeExport(start=segment_db.start, end=segment_db.end))
@@ -576,7 +577,7 @@ class VideoExport(View):
         # get the boundary information from the timeline selected in parameters
         try:
             shot_timeline_db = Timeline.objects.get(
-                id=parameters.get("shot_timeline_id")
+                id=parameters.get("shot_timeline_id"), video=video_db
             )
         except Timeline.DoesNotExist:
             raise Exception
@@ -703,7 +704,7 @@ class VideoExport(View):
                 return JsonResponse({"status": "error", "type": "missing_values"})
 
             try:
-                video_db = Video.objects.get(id=request.POST.get("video_id"))
+                video_db = readable(Video, request.user).get(id=request.POST.get("video_id"))
             except Video.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
 

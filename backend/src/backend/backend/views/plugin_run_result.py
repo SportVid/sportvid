@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.conf import settings
 
 from backend.models import PluginRunResult, Video, PluginRun
+from backend.permissions import readable
 from data import DataManager
 
 
@@ -23,7 +24,7 @@ class PluginRunResultList(View):
             query_dict = {}
             video_id = request.GET.get("video_id")
             if video_id:
-                try: video_db = Video.objects.get(id=video_id)
+                try: video_db = readable(Video, request.user).get(id=video_id)
                 except Video.DoesNotExist: return JsonResponse({"status": "error", "type": "not_exist"})
 
                 query_dict["plugin_run__video"] = video_db
@@ -31,11 +32,11 @@ class PluginRunResultList(View):
             plugin_run_id = request.GET.get("plugin_run_id")
             if plugin_run_id:
                 try:
-                    plugin_run_db = PluginRun.objects.get(id=plugin_run_id)
+                    plugin_run_db = readable(PluginRun, request.user).get(id=plugin_run_id)
                 except PluginRun.DoesNotExist: return JsonResponse({"status": "error", "type": "not_exist"})
                 query_dict["plugin_run"] = plugin_run_db
 
-            analyzes = PluginRunResult.objects.filter(**query_dict).select_related("plugin_run")
+            analyzes = readable(PluginRunResult, request.user).filter(**query_dict).select_related("plugin_run")
 
             add_results = request.GET.get("add_results", True)
             # TODO: this should be include_types (see code logic)

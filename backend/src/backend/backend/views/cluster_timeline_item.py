@@ -5,6 +5,7 @@ from django.views import View
 from django.http import JsonResponse
 
 from backend.models import ClusterTimelineItem, Video, PluginRun
+from backend.permissions import readable, writable
 
 
 logger = logging.getLogger(__name__)
@@ -22,8 +23,8 @@ class ClusterTimelineItemCreate(View):
 
             data = json.loads(body)
 
-            video = Video.objects.get(id=data["video_id"])
-            plugin_run = PluginRun.objects.get(id=uuid.UUID(data['plugin_run']))
+            video = writable(Video, request.user).get(id=data["video_id"])
+            plugin_run = writable(PluginRun, request.user).get(id=uuid.UUID(data['plugin_run']))
             cluster_timeline_item = ClusterTimelineItem.objects.create(
                 cluster_id=uuid.uuid4(),
                 name=data["name"],
@@ -51,7 +52,7 @@ class ClusterTimelineItemDelete(View):
                 data = json.loads(body)
             except Exception as e:
                 return JsonResponse({"status": "error", "type": "data_load"})
-            count, _ = ClusterTimelineItem.objects.filter(id=data.get("id")).delete()
+            count, _ = writable(ClusterTimelineItem, request.user).filter(id=data.get("id")).delete()
             if count:
                 return JsonResponse({"status": "ok"})
             return JsonResponse({"status": "error", "type": "delete_op"})
@@ -83,7 +84,7 @@ class ClusterTimelineItemRename(View):
                 return JsonResponse({"status": "error", "type": "wrong_request_body"})
 
             try:
-                cti = ClusterTimelineItem.objects.get(id=data.get("cti_id"))
+                cti = writable(ClusterTimelineItem, request.user).get(id=data.get("cti_id"))
             except ClusterTimelineItem.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
 
@@ -103,7 +104,7 @@ class ClusterTimelineItemFetch(View):
             video_id = uuid.UUID(hex=request.GET.get('video_id'))
             entries = [
                 cti.to_dict()
-                for cti in ClusterTimelineItem.objects.filter(video_id=video_id)
+                for cti in readable(ClusterTimelineItem, request.user).filter(video_id=video_id)
             ]
 
             return JsonResponse({"status": "ok", "entries": entries})
@@ -130,8 +131,8 @@ class ClusterTimelineItemMerge(View):
             if 'from_id' not in data or 'to_id' not in data:
                 return JsonResponse({'status': 'error', 'type': 'Params missing'})
 
-            from_cluster = ClusterTimelineItem.objects.get(id=data['from_id'])
-            ClusterTimelineItem.objects.get(id=data['to_id'])
+            from_cluster = writable(ClusterTimelineItem, request.user).get(id=data['from_id'])
+            writable(ClusterTimelineItem, request.user).get(id=data['to_id'])
 
             from_cluster.items.update(cluster_timeline_item_id=data['to_id'])
             from_cluster.delete()
@@ -139,3 +140,4 @@ class ClusterTimelineItemMerge(View):
 
         except:
             logger.exception('Failed to merge clusters')
+            return JsonResponse({"status": "error"})

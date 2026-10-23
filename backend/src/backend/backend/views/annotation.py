@@ -4,6 +4,7 @@ from django.views import View
 from django.http import JsonResponse
 
 from backend.models import Annotation, AnnotationCategory, Video
+from backend.permissions import writable
 
 
 logger = logging.getLogger(__name__)
@@ -40,14 +41,14 @@ class AnnoatationCreate(View):
                     create_args["color"] = data.get("color")
                 if "video_id" in data:
                     try:
-                        video_db = Video.objects.get(id=data.get("video_id"))
+                        video_db = writable(Video, request.user).get(id=data.get("video_id"))
                     except Video.DoesNotExist:
                         return JsonResponse({"status": "error", "type": "not_exist"})
                     create_args["video"] = video_db
 
                 if "category_id" in data:
                     try:
-                        annotation_category_db = AnnotationCategory.objects.get(id=data.get("category_id"))
+                        annotation_category_db = writable(AnnotationCategory, request.user).get(id=data.get("category_id"))
                     except AnnotationCategory.DoesNotExist:
                         return JsonResponse({"status": "error", "type": "not_exist"})
                     create_args["category"] = annotation_category_db
@@ -78,7 +79,7 @@ class AnnoatationChange(View):
             update_args = {}
             if "category_id" in data:
                 try:
-                    annotation_category_db = AnnotationCategory.objects.get(id=data.get("category_id"))
+                    annotation_category_db = writable(AnnotationCategory, request.user).get(id=data.get("category_id"))
                     update_args["category"] = annotation_category_db
                 except AnnotationCategory.DoesNotExist:
                     return JsonResponse({"status": "error", "type": "not_exist"})
@@ -91,7 +92,7 @@ class AnnoatationChange(View):
 
             if "color" in data:
                 update_args["color"] = data.get("color")
-            updated = Annotation.objects.filter(id=data.get("annotation_id")).update(**update_args)
+            updated = writable(Annotation, request.user).filter(id=data.get("annotation_id")).update(**update_args)
             if updated != 1:
                 return JsonResponse({"status": "error"})
 

@@ -3,7 +3,8 @@ import json
 from django.views import View
 from django.http import JsonResponse
 
-from backend.models import ClusterItem
+from backend.models import ClusterItem, ClusterTimelineItem
+from backend.permissions import readable, writable
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ class ClusterItemFetch(View):
 
             entries = [
                 item.to_dict()
-                for item in ClusterItem.objects.filter(video_id=request.GET.get('video_id'))
+                for item in readable(ClusterItem, request.user).filter(video_id=request.GET.get('video_id'))
             ]
 
             return JsonResponse({"status": "ok", "entries": entries})
@@ -51,7 +52,7 @@ class ClusterItemDelete(View):
                 )
 
             item_ids = list(data.get("item_ids"))
-            ClusterItem.objects.filter(id__in=item_ids).delete()
+            writable(ClusterItem, request.user).filter(id__in=item_ids).delete()
 
             return JsonResponse({"status": "ok", "entries": item_ids})
 
@@ -71,7 +72,9 @@ class ClusterItemMove(View):
                 body = request.body
             data = json.loads(body)
 
-            (ClusterItem.objects.filter(id__in=data['item_ids'])
+            # the target cluster must be writable too
+            writable(ClusterTimelineItem, request.user).get(id=data['new_cluster_id'])
+            (writable(ClusterItem, request.user).filter(id__in=data['item_ids'])
                                 .update(cluster_timeline_item=data['new_cluster_id']))
             return JsonResponse({"status": "ok"})
         except Exception:

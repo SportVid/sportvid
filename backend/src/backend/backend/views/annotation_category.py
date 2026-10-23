@@ -4,6 +4,7 @@ from django.views import View
 from django.http import JsonResponse
 
 from backend.models import AnnotationCategory, Video
+from backend.permissions import writable
 
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ class AnnoatationCategoryCreate(View):
                     create_args["color"] = data.get("color")
                 if "video_id" in data:
                     try:
-                        video_db = Video.objects.get(id=data.get("video_id"))
+                        video_db = writable(Video, request.user).get(id=data.get("video_id"))
                     except Video.DoesNotExist:
                         return JsonResponse({"status": "error", "type": "not_exist"})
                     create_args["video"] = video_db

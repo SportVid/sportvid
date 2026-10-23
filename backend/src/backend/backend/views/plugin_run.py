@@ -14,6 +14,7 @@ from rest_framework import serializers
 from sportvid.celery import app as celery_app
 
 from backend.models import Video, PluginRun, TrackingData
+from backend.permissions import unreadable_references, writable
 from backend.plugin_manager import PluginManager
 from backend.utils import download_url, download_file, media_url_to_file
 from backend.utils.events import publish_cancel
@@ -49,6 +50,14 @@ class PluginRunNew(View):
             serializer.is_valid(raise_exception=True)
             data = serializer.validated_data
 
+            # The video must be writable, and every object the parameters refer to readable.
+            video_db = writable(Video, request.user).filter(id=data["video_id"]).first()
+            if video_db is None:
+                raise serializers.ValidationError({"video_id": ["Unknown video"]})
+            denied = unreadable_references(data["parameters"], request.user)
+            if denied:
+                raise serializers.ValidationError({name: ["Unknown object"] for name in denied})
+
             output_dir = tempfile.mkdtemp(dir="/tmp")
             file_parameters = {}
 
@@ -74,7 +83,6 @@ class PluginRunNew(View):
             parameters = data["parameters"].copy()
             parameters["_files"] = file_parameters
 
-            video_db = Video.objects.get(id=data["video_id"])
             plugin_manager = PluginManager()
 
             result = plugin_manager(

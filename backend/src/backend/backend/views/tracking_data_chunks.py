@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.conf import settings
 
 from backend.models import PluginRun, PluginRunResult, Video
+from backend.permissions import readable
 from data import DataManager
 
 
@@ -61,7 +62,7 @@ class TrackingDataPosDataChunk(View):
                 limit = 5000
 
             try:
-                video_db = Video.objects.get(id=video_id)
+                video_db = readable(Video, request.user).get(id=video_id)
             except Video.DoesNotExist:
                 return JsonResponse(
                     {"status": "error", "type": "video_not_found"}, status=404

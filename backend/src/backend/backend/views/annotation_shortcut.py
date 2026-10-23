@@ -10,6 +10,7 @@ from backend.models import (
     Video, 
     Annotation
 )
+from backend.permissions import readable, writable
 
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,7 @@ class AnnotationShortcutCreate(View): #TODO: ?
                 create_args = {"key": data.get("key"), "owner": request.user}
                 if "video_id" in data:
                     try:
-                        video_db = Video.objects.get(id=data.get("video_id"))
+                        video_db = writable(Video, request.user).get(id=data.get("video_id"))
                     except Video.DoesNotExist:
                         return JsonResponse({"status": "error", "type": "not_exist"})
                     create_args["video"] = video_db
@@ -107,7 +108,7 @@ class AnnotationShortcutUpdate(View):
             video_db = None
             if "video_id" in data:
                 try:
-                    video_db = Video.objects.get(id=data.get("video_id"))
+                    video_db = writable(Video, request.user).get(id=data.get("video_id"))
                 except Video.DoesNotExist:
                     return JsonResponse({"status": "error", "type": "not_exist"})
 
@@ -117,7 +118,7 @@ class AnnotationShortcutUpdate(View):
                     continue
                 annotation_db = None
                 try:
-                    annotation_db = Annotation.objects.get(id=annotation_shortcut.get("id"))
+                    annotation_db = writable(Annotation, request.user).get(id=annotation_shortcut.get("id"))
                 except Annotation.DoesNotExist:
                     continue
 
@@ -161,7 +162,7 @@ class AnnotationShortcutList(View):
             if "video_id" in request.GET:
                 query_args["shortcut__video__id"] = request.GET.get("video_id")
 
-            query_results = AnnotationShortcut.objects.filter(**query_args)
+            query_results = readable(AnnotationShortcut, request.user).filter(**query_args)
 
             entries = []
             for shortcut in query_results:

@@ -8,6 +8,7 @@ from django.conf import settings
 
 from backend.utils import download_file
 from backend.models import Timeline, TimelineSegment, TimelineSegmentAnnotation, Video, Annotation
+from backend.permissions import writable
 
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class TimelineImportEAF(View):
             upload_id = uuid.uuid4().hex
             video_id = request.POST.get("video_id")
             try:
-                video_db = Video.objects.get(id=video_id)
+                video_db = writable(Video, request.user).get(id=video_id)
             except Video.DoesNotExist:
                 return JsonResponse({"status": "error"})
 

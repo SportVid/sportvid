@@ -4,6 +4,7 @@ from django.views import View
 from django.http import JsonResponse
 
 from backend.models import Video, Timeline, TimelineSegment, PluginRunResult
+from backend.permissions import readable, writable
 
 
 logger = logging.getLogger(__name__)
@@ -17,10 +18,10 @@ class TimelineList(View):
             
             video_id = request.GET.get("video_id")
             if video_id:
-                video_db = Video.objects.get(id=video_id)
+                video_db = readable(Video, request.user).get(id=video_id)
                 timelines = Timeline.objects.filter(video=video_db)
             else:
-                timelines = Timeline.objects.all()
+                timelines = readable(Timeline, request.user)
             
             timelines = (
                 timelines.select_related("video")
@@ -78,7 +79,7 @@ class TimelineDuplicate(View):
             except Exception as e:
                 return JsonResponse({"status": "error"})
             # get timeline entry to duplicate
-            timeline_db = Timeline.objects.get(id=data.get("id"))
+            timeline_db = writable(Timeline, request.user).get(id=data.get("id"))
             if not timeline_db:
                 return JsonResponse({"status": "error"})
 
@@ -127,7 +128,7 @@ class TimelineCreate(View):
 
             create_args = {"type": "A"}
             try:
-                video_db = Video.objects.get(id=data.get("video_id"))
+                video_db = writable(Video, request.user).get(id=data.get("video_id"))
                 create_args["video"] = video_db
                 create_args["order"] = Timeline.objects.filter(video=video_db).count()
             except Video.DoesNotExist:
@@ -181,7 +182,7 @@ class TimelineRename(View):
                 return JsonResponse({"status": "error", "type": "wrong_request_body"})
 
             try:
-                timeline_db = Timeline.objects.get(id=data.get("id"))
+                timeline_db = writable(Timeline, request.user).get(id=data.get("id"))
             except Timeline.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
 
@@ -216,7 +217,7 @@ class TimelineChangeVisualization(View):
                 return JsonResponse({"status": "error", "type": "wrong_request_body"})
 
             try:
-                timeline_db = Timeline.objects.get(id=data.get("id"))
+                timeline_db = writable(Timeline, request.user).get(id=data.get("id"))
             except Timeline.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
 
@@ -268,14 +269,14 @@ class TimelineSetParent(View):
                 return JsonResponse({"status": "error", "type": "missing_values"})
 
             try:
-                timeline_db = Timeline.objects.get(id=data.get("timelineId"))
+                timeline_db = writable(Timeline, request.user).get(id=data.get("timelineId"))
             except Timeline.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
 
             parent_timeline_db = None
             if data.get("parentId"):
                 try:
-                    parent_timeline_db = Timeline.objects.get(id=data.get("parentId"))
+                    parent_timeline_db = writable(Timeline, request.user).get(id=data.get("parentId"))
                 except Timeline.DoesNotExist:
                     return JsonResponse({"status": "error", "type": "not_exist"})
 
@@ -308,7 +309,7 @@ class TimelineSetCollapse(View):
                 return JsonResponse({"status": "error", "type": "missing_values"})
 
             try:
-                timeline_db = Timeline.objects.get(id=data.get("timelineId"))
+                timeline_db = writable(Timeline, request.user).get(id=data.get("timelineId"))
 
             except Timeline.DoesNotExist:
                 return JsonResponse({"status": "error", "type": "not_exist"})
@@ -342,7 +343,7 @@ class TimelineSetOrder(View):
             for idx, timelineId in enumerate(data.get("order")):
                 print(idx, timelineId)
                 try:
-                    timeline_db = Timeline.objects.get(id=timelineId)
+                    timeline_db = writable(Timeline, request.user).get(id=timelineId)
                 except Timeline.DoesNotExist:
                     return JsonResponse({"status": "error", "type": "not_exist"})
 
@@ -368,7 +369,7 @@ class TimelineDelete(View):
                 data = json.loads(body)
             except Exception as e:
                 return JsonResponse({"status": "error"})
-            count, _ = Timeline.objects.filter(id=data.get("id")).delete()
+            count, _ = writable(Timeline, request.user).filter(id=data.get("id")).delete()
             if count:
                 return JsonResponse({"status": "ok"})
             return JsonResponse({"status": "error"})

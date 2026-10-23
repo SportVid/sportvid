@@ -13,6 +13,7 @@ from backend.utils import (
     media_dir_to_file,
 )
 from backend.models import TrackingData, Video
+from backend.permissions import writable
 
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class TrackingDataUpload(View):
             
             tracking_data_id_uuid = uuid.uuid4()
             tracking_data_id = tracking_data_id_uuid.hex
-            video_db = Video.objects.get(id=request.POST.get("video_id"))
+            video_db = writable(Video, request.user).get(id=request.POST.get("video_id"))
             
             if "file" in request.FILES:
                 output_dir = media_dir_to_file(tracking_data_id)
@@ -237,7 +238,7 @@ class TrackingDataRename(View):
                 )
 
             try:
-                tracking_data_db = TrackingData.objects.get(id=data.get("id"))
+                tracking_data_db = writable(TrackingData, request.user).get(id=data.get("id"))
             except TrackingData.DoesNotExist:
                 return JsonResponse(
                     {"status": "error", "type": "not_exist"}, status=500

@@ -8,6 +8,7 @@ from django.views import View
 from django.http import JsonResponse
 
 from backend.models import PluginRunResult
+from backend.permissions import writable
 from backend.utils.decode_auth import decode_and_authenticate
 from data import (
     DataManager, 
@@ -112,7 +113,7 @@ class BoundingBoxesChange(View):
             else: logging.info(f'running {CH} update op. on bbox data...')
   
             # get the DB record and store the old data_id before changing anything.
-            bytetrack_prr_db = PluginRunResult.objects.get(
+            bytetrack_prr_db = writable(PluginRunResult, request.user).get(
                 plugin_run_id=bytetrack_result_id
             )
             old_data_id = bytetrack_prr_db.data_id
@@ -225,7 +226,7 @@ class BoundingBoxesReplace(View):
                 # a legitimate replace always carries at least the frames it started from.
                 raise ValueError("bboxes payload is empty or not a frame_time -> [...] dict")
 
-            bytetrack_prr_db = PluginRunResult.objects.get(
+            bytetrack_prr_db = writable(PluginRunResult, request.user).get(
                 plugin_run_id=bytetrack_result_id
             )
             old_data_id = bytetrack_prr_db.data_id
@@ -293,7 +294,7 @@ class BoundingBoxesDelete(View):
             if not CH: return JsonResponse({"status": "error", "type": "missing_args"})
             else: logging.info(f'running {CH} delete op. on bbox data...')
   
-            bytetrack_prr_db = PluginRunResult.objects.get(
+            bytetrack_prr_db = writable(PluginRunResult, request.user).get(
                 plugin_run_id=bytetrack_result_id
             )
             old_data_id = bytetrack_prr_db.data_id

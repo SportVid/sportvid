@@ -70,3 +70,40 @@ def readable(model_or_queryset, user) -> QuerySet:
 def writable(model_or_queryset, user) -> QuerySet:
     """Objects `user` may modify: their own, or all of them for admins."""
     return _scoped(model_or_queryset, user, write=True)
+
+
+# Plugin parameters that refer to other objects by ID (see backend/tasks/*.py). A plugin
+# run may only use objects its user can read.
+PARAMETER_REFERENCES = {
+    "tracking_data_id": "TrackingData",
+    "calibration_id": "CalibrationAssets",
+    "object_tracker_id": "PluginRun",
+    "object_tracker_run_id": "PluginRun",
+    "osnet_reid_id": "PluginRun",
+    "scalar_timeline_id": "Timeline",
+    "shot_timeline_id": "Timeline",
+    "timeline_ids": "Timeline",
+    "cluster_timeline_item_id": "ClusterTimelineItem",
+}
+
+
+def unreadable_references(parameters, user) -> list:
+    """Names of the parameters in `parameters` that refer to objects `user` cannot read."""
+    import uuid
+
+    from django.apps import apps
+
+    denied = []
+    for name, model_name in PARAMETER_REFERENCES.items():
+        value = (parameters or {}).get(name)
+        if value in (None, "", []):
+            continue
+        try:
+            ids = {uuid.UUID(str(v)) for v in (value if isinstance(value, (list, tuple)) else [value])}
+        except ValueError:
+            denied.append(name)
+            continue
+        model = apps.get_model("backend", model_name)
+        if readable(model, user).filter(id__in=ids).count() != len(ids):
+            denied.append(name)
+    return denied

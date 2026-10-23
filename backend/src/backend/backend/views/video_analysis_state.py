@@ -4,6 +4,7 @@ from django.views import View
 from django.http import JsonResponse
 from django.conf import settings
 
+from backend.permissions import readable, writable
 from backend.models import Video, VideoAnalysisState, Timeline, PluginRun
 
 
@@ -15,7 +16,7 @@ class VideoAnalysisStateGet(View):
         if not request.user.is_authenticated:
             return JsonResponse({"status": "error"}, status=500)
         try:
-            video_db = Video.objects.get(id=request.GET.get("video_id"))
+            video_db = readable(Video, request.user).get(id=request.GET.get("video_id"))
         except Video.DoesNotExist:
             return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
 
@@ -52,6 +53,9 @@ class VideoAnalysisStateSetSelectedShots(View):
             return JsonResponse(
                 {"status": "error", "type": "missing_values"}, status=500
             )
+
+        if not writable(Video, request.user).filter(id=data["video_id"]).exists():
+            return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
 
         video_analysis_state_db, _ = VideoAnalysisState.objects.get_or_create(
             video__id=data["video_id"]
@@ -94,6 +98,9 @@ class VideoAnalysisStateSetSelectedPlaceClustering(View):
             return JsonResponse(
                 {"status": "error", "type": "missing_values"}, status=500
             )
+
+        if not writable(Video, request.user).filter(id=data["video_id"]).exists():
+            return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
 
         video_analysis_state_db, _ = VideoAnalysisState.objects.get_or_create(
             video__id=data["video_id"]
@@ -138,6 +145,9 @@ class VideoAnalysisStateSetSelectedFaceClustering(View):
             return JsonResponse(
                 {"status": "error", "type": "missing_values"}, status=500
             )
+
+        if not writable(Video, request.user).filter(id=data["video_id"]).exists():
+            return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
 
         video_analysis_state_db, _ = VideoAnalysisState.objects.get_or_create(
             video__id=data["video_id"]
