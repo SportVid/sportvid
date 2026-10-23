@@ -8,6 +8,8 @@ from django.views import View
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import ensure_csrf_cookie
 
+from backend.permissions import can_write_all as is_admin
+
 from backend.models import (
     SportVidUser,
     Video,
@@ -279,6 +281,8 @@ def user_update(request):
                 return JsonResponse({"status": "ok"})
 
             elif update_type == "admin":
+                if not is_admin(request.user):
+                    return JsonResponse({"status": "error", "error": "not_authorized"}, status=403)
                 user_id = params.get("id")
                 if not user_id:
                     return JsonResponse({"status": "error", "message": "User ID missing for admin update"})
@@ -346,6 +350,8 @@ def user_delete(request):
     update_type = params.get("update_type", "user")
 
     if update_type == "admin":
+        if not is_admin(request.user):
+            return JsonResponse({"status": "error", "error": "not_authorized"}, status=403)
         user_id = params.get("id", None)
 
         if user_id == request.user.id:
@@ -439,7 +445,7 @@ def logout(request):
 
 @require_http_methods(["GET"])
 def user_list(request):
-    if request.user.role != "admin":
+    if not is_admin(request.user):
         return JsonResponse({"status": "error", "error": "not_authorized"})
     users = SportVidUser.objects.all()
     data = [u.to_dict() for u in users]
