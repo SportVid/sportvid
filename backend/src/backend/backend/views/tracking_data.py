@@ -266,9 +266,9 @@ class TrackingDataDelete(View):
             except Exception as e:
                 return JsonResponse({"status": "error"}, status=500)
             
-            # TODO: delete for prod
-            if data.get("id") == 'all': 
-                all_tdata = TrackingData.objects.all()
+            # "all" deletes the caller's own tracking data only.
+            if data.get("id") == 'all':
+                all_tdata = TrackingData.objects.filter(owner=request.user)
                 total_size = sum(
                     t.file_size + (t.meta_file_size if t.meta_file else 0) for t in all_tdata
                 )
