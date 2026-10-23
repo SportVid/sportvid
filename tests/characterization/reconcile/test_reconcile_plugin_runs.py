@@ -13,10 +13,10 @@ RUN_PLUGIN = "backend.plugin_manager.run_plugin"
 
 
 def reconcile():
-    """The seam under test: startup reconciliation as it runs today (AppConfig.ready)."""
-    from django.apps import apps
+    """The seam under test: startup reconciliation, run once at backend start (B4)."""
+    from django.core.management import call_command
 
-    apps.get_app_config("backend").ready()
+    call_command("reconcile_plugin_runs", wait_for_workers=0)
 
 
 class FakeInspect:
@@ -36,6 +36,9 @@ class FakeInspect:
     def scheduled(self):
         return self._reply(self._scheduled)
 
+    def ping(self):
+        return {"io@worker": {"ok": "pong"}} if self._answer else None
+
 
 def task_entry(run):
     return {"id": uuid.uuid4().hex, "name": RUN_PLUGIN, "args": [{"plugin_run": str(run.id)}], "kwargs": {}}
@@ -52,7 +55,10 @@ def fake_inspect(monkeypatch):
 
 @pytest.fixture
 def runs(db):
-    video = Video.objects.create(name="v", ext=".mp4")
+    from backend.models import SportVidUser
+
+    owner = SportVidUser.objects.create_user("owner", "owner@example.org", "pw")
+    video = Video.objects.create(name="v", ext=".mp4", owner=owner)
 
     def make(status):
         return PluginRun.objects.create(video=video, type="object_tracker", status=status)
@@ -92,9 +98,10 @@ def test_nothing_changes_when_no_worker_answers(fake_inspect, runs):
     assert status(running) == PluginRun.STATUS_RUNNING
 
 
-def test_queued_runs_unknown_to_workers_become_unknown(fake_inspect, runs):
-    # Pinned as-is; B4 changes this (a queued task may still wait in the broker).
+def test_queued_runs_are_untouched(fake_inspect, runs):
+    # Changed on purpose in B4 (agreed 2026-10-23): a queued task may still wait in the
+    # broker, which inspect() cannot see. Before, every restart flipped them to UNKNOWN.
     queued = runs(PluginRun.STATUS_QUEUED)
     fake_inspect["inspect"] = FakeInspect()
     reconcile()
-    assert status(queued) == PluginRun.STATUS_UNKNOWN
+    assert status(queued) == PluginRun.STATUS_QUEUED

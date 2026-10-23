@@ -8,13 +8,6 @@ from django.conf import settings
 
 
 @pytest.fixture(autouse=True)
-def _register_plugin_serializers():
-    # AppConfig.ready() only imports the serializers when the DB table already exists at
-    # startup, which is never true for the in-memory test database.
-    import backend.serializers  # noqa: F401
-
-
-@pytest.fixture(autouse=True)
 def _isolated_data_manager(monkeypatch):
     """Code constructs DataManager("/predictions/") etc. directly; redirect it to a temp dir."""
     from data import manager

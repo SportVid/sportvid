@@ -252,9 +252,11 @@ services:
     working_dir: /app/
     # SSE requires threaded workers so /events/stream does not occupy a whole worker per connection.
     # PROMETHEUS_MULTIPROC_DIR must exist before gunicorn forks its workers, hence the mkdir.
+    # reconcile_plugin_runs marks runs orphaned by a restart as UNKNOWN once, before gunicorn starts (B4).
     command: >
       bash -c "
       mkdir -p /tmp/prometheus_multiproc &&
+      (uv run --no-editable --package backend python3 backend/src/backend/manage.py reconcile_plugin_runs || true) &&
       uv run --no-editable --package backend gunicorn
       --bind 0.0.0.0:${BACKEND_PORT}
       --env SCRIPT_NAME=/api

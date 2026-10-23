@@ -1,61 +1,21 @@
 import logging
-import sys
 
 from django.apps import AppConfig
-from django.db.models import Q
-from django.db import connection
 
 
 logger = logging.getLogger(__name__)
-
-# TODO: Make schema-command detection more robust (e.g. via command name or
-# Django internals) and document that ready() must remain safe during migrations.
-_SCHEMA_COMMANDS = {"makemigrations", "migrate", "showmigrations", "sqlmigrate", "squashmigrations"}
 
 
 class BackendConfig(AppConfig):
     name = "backend"
 
     def ready(self):
+        # No database or Celery access here: ready() runs in every gunicorn worker and
+        # Celery process. Unfinished runs are reconciled once at backend start by
+        # `manage.py reconcile_plugin_runs` (backend/plugin_runs.py).
+
         # import django signal handlers
-        import backend.signals
+        import backend.signals  # noqa: F401
 
-        if _SCHEMA_COMMANDS.intersection(sys.argv):
-            return
-
-        if 'backend_pluginrun' not in connection.introspection.table_names():
-            return
-        # import here otherwise django complains
-        from sportvid.celery import app
-        from backend.models import PluginRun
-        
-        # import serializers for auto discovery
-        import backend.serializers
-
-        # set unfinished tasks to ERROR on startup
-        inspect = app.control.inspect()
-
-        scheduled = inspect.scheduled()
-        active = inspect.active()
-        reserved = inspect.reserved()
-
-        # inspect can return None or dict
-        if scheduled is None or active is None or reserved is None:
-            return
-
-        celery_runs = [
-            run['args'][0]['plugin_run']
-            for category in (list(scheduled.values()) +
-                             list(active.values()) +
-                             list(reserved.values()))
-            for run in category
-        ]
-
-        open_runs = PluginRun.objects.exclude(Q(status=PluginRun.STATUS_DONE)|
-                                              Q(status=PluginRun.STATUS_ERROR)|
-                                              Q(id__in=celery_runs))
-        if len(open_runs) > 0:
-            logger.warning(
-                f'Setting the status of {len(open_runs)} non-running PluginRuns to UNKNOWN'
-            )
-            open_runs.update(status=PluginRun.STATUS_UNKNOWN)
+        # import serializers so their @PluginManager.export_serializer runs
+        import backend.serializers  # noqa: F401
