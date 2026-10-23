@@ -1,4 +1,5 @@
 import logging
+from utils.model_paths import checked_model_path
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -49,6 +50,8 @@ class YoloX():
         self.exp = get_exp(None, model_path)
         
         self.checkpoint = detector_params.get("checkpoint", None)
+        if self.checkpoint:
+            self.checkpoint = checked_model_path(self.checkpoint)
         self.w, self.h = image_size
 
         self._init_inference(detector_params)

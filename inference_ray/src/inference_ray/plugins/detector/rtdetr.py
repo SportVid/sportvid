@@ -1,4 +1,5 @@
 import logging
+from utils.model_paths import checked_model_path
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -28,6 +29,8 @@ class RTDetr:
         self.detector_params = detector_params
 
         self.checkpoint = detector_params.get("checkpoint", model_path)
+        if "checkpoint" in detector_params:
+            self.checkpoint = checked_model_path(self.checkpoint)
         self.model = RTDETR(self.checkpoint)
         self.model.to(self.device)
 

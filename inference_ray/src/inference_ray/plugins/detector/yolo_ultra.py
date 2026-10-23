@@ -1,4 +1,5 @@
 import logging
+from utils.model_paths import checked_model_path
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -28,7 +29,7 @@ class YoloUltralytics():
         if self.num_classes == 0:
             raise RuntimeError("Expected at least 1 class to detect, please check the 'classes' args.")
 
-        self.checkpoint = detector_params.get("checkpoint", None)
+        self.checkpoint = checked_model_path(detector_params.get("checkpoint"))
         self.model = YOLO(self.checkpoint)
         self.model.to(self.device)
         

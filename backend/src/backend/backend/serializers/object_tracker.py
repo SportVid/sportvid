@@ -271,6 +271,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
 
         detector_validator = self._get_detector_validator(detector)
         detector_validator(detector_params)
+        self._validate_model_files(detector, detector_params)
 
         data["detector_params"] = self.build_detector_runtime_params(
             detector=detector,
@@ -331,6 +332,20 @@ class ObjectTrackerSerializer(serializers.Serializer):
             else:
                 params["conf"] = confidence_threshold
         return params
+
+    # Model files are fixed per detector preset: weights are unpickled when loaded, so a
+    # client must never choose the file (docs/adr/0004).
+    MODEL_FILE_KEYS = ("checkpoint", "model_path", "model_checkpoint")
+
+    def _validate_model_files(self, detector: str, params: Mapping[str, Any]) -> None:
+        preset = DETECTOR_DEFAULTS[detector]
+        for key in self.MODEL_FILE_KEYS:
+            if key in params and params[key] != preset.get(key):
+                self._raise_field_error(
+                    "detector_params",
+                    key,
+                    f"Only the preset {key} of detector '{detector}' is allowed.",
+                )
 
     def _get_detector_validator(self, detector: str):
         mapping = {

@@ -1,4 +1,5 @@
 import logging
+from utils.model_paths import checked_model_path
 import torch
 import json
 import numpy as np
@@ -120,7 +121,7 @@ class OSNetReID(
         self.cfg = parameters or {}
 
         self.model_name = self.cfg.get("model_name", "osnet_x1_0")
-        self.checkpoint = self.cfg.get("checkpoint", "/models/reid/osnet_x1_0_ms_d_c.pth.tar")
+        self.checkpoint = checked_model_path(self.cfg.get("checkpoint", "/models/reid/osnet_x1_0_ms_d_c.pth.tar"))
 
         self.gallery_mode = self.cfg.get("gallery_mode", "tracks")
         self.match_threshold = self.cfg.get("match_threshold", 0.6)

@@ -1,4 +1,5 @@
 import logging
+from utils.model_paths import checked_model_path
 import torch
 import numpy as np
 from PIL import Image
@@ -66,7 +67,7 @@ class RFDetr():
         self.checkpoint = detector_params.get("checkpoint", None)
         if self.checkpoint is not None and (
             str(self.checkpoint).strip().lower() not in {"", "none", "null"}):
-                pretrain_weights = str(self.checkpoint)
+                pretrain_weights = checked_model_path(self.checkpoint)
         # TODO: instantiate from model_path string representation.
         self.model = RFDETRLarge(
             device=self.device,

@@ -31,9 +31,10 @@ class OSNetReIdentificationSerializer(serializers.Serializer):
         required=False,
         default="osnet_x1_0",
     )
-    checkpoint = serializers.CharField(
-        required=False, 
-        allow_blank=False,
+    # Only the server-side checkpoints listed above (docs/adr/0004).
+    checkpoint = serializers.ChoiceField(
+        choices=MODEL_CHECKPOINTS,
+        required=False,
         default="/models/reid/osnet_x1_0_ms_d_c.pth.tar")
     
     # TODO: integrate for sportsreid checkpoints
