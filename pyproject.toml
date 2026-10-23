@@ -13,3 +13,7 @@ dependencies = [
 
 [tool.uv.workspace]
 members = ["packages/*", "analyser", "backend", "inference_ray"]
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+pythonpath = [".", "backend/src/backend"]
+testpaths = ["tests"]
