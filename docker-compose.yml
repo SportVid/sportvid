@@ -86,7 +86,7 @@ services:
       # - "--protected-mode"
       # - "yes"
     ports:
-      - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT} # remap port
+      - "127.0.0.1:${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT}" # remap port; localhost only, valkey has no password
     healthcheck:
       test: ["CMD-SHELL", "valkey-cli -h 127.0.0.1 -p ${VALKEY_INTERNAL_PORT} ping | grep PONG"]
       interval: 10s
@@ -301,8 +301,9 @@ services:
     build:
       context: ./frontend
     ports:
-      - 8080:8080
-      - 80:80
+      # localhost only: the dev stack must not be reachable from other machines
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:80:80"
     volumes:
       - ./frontend/:/app/frontend
       - ${DATA_PATH}/predictions/:/thumbnails
