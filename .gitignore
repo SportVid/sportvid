@@ -174,7 +174,6 @@ CLAUDE.md
 .vscode/
 
 # Copilot
-.github
 github/
 
 # Tests
@@ -189,5 +188,7 @@ models/
 # Project specific things
 README.md
 *.yml
+# CI workflows must be tracked
+!.github/workflows/*.yml
 Dockerfile
 

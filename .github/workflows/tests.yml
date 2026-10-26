@@ -1,0 +1,37 @@
+name: tests
+
+on:
+  push:
+    branches: [develop, refactoring, "refactor/**"]
+  pull_request:
+    branches: [develop, refactoring]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.4"  # same as the Dockerfiles
+          enable-cache: true
+
+      # The suite needs no GPU stack: skip CUDA, torch and onnxruntime (~5 GB) from the
+      # lockfile. Tests that touch inference_ray avoid importing the plugin modules.
+      - name: Install backend and test dependencies
+        run: |
+          skip=$(grep -oP '^name = "\K(nvidia-[^"]+|torch|torchvision|torchaudio|triton|onnxruntime(-gpu)?)(?=")' uv.lock \
+                 | sort -u | sed 's/^/--no-install-package /' | tr '\n' ' ')
+          uv sync --frozen --package backend --group dev $skip
+
+      - name: Run tests
+        run: uv run --frozen --no-sync pytest -q

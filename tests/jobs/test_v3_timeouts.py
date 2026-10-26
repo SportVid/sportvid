@@ -34,8 +34,16 @@ def test_analyser_job_that_never_finishes_is_aborted_and_marked_error(run, setti
     assert any(p["type"] == "plugin_run.update" and p["entry"]["status"] == "ERROR" for _, p in published_events)
 
 
-def test_ray_call_has_connect_and_read_timeouts(monkeypatch):
+def _manager(monkeypatch):
     from inference_ray import plugin as ray_plugin
+
+    # skip importing every plugin module (several need torch, which CI does not install)
+    monkeypatch.setattr(ray_plugin.AnalyserPluginManager, "find", lambda self, path=None: None)
+    return ray_plugin, ray_plugin.AnalyserPluginManager({"host": "inference_ray", "port": 8010, "status_port": 52365})
+
+
+def test_ray_call_has_connect_and_read_timeouts(monkeypatch):
+    ray_plugin, manager = _manager(monkeypatch)
 
     calls = {}
 
@@ -44,15 +52,13 @@ def test_ray_call_has_connect_and_read_timeouts(monkeypatch):
             calls.update(kwargs)
             return types.SimpleNamespace(json=lambda: {"out": "id"})
 
-    manager = ray_plugin.AnalyserPluginManager({"host": "inference_ray", "port": 8010, "status_port": 52365})
     monkeypatch.setattr(manager, "plugin_status", lambda: [{"plugin": "x", "route": "/x"}])
     assert manager("x", inputs={}, data_manager=None, session=Session()) == {"out": "id"}
     assert calls["timeout"] == (ray_plugin.RAY_CONNECT_TIMEOUT, ray_plugin.PLUGIN_RUN_TIMEOUT)
 
 
 def test_ray_status_query_has_a_timeout(monkeypatch):
-    from inference_ray import plugin as ray_plugin
-
+    ray_plugin, manager = _manager(monkeypatch)
     seen = {}
 
     def fake_get(url, **kwargs):
@@ -60,7 +66,7 @@ def test_ray_status_query_has_a_timeout(monkeypatch):
         return types.SimpleNamespace(json=lambda: {"applications": {}})
 
     monkeypatch.setattr(ray_plugin.requests, "get", fake_get)
-    ray_plugin.AnalyserPluginManager({"host": "inference_ray", "port": 8010, "status_port": 52365}).plugin_status()
+    manager.plugin_status()
     assert seen["timeout"] == ray_plugin.RAY_STATUS_TIMEOUT
 
 
