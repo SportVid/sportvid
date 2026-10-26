@@ -23,6 +23,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("shotdetection")
 class ShotDetection(Task):
+    ray_plugins = ("transnet_shotdetection",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

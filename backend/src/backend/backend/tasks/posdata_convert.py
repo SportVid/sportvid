@@ -19,6 +19,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("posdata_convert")
 class PosDataConvert(Task):
+    ray_plugins = ("posdata_convert",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

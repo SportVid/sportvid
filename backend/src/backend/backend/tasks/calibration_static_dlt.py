@@ -16,6 +16,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("calibration_static_dlt")
 class CalibrationStaticDlt(Task):
+    ray_plugins = ("calibration_static_dlt",)
+
     def __init__(self):
         self.config = {
             "output_path": None, # "/predictions/", 

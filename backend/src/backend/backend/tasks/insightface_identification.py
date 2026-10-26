@@ -27,6 +27,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("insightface_identification")
 class InsightfaceIdentification(Task):
+    ray_plugins = ("aggregate_scalar_per_time", "cosine_similarity", "insightface_image_detector_torch", "insightface_image_feature_extractor", "insightface_video_detector_torch", "insightface_video_feature_extractor")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

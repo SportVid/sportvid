@@ -24,6 +24,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("audio_rms")
 class AudioRms(Task):
+    ray_plugins = ("audio_rms_analysis", "video_to_audio")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

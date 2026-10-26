@@ -27,6 +27,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("color_analysis")
 class ColorAnalyser(Task):
+    ray_plugins = ("color_analyser",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

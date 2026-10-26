@@ -24,6 +24,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("audio_freq")
 class AudioFreq(Task):
+    ray_plugins = ("audio_freq_analysis", "video_to_audio")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

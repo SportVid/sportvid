@@ -51,3 +51,20 @@ def enqueued_tasks(monkeypatch):
     monkeypatch.setattr(convert_video.convert_video_to_hls, "apply_async", fake_apply_async("convert_video_to_hls"))
     monkeypatch.setattr(app.control, "revoke", lambda *a, **k: calls.append(("revoke", a, k)))
     return calls
+
+
+@pytest.fixture(autouse=True)
+def deployed_ray_plugins(request, monkeypatch):
+    """Pretend every Ray plugin is deployed (no analyser in tests); tests may edit the dict.
+
+    Tests marked @pytest.mark.real_catalogue keep the real analyser query.
+    """
+    if request.node.get_closest_marker("real_catalogue"):
+        return None
+    import backend.tasks  # noqa: F401  (registers the plugins)
+    from backend import plugin_catalogue
+    from backend.plugin_manager import PluginManager
+
+    deployed = {name: "test" for cls in PluginManager._plugins.values() for name in cls.ray_plugins}
+    monkeypatch.setattr(plugin_catalogue, "deployed_ray_plugins", lambda: deployed)
+    return deployed

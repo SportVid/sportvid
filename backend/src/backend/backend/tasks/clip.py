@@ -25,6 +25,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("clip")
 class CLIP(Task):
+    ray_plugins = ("clip_image_embedding", "clip_probs", "min_max_norm")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

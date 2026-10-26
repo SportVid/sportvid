@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 @PluginManager.export_plugin("aggregate_scalar")
 class AggregateScalar(Task):
+    ray_plugins = ("aggregate_scalar",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

@@ -135,6 +135,18 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     }
   };
 
+  // Names of the plugins that can run now (backend/plugin_catalogue.py), or null if the
+  // backend cannot tell; callers then offer every plugin.
+  const fetchAvailable = async () => {
+    try {
+      const res = await axios.get(`${config.API_LOCATION}/plugin/available`);
+      return res.data.status === "ok" ? res.data.plugins : null;
+    } catch (error) {
+      console.error("Failed to fetch available plugins:", error);
+      return null;
+    }
+  };
+
   const fetchAll = async ({ addResults = false }) => {
     if (state.isLoading) return;
     state.isLoading = true;
@@ -318,6 +330,7 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
   };
 
   return {
+    fetchAvailable,
     state,
     all,
     pluginInProgress,

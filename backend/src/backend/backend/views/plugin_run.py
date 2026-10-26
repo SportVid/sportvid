@@ -15,6 +15,7 @@ from sportvid.celery import app as celery_app
 
 from backend.models import Video, PluginRun, TrackingData
 from backend.permissions import unreadable_references, writable
+from backend.plugin_catalogue import is_available
 from backend.utils.storage import release_used_storage
 from backend.plugin_manager import PluginManager
 from backend.utils import download_url, download_file, media_url_to_file
@@ -58,6 +59,9 @@ class PluginRunNew(View):
             denied = unreadable_references(data["parameters"], request.user)
             if denied:
                 raise serializers.ValidationError({name: ["Unknown object"] for name in denied})
+            # B6: don't create a run whose Ray plugins are not deployed; it could only fail
+            if not is_available(data["plugin"]):
+                return JsonResponse({"status": "error", "type": "plugin_unavailable"}, status=400)
 
             output_dir = tempfile.mkdtemp(dir="/tmp")
             file_parameters = {}

@@ -5,10 +5,23 @@ from django.conf import settings
 
 from backend.models import Video, PluginRun
 from backend.permissions import readable
+from backend.plugin_catalogue import available_plugins
 from backend.plugin_manager import PluginManager
 
 
 logger = logging.getLogger(__name__)
+
+
+class PluginAvailable(View):
+    """Backend plugins whose Ray plugins are all deployed (audit B6).
+
+    plugins is null when the analyser cannot be asked; clients then offer everything.
+    """
+
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return JsonResponse({"status": "error", "type": "not_authenticated"}, status=401)
+        return JsonResponse({"status": "ok", "plugins": available_plugins()})
 
 
 class PluginList(View):

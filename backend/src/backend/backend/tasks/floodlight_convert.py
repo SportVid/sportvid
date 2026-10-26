@@ -18,6 +18,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("floodlight_convert")
 class FloodlightConvert(Task):
+    ray_plugins = ("floodlight_convert",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

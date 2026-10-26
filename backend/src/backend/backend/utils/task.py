@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 class Task:
+    # Ray Serve plugins this task calls through run_analyser(); the plugin is only offered
+    # and accepted when all of them are deployed (backend/plugin_catalogue.py).
+    ray_plugins: tuple = ()
+
     def __init__(self):
         pass
 

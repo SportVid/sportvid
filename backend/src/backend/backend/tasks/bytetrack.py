@@ -15,6 +15,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("bytetrack")
 class ByteTrack(Task):
+    ray_plugins = ("bytetrack",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

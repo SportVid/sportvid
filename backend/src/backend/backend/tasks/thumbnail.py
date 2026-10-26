@@ -13,6 +13,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("thumbnail")
 class Thumbnail(Task):
+    ray_plugins = ("thumbnail_generator",)
+
     def __init__(self):
         self.config = {
             "fps": 5,

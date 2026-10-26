@@ -61,6 +61,8 @@ urlpatterns = [
     # ---------- PLUGIN
     path("plugin/list",
         views.PluginList.as_view(), name="plugin_list"),
+    path("plugin/available",
+        views.PluginAvailable.as_view(), name="plugin_available"),
     path("plugin/run/new",
         views.PluginRunNew.as_view(), name="plugin_run_new"),
     path("plugin/run/list",

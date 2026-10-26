@@ -2111,8 +2111,17 @@ watch(
   { immediate: true }
 );
 
+// Only offer plugins the backend can run now (deployed Ray plugins); null = unknown,
+// show everything.
+const availablePlugins = ref(null);
 const pluginsSorted = computed(() => {
-  return plugins.value.slice(0).sort((a, b) => a.name.localeCompare(b.name));
+  const available = availablePlugins.value ? new Set(availablePlugins.value) : null;
+  return plugins.value
+    .map((group) =>
+      available ? { ...group, children: group.children.filter((p) => available.has(p.plugin)) } : group
+    )
+    .filter((group) => group.children.length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
 });
 
 const selected = computed(() => {
@@ -2268,12 +2277,13 @@ watch(
   }
 );
 
-onMounted(() => {
+onMounted(async () => {
   // window.dispatchEvent(new Event("plugin-overview-mounted"));
   tutorialStore.modalPluginVisible = true;
   document
     .querySelector("#v-list-group--id-7")
-    .parentElement.setAttribute("data-tour", "plugin-object-tracking-overview");
+    ?.parentElement.setAttribute("data-tour", "plugin-object-tracking-overview");
+  availablePlugins.value = await pluginRunStore.fetchAvailable();
 });
 
 onBeforeUnmount(() => {

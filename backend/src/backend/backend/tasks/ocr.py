@@ -32,6 +32,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("ocr_video_detector_onnx")
 class OCRTask(Task):
+    ray_plugins = ("ocr_video_detector_onnx",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

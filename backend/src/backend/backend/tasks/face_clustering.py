@@ -42,6 +42,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("face_clustering")
 class FaceClustering(Task):
+    ray_plugins = ("cluster_size_filter", "clustering", "dbscanclustering", "face_size_filter", "insightface_video_detector_torch", "insightface_video_feature_extractor")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

@@ -19,6 +19,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("kpi_computation")
 class KpiComputation(Task):
+    ray_plugins = ("kpi_computation",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

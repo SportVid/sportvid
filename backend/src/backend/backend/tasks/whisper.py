@@ -29,6 +29,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("whisper")
 class Whisper(Task):
+    ray_plugins = ("video_to_audio", "whisper")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

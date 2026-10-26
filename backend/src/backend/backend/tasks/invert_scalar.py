@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 
 @PluginManager.export_plugin("invert_scalar")
 class InvertScalar(Task):
+    ray_plugins = ("invert_scalar",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

@@ -283,9 +283,14 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
     def list_plugins(self, request, context):
         reply = analyser_pb2.ListPluginsReply()
 
-        # print(self.managers["plugin_manager"].plugin_status())
-        for _, plugin_class in self.managers["plugin_manager"].plugins().items():
-            reply.plugins.extend([analyser_pb2.PluginInfo(name=plugin_class._name)])
+        # Only plugins whose Ray Serve application is running can be used (audit B6);
+        # the version is the one the result cache keys on.
+        for status in self.managers["plugin_manager"].plugin_status():
+            if not status.get("is_running"):
+                continue
+            reply.plugins.append(
+                analyser_pb2.PluginInfo(name=status["plugin"], version=str(status.get("version") or ""))
+            )
 
         return reply
 

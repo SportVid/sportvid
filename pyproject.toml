@@ -17,3 +17,4 @@ members = ["packages/*", "analyser", "backend", "inference_ray"]
 DJANGO_SETTINGS_MODULE = "tests.settings"
 pythonpath = [".", "backend/src/backend"]
 testpaths = ["tests"]
+markers = ["real_catalogue: use the real analyser query in backend.plugin_catalogue"]
