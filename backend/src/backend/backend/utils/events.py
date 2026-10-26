@@ -66,9 +66,11 @@ def get_client():
     with _client_lock:
         if _client is None:
             import valkey
-            host = os.environ.get("VALKEY_CLIENT_HOST", "valkey")
-            port = int(os.environ.get("VALKEY_INTERNAL_PORT", 6380))
-            _client = valkey.Valkey(host=host, port=port, socket_keepalive=True)
+            from django.conf import settings
+            _client = valkey.Valkey(
+                host=settings.VALKEY_HOST, port=settings.VALKEY_PORT,
+                password=settings.VALKEY_PASSWORD, socket_keepalive=True,
+            )
     return _client
 
 

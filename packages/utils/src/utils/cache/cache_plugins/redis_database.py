@@ -1,3 +1,4 @@
+import os
 import logging
 import valkey
 import msgpack
@@ -29,6 +30,8 @@ class ValkeyCache(Cache, config=default_config, version="0.1"):
             host=self.config.get("host"),
             port=self.config.get("port"),
             db=self.config.get("db"),
+            # config.yml / --cache_valkey_password, else the shared VALKEY_PASSWD
+            password=self.config.get("password") or os.environ.get("VALKEY_PASSWD") or None,
         )
 
     def set(self, id: str, data: Any) -> bool:

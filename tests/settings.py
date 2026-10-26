@@ -1,7 +1,14 @@
 """Django settings for the test suite: production settings with local, isolated services."""
+import os
 import tempfile
 
-from sportvid.settings import *  # noqa: F401,F403
+# Same environment as the local stack's .env; settings fail closed without it.
+os.environ.setdefault("ENVIRONMENT", "local")
+os.environ.setdefault("POSTGRES_DB", "sportvid")
+os.environ.setdefault("POSTGRES_USER", "postgres")
+os.environ.setdefault("POSTGRES_PASSWORD", "postgres")
+
+from sportvid.settings import *  # noqa: E402,F401,F403
 
 SECRET_KEY = "test-only-not-a-secret"
 DEBUG = False

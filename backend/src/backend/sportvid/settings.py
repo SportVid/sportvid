@@ -26,21 +26,47 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 # build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "backend"]
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-]
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-]
+# One settings file for every environment (docs/adr/0002). ENVIRONMENT is "local" for
+# the docker-compose*.yml stacks on a developer machine, "dev" or "prod" on the servers.
+# Anything else, including unset, is treated like a server, so a missing variable fails
+# closed (see the checks at the end of this file).
+ENVIRONMENT = os.getenv("ENVIRONMENT", "prod")
+IS_LOCAL = ENVIRONMENT == "local"
+
+DEBUG = False  # only the settings secret may turn it on, and only for local development
+
+# defaults; the settings secret (allowed_hosts, csrf_trusted_origins) may override them
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "backend", "backend-dev"]
+if IS_LOCAL:
+    CORS_ALLOWED_ORIGINS = ["http://localhost:8080", "http://127.0.0.1:8080"]
+elif ENVIRONMENT == "dev":
+    CORS_ALLOWED_ORIGINS = ["https://www.dev.sportvid.dshs-koeln.de", "https://dev.sportvid.dshs-koeln.de"]
+else:
+    CORS_ALLOWED_ORIGINS = ["https://www.sportvid.dshs-koeln.de", "https://sportvid.dshs-koeln.de"]
+CSRF_TRUSTED_ORIGINS = list(CORS_ALLOWED_ORIGINS)
 CORS_ALLOW_CREDENTIALS = True
 
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
+if IS_LOCAL:
+    # the local stack runs over plain HTTP
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+else:
+    # the servers sit behind the nginx proxy, which terminates TLS
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# Valkey (Celery broker, live events, plugin progress). The password is required on
+# the servers and empty for the local stack, which only listens on 127.0.0.1.
+VALKEY_HOST = os.getenv("VALKEY_CLIENT_HOST", "valkey")
+VALKEY_PORT = int(os.getenv("VALKEY_INTERNAL_PORT", "6380"))
+VALKEY_PASSWORD = os.getenv("VALKEY_PASSWD") or None
 
 LOGGING = {
     "version": 1,
@@ -144,11 +170,12 @@ CACHES = {
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "sportvid",
-        "USER": "postgres",
-        "PASSWORD": "postgres",
-        "HOST": "postgres",
-        "PORT": 5432,
+        # DB_* on the servers; the local stack's .env only defines POSTGRES_*
+        "NAME": os.getenv("DB_NAME") or os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("DB_USER") or os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD") or os.getenv("POSTGRES_PASSWORD"),
+        "HOST": os.getenv("DB_HOST", "postgres"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
@@ -183,11 +210,16 @@ STATICFILES_DIRS = []
 # last resolution is used for indexing
 IMAGE_RESOLUTIONS = [{"min_dim": 200, "suffix": "_m"}, {"min_dim": 1080, "suffix": ""}]
 
-try: from .user_settings import *
-except: pass
+try:
+    from .user_settings import *  # noqa: F401,F403
+except ModuleNotFoundError:
+    pass
 
 MEDIA_URL = "/media/"
-THUMBNAIL_URL = "http://localhost/thumbnails/"
+# Origin under which nginx serves /media and /thumbnails ("public_base_url" in the
+# settings secret, e.g. https://dev.sportvid.dshs-koeln.de on the dev server).
+PUBLIC_BASE_URL = "http://localhost"
+THUMBNAIL_URL = None  # derived from PUBLIC_BASE_URL below unless the secret sets it
 
 # the last resolution will use for indexing
 IMAGE_RESOLUTIONS = [{"min_dim": 200, "suffix": "_m"}, {"min_dim": 1080, "suffix": ""}]
@@ -223,24 +255,48 @@ config_lut = {
     "grpc_port": "GRPC_PORT",
     "image_resolutions": "IMAGE_RESOLUTIONS",
     "pipelines": "PIPELINES",
-    "annotation_max_length": "ANNOTATION_MAX_LENGTH"
+    "annotation_max_length": "ANNOTATION_MAX_LENGTH",
+    "public_base_url": "PUBLIC_BASE_URL",
 }
 
-config_path = "/run/secrets/django_settings"
+from django.core.exceptions import ImproperlyConfigured  # noqa: E402
 
-# logging.error(f"SETTINGS FILE: {__file__}")
-# logging.error(f"SECRET EXISTS: {os.path.exists(config_path)}")
-# logging.error(f"MEDIA_ROOT BEFORE LOAD: {repr(globals().get('MEDIA_ROOT'))}")
+config_path = os.getenv("DJANGO_SETTINGS_SECRET", "/run/secrets/django_settings")
 
 if os.path.exists(config_path):
     try:
         with open(config_path, "r") as f:
             config = json.load(f)
-            for k, v in config_lut.items():
-                if k in config:
-                    globals()[v] = config[k]
-        logging.error(f"Successfully parsed django settings file: {config_path}")
-    except Exception as e:
-        logging.error(f"Failed to load or parse django settings file: {e}")
+    except (OSError, ValueError) as e:
+        # A broken secret must stop the app instead of silently running on defaults.
+        raise ImproperlyConfigured(f"Cannot read the settings secret {config_path}: {e}") from e
+    for k, v in config_lut.items():
+        if k in config:
+            globals()[v] = config[k]
 
-# logging.error(f"MEDIA_ROOT AFTER LOAD: {repr(globals().get('MEDIA_ROOT'))}")
+PUBLIC_BASE_URL = PUBLIC_BASE_URL.rstrip("/")
+if not THUMBNAIL_URL:
+    THUMBNAIL_URL = f"{PUBLIC_BASE_URL}/thumbnails/"
+
+# ---------- fail closed on the servers (docs/adr/0002)
+if IS_LOCAL:
+    SECRET_KEY = globals().get("SECRET_KEY") or "local-development-only-not-a-secret"
+else:
+    _problems = []
+    _key = str(globals().get("SECRET_KEY") or "")
+    if len(_key) < 50 or len(set(_key)) < 5 or _key.lower().startswith(("secret", "default", "django-insecure")):
+        _problems.append("secret_key is missing or a placeholder (need 50+ random characters)")
+    if DEBUG:
+        _problems.append("debug must be false")
+    for _name in ("NAME", "USER", "PASSWORD"):
+        if not DATABASES["default"][_name]:
+            _problems.append(f"database {_name.lower()} is missing (DB_{_name})")
+    if not VALKEY_PASSWORD:
+        _problems.append("VALKEY_PASSWD is missing")
+    if not PUBLIC_BASE_URL.startswith("https://"):
+        _problems.append("public_base_url must be the https:// origin of the site")
+    if _problems:
+        raise ImproperlyConfigured(
+            f"Refusing to start with ENVIRONMENT={ENVIRONMENT!r}: " + "; ".join(_problems)
+            + ". Set ENVIRONMENT=local for local development."
+        )

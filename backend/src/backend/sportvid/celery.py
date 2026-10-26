@@ -1,12 +1,21 @@
 import os
+from urllib.parse import quote
 from celery import Celery
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "sportvid.settings")
-app = Celery(
-    "sportvid", 
-    broker="redis://valkey:6380"
-)
+
+
+def _broker_url():
+    """Valkey broker from the environment (same variables as sportvid.settings)."""
+    host = os.getenv("VALKEY_CLIENT_HOST", "valkey")
+    port = os.getenv("VALKEY_INTERNAL_PORT", "6380")
+    password = os.getenv("VALKEY_PASSWD")
+    auth = f":{quote(password, safe='')}@" if password else ""
+    return f"redis://{auth}{host}:{port}/0"
+
+
+app = Celery("sportvid", broker=_broker_url())
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.

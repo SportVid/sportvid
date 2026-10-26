@@ -29,7 +29,8 @@ def _get_client():
     )
     port = int(os.environ.get("VALKEY_INTERNAL_PORT", 6380))
     _client = valkey.Valkey(
-        host=host, port=port, socket_timeout=2.0, socket_connect_timeout=2.0,
+        host=host, port=port, password=os.environ.get("VALKEY_PASSWD") or None,
+        socket_timeout=2.0, socket_connect_timeout=2.0,
         socket_keepalive=True,
     )
     return _client
