@@ -39,7 +39,8 @@
       "rules": {
         "min": "Min. 5 characters.",
         "max": "Max. 50 characters."
-      }
+      },
+      "not_approved": "Your account has not been approved by an administrator yet."
     },
     "logout": {
       "title": "Logout",
@@ -51,7 +52,8 @@
       "rules": {
         "min": "Min. 5 characters.",
         "max": "Max. 50 characters."
-      }
+      },
+      "pending_approval": "Thanks for registering! An administrator has to approve your account before you can log in."
     },
     "experience_mode": {
       "heading": "How do you want to use plugins?",
@@ -1453,7 +1455,8 @@
       "max_video_size": "Max. Video Size",
       "max_file_size": "Max. File Size",
       "date_joined": "Joined",
-      "actions": "Actions"
+      "actions": "Actions",
+      "is_active": "Active"
     }
   },
   "loading_screen": "Loading ...",

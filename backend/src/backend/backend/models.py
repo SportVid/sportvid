@@ -64,7 +64,8 @@ class SportVidUser(AbstractUser):
             "date_joined": self.date_joined,
             "dashboard_layout": self.dashboard_layout,
             "video_view_mode": self.video_view_mode,
-            "experience_mode": self.experience_mode
+            "experience_mode": self.experience_mode,
+            "is_active": self.is_active,
         }
 
     def __str__(self):

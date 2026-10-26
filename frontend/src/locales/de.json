@@ -32,7 +32,8 @@
       "rules": {
         "min": "Mindestens 5 Zeichen.",
         "max": "Maximal 50 Zeichen."
-      }
+      },
+      "not_approved": "Ihr Konto wurde noch nicht von einem Administrator freigeschaltet."
     },
     "logout": {
       "title": "Abmelden",
@@ -44,7 +45,8 @@
       "rules": {
         "min": "Mindestens 5 Zeichen.",
         "max": "Maximal 50 Zeichen."
-      }
+      },
+      "pending_approval": "Danke für die Registrierung! Ein Administrator muss Ihr Konto freischalten, bevor Sie sich anmelden können."
     },
     "experience_mode": {
       "heading": "Wie möchten Sie Plugins nutzen?",

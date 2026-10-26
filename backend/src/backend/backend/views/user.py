@@ -2,6 +2,8 @@ import logging
 import json
 from django.contrib import auth
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import JsonResponse
 from django.views import View
@@ -132,6 +134,13 @@ def login(request):
             }
         )
 
+    # authenticate() rejects inactive accounts. Tell the user their account still awaits
+    # approval, but only with the right password, so this reveals nothing to others.
+    pending = SportVidUser.objects.filter(username=username, is_active=False).first()
+    if pending is not None and pending.check_password(password):
+        return JsonResponse({"status": "error", "type": "not_approved",
+                             "message": "Account awaiting approval by an administrator"})
+
     return JsonResponse({"status": "error", "message": "Invalid login credentials"})
 
 
@@ -176,18 +185,19 @@ def register(request):
     if experience_mode not in ("simple", "complex"):
         experience_mode = "complex"
 
+    try:
+        validate_password(password, user=SportVidUser(username=username, email=email))
+    except ValidationError as e:
+        return JsonResponse({"status": "error", "type": "weak_password", "message": " ".join(e.messages)})
+
     # TODO: add email register here
+    # New accounts wait for an admin to activate them (admin panel, "active" switch).
     user = auth.get_user_model().objects.create_user(username, email, password)
+    user.is_active = False
     user.experience_mode = experience_mode
     user.save()
-    user = auth.authenticate(username=username, password=password)
-    logger.info('New user registered')
-
-    if user is not None:
-        auth.login(request, user)
-        return JsonResponse({"status": "ok"})
-
-    return JsonResponse({"status": "error"})
+    logger.info("New user registered, awaiting approval")
+    return JsonResponse({"status": "ok", "pending_approval": True})
 
 
 @require_http_methods(["POST"])
@@ -233,6 +243,10 @@ def user_update(request):
                         return JsonResponse({"status": "error", "message": "Both current and new passwords are required"})
                     if not user.check_password(pwd_current):
                         return JsonResponse({"status": "error", "message": "Invalid current password"})
+                    try:
+                        validate_password(pwd_new, user=user)
+                    except ValidationError as e:
+                        return JsonResponse({"status": "error", "type": "weak_password", "message": " ".join(e.messages)})
                     user.set_password(pwd_new)
                     pwd_changed = True
                     updated = True
@@ -292,8 +306,14 @@ def user_update(request):
                 except SportVidUser.DoesNotExist:
                     return JsonResponse({"status": "error", "message": "User not found"})
 
-                fields_to_update = ["email", "role", "max_storage_size", "max_video_size", "max_file_size"]
+                fields_to_update = ["email", "role", "max_storage_size", "max_video_size", "max_file_size", "is_active"]
                 updated = False
+
+                if "is_active" in params:
+                    if not isinstance(params["is_active"], bool):
+                        return JsonResponse({"status": "error", "message": "is_active must be true or false"})
+                    if user.id == request.user.id and not params["is_active"]:
+                        return JsonResponse({"status": "error", "message": "Admins cannot deactivate themselves"})
 
                 for field in fields_to_update:
                     if field in params:
@@ -303,18 +323,8 @@ def user_update(request):
                 if updated:
                     user.save()
 
-                user_data = {
-                    "id": user.id,
-                    "username": user.username,
-                    "email": user.email,
-                    "role": user.role,
-                    "max_storage_size": user.max_storage_size,
-                    "used_storage_size": user.used_storage_size,
-                    "max_video_size": user.max_video_size,
-                    "max_file_size": user.max_file_size,
-                }
-
-                return JsonResponse({"status": "ok", "data": user_data})
+                # the full user, so the admin table keeps every column (date_joined, is_active, ...)
+                return JsonResponse({"status": "ok", "data": user.to_dict()})
 
             else:
                 return JsonResponse({"status": "error", "message": "Invalid update type"})

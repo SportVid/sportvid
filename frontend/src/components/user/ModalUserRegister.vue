@@ -92,6 +92,9 @@
         >
           Error: {{ errorMessage }}
         </p>
+        <p v-if="infoMessage.length > 0" class="font-weight-bold text-success text-center mt-3 mb-n1">
+          {{ infoMessage }}
+        </p>
       </v-card-text>
 
       <v-card-actions>
@@ -171,6 +174,7 @@ const user = ref({
 const dialog = ref(props.modelValue);
 const showPassword = ref(false);
 const errorMessage = ref("");
+const infoMessage = ref("");
 
 const openModalUserLogin = () => {
   emit("open-modal-user-login");
@@ -178,9 +182,14 @@ const openModalUserLogin = () => {
 
 const register = async () => {
   const status = await userStore.register(user.value);
-  if (status.status === "ok") {
+  if (status.status === "ok" && status.pending_approval) {
+    // new accounts wait for an admin; keep the dialog open to say so
+    errorMessage.value = "";
+    infoMessage.value = t("user.register.pending_approval");
+  } else if (status.status === "ok") {
     dialog.value = false;
   } else {
+    infoMessage.value = "";
     errorMessage.value = status.message;
   }
 };
