@@ -697,7 +697,7 @@ const toggleRowExpand = (videoId) => {
 // see Video.to_dict()) rather than position_data.js's store, which only ever fetches for the
 // single currently-open player video.
 const POSDATA_TRACKER_TYPES = ["bytetrack", "object_tracker"];
-const POSDATA_DLT_TYPES = ["calibration_static_dlt"];
+const POSDATA_DLT_TYPES = ["calibration_static_dlt", "calibration_lens_solve"];
 const POSDATA_UPLOAD_TYPES = ["posdata_convert"];
 const METRICS_TYPES = ["kpi_computation"];
 

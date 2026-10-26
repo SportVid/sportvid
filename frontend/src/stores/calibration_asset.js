@@ -1,8 +1,7 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
-import { inv } from "mathjs";
 import { useTopViewStore } from "./top_view";
 import { usePlayerStore } from "@/stores/player";
 
@@ -241,6 +240,35 @@ export const useCalibrationAssetStore = defineStore(
             id: "31",
             active: false,
             compAreaCoordsRel: [{ x: 1, y: 0.365, z: 0 }],
+            videoCoordsRel: [{ x: null, y: null, z: null }],
+          },
+          // where the goal posts stand on the goal line (7.32 m apart)
+          {
+            name: "Goal-post-left-top",
+            id: "32",
+            active: false,
+            compAreaCoordsRel: [{ x: 0, y: 0.5538, z: 0 }],
+            videoCoordsRel: [{ x: null, y: null, z: null }],
+          },
+          {
+            name: "Goal-post-left-bottom",
+            id: "33",
+            active: false,
+            compAreaCoordsRel: [{ x: 0, y: 0.4462, z: 0 }],
+            videoCoordsRel: [{ x: null, y: null, z: null }],
+          },
+          {
+            name: "Goal-post-right-top",
+            id: "34",
+            active: false,
+            compAreaCoordsRel: [{ x: 1, y: 0.5538, z: 0 }],
+            videoCoordsRel: [{ x: null, y: null, z: null }],
+          },
+          {
+            name: "Goal-post-right-bottom",
+            id: "35",
+            active: false,
+            compAreaCoordsRel: [{ x: 1, y: 0.4462, z: 0 }],
             videoCoordsRel: [{ x: null, y: null, z: null }],
           },
         ],
@@ -1850,30 +1878,107 @@ export const useCalibrationAssetStore = defineStore(
       if (!m) return null;
       return JSON.stringify(m) === JSON.stringify(identityMatrix) ? null : m;
     });
-    const calibrationMatrixInv = computed(() => {
-      if (!calibrationMatrix.value) return null;
-      return inv(calibrationMatrix.value);
-    });
-
-    function applyHomography(matrix, point) {
-      const X = matrix[0][0] * point.x + matrix[0][1] * point.y + matrix[0][2] * 1;
-      const Y = matrix[1][0] * point.x + matrix[1][1] * point.y + matrix[1][2] * 1;
-      const W = matrix[2][0] * point.x + matrix[2][1] * point.y + matrix[2][2] * 1;
-
-      return { x: X / W, y: Y / W };
-    }
     const videoObject = computed(() => calibrationAssetObjects.value.map((m) => m.videoCoordsRel));
-    const topViewObjectProjection = computed(() => {
-      if (!calibrationMatrix.value) return [];
-      return videoObject.value
-        .filter((pointList) => pointList.some((p) => p.x !== null && p.y !== null))
-        .map((pointList) => pointList.map((p) => applyHomography(calibrationMatrix.value, p)));
-    });
+
+    // Everything projected through the calibration (homography + lens) is computed by the backend
+    // (calibration_assets/overlay and calibration_assets/project); the store only keeps the results to render.
+    // The key changes with the asset and with its homography (e.g. after a new DLT run).
+    const calibrationKey = computed(() =>
+      calibrationMatrix.value
+        ? JSON.stringify([calibrationAssetId.value, calibrationMatrix.value])
+        : null
+    );
+
+    // Points through the current asset's calibration, relative coordinates both ways; [x, y] or null (can't be
+    // mapped) per point. direction: "video_to_pitch" or "pitch_to_video". Sent in chunks that keep each request
+    // body (~45 bytes per point, < 1 MB per chunk) well under Django's 2.5 MB upload limit.
+    const PROJECT_CHUNK_POINTS = 20000;
+    const projectPoints = async (points, direction = "video_to_pitch") => {
+      if (!calibrationAssetId.value || !points.length) return points.map(() => null);
+      const projected = [];
+      for (let start = 0; start < points.length; start += PROJECT_CHUNK_POINTS) {
+        const res = await axios.post(`${config.API_LOCATION}/calibration_assets/project`, {
+          id: calibrationAssetId.value,
+          points: points.slice(start, start + PROJECT_CHUNK_POINTS),
+          direction,
+        });
+        if (res.data.status !== "ok") {
+          throw new Error(`calibration_assets/project: ${res.data.type ?? res.data.status}`);
+        }
+        projected.push(...res.data.points);
+      }
+      return projected;
+    };
+
+    // The pitch lines projected into the video, and each calibration object's pitch position projected next to
+    // where it was clicked: lines and markers that sit on the painted ones show a good calibration.
+    const showPitchOverlay = ref(false);
+    const togglePitchOverlay = () => {
+      showPitchOverlay.value = !showPitchOverlay.value;
+    };
+    const calibrationOverlay = ref({ markings: [], objects: [] });
+    const loadCalibrationOverlay = async () => {
+      const key = calibrationKey.value;
+      if (!key) {
+        calibrationOverlay.value = { markings: [], objects: [] };
+        return;
+      }
+      try {
+        const res = await axios.get(`${config.API_LOCATION}/calibration_assets/overlay`, {
+          params: { id: calibrationAssetId.value },
+        });
+        if (res.data.status === "ok" && key === calibrationKey.value) {
+          calibrationOverlay.value = { markings: res.data.markings, objects: res.data.objects };
+        }
+      } catch (error) {
+        console.error("Failed to load the calibration overlay:", error);
+      }
+    };
+    watch(calibrationKey, loadCalibrationOverlay, { immediate: true });
+    // [{name, points: [[x, y], ...]}] in relative video coordinates
+    const pitchOverlay = computed(() => calibrationOverlay.value.markings);
+    // per clicked object: where the calibration puts it in the video ([{x, y}, ...])
     const videoObjectReprojection = computed(() => {
-      if (!calibrationMatrixInv.value) return [];
-      return topViewObjectProjection.value.map((pointList) =>
-        pointList.map((p) => applyHomography(calibrationMatrixInv.value, p))
-      );
+      const clicked = new Set(filteredVideoObject.value.map((o) => o.id));
+      return calibrationOverlay.value.objects
+        .filter((o) => clicked.has(o.id))
+        .map((o) => o.points.filter((p) => p !== null).map(([x, y]) => ({ x, y })))
+        .filter((points) => points.length);
+    });
+
+    // The clicked points on the pitch (top view) through the current calibration, following unsaved edits.
+    const topViewObjectProjection = ref([]);
+    let topViewProjectionTimer = null;
+    let topViewProjectionRequest = 0;
+    const updateTopViewObjectProjection = () => {
+      clearTimeout(topViewProjectionTimer);
+      topViewProjectionTimer = setTimeout(async () => {
+        const request = ++topViewProjectionRequest;
+        const lists = filteredVideoObject.value.map((o) =>
+          o.videoCoordsRel.filter((p) => p.x !== null && p.y !== null)
+        );
+        if (!calibrationKey.value || !lists.length) {
+          topViewObjectProjection.value = [];
+          return;
+        }
+        try {
+          const projected = await projectPoints(lists.flat().map((p) => [p.x, p.y]));
+          if (request !== topViewProjectionRequest) return; // a newer request is underway
+          let i = 0;
+          topViewObjectProjection.value = lists.map((points) =>
+            points
+              .map(() => projected[i++])
+              .filter((p) => p !== null)
+              .map(([x, y]) => ({ x, y }))
+          );
+        } catch (error) {
+          console.error("Failed to project the clicked points onto the pitch:", error);
+        }
+      }, 150);
+    };
+    watch([calibrationKey, filteredVideoObject], updateTopViewObjectProjection, {
+      deep: true,
+      immediate: true,
     });
 
     return {
@@ -1905,11 +2010,15 @@ export const useCalibrationAssetStore = defineStore(
       deleteCalibrationAsset,
       calibrationMatrix,
       calibrationMatrixPersisted,
-      calibrationMatrixInv,
       videoObject,
       topViewObjectProjection,
       videoObjectReprojection,
-      applyHomography,
+      calibrationKey,
+      projectPoints,
+      showPitchOverlay,
+      togglePitchOverlay,
+      calibrationOverlay,
+      pitchOverlay,
       objectColorMap,
       calibrationMode,
       calibrationSport,
@@ -1933,6 +2042,7 @@ export const useCalibrationAssetStore = defineStore(
         "calibrationAssetObjects",
         "calibrationMatrixPersisted",
         "calibrationAssetId",
+        "showPitchOverlay",
       ],
       storage: sessionStorage,
     },

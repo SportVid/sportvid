@@ -5,7 +5,7 @@ from django.http import JsonResponse
 
 from backend.models import LensProfile, Video
 from backend.utils.decode_auth import decode_and_authenticate
-from backend.utils.lens import is_compatible
+from backend.utils.lens import MAX_CROP, MIN_CROP, aspect_fit, is_compatible, recording_modes
 
 
 logger = logging.getLogger(__name__)
@@ -74,8 +74,11 @@ class LensProfileModelList(View):
 class LensProfileList(View):
     """Lens profiles filtered by ?brand=, ?model=, ?group=, ?eis=, ?search=.
 
-    With ?video_id= each entry says whether it can be applied to that video's resolution,
-    and ?compatible_only=true drops the ones that can't.
+    With ?video_id= each entry also carries
+    - "compatible": the profile was calibrated at the video's aspect ratio (?compatible_only=true drops the others);
+    - "aspect_fit": how the video frame relates to the calibrated one (utils/lens.py:aspect_fit). Other aspect
+      ratios are applied as a centred crop of the calibrated frame, as GoPro records them;
+    - "recording_modes": the EIS crops the video may have been recorded with (utils/lens.py:recording_modes).
     """
     def get(self, request):
         try:
@@ -108,6 +111,10 @@ class LensProfileList(View):
                     )
                     if compatible_only and not entry["compatible"]:
                         continue
+                    entry["aspect_fit"] = aspect_fit(
+                        lens_profile.calib_width, lens_profile.calib_height, video.width, video.height
+                    )
+                    entry["recording_modes"] = recording_modes(lens_profile.raw, video.width, video.height)
                 entries.append(entry)
             return JsonResponse({"status": "ok", "entries": entries})
         except Exception:
@@ -116,7 +123,9 @@ class LensProfileList(View):
 
 
 class VideoSetLensProfile(View):
-    """Assign a lens profile to a video ({"video_id", "lens_profile_id"}); a null lens_profile_id clears it.
+    """Assign a lens profile to a video ({"video_id", "lens_profile_id", "lens_crop"}); a null lens_profile_id
+    clears it. "lens_crop" is the EIS crop of the recording mode (one of the profile's "recording_modes" or a
+    measured value), default 1.0.
 
     Existing calibrations keep the intrinsics they were computed with; rerun the
     calibration to apply a changed profile.
@@ -142,16 +151,27 @@ class VideoSetLensProfile(View):
                     "type": "unsupported_lens_profile",
                     "reason": lens_profile.unsupported_reason,
                 })
-            if not is_compatible(lens_profile.calib_width, lens_profile.calib_height, video.width, video.height):
+            if aspect_fit(lens_profile.calib_width, lens_profile.calib_height, video.width, video.height) is None:
                 return JsonResponse({
                     "status": "error",
                     "type": "incompatible_resolution",
-                    "reason": (
-                        f"lens profile {lens_profile.calib_width}x{lens_profile.calib_height} doesn't match "
-                        f"the video's aspect ratio ({video.width}x{video.height})"
-                    ),
+                    "reason": f"unknown resolution (video {video.width}x{video.height})",
+                })
+
+        lens_crop = 1.0
+        if lens_profile is not None and data.get("lens_crop") is not None:
+            try:
+                lens_crop = float(data.get("lens_crop"))
+            except (TypeError, ValueError):
+                lens_crop = float("nan")
+            if not MIN_CROP <= lens_crop <= MAX_CROP:
+                return JsonResponse({
+                    "status": "error",
+                    "type": "invalid_lens_crop",
+                    "reason": f"lens crop must lie in [{MIN_CROP}, {MAX_CROP}]",
                 })
 
         video.lens_profile = lens_profile
-        video.save(update_fields=["lens_profile"])
+        video.lens_crop = lens_crop
+        video.save(update_fields=["lens_profile", "lens_crop"])
         return JsonResponse({"status": "ok", "entry": video.to_dict()})

@@ -139,6 +139,8 @@ class Video(models.Model):
     lens_profile = models.ForeignKey(
         "LensProfile", blank=True, null=True, on_delete=models.SET_NULL, related_name="videos"
     )
+    # EIS crop of the recording mode (zoom about the frame centre, f / crop), see utils/lens.py:recording_modes
+    lens_crop = models.FloatField(default=1.0)
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {
@@ -165,6 +167,7 @@ class Video(models.Model):
             "sport": self.sport,
             "camera_motion": self.camera_motion,
             "lens_profile_id": self.lens_profile_id.hex if self.lens_profile_id else None,
+            "lens_crop": self.lens_crop,
             "status": self.status,
             "progress": self.progress,
             "eta_seconds": self.eta_seconds,

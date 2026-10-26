@@ -212,6 +212,12 @@ urlpatterns = [
     path("calibration_assets/delete", 
         views.CalibrationAssetsDelete.as_view(), 
         name="calibration_assets_delete"),
+    path("calibration_assets/overlay",
+        views.CalibrationAssetsOverlay.as_view(),
+        name="calibration_assets_overlay"),
+    path("calibration_assets/project",
+        views.CalibrationAssetsProject.as_view(),
+        name="calibration_assets_project"),
     # ---------- LENS PROFILES
     path("lens_profile/brands",
         views.LensProfileBrandList.as_view(),

@@ -366,7 +366,7 @@ const stateText = (state, types = null) => {
 
 // Just the type lists the template needs for stateText()'s progress lookup -- the actual
 // state derivation lives in usePositionDataStatus now.
-const posdataAllTypes = ["bytetrack", "object_tracker", "calibration_static_dlt", "posdata_convert"];
+const posdataAllTypes = ["bytetrack", "object_tracker", "calibration_static_dlt", "calibration_lens_solve", "posdata_convert"];
 const kpiTypes = ["kpi_computation"];
 
 // Cheap call (no add_results) so tracker runs can be classified as player- vs.
