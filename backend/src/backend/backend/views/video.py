@@ -15,6 +15,7 @@ from django.conf import settings
 from celery.app.control import Control
 from sportvid.celery import app as celery_app
 
+from backend.utils.storage import add_used_storage, quota_exceeded_response, release_used_storage, would_exceed_quota
 from backend.plugin_manager import PluginManager
 from backend.utils import (
     download_file,
@@ -63,6 +64,8 @@ class VideoUpload(View):
             video_id = video_id_uuid.hex
 
             if "file" in request.FILES:
+                if would_exceed_quota(request.user, request.FILES["file"].size):
+                    return quota_exceeded_response()
                 output_dir = media_dir_to_file(video_id)
                 download_result = download_file(
                     output_dir=output_dir,
@@ -150,8 +153,7 @@ class VideoUpload(View):
                 video_db.task_id = task.id
                 video_db.save(update_fields=["task_id"])
 
-                request.user.used_storage_size += request.FILES["file"].size
-                request.user.save()
+                add_used_storage(request.user, request.FILES["file"].size)
 
                 video_id_hex = video_db.id.hex if not video_db.file.hex else video_db.id.hex
                 return JsonResponse(
@@ -325,8 +327,7 @@ class VideoDelete(View):
                     logger.exception("Failed to clean up video files after delete")
 
                 if video_owner:
-                    video_owner.used_storage_size = max(0, video_owner.used_storage_size - file_size)
-                    video_owner.save()
+                    release_used_storage(video_owner, file_size)
                 return JsonResponse({"status": "ok"})
 
             return JsonResponse({"status": "error"}, status=500)

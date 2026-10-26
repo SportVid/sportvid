@@ -15,6 +15,7 @@ from sportvid.celery import app as celery_app
 
 from backend.models import Video, PluginRun, TrackingData
 from backend.permissions import unreadable_references, writable
+from backend.utils.storage import release_used_storage
 from backend.plugin_manager import PluginManager
 from backend.utils import download_url, download_file, media_url_to_file
 from backend.utils.events import publish_cancel
@@ -71,14 +72,17 @@ class PluginRunNew(View):
                     output_dir=output_dir,
                     output_name=data_id_uuid,
                     file=uploaded_file,
-                    max_size=11 * 1024 * 1024 * 1024,
+                    max_size=request.user.max_file_size,
                 )
 
-                if download_result.get("status") == "ok":
-                    file_parameters[m.group(1)] = {
-                        "value": download_result["origin"],
-                        "path": download_result["path"],
-                    }
+                if download_result.get("status") != "ok":
+                    # e.g. file_too_large (over the user's max_file_size): don't start the
+                    # run without the file the user meant to pass
+                    return JsonResponse(download_result, status=413 if download_result.get("type") == "file_too_large" else 400)
+                file_parameters[m.group(1)] = {
+                    "value": download_result["origin"],
+                    "path": download_result["path"],
+                }
 
             parameters = data["parameters"].copy()
             parameters["_files"] = file_parameters
@@ -188,10 +192,7 @@ class PluginRunDelete(View):
                 )
                 cascaded_deleted, _ = tdata_qs.delete()
                 if cascaded_deleted:
-                    request.user.used_storage_size = max(
-                        0, request.user.used_storage_size - total_size
-                    )
-                    request.user.save()
+                    release_used_storage(request.user, total_size)
 
             response, _ = runs.delete()
 

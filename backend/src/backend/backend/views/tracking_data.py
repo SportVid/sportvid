@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.conf import settings
 from pathlib import Path
 
+from backend.utils.storage import add_used_storage, quota_exceeded_response, release_used_storage, would_exceed_quota
 from backend.plugin_manager import PluginManager
 from backend.utils import (
     download_file,
@@ -43,7 +44,11 @@ class TrackingDataUpload(View):
             tracking_data_id_uuid = uuid.uuid4()
             tracking_data_id = tracking_data_id_uuid.hex
             video_db = writable(Video, request.user).get(id=request.POST.get("video_id"))
-            
+
+            upload_size = sum(request.FILES[k].size for k in ("file", "meta_data") if k in request.FILES)
+            if would_exceed_quota(request.user, upload_size):
+                return quota_exceeded_response()
+
             if "file" in request.FILES:
                 output_dir = media_dir_to_file(tracking_data_id)
 
@@ -146,11 +151,7 @@ class TrackingDataUpload(View):
                     meta_data_id_hex = tracking_data_db.meta_file.hex
                     json_entries[0].update({"meta_url": media_url_to_file(meta_data_id_hex, meta_ext)})
 
-                if "file" in request.FILES:
-                    request.user.used_storage_size += request.FILES["file"].size
-                if "meta_data" in request.FILES:
-                    request.user.used_storage_size += request.FILES["meta_data"].size
-                request.user.save()
+                add_used_storage(request.user, upload_size)
                 
                 return JsonResponse(
                     {
@@ -275,8 +276,7 @@ class TrackingDataDelete(View):
                 )
                 count, _ = all_tdata.delete()
                 if count:
-                    request.user.used_storage_size = max(0, request.user.used_storage_size - total_size)
-                    request.user.save()
+                    release_used_storage(request.user, total_size)
                     return JsonResponse({"status": "ok"})
             else:
                 tdata = TrackingData.objects.filter(id=data.get("id"), owner=request.user).first()
@@ -285,8 +285,7 @@ class TrackingDataDelete(View):
                     id=data.get("id"), owner=request.user
                 ).delete()
                 if count:
-                    request.user.used_storage_size = max(0, request.user.used_storage_size - file_size)
-                    request.user.save()
+                    release_used_storage(request.user, file_size)
                     return JsonResponse({"status": "ok"})
             return JsonResponse({"status": "error"}, status=500)
         except Exception:
