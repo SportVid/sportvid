@@ -29,6 +29,22 @@ class Task:
         td_file = media_path_to_file(file_hex, file_ext)
         return client.upload_file(td_file)
 
+    @staticmethod
+    def _record_provenance(plugin_run, ray_plugin):
+        """Append the Ray plugin and its deployed version to plugin_run.provenance (V4)."""
+        if plugin_run is None:
+            return
+        from backend.plugin_catalogue import deployed_ray_plugins
+
+        deployed = deployed_ray_plugins() or {}
+        entry = {"ray_plugin": ray_plugin, "version": deployed.get(ray_plugin)}
+        try:
+            current = PluginRun.objects.filter(id=plugin_run.id).values_list("provenance", flat=True).first() or []
+            PluginRun.objects.filter(id=plugin_run.id).update(provenance=[*current, entry])
+            plugin_run.provenance = [*current, entry]
+        except Exception:
+            logger.warning("Could not record provenance for plugin run %s", plugin_run.id, exc_info=True)
+
     def run_analyser(
         self,
         client: TaskAnalyserClient,
@@ -66,6 +82,8 @@ class Task:
                 f"Plugin is crashing: analyser job_id: {job_id} plugin_run_id: {plugin_run}"
             )
             return None
+
+        self._record_provenance(plugin_run or getattr(client, "plugin_run_db", None), analyser)
 
         result_ids = {}
         for output in result.outputs:

@@ -43,6 +43,19 @@ def _mark_running(plugin_run):
         logger.warning("Failed to publish plugin run RUNNING event", exc_info=True)
 
 
+def _recordable_parameters(parameters):
+    """Validated parameters as stored on the PluginRun (audit V4).
+
+    Uploaded files are recorded by their original name only; their temporary paths
+    mean nothing after the run.
+    """
+    recorded = dict(parameters or {})
+    files = recorded.pop("_files", None)
+    if files:
+        recorded["_files"] = {name: info.get("value") for name, info in files.items()}
+    return recorded
+
+
 class PluginManager:
     _plugins: Dict[str, Type] = {}
     _serializers: Dict[str, Type] = {}
@@ -170,6 +183,7 @@ class PluginManager:
                 video=video,
                 type=plugin,
                 status=PluginRun.STATUS_QUEUED,
+                parameters=_recordable_parameters(validated_parameters),
             )
             # Returns the plugin_run_id (hex) for the frontend to track the run.
             result["plugin_run_id"] = plugin_run.id.hex
