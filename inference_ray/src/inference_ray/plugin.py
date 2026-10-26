@@ -17,6 +17,12 @@ from typing import Union, Dict, Any
 
 # from inference_ray.callback import AnalyserPluginCallback
 
+# Seconds one plugin call to Ray Serve may take (PLUGIN_RUN_TIMEOUT in .env, shared with
+# the backend, audit V3). Connecting and the status query must answer quickly.
+PLUGIN_RUN_TIMEOUT = float(os.environ.get("PLUGIN_RUN_TIMEOUT", 12 * 3600))
+RAY_CONNECT_TIMEOUT = 10
+RAY_STATUS_TIMEOUT = 10
+
 
 def convert_name(name):
     s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
@@ -164,7 +170,7 @@ class AnalyserPluginManager(Manager):
         # print(f"{self.status_base_url}/api/serve/applications/", flush=True)
         try:
             status = requests.get(
-                f"{self.status_base_url}/api/serve/applications/"
+                f"{self.status_base_url}/api/serve/applications/", timeout=RAY_STATUS_TIMEOUT
             ).json()
         except:
             logging.error("[AnalyserPluginMananger] Can't get status from ray server.")
@@ -227,8 +233,8 @@ class AnalyserPluginManager(Manager):
 
         return plugin_to_run(config)
 
-    # TODO: Add explicit timeouts to http.post() and ensure long-running plugin
-    # implementations periodically check cancel_event to exit early.
+    # TODO: Long-running plugin implementations should periodically check cancel_event
+    # to exit early (the HTTP call itself has a timeout since V3).
     def __call__(
         self,
         plugin: str,
@@ -271,6 +277,7 @@ class AnalyserPluginManager(Manager):
                     # valkey under this id (see main.py / utils.progress_channel).
                     "job_id": job_id,
                 },
+                timeout=(RAY_CONNECT_TIMEOUT, PLUGIN_RUN_TIMEOUT),
             )
         except Exception:
             if cancel_event is not None and cancel_event.is_set():

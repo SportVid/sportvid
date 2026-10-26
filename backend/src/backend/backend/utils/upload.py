@@ -56,7 +56,7 @@ def download_file(file, output_dir, output_name=None, max_size=None, extensions=
 
 def download_url(url, output_dir, output_name=None, max_size=None, extensions=None):
     try:
-        response = requests.get(url, stream=True)
+        response = requests.get(url, stream=True, timeout=(10, 300))
         if response.status_code != 200:
             return {"status": "error", "type": "downloading_error"}
 

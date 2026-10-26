@@ -1,6 +1,7 @@
 import time
 import logging
 import grpc
+from django.conf import settings
 from contextlib import nullcontext
 
 from django.utils import timezone
@@ -155,10 +156,12 @@ class TaskAnalyserClient(AnalyserClient):
         job_id,
         plugin_run_db=None,
         status_fn=None,
-        timeout=86400, # 24 hours timeout
+        timeout=None,  # default: settings.PLUGIN_RUN_TIMEOUT
         progress_range=None,
     ):
         plugin_run_db = plugin_run_db if plugin_run_db is not None else self.plugin_run_db
+        if timeout is None:
+            timeout = settings.PLUGIN_RUN_TIMEOUT
 
         result = None
 
@@ -184,12 +187,18 @@ class TaskAnalyserClient(AnalyserClient):
 
                 if timeout:
                     if time.time() - start_time > timeout:
-                        logger.error(f"Timeout")
+                        logger.error("Analyser job %s exceeded %s s, aborting it", job_id, timeout)
+                        try:
+                            self.abort_plugin(job_id)  # free the analyser worker and the Ray call
+                        except Exception:
+                            logger.warning("Could not abort analyser job %s", job_id, exc_info=True)
                         if plugin_run_db:
                             # Timeout and gRPC-error paths now use .update() instead of possibly saving stale plugin_run_db instance.
                             PluginRun.objects.filter(id=plugin_run_db.id).update(
                                 status=PluginRun.STATUS_ERROR, eta_seconds=None
                             )
+                            plugin_run_db.status, plugin_run_db.eta_seconds = PluginRun.STATUS_ERROR, None
+                            publish_plugin_run(plugin_run_db)  # .update() skips the signal
                         return None
                 try:
                     result = self.get_plugin_status(job_id)

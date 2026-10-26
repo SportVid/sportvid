@@ -128,8 +128,8 @@ class AnalyserCacheWrapper:
                 )
         return results
 
-# TODO: Add explicit timeouts to plugin HTTP calls and ensure session.close()
-# actually interrupts in-flight requests quickly enough.
+# TODO: Ensure session.close() actually interrupts in-flight requests quickly enough
+# (the Ray HTTP call has a timeout since V3, see inference_ray.plugin.PLUGIN_RUN_TIMEOUT).
 # TODO: Implement periodic cleanup of cancel_events and sessions dicts to
 # prevent unbounded growth in long-running analyser processes.
 def run_plugin(args):

@@ -68,6 +68,11 @@ VALKEY_HOST = os.getenv("VALKEY_CLIENT_HOST", "valkey")
 VALKEY_PORT = int(os.getenv("VALKEY_INTERNAL_PORT", "6380"))
 VALKEY_PASSWORD = os.getenv("VALKEY_PASSWD") or None
 
+# Seconds one analyser job of a plugin run may take (audit V3). The analyser reads the
+# same variable for its HTTP call to Ray Serve. Celery's time_limit cannot do this:
+# it is not enforced by the threads pool the workers use.
+PLUGIN_RUN_TIMEOUT = int(os.getenv("PLUGIN_RUN_TIMEOUT", str(12 * 3600)))
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
