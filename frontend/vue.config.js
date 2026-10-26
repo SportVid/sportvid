@@ -11,9 +11,11 @@ module.exports = {
   devServer: {
     // `npm run serve` (port 8080) talks to the API same-origin, like nginx does in
     // production. Targets are the compose service names inside the frontend container.
+    // changeOrigin: false keeps "Host: localhost:8080", which Django's ALLOWED_HOSTS and
+    // its CSRF origin check expect (vue-cli would otherwise rewrite it to the target).
     proxy: {
-      "/api": { target: process.env.SPORTVID_BACKEND_URL || "http://backend:8010" },
-      "/thumbnails": { target: process.env.SPORTVID_MEDIA_URL || "http://localhost:80" },
+      "/api": { target: process.env.SPORTVID_BACKEND_URL || "http://backend:8010", changeOrigin: false },
+      "/thumbnails": { target: process.env.SPORTVID_MEDIA_URL || "http://localhost:80", changeOrigin: false },
     },
     // gzip would buffer server-sent events (/api/events/stream)
     compress: false,
