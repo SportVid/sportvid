@@ -2,6 +2,7 @@ from .plugin_run import PluginRunRequestSerializer
 from .object_tracker import ObjectTrackerSerializer
 from .bytetrack import ByteTrackSerializer
 from .calibration_static_dlt import CalibrationSerializer
+from .calibration_lens_solve import CalibrationLensSolveSerializer
 from .posdata_convert import PosDataConvertSerializer
 from .kpi_computation import KPIComputationSerializer
 from .floodlight_convert import FloodlightConvertSerializer

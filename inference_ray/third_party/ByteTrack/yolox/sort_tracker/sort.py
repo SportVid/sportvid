@@ -55,7 +55,7 @@ def iou_batch(bb_test, bb_gt):
 def convert_bbox_to_z(bbox):
   """
   Takes a bounding box in the form [x1,y1,x2,y2] and returns z in the form
-    [x,y,s,r] where x,y is the centre of the box and s is the scale/area and r is
+    [x,y,s,r] where x,y is the center of the box and s is the scale/area and r is
     the aspect ratio
   """
   w = bbox[2] - bbox[0]
@@ -69,7 +69,7 @@ def convert_bbox_to_z(bbox):
 
 def convert_x_to_bbox(x,score=None):
   """
-  Takes a bounding box in the centre form [x,y,s,r] and returns it in the form
+  Takes a bounding box in the center form [x,y,s,r] and returns it in the form
     [x1,y1,x2,y2] where x1,y1 is the top left and x2,y2 is the bottom right
   """
   w = np.sqrt(x[2] * x[3])

@@ -1,5 +1,7 @@
 import json
 import logging
+
+import numpy as np
 from django.views import View
 from django.http import JsonResponse
 
@@ -7,6 +9,8 @@ from backend.models import Video
 from backend.models import CalibrationAssets
 from backend.models import PluginRun
 from backend.utils.decode_auth import decode_and_authenticate
+from backend.utils.pitch import normalize_sport, object_pitch_positions, pitch_markings
+from backend.utils.projection import is_calibrated, pitch_to_video, project_polylines, to_json_points, video_to_pitch
 
 
 logger = logging.getLogger(__name__)
@@ -75,9 +79,9 @@ class CalibrationAssetsChange(View):
                     )
                 # the marker set changed, so any previously computed
                 # homography no longer corresponds to it -- invalidate the
-                # DLT run and force a rerun
+                # DLT / lens solver run and force a rerun
                 PluginRun.objects.filter(
-                    type="calibration_static_dlt",
+                    type__in=["calibration_static_dlt", "calibration_lens_solve"],
                     calibration_asset=calibration_assets,
                 ).delete()
             calibration_assets.save()
@@ -128,3 +132,81 @@ class CalibrationAssetsList(View):
         except Exception:
             logger.exception('Failed to list all available calibration assets')
             return JsonResponse({"status": "error"})
+
+
+def _calibration_context(calibration_assets):
+    """sport, pitch size and lens of a calibration asset's video, as the DLT task uses them."""
+    video = calibration_assets.video
+    sport = normalize_sport(calibration_assets.sport, video.sport if video else None)
+    field_length = (video.field_length if video else None) or 105.0
+    field_width = (video.field_width if video else None) or 68.0
+    return sport, field_length, field_width
+
+
+def _clicked_points(calibration_assets):
+    """All clicked video points of an asset (relative), which lie on the ground in front of the camera."""
+    return [
+        [p["x"], p["y"]]
+        for obj in calibration_assets.object_data.all()
+        for p in (obj.video_coords_rel or [])
+        if p.get("x") is not None and p.get("y") is not None
+    ]
+
+
+class CalibrationAssetsOverlay(View):
+    """What a calibration asset's homography and lens put into the video (?id=), for the frontend to draw:
+
+    - "markings": the pitch lines and circles, as polylines in relative video coordinates, split where the camera
+      can't see them;
+    - "objects": per calibration object, its pitch position (the metric model's for known markers, as the DLT
+      fit uses it) projected into the video, next to where it was clicked ([x, y] or null per point).
+    """
+    def get(self, request):
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({"status": "error", "type": "not_authenticated"})
+            calibration_assets = CalibrationAssets.objects.get(id=request.GET.get("id"), owner=request.user)
+            H, lens = calibration_assets.homography_matrix, calibration_assets.lens_intrinsics
+            if not is_calibrated(H):
+                return JsonResponse({"status": "ok", "calibrated": False, "markings": [], "objects": []})
+            sport, field_length, field_width = _calibration_context(calibration_assets)
+            clicks = _clicked_points(calibration_assets)
+            markings = project_polylines(pitch_markings(sport, field_length, field_width), H, lens, clicks)
+            objects = []
+            for obj in calibration_assets.object_data.all():
+                _, positions = object_pitch_positions(
+                    sport, calibration_assets.object_type, obj.name, obj.comp_area_coords_rel or [],
+                    field_length, field_width,
+                )
+                video = pitch_to_video(positions, H, lens, clicks) if positions else np.empty((0, 2))
+                objects.append({"id": obj.id.hex, "name": obj.name, "points": to_json_points(video)})
+            return JsonResponse({"status": "ok", "calibrated": True, "markings": markings, "objects": objects})
+        except (CalibrationAssets.DoesNotExist, ValueError):
+            return JsonResponse({"status": "error", "type": "not_exist"})
+        except Exception:
+            logger.exception(f'Failed to {__class__.__name__}')
+            return JsonResponse({"status": "error"})
+
+
+class CalibrationAssetsProject(View):
+    """Points projected through a calibration asset's homography and lens: {"id", "points": [[x, y], ...],
+    "direction": "video_to_pitch" (default) | "pitch_to_video"}, relative coordinates both ways. Returns
+    {"points": [[x, y] | null, ...]}, null where a point can't be mapped."""
+    @decode_and_authenticate(require_name=False)
+    def post(self, request, data):
+        try:
+            calibration_assets = CalibrationAssets.objects.get(id=data.get("id"), owner=request.user)
+        except (CalibrationAssets.DoesNotExist, ValueError):
+            return JsonResponse({"status": "error", "type": "not_exist"})
+        H, lens = calibration_assets.homography_matrix, calibration_assets.lens_intrinsics
+        if not is_calibrated(H):
+            return JsonResponse({"status": "error", "type": "not_calibrated"})
+        points = np.asarray(data.get("points") or [], dtype=np.float64).reshape(-1, 2)
+        direction = data.get("direction", "video_to_pitch")
+        if direction == "video_to_pitch":
+            projected = video_to_pitch(points, H, lens)
+        elif direction == "pitch_to_video":
+            projected = pitch_to_video(points, H, lens, _clicked_points(calibration_assets))
+        else:
+            return JsonResponse({"status": "error", "type": "wrong_direction"})
+        return JsonResponse({"status": "ok", "points": to_json_points(projected)})

@@ -317,6 +317,28 @@
               </template>
             </svg>
 
+            <!-- pitch markings projected through the calibration's homography and lens (by the backend) -->
+            <svg
+              v-if="calibrationAssetStore.showPitchOverlay"
+              :width="videoSize.width"
+              :height="videoSize.height"
+              style="position: absolute; top: 0; left: 0; pointer-events: none"
+            >
+              <polyline
+                v-for="(line, i) in calibrationAssetStore.pitchOverlay"
+                :key="`${line.name}-${i}`"
+                :points="
+                  line.points
+                    .map(([x, y]) => `${x * videoSize.width},${y * videoSize.height}`)
+                    .join(' ')
+                "
+                stroke="#ff00ff"
+                stroke-width="2"
+                stroke-opacity="0.8"
+                fill="none"
+              />
+            </svg>
+
             <v-icon v-if="isPip" class="pip-resize-handle" @pointerdown.stop="onPipResizeStart">
               mdi-resize-bottom-right
             </v-icon>

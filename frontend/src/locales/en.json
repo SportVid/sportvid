@@ -218,6 +218,7 @@
       "title": "Segments",
       "view_vid_segments": "View video segments"
     },
+    "view_pitch_overlay": "View pitch lines",
     "time-conflict": "Video markers were set at {time}. Adding a new marker on another timestamp will overwrite the existing ones.",
     "go_to_marker_time": "Go back to {time}"
   },
@@ -910,6 +911,13 @@
         "timeline_name": "Calibration Static DLT",
         "calibration_id": "Select Calibration Asset",
         "calibration_id_hint": "Select a calibration asset to use for the calibration."
+      },
+      "calibration_lens_solve": {
+        "plugin_name": "Lens self-calibration + DLT from annotated landmarks",
+        "plugin_description": "Estimates the lens distortion of a static camera from the annotated soccer landmarks and the painted pitch lines, without a lens profile, and then fits the homography on the undistorted landmarks. Needs at least 6 landmarks spread over the image.",
+        "calibration_id_hint": "Select a soccer calibration asset with markers.",
+        "num_frames": "Frames",
+        "num_frames_hint": "Number of frames sampled across the video to detect the pitch lines in."
       },
       "posdata_convert": {
         "plugin_name": "Position Data Convert"
