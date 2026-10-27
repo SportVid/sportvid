@@ -18,10 +18,22 @@ from backend.models import (
     SportVidUser,
 )
 from backend.utils.events import publish_plugin_run
+from backend.utils.task import TaskFailure
 from data import DataManager
 
 
 logger = logging.getLogger(__name__)
+
+
+def _failure_reason(plugin_run, exc):
+    """The failure_reason for a run that raised exc. A reason recorded earlier in the run (e.g. the
+    analyser timeout in analyser_client.py) is the root cause and is kept.
+    """
+    if plugin_run.failure_reason:
+        return plugin_run.failure_reason
+    if isinstance(exc, TaskFailure):
+        return exc.to_dict()
+    return {"type": "internal_error"}
 
 
 def _mark_running(plugin_run):
@@ -230,11 +242,12 @@ class PluginManager:
             )
             if plugin_result: result["result"] = plugin_result
 
-        except Exception:
-            logger.exception(f"Failed to run plugin {plugin_run.type}")
+        except Exception as e:
+            logger.exception(f"Failed to run plugin {plugin}")
             if plugin_run is not None:
                 plugin_run.eta_seconds = None
                 plugin_run.status = PluginRun.STATUS_ERROR
+                plugin_run.failure_reason = _failure_reason(plugin_run, e)
                 plugin_run.save()
             result["status"] = False
 
@@ -340,6 +353,11 @@ def run_plugin(self, args):
                         dependency_id, dependency_run.status, plugin,
                     )
                     plugin_run_db.status = PluginRun.STATUS_ERROR
+                    plugin_run_db.failure_reason = {
+                        "type": "dependency_failed",
+                        "message": f"The {dependency_run.type} run this run depends on failed",
+                        "details": {"plugin_run_id": dependency_run.id.hex, "plugin": dependency_run.type},
+                    }
                     plugin_run_db.save()
                     return
                 try:
@@ -351,6 +369,11 @@ def run_plugin(self, args):
                         dependency_id, plugin,
                     )
                     plugin_run_db.status = PluginRun.STATUS_ERROR
+                    plugin_run_db.failure_reason = {
+                        "type": "dependency_timeout",
+                        "message": f"The {dependency_run.type} run this run depends on did not finish in time",
+                        "details": {"plugin_run_id": dependency_run.id.hex, "plugin": dependency_run.type},
+                    }
                     plugin_run_db.save()
                     return
 
@@ -366,6 +389,11 @@ def run_plugin(self, args):
         logger.error("Plugin run failed: unknown plugin '%s'", plugin)
         if plugin_run_db is not None:
             plugin_run_db.status = PluginRun.STATUS_ERROR
+            plugin_run_db.failure_reason = {
+                "type": "unknown_plugin",
+                "message": f"Unknown plugin '{plugin}'",
+                "details": {"plugin": plugin},
+            }
             plugin_run_db.save()
         return
 
@@ -396,9 +424,10 @@ def run_plugin(self, args):
             plugin_run_db.status = PluginRun.STATUS_DONE
             plugin_run_db.save()
 
-    except Exception:
+    except Exception as e:
         logger.exception("Plugin run failed for %s", plugin)
         if plugin_run_db is not None:
             plugin_run_db.eta_seconds = None
             plugin_run_db.status = PluginRun.STATUS_ERROR
+            plugin_run_db.failure_reason = _failure_reason(plugin_run_db, e)
             plugin_run_db.save()

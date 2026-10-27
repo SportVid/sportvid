@@ -289,6 +289,9 @@ class PluginRun(models.Model):
     # produced the results. Empty for runs from before migration 0065.
     parameters = models.JSONField(blank=True, null=True)
     provenance = models.JSONField(blank=True, null=True)
+    # why the run ended in ERROR: {"type": "<snake_case>", "message": ..., "details": {...}}
+    # (backend.utils.task.TaskFailure); {"type": "internal_error"} for unexpected errors
+    failure_reason = models.JSONField(blank=True, null=True)
     # TODO: Consider adding db_index=True to task_id if we ever query by it, and
     # optionally add a validator for Celery task ID format.
     task_id = models.CharField(max_length=256, blank=True, null=True) # associate PluginRun DB entry with Celery run_plugin task.
@@ -324,6 +327,7 @@ class PluginRun(models.Model):
             "status": self.STATUS[self.status],
             "parameters": self.parameters,
             "provenance": self.provenance,
+            "failure_reason": self.failure_reason,
         }
         if include_refs_hashes:
             result["video_id"] = self.video.id.hex

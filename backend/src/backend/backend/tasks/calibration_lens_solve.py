@@ -6,6 +6,7 @@ from backend.models import PluginRun, Video
 from backend.plugin_manager import PluginManager
 from backend.utils.lens import angular_snapshot
 from backend.utils.pitch import soccer_fits
+from backend.utils.task import TaskFailure
 from .calibration_static_dlt import CalibrationStaticDlt
 from ..utils.analyser_client import TaskAnalyserClient
 
@@ -47,23 +48,37 @@ class CalibrationLensSolve(CalibrationStaticDlt):
         plugin_run: Optional[PluginRun],
     ) -> Optional[Dict]:
         if video_db is None or not video_db.width or not video_db.height:
-            raise Exception("The lens solver needs the calibration asset's video and its resolution")
+            raise TaskFailure(
+                "video_resolution_unknown", "The lens solver needs the calibration asset's video and its resolution"
+            )
         if sport != "soccer":
-            raise Exception(f"The lens solver only supports soccer pitches, not '{sport}'")
+            raise TaskFailure(
+                "unsupported_sport", f"The lens solver only supports soccer pitches, not '{sport}'", sport=sport
+            )
         if not soccer_fits(field_length, field_width):
-            raise Exception(
-                f"A {field_length} x {field_width} m pitch is too small for the standard markings the solver fits"
+            raise TaskFailure(
+                "pitch_too_small",
+                f"A {field_length} x {field_width} m pitch is too small for the standard markings the solver fits",
+                field_length=field_length,
+                field_width=field_width,
             )
         motion = video_db.camera_motion
         if motion in (Video.CAMERA_MOTION_PAN, Video.CAMERA_MOTION_ZOOM, Video.CAMERA_MOTION_PAN_ZOOM):
-            raise Exception(f"The lens solver needs a static camera, the video was classified as '{motion}'")
+            raise TaskFailure(
+                "camera_not_static",
+                f"The lens solver needs a static camera, the video was classified as '{motion}'",
+                camera_motion=motion,
+            )
         if motion != Video.CAMERA_MOTION_STATIC:
             logger.warning(
                 f"Video {video_db.id}: camera motion is '{motion}', the lens solver assumes a static camera"
             )
         if len(keypoints) < self.MIN_KEYPOINTS:
-            raise Exception(
-                f"The lens solver needs at least {self.MIN_KEYPOINTS} clicked soccer keypoints, got {len(keypoints)}"
+            raise TaskFailure(
+                "not_enough_keypoints",
+                f"The lens solver needs at least {self.MIN_KEYPOINTS} clicked soccer keypoints, got {len(keypoints)}",
+                count=len(keypoints),
+                required=self.MIN_KEYPOINTS,
             )
 
         video_id = self.upload_video(client, video_db)
@@ -81,7 +96,8 @@ class CalibrationLensSolve(CalibrationStaticDlt):
             progress_range=(0.0, 0.9),
         )
         if result is None:
-            raise Exception("Lens solver failed")
+            # the analyser does not pass on why yet
+            raise TaskFailure("lens_solver_failed", "The lens solver could not fit a lens to this video")
         with result[1]["lens"] as data:
             solver_result = json.loads(data.text)
 

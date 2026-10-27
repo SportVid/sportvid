@@ -9,6 +9,24 @@ from ..utils.analyser_client import TaskAnalyserClient
 logger = logging.getLogger(__name__)
 
 
+class TaskFailure(Exception):
+    """A plugin run failure the user can act on; stored as the run's failure_reason.
+
+    "type" is a stable snake_case code the frontend translates; "message" is the English text and
+    "details" the values it was built from (e.g. counts), so translations can fill them in. Other
+    exceptions are reported as "internal_error" without their text.
+    """
+
+    def __init__(self, type: str, message: str, **details):
+        super().__init__(message)
+        self.type = type
+        self.message = message
+        self.details = details
+
+    def to_dict(self) -> Dict:
+        return {"type": self.type, "message": self.message, "details": self.details}
+
+
 class Task:
     # Ray Serve plugins this task calls through run_analyser(); the plugin is only offered
     # and accepted when all of them are deployed (backend/plugin_catalogue.py).

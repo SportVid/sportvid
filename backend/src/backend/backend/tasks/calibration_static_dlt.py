@@ -10,7 +10,7 @@ from backend.models import (
     Video,
 )
 from backend.plugin_manager import PluginManager
-from backend.utils.task import Task
+from backend.utils.task import Task, TaskFailure
 from backend.utils.lens import (
     camera_pose_from_homography,
     lens_intrinsics_snapshot,
@@ -61,10 +61,13 @@ class CalibrationStaticDlt(Task):
             )
         ]
 
-        if len(point_correspondences) == 0:
-            raise Exception("No point correspondences fetched")
         if len(point_correspondences) < 4:
-            raise Exception("Not enough valid point correspondences (min 4 required)")
+            raise TaskFailure(
+                "not_enough_point_correspondences",
+                f"The calibration needs at least 4 placed points, got {len(point_correspondences)}",
+                count=len(point_correspondences),
+                required=4,
+            )
         
         video_db = data_db.video or video
         field_length = (video_db.field_length if video_db else None) or 105.0
@@ -120,7 +123,12 @@ class CalibrationStaticDlt(Task):
                     point["src"] = {"x": float(x), "y": float(y)}
                     valid.append(point)
             if len(valid) < 4:
-                raise Exception("Not enough valid point correspondences after undistortion (min 4 required)")
+                raise TaskFailure(
+                    "not_enough_points_after_undistortion",
+                    f"Only {len(valid)} placed point(s) lie within the lens model's valid range, at least 4 are needed",
+                    count=len(valid),
+                    required=4,
+                )
             point_correspondences_dict = valid
 
         # all parameters are serialized based on strings when calling run_analyser
@@ -136,7 +144,8 @@ class CalibrationStaticDlt(Task):
             progress_range=self.dlt_progress_range,
         )
 
-        if result is None: raise Exception
+        if result is None:
+            raise TaskFailure("homography_fit_failed", "The homography could not be fitted to the placed points")
 
         with transaction.atomic():
             with result[1]["homography"] as homography_data:

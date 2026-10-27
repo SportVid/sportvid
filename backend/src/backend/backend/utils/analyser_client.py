@@ -194,10 +194,16 @@ class TaskAnalyserClient(AnalyserClient):
                             logger.warning("Could not abort analyser job %s", job_id, exc_info=True)
                         if plugin_run_db:
                             # Timeout and gRPC-error paths now use .update() instead of possibly saving stale plugin_run_db instance.
+                            failure_reason = {
+                                "type": "analyser_timeout",
+                                "message": f"The analysis did not finish within {timeout:g} s",
+                                "details": {"timeout_seconds": timeout},
+                            }
                             PluginRun.objects.filter(id=plugin_run_db.id).update(
-                                status=PluginRun.STATUS_ERROR, eta_seconds=None
+                                status=PluginRun.STATUS_ERROR, eta_seconds=None, failure_reason=failure_reason
                             )
                             plugin_run_db.status, plugin_run_db.eta_seconds = PluginRun.STATUS_ERROR, None
+                            plugin_run_db.failure_reason = failure_reason
                             publish_plugin_run(plugin_run_db)  # .update() skips the signal
                         return None
                 try:

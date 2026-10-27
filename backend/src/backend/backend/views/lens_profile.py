@@ -1,4 +1,5 @@
 import logging
+from django.core.exceptions import ValidationError
 from django.db.models import Count, Q
 from django.views import View
 from django.http import JsonResponse
@@ -23,6 +24,20 @@ def _get_video(request):
         return Video.objects.get(id=request.GET.get("video_id"), owner=request.user), None
     except (Video.DoesNotExist, ValueError):
         return None, JsonResponse({"status": "error", "type": "not_exist"})
+
+
+def _entry(lens_profile, video):
+    """lens_profile.to_dict() plus, for a video, how the profile fits it (see LensProfileList)."""
+    entry = lens_profile.to_dict()
+    if video is not None:
+        entry["compatible"] = is_compatible(
+            lens_profile.calib_width, lens_profile.calib_height, video.width, video.height
+        )
+        entry["aspect_fit"] = aspect_fit(
+            lens_profile.calib_width, lens_profile.calib_height, video.width, video.height
+        )
+        entry["recording_modes"] = recording_modes(lens_profile.raw, video.width, video.height)
+    return entry
 
 
 class LensProfileBrandList(View):
@@ -104,21 +119,41 @@ class LensProfileList(View):
             compatible_only = request.GET.get("compatible_only", "false").lower() == "true"
             entries = []
             for lens_profile in query:
-                entry = lens_profile.to_dict()
-                if video is not None:
-                    entry["compatible"] = is_compatible(
-                        lens_profile.calib_width, lens_profile.calib_height, video.width, video.height
-                    )
-                    if compatible_only and not entry["compatible"]:
-                        continue
-                    entry["aspect_fit"] = aspect_fit(
-                        lens_profile.calib_width, lens_profile.calib_height, video.width, video.height
-                    )
-                    entry["recording_modes"] = recording_modes(lens_profile.raw, video.width, video.height)
+                entry = _entry(lens_profile, video)
+                if video is not None and compatible_only and not entry["compatible"]:
+                    continue
                 entries.append(entry)
             return JsonResponse({"status": "ok", "entries": entries})
         except Exception:
             logger.exception("Failed to list lens profiles")
+            return JsonResponse({"status": "error"})
+
+
+class LensProfileGet(View):
+    """One lens profile by ?id=, e.g. the one a video is assigned (video "lens_profile_id"), so the
+    picker can be pre-filled. With ?video_id= the entry carries the same per-video fields as LensProfileList.
+
+    Unsupported profiles are returned too ("supported": false): a video may still be assigned one that a
+    later import marked unsupported.
+    """
+    def get(self, request):
+        try:
+            if not request.user.is_authenticated:
+                return JsonResponse({"status": "error", "type": "not_authenticated"})
+            if "id" not in request.GET:
+                return JsonResponse({"status": "error", "type": "missing_values"})
+
+            video, error = _get_video(request)
+            if error is not None:
+                return error
+            try:
+                lens_profile = LensProfile.objects.get(id=request.GET.get("id"))
+            except (LensProfile.DoesNotExist, ValueError, ValidationError):
+                return JsonResponse({"status": "error", "type": "not_exist"})
+
+            return JsonResponse({"status": "ok", "entry": _entry(lens_profile, video)})
+        except Exception:
+            logger.exception("Failed to get lens profile")
             return JsonResponse({"status": "error"})
 
 
