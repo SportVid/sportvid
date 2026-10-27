@@ -177,6 +177,7 @@
       "add_ref_marker": "Referenzmarker hinzufügen",
       "delete_ref_marker": "Referenzmarker löschen"
     },
+    "view_pitch_overlay": "Spielfeldlinien anzeigen",
     "go_to_marker_time": "Zurück zu {time}"
   },
   "position_data": {
@@ -775,6 +776,13 @@
         "timeline_name": "Calibration Static DLT",
         "calibration_id": "Kalibrierungs-Asset auswählen",
         "calibration_id_hint": "Wählen Sie ein Kalibrierungs-Asset zur Verwendung bei der Kalibrierung aus."
+      },
+      "calibration_lens_solve": {
+        "plugin_name": "Objektiv-Selbstkalibrierung + DLT aus annotierten Landmarken",
+        "plugin_description": "Schätzt die Objektivverzeichnung einer statischen Kamera aus den annotierten Fußball-Landmarken und den aufgemalten Spielfeldlinien, ohne Objektivprofil, und bestimmt anschließend die Homographie auf den entzerrten Landmarken. Benötigt mindestens 6 über das Bild verteilte Landmarken.",
+        "calibration_id_hint": "Wählen Sie ein Fußball-Kalibrierungs-Asset mit Markern aus.",
+        "num_frames": "Frames",
+        "num_frames_hint": "Anzahl der über das Video verteilten Frames, in denen die Spielfeldlinien gesucht werden."
       },
       "posdata_convert": {
         "plugin_name": "Positionsdaten konvertieren"

@@ -1732,6 +1732,34 @@ const plugins = ref([
         optional_parameters: [],
       },
       {
+        name: t("modal.plugin.calibration_lens_solve.plugin_name"),
+        description: t("modal.plugin.calibration_lens_solve.plugin_description"),
+        icon: "mdi-camera-iris",
+        plugin: "calibration_lens_solve",
+        id: 707,
+        parameters: [
+          {
+            field: "select_calibration",
+            name: "calibration_id",
+            value: "",
+            text: t("modal.plugin.calibration_static_dlt.calibration_id"),
+            hint: t("modal.plugin.calibration_lens_solve.calibration_id_hint"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 2,
+            max: 20,
+            value: 8,
+            step: 1,
+            name: "num_frames",
+            text: t("modal.plugin.calibration_lens_solve.num_frames"),
+            hint: t("modal.plugin.calibration_lens_solve.num_frames_hint"),
+          },
+        ],
+      },
+      {
         name: t("modal.plugin.kpi_computation.plugin_name"),
         description: t("modal.plugin.kpi_computation.plugin_description"),
         icon: "mdi-chart-line",

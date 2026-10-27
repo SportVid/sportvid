@@ -597,6 +597,31 @@
           </v-list-item>
 
           <v-list-item
+            class="menu-item"
+            :disabled="!calibrationAssetStore.calibrationMatrix"
+            @click="
+              () => {
+                calibrationAssetStore.togglePitchOverlay();
+                showMarkerTypeMenu = false;
+              }
+            "
+          >
+            <v-list-item-title class="d-flex justify-space-between">
+              {{ $t("calibration_asset.view_pitch_overlay") }}
+              <v-icon
+                :class="{
+                  'text-disabled': !calibrationAssetStore.showPitchOverlay,
+                  'text-red': calibrationAssetStore.showPitchOverlay,
+                }"
+                class="mb-1"
+                size="small"
+              >
+                mdi-check
+              </v-icon>
+            </v-list-item-title>
+          </v-list-item>
+
+          <v-list-item
             v-if="calibrationAssetStore.calibrationAssetType === 'marker'"
             class="menu-item"
             @click="

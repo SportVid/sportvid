@@ -9,7 +9,7 @@ import { usePositionDataStore } from "@/stores/position_data";
 // disabled-Select tooltip -- can explain to the user exactly what's still missing instead of
 // just showing a bare disabled button.
 const TRACKER_TYPES = ["bytetrack", "object_tracker"];
-const DLT_TYPES = ["calibration_static_dlt"];
+const DLT_TYPES = ["calibration_static_dlt", "calibration_lens_solve"];
 const UPLOAD_TYPES = ["posdata_convert"];
 const KPI_TYPES = ["kpi_computation"];
 

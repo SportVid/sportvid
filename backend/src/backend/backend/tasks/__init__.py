@@ -4,6 +4,7 @@ from .audio_freq import *
 from .color_analysis import *
 from .insightface_identification import *
 from .shot_type_classification import *
+from .camera_motion_classification import *
 from .shotdetection import *
 from .thumbnail import *
 from .clip import *
@@ -17,6 +18,7 @@ from .ocr import *
 from .object_tracker import *
 from .bytetrack import * # TODO: remove after integration of object_tracker
 from .calibration_static_dlt import *
+from .calibration_lens_solve import *
 from .posdata_convert import *
 from .floodlight_convert import *
 from .kpi_computation import *

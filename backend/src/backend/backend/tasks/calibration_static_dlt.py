@@ -2,7 +2,7 @@ import logging
 import json
 from django.db import transaction
 from django.conf import settings
-from typing import Dict
+from typing import Dict, List, Optional
 
 from backend.models import (
     CalibrationAssets,
@@ -11,11 +11,22 @@ from backend.models import (
 )
 from backend.plugin_manager import PluginManager
 from backend.utils.task import Task
+from backend.utils.lens import (
+    camera_pose_from_homography,
+    lens_intrinsics_snapshot,
+    reprojection_rmse,
+    undistort_with_snapshot,
+    undistorted_camera_matrix,
+)
+from backend.utils.pitch import normalize_sport, object_pitch_positions
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("calibration_static_dlt")
 class CalibrationStaticDlt(Task):
+    # progress share of the homography fit; subclasses that run another analyser first move it to the end
+    dlt_progress_range = None
+
     ray_plugins = ("calibration_static_dlt",)
 
     def __init__(self):
@@ -55,36 +66,74 @@ class CalibrationStaticDlt(Task):
         if len(point_correspondences) < 4:
             raise Exception("Not enough valid point correspondences (min 4 required)")
         
-        # convert point correspondences
+        video_db = data_db.video or video
+        field_length = (video_db.field_length if video_db else None) or 105.0
+        field_width = (video_db.field_width if video_db else None) or 68.0
+        sport = normalize_sport(data_db.sport, video_db.sport if video_db else None)
+
+        # convert point correspondences; markers get their metric position on this pitch by name (the
+        # template's relative position is only right on a pitch of the template's reference size)
         point_correspondences_dict = []
+        keypoints = []      # markers placed by the pitch model: {"name", "video" (relative), "pitch" (metres)}
         for point in point_correspondences:
+            keypoint, positions = object_pitch_positions(
+                sport, data_db.object_type, point.name, point.comp_area_coords_rel, field_length, field_width
+            )
+            dst = positions[0]
+            if keypoint is not None:
+                keypoints.append({
+                    "name": keypoint,
+                    "video": [point.video_coords_rel[0]["x"], point.video_coords_rel[0]["y"]],
+                    "pitch": [dst[0] * field_length, dst[1] * field_width],
+                })
             point_correspondences_dict.append({
-                "dst": {
-                    "x": point.comp_area_coords_rel[0]["x"],
-                    "y": point.comp_area_coords_rel[0]["y"]
-                },
+                "dst": {"x": dst[0], "y": dst[1]},
                 "src": {
                     "x": point.video_coords_rel[0]["x"],
                     "y": point.video_coords_rel[0]["y"]
                 }
             })
-        # all parameters are serialized based on strings when calling run_analyser
-        plugin_parameters = {
-            "point_correspondences": json.dumps(point_correspondences_dict),
-        }
-        manager = DataManager(self.config["output_path"]) 
+        logging.info(
+            f"Calibration asset {data_db.id}: {len(keypoints)}/{len(point_correspondences_dict)} point(s) placed by the "
+            f"{sport or 'unknown'} pitch model on {field_length} x {field_width} m, the rest by template position"
+        )
+        manager = DataManager(self.config["output_path"])
         client = TaskAnalyserClient(
             host=self.config["analyser_host"],
             port=self.config["analyser_port"],
             plugin_run_db=plugin_run,
             manager=manager,
         )
+
+        # with a lens the homography is fitted on undistorted video coordinates
+        lens_intrinsics = self.lens_intrinsics(
+            client, video_db, keypoints, field_length, field_width, sport, plugin_run
+        )
+        if lens_intrinsics is not None:
+            undistorted = undistort_with_snapshot(
+                [[p["src"]["x"], p["src"]["y"]] for p in point_correspondences_dict], lens_intrinsics
+            )
+            valid = []
+            for point, (x, y) in zip(point_correspondences_dict, undistorted):
+                # NaN: beyond the lens model's valid range
+                if x == x and y == y:
+                    point["src"] = {"x": float(x), "y": float(y)}
+                    valid.append(point)
+            if len(valid) < 4:
+                raise Exception("Not enough valid point correspondences after undistortion (min 4 required)")
+            point_correspondences_dict = valid
+
+        # all parameters are serialized based on strings when calling run_analyser
+        plugin_parameters = {
+            "point_correspondences": json.dumps(point_correspondences_dict),
+        }
         result = self.run_analyser(
             client,
             "calibration_static_dlt",
             parameters=plugin_parameters,
             inputs={},
             downloads=["homography"],
+            progress_range=self.dlt_progress_range,
         )
 
         if result is None: raise Exception
@@ -93,6 +142,27 @@ class CalibrationStaticDlt(Task):
             with result[1]["homography"] as homography_data:
                 homography_matrix = homography_data.y.tolist()
                 data_db.homography_matrix = homography_matrix
+                data_db.lens_intrinsics = lens_intrinsics
+                data_db.reprojection_error = reprojection_rmse(
+                    homography_matrix,
+                    [[p["src"]["x"], p["src"]["y"]] for p in point_correspondences_dict],
+                    [[p["dst"]["x"], p["dst"]["y"]] for p in point_correspondences_dict],
+                    field_length,
+                    field_width,
+                )
+                data_db.camera_pose = None
+                if lens_intrinsics is not None:
+                    try:
+                        data_db.camera_pose = camera_pose_from_homography(
+                            homography_matrix,
+                            undistorted_camera_matrix(lens_intrinsics),
+                            lens_intrinsics["width"],
+                            lens_intrinsics["height"],
+                            field_length=field_length,
+                            field_width=field_width,
+                        )
+                    except Exception:
+                        logging.exception(f"Camera pose estimation failed for calibration asset {data_db.id}")
                 data_db.save()
                 logging.debug(f"Updated homography matrix {homography_matrix} for calibration asset {data_db.id}")
 
@@ -101,3 +171,18 @@ class CalibrationStaticDlt(Task):
             # "plugin_run_results": [plugin_run_result_db.id.hex],
             # "data": {"homography": result[1]["homography"].id},
         }
+
+    def lens_intrinsics(
+        self,
+        client: TaskAnalyserClient,
+        video_db: Optional[Video],
+        keypoints: List[Dict],
+        field_length: float,
+        field_width: float,
+        sport: Optional[str],
+        plugin_run: Optional[PluginRun],
+    ) -> Optional[Dict]:
+        """The lens the clicks are undistorted with before the homography fit: the video's lens profile, if any."""
+        if video_db is None or video_db.lens_profile is None:
+            return None
+        return lens_intrinsics_snapshot(video_db.lens_profile, video_db.width, video_db.height, crop=video_db.lens_crop)

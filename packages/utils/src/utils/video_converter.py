@@ -41,12 +41,7 @@ def _build_command(
 ) -> list[str]:
     input_kwargs: dict[str, Any] = {}
 
-    # TODO: Defining these offloads encoding to the GPU via CUDA.
-    # Didn't work for me, so I disabled GPU-based encoding.
-    # NOTE: with every entry commented out this list is empty, so nothing the
-    # caller passes as an input option ever reaches FFmpeg and decoding always
-    # runs on the CPU -- regardless of what convert_video.py's conversion_args
-    # say about "hwaccel". Worth knowing before trusting those settings.
+    # NOTE: Defining these offloads encoding to the GPU via CUDA.
     input_args = [
         # "hwaccel",
         # "hwaccel_output_format",
