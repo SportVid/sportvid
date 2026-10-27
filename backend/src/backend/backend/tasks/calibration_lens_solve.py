@@ -29,6 +29,9 @@ class CalibrationLensSolve(CalibrationStaticDlt):
     dlt_progress_range = (0.9, 1.0)
     MIN_KEYPOINTS = 6
 
+    # the lens solve runs first, then the inherited homography fit
+    ray_plugins = ("calibration_lens_solve", "calibration_static_dlt")
+
     def __call__(self, parameters: Dict, **kwargs):
         self.solver_parameters = {k: parameters[k] for k in SOLVER_PARAMETERS if parameters.get(k) is not None}
         return super().__call__(parameters, **kwargs)

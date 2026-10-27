@@ -1,4 +1,4 @@
-"""S3: password rules, admin approval of new accounts, and the account commands."""
+"""Password rules, admin approval of new accounts, and the account commands."""
 import json
 
 import pytest

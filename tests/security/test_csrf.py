@@ -1,4 +1,4 @@
-"""B7: state-changing requests need the CSRF token, as the frontend sends it.
+"""State-changing requests need the CSRF token, as the frontend sends it.
 
 The frontend first GETs user/csrf (sets the csrftoken cookie), then sends the cookie's
 value as X-CSRFToken on every request (frontend/src/plugins/axios.js).

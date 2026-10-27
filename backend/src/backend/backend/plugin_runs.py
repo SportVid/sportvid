@@ -1,4 +1,4 @@
-"""Reconciliation of plugin runs whose Celery task is gone (audit B4).
+"""Reconciliation of plugin runs whose Celery task is gone.
 
 When a worker restarts or crashes, the run it was executing stays RUNNING (or WAITING)
 in the database. `reconcile_plugin_runs()` marks such runs UNKNOWN. It runs once at

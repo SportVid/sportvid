@@ -1,4 +1,4 @@
-"""V3: every plugin run and external call has a time limit (PLUGIN_RUN_TIMEOUT)."""
+"""Every plugin run and external call has a time limit (PLUGIN_RUN_TIMEOUT)."""
 import types
 from contextlib import nullcontext
 

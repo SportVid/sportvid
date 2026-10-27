@@ -44,7 +44,7 @@ def _mark_running(plugin_run):
 
 
 def _recordable_parameters(parameters):
-    """Validated parameters as stored on the PluginRun (audit V4).
+    """Validated parameters as stored on the PluginRun.
 
     Uploaded files are recorded by their original name only; their temporary paths
     mean nothing after the run.

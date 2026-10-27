@@ -26,7 +26,7 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 # build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# One settings file for every environment (docs/adr/0002). ENVIRONMENT is "local" for
+# One settings file for every environment. ENVIRONMENT is "local" for
 # the docker-compose*.yml stacks on a developer machine, "dev" or "prod" on the servers.
 # Anything else, including unset, is treated like a server, so a missing variable fails
 # closed (see the checks at the end of this file).
@@ -68,7 +68,7 @@ VALKEY_HOST = os.getenv("VALKEY_CLIENT_HOST", "valkey")
 VALKEY_PORT = int(os.getenv("VALKEY_INTERNAL_PORT", "6380"))
 VALKEY_PASSWORD = os.getenv("VALKEY_PASSWD") or None
 
-# Seconds one analyser job of a plugin run may take (audit V3). The analyser reads the
+# Seconds one analyser job of a plugin run may take. The analyser reads the
 # same variable for its HTTP call to Ray Serve. Celery's time_limit cannot do this:
 # it is not enforced by the threads pool the workers use.
 PLUGIN_RUN_TIMEOUT = int(os.getenv("PLUGIN_RUN_TIMEOUT", str(12 * 3600)))
@@ -283,7 +283,7 @@ PUBLIC_BASE_URL = PUBLIC_BASE_URL.rstrip("/")
 if not THUMBNAIL_URL:
     THUMBNAIL_URL = f"{PUBLIC_BASE_URL}/thumbnails/"
 
-# ---------- fail closed on the servers (docs/adr/0002)
+# ---------- fail closed on the servers
 if IS_LOCAL:
     SECRET_KEY = globals().get("SECRET_KEY") or "local-development-only-not-a-secret"
 else:

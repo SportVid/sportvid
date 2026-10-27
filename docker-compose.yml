@@ -253,7 +253,7 @@ services:
     # SSE requires threaded workers so /events/stream does not occupy a whole worker per connection.
     # PROMETHEUS_MULTIPROC_DIR must exist before gunicorn forks its workers, hence the mkdir.
     # ensure_dev_admin creates the local admin from .env (DEV_ADMIN_*); it refuses outside ENVIRONMENT=local.
-    # reconcile_plugin_runs marks runs orphaned by a restart as UNKNOWN once, before gunicorn starts (B4).
+    # reconcile_plugin_runs marks runs orphaned by a restart as UNKNOWN once, before gunicorn starts.
     command: >
       bash -c "
       mkdir -p /tmp/prometheus_multiproc &&

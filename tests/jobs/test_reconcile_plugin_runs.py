@@ -1,4 +1,4 @@
-"""B4: startup reconciliation must never break the app and must read every inspect() format."""
+"""Startup reconciliation must never break the app and must read every inspect() format."""
 import uuid
 
 import pytest

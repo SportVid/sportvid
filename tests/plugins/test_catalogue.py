@@ -1,4 +1,4 @@
-"""B6: only plugins whose Ray plugins are deployed are offered and accepted."""
+"""Only plugins whose Ray plugins are deployed are offered and accepted."""
 import ast
 import inspect
 import json
@@ -61,11 +61,12 @@ def test_unreachable_analyser_means_unknown(db, settings):
 
 @pytest.mark.parametrize("plugin", sorted(PluginManager._plugins) or ["(none)"])
 def test_declared_ray_plugins_match_the_task_code(plugin):
-    """Task.ray_plugins must list exactly the Ray plugins its run_analyser() calls name."""
+    """Task.ray_plugins must list exactly the Ray plugins its run_analyser() calls name,
+    including the calls a subclass inherits from its base task (e.g. calibration_lens_solve)."""
     task_cls = PluginManager.get_plugin(plugin)
-    tree = ast.parse(inspect.getsource(inspect.getmodule(task_cls)))
+    modules = {inspect.getmodule(cls) for cls in task_cls.__mro__ if cls.__module__.startswith("backend.tasks.")}
     called = {
-        node.args[1].value for node in ast.walk(tree)
+        node.args[1].value for module in modules for node in ast.walk(ast.parse(inspect.getsource(module)))
         if isinstance(node, ast.Call) and getattr(node.func, "attr", "") == "run_analyser"
         and len(node.args) > 1 and isinstance(node.args[1], ast.Constant)
     }

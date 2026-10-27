@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class PluginAvailable(View):
-    """Backend plugins whose Ray plugins are all deployed (audit B6).
+    """Backend plugins whose Ray plugins are all deployed.
 
     plugins is null when the analyser cannot be asked; clients then offer everything.
     """

@@ -1,4 +1,4 @@
-"""Per-user storage quota (audit S4).
+"""Per-user storage quota.
 
 `used_storage_size` counts uploaded videos and tracking data. Uploads check the quota
 before anything is written, and the counter is changed with single UPDATE statements,

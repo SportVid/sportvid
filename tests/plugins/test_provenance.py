@@ -1,4 +1,4 @@
-"""V4: a plugin run records the parameters it was started with and the Ray plugin versions."""
+"""A plugin run records the parameters it was started with and the Ray plugin versions."""
 import json
 import types
 

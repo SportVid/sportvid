@@ -1,4 +1,4 @@
-"""Characterization: legitimate uses of the code paths behind B1, B8 and B3."""
+"""Characterization: legitimate uses of admin user management, tracking-data deletion and model checkpoints."""
 import json
 
 import pytest
@@ -10,7 +10,7 @@ def post_json(client, path, payload):
     return client.post(path, json.dumps(payload), content_type="application/json")
 
 
-# ---------- B1: admin user management
+# ---------- admin user management
 def test_admin_can_change_another_users_role_and_limits(as_user, world):
     response = post_json(as_user("adam"), "/user/update", {
         "params": {"update_type": "admin", "id": world.bob.id, "role": "researcher", "max_video_size": 123},
@@ -33,7 +33,7 @@ def test_user_can_update_own_email(as_user, world):
     assert world.bob.email == "new@example.org"
 
 
-# ---------- B8: deleting tracking data
+# ---------- deleting tracking data
 def test_owner_can_delete_own_tracking_data(as_user, world):
     response = post_json(as_user("alice"), "/tracking_data/delete", {"id": world.tracking_data.id.hex})
     assert response.json()["status"] == "ok"
@@ -46,7 +46,7 @@ def test_delete_all_removes_the_callers_tracking_data(as_user, world):
     assert not TrackingData.objects.filter(owner=world.bob).exists()
 
 
-# ---------- B3: model checkpoints the UI and the presets use
+# ---------- model checkpoints the UI and the presets use
 def _validate(plugin, parameters):
     from backend.plugin_manager import PluginManager
 

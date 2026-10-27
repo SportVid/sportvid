@@ -3,7 +3,7 @@
 Pinned on the unchanged code (develop @ bfa2cf9): the HTTP status and the body's "status"
 field for the video owner, an admin, and a researcher reading. Some pinned responses are
 errors that already happen today for valid input (e.g. shortcut/create is broken); they
-are pinned on purpose and tracked in docs/todos/BACKEND.md.
+are pinned on purpose.
 """
 import pytest
 

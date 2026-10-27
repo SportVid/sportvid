@@ -129,7 +129,7 @@ class AnalyserCacheWrapper:
         return results
 
 # TODO: Ensure session.close() actually interrupts in-flight requests quickly enough
-# (the Ray HTTP call has a timeout since V3, see inference_ray.plugin.PLUGIN_RUN_TIMEOUT).
+# (the Ray HTTP call has a timeout, see inference_ray.plugin.PLUGIN_RUN_TIMEOUT).
 # TODO: Implement periodic cleanup of cancel_events and sessions dicts to
 # prevent unbounded growth in long-running analyser processes.
 def run_plugin(args):
@@ -283,7 +283,7 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
     def list_plugins(self, request, context):
         reply = analyser_pb2.ListPluginsReply()
 
-        # Only plugins whose Ray Serve application is running can be used (audit B6);
+        # Only plugins whose Ray Serve application is running can be used;
         # the version is the one the result cache keys on.
         for status in self.managers["plugin_manager"].plugin_status():
             if not status.get("is_running"):

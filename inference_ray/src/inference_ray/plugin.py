@@ -18,7 +18,7 @@ from typing import Union, Dict, Any
 # from inference_ray.callback import AnalyserPluginCallback
 
 # Seconds one plugin call to Ray Serve may take (PLUGIN_RUN_TIMEOUT in .env, shared with
-# the backend, audit V3). Connecting and the status query must answer quickly.
+# the backend). Connecting and the status query must answer quickly.
 PLUGIN_RUN_TIMEOUT = float(os.environ.get("PLUGIN_RUN_TIMEOUT", 12 * 3600))
 RAY_CONNECT_TIMEOUT = 10
 RAY_STATUS_TIMEOUT = 10
@@ -234,7 +234,7 @@ class AnalyserPluginManager(Manager):
         return plugin_to_run(config)
 
     # TODO: Long-running plugin implementations should periodically check cancel_event
-    # to exit early (the HTTP call itself has a timeout since V3).
+    # to exit early (the HTTP call itself has a timeout).
     def __call__(
         self,
         plugin: str,

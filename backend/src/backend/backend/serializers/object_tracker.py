@@ -334,7 +334,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
         return params
 
     # Model files are fixed per detector preset: weights are unpickled when loaded, so a
-    # client must never choose the file (docs/adr/0004).
+    # client must never choose the file.
     MODEL_FILE_KEYS = ("checkpoint", "model_path", "model_checkpoint")
 
     def _validate_model_files(self, detector: str, params: Mapping[str, Any]) -> None:

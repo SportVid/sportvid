@@ -1,4 +1,4 @@
-"""B8: tracking_data/delete with id "all" must only delete the caller's own tracking data."""
+"""tracking_data/delete with id "all" must only delete the caller's own tracking data."""
 import json
 
 from backend.models import PluginRun, TrackingData

@@ -31,7 +31,7 @@ class OSNetReIdentificationSerializer(serializers.Serializer):
         required=False,
         default="osnet_x1_0",
     )
-    # Only the server-side checkpoints listed above (docs/adr/0004).
+    # Only the server-side checkpoints listed above.
     checkpoint = serializers.ChoiceField(
         choices=MODEL_CHECKPOINTS,
         required=False,

@@ -103,9 +103,3 @@ The backend has a pytest-django suite in `tests/`. It needs no running container
 ```sh
 uv run --package backend --group dev pytest
 ```
-
-## Documentation
-
-- [ARCHITECTURE.md](ARCHITECTURE.md): how the platform is built, the adopted target rules (T1–T19) and their status. Decisions are recorded in [docs/adr/](docs/adr/).
-- [docs/tutorials/](docs/tutorials/): [STRUCTURE.md](docs/tutorials/STRUCTURE.md) (repo layout), [BACKEND101.md](docs/tutorials/BACKEND101.md) (backend development), [PLUGIN101.md](docs/tutorials/PLUGIN101.md) (adding an analysis plugin).
-- [docs/todos/](docs/todos/README.md): open work per area.

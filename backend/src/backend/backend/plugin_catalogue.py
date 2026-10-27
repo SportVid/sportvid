@@ -1,4 +1,4 @@
-"""Which plugins can run right now (audit B6, docs/adr/0003).
+"""Which plugins can run right now.
 
 A backend plugin can run only if every Ray Serve plugin its task calls
 (`Task.ray_plugins`) is deployed and running. The analyser reports the running Ray

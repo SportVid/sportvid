@@ -1,4 +1,4 @@
-"""Object-level access rules (ARCHITECTURE.md T2, docs/adr/0001).
+"""Object-level access rules.
 
 Who may access an object:
 

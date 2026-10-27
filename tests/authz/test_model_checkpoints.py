@@ -1,4 +1,4 @@
-"""B3: clients cannot choose which model file a plugin loads (docs/adr/0004)."""
+"""Clients cannot choose which model file a plugin loads."""
 import pytest
 from rest_framework import serializers
 

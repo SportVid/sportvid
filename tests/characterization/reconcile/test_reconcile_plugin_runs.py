@@ -1,4 +1,4 @@
-"""Characterization: startup reconciliation of unfinished plugin runs (audit B4).
+"""Characterization: startup reconciliation of unfinished plugin runs.
 
 At startup, runs that no Celery worker reports any more are marked UNKNOWN. The fake
 inspect below answers like celery.app.control.inspect() does.
@@ -13,7 +13,7 @@ RUN_PLUGIN = "backend.plugin_manager.run_plugin"
 
 
 def reconcile():
-    """The seam under test: startup reconciliation, run once at backend start (B4)."""
+    """The seam under test: startup reconciliation, run once at backend start."""
     from django.core.management import call_command
 
     call_command("reconcile_plugin_runs", wait_for_workers=0)
@@ -99,7 +99,7 @@ def test_nothing_changes_when_no_worker_answers(fake_inspect, runs):
 
 
 def test_queued_runs_are_untouched(fake_inspect, runs):
-    # Changed on purpose in B4 (agreed 2026-10-23): a queued task may still wait in the
+    # Changed on purpose (agreed 2026-10-23): a queued task may still wait in the
     # broker, which inspect() cannot see. Before, every restart flipped them to UNKNOWN.
     queued = runs(PluginRun.STATUS_QUEUED)
     fake_inspect["inspect"] = FakeInspect()

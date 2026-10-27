@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0060_pluginrun_eta_seconds_video_eta_seconds_and_more'),
+        ('backend', '0064_video_lens_crop'),
     ]
 
     operations = [

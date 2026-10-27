@@ -1,4 +1,4 @@
-"""Guard for model weight files (docs/adr/0004).
+"""Guard for model weight files.
 
 Loading weights unpickles them, so a plugin must only load files from the server's model
 folder, never a path or URL that arrived with a request.

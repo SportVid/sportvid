@@ -1,4 +1,4 @@
-"""S4: uploads respect max_storage_size; plugin uploads respect max_file_size; usage can be recomputed."""
+"""Uploads respect max_storage_size; plugin uploads respect max_file_size; usage can be recomputed."""
 import json
 from io import StringIO
 

@@ -31,7 +31,7 @@ class Task:
 
     @staticmethod
     def _record_provenance(plugin_run, ray_plugin):
-        """Append the Ray plugin and its deployed version to plugin_run.provenance (V4)."""
+        """Append the Ray plugin and its deployed version to plugin_run.provenance."""
         if plugin_run is None:
             return
         from backend.plugin_catalogue import deployed_ray_plugins

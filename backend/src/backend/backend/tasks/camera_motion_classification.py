@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 @PluginManager.export_plugin("camera_motion_classification")
 class CameraMotionClassifier(Task):
+    ray_plugins = ("camera_motion_classifier",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

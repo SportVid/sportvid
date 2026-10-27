@@ -1,4 +1,4 @@
-"""B2: object IDs from a request are resolved through the owner (backend/permissions.py).
+"""Object IDs from a request are resolved through the owner (backend/permissions.py).
 
 For every endpoint that takes an object ID, a request against alice's objects by
 another user, by an anonymous client, or (for writes) by a researcher must change

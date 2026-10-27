@@ -65,7 +65,7 @@ def world(db):
     )
 
     # The frontend calls video/analysis/get (which creates this row) before any setter;
-    # the setters crash without it (see the findings in docs/todos/BACKEND.md).
+    # the setters crash without it.
     w.analysis_state = VideoAnalysisState.objects.create(video=w.video)
 
     w.calibration = CalibrationAssets.objects.create(owner=w.alice, video=w.video, name="cal")

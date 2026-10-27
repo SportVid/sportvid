@@ -1,4 +1,4 @@
-"""B1: only admins may use the admin branches of user/update, user/delete and user/admin/user/list."""
+"""Only admins may use the admin branches of user/update, user/delete and user/admin/user/list."""
 import json
 
 import pytest
