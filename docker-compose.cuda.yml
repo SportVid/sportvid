@@ -184,6 +184,9 @@ services:
       - /tmp
       - /var
     working_dir: /app/backend/src/backend/
+    environment:
+      # "video" mounts the driver's NVENC library, so HLS_ENCODER=auto can pick h264_nvenc
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
     deploy:
       resources:
         reservations:

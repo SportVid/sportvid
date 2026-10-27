@@ -6,6 +6,7 @@ import json
 import logging
 
 from celery.schedules import crontab
+from django.core.exceptions import ImproperlyConfigured
 from kombu import Queue
 
 # now using two separate celery workers for IO/gpu-bound processing
@@ -72,6 +73,12 @@ VALKEY_PASSWORD = os.getenv("VALKEY_PASSWD") or None
 # same variable for its HTTP call to Ray Serve. Celery's time_limit cannot do this:
 # it is not enforced by the threads pool the workers use.
 PLUGIN_RUN_TIMEOUT = int(os.getenv("PLUGIN_RUN_TIMEOUT", str(12 * 3600)))
+
+# Video encoder of the HLS conversion: "nvenc" (GPU), "x264" (CPU) or "auto", which uses
+# NVENC when the gpu worker can encode with it (utils.video_converter.nvenc_available).
+HLS_ENCODER = os.getenv("HLS_ENCODER", "auto").strip().lower()
+if HLS_ENCODER not in ("auto", "nvenc", "x264"):
+    raise ImproperlyConfigured(f"HLS_ENCODER must be auto, nvenc or x264, not {HLS_ENCODER!r}")
 
 LOGGING = {
     "version": 1,
@@ -263,8 +270,6 @@ config_lut = {
     "annotation_max_length": "ANNOTATION_MAX_LENGTH",
     "public_base_url": "PUBLIC_BASE_URL",
 }
-
-from django.core.exceptions import ImproperlyConfigured  # noqa: E402
 
 config_path = os.getenv("DJANGO_SETTINGS_SECRET", "/run/secrets/django_settings")
 

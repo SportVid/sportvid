@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import logging
 import os
 import signal
@@ -10,6 +11,54 @@ from typing import Any
 
 
 logger = logging.getLogger(__name__)
+
+# HLS_ENCODER values: "auto" picks NVENC when this machine can encode with it, else libx264
+HLS_ENCODERS = ("auto", "nvenc", "x264")
+
+# encoder-specific output options; everything else in the HLS call is shared
+_ENCODER_ARGS = {
+    # crf: constant rate factor [0-51], lower means higher quality and larger files
+    "x264": {"vcodec": "libx264", "crf": 23},
+    # preset trades encoding speed against compression [p1-p7]; vbr with cq 23 is close to crf 23
+    "nvenc": {"vcodec": "h264_nvenc", "preset": "p4", "rc": "vbr", "cq": 23},
+}
+
+
+@functools.lru_cache(maxsize=1)
+def nvenc_available() -> bool:
+    """Whether h264_nvenc works here, checked once per process.
+
+    `ffmpeg -encoders` only shows build support, so this encodes a few black frames:
+    that also needs an NVIDIA GPU and the driver's video capability in the container.
+    """
+    command = [
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin",
+        "-f", "lavfi", "-i", "color=c=black:s=256x256:d=0.2",
+        "-c:v", "h264_nvenc", "-f", "null", "-",
+    ]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        logger.info("NVENC probe failed, using libx264: %s", e)
+        return False
+    if result.returncode != 0:
+        logger.info("NVENC not available, using libx264: %s", result.stderr.strip()[-300:])
+        return False
+    return True
+
+
+def resolve_hls_encoder(setting: str | None) -> str:
+    """Map an HLS_ENCODER value to "nvenc" or "x264"."""
+    value = (setting or "auto").strip().lower()
+    if value not in HLS_ENCODERS:
+        raise ValueError(f"HLS_ENCODER must be one of {HLS_ENCODERS}, got {setting!r}")
+    if value == "auto":
+        return "nvenc" if nvenc_available() else "x264"
+    return value
+
+
+def hls_encoder_args(encoder: str) -> dict[str, Any]:
+    return dict(_ENCODER_ARGS[encoder])
 
 
 def terminate_process_group(

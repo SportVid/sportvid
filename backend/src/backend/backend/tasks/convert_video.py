@@ -16,7 +16,9 @@ from backend.utils import media_dir_to_file, media_path_to_file, publish_video
 from backend.utils.events import cancellation_watcher
 from backend.models import Video
 from backend.plugin_manager import PluginManager
-from utils.video_converter import convert_to_hls, probe_media_start, terminate_process_group
+from utils.video_converter import (
+    convert_to_hls, hls_encoder_args, probe_media_start, resolve_hls_encoder, terminate_process_group,
+)
 from utils.helper import remove_file, remove_dir
 
 from backend.utils.eta import EtaEstimator
@@ -221,7 +223,8 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         segment_time = 5
         gop = max(1, round(fps * segment_time))
         
-        # TODO: dynamic decoding based on GPU availability and deployment mode.
+        # NVENC or libx264 by HLS_ENCODER; decoding stays on the CPU either way
+        encoder = resolve_hls_encoder(settings.HLS_ENCODER)
         fmp4 = True
         
         conversion_args = {
@@ -231,40 +234,16 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 # $ top -H -p <ffmpeg_pid>
             "hls_playlist_type": "vod",
             "segment_time" : segment_time,
-            # -------- input: hardware acceleration
-            # NOTE: uncomment these lines if running without a GPU.
-            # "hwaccel": "cuda",
-            # "hwaccel_output_format": "cuda",
-            # -------- output: video/audio options
-            "vcodec" : "libx264", # NOTE: use "libx264" for CPU conversion.
-            # "vcodec" : "h264_nvenc" # NOTE: Use "h264_nvenc" for GPU conversion via NVENC
+            # -------- output: video/audio options (vcodec and rate control: hls_encoder_args)
+            **hls_encoder_args(encoder),
             "acodec" : "aac",
             "audio_bitrate" : "128k",
             # -------- HLS stuff
             "g": gop, # GOP size should match segment duration
             "keyint_min": gop, # same as GOP
             # "sc_threshold": 0, # no unpredictable keyframe insertions
-            "crf": 23,  # NOTE: Comment this line in for "libx264". Constant rate factor [0-51] --> lower: higher quality & larger file; higher: more compression & lower quality. 
-            # -------- NVENC tuning
-            # "preset": "p4", # NOTE: Uncomment if using GPU conversion. Controls encoding speed --vs.-- compression trade-off [p1-p7].
-            "rc": "vbr",
-            "cq": 23,
             # -------- output compat
-            # No B-frames. Their reordering makes FFmpeg's HLS/fMP4 muxer write a
-            # bogus baseMediaDecodeTime into the fragments, so the media carries
-            # timestamps starting somewhere else entirely while the playlist still
-            # claims the stream starts at 0. hls.js passes fMP4 straight through to
-            # MSE, so the browser buffers the data out at that offset, the playhead
-            # at 0 finds nothing, and the video never renders -- no error anywhere,
-            # while the byte ranges keep loading happily.
-            #
-            # How far off it lands depends on the encoder: libx264 produces a
-            # harmless ~66 ms that hls.js' gap controller skips over, h264_nvenc
-            # produced 100.2 s on a 60 s clip. Which is why this stayed invisible
-            # on the CPU path and broke the moment deploy-dev switched to NVENC.
-            # Keep this at 0 on every encoder so the branches behave alike; it
-            # costs roughly 4 % bitrate on libx264 and nothing measurable on NVENC.
-            "bf": 0,
+            "bf": 0, # no B-frames
             # "pix_fmt": "yuv420p", # pixel format of the output
             "loglevel": "error"
         }
@@ -284,8 +263,9 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             })
             
         logger.info(
-            "Starting HLS conversion for %s: %s -> %s",
+            "Starting HLS conversion for %s with %s: %s -> %s",
             video_id_hex,
+            encoder,
             file_in,
             manifest,
         )
