@@ -1,0 +1,341 @@
+# Prod server (sportvid.dshs-koeln.de), started by `manage.sh prod …` as compose project "prod".
+# Postgres and the nginx proxy run in the shared stack (docker-compose.db.yml, docker-compose.proxy.yml).
+# Configuration: /opt/deploy/.env.prod and the settings secret it names (SPORTVID_BACKEND_CONFIG).
+# Server-only additions (e.g. monitoring) are committed on deploy-prod, not here.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "5"
+
+networks:
+  shared:
+    external: true
+  prod:
+    driver: bridge
+
+secrets:
+  django_settings:
+    file: ${SPORTVID_BACKEND_CONFIG}
+
+volumes:
+  assets:
+    external: true
+    name: frontend-assets
+
+services:
+  inference_ray:
+    container_name: inference_ray_prod
+    user: "${UID:-1003}:${GID:-1003}"
+    image: sportvid_prod-inference_ray:latest
+    build:
+      context: .
+      dockerfile: inference_ray/Dockerfile
+      args:
+        - UID=${UID:-1003}
+        - GID=${GID:-1003}
+    init: true
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    # no dashboard port: only one stack on the host can publish 8265, and the dev stack does
+    shm_size: "12g" # NOTE: should be 30% of total available memory?
+    environment:
+      - HF_HOME=/models
+      - NUMBA_CACHE_DIR=/tmp
+      - NVIDIA_VISIBLE_DEVICES=all
+    env_file:
+      - /opt/deploy/.env.prod
+    volumes:
+      - ${DATA_PATH}/analyser:/data/
+      - ${DATA_PATH}/media/:/media/
+      - ${DATA_PATH}/models/:/models/
+      - ./inference_ray:/app/inference_ray
+      - ./analyser:/app/analyser
+      - ./packages:/app/packages
+      - ./backend:/app/backend
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./.python-version:/app/.python-version
+    working_dir: /app/
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0", "1", "2"] # dev uses ["3"]
+              capabilities: [gpu]
+    # Ray Serve listens on 8000 (deploy.prod.yml); dev uses 8001, both run on the same host
+    command: uv run --no-sync --package inference_ray serve run /app/inference_ray/deploy.prod.yml
+    logging: *logging
+    networks:
+      - prod
+
+  analyser:
+    container_name: analyser_prod
+    user: "${UID:-1003}:${GID:-1003}"
+    image: sportvid_prod-analyser:latest
+    build:
+      context: .
+      args:
+        - UID=${UID:-1003}
+        - GID=${GID:-1003}
+    environment:
+      - INFERENCE_RAY_PORT=8000 # http_options.port in inference_ray/deploy.prod.yml
+    env_file:
+      - /opt/deploy/.env.prod
+    volumes:
+      - ${DATA_PATH}/analyser:/data/
+      - ${DATA_PATH}/media/:/media/
+      - ${DATA_PATH}/cache/:/cache/
+      - ./inference_ray:/app/inference_ray
+      - ./analyser:/app/analyser
+      - ./packages:/app/packages
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./.python-version:/app/.python-version
+    working_dir: /app/
+    command: uv run --no-sync --package analyser analyser/src/analyser/server.py -v -c analyser/config.yml
+    logging: *logging
+    networks:
+      - prod
+
+  memcached:
+    container_name: memcached_prod
+    image: memcached:1.6.10-buster
+    command: -I 32m
+    logging: *logging
+    networks:
+      - prod
+
+  valkey:
+    container_name: valkey_prod
+    image: valkey/valkey:8.1.1-alpine
+    env_file:
+      - /opt/deploy/.env.prod
+    command:
+      - "/usr/local/bin/valkey-server"
+      - "--bind"
+      - "${VALKEY_INTERNAL_HOST}"
+      - "--port"
+      - "${VALKEY_INTERNAL_PORT}"
+      - "--requirepass"
+      - "${VALKEY_PASSWD}"
+      - "--protected-mode"
+      - "yes"
+    ports:
+      - ${VALKEY_INTERNAL_PORT}:${VALKEY_INTERNAL_PORT} # open on purpose, for debugging from outside
+    healthcheck:
+      # $$ leaves the password to the container's environment instead of the compose file
+      test: ["CMD-SHELL", "valkey-cli -p ${VALKEY_INTERNAL_PORT} -a \"$$VALKEY_PASSWD\" --no-auth-warning ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging: *logging
+    networks:
+      - prod
+
+  celery-io:
+    container_name: celery-io_prod
+    user: "${UID:-1003}:${GID:-1003}"
+    image: sportvid-celery-io_prod:latest
+    build:
+      context: .
+      args:
+        - UID=${UID:-1003}
+        - GID=${GID:-1003}
+    env_file:
+      - /opt/deploy/.env.prod
+    secrets:
+      - django_settings
+    volumes:
+      - ${DATA_PATH}/media/:/media
+      - ${DATA_PATH}/predictions:/predictions
+      - ${DATA_PATH}/backend_cache:/cache
+      - ./inference_ray:/app/inference_ray
+      - ./analyser:/app/analyser
+      - ./packages:/app/packages
+      - ./backend/:/app/backend
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./.python-version:/app/.python-version
+    depends_on:
+      # postgres runs in the shared stack, compose cannot wait for it here
+      valkey:
+        condition: service_started
+    tmpfs:
+      - /tmp
+      - /var
+    working_dir: /app/backend/src/backend/
+    command:
+      - "uv"
+      - "run"
+      - "--no-sync"
+      - "--package"
+      - "backend"
+      - "celery"
+      - "-A"
+      - "sportvid.celery:app"
+      - "worker"
+      - "--hostname=io@%h"
+      - "--queues=io"
+      - "--pool=threads"
+      - "--concurrency=16"
+      - "--prefetch-multiplier=1"
+      - "--loglevel"
+      - "${LOG_LEVEL:-INFO}"
+    logging: *logging
+    networks:
+      - shared
+      - prod
+
+  celery-gpu:
+    container_name: celery-gpu_prod
+    user: "${UID:-1003}:${GID:-1003}"
+    image: sportvid-celery-gpu_prod:latest
+    build:
+      context: .
+      args:
+        - UID=${UID:-1003}
+        - GID=${GID:-1003}
+    environment:
+      # fail loudly instead of falling back to libx264 when the GPU is missing
+      - HLS_ENCODER=nvenc
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+    env_file:
+      - /opt/deploy/.env.prod
+    secrets:
+      - django_settings
+    volumes:
+      - ${DATA_PATH}/media/:/media
+      - ${DATA_PATH}/predictions:/predictions
+      - ${DATA_PATH}/backend_cache:/cache
+      - ./inference_ray:/app/inference_ray
+      - ./analyser:/app/analyser
+      - ./packages:/app/packages
+      - ./backend/:/app/backend
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./.python-version:/app/.python-version
+    depends_on:
+      valkey:
+        condition: service_started
+    tmpfs:
+      - /tmp
+      - /var
+    working_dir: /app/backend/src/backend/
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0", "1", "2"]
+              capabilities: [gpu]
+    command:
+      - "uv"
+      - "run"
+      - "--no-sync"
+      - "--package"
+      - "backend"
+      - "celery"
+      - "-A"
+      - "sportvid.celery:app"
+      - "worker"
+      - "--hostname=gpu@%h"
+      - "--queues=gpu"
+      - "--pool=threads"
+      - "--concurrency=8"
+      - "--prefetch-multiplier=1"
+      - "--loglevel"
+      - "${LOG_LEVEL:-INFO}"
+    logging: *logging
+    networks:
+      - shared
+      - prod
+
+  backend:
+    container_name: backend_prod
+    user: "${UID:-1003}:${GID:-1003}"
+    image: sportvid_prod-backend:latest
+    build:
+      context: .
+      args:
+        - BACKEND_PORT=${BACKEND_PORT}
+        - UID=${UID:-1003}
+        - GID=${GID:-1003}
+    ports:
+      - "127.0.0.1:${BACKEND_PORT}:${BACKEND_PORT}" # localhost only; nginx reaches it over the shared network
+    secrets:
+      - django_settings
+    environment:
+      - PYTHONPATH=/app/backend/:/app:/app/analyser:/app/backend/src/backend/
+    env_file:
+      - /opt/deploy/.env.prod
+    volumes:
+      - ${DATA_PATH}/media/:/media
+      - ${DATA_PATH}/predictions:/predictions
+      - ${DATA_PATH}/backend_cache:/cache
+      - ./inference_ray:/app/inference_ray
+      - ./analyser:/app/analyser
+      - ./packages:/app/packages
+      - ./backend/:/app/backend
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./.python-version:/app/.python-version
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    working_dir: /app/
+    # reconcile_plugin_runs marks runs orphaned by a restart as UNKNOWN once, before gunicorn starts.
+    # SSE requires threaded workers so /events/stream does not occupy a whole worker per connection.
+    command: >
+      bash -c "
+      (uv run --no-sync --package backend python3 backend/src/backend/manage.py reconcile_plugin_runs || true) &&
+      uv run --no-sync --package backend gunicorn
+      --bind 0.0.0.0:${BACKEND_PORT}
+      --env SCRIPT_NAME=/api
+      sportvid.wsgi
+      --capture-output
+      --log-level ${LOG_LEVEL:-INFO}
+      --timeout ${GUNICORN_TIMEOUT:-1800}
+      --workers ${GUNICORN_WORKERS:-4}
+      --worker-class gthread
+      --threads ${GUNICORN_THREADS:-16}
+      "
+    healthcheck:
+      # X-Forwarded-Proto: the servers redirect plain http to https (SECURE_SSL_REDIRECT)
+      test: ["CMD", "python3", "-c", "import urllib.request as u; u.urlopen(u.Request('http://localhost:${BACKEND_PORT}/api/healthy/', headers={'X-Forwarded-Proto': 'https'}), timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    depends_on:
+      memcached:
+        condition: service_started
+      celery-io:
+        condition: service_started
+      celery-gpu:
+        condition: service_started
+    logging: *logging
+    networks:
+      - shared
+      - prod
+
+  # builds the bundle (frontend/Dockerfile.server) and copies it into the volume the proxy serves
+  frontend:
+    container_name: frontend_prod
+    image: sportvid_prod-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.server
+    volumes:
+      - assets:/assets
+    command: >
+      sh -c 'mkdir -p /assets/prod &&
+        rm -rf /assets/prod/* &&
+        cp -a dist/. /assets/prod/'
+    logging: *logging
+    networks:
+      - shared
+      - prod
+    depends_on:
+      backend:
+        condition: service_started

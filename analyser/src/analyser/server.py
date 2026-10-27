@@ -1,6 +1,7 @@
 import logging
 import sys
 import os
+import re
 import argparse
 import time
 import uuid
@@ -523,9 +524,16 @@ class Server:
 
 def read_config(path):
     with open(path, "r") as f:
-        raw_cfg_str = f.read()
-        expanded_cfg_str = os.path.expandvars(raw_cfg_str)
-        return yaml.safe_load(expanded_cfg_str)
+        expanded_cfg_str = os.path.expandvars(f.read())
+    # expandvars keeps unset variables as "${VAR}", which would only fail much later
+    unset = sorted({
+        name
+        for line in expanded_cfg_str.splitlines() if not line.lstrip().startswith("#")
+        for name in re.findall(r"\$\{(\w+)\}", line)
+    })
+    if unset:
+        raise ValueError(f"{path}: environment variables not set: {', '.join(unset)}")
+    return yaml.safe_load(expanded_cfg_str)
 
 
 def parse_args():

@@ -1,15 +1,18 @@
+# ${VAR} is expanded from the container environment (.env locally, /opt/deploy/.env.* and
+# the compose file on the servers); every variable used here must be set.
 data:
   data_dir: /data
   cache:
       type: valkey
       params:
         db: 1
-        host: valkey
-        port: 6380
+        host: ${VALKEY_CLIENT_HOST}
+        port: ${VALKEY_INTERNAL_PORT}
+        password: ${VALKEY_PASSWD}
         tag: analyser
 inference:
   type: ray
-  params: 
+  params:
     host: inference_ray
-    port: 8010
-    status_port: 52365
+    port: ${INFERENCE_RAY_PORT}
+    status_port: ${INFERENCE_RAY_STATUS_PORT}

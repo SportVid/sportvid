@@ -182,13 +182,12 @@ test_env/
 # SportVid models
 models/
 
-# Data dirs
-**/data/
+# Data dir of the local stack (DATA_PATH=./data); packages/data and vendored */data/ are code
+/data/
 
 # Project specific things
-README.md
-*.yml
-# CI workflows must be tracked
-!.github/workflows/*.yml
-Dockerfile
+# basic-auth list of the server proxy, copied into its image by proxy/Dockerfile
+proxy/auth/
+# docs of the vendored trackers that were never imported
+/inference_ray/third_party/**/README.md
 

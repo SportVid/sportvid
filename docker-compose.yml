@@ -40,8 +40,8 @@ services:
     #           capabilities: [ gpu ]
     command: >
       bash -c "
-      uv run --package inference_ray ray start --head --dashboard-host=0.0.0.0 --dashboard-port=8265 &&
-      uv run --package inference_ray serve run /app/inference_ray/deploy.yml
+      uv run --no-sync --package inference_ray ray start --head --dashboard-host=0.0.0.0 --dashboard-port=8265 &&
+      uv run --no-sync --package inference_ray serve run /app/inference_ray/deploy.yml
       "
 
   analyser:
@@ -63,7 +63,7 @@ services:
       - ./pyproject.toml:/app/pyproject.toml
       - ./.python-version:/app/.python-version
     working_dir: /app/
-    command: uv run --package analyser analyser/src/analyser/server.py -v -c analyser/config.yml
+    command: uv run --no-sync --package analyser analyser/src/analyser/server.py -v -c analyser/config.yml
 
   memcached:
     container_name: memcached
@@ -141,7 +141,7 @@ services:
     command:
       - "uv"
       - "run"
-      - "--no-editable"
+      - "--no-sync"
       - "--package"
       - "backend"
       - "celery"
@@ -197,7 +197,7 @@ services:
     command:
       - "uv"
       - "run"
-      - "--no-editable"
+      - "--no-sync"
       - "--package"
       - "backend"
       - "celery"
@@ -257,9 +257,9 @@ services:
     command: >
       bash -c "
       mkdir -p /tmp/prometheus_multiproc &&
-      (uv run --no-editable --package backend python3 backend/src/backend/manage.py ensure_dev_admin || true) &&
-      (uv run --no-editable --package backend python3 backend/src/backend/manage.py reconcile_plugin_runs || true) &&
-      uv run --no-editable --package backend gunicorn
+      (uv run --no-sync --package backend python3 backend/src/backend/manage.py ensure_dev_admin || true) &&
+      (uv run --no-sync --package backend python3 backend/src/backend/manage.py reconcile_plugin_runs || true) &&
+      uv run --no-sync --package backend gunicorn
       --bind 0.0.0.0:${BACKEND_PORT}
       --env SCRIPT_NAME=/api
       sportvid.wsgi
