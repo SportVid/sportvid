@@ -42,12 +42,28 @@ class AngularSolverConfig:
     tol: float = 1e-12
     regularization: float = 1e-5      # pull toward the round's starting polynomial (guards sparse data against a
                                       # degenerate fold-back)
+    min_slope: float = 0.1            # the ray angle's slope d theta / d r_d, out to past the content corner, may not
+                                      # fall below this fraction of its slope at the center. The markings rarely reach
+                                      # the corners, and a free polynomial past them can fold back; 0 -> no constraint
+    monotonic_weight: float = 1.0     # its penalty, in content px per unit of slope shortfall
+
+
+def _unfolded(theta: np.ndarray) -> np.ndarray:
+    """Mask of the samples of ``theta(r)`` (increasing ``r``) before the ray angle first stops increasing."""
+    bad = np.flatnonzero(np.diff(theta) <= 0)
+    keep = np.ones(len(theta), dtype=bool)
+    if bad.size:
+        keep[bad[0] + 1:] = False
+    return keep
 
 
 def _fit_inverse_polynomial(undist_poly: np.ndarray, num_samples: int = 200, r_max: float = 0.9) -> np.ndarray:
     """``dist_poly`` with ``r_d = dist_poly(arctan(r_u))`` approximating the inverse of ``undist_poly``, by
-    sampling and re-fitting (the angular model has no closed-form inverse)."""
+    sampling and re-fitting (the angular model has no closed-form inverse). Sampled only up to where
+    ``undist_poly`` folds back (``_unfolded``): past it the forward map has no inverse, and fitting through the
+    fold bends ``dist_poly`` everywhere, by 100+ px well inside the data."""
     r_d = np.linspace(0.0, r_max, num_samples)
+    r_d = r_d[_unfolded(polyval(undist_poly, r_d))]
     r_u = np.tan(polyval(undist_poly, r_d))
     mask = np.isfinite(r_u) & (r_u > 0) & (r_u < 20)
     if mask.sum() < len(undist_poly):
@@ -189,19 +205,26 @@ def fit_angular_lens_anchored(elements: List[Tuple[str, np.ndarray, np.ndarray]]
     if not elems:
         raise ValueError("no detected marking consistent with the pitch model")
 
+    r_corner = 0.5 * np.hypot(w, h) / w
+    # no fold-back: the slope stays above min_slope x the center's, sampled out to past the corner (where the
+    # inverse dist_poly is fitted); zero, with zero gradient, for a lens that does not come near folding
+    r_mono = np.linspace(0.0, 1.05 * r_corner, 64)
+    slope_min = config.min_slope * init_poly[-2]
+
     def residuals(p: np.ndarray) -> np.ndarray:
         poly, g = np.r_[p[:n], init_poly[-2:]], p[n:]
         out = element_residuals(poly, g)
         if keypoint_weight > 0:
             out.append(keypoint_weight * keypoint_residuals(poly, g))
         out.append(np.sqrt(config.regularization) * (poly - init_poly) * w)
+        if config.min_slope > 0:
+            out.append(config.monotonic_weight * w * np.maximum(slope_min - polyval(np.polyder(poly), r_mono), 0.0))
         return np.concatenate(out)
 
     x0 = np.r_[init_poly[:n], g0]
     sol = _least_squares(residuals, x0, method="trf", max_nfev=config.max_iterations * (len(x0) + 1),
                          xtol=config.tol, ftol=config.tol)
     undist_poly = np.r_[sol.x[:n], init_poly[-2:]]
-    r_corner = 0.5 * np.hypot(w, h) / w
     dist_poly = _fit_inverse_polynomial(undist_poly, r_max=1.05 * r_corner)
 
     res = residuals(sol.x)
@@ -225,7 +248,14 @@ def fit_angular_lens_anchored(elements: List[Tuple[str, np.ndarray, np.ndarray]]
                 markings=names, dropped_markings=dropped, n_points=sum(sizes),
                 line_rms_px=rms(kind_res("line")), arc_rms_px=rms(kind_res("arc")),
                 marking_median_px={nm: float(np.median(r)) for nm, r in zip(names, per)},
+                marking_rms_px={nm: rms(r) for nm, r in zip(names, per)},
+                marking_points={nm: s for nm, s in zip(names, sizes)},
                 keypoint_weight=keypoint_weight, zoom=zoom, out_scale=out_scale, loss=float(2 * sol.cost))
+    folds = r_mono[1:][np.diff(polyval(undist_poly, r_mono)) <= 0]
+    if folds.size and folds[0] <= r_corner:
+        meta["fold_r"] = float(folds[0])
+        logger.warning("lens solver: the fitted lens folds back at r = %.3f, inside the content (corner %.3f)",
+                       folds[0], r_corner)
     return AngularLensModel(undist_poly=undist_poly, dist_poly=dist_poly, K=K, size=(w, h),
                             K_new=K_new, size_new=(w_new, h_new), meta=meta)
 
@@ -272,7 +302,7 @@ def physical_gauge(lens: AngularLensModel, f: float, extra_degree: int = 2, inve
     undist_poly = np.r_[np.linalg.lstsq(A * wt[:, None], theta[ok] * wt, rcond=None)[0], 0.0]
     r_i = np.linspace(0.0, min(r_corner, r_fit), samples)               # the inverse, up to the content corner
     th_i = polyval(undist_poly, r_i)
-    keep = (th_i > 0) & (th_i < np.radians(89.5))
+    keep = (th_i > 0) & (th_i < np.radians(89.5)) & _unfolded(th_i)     # no inverse past a fold
     dist_poly = np.r_[np.linalg.lstsq(th_i[keep, None] ** np.arange(inverse_degree, 0, -1), r_i[keep],
                                       rcond=None)[0], 0.0]
     K_new = lens.K_new.copy()
@@ -355,6 +385,8 @@ DEFAULT_PARAMETERS = {
     "poly_degree": 6,
     "keypoint_weight": 1.0,
     "regularization": 1e-5,
+    "min_slope": 0.1,                 # no fold-back: see AngularSolverConfig
+    "monotonic_weight": 1.0,
     "search_px": 20.0,                # line search window either side of the projection
     "arc_search_m": 2.0,              # circle search window in pitch metres ...
     "arc_max_search_px": 150.0,       # ... clipped in px
@@ -364,8 +396,17 @@ DEFAULT_PARAMETERS = {
     "physical_max_px": 0.05,          # physical gauge: warn if the refit moves the undistortion by more ...
     "physical_fail_px": 1.0,          # ... and fail beyond this
     "min_valid_fraction": 0.95,       # share of the frame the lens must map (see valid_region)
-    "collapse_ratio": 0.9,            # a round finding fewer than this share of the previous round's points is dropped
+    "collapse_ratio": 0.9,            # a round finding fewer than this share of the previous round's points ends the rounds
 }
+
+
+def _round_score(meta: Dict, max_rms_px: float) -> Tuple[int, float]:
+    """How well a round's lens explains the painted markings, comparable across rounds (whose detected sets and
+    outlier thresholds differ): the points on the markings it fits within ``max_rms_px`` RMS, then their
+    point-weighted RMS (lower is better). A round that drops markings, or keeps them only loosely, scores lower."""
+    good = [(meta["marking_points"][nm], r) for nm, r in meta["marking_rms_px"].items() if r <= max_rms_px]
+    n = sum(p for p, _ in good)
+    return n, -float(np.sqrt(sum(p * r * r for p, r in good) / n)) if n else float("-inf")
 
 
 def self_calibrate(frames: List[np.ndarray], raw: np.ndarray, pitch_xy: np.ndarray, pitch: SoccerPitch,
@@ -379,18 +420,22 @@ def self_calibrate(frames: List[np.ndarray], raw: np.ndarray, pitch_xy: np.ndarr
     detects the markings around that projection and refits the lens; the next round searches around the new lens.
     A pinhole guide misses the curved outer lines and makes them look misplaced, so round 1 keeps markings up to
     ``first_round_outlier_px`` off and later rounds apply ``outlier_px`` under the current lens. Stops after
-    ``rounds`` or once the detected marking points stop growing."""
+    ``rounds`` or once the detected marking points stop growing, and returns the round whose lens fits the most
+    marking points within ``outlier_px`` (``_round_score``), not necessarily the last: a round can lose markings
+    the previous one fitted."""
     params = {**DEFAULT_PARAMETERS, **(params or {})}
     off, content = np.array(rect[:2], dtype=np.float64), tuple(int(v) for v in rect[2:])
     lines, curves = straight_lines(pitch), pitch_curves(pitch)
     geometry = element_geometry(lines, curves)
-    config = AngularSolverConfig(poly_degree=int(params["poly_degree"]), regularization=float(params["regularization"]))
+    config = AngularSolverConfig(poly_degree=int(params["poly_degree"]), regularization=float(params["regularization"]),
+                                 min_slope=float(params["min_slope"]),
+                                 monotonic_weight=float(params["monotonic_weight"]))
     rounds = max(1, int(params["rounds"]))
 
     guide_lens = PinholeLens(content)
     canvas = (float(guide_lens.K_new[0, 0]), tuple(guide_lens.size_new))     # fixed across rounds: same zoom
     init = poly_from_lens(guide_lens, content, config.poly_degree)
-    lens, prev_points, log = None, -1, []
+    lens, prev_points, log, best = None, -1, [], None
     for k in range(rounds):
         guide = fit_raw(guide_lens, off, raw, pitch_xy)
         if guide is None:
@@ -415,19 +460,24 @@ def self_calibrate(frames: List[np.ndarray], raw: np.ndarray, pitch_xy: np.ndarr
                     f" | dropped {', '.join(m['dropped_markings'])}" if m["dropped_markings"] else "")
         if progress is not None:
             progress((k + 1) / rounds)
+        score = _round_score(m, float(params["outlier_px"]))
+        if best is None or score > best[0]:
+            best = (score, lens, k)
         if k > 0 and n_points < prev_points * float(params["collapse_ratio"]):
             # sportvid addition: the previous round's lens finds far fewer markings than its own guide did (it bends
-            # where there are no markings, e.g. folds in the corners); keep that guide, fitted on more data
-            logger.info("lens solver: round %d found %d point(s) after %d, keeping the round-%d lens", k + 1, n_points,
-                        prev_points, k)
-            log[-1]["discarded"] = True
-            lens = guide_lens
+            # where there are no markings); no later round would recover them
+            logger.info("lens solver: round %d found %d point(s) after %d, stopping", k + 1, n_points, prev_points)
             break
         if k > 0 and n_points <= prev_points * 1.01:
             break                                    # nothing new found with the better lens: converged
         prev_points = n_points
         guide_lens, init = lens, lens.undist_poly
-    lens.meta.update(content_rect=[int(v) for v in rect], rounds=len(log))
+    (n_good, _), lens, k_best = best
+    for entry in log:
+        entry["kept"] = entry["round"] == k_best + 1
+    logger.info("lens solver: keeping round %d of %d: %d point(s) on markings it fits within %.1f px RMS",
+                k_best + 1, len(log), n_good, float(params["outlier_px"]))
+    lens.meta.update(content_rect=[int(v) for v in rect], rounds=len(log), best_round=k_best + 1)
     return lens, log
 
 

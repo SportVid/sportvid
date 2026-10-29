@@ -1,6 +1,6 @@
 """Self-calibration of a static camera's lens distortion from the pitch markings.
 
-Ported from trak (``trak/calib``, commit d417335), the prior-free ``trak-distortion-solve`` with its default
+Ported from trak (``trak/calib``, commit 55c018c), the prior-free ``trak-distortion-solve`` with its default
 options: an angular-polynomial lens and one plane homography fitted to the markings detected around the
 projection of the clicked keypoints, re-detected each round with the better lens. Not ported: the camera
 geometry and goal frames, per-marking weights, the detector guide and the lens check.
