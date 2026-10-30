@@ -16,12 +16,6 @@ CELERY_TASK_QUEUES = (
     Queue("gpu")
 )
 
-CELERY_TASK_ROUTES = {
-    "sportvid.tasks.convert_video_to_hls": {
-        "queue": "gpu",
-    }
-}
-
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
 # build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -218,9 +212,6 @@ USE_TZ = True
 
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 STATICFILES_DIRS = []
-
-# last resolution is used for indexing
-IMAGE_RESOLUTIONS = [{"min_dim": 200, "suffix": "_m"}, {"min_dim": 1080, "suffix": ""}]
 
 try:
     from .user_settings import *  # noqa: F401,F403

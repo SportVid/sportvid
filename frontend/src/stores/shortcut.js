@@ -48,8 +48,10 @@ export const useShortcutStore = defineStore('shortcut', () => {
       const res = await axios.post(`${config.API_LOCATION}/shortcut/create`, params);
       if (res.data.status === "ok") {
         const shortcut = res.data.entry;
+        // shortcut/create returns the existing shortcut for known keys
+        if (!(shortcut.id in shortcuts.value)) shortcutList.value.push(shortcut.id);
         shortcuts.value[shortcut.id] = shortcut;
-        shortcutList.value.push(shortcut.id);
+        updateKeyStore();
         return res.data.entry.id;
       }
     } finally {

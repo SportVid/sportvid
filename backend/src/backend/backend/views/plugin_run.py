@@ -14,7 +14,7 @@ from rest_framework import serializers
 from sportvid.celery import app as celery_app
 
 from backend.models import Video, PluginRun, TrackingData
-from backend.permissions import unreadable_references, writable
+from backend.permissions import readable, unreadable_references, writable
 from backend.plugin_catalogue import is_available
 from backend.utils.storage import release_used_storage
 from backend.plugin_manager import PluginManager
@@ -22,15 +22,18 @@ from backend.utils import download_url, download_file, media_url_to_file
 from backend.utils.events import publish_cancel
 
 from backend.serializers import PluginRunRequestSerializer
+from backend.utils.api import ApiView
 
 logger = logging.getLogger(__name__)
 
 
-class PluginRunNew(View):
+class PluginRunNew(ApiView):
+    json_body = False  # multipart/form data
+
+    legacy_errors = False  # already answered errors with error status codes
+
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=401)
 
             if request.content_type == "application/json" or (
                 request.content_type.startswith("application/json")):
@@ -130,26 +133,11 @@ class PluginRunNew(View):
             return JsonResponse({"status": "error"}, status=500)
 
 
-class PluginRunDelete(View):
+class PluginRunDelete(ApiView):
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                logger.error("PluginRunNew::not_authenticated")
-                return JsonResponse({"status": "error"})
 
-            if request.method != "POST":
-                logger.error("PluginRunNew::wrong_method")
-                return JsonResponse({"status": "error"})
-
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error"})
+            data = request.data
 
             if "plugin_list" not in data:
                 return JsonResponse(
@@ -159,12 +147,11 @@ class PluginRunDelete(View):
             plugin_list = data.get("plugin_list")
 
             if list(plugin_list)[0] == 'all':
+                # "all" means the caller's own runs, for admins too
                 runs = PluginRun.objects.filter(video__owner=request.user)
             else:
-                runs = PluginRun.objects.filter(
-                    id__in=plugin_list,
-                    video__owner=request.user,
-                )
+                # admins may delete any user's runs by id
+                runs = writable(PluginRun, request.user).filter(id__in=plugin_list)
             
             # before deleting plugin runs, build a list of active runs
             active_runs = list(
@@ -190,13 +177,16 @@ class PluginRunDelete(View):
             )
             cascaded_deleted = 0
             if tracking_data_ids:
-                tdata_qs = TrackingData.objects.filter(id__in=tracking_data_ids)
-                total_size = sum(
-                    t.file_size + (t.meta_file_size if t.meta_file else 0) for t in tdata_qs
-                )
+                tdata_qs = TrackingData.objects.filter(id__in=tracking_data_ids).select_related("owner")
+                # release the storage of each file's owner (an admin may delete other users' runs)
+                size_by_owner = {}
+                for t in tdata_qs:
+                    owner, size = size_by_owner.get(t.owner_id, (t.owner, 0))
+                    size_by_owner[t.owner_id] = (owner, size + t.file_size + (t.meta_file_size if t.meta_file else 0))
                 cascaded_deleted, _ = tdata_qs.delete()
                 if cascaded_deleted:
-                    release_used_storage(request.user, total_size)
+                    for owner, size in size_by_owner.values():
+                        release_used_storage(owner, size)
 
             response, _ = runs.delete()
 
@@ -206,22 +196,15 @@ class PluginRunDelete(View):
             return JsonResponse({"status": "error"})
 
 
-class PluginRunList(View):
+class PluginRunList(ApiView):
     def get(self, request):
         start = time.time()
-        if not request.user.is_authenticated:
-            logger.error("PluginRunNew::not_authenticated")
-            return JsonResponse({"status": "error"})
 
         plugin_manager = PluginManager()
         try:
-            can_see_all = request.user.role in ("admin", "researcher")
             video_id = request.GET.get("video_id")
             if video_id:
-                if can_see_all:
-                    analyses = PluginRun.objects.filter(video__id=video_id)
-                else:
-                    analyses = PluginRun.objects.filter(video__id=video_id, video__owner=request.user)
+                analyses = readable(PluginRun, request.user).filter(video__id=video_id)
             else:
                 analyses = PluginRun.objects.filter(video__owner=request.user)
             add_results = request.GET.get("add_results")

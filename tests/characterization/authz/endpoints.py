@@ -73,6 +73,7 @@ ENDPOINTS = [
     Endpoint("annotation/category/create", POST_JSON, lambda w: {"name": "newcat", "video_id": h(w.video)}, "write"),
     Endpoint("annotation/shortcut/update", POST_JSON, lambda w: {"video_id": h(w.video), "annotation_shortcuts": [{"id": h(w.annotation), "keys": ["b"]}]}, "write"),
     Endpoint("shortcut/create", POST_JSON, lambda w: {"key": "k", "video_id": h(w.video)}, "write"),
+    Endpoint("annotation/shortcut/create", POST_JSON, lambda w: {"annotation_id": h(w.annotation2), "keys": ["c"], "video_id": h(w.video)}, "write"),
     # ---------- tracking results (bounding boxes)
     Endpoint("position_data/bboxes/edit", POST_JSON, lambda w: {"object_tracker_run_id": h(w.plugin_run), "bbox_id": "0-1", "new_player_id": 7, "new_team_id": 3}, "write"),
     Endpoint("position_data/bboxes/replace", POST_JSON, lambda w: {"object_tracker_run_id": h(w.plugin_run), "bboxes": {"0": [[1, 3, 0, 0, 1, 1]]}}, "write"),

@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 import logging
 from django.views import View
 from django.http import HttpResponse, JsonResponse
@@ -7,29 +8,28 @@ from backend.models import Video, PluginRun
 from backend.permissions import readable
 from backend.plugin_catalogue import available_plugins
 from backend.plugin_manager import PluginManager
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
 
 
-class PluginAvailable(View):
+class PluginAvailable(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     """Backend plugins whose Ray plugins are all deployed.
 
     plugins is null when the analyser cannot be asked; clients then offer everything.
     """
 
     def get(self, request):
-        if not request.user.is_authenticated:
-            return JsonResponse({"status": "error", "type": "not_authenticated"}, status=401)
         return JsonResponse({"status": "ok", "plugins": available_plugins()})
 
 
-class PluginList(View):
+class PluginList(ApiView):
     def get(self, request):
         plugin_manager = PluginManager()
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
             video_id = request.GET.get("video_id")
             if video_id:
                 video_db = readable(Video, request.user).get(id=video_id)
@@ -50,6 +50,8 @@ class PluginList(View):
                 entries = [x.to_dict() for x in analyses]
 
             return JsonResponse({"status": "ok", "entries": entries})
+        except ObjectDoesNotExist:
+            return JsonResponse({"status": "error", "type": "not_exist"})
         except Exception:
             logger.exception('Failed to list plugins')
             return JsonResponse({"status": "error"})

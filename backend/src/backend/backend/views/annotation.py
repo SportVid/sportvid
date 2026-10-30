@@ -5,25 +5,16 @@ from django.http import JsonResponse
 
 from backend.models import Annotation, AnnotationCategory, Video
 from backend.permissions import writable
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
 
 
-class AnnoatationCreate(View):
+class AnnoatationCreate(ApiView):
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error", "type": "wrong_request_body"})
+            data = request.data
 
             if "name" not in data:
                 return JsonResponse({"status": "error", "type": "missing_values"})
@@ -61,20 +52,10 @@ class AnnoatationCreate(View):
             return JsonResponse({"status": "error"})
 
 
-class AnnoatationChange(View):
+class AnnoatationChange(ApiView):
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error", "type": "wrong_request_body"})
+            data = request.data
 
             update_args = {}
             if "category_id" in data:
@@ -94,7 +75,7 @@ class AnnoatationChange(View):
                 update_args["color"] = data.get("color")
             updated = writable(Annotation, request.user).filter(id=data.get("annotation_id")).update(**update_args)
             if updated != 1:
-                return JsonResponse({"status": "error"})
+                return JsonResponse({"status": "error", "type": "not_exist"})
 
             return JsonResponse({"status": "ok"})
         except Exception:
@@ -102,12 +83,10 @@ class AnnoatationChange(View):
             return JsonResponse({"status": "error"})
 
 
-class AnnoatationList(View):
+class AnnoatationList(ApiView):
     def get(self, request):
         try:
 
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
 
             query_args = {}
 

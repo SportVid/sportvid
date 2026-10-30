@@ -40,7 +40,7 @@ def test_pending_account_is_told_only_with_the_right_password(client, db):
     post(client, "/user/register", {"name": "newbie", "password": STRONG, "email": "n@example.org"})
     assert post(client, "/user/login", {"name": "newbie", "password": STRONG}).json()["type"] == "not_approved"
     assert post(client, "/user/login", {"name": "newbie", "password": "wrong"}).json() == {
-        "status": "error", "message": "Invalid login credentials"}
+        "status": "error", "type": "invalid_credentials", "message": "Invalid login credentials"}
 
 
 def test_admin_approval_enables_login(client, db, admin):

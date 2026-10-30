@@ -299,7 +299,7 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 # drains ffmpeg's error & "-progress" output line by line
                 while True:
                     # TODO: can block indefinitely if FFmpeg stops writing but hasn’t exited
-                    # --> use a non-blocking reader (e.g. a separate thread or select/queue) for stderr
+                    # --> use a non-blocking reader (e.g. a separate thread or select/queue) for stdout; stderr goes to the worker log
                     line = ffmpeg_proc.stdout.readline()
                     if not line:
                         if ffmpeg_proc.poll() is not None:

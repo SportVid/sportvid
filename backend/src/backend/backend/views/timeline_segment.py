@@ -10,27 +10,17 @@ from backend.models import (
     TimelineSegment, TimelineSegmentAnnotation, Timeline
 )
 from backend.permissions import writable
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
 
 
-class TimelineSegmentAnnotate(View):
+class TimelineSegmentAnnotate(ApiView):
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                logger.error("TimelineSegmentAnnotate::not_authenticated")
-                return JsonResponse({"status": "error"})
 
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error"})
+            data = request.data
 
             timeline_segment_ids = data.get("timeline_segment_ids")
             try:
@@ -109,22 +99,11 @@ class TimelineSegmentAnnotate(View):
             return JsonResponse({"status": "error"})
 
 
-class TimelineSegmentAnnotateRange(View):
+class TimelineSegmentAnnotateRange(ApiView):
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                logger.error("VideoUpload::not_authenticated")
-                return JsonResponse({"status": "error"})
 
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error"})
+            data = request.data
             if "start" not in data:
                 return JsonResponse({"status": "error", "type": "missing_values"})
             if "end" not in data:
@@ -261,11 +240,9 @@ class TimelineSegmentAnnotateRange(View):
             return JsonResponse({"status": "error"})
 
 
-class TimelineSegmentGet(View):
+class TimelineSegmentGet(ApiView):
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
             query_args = {}
             query_args["timeline__video__owner"] = request.user
             
@@ -286,11 +263,9 @@ class TimelineSegmentGet(View):
             return JsonResponse({"status": "error"})
 
 
-class TimelineSegmentList(View):
+class TimelineSegmentList(ApiView):
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
 
             query_args = {}
             query_args["timeline__video__owner"] = request.user
@@ -314,22 +289,11 @@ class TimelineSegmentList(View):
             return JsonResponse({"status": "error"})
 
 
-class TimelineSegmentMerge(View):
+class TimelineSegmentMerge(ApiView):
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                logger.error("VideoUpload::not_authenticated")
-                return JsonResponse({"status": "error"})
 
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error"})
+            data = request.data
 
             if "timeline_segment_ids" not in data or not isinstance(data.get("timeline_segment_ids"), (list, set)):
                 return JsonResponse({"status": "error", "type": "wrong_request_body"})
@@ -402,21 +366,11 @@ class TimelineSegmentMerge(View):
             return JsonResponse({"status": "error"})
 
 
-class TimelineSegmentSplit(View):
+class TimelineSegmentSplit(ApiView):
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
 
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error"})
+            data = request.data
             if "timeline_segment_id" not in data:
                 return JsonResponse({"status": "error", "type": "missing_values"})
 

@@ -5,16 +5,17 @@ from functools import wraps
 from django.conf import settings
 from django.db import transaction
 from django.views import View
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 
 from backend.models import PluginRunResult
 from backend.permissions import writable
-from backend.utils.decode_auth import decode_and_authenticate
 from data import (
     DataManager, 
     BboxesData, 
     BboxData
 )
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
@@ -71,9 +72,9 @@ def _compute_meta_data(bbd_data):
     })
 
 
-class BoundingBoxesChange(View):
-    @decode_and_authenticate(require_name=False)
-    def post(self, request, data):
+class BoundingBoxesChange(ApiView):
+    def post(self, request):
+        data = request.data
         altered_bbx = None
         manager = None
         try:
@@ -180,6 +181,8 @@ class BoundingBoxesChange(View):
             if os.path.exists(cache_path): os.remove(cache_path)
             logging.info(f"Successfully updated DB and deleted old data {old_data_id}.")
             return JsonResponse({"status": "ok", "entry": altered_bbx.to_dict()})
+        except ObjectDoesNotExist:
+            return JsonResponse({"status": "error", "type": "not_exist"})
         except Exception as e:
             logging.error(f"Failed to update bounding box data: {e}", exc_info=True)
             # if anything failed, delete the newly created (now orphaned) file
@@ -195,7 +198,7 @@ class BoundingBoxesChange(View):
             )
 
  
-class BoundingBoxesReplace(View):
+class BoundingBoxesReplace(ApiView):
     """
     Persists a client-computed, full bboxes array (and freshly-derived meta_data) as the new
     data for the given object_tracker run.
@@ -210,8 +213,8 @@ class BoundingBoxesReplace(View):
     every page reload. Baking it in here makes the tracker run itself carry the corrected team
     ids, so both problems go away: edits and reloads all operate on one consistent copy.
     """
-    @decode_and_authenticate(require_name=False)
-    def post(self, request, data):
+    def post(self, request):
+        data = request.data
         altered_bbx = None
         manager = None
         try:
@@ -250,6 +253,8 @@ class BoundingBoxesReplace(View):
             if os.path.exists(cache_path): os.remove(cache_path)
             logging.info(f"Successfully updated DB and deleted old data {old_data_id}.")
             return JsonResponse({"status": "ok", "entry": altered_bbx.to_dict()})
+        except ObjectDoesNotExist:
+            return JsonResponse({"status": "error", "type": "not_exist"})
         except Exception as e:
             logging.error(f"Failed to replace bounding box data: {e}", exc_info=True)
             if manager and altered_bbx and altered_bbx.id:
@@ -263,9 +268,9 @@ class BoundingBoxesReplace(View):
             )
 
 
-class BoundingBoxesDelete(View):
-    @decode_and_authenticate(require_name=False)
-    def post(self, request, data):
+class BoundingBoxesDelete(ApiView):
+    def post(self, request):
+        data = request.data
         altered_bbx = None
         manager = None
         try:
@@ -349,6 +354,8 @@ class BoundingBoxesDelete(View):
             if os.path.exists(cache_path): os.remove(cache_path)
             logging.info(f"Successfully updated DB and deleted old data {old_data_id}.")
             return JsonResponse({"status": "ok", "entry": altered_bbx.to_dict()})
+        except ObjectDoesNotExist:
+            return JsonResponse({"status": "error", "type": "not_exist"})
         except Exception as e:
             logging.error(f"Failed to delete bounding box data: {e}", exc_info=True)
             if altered_bbx and altered_bbx.id:

@@ -24,9 +24,11 @@ from backend.utils import (
     media_path_to_file
 )
 from backend.models import Video
+from backend.permissions import can_read_all, readable, writable
 from backend.utils.events import publish_cancel
 from utils.helper import remove_file, remove_dir
 from backend.tasks.convert_video import convert_video_to_hls
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
@@ -47,18 +49,17 @@ def parse_number(val):
         return None
             
                 
-class VideoUpload(View):
+class VideoUpload(ApiView):
+    json_body = False  # multipart/form data
+
+    legacy_errors = False  # already answered errors with error status codes
+
     def submit_analyse(self, plugins, **kwargs):
         plugin_manager = PluginManager()
         for plugin in plugins:
             plugin_manager(plugin, **kwargs)
 
     def post(self, request):
-        if not request.user.is_authenticated:
-            logger.error("VideoUpload::not_authenticated")
-            return JsonResponse(
-                {"status": "error", "type": "not_authenticated"}, status=500
-            )
         try:
             video_id_uuid = uuid.uuid4()
             video_id = video_id_uuid.hex
@@ -169,21 +170,21 @@ class VideoUpload(View):
                     }
                 )
 
-            return JsonResponse({"status": "error"}, status=500)
+            return JsonResponse({"status": "error", "type": "missing_values"}, status=500)  # no file
 
         except Exception:
             logger.exception("Video upload by user failed")
             return JsonResponse({"status": "error"}, status=500)
 
 
-class VideoList(View):
+class VideoList(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
 
-            can_see_all = request.user.role in ("admin", "researcher")
-            queryset = Video.objects.all() if can_see_all else Video.objects.filter(owner=request.user)
+            can_see_all = can_read_all(request.user, "Video")
+            queryset = readable(Video, request.user)
             if can_see_all:
                 queryset = queryset.select_related("owner")
 
@@ -199,16 +200,14 @@ class VideoList(View):
             return JsonResponse({"status": "error"}, status=500)
 
 
-class VideoGet(View):
+class VideoGet(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
 
-            can_see_all = request.user.role in ("admin", "researcher")
-            qs = Video.objects.filter(id=request.GET.get("id"))
-            if not can_see_all:
-                qs = qs.filter(owner=request.user)
+            can_see_all = can_read_all(request.user, "Video")
+            qs = readable(Video, request.user).filter(id=request.GET.get("id"))
             if can_see_all:
                 qs = qs.select_related("owner")
             entries = []
@@ -222,27 +221,19 @@ class VideoGet(View):
                     entry["owner_username"] = video.owner.username if video.owner else None
                 entries.append(entry)
             if len(entries) != 1:
-                return JsonResponse({"status": "error"}, status=500)
+                return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
             return JsonResponse({"status": "ok", "entry": entries[0]})
         except Exception:
             logger.exception("Failed to get video")
             return JsonResponse({"status": "error"}, status=500)
 
 
-class VideoRename(View):
+class VideoRename(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error"}, status=500)
+            data = request.data
 
             if "id" not in data:
                 return JsonResponse(
@@ -258,14 +249,11 @@ class VideoRename(View):
                 )
 
             try:
-                video_db = Video.objects.get(id=data.get("id"))
+                video_db = writable(Video, request.user).get(id=data.get("id"))
             except Video.DoesNotExist:
                 return JsonResponse(
                     {"status": "error", "type": "not_exist"}, status=500
                 )
-
-            if video_db.owner != request.user and request.user.role != "admin":
-                return JsonResponse({"status": "error", "type": "not_authorized"}, status=403)
 
             video_db.name = data.get("name")
             video_db.save()
@@ -275,28 +263,16 @@ class VideoRename(View):
             return JsonResponse({"status": "error"}, status=500)
 
 
-class VideoDelete(View):
+class VideoDelete(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error"}, status=500)
+            data = request.data
             
-            is_admin = request.user.role == "admin"
-            if is_admin:
-                video = Video.objects.select_related("owner").filter(id=data.get("id")).first()
-            else:
-                video = Video.objects.select_related("owner").filter(id=data.get("id"), owner=request.user).first()
+            video = writable(Video, request.user).select_related("owner").filter(id=data.get("id")).first()
             if not video:
-                return JsonResponse({"status": "error"}, status=500)
+                return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
 
             # TODO: Add structured logging for video deletion (task_id, revoke vs cancel)
             # and consider tracking "pending deletion" videos to avoid races with
@@ -311,10 +287,7 @@ class VideoDelete(View):
             video_owner = video.owner
             video_id_hex = video.id.hex
             # video row can then be deleted safely, without sending a termination signal to the Celery worker.
-            if is_admin:
-                count, _ = Video.objects.filter(id=video.id).delete()
-            else:
-                count, _ = Video.objects.filter(id=video.id, owner=request.user).delete()
+            count, _ = writable(Video, request.user).filter(id=video.id).delete()
 
             if count:
                 # Clean up files on disk
@@ -330,7 +303,7 @@ class VideoDelete(View):
                     release_used_storage(video_owner, file_size)
                 return JsonResponse({"status": "ok"})
 
-            return JsonResponse({"status": "error"}, status=500)
+            return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
         except Exception:
             logger.exception("Failed to delete video")
             return JsonResponse({"status": "error"}, status=500)

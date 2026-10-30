@@ -9,6 +9,7 @@ from django.conf import settings
 from backend.utils import download_file
 from backend.models import Timeline, TimelineSegment, TimelineSegmentAnnotation, Video, Annotation
 from backend.permissions import writable
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
@@ -28,23 +29,18 @@ def time_to_string(sec, loc="en"):
     return f"{hours}:{min}:{sec}.{sec_frac}"
 
 
-class TimelineImportEAF(View):
+class TimelineImportEAF(ApiView):
+    json_body = False  # multipart/form data
+
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                logger.error("TimelineImportEAF::not_authenticated")
-                return JsonResponse({"status": "error"})
-
-            if request.method != "POST":
-                logger.error("TimelineImportEAF::wrong_method")
-                return JsonResponse({"status": "error"})
 
             upload_id = uuid.uuid4().hex
             video_id = request.POST.get("video_id")
             try:
                 video_db = writable(Video, request.user).get(id=video_id)
             except Video.DoesNotExist:
-                return JsonResponse({"status": "error"})
+                return JsonResponse({"status": "error", "type": "not_exist"})
 
             if "file" in request.FILES:
                 output_dir = os.path.join(settings.MEDIA_ROOT)
@@ -88,7 +84,7 @@ class TimelineImportEAF(View):
                     }
                 )
 
-            return JsonResponse({"status": "error"})
+            return JsonResponse({"status": "error", "type": "missing_values"})  # no file
 
         except Exception:
             logger.exception("Failed to import EAF timeline")

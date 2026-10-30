@@ -1,6 +1,5 @@
 import json
 import logging
-import traceback
 from django.views import View
 from django.http import JsonResponse
 
@@ -11,92 +10,76 @@ from backend.models import (
     Annotation
 )
 from backend.permissions import readable, writable
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
 
 
-class AnnotationShortcutCreate(View): #TODO: ?
+def shortcut_for_keys(keys, user, video=None, type=None):
+    """The user's shortcut for this key combination (and video), created if missing."""
+    keys_string = Shortcut.generate_keys_string(keys)
+    shortcut_db, _ = Shortcut.objects.get_or_create(
+        keys_string=keys_string, video=video, owner=user, type=type, defaults={"keys": keys}
+    )
+    return shortcut_db
+
+
+def assign_shortcut(annotation, keys, user, video=None):
+    """Bind `keys` to `annotation`, replacing the annotation's previous shortcut."""
+    shortcut_db = shortcut_for_keys(keys, user, video=video, type="annotation")
+    annotation_shortcut_db, _ = AnnotationShortcut.objects.update_or_create(
+        annotation=annotation, defaults={"shortcut": shortcut_db}
+    )
+    return annotation_shortcut_db, shortcut_db
+
+
+def valid_keys(keys):
+    return isinstance(keys, list) and len(keys) > 0 and all(isinstance(k, str) and k for k in keys)
+
+
+class AnnotationShortcutCreate(ApiView):
+    """Bind a key combination to one annotation: {"annotation_id", "keys": [...], "video_id"?}."""
+
     def post(self, request):
-        return JsonResponse({"status": "error"})
-
+        data = request.data
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
-            # decode data
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error", "type": "wrong_request_body"})
-
-            if "key" not in data:
+            if "annotation_id" not in data or not valid_keys(data.get("keys")):
                 return JsonResponse({"status": "error", "type": "missing_values"})
 
-            try:
-                query_args = {"key": data.get("key"), "video_id": request.user}
-                if "video_id" in data:
-                    query_args["video__id"] = data.get("video_id")
-                shortcut_db = AnnotationShortcut.objects.get(**query_args)
-            except AnnotationShortcut.DoesNotExist:
-                create_args = {"key": data.get("key"), "owner": request.user}
-                if "video_id" in data:
-                    try:
-                        video_db = writable(Video, request.user).get(id=data.get("video_id"))
-                    except Video.DoesNotExist:
-                        return JsonResponse({"status": "error", "type": "not_exist"})
-                    create_args["video"] = video_db
+            video_db = None
+            if "video_id" in data:
+                video_db = writable(Video, request.user).filter(id=data.get("video_id")).first()
+                if video_db is None:
+                    return JsonResponse({"status": "error", "type": "not_exist"})
+            annotation_db = writable(Annotation, request.user).filter(id=data.get("annotation_id")).first()
+            if annotation_db is None:
+                return JsonResponse({"status": "error", "type": "not_exist"})
 
-                shortcut_db = AnnotationShortcut.objects.create(**create_args)
-            return JsonResponse({"status": "ok", "entry": shortcut_db.to_dict()})
-        except Exception as e:
-            logger.error(traceback.format_exc())
+            annotation_shortcut_db, shortcut_db = assign_shortcut(
+                annotation_db, data.get("keys"), request.user, video=video_db
+            )
+            return JsonResponse(
+                {"status": "ok", "entry": annotation_shortcut_db.to_dict(), "shortcut": shortcut_db.to_dict()}
+            )
+        except Exception:
+            logger.exception("Failed to create annotation shortcut")
             return JsonResponse({"status": "error"})
 
 
-class AnnotationShortcutUpdate(View):
+class AnnotationShortcutUpdate(ApiView):
     def delete_shortcut(self, annotation_shortcut, user, annotation, video=None):
         AnnotationShortcut.objects.filter(annotation=annotation).delete()
 
     def update_shortcut(self, annotation_shortcut, user, annotation, video=None):
-        keys = annotation_shortcut.get("keys")
-        id = annotation_shortcut.get("id")
-        keys_string = Shortcut.generate_keys_string(keys)
-
-        try:
-            shortcut_db = Shortcut.objects.get(keys_string=keys_string, video=video, owner=user, type="annotation")
-        except Shortcut.DoesNotExist:
-            shortcut_db = Shortcut.objects.create(
-                keys=keys, keys_string=keys_string, video=video, owner=user, type="annotation"
-            )
-
-        try:
-            annotation_shortcut_db = AnnotationShortcut.objects.get(annotation=annotation)
-
-            annotation_shortcut_db.shortcut = shortcut_db
-            annotation_shortcut_db.save()
-        except AnnotationShortcut.DoesNotExist:
-            annotation_shortcut_db = AnnotationShortcut.objects.create(annotation=annotation, shortcut=shortcut_db)
-
+        annotation_shortcut_db, shortcut_db = assign_shortcut(
+            annotation, annotation_shortcut.get("keys"), user, video=video
+        )
         return {"annotation_shortcut": annotation_shortcut_db, "shortcut": shortcut_db}
 
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error", "type": "wrong_request_body"})
+            data = request.data
 
             if "annotation_shortcuts" not in data:
                 return JsonResponse({"status": "error", "type": "missing_values"})
@@ -151,11 +134,9 @@ class AnnotationShortcutUpdate(View):
             return JsonResponse({"status": "error"})
 
 
-class AnnotationShortcutList(View):
+class AnnotationShortcutList(ApiView):
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
 
             query_args = {}
 

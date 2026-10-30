@@ -15,29 +15,9 @@ from backend.models import (
 )
 from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_file
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
-
-
-# @PluginManager.export_parser("face_clustering")
-# class FaceClusteringParser(Parser):
-#     def __init__(self):
-#         self.valid_parameter = {
-#             # clustering-specific params
-#             "clustering_method": {"parser": str, "default": "DBScan"},
-#             "cluster_threshold": {
-#                 "parser": float,
-#                 "default": 0.5,
-#             },  # agglomerative, dbscan
-#             "metric": {"parser": str, "default": "cosine"},  # dbscan
-#             # other params
-#             "max_samples_per_cluster": {"parser": int, "default": 30},
-#             "max_cluster": {"parser": int, "default": 50},
-#             "min_face_height": {"parser": float, "default": 0.1},
-#             "fps": {"parser": float, "default": 2.0},
-#         }
 
 
 @PluginManager.export_plugin("face_clustering")

@@ -10,24 +10,12 @@ from backend.models import (
     Timeline,
 )
 from backend.plugin_manager import PluginManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager, ListData
 from ..utils.analyser_client import TaskAnalyserClient
 
 
 logger = logging.getLogger(__name__)
-
-
-# @PluginManager.export_parser("aggregate_scalar")
-# class AggregateScalarParser(Parser):
-#     def __init__(self):
-#         self.aggregation_lut = {0: "or", 1: "and", 2: "mean", 3: "prod"}
-#         self.valid_parameter = {
-#             "timeline": {"parser": str, "default": "Aggregated Timeline"},
-#             "timeline_ids": {"required": True},
-#             "aggregation": {"parser": lambda x: self.aggregation_lut[x], "default": 0},
-#         }
 
 
 @PluginManager.export_plugin("aggregate_scalar")

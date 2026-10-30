@@ -8,18 +8,20 @@ from django.http import JsonResponse
 from backend.models import Video
 from backend.models import CalibrationAssets
 from backend.models import PluginRun
-from backend.utils.decode_auth import decode_and_authenticate
 from backend.utils.pitch import normalize_sport, object_pitch_positions, pitch_markings
 from backend.utils.projection import is_calibrated, pitch_to_video, project_polylines, to_json_points, video_to_pitch
 from backend.permissions import writable
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
 
 
-class CalibrationAssetsCreate(View):
-    @decode_and_authenticate(require_name=True)
-    def post(self, request, data): # data is passed from the decorator
+class CalibrationAssetsCreate(ApiView):
+    def post(self, request):
+        data = request.data
+        if "name" not in data:
+            return JsonResponse({"status": "error", "type": "missing_values"})
         try: # read from db on existing entry
             query_args = {"name": data.get("name"), "owner": request.user}
             if "video_id" in data:
@@ -56,9 +58,11 @@ class CalibrationAssetsCreate(View):
         return JsonResponse({"status": "ok", "entry": data_db.to_dict()})
 
 
-class CalibrationAssetsChange(View):
-    @decode_and_authenticate(require_name=True)
-    def post(self, request, data):
+class CalibrationAssetsChange(ApiView):
+    def post(self, request):
+        data = request.data
+        if "name" not in data:
+            return JsonResponse({"status": "error", "type": "missing_values"})
         try:
             calibration_assets = writable(CalibrationAssets, request.user).get(id=data.get("id"))
             if "name" in data:
@@ -96,15 +100,13 @@ class CalibrationAssetsChange(View):
             return JsonResponse({"status": "error"})
 
 
-class CalibrationAssetsDelete(View):
-    @decode_and_authenticate(require_name=False)
-    def post(self, request, data):
+class CalibrationAssetsDelete(ApiView):
+    def post(self, request):
+        data = request.data
         try:
             calibration_assets = writable(CalibrationAssets, request.user).get(id=data.get("id"))
+            # object_data is stored on the asset and goes with it
             calibration_assets.delete()
-            if "object_data" in data:
-                for obj in data.get("object_data"):
-                    obj.delete()
             return JsonResponse({"status": "ok"})
         except CalibrationAssets.DoesNotExist:
             return JsonResponse({"status": "error", "type": "not_exist"})   
@@ -113,11 +115,9 @@ class CalibrationAssetsDelete(View):
             return JsonResponse({"status": "error"})
 
 
-class CalibrationAssetsList(View):
+class CalibrationAssetsList(ApiView):
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
 
             query_args = {}
             query_args["owner"] = request.user
@@ -154,7 +154,7 @@ def _clicked_points(calibration_assets):
     ]
 
 
-class CalibrationAssetsOverlay(View):
+class CalibrationAssetsOverlay(ApiView):
     """What a calibration asset's homography and lens put into the video (?id=), for the frontend to draw:
 
     - "markings": the pitch lines and circles, as polylines in relative video coordinates, split where the camera
@@ -164,8 +164,6 @@ class CalibrationAssetsOverlay(View):
     """
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error", "type": "not_authenticated"})
             calibration_assets = CalibrationAssets.objects.get(id=request.GET.get("id"), owner=request.user)
             H, lens = calibration_assets.homography_matrix, calibration_assets.lens_intrinsics
             if not is_calibrated(H):
@@ -189,12 +187,12 @@ class CalibrationAssetsOverlay(View):
             return JsonResponse({"status": "error"})
 
 
-class CalibrationAssetsProject(View):
+class CalibrationAssetsProject(ApiView):
     """Points projected through a calibration asset's homography and lens: {"id", "points": [[x, y], ...],
     "direction": "video_to_pitch" (default) | "pitch_to_video"}, relative coordinates both ways. Returns
     {"points": [[x, y] | null, ...]}, null where a point can't be mapped."""
-    @decode_and_authenticate(require_name=False)
-    def post(self, request, data):
+    def post(self, request):
+        data = request.data
         try:
             calibration_assets = CalibrationAssets.objects.get(id=data.get("id"), owner=request.user)
         except (CalibrationAssets.DoesNotExist, ValueError):

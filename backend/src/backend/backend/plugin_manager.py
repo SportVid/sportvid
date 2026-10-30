@@ -55,6 +55,23 @@ def _mark_running(plugin_run):
         logger.warning("Failed to publish plugin run RUNNING event", exc_info=True)
 
 
+# How often and how long a run waits for its video's HLS conversion (time_limit=7200 there).
+CONVERSION_POLL_SECONDS = 10
+CONVERSION_MAX_RETRIES = 7200 // CONVERSION_POLL_SECONDS
+
+
+def _mark_waiting(plugin_run):
+    """Show a run that waits for its video's conversion as WAITING (once) and push it live."""
+    if plugin_run.status == PluginRun.STATUS_WAITING:
+        return
+    PluginRun.objects.filter(id=plugin_run.id).update(status=PluginRun.STATUS_WAITING, update_date=timezone.now())
+    plugin_run.status = PluginRun.STATUS_WAITING
+    try:
+        publish_plugin_run(plugin_run)
+    except Exception:
+        logger.warning("Failed to publish plugin run WAITING event", exc_info=True)
+
+
 def _recordable_parameters(parameters):
     """Validated parameters as stored on the PluginRun.
 
@@ -119,7 +136,10 @@ class PluginManager:
         serializer = serializer_cls(data=parameters or {})
         serializer.is_valid(raise_exception=True)
         val_params = cls._stringify_uuids(dict(serializer.validated_data))
-        
+        # uploaded files (set by plugin/run/new, not a client parameter) aren't serializer fields
+        if "_files" in parameters:
+            val_params["_files"] = parameters["_files"]
+
         # logging.error(f'validated params: {val_params}')
 
         return val_params
@@ -221,7 +241,7 @@ class PluginManager:
         _mark_running(plugin_run)
         try:
             plugin_result = self._plugins[plugin]()(
-                parameters,
+                validated_parameters,
                 user=user,
                 video=video,
                 plugin_run=plugin_run,
@@ -324,6 +344,28 @@ def run_plugin(self, args):
             # Instead of failing with DoesNotExist, task exits without starting analyser work.
             logger.info("PluginRun %s deleted before it started, skipping", plugin_run)
             return
+        # The upload's HLS conversion still rewrites the video file, and a plugin reading it
+        # now fails (InvalidDataError in Ray). Wait as WAITING until it is done. Like the
+        # dependency wait below, this comes before the in_scheduler guard.
+        if video_db.status == Video.STATUS_PROCESSING:
+            _mark_waiting(plugin_run_db)
+            waited = args.get("conversion_retries", 0)
+            try:
+                self.retry(
+                    args=[{**args, "conversion_retries": waited + 1}],
+                    countdown=CONVERSION_POLL_SECONDS,
+                    max_retries=CONVERSION_MAX_RETRIES,
+                )
+            except MaxRetriesExceededError:
+                logger.error("Video %s still converting -- aborting %s", video_db.id.hex, plugin)
+                plugin_run_db.status = PluginRun.STATUS_ERROR
+                plugin_run_db.failure_reason = {
+                    "type": "video_conversion_timeout",
+                    "message": "The video was still being converted when the run gave up waiting",
+                    "details": {"video_id": video_db.id.hex},
+                }
+                plugin_run_db.save()
+                return
         # NOTE: Some plugins take another plugin_run's id as input (object_tracker_id for
         # team_clustering/osnet_reid, object_tracker_run_id for kpi_computation) and need that
         # run's *results*, not just its id -- submitting them while it's still QUEUED/RUNNING
@@ -361,8 +403,9 @@ def run_plugin(self, args):
                     plugin_run_db.save()
                     return
                 try:
-                    # ~30 minutes total (360 * 5s) before giving up.
-                    self.retry(countdown=5, max_retries=360)
+                    # ~30 minutes total (360 * 5s) before giving up. Celery counts every retry
+                    # of this task, so the ones spent waiting for the conversion don't count.
+                    self.retry(countdown=5, max_retries=360 + args.get("conversion_retries", 0))
                 except MaxRetriesExceededError:
                     logger.error(
                         "Dependency plugin run %s never finished -- aborting %s",

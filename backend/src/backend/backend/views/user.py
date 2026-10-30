@@ -25,6 +25,7 @@ from backend.models import (
     AnnotationShortcut,
     CalibrationAssets,
 )
+from backend.utils.api import ApiView, api_function
 
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,9 @@ def get_csrf_token(request):
     return JsonResponse({"status": "ok"})
 
 
-class UserGet(View):
+class UserGet(ApiView):
+    legacy_errors = False  # answered "not logged in" with 401 already
+
     def post(self, request):
         logger.debug(
             "user.is_authenticated=%s session_key=%s sessionid=%s",
@@ -50,14 +53,6 @@ class UserGet(View):
             request.COOKIES.get("sessionid"),
         )
         
-        if not request.user.is_authenticated:
-            return JsonResponse(
-                {
-                    "status": "error", 
-                    "error": {"type": "not_authenticated"}
-                },
-                status=401
-            )
         try:
             user = request.user
             return JsonResponse(
@@ -85,31 +80,23 @@ class UserGet(View):
 
 
 @require_http_methods(["POST"])
+@api_function(public=True)
 def login(request):
-    try:
-        body = request.body.decode("utf-8")
-    except (UnicodeDecodeError, AttributeError):
-        body = request.body
-
-    try:
-        data = json.loads(body)
-    except Exception as e:
-        logger.exception('Could not load JSON for login')
-        return JsonResponse({"status": "error"})
+    data = request.data
 
     if "name" not in data["params"]:
         logger.warning('Name not supplied for login')
-        return JsonResponse({"status": "error", "message": "Name missing"})
+        return JsonResponse({"status": "error", "type": "missing_values", "message": "Name missing"})
 
     if "password" not in data["params"]:
         logger.warning('Password not supplied for login')
-        return JsonResponse({"status": "error", "message": "Password missing"})
+        return JsonResponse({"status": "error", "type": "missing_values", "message": "Password missing"})
 
     username = data["params"]["name"]
     password = data["params"]["password"]
 
     if username == "" or password == "":
-        return JsonResponse({"status": "error", "message": "Value empty"})
+        return JsonResponse({"status": "error", "type": "missing_values", "message": "Value empty"})
 
     user = auth.authenticate(username=username, password=password)
     if user is not None:
@@ -141,33 +128,25 @@ def login(request):
         return JsonResponse({"status": "error", "type": "not_approved",
                              "message": "Account awaiting approval by an administrator"})
 
-    return JsonResponse({"status": "error", "message": "Invalid login credentials"})
+    return JsonResponse({"status": "error", "type": "invalid_credentials", "message": "Invalid login credentials"})
 
 
 @require_http_methods(["POST"])
+@api_function(public=True)
 def register(request):
-    try:
-        body = request.body.decode("utf-8")
-    except (UnicodeDecodeError, AttributeError):
-        body = request.body
-
-    try:
-        data = json.loads(body)
-    except Exception as e:
-        logger.exception('Could not load JSON for register')
-        return JsonResponse({"status": "error"})
+    data = request.data
 
     if "name" not in data["params"]:
         logger.warning('Name not supplied for registration')
-        return JsonResponse({"status": "error", "message": "Name missing"})
+        return JsonResponse({"status": "error", "type": "missing_values", "message": "Name missing"})
 
     if "password" not in data["params"]:
         logger.warning('Password not supplied for registration')
-        return JsonResponse({"status": "error", "message": "Password missing"})
+        return JsonResponse({"status": "error", "type": "missing_values", "message": "Password missing"})
 
     if "email" not in data["params"]:
         logger.warning('EMail not supplied for registration')
-        return JsonResponse({"status": "error", "message": "E-Mail missing"})
+        return JsonResponse({"status": "error", "type": "missing_values", "message": "E-Mail missing"})
 
     username = data["params"]["name"]
     password = data["params"]["password"]
@@ -175,11 +154,11 @@ def register(request):
 
     if username == "" or password == "" or email == "":
         logger.warning("An input is missing for registration.")
-        return JsonResponse({"status": "error", "message": "Input empty"})
+        return JsonResponse({"status": "error", "type": "missing_values", "message": "Input empty"})
 
     if auth.get_user_model().objects.filter(username=username).count() > 0:
         logger.warning("User already exists. Abort.")
-        return JsonResponse({"status": "error", "message": "User already exists"})
+        return JsonResponse({"status": "error", "type": "user_exists", "message": "User already exists"})
 
     experience_mode = data["params"].get("experience_mode", "complex")
     if experience_mode not in ("simple", "complex"):
@@ -201,25 +180,9 @@ def register(request):
 
 
 @require_http_methods(["POST"])
+@api_function(legacy_errors=False)  # answered "not logged in" with 401 already
 def user_update(request):
-    if not request.user.is_authenticated:
-        return JsonResponse(
-            {
-                "status": "error", 
-                "error": {"type": "not_authenticated"}
-            },
-            status=401
-        )
-    try:
-        body = request.body.decode("utf-8")
-    except (UnicodeDecodeError, AttributeError):
-        body = request.body
-
-    try:
-        data = json.loads(body)
-    except Exception:
-        logger.exception("Could not decode JSON for user_update")
-        return JsonResponse({"status": "error"})
+    data = request.data
 
     params = data.get("params", {})
     update_type = params.get("update_type", "user")
@@ -240,9 +203,9 @@ def user_update(request):
 
                 if pwd_current or pwd_new:
                     if not pwd_current or not pwd_new:
-                        return JsonResponse({"status": "error", "message": "Both current and new passwords are required"})
+                        return JsonResponse({"status": "error", "type": "missing_values", "message": "Both current and new passwords are required"})
                     if not user.check_password(pwd_current):
-                        return JsonResponse({"status": "error", "message": "Invalid current password"})
+                        return JsonResponse({"status": "error", "type": "invalid_password", "message": "Invalid current password"})
                     try:
                         validate_password(pwd_new, user=user)
                     except ValidationError as e:
@@ -265,7 +228,7 @@ def user_update(request):
                 user = request.user
                 dashboard_layout = params.get("dashboard_layout")
                 if not isinstance(dashboard_layout, dict):
-                    return JsonResponse({"status": "error", "message": "Invalid dashboard layout"})
+                    return JsonResponse({"status": "error", "type": "wrong_value", "message": "Invalid dashboard layout"})
 
                 user.dashboard_layout = dashboard_layout
                 user.save()
@@ -276,7 +239,7 @@ def user_update(request):
                 user = request.user
                 video_view_mode = params.get("video_view_mode")
                 if video_view_mode not in ("grid", "list"):
-                    return JsonResponse({"status": "error", "message": "Invalid video view mode"})
+                    return JsonResponse({"status": "error", "type": "wrong_value", "message": "Invalid video view mode"})
 
                 user.video_view_mode = video_view_mode
                 user.save()
@@ -287,7 +250,7 @@ def user_update(request):
                 user = request.user
                 experience_mode = params.get("experience_mode")
                 if experience_mode not in ("simple", "complex"):
-                    return JsonResponse({"status": "error", "message": "Invalid experience mode"})
+                    return JsonResponse({"status": "error", "type": "wrong_value", "message": "Invalid experience mode"})
 
                 user.experience_mode = experience_mode
                 user.save()
@@ -296,24 +259,24 @@ def user_update(request):
 
             elif update_type == "admin":
                 if not is_admin(request.user):
-                    return JsonResponse({"status": "error", "error": "not_authorized"}, status=403)
+                    return JsonResponse({"status": "error", "type": "not_authorized", "error": "not_authorized"}, status=403)
                 user_id = params.get("id")
                 if not user_id:
-                    return JsonResponse({"status": "error", "message": "User ID missing for admin update"})
+                    return JsonResponse({"status": "error", "type": "missing_values", "message": "User ID missing for admin update"})
 
                 try:
                     user = SportVidUser.objects.get(id=user_id)
                 except SportVidUser.DoesNotExist:
-                    return JsonResponse({"status": "error", "message": "User not found"})
+                    return JsonResponse({"status": "error", "type": "not_exist", "message": "User not found"})
 
                 fields_to_update = ["email", "role", "max_storage_size", "max_video_size", "max_file_size", "is_active"]
                 updated = False
 
                 if "is_active" in params:
                     if not isinstance(params["is_active"], bool):
-                        return JsonResponse({"status": "error", "message": "is_active must be true or false"})
+                        return JsonResponse({"status": "error", "type": "wrong_value", "message": "is_active must be true or false"})
                     if user.id == request.user.id and not params["is_active"]:
-                        return JsonResponse({"status": "error", "message": "Admins cannot deactivate themselves"})
+                        return JsonResponse({"status": "error", "type": "wrong_value", "message": "Admins cannot deactivate themselves"})
 
                 for field in fields_to_update:
                     if field in params:
@@ -327,7 +290,7 @@ def user_update(request):
                 return JsonResponse({"status": "ok", "data": user.to_dict()})
 
             else:
-                return JsonResponse({"status": "error", "message": "Invalid update type"})
+                return JsonResponse({"status": "error", "type": "wrong_value", "message": "Invalid update type"})
         
 
     except Exception:
@@ -336,53 +299,37 @@ def user_update(request):
 
 
 @require_http_methods(["POST"])
+@api_function(legacy_errors=False)  # answered "not logged in" with 401 already
 def user_delete(request):
-    if not request.user.is_authenticated:
-        return JsonResponse(
-            {
-                "status": "error", 
-                "error": {"type": "not_authenticated"}
-            },
-            status=401
-        )
-    try:
-        body = request.body.decode("utf-8")
-    except (UnicodeDecodeError, AttributeError):
-        body = request.body
-
-    try:
-        data = json.loads(body)
-    except Exception:
-        logger.exception("Could not decode JSON for user_delete")
-        return JsonResponse({"status": "error"})
+    data = request.data
 
     params = data.get("params", {})
     update_type = params.get("update_type", "user")
 
     if update_type == "admin":
         if not is_admin(request.user):
-            return JsonResponse({"status": "error", "error": "not_authorized"}, status=403)
+            return JsonResponse({"status": "error", "type": "not_authorized", "error": "not_authorized"}, status=403)
         user_id = params.get("id", None)
 
         if user_id == request.user.id:
             logger.warning("Admins cannot delete themselves via admin panel")
-            return JsonResponse({"status": "error"})
+            return JsonResponse({"status": "error", "type": "wrong_value", "message": "Admins cannot delete themselves"})
 
         try:
             user = SportVidUser.objects.get(id=user_id)
         except SportVidUser.DoesNotExist:
-            return JsonResponse({"status": "error", "message": "User not found"})
+            return JsonResponse({"status": "error", "type": "not_exist", "message": "User not found"})
     
     else: 
         password = params.get("password", "")
         if password == "":
             logger.warning("Password not supplied for user_delete")
-            return JsonResponse({"status": "error", "message": "Password missing"})
+            return JsonResponse({"status": "error", "type": "missing_values", "message": "Password missing"})
 
         user = request.user
         if not user.check_password(password):
             logger.warning("Invalid password supplied for user_delete")
-            return JsonResponse({"status": "error", "message": "Invalid password"})
+            return JsonResponse({"status": "error", "type": "invalid_password", "message": "Invalid password"})
 
     try:
         with transaction.atomic():
@@ -448,15 +395,17 @@ def user_delete(request):
 
 
 @require_http_methods(["POST"])
+@api_function(public=True)  # logging out without a session is fine
 def logout(request):
     auth.logout(request)
     return JsonResponse({"status": "ok"})
 
 
 @require_http_methods(["GET"])
+@api_function()
 def user_list(request):
     if not is_admin(request.user):
-        return JsonResponse({"status": "error", "error": "not_authorized"})
+        return JsonResponse({"status": "error", "type": "not_authorized", "error": "not_authorized"})
     users = SportVidUser.objects.all()
     data = [u.to_dict() for u in users]
     return JsonResponse({"status": "ok", "data": data})

@@ -27,6 +27,7 @@ from backend.models import (
 )
 from data import DataManager, Shot
 from backend.permissions import readable
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
@@ -76,7 +77,9 @@ class TimeTypeExport(Enum):
     DURATION_NO_GAP = 4
 
 
-class VideoExport(View):
+class VideoExport(ApiView):
+    json_body = False  # multipart/form data
+
 
     def get_segment_times_from_timeline(
         self, video: Video, timeline_id: str = None
@@ -324,7 +327,7 @@ class VideoExport(View):
                 )
             )
 
-        print(f"A {time.time()-t}")
+        logger.debug(f"export timing A {time.time()-t}")
         t = time.time()
 
         if use_seconds:
@@ -393,7 +396,7 @@ class VideoExport(View):
                 )
             )
 
-        print(f"B {time.time()-t}")
+        logger.debug(f"export timing B {time.time()-t}")
         t = time.time()
         for timeline_db in (
             video_db.timeline_set.all()
@@ -410,7 +413,7 @@ class VideoExport(View):
                 self.export_timeline(timeline=timeline_db, segments=time_segments)
             )
 
-            print(f"{timeline_db.name} {time.time()-t}")
+            logger.debug(f"export timing {timeline_db.name} {time.time()-t}")
             t = time.time()
 
         csv_cols = []
@@ -427,8 +430,8 @@ class VideoExport(View):
         for line in rows:
             writer.writerow(line)
 
-        print(f"C {time.time()-t}")
-        print(f"TOTAL {time.time()-start_time}")
+        logger.debug(f"export timing C {time.time()-t}")
+        logger.debug(f"export timing TOTAL {time.time()-start_time}")
 
         return buffer.getvalue()
 
@@ -697,8 +700,6 @@ class VideoExport(View):
 
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
 
             if "video_id" not in request.POST:
                 return JsonResponse({"status": "error", "type": "missing_values"})

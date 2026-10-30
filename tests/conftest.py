@@ -53,6 +53,27 @@ def enqueued_tasks(monkeypatch):
     return calls
 
 
+@pytest.fixture
+def cancel_messages(monkeypatch):
+    """Record publish_cancel messages (channel, message) instead of sending them to Valkey."""
+    from backend.utils import events
+
+    messages = []
+    client = types.SimpleNamespace(publish=lambda channel, message: messages.append((channel, message)))
+    monkeypatch.setattr(events, "get_client", lambda: client)
+    return messages
+
+
+@pytest.fixture
+def register_plugin(monkeypatch):
+    """Register a throwaway backend plugin whose __call__ is `call`, for this test only."""
+    from backend.plugin_manager import PluginManager
+
+    def register(name, call):
+        monkeypatch.setitem(PluginManager._plugins, name, type(name, (), {"__call__": call}))
+    return register
+
+
 @pytest.fixture(autouse=True)
 def deployed_ray_plugins(request, monkeypatch):
     """Pretend every Ray plugin is deployed (no analyser in tests); tests may edit the dict.

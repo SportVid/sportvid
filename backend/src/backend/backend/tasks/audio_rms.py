@@ -6,20 +6,9 @@ from django.conf import settings
 from backend.models import PluginRun, PluginRunResult, Video, Timeline
 from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_file
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
-
-
-# @PluginManager.export_parser("audio_rms")
-# class AudioRmsParser(Parser):
-#     def __init__(self):
-
-#         self.valid_parameter = {
-#             "timeline": {"parser": str, "default": "audio_amp"},
-#             "sr": {"parser": int, "default": 24000},
-#         }
 
 
 @PluginManager.export_plugin("audio_rms")

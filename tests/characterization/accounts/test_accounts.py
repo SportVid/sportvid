@@ -24,7 +24,8 @@ def test_login_with_correct_password(client, alice):
 
 def test_login_with_wrong_password(client, alice):
     r = post(client, "/user/login", {"name": "alice", "password": "nope"})
-    assert r.json() == {"status": "error", "message": "Invalid login credentials"}
+    assert r.status_code == 401
+    assert r.json() == {"status": "error", "type": "invalid_credentials", "message": "Invalid login credentials"}
 
 
 def test_password_change(client, alice):
@@ -37,7 +38,8 @@ def test_password_change(client, alice):
 
 def test_register_with_existing_name(client, alice):
     r = post(client, "/user/register", {"name": "alice", "password": STRONG, "email": "a@b.c"})
-    assert r.json() == {"status": "error", "message": "User already exists"}
+    assert r.status_code == 400
+    assert r.json() == {"status": "error", "type": "user_exists", "message": "User already exists"}
 
 
 def test_admin_update_returns_the_user(client, alice):

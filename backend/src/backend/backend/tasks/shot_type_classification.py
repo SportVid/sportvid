@@ -16,7 +16,6 @@ from backend.models import (
     TimelineSegmentAnnotation,
 )
 from backend.plugin_manager import PluginManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 
 from data import Shot, ShotsData
@@ -32,16 +31,6 @@ LABEL_LUT = {
     "p_FS": "Full Shot",
     "p_LS": "Long Shot",
 }
-
-
-# @PluginManager.export_parser("shot_type_classification")
-# class ShotTypeClassifierParser(Parser):
-#     def __init__(self):
-#         self.valid_parameter = {
-#             "timeline": {"parser": str, "default": "Camera Setting"},
-#             "fps": {"parser": float, "default": 2.0},
-#             "shot_timeline_id": {},
-#         }
 
 
 @PluginManager.export_plugin("shot_type_classification")
