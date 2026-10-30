@@ -13,7 +13,6 @@ from django.http import JsonResponse
 from django.conf import settings
 
 from celery.app.control import Control
-from sportvid.celery import app as celery_app
 
 from backend.utils.storage import add_used_storage, quota_exceeded_response, release_used_storage, would_exceed_quota
 from backend.plugin_manager import PluginManager
@@ -25,7 +24,8 @@ from backend.utils import (
 )
 from backend.models import Video
 from backend.permissions import can_read_all, readable, writable
-from backend.utils.events import publish_cancel
+from backend.log_context import log_event
+from backend.utils.cancellation import cancel_conversion
 from utils.helper import remove_file, remove_dir
 from backend.tasks.convert_video import convert_video_to_hls
 from backend.utils.api import ApiView
@@ -274,14 +274,9 @@ class VideoDelete(ApiView):
             if not video:
                 return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
 
-            # TODO: Add structured logging for video deletion (task_id, revoke vs cancel)
-            # and consider tracking "pending deletion" videos to avoid races with
-            # conversion tasks.
             # NOTE: If a conversion is queued, Celery revoke prevents it from starting.
             # If conversion is already running, the conversion task's watcher receives the message and kills the FFmpeg subprocess.
-            if video.task_id:
-                celery_app.control.revoke(video.task_id, terminate=False)
-            publish_cancel("video", video.id.hex)
+            cancel_conversion(video, reason="video_delete")
 
             file_size = video.file_size
             video_owner = video.owner
@@ -297,10 +292,15 @@ class VideoDelete(ApiView):
                     for ext in (video.ext, ".mp4", ".mkv", ".ogv"):
                         remove_file(media_path_to_file(video_id_hex, ext))
                 except Exception:
+                    files_removed = False
                     logger.exception("Failed to clean up video files after delete")
+                else:
+                    files_removed = True
 
                 if video_owner:
                     release_used_storage(video_owner, file_size)
+                log_event(logger, "video.delete", video_id=video_id_hex, storage_released=file_size,
+                          files_removed=files_removed)
                 return JsonResponse({"status": "ok"})
 
             return JsonResponse({"status": "error", "type": "not_exist"}, status=500)

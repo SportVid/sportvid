@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, List
 
+from backend.log_context import log_event
 from backend.models import PluginRun, PluginRunResult, Video, Timeline, TrackingData
 from backend.utils import media_path_to_file
 from ..utils.analyser_client import TaskAnalyserClient
@@ -86,9 +87,7 @@ class Task:
         )
         if job_id is None:
             return None
-        logger.info(
-            f"Plugin started: analyser job_id: {job_id} plugin_run_id: {plugin_run}"
-        )
+        log_event(logger, "analyser.job.start", job_id=job_id, analyser=analyser)
 
         result = client.get_plugin_results(
             job_id=job_id,
@@ -96,9 +95,8 @@ class Task:
             progress_range=progress_range,
         )
         if result is None:
-            logger.error(
-                f"Plugin is crashing: analyser job_id: {job_id} plugin_run_id: {plugin_run}"
-            )
+            # also after a cancel (the run was deleted); analyser_client logged which
+            log_event(logger, "analyser.job.no_result", level=logging.ERROR, job_id=job_id, analyser=analyser)
             return None
 
         self._record_provenance(plugin_run or getattr(client, "plugin_run_db", None), analyser)

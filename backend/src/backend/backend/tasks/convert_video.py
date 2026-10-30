@@ -13,6 +13,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 
 from backend.utils import media_dir_to_file, media_path_to_file, publish_video
+from backend.log_context import log_context, log_event
 from backend.utils.events import cancellation_watcher
 from backend.models import Video
 from backend.plugin_manager import PluginManager
@@ -202,6 +203,11 @@ def _metadata(file_in: Path) -> tuple[float, float | None, Any]:
 
 @shared_task(bind=True, time_limit=7200, soft_time_limit=5400, queue="gpu")
 def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
+    with log_context(video_id=video_id_hex, task_id=self.request.id):
+        return _convert_video_to_hls(video_id_hex, original_ext, analyzers)
+
+
+def _convert_video_to_hls(video_id_hex, original_ext, analyzers):
     started = time.monotonic()
     video_db = None
     ffmpeg_proc: subprocess.Popen[str] | None = None

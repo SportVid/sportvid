@@ -11,7 +11,6 @@ from django.http import HttpResponse, JsonResponse
 from django.conf import settings
 from rest_framework import serializers
 
-from sportvid.celery import app as celery_app
 
 from backend.models import Video, PluginRun, TrackingData
 from backend.permissions import readable, unreadable_references, writable
@@ -19,7 +18,7 @@ from backend.plugin_catalogue import is_available
 from backend.utils.storage import release_used_storage
 from backend.plugin_manager import PluginManager
 from backend.utils import download_url, download_file, media_url_to_file
-from backend.utils.events import publish_cancel
+from backend.utils.cancellation import active_plugin_runs, cancel_plugin_runs
 
 from backend.serializers import PluginRunRequestSerializer
 from backend.utils.api import ApiView
@@ -153,20 +152,8 @@ class PluginRunDelete(ApiView):
                 # admins may delete any user's runs by id
                 runs = writable(PluginRun, request.user).filter(id__in=plugin_list)
             
-            # before deleting plugin runs, build a list of active runs
-            active_runs = list(
-                runs.exclude(status__in=[PluginRun.STATUS_DONE, PluginRun.STATUS_ERROR])
-                .values_list("id", "task_id")
-            )
-            
-            # TODO: Add structured logging to distinguish revoked (queued) vs cancelled
-            # (running) plugin runs, and optionally verify that tasks actually stopped.
-            for run_id, task_id in active_runs:
-                if task_id:
-                    # for each active run with a task id -> revoke queued Celery task to prevent it from starting
-                    celery_app.control.revoke(task_id, terminate=False)
-                # publish running-job cancellation for every active run -> cancellation event causes the task's watcher to abort analyser request
-                publish_cancel("plugin_run", run_id.hex)
+            # revoke the queued Celery tasks, and tell the running ones' watchers to abort their analyser job
+            cancel_plugin_runs(active_plugin_runs(runs), reason="user_delete")
 
             # NOTE: Cascaded deletion of uploaded TrackingData that were created from a `posdata_convert` PluginRun.
             # Also deletes any `kpi_compution` runs derived from the same file.

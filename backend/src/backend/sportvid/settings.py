@@ -79,7 +79,9 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "[%(asctime)s][%(levelname)s][%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            # appends the correlation IDs bound with backend.log_context (video_id=..., plugin_run_id=...)
+            "()": "backend.log_context.ContextFormatter",
+            "fmt": "[%(asctime)s][%(levelname)s][%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         }
     },

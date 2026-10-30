@@ -10,6 +10,7 @@ from analyser.client import AnalyserClient
 from backend.models import PluginRun
 from backend.utils import RetryOnRpcErrorClientInterceptor, ExponentialBackoff
 from backend.utils.eta import EtaEstimator
+from backend.log_context import log_context, log_event
 from backend.utils.events import cancellation_watcher, publish_plugin_run
 from interface import analyser_pb2
 from interface import analyser_pb2_grpc
@@ -179,10 +180,10 @@ class TaskAnalyserClient(AnalyserClient):
                 "plugin_run", plugin_run_db.id.hex, on_cancel=lambda: self.abort_plugin(job_id)
             )
         )
-        with watch as cancel_event:
+        with log_context(job_id=job_id), watch as cancel_event:
             while True:
                 if cancel_event is not None and cancel_event.is_set():
-                    logger.info(f"Plugin run {plugin_run_db.id.hex} cancelled")
+                    log_event(logger, "plugin_run.cancelled", plugin_run_id=plugin_run_db.id, source="valkey")
                     return None
 
                 if timeout:

@@ -32,16 +32,15 @@ channel of the user it authenticated as.
 # Uses timeout=1.0, which is fine, but if Valkey is slow or the network is flaky, threads can pile up.
 # --> Consider a small per-process limit on active watchers if you expect very high churn.
 
-# TODO: No structured logging for cancellation
-# Cancellation events are logged, but without correlation IDs (job IDs, video IDs) in a structured way.
-# --> Add structured logging fields (e.g. kind, resource_id) consistently.
-
 
 import os
 import json
 import logging
 import threading
+import contextvars
 from contextlib import contextmanager
+
+from backend.log_context import log_event
 
 logger = logging.getLogger(__name__)
 
@@ -182,15 +181,18 @@ def subscribe(user_id):
 def cancel_channel(kind, resource_id) -> str:
     return f"{CANCEL_CHANNEL_PREFIX}:{kind}:{resource_id}"
 
-def publish_cancel(kind, resource_id) -> None:
+def publish_cancel(kind, resource_id) -> bool:
     """ Publishes a (fire-and-forget) cancellation message for a specific resource, such as:
         - video: <video_id>
         - plugin_run: <plugin_run_id>
+    Returns whether Valkey took the message (not whether anyone was listening).
     """
     try:
         get_client().publish(cancel_channel(kind, resource_id), "cancel")
+        return True
     except Exception:
         logger.warning("Failed to publish cancel for %s %s", kind, resource_id, exc_info=True)
+        return False
 
 @contextmanager
 def cancellation_watcher(kind, resource_id, on_cancel=None):
@@ -237,6 +239,7 @@ def cancellation_watcher(kind, resource_id, on_cancel=None):
                     return
                 
                 if message and message.get("type") == "message":
+                    log_event(logger, "cancel.received", kind=kind, resource_id=resource_id)
                     event.set()
                     if on_cancel is not None:
                         try:
@@ -252,8 +255,10 @@ def cancellation_watcher(kind, resource_id, on_cancel=None):
             except Exception:
                 pass
 
+    # copy_context: the listener (and on_cancel) logs with the task's correlation IDs
     thread = threading.Thread(
-        target=_listen, name=f"cancel-watch-{kind}-{resource_id}", daemon=True
+        target=contextvars.copy_context().run, args=(_listen,),
+        name=f"cancel-watch-{kind}-{resource_id}", daemon=True,
     )
     thread.start()
     try:

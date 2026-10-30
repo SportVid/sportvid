@@ -17,6 +17,7 @@ from backend.models import (
     Video,
     SportVidUser,
 )
+from backend.log_context import log_context, log_event
 from backend.utils.events import publish_plugin_run
 from backend.utils.task import TaskFailure
 from data import DataManager
@@ -315,8 +316,24 @@ def generate_plugin_run_result_cache(
                 logger.exception("Cache couldn't write")
 
 
+def _hex(id):
+    """The payload's UUID strings in the hex form the views and the conversion log."""
+    try:
+        return uuid.UUID(str(id)).hex if id else None
+    except ValueError:
+        return id
+
+
 @shared_task(bind=True)
 def run_plugin(self, args):
+    with log_context(
+        plugin=args.get("plugin"), plugin_run_id=_hex(args.get("plugin_run")),
+        video_id=_hex(args.get("video")), task_id=self.request.id,
+    ):
+        return _run_plugin(self, args)
+
+
+def _run_plugin(self, args):
     plugin = args.get("plugin")
     parameters = args.get("parameters") or {}
     video = args.get("video")
