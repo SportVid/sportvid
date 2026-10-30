@@ -375,8 +375,8 @@ def _run_plugin(self, args):
     # A run can be deleted at any point while this runs; the missing row is the signal.
     # plugin/run/delete and video/delete delete it before they publish the cancel, the
     # analyser poll aborts the job when its progress write finds no row, and every status
-    # write here goes through _save_run(), which never inserts the deleted run again.
-    # TaskAnalyserClient's gRPC error paths still save() (BACKEND.md › Plugin runs).
+    # write here goes through _save_run() (TaskAnalyserClient's through _fail_run()), which
+    # never inserts the deleted run again.
     plugin_run_db = None
     if not dry_run and plugin_run is not None:
         try:

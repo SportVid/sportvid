@@ -1,4 +1,6 @@
-"""TaskAnalyserClient: what a gRPC failure does to the plugin run."""
+"""TaskAnalyserClient: a gRPC failure marks the run ERROR, but never inserts a deleted run again."""
+import logging
+
 import grpc
 import pytest
 
@@ -36,24 +38,31 @@ METHODS = ["list_plugins", "upload_data", "upload_file", "run_plugin", "get_plug
 
 
 @pytest.mark.parametrize("method", METHODS)
-def test_a_grpc_error_marks_the_run_error(run, monkeypatch, method):
+def test_a_grpc_error_marks_the_run_error(run, monkeypatch, published_events, caplog, method):
     monkeypatch.setattr(AnalyserClient, method, fail)
+    published_events.clear()
 
     assert getattr(client_for(run), method)() is None
 
     run.refresh_from_db()
     assert run.status == PluginRun.STATUS_ERROR
+    assert [p["entry"]["status"] for _, p in published_events if p["type"] == "plugin_run.update"] == ["ERROR"]
+    [error] = [r for r in caplog.records if r.msg == "analyser.grpc_error"]
+    assert error.levelno == logging.ERROR
+    assert error.log_fields == {"call": method, "code": "UNAVAILABLE", "message": "analyser down"}
 
 
 @pytest.mark.parametrize("method", METHODS)
-def test_a_grpc_error_after_the_run_was_deleted_inserts_it_again(run, monkeypatch, method):
+def test_a_grpc_error_after_the_run_was_deleted_leaves_it_deleted(run, monkeypatch, caplog, method):
     monkeypatch.setattr(AnalyserClient, method, fail)
     client = client_for(run)
     PluginRun.objects.filter(id=run.id).delete()
 
-    getattr(client, method)()
+    with caplog.at_level(logging.INFO, logger="backend"):
+        getattr(client, method)()
 
-    assert PluginRun.objects.filter(id=run.id).exists()
+    assert not PluginRun.objects.filter(id=run.id).exists()
+    assert "plugin_run.deleted_while_running" in [r.msg for r in caplog.records]
 
 
 def test_abort_errors_leave_the_run_alone(run, monkeypatch):
@@ -78,5 +87,5 @@ def test_a_status_poll_error_marks_the_run_error(run, monkeypatch, published_eve
 
     run.refresh_from_db()
     assert run.status == PluginRun.STATUS_ERROR
-    # get_plugin_status' own save() sends it; the poll's .update() after it adds nothing
+    # get_plugin_status marks it; the poll doesn't mark it a second time
     assert [p["entry"]["status"] for _, p in published_events if p["type"] == "plugin_run.update"] == ["ERROR"]
