@@ -35,15 +35,29 @@ def _value(value):
     return value
 
 
+def current():
+    """The fields bound right now, e.g. to hand the request_id on to a Celery task."""
+    return dict(_fields.get())
+
+
+def bind(**fields):
+    """log_context() for code that can't wrap a block (signal handlers); returns the token for unbind()."""
+    added = {k: _value(v) for k, v in fields.items() if v is not None}
+    return _fields.set({**_fields.get(), **added})
+
+
+def unbind(token):
+    _fields.reset(token)
+
+
 @contextmanager
 def log_context(**fields):
     """Add `fields` to every record logged in this block; None values are left out."""
-    added = {k: _value(v) for k, v in fields.items() if v is not None}
-    token = _fields.set({**_fields.get(), **added})
+    token = bind(**fields)
     try:
         yield
     finally:
-        _fields.reset(token)
+        unbind(token)
 
 
 def log_event(logger, event, *, level=logging.INFO, exc_info=None, **fields):

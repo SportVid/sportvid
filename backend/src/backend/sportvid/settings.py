@@ -133,6 +133,8 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "backend.SportVidUser"
 
 MIDDLEWARE = [
+    # first, so every line logged for the request (other middleware included) carries request_id
+    "backend.middleware.RequestIdMiddleware",
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
