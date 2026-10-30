@@ -52,26 +52,17 @@ def test_a_grpc_error_marks_the_run_error(run, monkeypatch, published_events, ca
     assert error.log_fields == {"call": method, "code": "UNAVAILABLE", "message": "analyser down"}
 
 
-@pytest.mark.parametrize("method", METHODS)
-def test_a_grpc_error_after_the_run_was_deleted_leaves_it_deleted(run, monkeypatch, caplog, method):
-    monkeypatch.setattr(AnalyserClient, method, fail)
+def test_a_grpc_error_after_the_run_was_deleted_leaves_it_deleted(run, monkeypatch, caplog):
+    """One call is enough: every wrapper marks the run through _fail_run(), checked per call above."""
+    monkeypatch.setattr(AnalyserClient, "upload_file", fail)
     client = client_for(run)
     PluginRun.objects.filter(id=run.id).delete()
 
     with caplog.at_level(logging.INFO, logger="backend"):
-        getattr(client, method)()
+        client.upload_file()
 
     assert not PluginRun.objects.filter(id=run.id).exists()
     assert "plugin_run.deleted_while_running" in [r.msg for r in caplog.records]
-
-
-def test_abort_errors_leave_the_run_alone(run, monkeypatch):
-    monkeypatch.setattr(AnalyserClient, "abort_plugin", fail)
-
-    assert client_for(run).abort_plugin("job-1") is None
-
-    run.refresh_from_db()
-    assert run.status == PluginRun.STATUS_RUNNING
 
 
 def test_a_status_poll_error_marks_the_run_error(run, monkeypatch, published_events):

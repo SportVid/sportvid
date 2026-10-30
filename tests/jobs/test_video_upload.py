@@ -1,10 +1,14 @@
 """video/upload stores the file, creates a PROCESSING Video and enqueues the HLS conversion (T9, T17)."""
+import json
 import os
+import types
+import uuid
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from backend.models import Video
+from backend.tasks import convert_video
 from backend.utils import media_path_to_file
 from tests.factories import make_user
 
@@ -65,5 +69,21 @@ def test_upload_rejects_other_file_types(client, alice, enqueued_tasks):
     assert r.json()["type"] == "wrong_file_extension"
     assert not Video.objects.exists()
     assert conversions(enqueued_tasks) == []
+    alice.refresh_from_db()
+    assert alice.used_storage_size == 0
+
+
+def test_video_deleted_while_its_upload_finishes(client, alice, monkeypatch, cancel_messages):
+    """The delete lands between creating the row and storing the task id: no 500, and the quota is even."""
+    def enqueue_then_delete(args, **kwargs):
+        r = client.post("/video/delete", json.dumps({"id": args[0]}), content_type="application/json")
+        assert r.json() == {"status": "ok"}
+        return types.SimpleNamespace(id=uuid.uuid4().hex)
+    monkeypatch.setattr(convert_video.convert_video_to_hls, "apply_async", enqueue_then_delete)
+
+    r = upload(client)
+
+    assert r.json()["status"] == "ok"
+    assert not Video.objects.exists()
     alice.refresh_from_db()
     assert alice.used_storage_size == 0

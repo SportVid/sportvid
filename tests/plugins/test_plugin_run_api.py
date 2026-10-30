@@ -4,6 +4,7 @@ Assertions stay on what callers observe (response body, rows, the enqueued task 
 cancel messages), so they hold when the handlers move into a service layer (T8).
 """
 import json
+import types
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -128,21 +129,36 @@ def revoked(enqueued_tasks):
 
 def test_delete_cancels_active_runs(client, video, enqueued_tasks, cancel_messages):
     queued = make_run(video, status=PluginRun.STATUS_QUEUED, task_id="t-queued")
+    waiting = make_run(video, status=PluginRun.STATUS_WAITING, task_id="t-waiting")  # retrying, e.g. for the conversion
     running = make_run(video, status=PluginRun.STATUS_RUNNING, task_id="t-running")
     running_untracked = make_run(video, status=PluginRun.STATUS_RUNNING)
     done = make_run(video, status=PluginRun.STATUS_DONE, task_id="t-done")
     failed = make_run(video, status=PluginRun.STATUS_ERROR, task_id="t-failed")
-    runs = [queued, running, running_untracked, done, failed]
+    runs = [queued, waiting, running, running_untracked, done, failed]
 
     r = delete_runs(client, [run.id.hex for run in runs])
 
     assert r.json()["status"] == "ok"
     assert not PluginRun.objects.exists()
     # queued Celery tasks are revoked; running analyser jobs are told to abort
-    assert revoked(enqueued_tasks) == {"t-queued", "t-running"}
+    assert revoked(enqueued_tasks) == {"t-queued", "t-waiting", "t-running"}
     assert {channel for channel, _ in cancel_messages} == {
-        cancel_channel("plugin_run", run.id.hex) for run in (queued, running, running_untracked)
+        cancel_channel("plugin_run", run.id.hex) for run in (queued, waiting, running, running_untracked)
     }
+
+
+def test_delete_removes_the_row_before_the_cancel_goes_out(client, video, monkeypatch):
+    """A task that subscribes after the cancel was published must find its run missing."""
+    from backend.utils import events
+
+    run = make_run(video, status=PluginRun.STATUS_RUNNING)
+    seen = []
+    monkeypatch.setattr(events, "get_client", lambda: types.SimpleNamespace(
+        publish=lambda channel, message: seen.append(PluginRun.objects.filter(id=run.id).exists())))
+
+    delete_runs(client, [run.id.hex])
+
+    assert seen == [False]
 
 
 def test_delete_all_only_touches_own_runs(client, video, cancel_messages):
@@ -179,6 +195,16 @@ def test_deleting_a_conversion_removes_its_tracking_data(client, alice, video, c
     assert not PluginRun.objects.filter(id=kpi.id).exists()
     alice.refresh_from_db()
     assert alice.used_storage_size == 700
+
+
+def test_runs_derived_from_a_deleted_upload_are_cancelled(client, alice, video, cancel_messages):
+    upload = TrackingData.objects.create(owner=alice, video=video, name="td", ext=".csv", file_size=10)
+    convert = make_run(video, type="posdata_convert", status=PluginRun.STATUS_DONE, tracking_data=upload)
+    kpi = make_run(video, type="kpi_computation", status=PluginRun.STATUS_RUNNING, tracking_data=upload)
+
+    delete_runs(client, [convert.id.hex])
+
+    assert cancel_messages == [(cancel_channel("plugin_run", kpi.id.hex), "cancel")]
 
 
 def test_uploaded_files_reach_plugins_with_a_serializer(client, video, enqueued_tasks):

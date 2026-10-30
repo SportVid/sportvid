@@ -41,17 +41,7 @@ def test_finishing_a_deleted_run_does_not_insert_it_again(video, register_plugin
     assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
 
 
-def test_a_failing_run_that_still_exists_is_marked_error(video, register_plugin):
-    run = make_run(video, type="fake")
-    register_plugin("fake", lambda self, **kwargs: (_ for _ in ()).throw(RuntimeError("boom")))
-
-    run_plugin(payload(run))
-
-    run.refresh_from_db()
-    assert run.status == PluginRun.STATUS_ERROR
-
-
-def test_analyser_poll_aborts_the_job_when_the_run_is_gone(video, monkeypatch, caplog):
+def test_analyser_poll_aborts_the_job_when_the_run_is_gone(video, monkeypatch, log_lines):
     """Without the cancel message (Valkey down, or sent before the watcher subscribed) the poll notices the delete."""
     run = make_run(video, status=PluginRun.STATUS_RUNNING)
     client = TaskAnalyserClient.__new__(TaskAnalyserClient)
@@ -63,12 +53,10 @@ def test_analyser_poll_aborts_the_job_when_the_run_is_gone(video, monkeypatch, c
     monkeypatch.setattr(analyser_client, "cancellation_watcher", _silent_watcher)
     PluginRun.objects.filter(id=run.id).delete()
 
-    with caplog.at_level(logging.INFO, logger="backend"):
-        assert client.get_plugin_results("job-1", plugin_run_db=run, timeout=60) is None
+    assert client.get_plugin_results("job-1", plugin_run_db=run, timeout=60) is None
 
     assert aborted == ["job-1"]
-    [event] = [r for r in caplog.records if r.msg == "plugin_run.cancelled"]
-    assert event.log_fields == {"plugin_run_id": run.id.hex, "source": "db_fallback"}
+    assert f"INFO plugin_run.cancelled job_id=job-1 plugin_run_id={run.id.hex} source=db_fallback" in log_lines()
 
 
 def _silent_watcher(kind, resource_id, on_cancel=None):

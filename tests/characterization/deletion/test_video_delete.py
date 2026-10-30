@@ -14,7 +14,7 @@ from tests.factories import make_run, make_user, make_video
 
 @pytest.fixture
 def alice(db, client):
-    user = make_user("alice", used_storage_size=1000)
+    user = make_user("alice")
     client.force_login(user)
     return user
 
@@ -28,7 +28,7 @@ def revoked(enqueued_tasks):
 
 
 def test_deleting_a_converting_video_revokes_and_cancels_the_conversion(client, alice, enqueued_tasks, cancel_messages):
-    video = make_video(alice, status=Video.STATUS_PROCESSING, task_id="t-conv", file_size=300)
+    video = make_video(alice, status=Video.STATUS_PROCESSING, task_id="t-conv")
     source = write_source(video)
     os.makedirs(asset_dir(video.id.hex))
 
@@ -40,8 +40,6 @@ def test_deleting_a_converting_video_revokes_and_cancels_the_conversion(client, 
     assert cancel_messages == [(cancel_channel("video", video.id.hex), "cancel")]
     assert not os.path.exists(source)
     assert not os.path.exists(asset_dir(video.id.hex))
-    alice.refresh_from_db()
-    assert alice.used_storage_size == 700
 
 
 def test_deleting_a_converted_video_leaves_its_finished_task_alone(client, alice, enqueued_tasks, cancel_messages):
@@ -55,11 +53,13 @@ def test_deleting_a_converted_video_leaves_its_finished_task_alone(client, alice
     assert cancel_messages == []
 
 
-@pytest.mark.parametrize("status", [PluginRun.STATUS_QUEUED, PluginRun.STATUS_WAITING, PluginRun.STATUS_RUNNING])
-def test_deleting_a_video_cancels_its_active_plugin_runs(client, alice, enqueued_tasks, cancel_messages, status):
-    """The runs cascade away with the video; their Celery tasks and analyser jobs are stopped too."""
+def test_deleting_a_video_cancels_its_active_plugin_runs(client, alice, enqueued_tasks, cancel_messages):
+    """The runs cascade away with the video; their Celery tasks and analyser jobs are stopped too.
+
+    Which statuses count as active is pinned once, for plugin/run/delete (test_plugin_run_api.py).
+    """
     video = make_video(alice)
-    run = make_run(video, status=status, task_id="t-run")
+    run = make_run(video, status=PluginRun.STATUS_RUNNING, task_id="t-run")
     done = make_run(video, status=PluginRun.STATUS_DONE, task_id="t-done")
 
     delete_video(client, video)

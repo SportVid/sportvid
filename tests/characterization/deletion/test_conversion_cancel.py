@@ -3,13 +3,11 @@
 A deleted video is a cancellation, not a failure: the task removes what it wrote, logs
 video.conversion.cancelled with the stage that noticed it, and logs nothing at ERROR.
 """
-import io
 import logging
 import os
 
 import pytest
 
-from backend.log_context import ContextFormatter
 from backend.models import Video
 from backend.tasks import convert_video
 from backend.tasks.convert_video import convert_video_to_hls
@@ -67,22 +65,11 @@ def test_conversion_finishes_done_and_schedules_the_thumbnail(video, conversion,
     assert cancelled_sources(log) == []
 
 
-def test_conversion_lines_carry_the_video_id(video, conversion):
-    """The context is read when a line is written, so a handler has to be attached during the task."""
-    stream = io.StringIO()
-    handler = logging.StreamHandler(stream)
-    handler.setFormatter(ContextFormatter(fmt="%(message)s"))
-    logger = logging.getLogger("backend.tasks.convert_video")
-    logger.addHandler(handler)
-    try:
-        delete(video)
-        convert_video_to_hls(video.id.hex, video.ext)
-    finally:
-        logger.removeHandler(handler)
+def test_conversion_lines_carry_the_video_id(video, conversion, log_lines):
+    delete(video)
+    convert_video_to_hls(video.id.hex, video.ext)
 
-    assert stream.getvalue().splitlines() == [
-        f"video.conversion.cancelled video_id={video.id.hex} source=deleted_before_start"
-    ]
+    assert f"INFO video.conversion.cancelled video_id={video.id.hex} source=deleted_before_start" in log_lines()
 
 
 def test_video_deleted_before_the_task_starts(video, conversion, enqueued_tasks, log):
@@ -106,14 +93,15 @@ def test_cancel_before_ffmpeg_starts_stops_it_at_once(video, conversion, monkeyp
     monkeypatch.setattr(convert_video, "_metadata", user_deletes)
 
     assert convert_video_to_hls(video.id.hex, video.ext) is None
-    assert ffmpeg.terminated >= 1
+    assert ffmpeg.terminated_at[0] == 0  # right after it started, not by the existence check
     assert cancelled_sources(log) == ["valkey"]
     assert errors(log) == []
     assert_cleaned_up(video, enqueued_tasks)
 
 
-@pytest.mark.parametrize("cancel_message", [True, False], ids=["valkey", "db_fallback"])
-def test_video_deleted_while_encoding(video, conversion, enqueued_tasks, log, cancel_message):
+@pytest.mark.parametrize("cancel_message, killed_after", [(True, 0), (False, 2)], ids=["valkey", "db_fallback"])
+def test_video_deleted_while_encoding(video, conversion, enqueued_tasks, log, cancel_message, killed_after):
+    """The cancel message kills FFmpeg at once; without it the existence check on `progress=` does."""
     ffmpeg, watcher = conversion
 
     def user_deletes():
@@ -123,7 +111,7 @@ def test_video_deleted_while_encoding(video, conversion, enqueued_tasks, log, ca
     ffmpeg.during = user_deletes
 
     assert convert_video_to_hls(video.id.hex, video.ext) is None
-    assert ffmpeg.terminated >= 1
+    assert ffmpeg.terminated_at[0] == killed_after
     assert cancelled_sources(log) == ["valkey" if cancel_message else "db_fallback"]
     assert errors(log) == []
     assert_cleaned_up(video, enqueued_tasks)

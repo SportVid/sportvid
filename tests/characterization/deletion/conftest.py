@@ -16,25 +16,33 @@ PROGRESS = "out_time_us=5000000\nprogress=continue\nout_time_us=10000000\nprogre
 class _Progress(io.StringIO):
     """FFmpeg's -progress pipe; calls `during` before the first line, i.e. while the task watches it encode."""
 
-    def __init__(self, during):
+    def __init__(self, ffmpeg):
         super().__init__(PROGRESS)
-        self.during = during
+        self.ffmpeg = ffmpeg
 
     def readline(self, *args):
-        if self.during is not None:
-            during, self.during = self.during, None
+        if self.ffmpeg.during is not None:
+            during, self.ffmpeg.during = self.ffmpeg.during, None
             during()
-        return super().readline(*args)
+        line = super().readline(*args)
+        if line:
+            self.ffmpeg.lines_read += 1
+        return line
 
 
 class FakeFFmpeg:
-    """Writes a single-file fMP4 playlist like the real conversion; `during` runs while it "encodes"."""
+    """Writes a single-file fMP4 playlist like the real conversion; `during` runs while it "encodes".
+
+    terminated_at lists how many progress lines the task had read at each kill: 0 means it was
+    stopped at once, 2 means only the existence check on the first `progress=` line caught it.
+    """
 
     def __init__(self, rc=0, during=None):
         self.rc = rc
         self.during = during
         self.calls = []
-        self.terminated = 0
+        self.lines_read = 0
+        self.terminated_at = []
 
     def __call__(self, file_in, manifest, asynchronous=True, **args):
         self.calls.append((file_in, manifest))
@@ -44,7 +52,7 @@ class FakeFFmpeg:
             f.write(f'#EXTM3U\n#EXT-X-MAP:URI="{media}"\n#EXTINF:5.0,\n{media}\n#EXT-X-ENDLIST\n')
         with open(os.path.join(asset_dir, media), "wb") as f:
             f.write(b"\x00" * 100)
-        return types.SimpleNamespace(stdout=_Progress(self.during), poll=lambda: self.rc, wait=lambda: self.rc)
+        return types.SimpleNamespace(stdout=_Progress(self), poll=lambda: self.rc, wait=lambda: self.rc)
 
 
 class FakeWatcher:
@@ -78,7 +86,7 @@ def conversion(monkeypatch):
     monkeypatch.setattr(convert_video, "probe_media_start", lambda path: 0.0)
 
     def terminate(proc):
-        ffmpeg.terminated += 1
+        ffmpeg.terminated_at.append(ffmpeg.lines_read)
     monkeypatch.setattr(convert_video, "terminate_process_group", terminate)
     return ffmpeg, watcher
 
