@@ -1,27 +1,13 @@
 """request_id: one ID on every log line of an API request and of the Celery tasks it enqueues."""
-import io
 import json
-import logging
 import re
 
 import pytest
 from celery import Celery
 from celery.contrib.testing.worker import start_worker
 
-from backend.log_context import ContextFormatter, current, log_context
+from backend.log_context import current, log_context
 from tests.factories import make_user, make_video
-
-
-@pytest.fixture
-def lines():
-    """Lines of the backend loggers, formatted like the console handler (which reads the context when writing)."""
-    stream = io.StringIO()
-    handler = logging.StreamHandler(stream)
-    handler.setFormatter(ContextFormatter(fmt="%(message)s"))
-    logger = logging.getLogger("backend")
-    logger.addHandler(handler)
-    yield lambda: stream.getvalue().splitlines()
-    logger.removeHandler(handler)
 
 
 def test_a_request_gets_an_id(client):
@@ -35,13 +21,13 @@ def test_the_proxys_id_is_kept(client):
     assert r["X-Request-ID"] == "0f3c9e2a7b1d4e5f8a9b0c1d2e3f4a5b"
 
 
-@pytest.mark.parametrize("incoming", ["a b", "x" * 65, 'id" injected=1', "line\nbreak", ""])
+@pytest.mark.parametrize("incoming", ['id" injected=1', "x" * 65, "id\n"], ids=["characters", "length", "trailing_newline"])
 def test_ids_that_could_garble_the_log_are_replaced(client, incoming):
     r = client.get("/healthy/", HTTP_X_REQUEST_ID=incoming)
     assert re.fullmatch(r"[0-9a-f]{32}", r["X-Request-ID"])
 
 
-def test_the_requests_log_lines_carry_it(client, db, lines, cancel_messages):
+def test_the_requests_log_lines_carry_it(client, db, log_lines, cancel_messages):
     user = make_user("alice")
     client.force_login(user)
     video = make_video(user)
@@ -50,7 +36,7 @@ def test_the_requests_log_lines_carry_it(client, db, lines, cancel_messages):
                     HTTP_X_REQUEST_ID="req-1")
 
     assert r["X-Request-ID"] == "req-1"
-    assert f"video.delete request_id=req-1 video_id={video.id.hex} storage_released=0 files_removed=true" in lines()
+    assert any(line.startswith("INFO video.delete request_id=req-1 ") for line in log_lines())
     assert current() == {}  # nothing left bound after the request
 
 

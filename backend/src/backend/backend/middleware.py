@@ -5,7 +5,7 @@ from backend.log_context import log_context
 
 # What a proxy's request ID looks like (nginx's $request_id is 32 hex chars). Anything else
 # is replaced, so a client can't write arbitrary text into the log lines.
-_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+_REQUEST_ID = re.compile(r"[A-Za-z0-9._-]{1,64}")
 
 
 class RequestIdMiddleware:
@@ -22,7 +22,7 @@ class RequestIdMiddleware:
 
     def __call__(self, request):
         incoming = request.headers.get("X-Request-ID", "")
-        request.request_id = incoming if _REQUEST_ID.match(incoming) else uuid.uuid4().hex
+        request.request_id = incoming if _REQUEST_ID.fullmatch(incoming) else uuid.uuid4().hex
         with log_context(request_id=request.request_id):
             response = self.get_response(request)
         response["X-Request-ID"] = request.request_id
