@@ -244,7 +244,13 @@ class TaskAnalyserClient(AnalyserClient):
                         # auto_now doesn't fire on a queryset .update(), so bump it here
                         # -- the frontend uses update_date as a change signal.
                         update_fields.setdefault("update_date", timezone.now())
-                        PluginRun.objects.filter(id=plugin_run_db.id).update(**update_fields)
+                        if not PluginRun.objects.filter(id=plugin_run_db.id).update(**update_fields):
+                            # the run was deleted and its cancel message never arrived (Valkey down,
+                            # or sent before the watcher subscribed): stop the analyser job anyway
+                            log_event(logger, "plugin_run.cancelled", plugin_run_id=plugin_run_db.id,
+                                      source="db_fallback")
+                            self.abort_plugin(job_id)
+                            return None
                         # .update() skips post_save, so push the live event ourselves --
                         # otherwise the status list only ever sees QUEUED then DONE.
                         for field, value in update_fields.items():

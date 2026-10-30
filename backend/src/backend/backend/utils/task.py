@@ -95,8 +95,11 @@ class Task:
             progress_range=progress_range,
         )
         if result is None:
-            # also after a cancel (the run was deleted); analyser_client logged which
-            log_event(logger, "analyser.job.no_result", level=logging.ERROR, job_id=job_id, analyser=analyser)
+            run = plugin_run or getattr(client, "plugin_run_db", None)
+            # no result after a cancel is expected; analyser_client logged why
+            deleted = run is not None and not PluginRun.objects.filter(id=run.id).exists()
+            log_event(logger, "analyser.job.no_result", level=logging.INFO if deleted else logging.ERROR,
+                      job_id=job_id, analyser=analyser, run_deleted=deleted)
             return None
 
         self._record_provenance(plugin_run or getattr(client, "plugin_run_db", None), analyser)

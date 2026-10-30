@@ -316,6 +316,33 @@ def generate_plugin_run_result_cache(
                 logger.exception("Cache couldn't write")
 
 
+def _save_run(plugin_run):
+    """plugin_run.save() for a run that may have been deleted meanwhile; returns whether it still exists.
+
+    A plain save() of a deleted row inserts it again, so the user's delete would be undone by
+    the task's final status write. This writes the same fields with a queryset .update(),
+    which skips post_save, so the live event is sent here.
+
+    task_id is left out: the task may have read the run before PluginManager.run stored it,
+    and writing back None would leave a later delete nothing to revoke.
+    """
+    plugin_run.update_date = timezone.now()
+    fields = {
+        f.attname: getattr(plugin_run, f.attname)
+        for f in PluginRun._meta.concrete_fields
+        if not f.primary_key and f.name != "task_id"
+    }
+    if not PluginRun.objects.filter(id=plugin_run.id).update(**fields):
+        log_event(logger, "plugin_run.deleted_while_running",
+                  status=PluginRun.STATUS.get(plugin_run.status, plugin_run.status).lower())
+        return False
+    try:
+        publish_plugin_run(plugin_run)
+    except Exception:
+        logger.warning("Failed to publish plugin run event", exc_info=True)
+    return True
+
+
 def _hex(id):
     """The payload's UUID strings in the hex form the views and the conversion log."""
     try:
@@ -345,12 +372,11 @@ def _run_plugin(self, args):
     video_db = Video.objects.get(id=video)
     user_db = SportVidUser.objects.get(id=user)
     
-    # TODO: Race between task start and deletion. DoesNotExist guard is not enough.
-    # There is still a small window where the task starts, reads the run, and then the run is deleted before progress writes.
-    # Also, there is no explicit handling for "deleted but task started".
-    # Task will write progress to a non-existent run if it was deleted after the initial lookup.
-    # --> Consider checking existence periodically or before each progress write.
-    # --> Opt.: Mark runs as "cancelling" instead of deleting immediately, then clean up later.
+    # A run can be deleted at any point while this runs; the missing row is the signal.
+    # plugin/run/delete and video/delete delete it before they publish the cancel, the
+    # analyser poll aborts the job when its progress write finds no row, and every status
+    # write here goes through _save_run(), which never inserts the deleted run again.
+    # TaskAnalyserClient's gRPC error paths still save() (BACKEND.md › Plugin runs).
     plugin_run_db = None
     if not dry_run and plugin_run is not None:
         try:
@@ -381,7 +407,7 @@ def _run_plugin(self, args):
                     "message": "The video was still being converted when the run gave up waiting",
                     "details": {"video_id": video_db.id.hex},
                 }
-                plugin_run_db.save()
+                _save_run(plugin_run_db)
                 return
         # NOTE: Some plugins take another plugin_run's id as input (object_tracker_id for
         # team_clustering/osnet_reid, object_tracker_run_id for kpi_computation) and need that
@@ -417,7 +443,7 @@ def _run_plugin(self, args):
                         "message": f"The {dependency_run.type} run this run depends on failed",
                         "details": {"plugin_run_id": dependency_run.id.hex, "plugin": dependency_run.type},
                     }
-                    plugin_run_db.save()
+                    _save_run(plugin_run_db)
                     return
                 try:
                     # ~30 minutes total (360 * 5s) before giving up. Celery counts every retry
@@ -434,7 +460,7 @@ def _run_plugin(self, args):
                         "message": f"The {dependency_run.type} run this run depends on did not finish in time",
                         "details": {"plugin_run_id": dependency_run.id.hex, "plugin": dependency_run.type},
                     }
-                    plugin_run_db.save()
+                    _save_run(plugin_run_db)
                     return
 
         if plugin_run_db.in_scheduler:
@@ -442,7 +468,8 @@ def _run_plugin(self, args):
             return
 
         plugin_run_db.in_scheduler = True
-        plugin_run_db.save()
+        if not _save_run(plugin_run_db):
+            return
 
     plugin_cls = PluginManager.get_plugin(plugin)
     if plugin_cls is None:
@@ -454,7 +481,7 @@ def _run_plugin(self, args):
                 "message": f"Unknown plugin '{plugin}'",
                 "details": {"plugin": plugin},
             }
-            plugin_run_db.save()
+            _save_run(plugin_run_db)
         return
 
     # The worker has the job now -- flip it to RUNNING before the (possibly slow) video
@@ -482,12 +509,16 @@ def _run_plugin(self, args):
             plugin_run_db.progress = 1.0
             plugin_run_db.eta_seconds = None
             plugin_run_db.status = PluginRun.STATUS_DONE
-            plugin_run_db.save()
+            _save_run(plugin_run_db)
 
     except Exception as e:
+        if plugin_run_db is not None and not PluginRun.objects.filter(id=plugin_run_db.id).exists():
+            # deleted while it ran: the failure is the cancel (no result) or the results losing their run
+            log_event(logger, "plugin_run.deleted_while_running", error=type(e).__name__)
+            return
         logger.exception("Plugin run failed for %s", plugin)
         if plugin_run_db is not None:
             plugin_run_db.eta_seconds = None
             plugin_run_db.status = PluginRun.STATUS_ERROR
             plugin_run_db.failure_reason = _failure_reason(plugin_run_db, e)
-            plugin_run_db.save()
+            _save_run(plugin_run_db)

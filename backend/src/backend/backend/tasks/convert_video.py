@@ -203,11 +203,28 @@ def _metadata(file_in: Path) -> tuple[float, float | None, Any]:
 
 @shared_task(bind=True, time_limit=7200, soft_time_limit=5400, queue="gpu")
 def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
-    with log_context(video_id=video_id_hex, task_id=self.request.id):
-        return _convert_video_to_hls(video_id_hex, original_ext, analyzers)
+    ffmpeg = {}  # the FFmpeg process once it runs, for the cancel callback
+
+    def kill_ffmpeg():
+        if ffmpeg.get("proc") is not None:
+            terminate_process_group(ffmpeg["proc"])
+
+    # The watcher subscribes before the task first reads the video. video/delete deletes the
+    # row before it publishes the cancel, so a deletion is either seen by that read or
+    # arrives as a message. Only a SUBSCRIBE still in flight can miss both; the existence
+    # check in the progress loop covers that.
+    with log_context(video_id=video_id_hex, task_id=self.request.id), \
+            cancellation_watcher("video", video_id_hex, on_cancel=kill_ffmpeg) as cancel_event:
+        return _convert_video_to_hls(video_id_hex, original_ext, analyzers, cancel_event, ffmpeg)
 
 
-def _convert_video_to_hls(video_id_hex, original_ext, analyzers):
+def _cancelled(source, *paths):
+    """The video was deleted while it was converted: drop what this task wrote, no error."""
+    log_event(logger, "video.conversion.cancelled", source=source)
+    safe_delete([p for p in paths if p])
+
+
+def _convert_video_to_hls(video_id_hex, original_ext, analyzers, cancel_event, ffmpeg):
     started = time.monotonic()
     video_db = None
     ffmpeg_proc: subprocess.Popen[str] | None = None
@@ -216,7 +233,11 @@ def _convert_video_to_hls(video_id_hex, original_ext, analyzers):
     file_in: Path | None = None
 
     try:
-        video_db = Video.objects.get(id=video_id_hex)
+        video_db = Video.objects.filter(id=video_id_hex).first()
+        if video_db is None:
+            # deleted while queued, and the revoke came too late (or there was no task_id yet)
+            _cancelled("deleted_before_start")
+            return
 
         output_root = Path(media_dir_to_file(video_id_hex))
         file_in = Path(media_path_to_file(video_id_hex, original_ext))
@@ -283,6 +304,10 @@ def _convert_video_to_hls(video_id_hex, original_ext, analyzers):
             asynchronous=True,
             **conversion_args,
         )
+        ffmpeg["proc"] = ffmpeg_proc
+        if cancel_event.is_set():
+            # the cancel came before there was a process for on_cancel to stop
+            terminate_process_group(ffmpeg_proc)
         
         # denominator for the conversion progress --> may be missing for some containers
         source_duration = duration_ms / 1000. if duration_ms is not None else None
@@ -293,79 +318,73 @@ def _convert_video_to_hls(video_id_hex, original_ext, analyzers):
     
         eta_estimator = EtaEstimator() # time ETA from here
 
-        # listener thread reacts to VideoDelete and publishes a cancel request for this video to kill ffmpeg immediately
+        # The watcher (convert_video_to_hls) kills FFmpeg the moment video/delete publishes the cancel.
         # TODO: cancellation relies on Valkey
         # --> add a fallback timeout to kill FFmpeg if it appears stuck.
-        with cancellation_watcher(
-            "video",
-            video_id_hex,
-            on_cancel=lambda: terminate_process_group(ffmpeg_proc),
-        ) as cancel_event:
-            try:
-                # drains ffmpeg's error & "-progress" output line by line
-                while True:
-                    # TODO: can block indefinitely if FFmpeg stops writing but hasn’t exited
-                    # --> use a non-blocking reader (e.g. a separate thread or select/queue) for stdout; stderr goes to the worker log
-                    line = ffmpeg_proc.stdout.readline()
-                    if not line:
-                        if ffmpeg_proc.poll() is not None:
+        try:
+            # drains ffmpeg's error & "-progress" output line by line
+            while True:
+                # TODO: can block indefinitely if FFmpeg stops writing but hasn’t exited
+                # --> use a non-blocking reader (e.g. a separate thread or select/queue) for stdout; stderr goes to the worker log
+                line = ffmpeg_proc.stdout.readline()
+                if not line:
+                    if ffmpeg_proc.poll() is not None:
+                        break
+                    continue
+    
+                line = line.rstrip()
+                is_progress_line = bool(_FFMPEG_PROGRESS_LINE.match(line)) # identifies progress lines
+                
+                if not is_progress_line:
+                    # non-progress lines on stdout are unexpected; ignore quietly.
+                    continue
+                
+                if line.startswith("out_time_us=") and source_duration:
+                    try:
+                        elapsed = int(line.split("=", 1)[1]) / 1_000_000.0
+                    except ValueError:
+                        elapsed = None
+                    if elapsed is not None:
+                        encoded_fraction = min(elapsed / float(source_duration), 1.0)
+                        # reserves the last few percent for archive packing and writing metadata
+                        progress = encoded_fraction * 0.95
+                        if progress - last_reported >= _PROGRESS_STEP:
+                            last_reported = progress
+                            # ETA is estimated against the true encode fraction so it
+                            # predicts when ffmpeg finishes, not when the scaled bar would reach 100%.
+                            _report_conversion_progress(
+                                video_id_hex,
+                                progress,
+                                eta_estimator.update(encoded_fraction),
+                            )
+                
+                if line.startswith("progress="):
+                    now = time.monotonic()
+                    if now - last_delete_check >= _DELETE_CHECK_INTERVAL:
+                        last_delete_check = now
+                        # fallback existence check in case Valkey is unavailable.
+                        if not Video.objects.filter(id=video_id_hex).exists():
+                            cancelled = True
+                            terminate_process_group(ffmpeg_proc)
                             break
-                        continue
-        
-                    line = line.rstrip()
-                    is_progress_line = bool(_FFMPEG_PROGRESS_LINE.match(line)) # identifies progress lines
-                    
-                    if not is_progress_line:
-                        # non-progress lines on stdout are unexpected; ignore quietly.
-                        continue
-                    
-                    if line.startswith("out_time_us=") and source_duration:
-                        try:
-                            elapsed = int(line.split("=", 1)[1]) / 1_000_000.0
-                        except ValueError:
-                            elapsed = None
-                        if elapsed is not None:
-                            encoded_fraction = min(elapsed / float(source_duration), 1.0)
-                            # reserves the last few percent for archive packing and writing metadata
-                            progress = encoded_fraction * 0.95
-                            if progress - last_reported >= _PROGRESS_STEP:
-                                last_reported = progress
-                                # ETA is estimated against the true encode fraction so it
-                                # predicts when ffmpeg finishes, not when the scaled bar would reach 100%.
-                                _report_conversion_progress(
-                                    video_id_hex,
-                                    progress,
-                                    eta_estimator.update(encoded_fraction),
-                                )
-                    
-                    if line.startswith("progress="):
-                        now = time.monotonic()
-                        if now - last_delete_check >= _DELETE_CHECK_INTERVAL:
-                            last_delete_check = now
-                            # fallback existence check in case Valkey is unavailable.
-                            if not Video.objects.filter(id=video_id_hex).exists():
-                                logger.info(
-                                    "Video %s deleted; terminating FFmpeg (fallback).",
-                                    video_id_hex,
-                                )
-                                cancelled = True
-                                terminate_process_group(ffmpeg_proc)
-                                break
-                # drains any remaining stdout after FFmpeg exits.
-                rest = ffmpeg_proc.stdout.read()
-                if rest:
-                    for extra_line in rest.splitlines():
-                        if not _FFMPEG_PROGRESS_LINE.match(extra_line):
-                            logger.debug("[ffmpeg progress] %s", extra_line)    
-            finally:
-                if ffmpeg_proc.stdout:
-                    ffmpeg_proc.stdout.close() 
-                    
-            cancelled = cancelled or cancel_event.is_set()
+            # drains any remaining stdout after FFmpeg exits.
+            rest = ffmpeg_proc.stdout.read()
+            if rest:
+                for extra_line in rest.splitlines():
+                    if not _FFMPEG_PROGRESS_LINE.match(extra_line):
+                        logger.debug("[ffmpeg progress] %s", extra_line)    
+        finally:
+            if ffmpeg_proc.stdout:
+                ffmpeg_proc.stdout.close() 
+                
+        cancelled = cancelled or cancel_event.is_set()
         
         # waits for the return code and raises on error if not cancelled
         rc = ffmpeg_proc.wait()
-        if not cancelled and rc != 0:
+        if cancelled:
+            _cancelled("valkey" if cancel_event.is_set() else "db_fallback", asset_dir)
+            return
+        if rc != 0:
             raise RuntimeError(
                 f"FFmpeg exited with code {rc}"
             )        
@@ -426,9 +445,8 @@ def _convert_video_to_hls(video_id_hex, original_ext, analyzers):
         )
 
         if not upd:
-            raise RuntimeError(
-                f"Video disappeared before completion: {video_id_hex}"
-            )
+            _cancelled("deleted_while_packing", archive_path, asset_dir)
+            return
 
         # Queryset .update() doesn't fire post_save --> push the "done" state explicitly,
         # so the gallery card resolves itself without a reload.
@@ -479,7 +497,15 @@ def _convert_video_to_hls(video_id_hex, original_ext, analyzers):
         safe_delete([archive_path, asset_dir])
         raise
 
-    except Exception:
+    except Exception as e:
+        if not Video.objects.filter(id=video_id_hex).exists():
+            # deleted meanwhile; the failure is most likely video/delete removing the files
+            if ffmpeg_proc is not None:
+                terminate_process_group(ffmpeg_proc)
+            logger.debug("Conversion of a deleted video stopped with %r", e)
+            _cancelled("deleted", archive_path, asset_dir)
+            return
+
         logger.exception(
             "Video conversion failed: %s", 
             video_id_hex

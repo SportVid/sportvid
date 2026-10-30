@@ -152,15 +152,17 @@ class PluginRunDelete(ApiView):
                 # admins may delete any user's runs by id
                 runs = writable(PluginRun, request.user).filter(id__in=plugin_list)
             
-            # revoke the queued Celery tasks, and tell the running ones' watchers to abort their analyser job
-            cancel_plugin_runs(active_plugin_runs(runs), reason="user_delete")
-
             # NOTE: Cascaded deletion of uploaded TrackingData that were created from a `posdata_convert` PluginRun.
             # Also deletes any `kpi_compution` runs derived from the same file.
             # TODO: Should get rid of this here and implement a dedicated task for cleaning up orphaned plugins and files.
             tracking_data_ids = list(
                 runs.filter(type="posdata_convert", tracking_data__isnull=False)
                 .values_list("tracking_data_id", flat=True)
+            )
+            # Read before the delete. The runs derived from a deleted upload (kpi_computation) go with it.
+            active_runs = active_plugin_runs(
+                PluginRun.objects.filter(id__in=runs.values("id"))
+                | PluginRun.objects.filter(tracking_data_id__in=tracking_data_ids)
             )
             cascaded_deleted = 0
             if tracking_data_ids:
@@ -176,6 +178,9 @@ class PluginRunDelete(ApiView):
                         release_used_storage(owner, size)
 
             response, _ = runs.delete()
+            # After the delete, like video/delete: a task that misses the cancel finds its run gone.
+            # Revokes the queued Celery tasks and tells the running ones' watchers to abort their analyser job.
+            cancel_plugin_runs(active_runs, reason="user_delete")
 
             return JsonResponse({"status": "ok", "deleted_items": response + cascaded_deleted})
         except Exception:

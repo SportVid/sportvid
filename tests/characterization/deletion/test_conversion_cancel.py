@@ -1,8 +1,15 @@
-"""Characterization: what convert_video_to_hls does when its video is deleted at each stage."""
+"""What convert_video_to_hls does when its video is deleted at each stage.
+
+A deleted video is a cancellation, not a failure: the task removes what it wrote, logs
+video.conversion.cancelled with the stage that noticed it, and logs nothing at ERROR.
+"""
+import io
+import logging
 import os
 
 import pytest
 
+from backend.log_context import ContextFormatter
 from backend.models import Video
 from backend.tasks import convert_video
 from backend.tasks.convert_video import convert_video_to_hls
@@ -18,15 +25,35 @@ def video(db):
     return video
 
 
+@pytest.fixture
+def log(caplog):
+    caplog.set_level(logging.DEBUG, logger="backend")
+    return caplog
+
+
 def scheduled_plugins(enqueued_tasks):
     return [kwargs["args"][0]["plugin"] for name, args, kwargs in enqueued_tasks if name == "run_plugin"]
+
+
+def cancelled_sources(log):
+    return [r.log_fields["source"] for r in log.records if r.msg == "video.conversion.cancelled"]
+
+
+def errors(log):
+    return [r for r in log.records if r.levelno >= logging.ERROR]
 
 
 def delete(video):
     Video.objects.filter(id=video.id).delete()
 
 
-def test_conversion_finishes_done_and_schedules_the_thumbnail(video, conversion, enqueued_tasks):
+def assert_cleaned_up(video, enqueued_tasks):
+    assert not os.path.exists(archive(video.id.hex))
+    assert not os.path.exists(asset_dir(video.id.hex))
+    assert scheduled_plugins(enqueued_tasks) == []
+
+
+def test_conversion_finishes_done_and_schedules_the_thumbnail(video, conversion, enqueued_tasks, log):
     ffmpeg, watcher = conversion
 
     convert_video_to_hls(video.id.hex, video.ext)
@@ -37,30 +64,56 @@ def test_conversion_finishes_done_and_schedules_the_thumbnail(video, conversion,
     assert os.path.isfile(archive(video.id.hex))
     assert watcher.subscribed == [("video", video.id.hex)]
     assert scheduled_plugins(enqueued_tasks) == ["thumbnail"]
+    assert cancelled_sources(log) == []
 
 
-def test_video_deleted_before_the_task_starts(video, conversion):
+def test_conversion_lines_carry_the_video_id(video, conversion):
+    """The context is read when a line is written, so a handler has to be attached during the task."""
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(ContextFormatter(fmt="%(message)s"))
+    logger = logging.getLogger("backend.tasks.convert_video")
+    logger.addHandler(handler)
+    try:
+        delete(video)
+        convert_video_to_hls(video.id.hex, video.ext)
+    finally:
+        logger.removeHandler(handler)
+
+    assert stream.getvalue().splitlines() == [
+        f"video.conversion.cancelled video_id={video.id.hex} source=deleted_before_start"
+    ]
+
+
+def test_video_deleted_before_the_task_starts(video, conversion, enqueued_tasks, log):
     ffmpeg, _ = conversion
     delete(video)
 
-    with pytest.raises(Video.DoesNotExist):
-        convert_video_to_hls(video.id.hex, video.ext)
+    assert convert_video_to_hls(video.id.hex, video.ext) is None
     assert ffmpeg.calls == []
+    assert cancelled_sources(log) == ["deleted_before_start"]
+    assert errors(log) == []
 
 
-def test_video_deleted_before_ffmpeg_starts_still_runs_ffmpeg(video, conversion, monkeypatch):
-    """The cancel message is published before the watcher subscribes, so only the DB check stops it."""
-    ffmpeg, _ = conversion
-    monkeypatch.setattr(convert_video, "_metadata", lambda f: delete(video) or (25.0, 10_000.0, (1920, 1080)))
+def test_cancel_before_ffmpeg_starts_stops_it_at_once(video, conversion, monkeypatch, enqueued_tasks, log):
+    """The watcher subscribes first, so a cancel while reading the metadata is kept for the FFmpeg that follows."""
+    ffmpeg, watcher = conversion
 
-    with pytest.raises(RuntimeError, match="disappeared"):
-        convert_video_to_hls(video.id.hex, video.ext)
-    assert len(ffmpeg.calls) == 1
+    def user_deletes(file_in):
+        delete(video)
+        watcher.fire()  # on_cancel finds no process yet
+        return 25.0, 10_000.0, (1920, 1080)
+    monkeypatch.setattr(convert_video, "_metadata", user_deletes)
+
+    assert convert_video_to_hls(video.id.hex, video.ext) is None
     assert ffmpeg.terminated >= 1
+    assert cancelled_sources(log) == ["valkey"]
+    assert errors(log) == []
+    assert_cleaned_up(video, enqueued_tasks)
 
 
 @pytest.mark.parametrize("cancel_message", [True, False], ids=["valkey", "db_fallback"])
-def test_video_deleted_while_encoding_fails_the_task(video, conversion, enqueued_tasks, cancel_message):
+def test_video_deleted_while_encoding(video, conversion, enqueued_tasks, log, cancel_message):
     ffmpeg, watcher = conversion
 
     def user_deletes():
@@ -69,19 +122,40 @@ def test_video_deleted_while_encoding_fails_the_task(video, conversion, enqueued
             watcher.fire()
     ffmpeg.during = user_deletes
 
-    with pytest.raises(RuntimeError, match="disappeared"):
-        convert_video_to_hls(video.id.hex, video.ext)
+    assert convert_video_to_hls(video.id.hex, video.ext) is None
     assert ffmpeg.terminated >= 1
-    assert not os.path.exists(archive(video.id.hex))
-    assert not os.path.exists(asset_dir(video.id.hex))
-    assert scheduled_plugins(enqueued_tasks) == []
+    assert cancelled_sources(log) == ["valkey" if cancel_message else "db_fallback"]
+    assert errors(log) == []
+    assert_cleaned_up(video, enqueued_tasks)
 
 
-def test_video_deleted_while_packing_fails_the_task(video, conversion, monkeypatch, enqueued_tasks):
+def test_video_deleted_while_packing(video, conversion, monkeypatch, enqueued_tasks, log):
     monkeypatch.setattr(convert_video, "probe_media_start", lambda path: delete(video) or 0.0)
 
-    with pytest.raises(RuntimeError, match="disappeared"):
+    assert convert_video_to_hls(video.id.hex, video.ext) is None
+    assert cancelled_sources(log) == ["deleted_while_packing"]
+    assert errors(log) == []
+    assert_cleaned_up(video, enqueued_tasks)
+
+
+def test_files_removed_under_the_task_count_as_cancelled(video, conversion, monkeypatch, enqueued_tasks, log):
+    """video/delete removes the files while the task reads them; the task's error is the deletion's doing."""
+    def files_gone(path):
+        delete(video)
+        raise FileNotFoundError(path)
+    monkeypatch.setattr(convert_video, "probe_media_start", files_gone)
+
+    assert convert_video_to_hls(video.id.hex, video.ext) is None
+    assert cancelled_sources(log) == ["deleted"]
+    assert errors(log) == []
+    assert_cleaned_up(video, enqueued_tasks)
+
+
+def test_a_real_failure_still_fails(video, conversion, monkeypatch, log):
+    monkeypatch.setattr(convert_video, "probe_media_start", lambda path: 5.0)
+
+    with pytest.raises(RuntimeError, match="out of sync"):
         convert_video_to_hls(video.id.hex, video.ext)
-    assert not os.path.exists(archive(video.id.hex))
-    assert not os.path.exists(asset_dir(video.id.hex))
-    assert scheduled_plugins(enqueued_tasks) == []
+    video.refresh_from_db()
+    assert video.status == Video.STATUS_ERROR
+    assert [r.getMessage() for r in errors(log)] == [f"Video conversion failed: {video.id.hex}"]

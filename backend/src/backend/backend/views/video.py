@@ -22,10 +22,10 @@ from backend.utils import (
     media_dir_to_file,
     media_path_to_file
 )
-from backend.models import Video
+from backend.models import PluginRun, Video
 from backend.permissions import can_read_all, readable, writable
 from backend.log_context import log_event
-from backend.utils.cancellation import cancel_conversion
+from backend.utils.cancellation import active_plugin_runs, cancel_conversion, cancel_plugin_runs
 from utils.helper import remove_file, remove_dir
 from backend.tasks.convert_video import convert_video_to_hls
 from backend.utils.api import ApiView
@@ -150,11 +150,13 @@ class VideoUpload(ApiView):
                 #     except Exception:
                 #         logger.exception(f"Failed to schedule plugin {plugin}")
                 
+                # Counted before the video can be seen: a delete right after the upload releases it again.
+                add_used_storage(request.user, request.FILES["file"].size)
+
                 task = convert_video_to_hls.apply_async((video_db.id.hex, ext, analyzers))
                 video_db.task_id = task.id
-                video_db.save(update_fields=["task_id"])
-
-                add_used_storage(request.user, request.FILES["file"].size)
+                # .update(): if the video is already deleted again, save() would fail the upload
+                Video.objects.filter(id=video_db.id).update(task_id=task.id)
 
                 video_id_hex = video_db.id.hex if not video_db.file.hex else video_db.id.hex
                 return JsonResponse(
@@ -274,17 +276,22 @@ class VideoDelete(ApiView):
             if not video:
                 return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
 
-            # NOTE: If a conversion is queued, Celery revoke prevents it from starting.
-            # If conversion is already running, the conversion task's watcher receives the message and kills the FFmpeg subprocess.
-            cancel_conversion(video, reason="video_delete")
-
+            # The runs cascade away with the row, so the ones to cancel are read first.
+            active_runs = active_plugin_runs(PluginRun.objects.filter(video=video))
             file_size = video.file_size
             video_owner = video.owner
             video_id_hex = video.id.hex
-            # video row can then be deleted safely, without sending a termination signal to the Celery worker.
+            # The missing row is the "pending deletion" marker the tasks check, so it goes before
+            # the cancel: a task that subscribes after the cancel was sent still finds it gone.
             count, _ = writable(Video, request.user).filter(id=video.id).delete()
 
             if count:
+                if video.status == Video.STATUS_PROCESSING:
+                    # NOTE: If a conversion is queued, Celery revoke prevents it from starting.
+                    # If conversion is already running, the conversion task's watcher receives the message and kills the FFmpeg subprocess.
+                    cancel_conversion(video, reason="video_delete")
+                cancel_plugin_runs(active_runs, reason="video_delete")
+
                 # Clean up files on disk
                 try:
                     output_dir = media_dir_to_file(video_id_hex)
