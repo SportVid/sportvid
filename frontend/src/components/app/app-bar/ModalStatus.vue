@@ -38,7 +38,7 @@
                   <v-icon :color="stateColor(dltState)" size="18" class="mr-1">
                     {{ stateIcon(dltState) }}
                   </v-icon>
-                  <span class="text-caption">{{ $t("modal.status.source.dlt") }}</span>
+                  <span class="text-caption">{{ $t("modal.status.source.calibration") }}</span>
                 </div>
                 <div class="d-flex align-center">
                   <v-icon :color="stateColor(objectTrackingState)" size="18" class="mr-1">

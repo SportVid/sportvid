@@ -155,6 +155,13 @@
                       <v-list-item @click="renameTargetId = item.id">
                         <v-list-item-title>{{ $t("video_view.rename_video") }}</v-list-item-title>
                       </v-list-item>
+                      <!-- Which camera/lens the video was recorded with: a property of the
+                           video, used by the calibration (see LensProfileSelect). Everything the
+                           picker needs is known once the conversion is done, and the menu itself
+                           is only rendered then (showProcessingCard). -->
+                      <v-list-item @click="lensProfileTargetId = item.id">
+                        <v-list-item-title>{{ $t("video_view.lens_profile") }}</v-list-item-title>
+                      </v-list-item>
                       <v-list-item @click="deleteVideo(item.id)">
                         <v-list-item-title class="text-red">{{
                           $t("video_view.delete_video")
@@ -330,6 +337,13 @@
                         @click.stop="renameTargetId = item.id"
                       />
                       <v-btn
+                        v-if="!showProcessingCard(item)"
+                        icon="mdi-camera-iris"
+                        variant="text"
+                        density="comfortable"
+                        @click.stop="lensProfileTargetId = item.id"
+                      />
+                      <v-btn
                         icon="mdi-trash-can-outline"
                         variant="text"
                         density="comfortable"
@@ -442,6 +456,11 @@
       :video="renameTargetId"
       v-model="renameDialogOpen"
     />
+    <ModalVideoLensProfile
+      v-if="lensProfileTargetId !== null"
+      :video="lensProfileTargetId"
+      v-model="lensProfileDialogOpen"
+    />
   </v-main>
 </template>
 
@@ -455,6 +474,7 @@ import { usePluginRunStore } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { getDisplayTime, getEtaDisplay } from "@/plugins/time";
 import ModalVideoRename from "@/components/video/ModalVideoRename.vue";
+import ModalVideoLensProfile from "@/components/video/ModalVideoLensProfile.vue";
 import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 import config from "../../app.config";
 
@@ -810,6 +830,14 @@ const canWrite = (item) => {
 
 const deleteVideo = (videoId) => videoStore.deleteVideo(videoId);
 const showVideo = (videoId) => router.push({ path: `/video-analysis/${videoId}` });
+
+const lensProfileTargetId = ref(null);
+const lensProfileDialogOpen = computed({
+  get: () => lensProfileTargetId.value !== null,
+  set: (val) => {
+    if (!val) lensProfileTargetId.value = null;
+  },
+});
 
 const renameTargetId = ref(null);
 const renameDialogOpen = computed({

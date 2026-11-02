@@ -81,6 +81,8 @@ class PluginManager:
             if name in cls._plugins:
                 raise ValueError(f"Plugin '{name}' is already registered")
             cls._plugins[name] = plugin_cls
+            # the name a task is run under, for tasks that record what computed a result
+            plugin_cls.plugin_name = name
             return plugin_cls
         return export_helper
 

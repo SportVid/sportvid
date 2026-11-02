@@ -22,9 +22,13 @@ class CalibrationLensSolve(CalibrationStaticDlt):
     """The static DLT calibration with a lens self-calibrated from the same clicks and the painted pitch markings,
     instead of a lens profile (inference_ray/calib, ported from trak's prior-free distortion solver).
 
-    Needs a soccer calibration asset of markers on a static camera: the markings are detected in frames sampled
+    Wants a soccer calibration asset of markers on a static camera: the markings are detected in frames sampled
     across the video. The lens is stored on the calibration asset (``lens_intrinsics``, model ``angular``) and the
     homography is fitted on the clicks undistorted with it. The video's lens profile is not used.
+
+    Whatever the solver needs and doesn't get, the run still produces a calibration: a lens that cannot be solved
+    falls back to the inherited one (the video's lens profile, or none at all), i.e. to a plain DLT+RANSAC fit.
+    That is what lets the frontend pick this plugin for every video without a lens profile.
     """
 
     dlt_progress_range = (0.9, 1.0)
@@ -47,6 +51,38 @@ class CalibrationLensSolve(CalibrationStaticDlt):
         sport: Optional[str],
         plugin_run: Optional[PluginRun],
     ) -> Optional[Dict]:
+        """The lens solved from the video, or the inherited one when it can't be solved (see the class docstring).
+
+        The fallback is not recorded as a failure reason: the run succeeds, and whether a lens was solved is
+        visible on the calibration asset itself (``lens_intrinsics`` carries the solver's log, or is null).
+        """
+        try:
+            return self.solve_lens(client, video_db, keypoints, field_length, field_width, sport, plugin_run)
+        except TaskFailure as failure:
+            logger.warning(
+                f"Calibration of video {video_db.id if video_db else None}: the lens solver was skipped "
+                f"({failure.type}: {failure.message}), falling back to a fit without a solved lens"
+            )
+        except Exception:
+            logger.exception(
+                f"Calibration of video {video_db.id if video_db else None}: the lens solver failed, falling "
+                f"back to a fit without a solved lens"
+            )
+        return super().lens_intrinsics(
+            client, video_db, keypoints, field_length, field_width, sport, plugin_run
+        )
+
+    def solve_lens(
+        self,
+        client: TaskAnalyserClient,
+        video_db: Optional[Video],
+        keypoints: List[Dict],
+        field_length: float,
+        field_width: float,
+        sport: Optional[str],
+        plugin_run: Optional[PluginRun],
+    ) -> Optional[Dict]:
+        """The lens solved from the clicks and the painted markings; raises TaskFailure when it can't be."""
         if video_db is None or not video_db.width or not video_db.height:
             raise TaskFailure(
                 "video_resolution_unknown", "The lens solver needs the calibration asset's video and its resolution"

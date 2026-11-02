@@ -401,6 +401,51 @@
             width="190px"
             data-tour="video-display-settings-list"
           >
+            <!-- Calibration mode has its own two overlays and nothing else in here applies to
+                 it (the bounding-box overlay is off, position data isn't what is being worked
+                 on), so the menu is swapped out wholesale. These two used to live in the
+                 calibration card's "Marker" menu on the top-view side. -->
+            <template v-if="calibrationAssetStore.calibrationMode">
+              <v-list-item class="menu-item" @click="calibrationAssetStore.toggleVideoAsset()">
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{
+                    calibrationAssetStore.calibrationAssetType === "marker"
+                      ? $t("calibration_asset.marker.view_vid_marker")
+                      : $t("calibration_asset.segments.view_vid_segments")
+                  }}
+                  <tab-window-icon
+                    :class="{
+                      'text-disabled': !calibrationAssetStore.showVideoAsset,
+                      'text-red': calibrationAssetStore.showVideoAsset,
+                    }"
+                  >
+                    mdi-check
+                  </tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-list-item
+                class="menu-item"
+                :disabled="!calibrationAssetStore.calibrationMatrix"
+                @click="calibrationAssetStore.togglePitchOverlay()"
+              >
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("calibration_asset.view_pitch_overlay") }}
+                  <tab-window-icon
+                    :class="{
+                      'text-disabled':
+                        !calibrationAssetStore.showPitchOverlay ||
+                        !calibrationAssetStore.calibrationMatrix,
+                      'text-red': calibrationAssetStore.showPitchOverlay,
+                    }"
+                  >
+                    mdi-check
+                  </tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+
+            <template v-else>
             <v-list-item
               class="menu-item"
               @click="bboxesStore.viewBoundingBox"
@@ -494,6 +539,7 @@
                 </v-list-item>
               </v-list>
             </v-menu>
+            </template>
           </v-list>
         </v-menu>
         <ModalPositionDataUpload

@@ -5,6 +5,7 @@ from django.conf import settings
 from typing import Dict, List, Optional
 
 from backend.models import (
+    Calibration,
     CalibrationAssets,
     PluginRun,
     Video,
@@ -150,19 +151,17 @@ class CalibrationStaticDlt(Task):
         with transaction.atomic():
             with result[1]["homography"] as homography_data:
                 homography_matrix = homography_data.y.tolist()
-                data_db.homography_matrix = homography_matrix
-                data_db.lens_intrinsics = lens_intrinsics
-                data_db.reprojection_error = reprojection_rmse(
+                reprojection_error = reprojection_rmse(
                     homography_matrix,
                     [[p["src"]["x"], p["src"]["y"]] for p in point_correspondences_dict],
                     [[p["dst"]["x"], p["dst"]["y"]] for p in point_correspondences_dict],
                     field_length,
                     field_width,
                 )
-                data_db.camera_pose = None
+                camera_pose = None
                 if lens_intrinsics is not None:
                     try:
-                        data_db.camera_pose = camera_pose_from_homography(
+                        camera_pose = camera_pose_from_homography(
                             homography_matrix,
                             undistorted_camera_matrix(lens_intrinsics),
                             lens_intrinsics["width"],
@@ -172,7 +171,20 @@ class CalibrationStaticDlt(Task):
                         )
                     except Exception:
                         logging.exception(f"Camera pose estimation failed for calibration asset {data_db.id}")
-                data_db.save()
+
+                # Every run keeps its own calibration, so the variants (with a lens profile, with a solved
+                # lens, with none) can be compared and switched between afterwards. The asset mirrors the
+                # active one -- that is what the overlay, KPI computation and position data read.
+                calibration = Calibration.objects.create(
+                    calibration_asset=data_db,
+                    plugin_run=plugin_run,
+                    plugin=getattr(self, "plugin_name", ""),
+                    homography_matrix=homography_matrix,
+                    lens_intrinsics=lens_intrinsics,
+                    camera_pose=camera_pose,
+                    reprojection_error=reprojection_error,
+                )
+                data_db.apply_calibration(calibration)
                 logging.debug(f"Updated homography matrix {homography_matrix} for calibration asset {data_db.id}")
 
         return {

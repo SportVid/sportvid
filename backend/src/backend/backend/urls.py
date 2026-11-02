@@ -220,6 +220,9 @@ urlpatterns = [
     path("calibration_assets/project",
         views.CalibrationAssetsProject.as_view(),
         name="calibration_assets_project"),
+    path("calibration/activate",
+        views.CalibrationActivate.as_view(),
+        name="calibration_activate"),
     # ---------- LENS PROFILES
     path("lens_profile/brands",
         views.LensProfileBrandList.as_view(),

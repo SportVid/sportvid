@@ -43,8 +43,11 @@
                     {{ $t("position_data.generate.object_tracker") }}
                   </v-btn>
 
+                  <!-- One entry for camera calibration; which plugin runs (DLT+RANSAC vs.
+                       lens self-calibration) is picked as the first parameter inside the
+                       modal, see calibrationParams. -->
                   <v-btn data-tour="posdata-generate-dlt" @click="showDltModal = true">
-                    {{ $t("position_data.generate.dlt") }}
+                    {{ $t("position_data.generate.calibration") }}
                   </v-btn>
 
                   <!-- Optional refinement on top of an existing (player-)Object Tracker run --
@@ -144,9 +147,9 @@
             v-if="showDltModal"
             v-model="showDltModal"
             plugin="calibration_static_dlt"
-            :name="$t('modal.plugin.calibration_static_dlt.plugin_name')"
-            :description="$t('modal.plugin.calibration_static_dlt.plugin_description')"
-            :paramsFactory="dltParams"
+            :name="$t('modal.plugin.calibration.plugin_name')"
+            :description="$t('modal.plugin.calibration.plugin_description')"
+            :paramsFactory="calibrationParams"
             :videoId="playerStore.videoId"
             runButtonDataTour="posdata-dlt-apply"
           />
@@ -236,7 +239,7 @@ import { useUserStore } from "@/stores/user";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import {
   objectTrackerParams,
-  dltParams,
+  calibrationParams,
   teamClusteringParams,
   osnetReidParams,
   kpiComputationParams,

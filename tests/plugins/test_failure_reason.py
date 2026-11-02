@@ -106,7 +106,7 @@ def test_lens_solver_rejects_a_moving_camera(video, motion, grpc_settings):
 
     video.camera_motion = motion
     with pytest.raises(TaskFailure) as failure:
-        CalibrationLensSolve().lens_intrinsics(None, video, [], 105.0, 68.0, "soccer", None)
+        CalibrationLensSolve().solve_lens(None, video, [], 105.0, 68.0, "soccer", None)
     assert failure.value.type == "camera_not_static"
     assert failure.value.details == {"camera_motion": motion}
 
@@ -116,9 +116,28 @@ def test_lens_solver_needs_enough_keypoints(video, grpc_settings):
 
     video.camera_motion = Video.CAMERA_MOTION_STATIC
     with pytest.raises(TaskFailure) as failure:
-        CalibrationLensSolve().lens_intrinsics(None, video, [{}] * 5, 105.0, 68.0, "soccer", None)
+        CalibrationLensSolve().solve_lens(None, video, [{}] * 5, 105.0, 68.0, "soccer", None)
     assert failure.value.type == "not_enough_keypoints"
     assert failure.value.details == {"count": 5, "required": 6}
+
+
+@pytest.mark.parametrize(
+    "motion, sport, keypoints",
+    [
+        (Video.CAMERA_MOTION_PAN, "soccer", [{}] * 6),       # moving camera
+        (Video.CAMERA_MOTION_STATIC, "handball", [{}] * 6),  # no pitch model
+        (Video.CAMERA_MOTION_STATIC, "soccer", [{}] * 5),    # too few landmarks
+    ],
+)
+def test_lens_solver_falls_back_instead_of_failing(video, motion, sport, keypoints, grpc_settings):
+    """What the solver needs and doesn't get doesn't fail the run: lens_intrinsics returns the inherited
+    lens (here none, the video has no profile), so the homography is fitted without undistortion."""
+    from backend.tasks.calibration_lens_solve import CalibrationLensSolve
+
+    video.camera_motion = motion
+    assert (
+        CalibrationLensSolve().lens_intrinsics(None, video, keypoints, 105.0, 68.0, sport, None) is None
+    )
 
 
 def test_analyser_timeout_records_its_reason(video, settings, monkeypatch):

@@ -19,12 +19,12 @@
           @select-calibration="onSelectCalibration"
         />
 
+        <!-- Counts only the parameters that would actually render -- a plugin whose optional
+             parameters are all inapplicable to the current selection (e.g. the lens solver's
+             ones while DLT+RANSAC is the picked calibration method) would otherwise offer an
+             empty "Advanced options" panel. -->
         <v-expansion-panels
-          v-if="
-            optionalParameters &&
-            optionalParameters.length > 0 &&
-            userStore.experienceMode !== 'simple'
-          "
+          v-if="visibleOptionalParameters.length > 0 && userStore.experienceMode !== 'simple'"
           class="mt-4"
           data-tour="kpi-advanced-options"
         >
@@ -53,9 +53,13 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useUserStore } from "@/stores/user";
-import { submitPlugin } from "@/composables/usePluginParams";
+import {
+  applyLensProfileSelection,
+  pluginFromParams,
+  submitPlugin,
+} from "@/composables/usePluginParams";
 import { useCalibrationCreateFlow } from "@/composables/useCalibrationCreateFlow";
 import Parameters from "./Parameters.vue";
 import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
@@ -101,10 +105,21 @@ const { parameters, optionalParameters } = props.paramsFactory();
 const { showCalibrationCreate, onCreateCalibration, onSelectCalibration } =
   useCalibrationCreateFlow(dialog);
 
-const run = () => {
-  const allParams = [...parameters.value, ...optionalParameters.value];
-  submitPlugin(props.plugin, allParams, props.videoId).then(() => {
-    dialog.value = false;
-  });
+// A params factory can carry the plugin to run among its parameters (calibrationParams derives
+// it from the video's lens profile) -- the `plugin` prop is then the fallback for the moment
+// before that field has a value.
+const allParams = computed(() => [...parameters.value, ...optionalParameters.value]);
+const visibleOptionalParameters = computed(
+  () => optionalParameters.value?.filter((p) => !p.hidden && !p.simpleHidden) ?? []
+);
+const activePlugin = computed(() => pluginFromParams(allParams.value, props.plugin));
+
+const run = async () => {
+  // A lens profile picked in this dialog is a property of the video and has to be saved before
+  // the run starts, since the backend task reads it from there (and it decides which calibration
+  // plugin runs). If it can't be saved the run is not started.
+  if (!(await applyLensProfileSelection(allParams.value, props.videoId))) return;
+  await submitPlugin(activePlugin.value, allParams.value, props.videoId);
+  dialog.value = false;
 };
 </script>

@@ -2,10 +2,12 @@ import json
 import logging
 
 import numpy as np
+from django.core.exceptions import ValidationError
 from django.views import View
 from django.http import JsonResponse
 
 from backend.models import Video
+from backend.models import Calibration
 from backend.models import CalibrationAssets
 from backend.models import PluginRun
 from backend.utils.decode_auth import decode_and_authenticate
@@ -108,6 +110,34 @@ class CalibrationAssetsDelete(View):
             return JsonResponse({"status": "ok"})
         except CalibrationAssets.DoesNotExist:
             return JsonResponse({"status": "error", "type": "not_exist"})   
+        except Exception:
+            logger.exception(f'Failed to {__class__.__name__}')
+            return JsonResponse({"status": "error"})
+
+
+class CalibrationActivate(View):
+    """Make one of a calibration asset's calibrations the active one ({"id"} of the calibration).
+
+    Every run over an asset keeps its own calibration (see the Calibration model), the active one is what the
+    overlay, KPI computation and position data use. Switching is a pure pick: results already computed with
+    another one keep what they were computed with.
+    """
+    @decode_and_authenticate(require_name=False)
+    def post(self, request, data):
+        try:
+            calibration = Calibration.objects.get(
+                id=data.get("id"), calibration_asset__in=writable(CalibrationAssets, request.user)
+            )
+        except (Calibration.DoesNotExist, ValueError, ValidationError):
+            return JsonResponse({"status": "error", "type": "not_exist"})
+        except Exception:
+            logger.exception(f'Failed to {__class__.__name__}')
+            return JsonResponse({"status": "error"})
+
+        try:
+            asset = calibration.calibration_asset
+            asset.apply_calibration(calibration)
+            return JsonResponse({"status": "ok", "entry": asset.to_dict()})
         except Exception:
             logger.exception(f'Failed to {__class__.__name__}')
             return JsonResponse({"status": "error"})

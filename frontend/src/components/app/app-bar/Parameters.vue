@@ -12,6 +12,8 @@
         v-model="parameter.value"
         :items="parameter.items"
         :label="parameter.text"
+        :hint="parameter.hint"
+        :persistent-hint="!!parameter.hint"
         v-if="parameter.field == 'select_options'"
         :key="parameter.name"
         :data-tour="parameter.dataTour || undefined"
@@ -515,6 +517,15 @@
           class="ml-2 checkbox-label-spacing"
         />
       </div>
+
+      <!-- Not a plugin parameter but a property of the video (hence `uiOnly`, see submitPlugin):
+           which lens profile the calibration undistorts the clicked points with. Sits among the
+           parameters because that is where it is needed, and because it decides which
+           calibration plugin the run uses. Saved when the run is started, see
+           applyLensProfileSelection. -->
+      <div v-if="parameter.field == 'select_lens_profile'" :key="parameter.name" class="mb-6">
+        <LensProfileSelect v-model="parameter.value" :video="playerStore.video" />
+      </div>
     </template>
   </div>
 </template>
@@ -526,6 +537,7 @@ import { useTimelineStore } from "@/stores/timeline";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
+import LensProfileSelect from "@/components/video/LensProfileSelect.vue";
 import { useExportStore } from "@/stores/export";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";

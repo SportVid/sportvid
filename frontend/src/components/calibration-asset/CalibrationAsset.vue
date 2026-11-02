@@ -559,7 +559,14 @@
 
       <v-menu v-model="showMarkerTypeMenu" location="top" :close-on-content-click="false">
         <template #activator="{ props }">
-          <v-btn v-bind="props" size="small" data-tour="calibration-object-btn">
+          <!-- Only the marker type has menu entries left (add/delete a custom marker); for
+               segments the button stays as the label that names the current type. -->
+          <v-btn
+            v-bind="props"
+            size="small"
+            :disabled="calibrationAssetStore.calibrationAssetType !== 'marker'"
+            data-tour="calibration-object-btn"
+          >
             {{
               calibrationAssetStore.calibrationAssetType === "marker"
                 ? $t("calibration_asset.marker.title")
@@ -567,60 +574,10 @@
             }}
           </v-btn>
         </template>
+        <!-- The two "show this overlay" toggles moved to the video player's display-settings
+             menu, where the overlays they switch actually are; what is left here acts on the
+             marker set itself. -->
         <v-list class="py-0" density="compact" width="180px">
-          <v-list-item
-            class="menu-item"
-            @click="
-              () => {
-                calibrationAssetStore.toggleVideoAsset();
-                showMarkerTypeMenu = false;
-              }
-            "
-          >
-            <v-list-item-title class="d-flex justify-space-between">
-              {{
-                calibrationAssetStore.calibrationAssetType === "marker"
-                  ? $t("calibration_asset.marker.view_vid_marker")
-                  : $t("calibration_asset.segments.view_vid_segments")
-              }}
-              <v-icon
-                :class="{
-                  'text-disabled': !calibrationAssetStore.showVideoAsset,
-                  'text-red': calibrationAssetStore.showVideoAsset,
-                }"
-                class="mb-1"
-                size="small"
-              >
-                mdi-check
-              </v-icon>
-            </v-list-item-title>
-          </v-list-item>
-
-          <v-list-item
-            class="menu-item"
-            :disabled="!calibrationAssetStore.calibrationMatrix"
-            @click="
-              () => {
-                calibrationAssetStore.togglePitchOverlay();
-                showMarkerTypeMenu = false;
-              }
-            "
-          >
-            <v-list-item-title class="d-flex justify-space-between">
-              {{ $t("calibration_asset.view_pitch_overlay") }}
-              <v-icon
-                :class="{
-                  'text-disabled': !calibrationAssetStore.showPitchOverlay,
-                  'text-red': calibrationAssetStore.showPitchOverlay,
-                }"
-                class="mb-1"
-                size="small"
-              >
-                mdi-check
-              </v-icon>
-            </v-list-item-title>
-          </v-list-item>
-
           <v-list-item
             v-if="calibrationAssetStore.calibrationAssetType === 'marker'"
             class="menu-item"

@@ -850,6 +850,26 @@ class CalibrationAssets(models.Model):
     # RMS error (metres on the pitch) of the point correspondences under the homography; these
     # are the points it was fitted on, so it is a lower bound (always 0 with exactly 4 points)
     reprojection_error = models.FloatField(blank=True, null=True)
+    # Which of this asset's Calibrations the four fields above mirror, i.e. the one everything
+    # downstream (the overlay, KPI computation, position data) works with. Every run over the
+    # asset adds one and becomes the active one; the user can switch back (views/calibration_assets.py: CalibrationActivate).
+    active_calibration = models.ForeignKey(
+        "Calibration",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
+    def apply_calibration(self, calibration):
+        """Make one of this asset's calibrations the active one and mirror it onto the asset, where every
+        consumer reads it from. Saves the asset."""
+        self.active_calibration = calibration
+        self.homography_matrix = calibration.homography_matrix
+        self.lens_intrinsics = calibration.lens_intrinsics
+        self.camera_pose = calibration.camera_pose
+        self.reprojection_error = calibration.reprojection_error
+        self.save()
 
     def to_dict(self, include_refs_hashes=True, include_refs=True, **kwargs):
         result = {
@@ -861,10 +881,55 @@ class CalibrationAssets(models.Model):
             "lens_intrinsics": self.lens_intrinsics,
             "camera_pose": self.camera_pose,
             "reprojection_error": self.reprojection_error,
+            "active_calibration_id": self.active_calibration_id.hex if self.active_calibration_id else None,
         }
         if include_refs:
             result["object_data"] = [x.to_dict() for x in self.object_data.all()]
+            result["calibrations"] = [x.to_dict() for x in self.calibrations.all()]
         return result
+
+
+class Calibration(models.Model):
+    """One calibration of a CalibrationAssets, as computed by one plugin run.
+
+    The asset holds the clicked points; each run over it (DLT+RANSAC with or without a lens profile, or with a
+    lens solved from the video) fits its own homography from them. Keeping them all is what lets the user
+    compare the variants and pick one, instead of only ever seeing the last run's result.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    calibration_asset = models.ForeignKey(
+        CalibrationAssets, on_delete=models.CASCADE, related_name="calibrations"
+    )
+    # the run that computed it; kept as a plain name in `plugin` so a deleted run doesn't take that with it
+    plugin_run = models.ForeignKey(
+        PluginRun, blank=True, null=True, on_delete=models.SET_NULL, related_name="calibrations"
+    )
+    plugin = models.CharField(max_length=256, blank=True, default="")
+    date = models.DateTimeField(auto_now_add=True)
+    homography_matrix = models.JSONField(default=default_homography_matrix)
+    lens_intrinsics = models.JSONField(blank=True, null=True)
+    camera_pose = models.JSONField(blank=True, null=True)
+    reprojection_error = models.FloatField(blank=True, null=True)
+
+    class Meta: ordering = ["-date"]
+
+    def to_dict(self, **kwargs):
+        # The homography and the full lens snapshot are left out: of all the calibrations of an asset only the
+        # active one is applied, and it is mirrored onto the asset itself. This is what the picker needs to
+        # tell them apart.
+        lens = self.lens_intrinsics or {}
+        return {
+            "id": self.id.hex,
+            "plugin": self.plugin,
+            "plugin_run_id": self.plugin_run_id.hex if self.plugin_run_id else None,
+            "date": self.date.isoformat(),
+            "reprojection_error": self.reprojection_error,
+            # "fisheye" for a lens profile (with its name), "angular" for one solved from the video,
+            # null when the homography was fitted on the raw video coordinates
+            "lens_model": lens.get("model"),
+            "lens_profile_name": lens.get("lens_profile_name"),
+            "camera_pose": self.camera_pose,
+        }
 
 
 class PointCorrespondence(models.Model):

@@ -42,9 +42,18 @@
 
         <v-divider class="my-6" />
 
+        <!-- Camera/lens of this video -- same component and same effect as in the Complex-mode
+             calibration dialog (it writes the video's lens profile, see LensProfileSelect);
+             assigning one here also decides which calibration the run below uses. -->
+        <div class="mx-2">
+          <LensProfileSelect v-model="lensProfile" :video="playerStore.video" />
+        </div>
+
+        <v-divider class="my-6" />
+
         <v-row class="mx-2 mt-2">
-          <!-- Left: which saved asset the DLT calibration run below uses, and the
-               player-tracking source (new run vs. reusing an existing finished one). -->
+          <!-- Left: which saved asset the calibration run below uses, and the player-tracking
+               source (new run vs. reusing an existing finished one). -->
           <v-col cols="12" md="6">
             <v-select
               v-model="calibrationId"
@@ -137,21 +146,26 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
+import { usePlayerStore } from "@/stores/player";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useCalibrationCreateFlow } from "@/composables/useCalibrationCreateFlow";
 import { useObjectTrackerPlayerRuns } from "@/composables/useObjectTrackerPlayerRuns";
 import {
-  dltParams,
+  applyLensProfileSelection,
+  calibrationParams,
   objectTrackerParams,
   teamClusteringParams,
   osnetReidParams,
+  pluginFromParams,
   submitPlugin,
 } from "@/composables/usePluginParams";
+import LensProfileSelect from "@/components/video/LensProfileSelect.vue";
 import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
 
 const { t } = useI18n();
+const playerStore = usePlayerStore();
 const pluginRunResultStore = usePluginRunResultStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 
@@ -186,14 +200,26 @@ const { showCalibrationCreate, onCreateCalibration, onSelectCalibration } =
 // auto-unwraps it -- a nested `dlt.parameters` access in the template stays a Ref object
 // instead of the array Parameters.vue expects (see the "$props.parameters.filter is not a
 // function" crash this used to cause).
-const { parameters: dltParameters, optionalParameters: dltOptionalParameters } = dltParams();
-// Writable so the split-out v-select below (see template) can drive the same underlying
-// dltParameters field submitPlugin("calibration_static_dlt", ...) reads from -- same value,
-// just no longer rendered together with the create/select-for-editing buttons above it.
+const { parameters: dltParameters, optionalParameters: dltOptionalParameters } =
+  calibrationParams();
+// Writable so the split-out v-selects below (see template) can drive the same underlying
+// dltParameters fields the calibration run reads from -- same values, just no longer rendered
+// together with the create/select-for-editing buttons above them.
+const dltField = (name) => dltParameters.value.find((p) => p.name === name);
 const calibrationId = computed({
-  get: () => dltParameters.value.find((p) => p.name === "calibration_id")?.value,
+  get: () => dltField("calibration_id")?.value,
   set: (value) => {
-    const field = dltParameters.value.find((p) => p.name === "calibration_id");
+    const field = dltField("calibration_id");
+    if (field) field.value = value;
+  },
+});
+// This modal lays its fields out itself instead of rendering <Parameters>, so the lens-profile
+// field of the shared params set is bound by hand -- same field, same effect on which
+// calibration plugin the run below uses.
+const lensProfile = computed({
+  get: () => dltField("lens_profile")?.value,
+  set: (value) => {
+    const field = dltField("lens_profile");
     if (field) field.value = value;
   },
 });
@@ -271,10 +297,14 @@ const runDependentPlugins = (objectTrackerId) => {
   }
 };
 
-const runPlugins = () => {
+const runPlugins = async () => {
+  // The lens profile picked above is saved onto the video first -- the calibration task reads it
+  // from there, and it decides which calibration plugin runs.
+  const calibrationRunParams = [...dltParameters.value, ...dltOptionalParameters.value];
+  if (!(await applyLensProfileSelection(calibrationRunParams, props.videoId))) return;
   submitPlugin(
-    "calibration_static_dlt",
-    [...dltParameters.value, ...dltOptionalParameters.value],
+    pluginFromParams(calibrationRunParams, "calibration_static_dlt"),
+    calibrationRunParams,
     props.videoId
   );
 

@@ -1772,6 +1772,34 @@ export const useCalibrationAssetStore = defineStore(
         console.error("Failed to list calibration assets:", error);
       }
     };
+    // Picks which of an asset's calibrations is applied. Every run over an asset keeps its own
+    // (backend: the Calibration model), the asset mirrors the active one -- which is what the
+    // overlay, KPI computation and position data read. Results computed earlier keep the
+    // calibration they were computed with, switching only affects what runs from now on.
+    const activateCalibration = async (calibrationId) => {
+      try {
+        const res = await axios.post(`${config.API_LOCATION}/calibration/activate`, {
+          id: calibrationId,
+        });
+        if (res.data.status !== "ok") {
+          console.error("Failed to activate the calibration:", res.data);
+          return false;
+        }
+        const entry = res.data.entry;
+        calibrationAssetsList.value = Object.values(calibrationAssetsList.value).map((asset) =>
+          asset.id === entry.id ? entry : asset
+        );
+        // the cached matrix wins over the asset's in calibrationMatrix -- drop it so the newly
+        // activated one is picked up and the overlay is redrawn
+        if (calibrationAssetId.value === entry.id) {
+          calibrationMatrixPersisted.value = [];
+        }
+        return true;
+      } catch (error) {
+        console.error("Failed to activate the calibration:", error);
+        return false;
+      }
+    };
     const loadCalibrationAsset = (id) => {
       const calibrationAsset = calibrationAssetsList.value.find((asset) => asset.id === id);
       if (calibrationAsset) {
@@ -1912,7 +1940,10 @@ export const useCalibrationAssetStore = defineStore(
 
     // The pitch lines projected into the video, and each calibration object's pitch position projected next to
     // where it was clicked: lines and markers that sit on the painted ones show a good calibration.
-    const showPitchOverlay = ref(false);
+    // On by default -- in calibration mode the projected markings are the main feedback on
+    // whether a calibration is any good, so they are shown unless switched off. Entering
+    // calibration mode turns them back on, leaving it hides them (see AnalysisView).
+    const showPitchOverlay = ref(true);
     const togglePitchOverlay = () => {
       showPitchOverlay.value = !showPitchOverlay.value;
     };
@@ -2005,6 +2036,7 @@ export const useCalibrationAssetStore = defineStore(
       createCalibrationAsset,
       loadCalibrationAsset,
       loadCalibrationAssetsList,
+      activateCalibration,
       saveCalibrationAsset,
       updateCalibrationAsset,
       deleteCalibrationAsset,
