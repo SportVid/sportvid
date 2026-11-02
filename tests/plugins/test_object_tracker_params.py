@@ -134,3 +134,65 @@ def test_bytetrack_can_use_gta_link_and_stays_off_by_default():
 
 def test_bytetrack_rejects_unknown_keys():
     assert "tracker_params" in errors({"detector": "rfdetr", "tracker": "bytetrack", "tracker_params": {"buffer": 30}})
+
+
+def test_sahi_is_validated_and_filled_with_defaults():
+    data = validate({"detector": "rfdetr", "tracker": "bytetrack", "ball_detector": "rfdetr",
+                     "ball_detector_params": {"sahi": {"enabled": True, "full_frame": False}}})
+    sahi = data["ball_detector_params"]["sahi"]
+    assert sahi["enabled"] and not sahi["full_frame"]
+    assert sahi["slice_size"] == [560, 560] and sahi["overlap"] == [0.2, 0.2]
+    assert sahi["merge"] == "nmm" and sahi["match_metric"] == "ios" and sahi["match_threshold"] == 0.5
+    assert "sahi" not in data["detector_params"]
+
+
+def test_sahi_for_every_detector():
+    for detector in ("yolox", "yolo11", "rfdetr", "rtdetr"):
+        data = validate({"detector": detector, "detector_params": {"sahi": {"enabled": True, "slice_size": [540, 960]}}})
+        assert data["detector_params"]["sahi"]["slice_size"] == [540, 960]
+
+
+def test_sahi_rejects_unknown_keys_and_bad_values():
+    assert "detector_params" in errors({"detector": "yolox", "detector_params": {"sahi": {"enabled": True, "tiles": 4}}})
+    assert "detector_params" in errors({"detector": "yolox", "detector_params": {"sahi": {"merge": "wbf"}}})
+    assert "detector_params" in errors({"detector": "yolox", "detector_params": {"sahi": {"slice_size": [560]}}})
+
+
+def test_yolox_input_format():
+    assert validate({"detector": "yolox"})["detector_params"]["input_format"] == "auto"
+    assert validate({"detector": "yolox", "detector_params": {"input_format": "bgr255"}})["detector_params"]["input_format"] == "bgr255"
+    assert "detector_params" in errors({"detector": "yolox", "detector_params": {"input_format": "rgb"}})
+    # the other backends have no input convention to choose
+    assert "detector_params" in errors({"detector": "rfdetr", "detector_params": {"input_format": "legacy"}})
+
+
+def test_yolox_sn_player_preset():
+    data = validate({"detector": "yolox_sn_player", "tracker": "deep_eiou", "detector_params": {"confidence_threshold": 0.4}})
+    p = data["detector_params"]
+    assert p["checkpoint"] == "/models/yolox/yolox_l_sn_player.pth" and p["model_path"] == "yolox-l"
+    assert p["test_size"] == [736, 1280] and p["input_format"] == "auto"
+    assert p["conf_thresh"] == 0.4 and "conf" not in p          # the YOLOX name of the alias
+    assert "sahi" not in p
+
+
+def test_yolox_sn_ball_preset_runs_sliced():
+    data = validate({"detector": "yolox_sn_player", "tracker": "deep_eiou", "ball_detector": "yolox_sn_ball"})
+    p = data["ball_detector_params"]
+    assert p["checkpoint"] == "/models/yolox/yolox_l_sn_ball_tiles.pth" and p["test_size"] == [576, 576]
+    assert p["sahi"]["enabled"] and not p["sahi"]["full_frame"] and p["sahi"]["slice_size"] == [560, 560]
+    assert p["sahi"]["merge"] == "nmm" and p["sahi"]["overlap"] == [0.2, 0.2]   # filled from SAHI_DEFAULTS
+    assert p["output_class_mapping"][0]["entity_type"] == "ball"
+
+
+def test_partial_sahi_override_keeps_the_preset():
+    data = validate({"detector": "rfdetr", "ball_detector": "yolox_sn_ball",
+                     "ball_detector_params": {"sahi": {"overlap": [0.3, 0.3]}, "conf_thresh": 0.2}})
+    p = data["ball_detector_params"]
+    assert p["sahi"]["enabled"] and not p["sahi"]["full_frame"] and p["sahi"]["overlap"] == [0.3, 0.3]
+    assert p["conf_thresh"] == 0.2
+
+
+def test_yolox_sn_presets_keep_their_model_files():
+    for detector in ("yolox_sn_player", "yolox_sn_ball"):
+        assert "detector_params" in errors({"detector": detector,
+                                            "detector_params": {"model_path": "/models/yolox/yolox_x.pth"}})

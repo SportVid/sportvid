@@ -55,14 +55,15 @@ class ObjectTracker(
     AnalyserPlugin,
     config=default_config,
     parameters={},
-    version="0.3",
+    version="0.4",
     requires=requires,
     provides=provides
 ):
     """ Detectors -> player tracker + ball tracker -> tracklets, in stages (see tracker/README.md):
 
     1. detection over the decoded video: the (player) detector, and the optional ball detector, a second
-       detector instance with its own parameters (``ball_detector`` / ``ball_detector_params``);
+       detector instance with its own parameters (``ball_detector`` / ``ball_detector_params``); either can run
+       sliced (``sahi``, SAHI-style tiles, ``detector/slicing.py``);
     2. routing by ``output_class_mapping``: the ``entity_type: ball`` classes never reach the player tracker. The
        ball candidates come from the ball detector when it runs (the player detector's ball class is dropped),
        else from the player detector;
@@ -93,7 +94,9 @@ class ObjectTracker(
             YoloX,
             YoloUltralytics,
             RFDetr,
-            RTDetr
+            RTDetr,
+            SliceConfig,
+            SlicedDetector,
         )
         from .tracker import (
             ByteTrack,
@@ -104,6 +107,8 @@ class ObjectTracker(
 
         DETECTOR_MAP = {
             "yolox": YoloX,
+            "yolox_sn_player": YoloX,
+            "yolox_sn_ball": YoloX,
             "yolo10": YoloUltralytics,
             "yolo11": YoloUltralytics,
             "yolo12": YoloUltralytics,
@@ -142,21 +147,22 @@ class ObjectTracker(
                 )
                 image_size = video_decoder._size
                 # -------> instantiate detector(s) & tracker objects
-                self.detector = DETECTOR_MAP[parameters["detector"]](
-                    model_path=parameters["detector_params"]["model_path"],
-                    image_size=image_size,
-                    detector_params=parameters["detector_params"],
-                    device="cuda",
-                )
+                def build_detector(name, params):
+                    detector = DETECTOR_MAP[name](
+                        model_path=params["model_path"],
+                        image_size=image_size,
+                        detector_params=params,
+                        device="cuda",
+                    )
+                    # SAHI-style sliced inference around any backend (detector/slicing.py)
+                    slicing = SliceConfig.from_cfg(params.get("sahi"))
+                    return detector if slicing is None else SlicedDetector(detector, slicing, params.get("batch_size", 1))
+
+                self.detector = build_detector(parameters["detector"], parameters["detector_params"])
                 # NOTE: the ball detector is another instance of a detector wrapper, with its own parameters
                 self.ball_detector = None
                 if _is_set(ball_detector_name):
-                    self.ball_detector = DETECTOR_MAP[ball_detector_name](
-                        model_path=parameters["ball_detector_params"]["model_path"],
-                        image_size=image_size,
-                        detector_params=parameters["ball_detector_params"],
-                        device="cuda",
-                    )
+                    self.ball_detector = build_detector(ball_detector_name, parameters["ball_detector_params"])
                 if self.tracker:
                     self.tracker = TRACKER_MAP[parameters["tracker"]](
                         tracker_params=parameters["tracker_params"],

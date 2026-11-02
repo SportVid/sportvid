@@ -1,5 +1,4 @@
-"""Offline refinement of a finished player-track state (``Tracker.finalize``), ported from trak's
-``trak/tracker/refine.py``. Both work on top of any player tracker and are configured in its parameters
+"""Offline refinement of a finished player-track state (``Tracker.finalize``). Both work on top of any player tracker and are configured in its parameters
 (``gta_link`` / ``interpolation``, each with ``enabled``).
 
 - ``GTALink``: GTA-Link (Sun et al., ACCV-W 2024, MIT, vendored in ``third_party/gta_link``) splits tracklets whose
@@ -47,7 +46,7 @@ class GTALink:
     """Embeds every output box while its frame is in memory (``observe``), then splits and connects the
     tracklets over the whole clip (``refine``), as GTA-Link's ``generate_tracklets.py`` + ``refine_tracklets.py``.
 
-    As in trak: the boxes come from the tracker state instead of a MOT file; output IDs are renumbered 1..N in
+    The boxes come from the tracker state instead of a MOT file; output IDs are renumbered 1..N in
     sorted order and every score is 1 (upstream's ``save_results``); upstream always runs the connect step.
     """
 
@@ -122,7 +121,7 @@ class Interpolation:
     """Fills gaps shorter than ``n_dti`` frames in tracks with more than ``n_min`` boxes by linear interpolation of
     the tlwh box, unless the box centre moves more than ``distance_thres`` px across the gap. A (frame, id) pair
     that occurs more than once is dropped first (all its boxes). Existing boxes keep their score, interpolated
-    ones get 1 (trak; Deep-EIoU's script writes -1 for every box)."""
+    ones get 1 (Deep-EIoU's script writes -1 for every box)."""
 
     def __init__(self, cfg: Dict[str, Any]):
         self.n_min = int(cfg.get('n_min', 5))

@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 
 class Tracker(ABC):
-    """ Interface of the player trackers run by ``object_tracker`` (same as trak's ``trak.tracker.tracker``).
+    """ Interface of the player trackers run by ``object_tracker`` .
 
     - ``process`` tracks a sequence of frames and appends one ``track_frame`` dict per input frame to ``self.state``.
     - ``finalize`` runs once after the last frame: the offline refinements over the whole clip configured in the

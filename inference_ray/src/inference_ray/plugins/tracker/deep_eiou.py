@@ -335,7 +335,7 @@ def _drop_duplicates(tracked: List[_Track], lost: List[_Track]):
 
 # ---------------------------------------------------------------------------------------------------------------
 class DeepEIoU(Tracker):
-    """Deep-EIoU behind the ``Tracker`` interface (trak's ``trak/tracker/deep_eiou.py`` wrapper, SportsMOT setting).
+    """Deep-EIoU behind the ``Tracker`` interface (SportsMOT setting).
 
     Detections with score > ``track_low_thresh`` are embedded (``appearance.ReIDEncoder``); frames without
     detections skip the association, so tracks do not age there and no boxes are written for them (as upstream's

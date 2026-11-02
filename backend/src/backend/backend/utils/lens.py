@@ -113,7 +113,7 @@ def mode_intrinsics(
     height: int,
     crop: float = 1.0,
 ) -> np.ndarray:
-    """K of a recording mode at the video resolution, as Gyroflow and trak model GoPro modes:
+    """K of a recording mode at the video resolution, as Gyroflow models GoPro modes:
 
     1. the video frame has the calibrated frame's pixel scale across the full width; a different
        aspect ratio crops rows (wider video) or extends them beyond the calibrated frame (taller video,

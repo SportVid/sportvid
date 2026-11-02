@@ -6,6 +6,10 @@ import numpy as np
 from typing import Any, Dict, List
 
 
+def model_path_name(exp) -> str:
+    return getattr(exp, "exp_name", type(exp).__name__)
+
+
 @staticmethod
 def xyxy_to_xywh(xyxy):
     xyxy = np.asarray(xyxy)
@@ -28,10 +32,27 @@ def xyxy_to_xywh_tensor(xyxy: torch.Tensor) -> torch.Tensor:
     return torch.stack((cx, cy, w, h), dim=-1)
 
 
+def load_checkpoint(path: str, device: str) -> Dict[str, Any]:
+    """ ``torch.load`` without arbitrary unpickling: weights only, plus the numpy scalars YOLOX's trainer stores
+    (``best_ap``, ``curr_ap``; pickled as ``numpy.core.multiarray.scalar`` by numpy 1). """
+    allowed = [np.dtype, *[getattr(np.dtypes, n) for n in dir(np.dtypes) if n.endswith("DType")]]
+    if int(np.__version__.split(".")[0]) >= 2:
+        from numpy._core.multiarray import scalar
+    else:
+        from numpy.core.multiarray import scalar
+    allowed += [scalar, (scalar, "numpy.core.multiarray.scalar")]
+    with torch.serialization.safe_globals(allowed):
+        return torch.load(path, map_location=device, weights_only=True)
+
+
 class YoloX():
     """
     YOLOX detector wrapper for inference.
     Source: https://github.com/Megvii-BaseDetection/YOLOX
+
+    Any YOLOX checkpoint loads: the architecture (depth, width, number of classes) and the input convention
+    (``input_format``: legacy RGB / 255 / ImageNet mean-std, or BGR 0-255, ``yolox_input.py``) are read from it.
+    ``model_path`` (an exp name, e.g. ``yolox-x``) picks the model family.
     """
     def __init__(
         self,
@@ -54,11 +75,11 @@ class YoloX():
             self.checkpoint = checked_model_path(self.checkpoint)
         self.w, self.h = image_size
 
-        self._init_inference(detector_params)
-        
-        # ImageNet norm constants for preprocessing
+        # ImageNet norm constants of the legacy input
         self.rgb_means = (0.485, 0.456, 0.406)
         self.std = (0.229, 0.224, 0.225)
+
+        self._init_inference(detector_params)
 
     def _init_inference(self, cfg: Dict[Any, Any]):
         """
@@ -67,17 +88,52 @@ class YoloX():
           - restores weights from checkpoint (strict)
           - sets eval mode and disables internal decoding
         """
-        import torch
-        
+        from .yolox_input import FORMATS, architecture, state_input_format
+
         self.cfg = cfg
-        self.exp.num_classes = self.num_classes = self.cfg["num_classes"]
         self.conf_thresh = self.cfg["conf_thresh"]
         self.nms_thresh = self.cfg["nms_thresh"]
-        
-        self.classes = self.cfg.get('classes', [])
-        self.num_classes = len(self.classes)
-        if self.num_classes == 0:
+
+        self.classes = [int(c) for c in self.cfg.get('classes', [])]
+        if not self.classes:
             raise RuntimeError("Expected at least 1 class to detect, please check the 'classes' args.")
+        if not self.checkpoint:
+            raise ValueError("YOLOX needs a checkpoint (detector_params.checkpoint); random weights detect nothing.")
+
+        logging.info(f"[inference] Loading checkpoint: {self.checkpoint}")
+        chkpt = load_checkpoint(self.checkpoint, self.device)
+        state_dict = chkpt.get("model", chkpt) if isinstance(chkpt, dict) else chkpt
+        if all(k.startswith("module.") for k in state_dict):  # saved from DistributedDataParallel
+            state_dict = {k[len("module."):]: v for k, v in state_dict.items()}
+
+        # architecture from the weights, so a checkpoint of another size than the exp's default loads too
+        arch = architecture(state_dict)
+        if (self.exp.depth, self.exp.width) != (arch["depth"], arch["width"]):
+            logging.info(f"[inference] {self.checkpoint}: depth {arch['depth']}, width {arch['width']} "
+                         f"(exp '{model_path_name(self.exp)}' defaults to {self.exp.depth}, {self.exp.width}).")
+        self.exp.depth, self.exp.width = arch["depth"], arch["width"]
+        self.exp.num_classes = self.num_classes = arch["num_classes"]
+        if self.cfg.get("num_classes") not in (None, self.num_classes):
+            logging.warning(f"[inference] num_classes {self.cfg['num_classes']} ignored: the checkpoint has "
+                            f"{self.num_classes} classes.")
+        unknown = [c for c in self.classes if not 0 <= c < self.num_classes]
+        if unknown:
+            raise ValueError(f"classes {unknown} do not exist in {self.checkpoint} ({self.num_classes} classes).")
+
+        # input convention: the checkpoint's input_format tag (a converted checkpoint), else its stem statistics; an
+        # explicit setting must agree (the wrong one gives hundreds of low-score boxes per frame instead of an error)
+        tag = chkpt.get("input_format") if isinstance(chkpt, dict) else None
+        if tag is not None and tag not in FORMATS:
+            raise ValueError(f"{self.checkpoint}: unknown input_format tag {tag!r}.")
+        detected, source = (tag, "its input_format tag") if tag else (state_input_format(state_dict)[0],
+                                                                       "its stem statistics")
+        wanted = self.cfg.get("input_format") or "auto"
+        if wanted not in ("auto", *FORMATS):
+            raise ValueError(f"input_format must be auto, legacy or bgr255, got {wanted!r}.")
+        if wanted != "auto" and wanted != detected:
+            raise ValueError(f"{self.checkpoint} expects {detected} input ({source}), but input_format is {wanted}.")
+        self.input_format = detected
+        logging.info(f"[inference] YOLOX checkpoint input: {detected} ({source}).")
 
         # test_size must match the training input_size exactly
         self.test_size = self.exp.test_size # default is determined by exp
@@ -97,20 +153,10 @@ class YoloX():
             f"conf={self.conf_thresh}, nms={self.nms_thresh}"
         )
 
-        # build model
+        # build model; strict=True still catches another family (tiny / nano: depthwise convs)
         self.model = self.exp.get_model().to(self.device)
-
-        # load checkpoint
-        if self.checkpoint:
-            logging.info(f"[inference] Loading checkpoint: {self.checkpoint}")
-            chkpt = torch.load(self.checkpoint, map_location=self.device)
-            self.model.load_state_dict(chkpt["model"], strict=True) # strict=True to check for architecture mismatches
-            logging.info("[inference] Checkpoint loaded successfully.")
-        else:
-            logging.warning(
-                "[inference] No checkpoint provided -> running with random weights. "
-                "Set model_chkpt in your config."
-            )
+        self.model.load_state_dict(state_dict, strict=True)
+        logging.info("[inference] Checkpoint loaded successfully.")
 
         # fp16 after checkpoint load so the cast doesn't affect weight loading
         self.fp16 = bool(cfg.get("fp16", False) and self.device.startswith("cuda"))
@@ -140,8 +186,9 @@ class YoloX():
     def _letterbox_torch(self, img_chw: torch.Tensor, out_h: int, out_w: int, pad_value: float = 114.0):
         c, h, w = img_chw.shape
         ratio = min(out_h / h, out_w / w)
-        new_h = max(1, int(round(h * ratio)))
-        new_w = max(1, int(round(w * ratio)))
+        # truncated, as yolox.data.data_augment.preproc
+        new_h = max(1, int(h * ratio))
+        new_w = max(1, int(w * ratio))
 
         resized = F.interpolate(
             img_chw.unsqueeze(0),
@@ -188,8 +235,12 @@ class YoloX():
 
         for img_chw in frames:
             pimg, ratio = self._letterbox_torch(img_chw, out_h, out_w, pad_value=114.0)
-            pimg = pimg / 255.0
-            pimg = (pimg - mean) / std
+            if self.input_format == "legacy":
+                # ValTransform(legacy=True): RGB, /255, ImageNet mean / std (YOLOX <= 0.1.0, ByteTrack, MixSort)
+                pimg = (pimg / 255.0 - mean) / std
+            else:
+                # ValTransform(legacy=False): BGR 0-255, cv2.imread's channel order (YOLOX 0.1.1rc0, the SoccerNet fine-tunes)
+                pimg = pimg.flip(0)
             processed_list.append(pimg)
             ratios.append(ratio)
 
@@ -297,12 +348,14 @@ class YoloX():
             xyxy_cpu = xyxy.detach().cpu().numpy()
             xywh_cpu = xywh.detach().cpu().numpy()
 
+            # rows are x1, y1, x2, y2, obj_conf, cls_conf, cls; the score postprocess thresholds
+            # is obj * cls, not cls_conf alone
             bbox_list = [
                 {
                     "xyxy": xyxy_cpu[i],
                     "xywh": xywh_cpu[i],
                     "cls_id": int(pred_cpu[i, -1].item()),
-                    "conf": float(pred_cpu[i, -2].item()),
+                    "conf": float(pred_cpu[i, 4].item() * pred_cpu[i, 5].item()),
                 }
                 for i in range(pred_cpu.shape[0])
                 if torch.isfinite(pred_cpu[i, :4]).all()

@@ -5,7 +5,7 @@ from rest_framework import serializers
 from backend.plugin_manager import PluginManager
 
 
-DETECTOR_CHOICES = ["yolox", "yolo10", "yolo11", "yolo12", "yolo26", "rfdetr", "rtdetr"]
+DETECTOR_CHOICES = ["yolox", "yolox_sn_player", "yolox_sn_ball", "yolo10", "yolo11", "yolo12", "yolo26", "rfdetr", "rtdetr"]
 TRACKER_CHOICES = ["bytetrack", "deep_eiou"]
 BALL_TRACKER_CHOICES = ["kalman"]
 
@@ -19,8 +19,9 @@ default_yolox_params = {
     "fp16": False,
     "num_classes": 1, 
     "decode": True,
-    "model_path": "yolox-x",
+    "model_path": "yolox-x",      # the model family; depth, width and the number of classes come from the checkpoint
     "checkpoint": "/models/yolox/bytetrack_x_mot17.pth.tar",
+    "input_format": "auto",       # auto: read from the checkpoint (legacy RGB / ImageNet, or BGR 0-255); or force one
     "output_class_mapping": {
         -1: {
             "entity_type": "unknown",
@@ -29,6 +30,63 @@ default_yolox_params = {
         0: {
             "entity_type": "athlete",
             "default_team": 3
+        }
+    }
+}
+
+# YOLOX-L fine-tuned on SoccerNet-GSR (broadcast football) for one person class, COCO initialisation, multi-scale
+# training 0.8-1.6 at 736x1280 (BGR 0-255 input, tagged in the checkpoint). On the DSHS recordings (tracker/README.md)
+# it beats the RF-DETR SN default: recall 0.91 / precision 0.82 vs. 0.86 / 0.81, and with Deep-EIoU -> GTA-Link it
+# gives the identity numbers of default_deep_eiou_params. API-only (the frontend does not offer it).
+default_yolox_sn_player_params = {
+    "batch_size": 1,
+    "conf_thresh": 0.35,          # the threshold it was evaluated with
+    "nms_thresh": 0.45,
+    "classes": [0],
+    "fp16": False,
+    "num_classes": 1,
+    "decode": True,
+    "model_path": "yolox-l",
+    "checkpoint": "/models/yolox/yolox_l_sn_player.pth",
+    "input_format": "auto",
+    "test_size": [736, 1280],     # the training size
+    "output_class_mapping": {
+        -1: {
+            "entity_type": "unknown",
+            "default_team": -1
+        },
+        0: {
+            "entity_type": "player",
+            "default_team": 3
+        }
+    }
+}
+
+# YOLOX-L ball model trained on 560 px tiles of SoccerNet-GSR at native scale: it runs sliced (SAHI) and never on the
+# whole frame, which would show it the ball 2-3x too small. On the DSHS recordings, with the Kalman ball tracker:
+# ball recall 0.62 / 0.53 (tuning / held-out matches) vs. 0.28 / 0.23 for the RF-DETR SN default. 1920x1080 is
+# 5 x 3 tiles per frame. A ball detector (ball_detector: yolox_sn_ball), or the detector of a ball-only run.
+default_yolox_sn_ball_params = {
+    "batch_size": 4,              # tiles per forward pass
+    "conf_thresh": 0.1,           # the low confidence floor: the ball tracker gates weak candidates
+    "nms_thresh": 0.45,
+    "classes": [0],
+    "fp16": True,                 # on CUDA only; matched fp32 on this model family
+    "num_classes": 1,
+    "decode": True,
+    "model_path": "yolox-l",
+    "checkpoint": "/models/yolox/yolox_l_sn_ball_tiles.pth",
+    "input_format": "auto",
+    "test_size": [576, 576],      # each 560 px tile at native scale, as trained
+    "sahi": {
+        "enabled": True,
+        "slice_size": [560, 560],
+        "full_frame": False,
+    },
+    "output_class_mapping": {
+        0: {
+            "entity_type": "ball",
+            "default_team": 0
         }
     }
 }
@@ -142,8 +200,8 @@ default_rtdetr_params = {
 #   2) conservative: [0.5 60 0.75]
 #   3) occlusion-heavy: [0.45 90 0.7]
 # track_buffer counts frames at 30 fps (ByteTrack's convention): the plugin scales it to the decoding rate, so it
-# is a duration (150 = 5 s at any fps). 150 is trak's ByteTrack re-tune on the DSHS recordings (buffer 150 of
-# 30 / 60 / 150; inference_ray plugins/tracker/README.md).
+# is a duration (150 = 5 s at any fps). 150 was the best of 30 / 60 / 150 in a ByteTrack re-tune on amateur football
+# recordings (inference_ray plugins/tracker/README.md).
 default_bytetrack_params = {
     "track_thresh": 0.45,       # tracking confidence threshold (0.6 = default)
     "track_buffer": 150,        # keep lost tracks this many frames at 30 fps (150 = 5 s)
@@ -155,6 +213,8 @@ default_bytetrack_params = {
 
 DETECTOR_DEFAULTS = {
     "yolox": default_yolox_params,
+    "yolox_sn_player": default_yolox_sn_player_params,
+    "yolox_sn_ball": default_yolox_sn_ball_params,
     "yolo10": default_yolo10_params,
     "yolo11": default_yolo11_params,
     "yolo12": default_yolo12_params,
@@ -169,7 +229,7 @@ REID_MODEL = {
     "model_name": "osnet_ain_x1_0",
     "model_path": "/models/reid/osnet_ain_ms_d_c.pth.tar",
 }
-# GTA-Link (third_party/gta_link): the README's general parameters, as trak's deep_eiou_gta.yaml
+# GTA-Link (third_party/gta_link): the general parameters of its README
 default_gta_link_params = {
     "enabled": False,
     **REID_MODEL,
@@ -191,7 +251,7 @@ default_interpolation_params = {
     "distance_thres": 200,        # ... unless the box centre moves more than this (px) across the gap
 }
 
-# Deep-EIoU (re-implemented, inference_ray plugins/tracker/deep_eiou.py) -> GTA-Link: trak's winner on the DSHS
+# Deep-EIoU (re-implemented, inference_ray plugins/tracker/deep_eiou.py) -> GTA-Link: the best tracker on the DSHS
 # recordings (deep_eiou_gta with OSNet-AIN MS+D+C in both; IDF1 0.59 / 16 IDs small M1, 0.46 / 18 Matches 2-3, on
 # YOLOX-L SN detections). Tracker thresholds are upstream's SportsMOT setting; track_buffer counts frames at 30 fps.
 default_deep_eiou_params = {
@@ -222,7 +282,7 @@ TRACKER_DEFAULTS = {
 }
 
 # Ball detector: another instance of a detector preset (same model files), with its own parameters. Only the
-# detectors whose preset model has a ball class; the low confidence floor is trak's (0.10): the ball tracker gates
+# detectors whose preset model has a ball class; the low confidence floor (0.10) is deliberate: the ball tracker gates
 # weak candidates itself (min_conf / init_conf below).
 BALL_DETECTOR_OVERRIDES = {
     "yolo10": {"classes": [32], "conf": 0.1},
@@ -231,10 +291,11 @@ BALL_DETECTOR_OVERRIDES = {
     "yolo26": {"classes": [32], "conf": 0.1},
     "rtdetr": {"classes": [32], "conf": 0.1},
     "rfdetr": {"classes": ["ball"], "conf": 0.1},
+    "yolox_sn_ball": {},          # a ball model already
 }
 BALL_DETECTOR_CHOICES = list(BALL_DETECTOR_OVERRIDES)
 
-# Kalman ball tracker (inference_ray plugins/tracker/ball_tracker.py; trak's configs/ball_tracker/kalman.yaml).
+# Kalman ball tracker (inference_ray plugins/tracker/ball_tracker.py; the defaults it was tuned with).
 # Frame-based values are given at 30 fps and scaled to the decoding rate by the plugin. Below min_fps the ball
 # candidates are written untracked.
 default_kalman_ball_params = {
@@ -270,6 +331,51 @@ default_kalman_ball_params = {
 
 BALL_TRACKER_DEFAULTS = {
     "kalman": default_kalman_ball_params
+}
+
+
+class StrictSerializer(serializers.Serializer):
+    """ Rejects keys it does not declare (DRF drops them silently, and their default would be used). """
+
+    def to_internal_value(self, data):
+        if not isinstance(data, Mapping):
+            raise serializers.ValidationError({"non_field_errors": ["Expected an object."]})
+        unknown = sorted(set(data) - set(self.fields))
+        if unknown:
+            raise serializers.ValidationError({"non_field_errors": [f"Unknown parameters: {unknown}."]})
+        return super().to_internal_value(data)
+
+
+# SAHI-style sliced inference (inference_ray plugins/detector/slicing.py), for any detector. The defaults are
+# slicing.SliceConfig's. Costs ~(tiles + 1) plain passes per frame.
+class SahiParamsSerializer(StrictSerializer):
+    enabled = serializers.BooleanField(required=False)
+    slice_size = serializers.ListField(      # [h, w] tile size in frame px; each tile is resized to the model input
+        required=False, child=serializers.IntegerField(min_value=32), min_length=2, max_length=2)
+    overlap = serializers.ListField(         # [h, w] min. overlap ratio of neighbouring tiles
+        required=False, child=serializers.FloatField(min_value=0.0, max_value=0.95), min_length=2, max_length=2)
+    full_frame = serializers.BooleanField(required=False)   # also detect on the whole frame
+    tile_batch_size = serializers.IntegerField(required=False, allow_null=True, min_value=1)  # null: batch_size
+    tile_classes = serializers.ListField(    # keep only these raw class ids from the tiles; null -> all
+        required=False, allow_null=True, child=serializers.IntegerField(min_value=0))
+    merge = serializers.ChoiceField(choices=["nmm", "nms"], required=False)
+    match_metric = serializers.ChoiceField(choices=["ios", "iou"], required=False)
+    match_threshold = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    class_agnostic = serializers.BooleanField(required=False)
+
+
+# the values a run gets for every sahi key that neither the preset nor the request sets
+SAHI_DEFAULTS = {
+    "enabled": False,
+    "slice_size": [560, 560],
+    "overlap": [0.2, 0.2],
+    "full_frame": True,
+    "tile_batch_size": None,
+    "tile_classes": None,
+    "merge": "nmm",                 # nmm: union of the matched boxes (SAHI default) | nms: keep the best box
+    "match_metric": "ios",          # ios: intersection over the smaller box, matches boxes cut by a tile border | iou
+    "match_threshold": 0.5,
+    "class_agnostic": False,
 }
 
 
@@ -329,6 +435,8 @@ class DetectorParamsSerializer(serializers.Serializer):
     resolution = serializers.IntegerField(required=False, min_value=56)
     model_path = serializers.CharField(required=False, allow_blank=False)
     model_checkpoint = serializers.CharField(required=False, allow_blank=False)
+    input_format = serializers.ChoiceField(choices=["auto", "legacy", "bgr255"], required=False)
+    sahi = SahiParamsSerializer(required=False)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         if "confidence_threshold" in attrs:
@@ -339,18 +447,6 @@ class DetectorParamsSerializer(serializers.Serializer):
                     ]
                 })
         return attrs
-
-class StrictSerializer(serializers.Serializer):
-    """ Rejects keys it does not declare (DRF drops them silently, and their default would be used). """
-
-    def to_internal_value(self, data):
-        if not isinstance(data, Mapping):
-            raise serializers.ValidationError({"non_field_errors": ["Expected an object."]})
-        unknown = sorted(set(data) - set(self.fields))
-        if unknown:
-            raise serializers.ValidationError({"non_field_errors": [f"Unknown parameters: {unknown}."]})
-        return super().to_internal_value(data)
-
 
 class GTALinkParamsSerializer(StrictSerializer):
     enabled = serializers.BooleanField(required=False)
@@ -578,11 +674,8 @@ class ObjectTrackerSerializer(serializers.Serializer):
         user_params: Mapping[str, Any] | None = None,
     ) -> Dict[str, Any]:
         """ The detector preset with the ball overrides (classes, confidence floor), then the user's values. """
-        params = deepcopy(dict(DETECTOR_DEFAULTS[detector]))
-        params.update(deepcopy(BALL_DETECTOR_OVERRIDES[detector]))
-        if user_params:
-            params.update(dict(user_params))
-        return cls._normalize_detector_params(detector, params)
+        presets = {detector: {**deepcopy(dict(DETECTOR_DEFAULTS[detector])), **deepcopy(BALL_DETECTOR_OVERRIDES[detector])}}
+        return cls._normalize_detector_params(detector, cls._merge_with_presets(presets, detector, user_params))
 
     @staticmethod
     def _validate_as_group(group_name: str, validator, params: Mapping[str, Any]) -> None:
@@ -635,10 +728,12 @@ class ObjectTrackerSerializer(serializers.Serializer):
     @classmethod
     def _normalize_detector_params(cls, detector: str, params: Dict[str, Any]) -> Dict[str, Any]:
         params = deepcopy(params)
+        if "sahi" in params:
+            params["sahi"] = {**SAHI_DEFAULTS, **json_safe(params["sahi"])}
 
         confidence_threshold = params.pop("confidence_threshold", None)
         if confidence_threshold is not None:
-            if detector == "yolox":
+            if detector.startswith("yolox"):
                 params["conf_thresh"] = confidence_threshold
             else:
                 params["conf"] = confidence_threshold
@@ -661,6 +756,8 @@ class ObjectTrackerSerializer(serializers.Serializer):
     def _get_detector_validator(self, detector: str):
         mapping = {
             "yolox": self._validate_yolox_params,
+            "yolox_sn_player": self._validate_yolox_params,
+            "yolox_sn_ball": self._validate_yolox_params,
             "yolo10": self._validate_yoloultra_params,
             "yolo11": self._validate_yoloultra_params,
             "yolo12": self._validate_yoloultra_params,
@@ -690,7 +787,9 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "model_path",
             "model_checkpoint",
             "confidence_threshold",
-            "output_class_mapping"
+            "output_class_mapping",
+            "input_format",
+            "sahi",
         }
         self._reject_unknown_keys("detector_params", params, allowed)
 
@@ -718,7 +817,8 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "verbose",
             "checkpoint",
             "confidence_threshold",
-            "output_class_mapping"
+            "output_class_mapping",
+            "sahi",
         }
         self._reject_unknown_keys("detector_params", params, allowed)
 
@@ -750,7 +850,8 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "verbose",
             "checkpoint",
             "confidence_threshold",
-            "output_class_mapping"
+            "output_class_mapping",
+            "sahi",
         }
         self._reject_unknown_keys("detector_params", params, allowed)
 
@@ -781,7 +882,8 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "verbose",
             "checkpoint",
             "confidence_threshold",
-            "output_class_mapping"
+            "output_class_mapping",
+            "sahi",
         }
         self._reject_unknown_keys("detector_params", params, allowed)
 
