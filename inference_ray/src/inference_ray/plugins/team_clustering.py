@@ -18,6 +18,7 @@ from data import Data, DataManager, VideoData, TeamsData
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 from utils import VideoDecoder
 from .osnet_reid import _crop_tracks
+from .tracker.tracklets import video_meta
 
 
 default_config = {
@@ -41,7 +42,7 @@ class TeamClustering(
     AnalyserPlugin,
     config=default_config,
     parameters={},
-    version="0.1",
+    version="0.2",
     requires=requires,
     provides=provides,
 ):
@@ -128,11 +129,8 @@ class TeamClustering(
             raise ValueError("team_clustering requires 'video' input.")
 
         with inputs["tracklets"] as tracklets_data:
-            tracklets_meta = json.loads(tracklets_data.meta_data or "{}")
-            tracklets_meta = tracklets_meta.get("video", {})
-            self.fps = tracklets_meta.get("fps", 30)
-            self.detector_h = tracklets_meta.get("detector_h", 1080)
-            self.detector_w = tracklets_meta.get("detector_w", 1920)
+            # frame size the tracklet boxes are normalised by (object_tracker writes video.h / video.w)
+            self.fps, self.detector_h, self.detector_w = video_meta(json.loads(tracklets_data.meta_data or "{}"))
             tracklets_by_time = json.loads(tracklets_data.bboxes)
 
         with inputs["video"] as video_input_data:

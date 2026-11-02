@@ -9,11 +9,13 @@ from PIL import Image
 from data import (
     Data, DataManager,
     VideoData,
-    BboxesData
+    BboxesData,
+    ReIDData
 )
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
 from utils import VideoDecoder, VideoBatcher
 from .reid import GlobalIDManager, Gallery, ProtoGallery
+from .tracker.tracklets import video_meta
 
 
 default_config = {
@@ -24,10 +26,11 @@ default_config = {
 
 requires = {
     "video": VideoData,
+    "tracklets": BboxesData,
 }
 
 provides = {
-    "tracklets": BboxesData,
+    "reids": ReIDData,
 }
 
 
@@ -101,7 +104,7 @@ class OSNetReID(
     AnalyserPlugin,
     config=default_config,
     parameters={},
-    version="0.2",
+    version="0.3",
     requires=requires,
     provides=provides
 ):
@@ -191,11 +194,8 @@ class OSNetReID(
         self.frame_id = 0
         with inputs["tracklets"] as tracklets_data:
             # data unpacking
-            tracklets_meta = json.loads(tracklets_data.meta_data)
-            tracklets_meta = tracklets_meta.get('video', {})
-            self.fps = tracklets_meta.get('fps', 30)
-            self.detector_h = tracklets_meta.get('detector_h', 1080)
-            self.detector_w = tracklets_meta.get('detector_w', 1920)
+            # frame size the tracklet boxes are normalised by (object_tracker writes video.h / video.w)
+            self.fps, self.detector_h, self.detector_w = video_meta(json.loads(tracklets_data.meta_data))
             
             tracklets_data = json.loads(tracklets_data.bboxes)
             # video decoding

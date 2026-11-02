@@ -1,15 +1,22 @@
 import logging
-import argparse
-from pprint import pprint
-from enum import IntEnum
-from typing import Any, Callable, Dict, List, Tuple, Optional
+from typing import Any, Callable, Dict, Mapping
 from data import (
-    Data, DataManager, 
+    Data, DataManager,
     VideoData,
-    BboxesData
+    BboxesData,
+    compute_bboxes_meta
 )
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
-from utils import VideoDecoder, VideoBatcher
+from utils import VideoDecoder
+from .tracker.tracklets import (
+    TeamId,
+    DEFAULT_TEAM_META,
+    frame_time_ms,
+    tracklet_row,
+    center_to_tlwh,
+    entity_class_ids,
+    split_detections,
+)
 
 
 default_config = {
@@ -26,20 +33,16 @@ provides = {
     "tracklets": BboxesData,
 }
 
+# entity id of detections written without tracking (ball candidates, detection-only runs)
+UNTRACKED_ID = 0
 
-class TeamId(IntEnum):
-    UNKNOWN = (-1, "Unknown")
-    BALL = (0, "Ball")
-    BYSTANDER = (1, "Bystander")
-    REFEREE = (2, "Referee")
-    TEAM_LEFT = (3, "Team A")
-    TEAM_RIGHT = (4, "Team B")
 
-    def __new__(cls, value: int, label: str):
-        obj = int.__new__(cls, value)
-        obj._value_ = value
-        obj.label = label
-        return obj
+def _class_entry(output_class_mapping: Mapping[Any, Mapping[str, Any]], cls_id) -> Mapping[str, Any]:
+    """ ``output_class_mapping`` entry of a class id; keys are str once the parameters went through JSON. """
+    entry = output_class_mapping.get(str(cls_id))
+    if entry is None:
+        entry = output_class_mapping.get(cls_id, {})
+    return entry or {}
 
 
 @AnalyserPluginManager.export("object_tracker")
@@ -47,13 +50,24 @@ class ObjectTracker(
     AnalyserPlugin,
     config=default_config,
     parameters={},
-    version="0.1",
+    version="0.2",
     requires=requires,
     provides=provides
 ):
+    """ Detector -> player tracker -> tracklets, in stages (see tracker/README.md):
+
+    1. detection over the decoded video;
+    2. routing: with a tracker, the classes ``output_class_mapping`` names ``entity_type: ball`` are split off
+       and never reach the player tracker;
+    3. player tracking (``Tracker.process``), then ``Tracker.finalize`` once over the whole clip;
+    4. per-track class votes (``TrackClassMapper``) give each track its default team;
+    5. output: player tracks, plus the untracked detections (the split-off ball candidates, or every detection
+       when no tracker is set) with entity id 0.
+    """
+
     def __init__(self, config=None, **kwargs):
         super().__init__(config, **kwargs)
-        
+
     def call(
         self,
         inputs: Dict[str, Data],
@@ -65,7 +79,7 @@ class ObjectTracker(
         import time
         from collections import defaultdict
         from .detector import (
-            YoloX, 
+            YoloX,
             YoloUltralytics,
             RFDetr,
             RTDetr
@@ -74,7 +88,7 @@ class ObjectTracker(
             ByteTrack,
             TrackClassMapper
         )
-        
+
         DETECTOR_MAP = {
             "yolox": YoloX,
             "yolo10": YoloUltralytics,
@@ -87,16 +101,17 @@ class ObjectTracker(
         TRACKER_MAP = {
            "bytetrack": ByteTrack
         }
-    
+
         # -------> decode video and pass it to detector
         # TODO: Implement VideoBatcher for more efficient mini-batch processing.
         batch_size = parameters["detector_params"]["batch_size"]
-        
+
         fps = parameters["fps"]
         parameters["tracker_params"].update({"frame_rate" : fps})
         self.tracker = parameters.get("tracker", None)
         if self.tracker in [None, "", "None"]: self.tracker = None
-        
+        out_cls_map = parameters["detector_params"]["output_class_mapping"]
+
         with inputs["video"] as input_data:
             with input_data.open_video() as f_video:
                 video_decoder = VideoDecoder(
@@ -106,7 +121,6 @@ class ObjectTracker(
                     ref_id=input_data.id,
                 )
                 image_size = video_decoder._size
-                # s = time.time()
                 # -------> instantiate detector & tracker objects
                 self.detector = DETECTOR_MAP[parameters["detector"]](
                     model_path=parameters["detector_params"]["model_path"],
@@ -119,7 +133,7 @@ class ObjectTracker(
                         tracker_params=parameters["tracker_params"],
                         device="cuda",
                     )
-                # -------> detect & track
+                # -------> 1) detect
                 total_frames = len(video_decoder)
                 last_reported = 0.0
 
@@ -136,133 +150,80 @@ class ObjectTracker(
                                 callbacks,
                                 progress=min((frame_id + 1) / total_frames, 1.0) * 0.9,
                             )
-
-                tracker_inputs = {
-                    'detections': self.detector.state,
-                    'image_shape': (self.detector.h, self.detector.w), 
-                    'det_shape': self.detector.det_shape,
-                }
                 self.update_callbacks(callbacks, progress=0.9)
-                if self.tracker:
-                    _ = self.tracker.process(tracker_inputs)  # TODO: check performance for 90m+ video footage.
-                    # NOTE: Creates a tracklet to detection class mapping.
-                    # We'll use it for the default team assignment at this stage.
-                    trk_det_mapping = TrackClassMapper().map_tracks_to_detections(
-                        tracks=self.tracker.state,
-                        detections=self.detector.state,
-                        iou_thresh=0.3
+
+        # every detector reports boxes in frame pixels (detector contract, tracker/README.md)
+        frame_h, frame_w = (int(v) for v in self.detector.frame_shape)
+        detections = self.detector.state
+
+        # -------> 2) route: ball candidates never reach the player tracker
+        if self.tracker:
+            ball_cls_ids = entity_class_ids(out_cls_map, "ball")
+            player_dets, untracked_dets = split_detections(detections, ball_cls_ids)
+        else:
+            player_dets, untracked_dets = None, detections
+
+        tracklets = defaultdict(list)
+
+        # -------> 3) track players + 4) default team per track from its class votes
+        if self.tracker:
+            self.tracker.process({
+                'detections': player_dets,
+                'image_shape': (frame_h, frame_w),
+                'det_shape': (frame_h, frame_w),
+            })  # TODO: check performance for 90m+ video footage.
+            self.tracker.finalize()
+            trk_det_mapping = TrackClassMapper().map_tracks_to_detections(
+                tracks=self.tracker.state,
+                detections=player_dets,
+                iou_thresh=0.3
+            )
+            for track in self.tracker.state:
+                frame_id = track['frame_id']
+                frame_time = frame_time_ms(frame_id, fps)
+                for track_id, track_score, track_tlwh in zip(
+                    track['track_ids'],
+                    track['track_scores'],
+                    track['track_boxes'],
+                ):
+                    # NOTE: Mapping of class_id to team_id.
+                    # Detectors have varying output heads, so we need some mapping dict from cls_id to real-world entity.
+                    class_id = trk_det_mapping[frame_id][track_id]['class']
+                    team_id = _class_entry(out_cls_map, class_id).get("default_team", TeamId.TEAM_LEFT)
+                    tracklets[frame_time].append(
+                        tracklet_row(track_id, team_id, track_tlwh, frame_w, frame_h, track_score)
                     )
-                    """
-                    {
-                        "0":{
-                            "entity_type": "athlete",
-                            "default_team": "3"
-                        }, ...
-                    }                
-                    """
-                
-                # e = time.time()
-                # logging.error(f"object_tracker.py took: {e-s}")
-                
-                # -------> build the required output format for consistency with other plugins
-                tracklets = defaultdict(list)
-                unique_player_ids = set()
-                
-                # TODO: This is specific to team-based sports, need a generic solution at some point...!
-                team_id_meta = {
-                    TeamId.UNKNOWN: {"name": "Unknown"},
-                    TeamId.BYSTANDER: {"name": "Bystander"},
-                    TeamId.BALL: {"name": "Ball"},
-                    TeamId.REFEREE: {"name": "Referee"},
-                    TeamId.TEAM_LEFT: {"name": "Team A"},
-                    TeamId.TEAM_RIGHT: {"name": "Team B"},
-                }
-                out_cls_map = parameters["detector_params"]["output_class_mapping"]
-                
-                # --------------------------------------------------
-                # ----------- NOTE: output of this plugin run returns tracklets
-                if self.tracker:
-                    for frame_id, track in enumerate(self.tracker.state, start=0): # [N,5]
-                        for (track_id, track_score, track_xywh, team_id) in zip( # [5,]
-                            track['track_ids'],
-                            track['track_scores'],
-                            track['track_boxes'],
-                            track['team_ids']
-                        ):
-                            frame_time = round((frame_id/fps)*1000.)
-                            unique_player_ids.add(track_id)
-                            # NOTE: Mapping of class_id to team_id.
-                            # Detectors have varying output heads, so we need some mapping dict from cls_id to real-world entity.
-                            class_id = trk_det_mapping[frame_id][track_id]['class']
-                            assigned_cls_id = out_cls_map.get(str(class_id), {})
-                            default_team_assgn = assigned_cls_id.get("default_team", 3)
-                            # coord normalization
-                            x_norm = int(track_xywh[0]) / self.detector.w
-                            y_norm = int(track_xywh[1]) / self.detector.h
-                            w_norm = int(track_xywh[2]) / self.detector.w
-                            h_norm = int(track_xywh[3]) / self.detector.h
-                            # construction of tracklet element
-                            tracklet = [
-                                int(track_id),
-                                int(default_team_assgn),
-                                0,
-                                float(x_norm + (w_norm / 2)), float(y_norm + h_norm),
-                                float(x_norm), float(y_norm), float(w_norm), float(h_norm),
-                                float(track_score)
-                            ]
-                            tracklets[frame_time].append(tracklet)
-                else:
-                # ----------- NOTE: output of this plugin run returns detections only.
-                # TODO: currently hard-coded for ball detections...!
-                    for frame_id, detections in enumerate(tracker_inputs['detections']):
-                        frame_time = round((frame_id / fps) * 1000.0)
-                        for det in detections:
-                            class_id = det["cls_id"]
-                            track_id = 0 # NOTE: always assigning 0 to all detections here.
-                            assigned_cls = out_cls_map.get(str(class_id), {})
-                            default_team_assgn = assigned_cls.get("default_team", 3)
 
-                            x, y, w, h = det["xywh"]
-                            x_norm = x / self.detector.w
-                            y_norm = y / self.detector.h
-                            w_norm = w / self.detector.w
-                            h_norm = h / self.detector.h
+        # -------> 5) untracked detections: ball candidates, or everything in a detection-only run
+        # TODO: replaced by the Kalman ball tracker in the next step (tracker/README.md).
+        for frame_id, frame_dets in enumerate(untracked_dets):
+            frame_time = frame_time_ms(frame_id, fps)
+            for det in frame_dets:
+                team_id = _class_entry(out_cls_map, det["cls_id"]).get("default_team", TeamId.TEAM_LEFT)
+                tracklets[frame_time].append(
+                    # detector xywh is (centre x, centre y, w, h)
+                    tracklet_row(UNTRACKED_ID, team_id, center_to_tlwh(det["xywh"]), frame_w, frame_h, det["conf"])
+                )
 
-                            track_score = det["conf"]
+        # -------> output: same entity scheme as after an edit in the bbox editor
+        entity_meta = compute_bboxes_meta(tracklets)
+        meta_dict = {
+            # TODO: This is specific to team-based sports, need a generic solution at some point...!
+            "team_ids": DEFAULT_TEAM_META,
+            "player_ids": entity_meta["player_ids"],
+            "ref_ids": entity_meta["ref_ids"],
+            "ball_ids": entity_meta["ball_ids"],
+            "video": dict(
+                fps=fps,
+                h=frame_h,
+                w=frame_w
+            )
+        }
+        logging.info(
+            f"object_tracker: {len(entity_meta['player_ids'])} players, {len(entity_meta['ref_ids'])} referees, "
+            f"{sum(len(rows) for rows in tracklets.values())} boxes in {len(detections)} frames."
+        )
 
-                            tracklet = [
-                                int(track_id),
-                                int(default_team_assgn),
-                                0,
-                                float(x_norm + (w_norm / 2)),
-                                float(y_norm + h_norm),
-                                float(x_norm),
-                                float(y_norm),
-                                float(w_norm),
-                                float(h_norm),
-                                float(track_score),
-                            ]
-                            tracklets[frame_time].append(tracklet)
-                # --------------------------------------------------
-                player_id_meta = {
-                    pid: {
-                        "id": pid, 
-                        "name": str(pid), 
-                        "number": pid, 
-                        "team_id": int(default_team_assgn)
-                    }
-                    for pid in sorted(unique_player_ids)
-                }     
-                meta_dict = {
-                    "team_ids": team_id_meta,
-                    "player_ids": player_id_meta,
-                    "video": dict(
-                        fps=fps,
-                        h=int(self.detector.h),
-                        w=int(self.detector.w)
-                    )
-                }
-        
         with data_manager.create_data("BboxesData") as output_data:
             output_data.bboxes = json.dumps(tracklets)
             output_data.meta_data = json.dumps(meta_dict)

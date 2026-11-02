@@ -164,6 +164,7 @@ class YoloX():
         input_shape = frames.shape
         self.h, self.w = int(input_shape[1]), int(input_shape[2])
         self.det_shape = (self.h, self.w)
+        self.frame_shape = (self.h, self.w)  # boxes are scaled back to frame pixels in run_inference
 
         if frames.dtype != torch.float32 and frames.dtype != torch.float16:
             frames = frames.float()

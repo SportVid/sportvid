@@ -140,9 +140,12 @@ default_rtdetr_params = {
 #   1) balanced: [0.5 60 0.7]
 #   2) conservative: [0.5 60 0.75]
 #   3) occlusion-heavy: [0.45 90 0.7]
+# track_buffer counts frames at 30 fps (ByteTrack's convention): the plugin scales it to the decoding rate, so it
+# is a duration (150 = 5 s at any fps). 150 is trak's ByteTrack re-tune on the DSHS recordings (buffer 150 of
+# 30 / 60 / 150; inference_ray plugins/tracker/README.md).
 default_bytetrack_params = {
     "track_thresh": 0.45,       # tracking confidence threshold (0.6 = default)
-    "track_buffer": 90,         # num of frames to keep lost tracks
+    "track_buffer": 150,        # keep lost tracks this many frames at 30 fps (150 = 5 s)
     "match_thresh": 0.7,        # [0.8, 0.6, 0.4]; high = fewer ID switches, low -> More MOTA; IoU matching threshold for associating detections to existing tracks
     "mot20": False,             # 'True' skips fusing scores?
     "aspect_ratio_thresh": 5.0, # reject tracking artifacts / FPs of unrealistic shape
