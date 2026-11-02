@@ -95,3 +95,42 @@ def test_ball_tracker_rejects_unknown_and_inconsistent_params():
     assert "ball_tracker_params" in errors({"detector": "rfdetr", "ball_tracker_params": {"gate": 10}})
     assert "ball_tracker_params" in errors({"detector": "rfdetr",
                                             "ball_tracker_params": {"min_conf": 0.5, "init_conf": 0.4}})
+
+
+# ---- Deep-EIoU, GTA-Link, interpolation (API-only)
+from backend.serializers.object_tracker import default_deep_eiou_params, REID_MODEL  # noqa: E402
+
+
+def test_deep_eiou_defaults_are_deep_eiou_to_gta_link_with_osnet_ain():
+    p = validate({"detector": "rfdetr", "tracker": "deep_eiou"})["tracker_params"]
+    assert p == default_deep_eiou_params
+    assert p["gta_link"]["enabled"] and not p["interpolation"]["enabled"]
+    assert p["reid_model_path"] == p["gta_link"]["model_path"] == REID_MODEL["model_path"]
+
+
+def test_nested_overrides_keep_the_preset_model_files():
+    p = validate({"detector": "rfdetr", "tracker": "deep_eiou",
+                  "tracker_params": {"track_buffer": 90, "gta_link": {"eps": 0.65}, "interpolation": {"enabled": True}}})["tracker_params"]
+    assert p["track_buffer"] == 90 and p["gta_link"]["eps"] == 0.65 and p["gta_link"]["enabled"]
+    assert p["gta_link"]["model_path"] == REID_MODEL["model_path"] and p["interpolation"]["n_dti"] == 20
+
+
+@pytest.mark.parametrize("params", [
+    {"reid_model_path": "/tmp/evil.pth"},
+    {"gta_link": {"model_path": "/tmp/evil.pth"}},
+    {"track_thresh": 0.5},                       # a ByteTrack key
+    {"track_low_thresh": 0.7, "track_high_thresh": 0.6},
+])
+def test_deep_eiou_rejects_model_files_unknown_keys_and_bad_thresholds(params):
+    assert "tracker_params" in errors({"detector": "rfdetr", "tracker": "deep_eiou", "tracker_params": params})
+
+
+def test_bytetrack_can_use_gta_link_and_stays_off_by_default():
+    p = validate({"detector": "rfdetr", "tracker": "bytetrack"})["tracker_params"]
+    assert not p["gta_link"]["enabled"] and not p["interpolation"]["enabled"]
+    p = validate({"detector": "rfdetr", "tracker": "bytetrack", "tracker_params": {"gta_link": {"enabled": True}}})["tracker_params"]
+    assert p["gta_link"]["enabled"] and p["gta_link"]["model_path"] == REID_MODEL["model_path"]
+
+
+def test_bytetrack_rejects_unknown_keys():
+    assert "tracker_params" in errors({"detector": "rfdetr", "tracker": "bytetrack", "tracker_params": {"buffer": 30}})

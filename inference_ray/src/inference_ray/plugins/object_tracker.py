@@ -55,7 +55,7 @@ class ObjectTracker(
     AnalyserPlugin,
     config=default_config,
     parameters={},
-    version="0.2",
+    version="0.3",
     requires=requires,
     provides=provides
 ):
@@ -66,7 +66,9 @@ class ObjectTracker(
     2. routing by ``output_class_mapping``: the ``entity_type: ball`` classes never reach the player tracker. The
        ball candidates come from the ball detector when it runs (the player detector's ball class is dropped),
        else from the player detector;
-    3. player tracking (``Tracker.process``), then ``Tracker.finalize`` once over the whole clip;
+    3. player tracking (``tracker``: ``bytetrack`` | ``deep_eiou``), frame by frame inside the detection loop
+       with the frame's pixels (appearance embeddings), then ``Tracker.finalize`` once over the whole clip
+       (GTA-Link, interpolation);
     4. per-track class votes (``TrackClassMapper``) give each track its default team;
     5. ball tracking (``ball_tracker``: ``kalman``) over the whole clip, with the player tracks as kick hints;
        without a ball tracker, or below its ``min_fps``, the candidates are written untracked;
@@ -95,6 +97,7 @@ class ObjectTracker(
         )
         from .tracker import (
             ByteTrack,
+            DeepEIoU,
             BallTracker,
             TrackClassMapper
         )
@@ -109,7 +112,8 @@ class ObjectTracker(
             "rtdetr": RTDetr,
         }
         TRACKER_MAP = {
-           "bytetrack": ByteTrack
+           "bytetrack": ByteTrack,
+           "deep_eiou": DeepEIoU,
         }
         BALL_TRACKER_MAP = {
             "kalman": BallTracker
@@ -126,6 +130,7 @@ class ObjectTracker(
         ball_detector_name = parameters.get("ball_detector")
         ball_tracker_name = parameters.get("ball_tracker")
         out_cls_map = parameters["detector_params"]["output_class_mapping"]
+        ball_cls_ids = entity_class_ids(out_cls_map, "ball")
 
         with inputs["video"] as input_data:
             with input_data.open_video() as f_video:
@@ -157,7 +162,8 @@ class ObjectTracker(
                         tracker_params=parameters["tracker_params"],
                         device="cuda",
                     )
-                # -------> 1) detect
+                # -------> 1) detect + 3) track players, frame by frame: the trackers that embed boxes (Deep-EIoU,
+                # GTA-Link) need the pixels, and no frame is kept after its iteration
                 total_frames = len(video_decoder)
                 last_reported = 0.0
 
@@ -165,6 +171,17 @@ class ObjectTracker(
                     for detector in (self.detector, self.ball_detector):
                         if detector is not None:
                             detector.run_inference(detector.preprocess(_frame))
+                    if self.tracker:
+                        # every detector reports boxes in frame pixels (detector contract, tracker/README.md)
+                        frame_shape = tuple(int(v) for v in self.detector.frame_shape)
+                        # 2) route: ball candidates never reach the player tracker
+                        player_dets, _ = split_detections(self.detector.state[-1:], ball_cls_ids)
+                        self.tracker.process({
+                            'detections': player_dets,
+                            'frames': [_frame["frame"]],      # HWC uint8 RGB
+                            'image_shape': frame_shape,
+                            'det_shape': frame_shape,
+                        })
                     # NOTE: Since detection dominates the runtime, it owns almost the whole progress bar.
                     if total_frames:
                         now = time.time()
@@ -181,8 +198,8 @@ class ObjectTracker(
         frame_h, frame_w = (int(v) for v in self.detector.frame_shape)
         detections = self.detector.state
 
-        # -------> 2) route: ball candidates never reach the player tracker
-        other_dets, ball_dets = split_detections(detections, entity_class_ids(out_cls_map, "ball"))
+        # -------> 2) route (as in the loop): ball candidates never reach the player tracker
+        other_dets, ball_dets = split_detections(detections, ball_cls_ids)
         if self.ball_detector is not None:
             ball_out_cls_map = parameters["ball_detector_params"]["output_class_mapping"]
             if tuple(int(v) for v in self.ball_detector.frame_shape) != (frame_h, frame_w):
@@ -194,14 +211,9 @@ class ObjectTracker(
 
         tracklets = defaultdict(list)
 
-        # -------> 3) track players + 4) default team per track from its class votes
+        # -------> 3b) offline refinement (GTA-Link, interpolation) + 4) default team per track from its class votes
         player_tlwhs = None
         if self.tracker:
-            self.tracker.process({
-                'detections': other_dets,
-                'image_shape': (frame_h, frame_w),
-                'det_shape': (frame_h, frame_w),
-            })  # TODO: check performance for 90m+ video footage.
             self.tracker.finalize()
             trk_det_mapping = TrackClassMapper().map_tracks_to_detections(
                 tracks=self.tracker.state,

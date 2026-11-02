@@ -6,7 +6,7 @@ from backend.plugin_manager import PluginManager
 
 
 DETECTOR_CHOICES = ["yolox", "yolo10", "yolo11", "yolo12", "yolo26", "rfdetr", "rtdetr"]
-TRACKER_CHOICES = ["bytetrack"]
+TRACKER_CHOICES = ["bytetrack", "deep_eiou"]
 BALL_TRACKER_CHOICES = ["kalman"]
 
 
@@ -163,8 +163,62 @@ DETECTOR_DEFAULTS = {
     "rtdetr": default_rtdetr_params, 
 }
 
+# Offline refinements (inference_ray plugins/tracker/refine.py), available to every tracker. The ReID model files
+# are fixed presets (weights are unpickled when loaded, so a client must never choose the file).
+REID_MODEL = {
+    "model_name": "osnet_ain_x1_0",
+    "model_path": "/models/reid/osnet_ain_ms_d_c.pth.tar",
+}
+# GTA-Link (third_party/gta_link): the README's general parameters, as trak's deep_eiou_gta.yaml
+default_gta_link_params = {
+    "enabled": False,
+    **REID_MODEL,
+    "amp": False,                 # fp16 autocast for the embeddings
+    "use_split": True,
+    "min_len": 100,               # tracklets shorter than this are not split
+    "eps": 0.6,                   # DBSCAN neighbourhood (cosine) when looking for identity switches
+    "min_samples": 10,
+    "max_k": 3,                   # at most this many sub-tracklets per tracklet
+    "use_connect": True,          # upstream always runs the connect step
+    "spatial_factor": 1.0,        # scales the max exit / entry distance between merged tracklets
+    "merge_dist_thres": 0.4,      # merge tracklets whose mean cosine distance is below this
+}
+# linear interpolation of short gaps (Deep-EIoU's SportsMOT post-processing, re-implemented)
+default_interpolation_params = {
+    "enabled": False,
+    "n_min": 5,                   # only tracks with more boxes than this
+    "n_dti": 20,                  # fill gaps shorter than this many frames
+    "distance_thres": 200,        # ... unless the box centre moves more than this (px) across the gap
+}
+
+# Deep-EIoU (re-implemented, inference_ray plugins/tracker/deep_eiou.py) -> GTA-Link: trak's winner on the DSHS
+# recordings (deep_eiou_gta with OSNet-AIN MS+D+C in both; IDF1 0.59 / 16 IDs small M1, 0.46 / 18 Matches 2-3, on
+# YOLOX-L SN detections). Tracker thresholds are upstream's SportsMOT setting; track_buffer counts frames at 30 fps.
+default_deep_eiou_params = {
+    "track_high_thresh": 0.6,     # first association: detections above this
+    "track_low_thresh": 0.1,      # detections at or below are dropped; between low and high: second association
+    "new_track_thresh": 0.7,      # an unmatched detection starts a track from this score on
+    "track_buffer": 60,           # keep lost tracks this many frames at 30 fps (60 = 2 s)
+    "match_thresh": 0.8,          # max fused cost of a first-round match
+    "min_box_area": 10,           # output filter (px^2)
+    "remove_edge_dets": False,    # drop detections touching the top / left image edge
+    "with_reid": True,            # fuse appearance embeddings into the first-round cost
+    "reid_model_name": REID_MODEL["model_name"],
+    "reid_model_path": REID_MODEL["model_path"],
+    "reid_amp": False,
+    "proximity_thresh": 0.5,      # appearance only counts where the EIoU cost is at most this
+    "appearance_thresh": 0.25,    # ... and the halved cosine distance at most this
+    "gta_link": {**default_gta_link_params, "enabled": True},
+    "interpolation": dict(default_interpolation_params),
+}
+
 TRACKER_DEFAULTS = {
-    "bytetrack": default_bytetrack_params
+    "bytetrack": {
+        **default_bytetrack_params,
+        "gta_link": dict(default_gta_link_params),
+        "interpolation": dict(default_interpolation_params),
+    },
+    "deep_eiou": default_deep_eiou_params,
 }
 
 # Ball detector: another instance of a detector preset (same model files), with its own parameters. Only the
@@ -286,13 +340,86 @@ class DetectorParamsSerializer(serializers.Serializer):
                 })
         return attrs
 
-class TrackerParamsSerializer(serializers.Serializer):
+class StrictSerializer(serializers.Serializer):
+    """ Rejects keys it does not declare (DRF drops them silently, and their default would be used). """
+
+    def to_internal_value(self, data):
+        if not isinstance(data, Mapping):
+            raise serializers.ValidationError({"non_field_errors": ["Expected an object."]})
+        unknown = sorted(set(data) - set(self.fields))
+        if unknown:
+            raise serializers.ValidationError({"non_field_errors": [f"Unknown parameters: {unknown}."]})
+        return super().to_internal_value(data)
+
+
+class GTALinkParamsSerializer(StrictSerializer):
+    enabled = serializers.BooleanField(required=False)
+    amp = serializers.BooleanField(required=False)
+    use_split = serializers.BooleanField(required=False)
+    min_len = serializers.IntegerField(required=False, min_value=1)
+    eps = serializers.FloatField(required=False, min_value=0.0, max_value=2.0)
+    min_samples = serializers.IntegerField(required=False, min_value=1)
+    max_k = serializers.IntegerField(required=False, min_value=1)
+    use_connect = serializers.BooleanField(required=False)
+    spatial_factor = serializers.FloatField(required=False, min_value=0.0)
+    merge_dist_thres = serializers.FloatField(required=False, min_value=0.0, max_value=2.0)
+
+
+class InterpolationParamsSerializer(StrictSerializer):
+    enabled = serializers.BooleanField(required=False)
+    n_min = serializers.IntegerField(required=False, min_value=0)
+    n_dti = serializers.IntegerField(required=False, min_value=2)
+    distance_thres = serializers.FloatField(required=False, min_value=0.0)
+
+
+class TrackerParamsSerializer(StrictSerializer):
+    """ ByteTrack. """
     track_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     track_buffer = serializers.IntegerField(required=False, min_value=1)
     match_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     mot20 = serializers.BooleanField(required=False)
     aspect_ratio_thresh = serializers.FloatField(required=False, min_value=0.0)
     min_box_area = serializers.FloatField(required=False, min_value=0.0)
+    gta_link = GTALinkParamsSerializer(required=False)
+    interpolation = InterpolationParamsSerializer(required=False)
+
+
+class DeepEIoUParamsSerializer(StrictSerializer):
+    track_high_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    track_low_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    new_track_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    track_buffer = serializers.IntegerField(required=False, min_value=1)
+    match_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    min_box_area = serializers.FloatField(required=False, min_value=0.0)
+    remove_edge_dets = serializers.BooleanField(required=False)
+    with_reid = serializers.BooleanField(required=False)
+    reid_amp = serializers.BooleanField(required=False)
+    proximity_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    appearance_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    gta_link = GTALinkParamsSerializer(required=False)
+    interpolation = InterpolationParamsSerializer(required=False)
+
+    def validate(self, attrs):
+        low = attrs.get("track_low_thresh", default_deep_eiou_params["track_low_thresh"])
+        high = attrs.get("track_high_thresh", default_deep_eiou_params["track_high_thresh"])
+        if low >= high:
+            raise serializers.ValidationError({"track_low_thresh": ["track_low_thresh must be below track_high_thresh."]})
+        return attrs
+
+
+def json_safe(value):
+    """ Validated data (OrderedDicts, nested) as plain dicts / lists. """
+    if isinstance(value, Mapping):
+        return {k: json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(v) for v in value]
+    return value
+
+
+TRACKER_PARAM_SERIALIZERS = {
+    "bytetrack": TrackerParamsSerializer,
+    "deep_eiou": DeepEIoUParamsSerializer,
+}
 
 
 class KalmanBallTrackerParamsSerializer(serializers.Serializer):
@@ -360,7 +487,8 @@ class ObjectTrackerSerializer(serializers.Serializer):
         allow_blank=True
     )
     detector_params = DetectorParamsSerializer(required=False, default=dict)
-    tracker_params = TrackerParamsSerializer(required=False, default=dict)
+    # validated per tracker in validate() (TRACKER_PARAM_SERIALIZERS); deep_eiou is API-only for now
+    tracker_params = serializers.DictField(required=False, default=dict)
     # API-only for now (the frontend does not send these): a second detector instance for the ball, and the
     # ball tracker. Without ball_detector the ball candidates are the detector's ball class.
     ball_detector = serializers.ChoiceField(
@@ -396,6 +524,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
             user_params=detector_params,
         )
         if tracker not in (None, ""):
+            tracker_params = self._validated_group("tracker_params", TRACKER_PARAM_SERIALIZERS[tracker], tracker_params)
             tracker_validator = self._get_tracker_validator(tracker)
             tracker_validator(tracker_params)
             data["tracker_params"] = self.build_tracker_runtime_params(
@@ -482,14 +611,25 @@ class ObjectTrackerSerializer(serializers.Serializer):
         return cls._merge_with_presets(TRACKER_DEFAULTS, tracker, user_params)
 
     @staticmethod
+    def _validated_group(group_name: str, serializer_cls, params: Mapping[str, Any]) -> Dict[str, Any]:
+        s = serializer_cls(data=params)
+        if not s.is_valid():
+            raise serializers.ValidationError({group_name: s.errors})
+        return json_safe(s.validated_data)
+
+    @staticmethod
     def _merge_with_presets(
         presets: Mapping[str, Mapping[str, Any]],
         key: str,
         user_params: Mapping[str, Any] | None,
     ) -> Dict[str, Any]:
         merged = deepcopy(dict(presets[key]))
-        if user_params:
-            merged.update(dict(user_params))
+        for k, v in dict(user_params or {}).items():
+            # nested groups (gta_link, interpolation) are merged key by key, so the preset's model files stay
+            if isinstance(v, Mapping) and isinstance(merged.get(k), Mapping):
+                merged[k] = {**merged[k], **dict(v)}
+            else:
+                merged[k] = v
         return merged
 
     @classmethod
@@ -533,6 +673,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
     def _get_tracker_validator(self, tracker: str):
         mapping = {
             "bytetrack": self._validate_bytetrack_params,
+            "deep_eiou": lambda params: None,   # DeepEIoUParamsSerializer.validate
         }
         return mapping[tracker]
 
@@ -660,6 +801,8 @@ class ObjectTrackerSerializer(serializers.Serializer):
             "mot20",
             "aspect_ratio_thresh",
             "min_box_area",
+            "gta_link",
+            "interpolation",
         }
         self._reject_unknown_keys("tracker_params", params, allowed)
 

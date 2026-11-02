@@ -8,8 +8,11 @@ class Tracker(ABC):
     """ Interface of the player trackers run by ``object_tracker`` (same as trak's ``trak.tracker.tracker``).
 
     - ``process`` tracks a sequence of frames and appends one ``track_frame`` dict per input frame to ``self.state``.
-    - ``finalize`` runs once after the last frame: offline refinement over the whole clip (e.g. GTA-Link,
-      interpolation) replaces ``self.state`` there. The base implementation changes nothing.
+    - ``finalize`` runs once after the last frame: the offline refinements over the whole clip configured in the
+      parameters (``gta_link``, ``interpolation``; ``refine.py``) replace ``self.state`` there.
+
+    GTA-Link embeds the output boxes while their frame is in memory, so ``process`` gets the frames as well
+    (``inputs['frames']``, HWC uint8 RGB) and passes each to ``_record``.
     """
 
     def __init__(self, tracker_params: Dict[Any, Any], device: str = "cuda", **kwargs):
@@ -18,6 +21,8 @@ class Tracker(ABC):
         self.tracker_params = dict(tracker_params)
         self.state: List[Dict[str, Any]] = list()
         self.frame_id = 0
+        from .refine import build_refiners
+        self.gta_link, self.interpolation = build_refiners(self.tracker_params, self.device)
 
     @abstractmethod
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
@@ -34,16 +39,28 @@ class Tracker(ABC):
         """
 
     def finalize(self) -> List[Dict[str, Any]]:
-        """ Post-hoc refinement after the last frame (the caller runs it once). """
+        """ Post-hoc refinement after the last frame (the caller runs it once). Replaces ``self.state`` with new
+        frame dicts: GTA-Link renumbers the track ids. """
+        if self.gta_link is not None:
+            self.state = self.gta_link.refine(self.state)
+        if self.interpolation is not None:
+            self.state = self.interpolation.refine(self.state)
         return self.state
 
-    def _record(self, track_results: Dict[str, Any]) -> None:
+    def _record(self, track_results: Dict[str, Any], frame=None) -> None:
+        """ Append one frame's tracks; ``frame`` (HWC uint8 RGB) lets GTA-Link embed the output boxes. """
         self.state.append(track_results)
+        if self.gta_link is not None:
+            if frame is None:
+                raise ValueError("GTA-Link needs the frames; the caller passed none.")
+            self.gta_link.observe(self.frame_id, track_results, frame)
         self.frame_id += 1
 
     def reset_state(self) -> None:
         self.state = list()
         self.frame_id = 0
+        if self.gta_link is not None:
+            self.gta_link.reset()
 
 
 def track_frame(frame_id: int, tlwhs, ids, scores) -> Dict[str, Any]:

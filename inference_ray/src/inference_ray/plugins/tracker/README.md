@@ -10,6 +10,9 @@ recordings with Kinexon ground truth.
 |---|---|
 | `tracker.py` | `Tracker` interface, `track_frame` state schema, `detections_xyxy_conf` |
 | `bytetrack.py` | ByteTrack (`third_party/ByteTrack`) behind the interface |
+| `deep_eiou.py` | Deep-EIoU, re-implemented (association + wrapper) |
+| `refine.py` | offline refinements in `finalize`: GTA-Link (`third_party/gta_link`), interpolation (re-implemented) |
+| `appearance.py` | `ReIDEncoder`: torchreid embeddings of boxes (OSNet-AIN by default), strict weight loading |
 | `ball_tracker.py` | Kalman ball tracker, ported from trak's `ball_tracker.py` |
 | `track_class_mapper.py` | per-track class votes (detector class → default team) |
 | `tracklets.py` | the `BboxesData` row format, `TeamId`, metadata reading, class routing |
@@ -22,7 +25,7 @@ recordings with Kinexon ground truth.
 | 1 | `object_tracker` as staged pipeline, trak's tracker interface, ball split | done |
 | 1b | ByteTrack `track_buffer` as a duration (fps scaling), default re-tuned | done |
 | 2 | Kalman ball tracker; optional separate ball-detector instance | done |
-| 3 | Deep-EIoU (re-implemented), GTA-Link, interpolation; OSNet-AIN embeddings | open |
+| 3 | Deep-EIoU (re-implemented), GTA-Link (vendored), interpolation (re-implemented); OSNet-AIN embeddings | done |
 | 4 | `team_clustering` on ReID embeddings (trak `Clustering`, `embedding_only` / `reid_weight`) | open |
 | 5 | `osnet_reid` in line with trak (vectorised gallery scores, `keep_tracker_binding`) | open |
 | later | YOLOX input convention (BGR 0–255 checkpoints) and SAHI tiling | open |
@@ -49,9 +52,11 @@ Decisions (2026-11-02):
 2. **Routing** by `output_class_mapping`. The classes with `entity_type: ball` never reach the player tracker.
    The ball candidates come from the ball detector's ball classes when it runs, and the player detector's ball
    class is then dropped. Otherwise they are the player detector's ball class (trak's rule).
-3. **Player tracking**: `Tracker.process` over all frames, then `Tracker.finalize` once over the whole clip.
-   The offline refinements of step 3 (GTA-Link, interpolation) go into `finalize`. GTA-Link needs the frames
-   while tracking, so it must live inside `object_tracker`, not in a separate plugin.
+3. **Player tracking** (`tracker`: `bytetrack` | `deep_eiou`), frame by frame inside the detection loop, with
+   the frame's pixels: Deep-EIoU embeds the detections and GTA-Link the output boxes while the frame is in
+   memory, and no frame is kept after its iteration. Then `Tracker.finalize` runs once over the whole clip
+   (GTA-Link, interpolation). So GTA-Link must live inside `object_tracker`, not in a separate plugin. It
+   renumbers the track IDs.
 4. **Default team per track** from `TrackClassMapper`'s cumulative class votes and `output_class_mapping`.
    Without a tracker (a detection-only run), the non-ball detections are written untracked (entity ID 0).
 5. **Ball**: `ball_tracker: kalman` runs over the whole clip, with the player tracks as kick hints (no hints
@@ -79,6 +84,49 @@ Same as trak's `trak.tracker.tracker.Tracker`, so the trak wrappers port with li
 `finalize()`, and `reset_state()`. `track_frame` is `{frame_id, track_ids, track_scores, track_boxes}`, with
 boxes as tlwh in frame pixels. trak's `team_ids` field is left out: here the team comes from the class
 mapping, and trak's 0 would read as `TeamId.BALL`.
+
+### Deep-EIoU (`deep_eiou.py`)
+
+A re-implementation: the upstream repository (hsiangwei0903/Deep-EIoU) has no license, so none of its code is
+used. It reproduces the behaviour of the version trak evaluated (its fork at 2fc7d27, upstream's SportsMOT
+setting `tools/sport_track.py`); the module docstring lists the details. Its main properties:
+
+- Association uses the *last detection box* of a track, enlarged by the expansion scale (Expansion IoU: 0.7, then
+  0.8 for the high-score detections, 0.5 for the low-score ones), not a motion prediction. The appearance cost
+  (cosine / 2) is fused by `min` where the EIoU cost is at most `proximity_thresh` and the appearance cost at most
+  `appearance_thresh`.
+- The Kalman filter only matters for dropping duplicate tracked / lost pairs (it is never predicted, and corrected
+  only on re-finding a lost track). Output boxes are the last detection boxes.
+- Quirks kept on purpose, so the DSHS results carry over: floored box expansion and inclusive-pixel IoU; a score
+  exactly at `track_high_thresh` takes part in neither round; a track removed in a frame stays in the lost pool
+  (and can be re-found) for one more frame; frames without detections skip the association (tracks do not age
+  there).
+- `track_buffer` counts frames at 30 fps and is scaled to the decoding rate, at least one frame (as ByteTrack).
+- Embeddings: `appearance.ReIDEncoder` (trak's `SportsOSNet` preprocessing: PIL crop of the RGB frame, resize to
+  256x128, ImageNet normalisation), OSNet-AIN MS+D+C (`/models/reid/osnet_ain_ms_d_c.pth.tar`) by default: trak's
+  winner in both Deep-EIoU and GTA-Link (`reports/README.md` §18). The weights load strictly (every layer but the
+  classifier, or an error). The model is built without the ImageNet download, which the ReID weights replace anyway.
+
+Defaults (`default_deep_eiou_params`): upstream's thresholds (high 0.6, low 0.1, new 0.7, match 0.8, buffer 60,
+proximity 0.5, appearance 0.25), ReID on, GTA-Link on with the README's general parameters, interpolation off.
+That is trak's `deep_eiou_gta` with OSNet-AIN: IDF1 0.59 / 16 IDs on small M1 and 0.46 / 18 on Matches 2–3. Those
+numbers were measured on YOLOX-L SN detections. With the RF-DETR SN default here they are not measured yet; the
+thresholds depend on the detector's score distribution.
+
+### GTA-Link and interpolation (`refine.py`)
+
+Both run in `Tracker.finalize` and work on top of any tracker (`tracker_params.gta_link` / `.interpolation`,
+each with `enabled`; on for Deep-EIoU's GTA-Link, off otherwise).
+
+- **GTA-Link** (MIT) is vendored in `inference_ray/third_party/gta_link` (`Tracklet.py`, `refine_tracklets.py`
+  from the fork trak evaluated, matplotlib / seaborn imported lazily; provenance in its README). It is installed
+  through the `tracking` extra (`inference_ray/pyproject.toml`, path source). It embeds every output box during
+  tracking (one 512-d float32 vector per box, kept until `finalize`), then splits tracklets whose embeddings
+  cluster into several identities (DBSCAN) and connects tracklets of one identity. Output IDs are renumbered 1..N
+  and every score is 1 (upstream's output).
+- **Interpolation** re-implements Deep-EIoU's `tools/sport_interpolation.py` (same license problem): gaps shorter
+  than `n_dti` frames in tracks with more than `n_min` boxes are filled linearly, unless the box centre moves more
+  than `distance_thres` px; a (frame, ID) pair that occurs twice is dropped first. Interpolated boxes get score 1.
 
 ### ByteTrack: `track_buffer` is a duration
 
@@ -125,6 +173,8 @@ constructor, no class filter, no h5 state files, fps scaling).
 
 | Field | Default | Meaning |
 |---|---|---|
+| `tracker` | none | `bytetrack` (UI) or `deep_eiou` (API-only) |
+| `tracker_params` | the tracker's preset | validated per tracker (`TRACKER_PARAM_SERIALIZERS`), unknown keys rejected; nested `gta_link` / `interpolation` are merged key by key into the preset; the ReID model files are fixed presets, not parameters |
 | `ball_detector` | none | a second detector instance for the ball: `yolo10/11/12/26`, `rtdetr`, `rfdetr` (presets with a ball class) |
 | `ball_detector_params` | the preset + `BALL_DETECTOR_OVERRIDES` | the same model files as the preset (allowlist), ball classes only, `conf` 0.1 (trak's floor: the tracker gates weak candidates) |
 | `ball_tracker` | `kalman` | `null` writes the candidates untracked |
@@ -163,14 +213,26 @@ Coordinates are normalised by the frame size; `x, y` is the top-left corner. `me
 | 10 | The Ultralytics wrapper appended one state entry *per detection*, and none for a frame whose detections were all filtered out. Every YOLO10/11/12/26 run (including the UI's default ball detector, yolo11) misaligned frames and times. | one entry per frame | Ultralytics boxes at the right time |
 | 11 | Ultralytics (`rect`) and RT-DETR normalised by the padded frame size; RT-DETR's `det_shape` was padded twice. Ultralytics without `rect` reported `imgsz` coordinates. | detector contract (`frame_shape`, frame-pixel boxes) | ≤ 0.7 % box offsets fixed; RT-DETR tracks slightly different |
 | 12 | Ball runs wrote every ball detection (several per frame, clutter included). | Kalman ball tracker | from 10 fps on: one ball per frame, gaps filled, clutter and static decoys dropped |
+| 13 | Player tracking ran after the detection loop, without pixels. | tracking inside the loop, with the frame | none for ByteTrack (same order of updates) |
+| 14 | `tracker_params` went through a ByteTrack-only nested serializer, which silently dropped unknown keys. | per-tracker serializers that reject unknown keys | a misspelt key is an error; the UI's keys are all known |
 
 **Plugin versions** are part of the analyser's cache key. Every plugin whose output changes must bump its
-`version`: `object_tracker` 0.1 → 0.2 (steps 0–2), `osnet_reid` 0.2 → 0.3, `team_clustering` 0.1 → 0.2.
+`version`: `object_tracker` 0.1 → 0.2 (steps 0–2) → 0.3 (step 3), `osnet_reid` 0.2 → 0.3, `team_clustering` 0.1 → 0.2.
 
 ### Verification
 
-- Backend tests: 475 passed, including `tests/plugins/test_object_tracker_params.py` (13 tests: buffer default,
-  UI payloads, ball-detector presets and the model-file allowlist, ball-tracker parameter validation).
+- Backend tests: 483 passed, including `tests/plugins/test_object_tracker_params.py` (21 tests: buffer default,
+  UI payloads, ball-detector presets and the model-file allowlist, ball-tracker parameter validation, Deep-EIoU /
+  GTA-Link / interpolation presets, nested merges, rejected model paths and unknown keys).
+- Deep-EIoU's association against the fork trak evaluated, on synthetic clips (18 players, crossings, dropouts,
+  scores across all thresholds, identity embeddings with noise): identical tracks (IDs, boxes, scores, every
+  frame) on 3 clips × ReID on / off × 30 / 10 fps.
+- The full stack against trak, on a synthetic video (12 coloured players in two teams, 160 frames) with real
+  OSNet-AIN embeddings on CPU: trak's Deep-EIoU wrapper + its GTA-Link vs. `DeepEIoU` + the vendored GTA-Link.
+  Identical online tracks (42 IDs), identical embeddings, identical tracks after GTA-Link (16 IDs).
+- Interpolation against trak's wrapper of `sport_interpolation.dti`: identical IDs and boxes (within trak's
+  0.01 px text round trip). One score differs: trak's wrapper gives a box interpolated at a dropped duplicate
+  (frame, ID) the dropped duplicate's score; here it gets 1, like every interpolated box.
 - The ball tracker port against trak's `BallTracker` at 30 fps, on a synthetic 600-frame clip (ball with kicks,
   gaps and weak detections, a static decoy, clutter, players): identical state (boxes, scores, segments,
   status), with and without player hints, with default and non-default parameters.
@@ -186,7 +248,10 @@ Coordinates are normalised by the frame size; `x, y` is the top-left corner. `me
     candidates with the player tracks as hints; the player tracks are unchanged by it;
   - separate ball detector: the ball rows come from it only, and the player tracks are unchanged;
   - at 1 fps (below `min_fps`) the output equals the untracked one;
-  - the Ultralytics wrapper writes one state entry per frame, and resized boxes come back in frame pixels.
+  - the Ultralytics wrapper writes one state entry per frame, and resized boxes come back in frame pixels;
+  - `tracker: deep_eiou` (without ReID, and with ReID + GTA-Link): the output equals the tracker run directly on
+    the player detections and frames; the ball rows are unaffected. ByteTrack inside the loop: the step-0/1
+    checks above still hold.
 
 None of this has been run on a real video with real detectors yet; that needs the GPU deployment.
 
@@ -197,3 +262,11 @@ None of this has been run on a real video with real detectors yet; that needs th
 - The ball tracker's pixel thresholds are not scaled with resolution (see above).
 - The standalone `bytetrack` plugin (`plugins/bytetrack.py`) has the same ID counter issue (6). It is left as is.
 - `TrackClassMapper` and `osnet_reid` log at `error` level for every frame.
+- **GTA-Link memory**: one 512-d float32 embedding per output box until `finalize`, about 2 KB per box. 90 min of
+  22 players at 10 fps is about 1.2 M boxes, i.e. ~2.4 GB (~7 GB at 30 fps). trak has the same limit; storing
+  float16, or splitting long videos, are the options.
+- Embeddings differ slightly between CPU and GPU, and GTA-Link / the appearance gate can then decide a near-tie
+  differently: a run is reproducible on the same device type, not across them. `deploy.yml` (CPU only) would also
+  embed every detection on the CPU, which is slow; the CUDA deployments give `object_tracker` a GPU share.
+- trak's wrapper casts detections to float32 before Deep-EIoU, this one keeps float64: a score that lies exactly on
+  a threshold in float64 can fall on the other side in float32. Identical otherwise.

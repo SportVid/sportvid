@@ -52,8 +52,10 @@ class ByteTrack(Tracker):
 
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
         """ Brings the detections into the (N, 5) [x1, y1, x2, y2, conf] arrays BYTE consumes. """
+        dets = inputs.get('detections') or []
         return {
-            'detections': [detections_xyxy_conf(d) for d in (inputs.get('detections') or [])],
+            'detections': [detections_xyxy_conf(d) for d in dets],
+            'frames': inputs.get('frames') or [None] * len(dets),   # BYTE needs no pixels; GTA-Link does
             'shape': inputs['image_shape'],
             'det_shape': inputs['det_shape'],
         }
@@ -63,7 +65,7 @@ class ByteTrack(Tracker):
         img_shape = prep['shape']
         det_shape = prep['det_shape']
 
-        for detection in prep['detections']:
+        for detection, frame in zip(prep['detections'], prep['frames']):
             # a frame without detections still goes through update, so lost tracks age there
             online_targets = self.tracker.update(
                 detection,      # [N,x1,y1,x2,y2,conf]
@@ -79,7 +81,7 @@ class ByteTrack(Tracker):
                     tlwhs.append(tlwh)
                     ids.append(tar.track_id)
                     scores.append(tar.score.item())
-            self._record(track_frame(self.frame_id, tlwhs, ids, scores))
+            self._record(track_frame(self.frame_id, tlwhs, ids, scores), frame)
 
         logging.debug(f"ByteTrack: {self.frame_id} frames tracked.")
         return self.state
