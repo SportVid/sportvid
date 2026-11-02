@@ -7,6 +7,7 @@ from backend.plugin_manager import PluginManager
 
 DETECTOR_CHOICES = ["yolox", "yolo10", "yolo11", "yolo12", "yolo26", "rfdetr", "rtdetr"]
 TRACKER_CHOICES = ["bytetrack"]
+BALL_TRACKER_CHOICES = ["kalman"]
 
 
 # TODO: dynamic checkpoint loading based on context / sports type.
@@ -166,6 +167,57 @@ TRACKER_DEFAULTS = {
     "bytetrack": default_bytetrack_params
 }
 
+# Ball detector: another instance of a detector preset (same model files), with its own parameters. Only the
+# detectors whose preset model has a ball class; the low confidence floor is trak's (0.10): the ball tracker gates
+# weak candidates itself (min_conf / init_conf below).
+BALL_DETECTOR_OVERRIDES = {
+    "yolo10": {"classes": [32], "conf": 0.1},
+    "yolo11": {"classes": [32], "conf": 0.1},
+    "yolo12": {"classes": [32], "conf": 0.1},
+    "yolo26": {"classes": [32], "conf": 0.1},
+    "rtdetr": {"classes": [32], "conf": 0.1},
+    "rfdetr": {"classes": ["ball"], "conf": 0.1},
+}
+BALL_DETECTOR_CHOICES = list(BALL_DETECTOR_OVERRIDES)
+
+# Kalman ball tracker (inference_ray plugins/tracker/ball_tracker.py; trak's configs/ball_tracker/kalman.yaml).
+# Frame-based values are given at 30 fps and scaled to the decoding rate by the plugin. Below min_fps the ball
+# candidates are written untracked.
+default_kalman_ball_params = {
+    "min_conf": 0.10,             # candidates below are ignored
+    "init_conf": 0.40,            # confidence needed to (re)acquire the ball
+    "gate_px": 60.0,              # association radius around the predicted position (px / frame)
+    "gate_growth_px": 20.0,       # + per frame without a match, scaled by the candidate's confidence
+    "max_missed": 15,             # frames without a match before the track is dropped
+    "switch_frames": 3,           # re-acquire elsewhere after this many frames with a confident candidate outside the gate
+    "max_gap": 10,                # fill gaps up to this many frames within a track segment
+    "outlier_px": 25.0,           # a weak detection this far off the smoothed path is dropped, unless supported
+    "corner_dv_px": 5.0,          # kick corner: velocity change (px / frame) where the path may change direction
+    "kick_vel_px": 30.0,          # expected kick speed (px / frame): widens the gate after a touch
+    "player_hint": True,          # ball at a player's foot -> a kick may happen there (needs a player tracker)
+    "foot_reach": 1.5,            # "at a player's foot": within this many player box widths of the foot point
+    "confirm_frames": 4,          # weak detections needed to confirm a provisional track
+    "tentative_gate_px": 30.0,    # association radius of a provisional track (px / frame)
+    "tentative_max_missed": 2,    # frames a provisional track may go unseen
+    "reacquire_px": 60.0,         # starting this close to the last known ball position: accepted
+    "reacquire_growth_px": 15.0,  # further away: must move, and start within a radius growing by this per frame
+    "reacquire_max_px": 400.0,    # ... up to this
+    "min_move_px": 20.0,          # "moving": distance covered along the longest recent smooth run
+    "tentative_resid_px": 6.0,    # ... which must fit a constant-velocity line within this RMS (px)
+    "tentative_skip_body": 0.75,  # provisional tracks ignore weak candidates on the upper part of a player box
+    "accel_px": 4.0,              # Kalman process noise: ball acceleration std (px / frame^2)
+    "meas_px": 2.0,               # Kalman measurement noise of a conf=1 detection (px), scales with 1 / conf
+    "static_filter": True,        # drop ball candidates that never move (cones, spare balls, markings)
+    "static_radius_px": 12.0,     # "same spot": within this radius
+    "static_min_hits": 60,        # ... for at least this many frames
+    "static_min_span": 150,       # ... spanning more than this many frames
+    "min_fps": 10.0,              # below this decoding rate the ball is not tracked
+}
+
+BALL_TRACKER_DEFAULTS = {
+    "kalman": default_kalman_ball_params
+}
+
 
 class DetectorParamsSerializer(serializers.Serializer):
     batch_size = serializers.IntegerField(required=False, min_value=1)
@@ -243,6 +295,51 @@ class TrackerParamsSerializer(serializers.Serializer):
     min_box_area = serializers.FloatField(required=False, min_value=0.0)
 
 
+class KalmanBallTrackerParamsSerializer(serializers.Serializer):
+    min_conf = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    init_conf = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    gate_px = serializers.FloatField(required=False, min_value=0.0)
+    gate_growth_px = serializers.FloatField(required=False, min_value=0.0)
+    max_missed = serializers.IntegerField(required=False, min_value=1)
+    switch_frames = serializers.IntegerField(required=False, min_value=1)
+    max_gap = serializers.IntegerField(required=False, min_value=0)
+    outlier_px = serializers.FloatField(required=False, min_value=0.0)
+    corner_dv_px = serializers.FloatField(required=False, min_value=0.0)
+    kick_vel_px = serializers.FloatField(required=False, min_value=0.0)
+    player_hint = serializers.BooleanField(required=False)
+    foot_reach = serializers.FloatField(required=False, min_value=0.0)
+    confirm_frames = serializers.IntegerField(required=False, min_value=2)
+    tentative_gate_px = serializers.FloatField(required=False, min_value=0.0)
+    tentative_max_missed = serializers.IntegerField(required=False, min_value=0)
+    reacquire_px = serializers.FloatField(required=False, min_value=0.0)
+    reacquire_growth_px = serializers.FloatField(required=False, min_value=0.0)
+    reacquire_max_px = serializers.FloatField(required=False, min_value=0.0)
+    min_move_px = serializers.FloatField(required=False, min_value=0.0)
+    tentative_resid_px = serializers.FloatField(required=False, min_value=0.0)
+    tentative_skip_body = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    accel_px = serializers.FloatField(required=False, min_value=0.0)
+    meas_px = serializers.FloatField(required=False, min_value=1e-6)
+    static_filter = serializers.BooleanField(required=False)
+    static_radius_px = serializers.FloatField(required=False, min_value=0.0)
+    static_min_hits = serializers.IntegerField(required=False, min_value=1)
+    static_min_span = serializers.IntegerField(required=False, min_value=1)
+    min_fps = serializers.FloatField(required=False, min_value=1.0)
+
+    def to_internal_value(self, data):
+        # a misspelt key would otherwise be dropped silently and its default used
+        unknown = sorted(set(data or {}) - set(self.fields))
+        if unknown:
+            raise serializers.ValidationError({"non_field_errors": [f"Unknown parameters: {unknown}."]})
+        return super().to_internal_value(data)
+
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        min_conf = attrs.get("min_conf", default_kalman_ball_params["min_conf"])
+        init_conf = attrs.get("init_conf", default_kalman_ball_params["init_conf"])
+        if init_conf <= min_conf:
+            raise serializers.ValidationError({"init_conf": ["init_conf must be greater than min_conf."]})
+        return attrs
+
+
 @PluginManager.export_serializer("object_tracker")
 class ObjectTrackerSerializer(serializers.Serializer):
     fps = serializers.IntegerField(
@@ -264,6 +361,24 @@ class ObjectTrackerSerializer(serializers.Serializer):
     )
     detector_params = DetectorParamsSerializer(required=False, default=dict)
     tracker_params = TrackerParamsSerializer(required=False, default=dict)
+    # API-only for now (the frontend does not send these): a second detector instance for the ball, and the
+    # ball tracker. Without ball_detector the ball candidates are the detector's ball class.
+    ball_detector = serializers.ChoiceField(
+        choices=BALL_DETECTOR_CHOICES,
+        required=False,
+        default=None,
+        allow_blank=True,
+        allow_null=True,
+    )
+    ball_detector_params = DetectorParamsSerializer(required=False, default=dict)
+    ball_tracker = serializers.ChoiceField(
+        choices=BALL_TRACKER_CHOICES,
+        required=False,
+        default="kalman",
+        allow_blank=True,
+        allow_null=True,
+    )
+    ball_tracker_params = KalmanBallTrackerParamsSerializer(required=False, default=dict)
 
     def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
         detector = data.get("detector", "yolox")
@@ -294,7 +409,60 @@ class ObjectTrackerSerializer(serializers.Serializer):
                 })
             data["tracker_params"] = {}
 
+        ball_detector = data.get("ball_detector")
+        ball_detector_params = data.get("ball_detector_params", {})
+        if ball_detector not in (None, ""):
+            self._validate_as_group("ball_detector_params", self._get_detector_validator(ball_detector),
+                                    ball_detector_params)
+            self._validate_as_group("ball_detector_params", lambda p: self._validate_model_files(ball_detector, p),
+                                    ball_detector_params)
+            data["ball_detector_params"] = self.build_ball_detector_runtime_params(
+                detector=ball_detector,
+                user_params=ball_detector_params,
+            )
+        else:
+            if ball_detector_params:
+                raise serializers.ValidationError({
+                    "ball_detector_params": ["ball_detector_params cannot be provided when ball_detector is null or omitted."]
+                })
+            data["ball_detector"] = None
+            data["ball_detector_params"] = {}
+
+        ball_tracker = data.get("ball_tracker")
+        ball_tracker_params = data.get("ball_tracker_params", {})
+        if ball_tracker not in (None, ""):
+            data["ball_tracker_params"] = self._merge_with_presets(BALL_TRACKER_DEFAULTS, ball_tracker, ball_tracker_params)
+        else:
+            if ball_tracker_params:
+                raise serializers.ValidationError({
+                    "ball_tracker_params": ["ball_tracker_params cannot be provided when ball_tracker is null."]
+                })
+            data["ball_tracker"] = None
+            data["ball_tracker_params"] = {}
+
         return data
+
+    @classmethod
+    def build_ball_detector_runtime_params(
+        cls,
+        detector: str,
+        user_params: Mapping[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """ The detector preset with the ball overrides (classes, confidence floor), then the user's values. """
+        params = deepcopy(dict(DETECTOR_DEFAULTS[detector]))
+        params.update(deepcopy(BALL_DETECTOR_OVERRIDES[detector]))
+        if user_params:
+            params.update(dict(user_params))
+        return cls._normalize_detector_params(detector, params)
+
+    @staticmethod
+    def _validate_as_group(group_name: str, validator, params: Mapping[str, Any]) -> None:
+        """ Run a detector_params validator on another parameter group, reporting errors under that group. """
+        try:
+            validator(params)
+        except serializers.ValidationError as ex:
+            detail = ex.detail.get("detector_params", ex.detail) if isinstance(ex.detail, dict) else ex.detail
+            raise serializers.ValidationError({group_name: detail})
 
     @classmethod
     def build_detector_runtime_params(
