@@ -100,7 +100,9 @@
           hide-default-footer
           :headers="headers"
           :items="props.pluginRuns"
-          item-key="id"
+          item-value="id"
+          v-model:expanded="expandedIds"
+          :row-props="({ item }) => (expandedIds.includes(item.id) ? { class: 'row-expanded' } : {})"
           class="mb-3 status-table"
         >
           <template #item.date="{ item }">
@@ -123,10 +125,29 @@
               >
             </div>
           </template>
-          <template #item.status="{ value }">
-            <v-chip :color="progressColor(value)" variant="flat">
+          <template #item.status="{ item, value }">
+            <v-chip
+              v-if="failureText(item)"
+              :color="progressColor(value)"
+              variant="flat"
+              :append-icon="expandedIds.includes(item.id) ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+              @click="toggleExpanded(item.id)"
+            >
               {{ getStatusText(value) }}
             </v-chip>
+            <v-chip v-else :color="progressColor(value)" variant="flat">
+              {{ getStatusText(value) }}
+            </v-chip>
+          </template>
+          <template #expanded-row="{ columns, item }">
+            <tr v-if="failureText(item)" class="failure-row">
+              <td :colspan="columns.length">
+                <div class="failure-reason text-body-2 d-flex align-start">
+                  <v-icon size="18" color="error" class="mr-2">mdi-alert-circle-outline</v-icon>
+                  <span>{{ failureText(item) }}</span>
+                </div>
+              </td>
+            </tr>
           </template>
         </v-data-table>
 
@@ -275,7 +296,7 @@ const props = defineProps({
 
 const emit = defineEmits();
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 
 const pluginTypes = computed(() => [...new Set(props.pluginRuns.map((p) => p.type))]);
 const selectedPlugin = ref(null);
@@ -320,6 +341,26 @@ const progressColor = (status) => {
 
 const getStatusText = (status) => {
   return t(`modal.plugin.status.${status.toLowerCase()}`);
+};
+
+// Rows whose failure reason is unfolded below them (toggled by clicking the status chip).
+const expandedIds = ref([]);
+const toggleExpanded = (id) => {
+  expandedIds.value = expandedIds.value.includes(id)
+    ? expandedIds.value.filter((e) => e !== id)
+    : [...expandedIds.value, id];
+};
+
+// Why a run ended in ERROR, from the backend's failure_reason {type, message, details}:
+// the translated type (details fill its placeholders), else the backend's English message,
+// else a generic internal error (runs from before failure_reason existed have none).
+const failureText = (run) => {
+  if (run.status !== "ERROR") return null;
+  const reason = run.failure_reason;
+  if (!reason) return t("modal.plugin.failure.internal_error");
+  const key = `modal.plugin.failure.${reason.type}`;
+  if (te(key)) return t(key, reason.details || {});
+  return reason.message || t("modal.plugin.failure.internal_error");
 };
 
 // Status overview (read-only), derived from raw plugin runs / position data -- shared with
@@ -443,6 +484,16 @@ const formatLocalDate = (dateString) => {
 .status-area.state-error {
   border-color: rgba(244, 67, 54, 0.4);
   background-color: rgba(244, 67, 54, 0.12);
+}
+
+/* An unfolded row and its failure reason read as one block: no divider between them. */
+.status-table :deep(tr.row-expanded > td) {
+  border-bottom: none !important;
+}
+
+.failure-reason {
+  padding: 0 0 10px;
+  line-height: 1.4;
 }
 
 .delete-panel-title {
