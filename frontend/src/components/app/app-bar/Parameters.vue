@@ -523,8 +523,9 @@
            parameters because that is where it is needed, and because it decides which
            calibration plugin the run uses. Saved when the run is started, see
            applyLensProfileSelection. -->
-      <div v-if="parameter.field == 'select_lens_profile'" :key="parameter.name" class="mb-6">
-        <LensProfileSelect v-model="parameter.value" :video="playerStore.video" />
+      <div v-if="parameter.field == 'select_lens_profile'" :key="parameter.name">
+        <LensProfileSelect v-model="parameter.value" :video="playerStore.video" class="mb-6" />
+        <v-divider class="mb-4" />
       </div>
     </template>
   </div>

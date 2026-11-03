@@ -123,8 +123,6 @@
       >
         {{ $t(`lens_profile.aspect_${selectedProfile.aspect_fit}`) }}
       </v-alert>
-
-      <div class="text-caption text-grey mt-2">{{ $t("lens_profile.none_hint") }}</div>
     </template>
   </div>
 </template>

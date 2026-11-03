@@ -34,77 +34,106 @@ function hideInSimpleMode(parameters, names) {
 // object_tracker replaces bytetrack as the generic detector+tracker plugin —
 // it additionally lets the user pick a tracking_target (player vs. ball),
 // which restricts the available detectors and (for ball runs) drops the
-// tracker/tracker_params entirely since there's nothing to track between
-// frames for a single ball detection. Ported from the retired ModalPlugin.vue.
-const ALL_OBJECT_TRACKER_DETECTOR_ITEMS = [
-  { title: "YOLOX", value: "yolox" },
-  { title: "YOLOv10 (Ultralytics)", value: "yolo10" },
-  { title: "YOLOv11 (Ultralytics)", value: "yolo11" },
-  { title: "YOLOv12 (Ultralytics)", value: "yolo12" },
-  { title: "YOLOv26 (Ultralytics)", value: "yolo26" },
-  { title: "RF-DETR", value: "rfdetr" },
-  { title: "RT-DETR", value: "rtdetr" },
+// tracker/tracker_params entirely, so player and ball always run as two separate
+// object_tracker runs (backend: "bboxes" vs. "bboxes_ball" results). Shared with the
+// batch ModalPlugin.vue via watchObjectTrackerSelection/objectTrackerClasses below.
+//
+// The SoccerNet models (backend serializers/object_tracker.py): yolox_sn_player is a
+// person-only YOLOX-L, yolox_sn_ball a ball-only YOLOX-L that always runs tiled (SAHI) --
+// hence each is offered only for its own tracking_target.
+const OBJECT_TRACKER_DETECTOR_ITEMS = {
+  yolox: { title: "YOLOX", value: "yolox" },
+  yolox_sn_player: { title: "YOLOX-L SoccerNet (Player)", value: "yolox_sn_player" },
+  yolox_sn_ball: { title: "YOLOX-L SoccerNet (Ball)", value: "yolox_sn_ball" },
+  yolo10: { title: "YOLOv10 (Ultralytics)", value: "yolo10" },
+  yolo11: { title: "YOLOv11 (Ultralytics)", value: "yolo11" },
+  yolo12: { title: "YOLOv12 (Ultralytics)", value: "yolo12" },
+  yolo26: { title: "YOLOv26 (Ultralytics)", value: "yolo26" },
+  rfdetr: { title: "RF-DETR", value: "rfdetr" },
+  rtdetr: { title: "RT-DETR", value: "rtdetr" },
+};
+const PLAYER_TARGET_DETECTORS = [
+  "yolox",
+  "yolox_sn_player",
+  "yolo10",
+  "yolo11",
+  "yolo12",
+  "yolo26",
+  "rfdetr",
+  "rtdetr",
 ];
-const BALL_OBJECT_TRACKER_DETECTOR_ITEMS = ALL_OBJECT_TRACKER_DETECTOR_ITEMS.filter((d) =>
-  ["yolo11", "yolo12", "rfdetr"].includes(d.value)
+// the detectors whose model has a ball class (backend BALL_DETECTOR_OVERRIDES)
+const BALL_TARGET_DETECTORS = [
+  "yolox_sn_ball",
+  "yolo10",
+  "yolo11",
+  "yolo12",
+  "yolo26",
+  "rfdetr",
+  "rtdetr",
+];
+// detector a ball run falls back to when the selected one has no ball class
+const BALL_TARGET_FALLBACK_DETECTOR = "yolo11";
+const PLAYER_TARGET_FALLBACK_DETECTOR = "yolox";
+export const PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS = PLAYER_TARGET_DETECTORS.map(
+  (d) => OBJECT_TRACKER_DETECTOR_ITEMS[d]
+);
+const BALL_OBJECT_TRACKER_DETECTOR_ITEMS = BALL_TARGET_DETECTORS.map(
+  (d) => OBJECT_TRACKER_DETECTOR_ITEMS[d]
 );
 
+const YOLOX_PARAMS = ["confidence_threshold", "batch_size", "nms_thresh", "fp16", "decode"];
+const YOLO_ULTRALYTICS_PARAMS = [
+  "confidence_threshold",
+  "batch_size",
+  "iou",
+  "agnostic_nms",
+  "half",
+  "max_det",
+  "verbose",
+];
 const DETECTOR_PARAM_VISIBILITY = {
-  yolox: ["confidence_threshold", "batch_size", "nms_thresh", "fp16", "decode", "num_classes"],
-  yolo10: [
-    "confidence_threshold",
-    "batch_size",
-    "iou",
-    "agnostic_nms",
-    "half",
-    "max_det",
-    "verbose",
-  ],
-  yolo11: [
-    "confidence_threshold",
-    "batch_size",
-    "iou",
-    "agnostic_nms",
-    "half",
-    "max_det",
-    "verbose",
-  ],
-  yolo12: [
-    "confidence_threshold",
-    "batch_size",
-    "iou",
-    "agnostic_nms",
-    "half",
-    "max_det",
-    "verbose",
-  ],
-  yolo26: [
-    "confidence_threshold",
-    "batch_size",
-    "iou",
-    "agnostic_nms",
-    "half",
-    "max_det",
-    "verbose",
-  ],
+  // num_classes only for the generic YOLOX: the SoccerNet checkpoints have one class each
+  // (the backend reads it from the checkpoint anyway)
+  yolox: [...YOLOX_PARAMS, "num_classes"],
+  yolox_sn_player: YOLOX_PARAMS,
+  yolox_sn_ball: YOLOX_PARAMS,
+  yolo10: YOLO_ULTRALYTICS_PARAMS,
+  yolo11: YOLO_ULTRALYTICS_PARAMS,
+  yolo12: YOLO_ULTRALYTICS_PARAMS,
+  yolo26: YOLO_ULTRALYTICS_PARAMS,
   rfdetr: ["confidence_threshold", "batch_size", "max_det", "resolution", "verbose"],
   rtdetr: ["confidence_threshold", "batch_size", "verbose"],
 };
 
-const DETECTOR_CONFIDENCE_DEFAULT = {
-  yolox: 0.2,
-  yolo10: 0.2,
-  yolo11: 0.2,
-  yolo12: 0.2,
-  yolo26: 0.2,
-  rfdetr: 0.5,
-  rtdetr: 0.25,
+// Values set whenever the detector changes. The YOLOX-family presets differ in nms and
+// batch size (yolox_sn_ball: batch_size = tiles per forward pass); everything the frontend
+// sends overrides the backend preset, so these mirror the backend presets.
+const DETECTOR_PARAM_DEFAULTS = {
+  yolox: { confidence_threshold: 0.2, nms_thresh: 0.65, batch_size: 1 },
+  yolox_sn_player: { confidence_threshold: 0.35, nms_thresh: 0.45, batch_size: 1 },
+  // low floor on purpose: the backend's ball tracker gates weak candidates itself
+  yolox_sn_ball: { confidence_threshold: 0.1, nms_thresh: 0.45, batch_size: 4 },
+  yolo10: { confidence_threshold: 0.2, batch_size: 1 },
+  yolo11: { confidence_threshold: 0.2, batch_size: 1 },
+  yolo12: { confidence_threshold: 0.2, batch_size: 1 },
+  yolo26: { confidence_threshold: 0.2, batch_size: 1 },
+  rfdetr: { confidence_threshold: 0.5, batch_size: 1 },
+  rtdetr: { confidence_threshold: 0.25, batch_size: 1 },
 };
-
-const BALL_TARGET_DETECTORS = ["yolo11", "yolo12", "rfdetr"];
-const BALL_RFDETR_CONFIDENCE_DEFAULT = 0.2;
-const BALL_YOLO_IOU_DEFAULT = 0.5;
+// on top of DETECTOR_PARAM_DEFAULTS, per tracking_target
 const PLAYER_IOU_DEFAULT = 0.3;
+const BALL_YOLO_IOU_DEFAULT = 0.5;
+const TARGET_PARAM_DEFAULTS = {
+  ball: {
+    rfdetr: { confidence_threshold: 0.2 },
+    yolo10: { iou: BALL_YOLO_IOU_DEFAULT },
+    yolo11: { iou: BALL_YOLO_IOU_DEFAULT },
+    yolo12: { iou: BALL_YOLO_IOU_DEFAULT },
+    yolo26: { iou: BALL_YOLO_IOU_DEFAULT },
+  },
+  player: Object.fromEntries(PLAYER_TARGET_DETECTORS.map((d) => [d, { iou: PLAYER_IOU_DEFAULT }])),
+};
 
 // Ball vs. player class filters per detector, keyed by tracking_target. There's no UI
 // control for `classes` -- it's derived from the (UI-only) tracking_target parameter in
@@ -112,12 +141,17 @@ const PLAYER_IOU_DEFAULT = 0.3;
 // backend doesn't know that field.
 const OBJECT_TRACKER_CLASSES_BY_TARGET = {
   ball: {
+    yolox_sn_ball: [0],
+    yolo10: [32],
     yolo11: [32],
     yolo12: [32],
+    yolo26: [32],
+    rtdetr: [32],
     rfdetr: ["ball"],
   },
   player: {
     yolox: [0],
+    yolox_sn_player: [0],
     yolo10: [0],
     yolo11: [0],
     yolo12: [0],
@@ -127,18 +161,199 @@ const OBJECT_TRACKER_CLASSES_BY_TARGET = {
   },
 };
 
+export function objectTrackerClasses(target, detector) {
+  return OBJECT_TRACKER_CLASSES_BY_TARGET[target]?.[detector];
+}
+
+// Default fps of an object_tracker run: the video's own frame rate, rounded and clamped to
+// the backend's 1-30 range.
+export function defaultObjectTrackerFps(videoFps) {
+  const fps = Math.round(Number(videoFps));
+  return Number.isFinite(fps) ? Math.min(30, Math.max(1, fps)) : 30;
+}
+
+// Player trackers (backend TRACKER_CHOICES). Their tracker_params differ, so each field is
+// shown only for the tracker(s) listed in TRACKER_PARAM_VISIBILITY, and switching the tracker
+// resets the fields to that tracker's defaults (TRACKER_PARAM_DEFAULTS) -- several names
+// (track_buffer, match_thresh, min_box_area) are shared but have different defaults.
+export const OBJECT_TRACKER_TRACKER_ITEMS = [
+  { title: "ByteTrack", value: "bytetrack" },
+  { title: "Deep-EIoU", value: "deep_eiou" },
+];
+const TRACKER_PARAM_VISIBILITY = {
+  bytetrack: [
+    "track_thresh",
+    "track_buffer",
+    "match_thresh",
+    "mot20",
+    "aspect_ratio_thresh",
+    "min_box_area",
+  ],
+  deep_eiou: [
+    "track_high_thresh",
+    "track_low_thresh",
+    "new_track_thresh",
+    "track_buffer",
+    "match_thresh",
+    "min_box_area",
+    "remove_edge_dets",
+    "with_reid",
+    "proximity_thresh",
+    "appearance_thresh",
+    "gta_link_enabled",
+    "interpolation_enabled",
+  ],
+};
+const TRACKER_PARAM_DEFAULTS = {
+  bytetrack: {
+    track_thresh: 0.4,
+    track_buffer: 300,
+    match_thresh: 0.8,
+    mot20: false,
+    aspect_ratio_thresh: 5.0,
+    min_box_area: 0,
+  },
+  // backend default_deep_eiou_params (upstream's SportsMOT setting)
+  deep_eiou: {
+    track_high_thresh: 0.6,
+    track_low_thresh: 0.1,
+    new_track_thresh: 0.7,
+    track_buffer: 60,
+    match_thresh: 0.8,
+    min_box_area: 10,
+    remove_edge_dets: false,
+    with_reid: true,
+    proximity_thresh: 0.5,
+    appearance_thresh: 0.25,
+    gta_link_enabled: true,
+    interpolation_enabled: false,
+  },
+};
+
+// The Deep-EIoU-only tracker_params fields, appended to the object_tracker optional
+// parameters of both objectTrackerParams() and the batch ModalPlugin.vue. gta_link /
+// interpolation are nested groups in the backend (tracker_params.gta_link.enabled), hence
+// `subgroup` + `subname` (see setGroupedValue).
+export function deepEiouTrackerFields(t) {
+  const slider = (name, step = 0.05) => ({
+    field: "slider",
+    min: 0,
+    max: 1,
+    value: TRACKER_PARAM_DEFAULTS.deep_eiou[name],
+    step,
+    name,
+    text: t(`modal.plugin.object_tracker.${name}`),
+    group: "tracker_params",
+    hidden: true,
+  });
+  const checkbox = (name, extra = {}) => ({
+    field: "checkbox",
+    value: TRACKER_PARAM_DEFAULTS.deep_eiou[name],
+    name,
+    text: t(`modal.plugin.object_tracker.${name}`),
+    group: "tracker_params",
+    hidden: true,
+    ...extra,
+  });
+  return [
+    slider("track_high_thresh"),
+    slider("track_low_thresh"),
+    slider("new_track_thresh"),
+    checkbox("remove_edge_dets"),
+    checkbox("with_reid"),
+    slider("proximity_thresh"),
+    slider("appearance_thresh"),
+    checkbox("gta_link_enabled", { subgroup: "gta_link", subname: "enabled" }),
+    checkbox("interpolation_enabled", { subgroup: "interpolation", subname: "enabled" }),
+  ];
+}
+
+// Puts a `group`-tagged parameter into the grouped payload: grouped[group][name], or
+// grouped[group][subgroup][subname] for nested backend groups.
+export function setGroupedValue(grouped, p) {
+  const group = (grouped[p.group] = grouped[p.group] || {});
+  if (p.subgroup) {
+    group[p.subgroup] = group[p.subgroup] || {};
+    group[p.subgroup][p.subname ?? p.name] = p.value;
+  } else {
+    group[p.name] = p.value;
+  }
+}
+
+// Keeps the object_tracker fields consistent with tracking_target + detector:
+//  - restricts the detector choices to the target's (falling back to a valid one),
+//  - shows only the selected detector's detector_params, with its defaults,
+//  - hides the tracker and all tracker_params fields for ball runs. `hidden` (unlike
+//    simpleHidden) also drops the field from submission -- for "tracker" that's the actual
+//    signal the backend uses to tell ball- from player-tracking runs apart
+//    (tasks/object_tracker.py: `"bboxes" if parameters.get("tracker") else "bboxes_ball"`),
+//    so this must stay driven by tracking_target alone and never by experience mode.
+// `parameters`/`optionalParameters` are refs (or computeds) of parameter arrays.
+export function watchObjectTrackerSelection(parameters, optionalParameters) {
+  const find = (list, name) => list.value.find((p) => p.name === name);
+  watch(
+    () => [
+      find(parameters, "tracking_target")?.value,
+      find(parameters, "detector")?.value,
+      find(parameters, "tracker")?.value,
+    ],
+    ([target, detector, tracker]) => {
+      const detectorParam = find(parameters, "detector");
+      if (!detectorParam) return;
+      const isBall = target === "ball";
+      detectorParam.items = isBall
+        ? BALL_OBJECT_TRACKER_DETECTOR_ITEMS
+        : PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS;
+      const allowed = isBall ? BALL_TARGET_DETECTORS : PLAYER_TARGET_DETECTORS;
+      if (!allowed.includes(detector)) {
+        // re-runs this watcher with the new detector
+        detectorParam.value = isBall
+          ? BALL_TARGET_FALLBACK_DETECTOR
+          : PLAYER_TARGET_FALLBACK_DETECTOR;
+        return;
+      }
+
+      const visible = DETECTOR_PARAM_VISIBILITY[detector] || [];
+      const defaults = {
+        ...DETECTOR_PARAM_DEFAULTS[detector],
+        ...TARGET_PARAM_DEFAULTS[isBall ? "ball" : "player"][detector],
+      };
+      for (const p of optionalParameters.value) {
+        if (p.group === "detector_params") {
+          p.hidden = !visible.includes(p.name);
+          if (p.name in defaults) p.value = defaults[p.name];
+        } else if (p.group === "tracker_params") {
+          p.hidden = isBall || !(TRACKER_PARAM_VISIBILITY[tracker] || []).includes(p.name);
+        }
+      }
+      const trackerParam = find(parameters, "tracker");
+      if (trackerParam) trackerParam.hidden = isBall;
+    },
+    { immediate: true }
+  );
+  // separate from the above so that changing the detector / target keeps the tracker values
+  watch(
+    () => find(parameters, "tracker")?.value,
+    (tracker) => {
+      const defaults = TRACKER_PARAM_DEFAULTS[tracker] || {};
+      for (const p of optionalParameters.value) {
+        if (p.group === "tracker_params" && p.name in defaults) p.value = defaults[p.name];
+      }
+    },
+    { immediate: true }
+  );
+}
+
 export function objectTrackerParams() {
   const { t } = useI18n();
+  const playerStore = usePlayerStore();
 
   const parameters = ref([
     {
       field: "slider",
       min: 1,
       max: 30,
-      // Defaults to 1 rather than the video's actual fps (usually 30) -- tracking every frame
-      // is a lot slower to test against than most trial runs need; still freely adjustable up
-      // to the real fps via this slider.
-      value: 1,
+      value: defaultObjectTrackerFps(playerStore.videoFPS),
       step: 1,
       name: "fps",
       text: t("modal.plugin.fps"),
@@ -158,14 +373,14 @@ export function objectTrackerParams() {
       field: "select_options",
       name: "detector",
       value: "yolox",
-      items: ALL_OBJECT_TRACKER_DETECTOR_ITEMS,
+      items: PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS,
       text: t("modal.plugin.object_tracker.detector"),
     },
     {
       field: "select_options",
       name: "tracker",
       value: "bytetrack",
-      items: [{ title: "ByteTrack", value: "bytetrack" }],
+      items: OBJECT_TRACKER_TRACKER_ITEMS,
       text: t("modal.plugin.object_tracker.tracker"),
     },
   ]);
@@ -339,79 +554,10 @@ export function objectTrackerParams() {
       text: t("modal.plugin.object_tracker.min_box_area"),
       group: "tracker_params",
     },
+    ...deepEiouTrackerFields(t),
   ]);
 
-  // Toggle visibility of detector-specific parameters based on the selected detector.
-  watch(
-    () => parameters.value.find((p) => p.name === "detector")?.value,
-    (detector) => {
-      const visible = DETECTOR_PARAM_VISIBILITY[detector] || [];
-      for (const p of optionalParameters.value) {
-        if (p.group !== "detector_params") continue;
-        p.hidden = !visible.includes(p.name);
-      }
-      const confidenceParam = optionalParameters.value.find(
-        (p) => p.name === "confidence_threshold"
-      );
-      if (confidenceParam && detector in DETECTOR_CONFIDENCE_DEFAULT) {
-        confidenceParam.value = DETECTOR_CONFIDENCE_DEFAULT[detector];
-      }
-    },
-    { immediate: true }
-  );
-
-  // Toggle between "player" and "ball" tracking runs: restricts the detector choices,
-  // hides the tracker (ByteTrack) and all tracker_params fields for ball runs (no tracker
-  // for ball detections), and adjusts detector confidence/iou defaults accordingly.
-  watch(
-    () => [
-      parameters.value.find((p) => p.name === "tracking_target")?.value,
-      parameters.value.find((p) => p.name === "detector")?.value,
-    ],
-    ([target, detector]) => {
-      const detectorParam = parameters.value.find((p) => p.name === "detector");
-      const trackerParam = parameters.value.find((p) => p.name === "tracker");
-      const trackerParamFields = optionalParameters.value.filter(
-        (p) => p.group === "tracker_params"
-      );
-      const confidenceParam = optionalParameters.value.find(
-        (p) => p.name === "confidence_threshold"
-      );
-      const iouParam = optionalParameters.value.find((p) => p.name === "iou");
-
-      if (target === "ball") {
-        detectorParam.items = BALL_OBJECT_TRACKER_DETECTOR_ITEMS;
-        if (!BALL_TARGET_DETECTORS.includes(detector)) {
-          detectorParam.value = "yolo11";
-          return;
-        }
-        // `hidden` (unlike simpleHidden below) also drops the field from submission
-        // (see submitPlugin) -- for "tracker" that's the actual signal the backend uses to
-        // tell ball- from player-tracking runs apart (object_tracker.py:
-        // `"bboxes" if parameters.get("tracker") else "bboxes_ball"`), so this must stay
-        // driven by tracking_target alone and never by experience mode.
-        if (trackerParam) trackerParam.hidden = true;
-        for (const p of trackerParamFields) p.hidden = true;
-
-        if (detector === "rfdetr" && confidenceParam) {
-          confidenceParam.value = BALL_RFDETR_CONFIDENCE_DEFAULT;
-        }
-        if ((detector === "yolo11" || detector === "yolo12") && iouParam) {
-          iouParam.value = BALL_YOLO_IOU_DEFAULT;
-        }
-      } else {
-        detectorParam.items = ALL_OBJECT_TRACKER_DETECTOR_ITEMS;
-        if (trackerParam) trackerParam.hidden = false;
-        for (const p of trackerParamFields) p.hidden = false;
-
-        if (iouParam) iouParam.value = PLAYER_IOU_DEFAULT;
-        if (confidenceParam && detector in DETECTOR_CONFIDENCE_DEFAULT) {
-          confidenceParam.value = DETECTOR_CONFIDENCE_DEFAULT[detector];
-        }
-      }
-    },
-    { immediate: true }
-  );
+  watchObjectTrackerSelection(parameters, optionalParameters);
 
   hideInSimpleMode(parameters, ["fps", "detector", "tracker"]);
 
@@ -1262,7 +1408,7 @@ export function submitPlugin(plugin, parameters, videoId) {
       const detector = parameters.find((p) => p.name === "detector")?.value;
       parameters.splice(targetIndex, 1);
 
-      const classes = OBJECT_TRACKER_CLASSES_BY_TARGET[target]?.[detector];
+      const classes = objectTrackerClasses(target, detector);
       if (classes) {
         parameters.push({ name: "classes", value: classes, group: "detector_params" });
       }
@@ -1280,8 +1426,7 @@ export function submitPlugin(plugin, parameters, videoId) {
   for (const p of parameters) {
     if (p.hidden) continue;
     if (p.group) {
-      grouped[p.group] = grouped[p.group] || {};
-      grouped[p.group][p.name] = p.value;
+      setGroupedValue(grouped, p);
     } else {
       ungrouped.push(p);
     }
