@@ -35,12 +35,10 @@ default_yolox_params = {
 }
 
 # YOLOX-L fine-tuned on SoccerNet-GSR (broadcast football) for one person class, COCO initialisation, multi-scale
-# training 0.8-1.6 at 736x1280 (BGR 0-255 input, tagged in the checkpoint). On the DSHS recordings (tracker/README.md)
-# it beats the RF-DETR SN default: recall 0.91 / precision 0.82 vs. 0.86 / 0.81, and with Deep-EIoU -> GTA-Link it
-# gives the identity numbers of default_deep_eiou_params. API-only (the frontend does not offer it).
+# training 0.8-1.6 at 736x1280 (BGR 0-255 input, tagged in the checkpoint). API-only (the frontend does not offer it).
 default_yolox_sn_player_params = {
     "batch_size": 1,
-    "conf_thresh": 0.35,          # the threshold it was evaluated with
+    "conf_thresh": 0.35,
     "nms_thresh": 0.45,
     "classes": [0],
     "fp16": False,
@@ -63,9 +61,7 @@ default_yolox_sn_player_params = {
 }
 
 # YOLOX-L ball model trained on 560 px tiles of SoccerNet-GSR at native scale: it runs sliced (SAHI) and never on the
-# whole frame, which would show it the ball 2-3x too small. On the DSHS recordings, with the Kalman ball tracker:
-# ball recall 0.62 / 0.53 (tuning / held-out matches) vs. 0.28 / 0.23 for the RF-DETR SN default. 1920x1080 is
-# 5 x 3 tiles per frame. A ball detector (ball_detector: yolox_sn_ball), or the detector of a ball-only run.
+# whole frame, which would show it the ball 2-3x too small. 1920x1080 is 5 x 3 tiles per frame. A ball detector (ball_detector: yolox_sn_ball), or the detector of a ball-only run.
 default_yolox_sn_ball_params = {
     "batch_size": 4,              # tiles per forward pass
     "conf_thresh": 0.1,           # the low confidence floor: the ball tracker gates weak candidates
@@ -200,8 +196,7 @@ default_rtdetr_params = {
 #   2) conservative: [0.5 60 0.75]
 #   3) occlusion-heavy: [0.45 90 0.7]
 # track_buffer counts frames at 30 fps (ByteTrack's convention): the plugin scales it to the decoding rate, so it
-# is a duration (150 = 5 s at any fps). 150 was the best of 30 / 60 / 150 in a ByteTrack re-tune on amateur football
-# recordings (inference_ray plugins/tracker/README.md).
+# is a duration (150 = 5 s at any fps).
 default_bytetrack_params = {
     "track_thresh": 0.45,       # tracking confidence threshold (0.6 = default)
     "track_buffer": 150,        # keep lost tracks this many frames at 30 fps (150 = 5 s)
@@ -251,9 +246,8 @@ default_interpolation_params = {
     "distance_thres": 200,        # ... unless the box centre moves more than this (px) across the gap
 }
 
-# Deep-EIoU (re-implemented, inference_ray plugins/tracker/deep_eiou.py) -> GTA-Link: the best tracker on the DSHS
-# recordings (deep_eiou_gta with OSNet-AIN MS+D+C in both; IDF1 0.59 / 16 IDs small M1, 0.46 / 18 Matches 2-3, on
-# YOLOX-L SN detections). Tracker thresholds are upstream's SportsMOT setting; track_buffer counts frames at 30 fps.
+# Deep-EIoU (re-implemented, inference_ray plugins/tracker/deep_eiou.py) -> GTA-Link, with OSNet-AIN MS+D+C
+# embeddings in both. Tracker thresholds are upstream's SportsMOT setting; track_buffer counts frames at 30 fps.
 default_deep_eiou_params = {
     "track_high_thresh": 0.6,     # first association: detections above this
     "track_low_thresh": 0.1,      # detections at or below are dropped; between low and high: second association
@@ -295,7 +289,7 @@ BALL_DETECTOR_OVERRIDES = {
 }
 BALL_DETECTOR_CHOICES = list(BALL_DETECTOR_OVERRIDES)
 
-# Kalman ball tracker (inference_ray plugins/tracker/ball_tracker.py; the defaults it was tuned with).
+# Kalman ball tracker (inference_ray plugins/tracker/ball_tracker.py).
 # Frame-based values are given at 30 fps and scaled to the decoding rate by the plugin. Below min_fps the ball
 # candidates are written untracked.
 default_kalman_ball_params = {

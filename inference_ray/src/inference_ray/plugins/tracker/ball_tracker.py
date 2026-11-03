@@ -1,9 +1,9 @@
 """
-Single-ball tracker (see tracker/README.md).
+Single-ball tracker.
 
 Integration with SportVid:
 
-* Frame-based parameters are given at ``REFERENCE_FPS`` (30, the rate they were tuned at) and scaled to the
+* Frame-based parameters are given at ``REFERENCE_FPS`` (30) and scaled to the
   decoding rate (``scale_to_fps``): durations in frames by fps / 30, per-frame motion by 30 / fps,
   accelerations by (30 / fps)^2. At 30 fps nothing changes.
 * The caller passes only ball-class detections (``detections``), in frame pixels; there is no class filter here.
@@ -219,9 +219,9 @@ class _Tentative:
         return float(np.mean([r[4] for _, r in self.picks]))
 
 
-REFERENCE_FPS = 30.0      # the rate the defaults are tuned at (DSHS recordings, tracker/README.md)
+REFERENCE_FPS = 30.0      # the rate the frame-based defaults are given at
 
-# the tuned defaults; the backend serializer holds the same values
+# the defaults; the backend serializer holds the same values
 DEFAULTS = {
     "min_conf": 0.10, "init_conf": 0.40, "gate_px": 60.0, "gate_growth_px": 20.0, "max_missed": 15,
     "switch_frames": 3, "max_gap": 10, "outlier_px": 25.0, "corner_dv_px": 5.0, "kick_vel_px": 30.0,

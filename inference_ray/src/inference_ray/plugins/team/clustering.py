@@ -18,10 +18,10 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# the evaluated settings (tracker/README.md); the backend serializer holds the same values
+# the defaults; the backend serializer holds the same values
 DEFAULTS = {
     "clustering_method": "KMEANS",
-    "K": 4,
+    "K": 3,
     "num_teams": 2,
     "min_cluster_size": 3,
     "cluster_selection_epsilon": 0.5,
@@ -29,7 +29,7 @@ DEFAULTS = {
     "pca_components": 16,
     "metric": "euclidean",
     "hsv_only": True,
-    "embedding_only": False,
+    "embedding_only": True,
     "two_channel": True,
     "hist_h_bins": 16,
     "hist_s_bins": 4,
@@ -221,7 +221,7 @@ class TeamClusterer:
             return color
         reid = self._reid_feature(embedding)
         if reid is None:
-            # KMeans keeps the colour weight here, HDBSCAN does not (as evaluated)
+            # KMeans keeps the colour weight here, HDBSCAN does not
             return color * self.color_weight if self.clustering_method == "KMEANS" else color
         merged = np.concatenate([color * self.color_weight, reid * self.reid_weight], axis=0).astype(np.float32)
         merged /= np.linalg.norm(merged) + 1e-12

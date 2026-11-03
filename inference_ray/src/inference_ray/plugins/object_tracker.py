@@ -59,7 +59,7 @@ class ObjectTracker(
     requires=requires,
     provides=provides
 ):
-    """ Detectors -> player tracker + ball tracker -> tracklets, in stages (see tracker/README.md):
+    """ Detectors -> player tracker + ball tracker -> tracklets, in stages:
 
     1. detection over the decoded video: the (player) detector, and the optional ball detector, a second
        detector instance with its own parameters (``ball_detector`` / ``ball_detector_params``); either can run
@@ -178,7 +178,7 @@ class ObjectTracker(
                         if detector is not None:
                             detector.run_inference(detector.preprocess(_frame))
                     if self.tracker:
-                        # every detector reports boxes in frame pixels (detector contract, tracker/README.md)
+                        # every detector reports boxes in frame pixels (detector contract)
                         frame_shape = tuple(int(v) for v in self.detector.frame_shape)
                         # 2) route: ball candidates never reach the player tracker
                         player_dets, _ = split_detections(self.detector.state[-1:], ball_cls_ids)
@@ -200,7 +200,7 @@ class ObjectTracker(
                             )
                 self.update_callbacks(callbacks, progress=0.9)
 
-        # every detector reports boxes in frame pixels (detector contract, tracker/README.md)
+        # every detector reports boxes in frame pixels (detector contract)
         frame_h, frame_w = (int(v) for v in self.detector.frame_shape)
         detections = self.detector.state
 

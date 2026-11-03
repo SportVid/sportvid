@@ -24,3 +24,4 @@ from .floodlight_convert import *
 from .kpi_computation import *
 from .osnet_reid import *
 from .team_clustering import *
+from .pitch_filter import *

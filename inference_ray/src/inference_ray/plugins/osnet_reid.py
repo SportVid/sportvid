@@ -43,7 +43,7 @@ class OSNetReID(
     requires=requires,
     provides=provides
 ):
-    """ Global identities for the player tracks (tracker/README.md):
+    """ Global identities for the player tracks:
 
     1. per decoded frame the player boxes of the tracklets (entity id 0, the ball and untracked detections, and the
        ball rows are left out);

@@ -7,11 +7,9 @@ CLUSTERING_ALGORITHM_CHOICE = ["KMEANS", "HDBSCAN"]
 HDBSCAN_METRIC_CHOICE = ["euclidean", "cosine"]
 
 
-# Defaults are the team stage's evaluated settings (inference_ray plugins/team/clustering.py, tracker/README.md):
-# KMeans into K=4 clusters (two teams + goalkeepers + referees), the two largest are the teams, on the HSV colour
-# of the torso. On labelled player crops of the DSHS recordings the OSNet embeddings separate the teams far better (98-99 % vs. 75 %,
-# KMeans K=2 per crop); `embedding_only: true` clusters on them, pending an end-to-end evaluation.
-# The frontend sends its own values for most of these (usePluginParams.js).
+# Defaults: KMeans into K=3 clusters of the OSNet-AIN embeddings alone; the two largest are the teams and the
+# tracks of the third get no team.
+# The frontend sends its own values for most of these (usePluginParams.js), but not hsv_only / embedding_only.
 @PluginManager.export_serializer("team_clustering")
 class TeamClusteringSeriaizer(serializers.Serializer):
     object_tracker_id = serializers.UUIDField(
@@ -27,7 +25,7 @@ class TeamClusteringSeriaizer(serializers.Serializer):
 
     K = serializers.IntegerField(
         required=False,
-        default=4,
+        default=3,
         min_value=2,
         max_value=16
     )
@@ -67,7 +65,7 @@ class TeamClusteringSeriaizer(serializers.Serializer):
     )
     embedding_only = serializers.BooleanField(
         required=False,
-        default=False
+        default=True
     )
     reid_amp = serializers.BooleanField(
         required=False,
@@ -194,6 +192,13 @@ class TeamClusteringSeriaizer(serializers.Serializer):
         required=False,
         default=True
     )
+    # bystander tracks (pitch_filter marks the tracks off the pitch so) are neither clustered nor written to the
+    # mapping either, so they stay bystanders. Note: a tracker run a team result was merged into carries bystanders
+    # from that result too (its tracks without a team).
+    skip_bystanders = serializers.BooleanField(
+        required=False,
+        default=True
+    )
 
     # NOTE: crop_size_x & crop_size_y need to be set according to the crop size used by the embedding model!
     crop_size_x = serializers.IntegerField(
@@ -235,7 +240,7 @@ class TeamClusteringSeriaizer(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        if attrs.get("clustering_algo", "KMEANS") == "KMEANS" and attrs.get("num_teams", 2) > attrs.get("K", 4):
+        if attrs.get("clustering_algo", "KMEANS") == "KMEANS" and attrs.get("num_teams", 2) > attrs.get("K", 3):
             raise serializers.ValidationError({"num_teams": "num_teams must not exceed K."})
         # the embedding model is a fixed preset: a client never chooses a model file
         attrs["reid_model"] = dict(REID_MODEL)

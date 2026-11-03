@@ -69,7 +69,7 @@ class ReIDEncoder:
         load_reid_weights(model, model_path)
         self.model = model.eval().to(self.device)
         self.feature_dim = int(getattr(self.model, "feature_dim", 512))
-        # fp16 autocast: ~3x faster for the transformers, cosine to fp32 >= 0.99999 (on labelled player crops)
+        # fp16 autocast (CUDA only)
         self.amp = bool(amp) and self.device.startswith("cuda")
         logger.info(f"ReIDEncoder: {model_name} from {model_path} on {self.device} (amp={self.amp}).")
 

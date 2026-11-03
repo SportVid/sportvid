@@ -1,4 +1,4 @@
-"""osnet_reid parameters: the evaluated defaults, the UI's parameter set, the checkpoint following the model."""
+"""osnet_reid parameters: the API defaults, the UI's parameter set, the checkpoint following the model."""
 import uuid
 
 from backend.serializers.osnet_reid import MODEL_CHECKPOINT, OSNetReIdentificationSerializer
@@ -20,7 +20,7 @@ def validate(params):
     return s.validated_data
 
 
-def test_api_defaults_are_the_evaluated_settings():
+def test_api_defaults():
     data = validate({"object_tracker_id": TRACKER_RUN})
     assert data["model_name"] == "osnet_ain_x1_0"
     assert data["checkpoint"] == "/models/reid/osnet_ain_ms_d_c.pth.tar"
