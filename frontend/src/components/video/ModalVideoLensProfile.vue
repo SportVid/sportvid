@@ -26,7 +26,9 @@
 
         <v-row class="mt-4">
           <v-spacer />
-          <v-btn :loading="saving" @click="submit">{{ $t("button.save") }}</v-btn>
+          <v-btn :loading="saving" :disabled="!selection" @click="submit">{{
+            $t("button.save")
+          }}</v-btn>
         </v-row>
       </v-card-text>
     </v-card>
@@ -34,7 +36,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { useVideoStore } from "@/stores/video";
@@ -68,26 +70,15 @@ const videoData = computed(() => videoStore.get(props.video) ?? null);
 
 const saving = ref(false);
 const error = ref(null);
-const selection = ref({ lensProfileId: null, lensCrop: 1.0 });
-
-// Initialised from the video once, by its id -- deliberately not on `videoData`, whose entry is
-// replaced on every refresh of the gallery (the live event stream and its polling fallback both
-// do that while a plugin run is going). Watching the entry re-synced the picker from the stored
-// value and dropped what had just been picked, so saving appeared to do nothing.
-watch(
-  () => props.video,
-  (id) => {
-    const video = videoStore.get(id);
-    selection.value = {
-      lensProfileId: video?.lens_profile_id ?? null,
-      lensCrop: video?.lens_crop ?? 1.0,
-    };
-  },
-  { immediate: true }
-);
+// What the picker reports: it starts out on what the video carries and reports every change
+// afterwards (see LensProfileSelect). Nothing here re-syncs it from the video entry -- that entry
+// is replaced on every refresh of the gallery (the live event stream and its polling fallback
+// both do that while a plugin run is going), which used to throw the user's pick away again and
+// made saving appear to do nothing. Null only until the picker has mounted.
+const selection = ref(null);
 
 const submit = async () => {
-  if (saving.value) return;
+  if (saving.value || !selection.value) return;
   saving.value = true;
   error.value = null;
   try {

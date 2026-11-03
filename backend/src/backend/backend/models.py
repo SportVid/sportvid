@@ -943,6 +943,12 @@ class PointCorrespondence(models.Model):
     active = models.BooleanField(default=False)
     comp_area_coords_rel = models.JSONField(default=list)
     video_coords_rel = models.JSONField(default=list)
+    # The video time (ms) this object was clicked at. An asset may be annotated on several frames --
+    # one row per (object, annotated frame), plus one row with no clicks for an object that was never
+    # placed. Null for assets annotated before frames were recorded, and for those unplaced rows.
+    # All frames' clicks are pooled into one homography fit (tasks/calibration_static_dlt.py), which
+    # only holds for a camera that does not move between the annotated frames.
+    time = models.FloatField(blank=True, null=True)
 
     def to_dict(self):
         return {
@@ -950,7 +956,8 @@ class PointCorrespondence(models.Model):
             "name": self.name,
             "active": self.active,
             "compAreaCoordsRel": self.comp_area_coords_rel,
-            "videoCoordsRel": self.video_coords_rel
+            "videoCoordsRel": self.video_coords_rel,
+            "time": self.time,
         }
 
 

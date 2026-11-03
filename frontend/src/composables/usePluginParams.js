@@ -1,4 +1,4 @@
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePositionDataStore } from "@/stores/position_data";
 import { usePluginRunStore } from "@/stores/plugin_run";
@@ -942,83 +942,116 @@ export function osnetReidParams() {
   return { parameters, optionalParameters };
 }
 
-// Camera calibration is offered as one entry with a method picker in front of it instead of
-// one button per plugin: the picked method *is* the plugin that gets run. `pluginSelect: true`
-// marks that field -- submitPlugin drops it from the payload (the backend serializers don't
-// know it) and the hosts read the plugin to submit out of it via pluginFromParams() below.
 // The two calibration plugins, in the order the rule below prefers them. There is no method
 // picker: which one runs follows from the lens profile picked for the video, and the lens solver
 // falls back to the plain DLT inside the backend task when it cannot solve a lens (see
 // tasks/calibration_lens_solve.py's lens_intrinsics), so there is nothing left to choose.
 export const CALIBRATION_METHODS = ["calibration_static_dlt", "calibration_lens_solve"];
 
-// The plugin a parameter set submits as: the value of its plugin-select field, or `fallback` for
-// parameter sets without one.
-export function pluginFromParams(parameters, fallback) {
-  return parameters.find((p) => p.pluginSelect)?.value || fallback;
-}
-
-// Writes the lens profile a calibrationParams set has picked onto the video, if it differs from
-// what the video carries. The hosts call this right before they submit the run: the backend task
-// reads the profile off the video, so it has to land first. Returns false when it couldn't be
-// saved, which aborts the run rather than quietly calibrating with the old profile.
+// Writes the lens profile a calibrationParams set has picked onto the video. The hosts call this
+// right before they submit the run: the backend task reads the profile off the video, so it has
+// to land first. Returns false when it couldn't be saved, which aborts the run rather than
+// quietly calibrating with the old profile.
 export async function applyLensProfileSelection(parameters, videoId) {
   const field = parameters.find((p) => p.field === "select_lens_profile");
-  if (!field || !videoId) return true;
+  const picked = field?.value ?? null;
+  // No picker in this parameter set, or one that never got as far as reporting a selection (the
+  // video isn't converted yet, so no profile can be assigned): the video keeps what it carries.
+  if (!picked || !videoId) return true;
 
-  const playerStore = usePlayerStore();
-  const lensProfileStore = useLensProfileStore();
-  const video = playerStore.video;
-  const picked = field.value ?? {};
-  const lensProfileId = picked.lensProfileId ?? null;
-  const lensCrop = picked.lensCrop ?? 1.0;
-
-  const sameProfile = (video?.lens_profile_id ?? null) === lensProfileId;
-  const sameCrop = !lensProfileId || (video?.lens_crop ?? 1.0) === lensCrop;
-  if (sameProfile && sameCrop) return true;
-
-  const res = await lensProfileStore.setForVideo({ videoId, lensProfileId, lensCrop });
+  // Written out unconditionally, without comparing against a video entry held in some store
+  // first: that comparison is what used to skip the save whenever the local copy had drifted
+  // (an entry replaced over the live event stream, a profile assigned in the other dialog), and
+  // the run then went out with the previously stored profile. One extra request per run.
+  const res = await useLensProfileStore().setForVideo({
+    videoId,
+    lensProfileId: picked.lensProfileId ?? null,
+    lensCrop: picked.lensCrop ?? 1.0,
+  });
   if (res.status !== "ok") {
     console.error("Could not save the video's lens profile, not starting the calibration:", res);
     return false;
   }
-  // Two stores hold a video: the player's single open one (which the calibration rule reads) and
-  // the gallery's map (which the video overview and its own camera/lens dialog read). The
-  // response is the updated entry, so both are patched -- otherwise the change only shows up
-  // in the dialog it was made in.
+  // Two stores hold a video: the player's single open one and the gallery's map (which the video
+  // overview and its own camera/lens dialog read). The response is the updated entry, so both
+  // are brought up to date -- otherwise the change only shows up in the dialog it was made in.
+  const playerStore = usePlayerStore();
   useVideoStore().upsert(res.entry);
-  await playerStore.fetchVideo({ videoId });
+  if (playerStore.video?.id === res.entry.id) {
+    await playerStore.fetchVideo({ videoId });
+  }
   return true;
 }
 
+// Camera calibration is offered as one entry instead of one button per plugin. Which of the two
+// plugins actually runs is derived state, returned as `plugin` for the hosts to submit with --
+// not a parameter that something writes into: deriving it is what keeps it from going stale
+// against the picked lens profile.
 export function calibrationParams() {
   const { t } = useI18n();
   const pluginRunStore = usePluginRunStore();
   const playerStore = usePlayerStore();
 
+  // Plugins the backend can run right now (deployed Ray plugins); null until the answer is in,
+  // which means "assume everything is there" as everywhere else.
+  const available = ref(null);
+  pluginRunStore.fetchAvailable().then((plugins) => {
+    available.value = plugins;
+  });
+  const canRun = (plugin) => available.value === null || available.value.includes(plugin);
+
+  // The { lensProfileId, lensCrop } the picker has reported, null until it has mounted.
+  const lensProfileSelection = ref(null);
+
+  // Which profile the run will use: what the picker reported, or -- in the moment before it has
+  // -- what the video already carries.
+  const lensProfileId = computed(() =>
+    lensProfileSelection.value
+      ? (lensProfileSelection.value.lensProfileId ?? null)
+      : (playerStore.video?.lens_profile_id ?? null)
+  );
+
+  // The rule: with a lens profile the clicked points are undistorted with it, without one the
+  // lens is solved from the video. Everything the solver needs beyond that (a static camera,
+  // enough landmarks, a pitch model for the sport) is the backend's business -- it falls back to
+  // the plain DLT fit on its own, so the choice here is not second-guessed.
+  const plugin = computed(() =>
+    !lensProfileId.value && canRun("calibration_lens_solve")
+      ? "calibration_lens_solve"
+      : "calibration_static_dlt"
+  );
+
   const parameters = ref([
     {
-      // The video's lens profile: a property of the video, not a plugin parameter, and only
-      // written to the video when the run is started (applyLensProfileSelection above).
+      // The video's lens profile: a property of the video, not a plugin parameter (hence
+      // `uiOnly`), and only written to the video when the run is started
+      // (applyLensProfileSelection above). Backed by the ref so everything derived from it has
+      // one explicit source.
       field: "select_lens_profile",
       name: "lens_profile",
       uiOnly: true,
-      value: { lensProfileId: null, lensCrop: 1.0 },
-    },
-    {
-      // Carries the plugin the run submits as, not a parameter of it -- no field type renders
-      // it, the rule below is the only thing that writes it.
-      field: "plugin_select",
-      name: "method",
-      pluginSelect: true,
-      value: "calibration_static_dlt",
+      get value() {
+        return lensProfileSelection.value;
+      },
+      set value(selection) {
+        lensProfileSelection.value = selection;
+      },
     },
     {
       field: "select_calibration",
       name: "calibration_id",
       value: "",
+      // Which asset is calibrated is the one thing the run cannot be started without (see
+      // ModalPluginRun's hasMissingRequired); the lens profile and the solver's parameters below
+      // are all optional.
+      required: true,
       text: t("modal.plugin.calibration_static_dlt.calibration_id"),
-      hint: t("modal.plugin.calibration_static_dlt.calibration_id_hint"),
+      // Reads which plugin the run would use, so it changes with the picked profile.
+      get hint() {
+        return plugin.value === "calibration_lens_solve"
+          ? t("modal.plugin.calibration_lens_solve.calibration_id_hint")
+          : t("modal.plugin.calibration_static_dlt.calibration_id_hint");
+      },
     },
   ]);
 
@@ -1059,52 +1092,7 @@ export function calibrationParams() {
     },
   ]);
 
-  const field = (name) => parameters.value.find((p) => p.name === name);
-
-  // The picker starts on whatever the video carries and then holds the user's choice until the
-  // run is started -- so it is initialised once per video, NOT on every change of the video
-  // entry. The entry is replaced whenever the video is refetched or pushed in over the live
-  // event stream, and re-syncing on each of those threw the just-picked profile away again, so
-  // the run went out with the previously saved one.
-  let initialisedFor = null;
-  watch(
-    () => playerStore.video?.id,
-    (id) => {
-      if (!id || id === initialisedFor) return;
-      initialisedFor = id;
-      field("lens_profile").value = {
-        lensProfileId: playerStore.video?.lens_profile_id ?? null,
-        lensCrop: playerStore.video?.lens_crop ?? 1.0,
-      };
-    },
-    { immediate: true }
-  );
-
-  // Plugins the backend can run right now (deployed Ray plugins); null until the answer is in,
-  // which means "assume everything is there" as everywhere else.
-  const available = ref(null);
-  pluginRunStore.fetchAvailable().then((plugins) => {
-    available.value = plugins;
-  });
-  const canRun = (plugin) => available.value === null || available.value.includes(plugin);
-
-  // The rule: with a lens profile the clicked points are undistorted with it, without one the
-  // lens is solved from the video. Everything the solver needs beyond that (a static camera,
-  // enough landmarks, a pitch model for the sport) is the backend's business -- it falls back to
-  // the plain DLT fit on its own, so the choice here is not second-guessed.
-  watch(
-    [() => field("lens_profile")?.value?.lensProfileId, available],
-    ([lensProfileId]) => {
-      const lensSolve = !lensProfileId && canRun("calibration_lens_solve");
-      field("method").value = lensSolve ? "calibration_lens_solve" : "calibration_static_dlt";
-      field("calibration_id").hint = lensSolve
-        ? t("modal.plugin.calibration_lens_solve.calibration_id_hint")
-        : t("modal.plugin.calibration_static_dlt.calibration_id_hint");
-    },
-    { immediate: true }
-  );
-
-  return { parameters, optionalParameters };
+  return { parameters, optionalParameters, plugin };
 }
 
 export function kpiComputationParams() {
@@ -1249,10 +1237,9 @@ export function kpiComputationParams() {
 
 export function submitPlugin(plugin, parameters, videoId) {
   const pluginRunStore = usePluginRunStore();
-  // Fields that drive the dialog rather than the plugin never go into the payload: the method
-  // picker selects *which* plugin runs (see calibrationParams), and `uiOnly` fields (the lens
-  // profile block, explanatory notes) carry no parameter at all.
-  parameters = parameters.filter((p) => !p.pluginSelect && !p.uiOnly);
+  // `uiOnly` fields drive the dialog rather than the plugin and never go into the payload (the
+  // lens profile block, explanatory notes) -- they carry no parameter at all.
+  parameters = parameters.filter((p) => !p.uiOnly);
 
   if (plugin === "object_tracker") {
     const targetIndex = parameters.findIndex((p) => p.name === "tracking_target");

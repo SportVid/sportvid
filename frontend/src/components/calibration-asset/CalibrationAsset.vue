@@ -610,36 +610,88 @@
         </v-list>
       </v-menu>
 
+      <!-- The annotated frames. Every frame keeps its own clicks and all of them are fitted into
+           one homography, so this is both the overview ("how many frames, at which time, how many
+           points each") and the way back to them: an entry seeks the player to that frame, which
+           makes it the one being edited. -->
       <v-menu
-        v-if="
-          calibrationAssetStore.timeChangeConflict &&
-          calibrationAssetStore.videoObjectTime !== playerStore.currentTime
-        "
-        open-on-hover
-        :close-delay="200"
+        v-if="calibrationAssetStore.annotatedFrames.length"
         location="top"
+        :close-on-content-click="false"
       >
         <template #activator="{ props }">
-          <v-icon v-bind="props" color="warning" size="small" class="ml-2 mt-1"
-            >mdi-information-outline</v-icon
-          >
-        </template>
-        <div class="time-conflict-menu pa-3 d-flex flex-column align-center">
-          <div>
+          <v-btn v-bind="props" size="small" data-tour="calibration-frames-btn">
             {{
-              $t("calibration_asset.time-conflict", {
-                time: getTimecode(calibrationAssetStore.videoObjectTime ?? 0),
-              })
-            }}
-          </div>
-          <v-btn variant="outlined" size="small" class="mt-2" @click="goToMarkerTime">
-            {{
-              $t("calibration_asset.go_to_marker_time", {
-                time: getTimecode(calibrationAssetStore.videoObjectTime ?? 0),
+              $t("calibration_asset.frames.title", {
+                count: calibrationAssetStore.annotatedFrames.length,
               })
             }}
           </v-btn>
-        </div>
+        </template>
+
+        <v-list class="py-0" density="compact" width="260px">
+          <v-list-item
+            v-for="frame in calibrationAssetStore.annotatedFrames"
+            :key="frame.key"
+            class="menu-item"
+            :class="{ 'frame-active': frame.key === calibrationAssetStore.activeFrameKey }"
+            :disabled="frame.time === null"
+            @click="calibrationAssetStore.goToFrame(frame.key)"
+          >
+            <v-list-item-title class="d-flex align-center">
+              <span>
+                {{
+                  frame.time === null
+                    ? $t("calibration_asset.frames.unknown_time")
+                    : getTimecode(frame.time)
+                }}
+              </span>
+              <!-- Just how many points sit on this frame: the minimum is not a per-frame rule
+                   (see the total below), so there is nothing to measure it against here. -->
+              <span class="text-caption text-medium-emphasis ml-2">
+                {{ $t("calibration_asset.frames.points", { count: frame.count }) }}
+              </span>
+              <v-spacer />
+              <v-icon
+                size="small"
+                color="error"
+                :title="$t('calibration_asset.frames.delete')"
+                @click.stop="calibrationAssetStore.deleteFrame(frame.key)"
+              >
+                mdi-delete-outline
+              </v-icon>
+            </v-list-item-title>
+          </v-list-item>
+
+          <!-- What the minimum is actually about, and the only count that can be measured against
+               it: the different objects placed anywhere. Spelled out rather than hidden in a
+               tooltip, because the per-frame numbers above mean little without it. -->
+          <v-divider />
+          <div class="pa-2">
+            <div
+              class="text-caption"
+              :class="
+                calibrationAssetStore.placedObjectCount < calibrationAssetStore.minPlacedObjects
+                  ? 'text-warning'
+                  : 'text-medium-emphasis'
+              "
+            >
+              {{
+                $t("calibration_asset.frames.distinct", {
+                  count: calibrationAssetStore.placedObjectCount,
+                  required: calibrationAssetStore.minPlacedObjects,
+                })
+              }}
+            </div>
+            <!-- Only while the minimum is not met: once it is, the count alone says it. -->
+            <div
+              v-if="calibrationAssetStore.placedObjectCount < calibrationAssetStore.minPlacedObjects"
+              class="text-caption text-medium-emphasis"
+            >
+              {{ $t("calibration_asset.frames.min_hint") }}
+            </div>
+          </div>
+        </v-list>
       </v-menu>
 
       <div v-if="calibrationAssetStore.isAddingCustomMarker" class="custom-marker-coords-overlay">
@@ -683,27 +735,10 @@
       </div>
     </v-row>
   </v-container>
-
-  <v-snackbar color="accent" v-model="showvideoObjectActionSnackbar">
-    <div class="d-flex flex-column align-center">
-      <div class="d-flex justify-center">
-        <snackbar-icon-warning />
-        <span class="text-h6">{{ videoObjectActionMessage }}</span>
-      </div>
-      <v-btn variant="outlined" class="mt-2" @click="goToMarkerTime">
-        {{
-          $t("calibration_asset.go_to_marker_time", {
-            time: getTimecode(calibrationAssetStore.videoObjectTime ?? 0),
-          })
-        }}
-      </v-btn>
-    </div>
-  </v-snackbar>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
-import { useI18n } from "vue-i18n";
 import { getTimecode } from "@/plugins/time";
 import { useTopViewStore } from "@/stores/top_view";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
@@ -714,8 +749,6 @@ import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCal
 import ModalCalibrationAssetSave from "@/components/calibration-asset/ModalCalibrationAssetSave.vue";
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
 import ModalCalibrationAssetUpdate from "@/components/calibration-asset/ModalCalibrationAssetUpdate.vue";
-
-const { t } = useI18n();
 
 const topViewStore = useTopViewStore();
 const calibrationAssetStore = useCalibrationAssetStore();
@@ -872,6 +905,9 @@ const confirmUnmap = () => {
 const cancelPendingUnmap = () => {
   pendingUnmapId.value = null;
 };
+// Colour means one thing only: this object is placed on the frame on screen. An object placed on
+// another frame looks like an unplaced one here -- which frames carry what is the frame picker's
+// job, and two shades of the same colour would be read as one state, not two.
 const objectColor = (obj) => {
   if (obj.active || calibrationAssetStore.hoveredVideoObject === obj.id) return "white";
   if (isMapped(obj)) return calibrationAssetStore.objectColorMap[obj.id] ?? "#888888";
@@ -947,54 +983,6 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", onFullscreenChange);
-});
-
-watch(
-  () => playerStore.currentTime,
-  (newTime, oldTime) => {
-    if (
-      oldTime === undefined ||
-      newTime === oldTime ||
-      calibrationAssetStore.timeChangeConflict ||
-      !calibrationAssetStore.isAssetEdited
-    )
-      return;
-
-    const hasVideoCoords = calibrationAssetStore.calibrationAssetObjects.some((o) => {
-      const v = o.videoCoordsRel;
-      return v && (v.x !== null || v.y !== null);
-    });
-
-    if (hasVideoCoords) {
-      calibrationAssetStore.timeChangeConflict = true;
-      showvideoObjectActionSnackbar.value = true;
-      calibrationAssetStore.videoObjectTime = oldTime;
-    }
-  }
-);
-
-const showvideoObjectActionSnackbar = ref(false);
-const videoObjectActionMessage = ref("");
-const goToMarkerTime = () => {
-  if (calibrationAssetStore.videoObjectTime !== null) {
-    playerStore.setCurrentTime(calibrationAssetStore.videoObjectTime);
-    if (showvideoObjectActionSnackbar.value) {
-      showvideoObjectActionSnackbar.value = false;
-    }
-  }
-};
-const resetVideoObjectActionSnackbar = async () => {
-  showvideoObjectActionSnackbar.value = false;
-  await nextTick();
-  showvideoObjectActionSnackbar.value = true;
-};
-watch([() => calibrationAssetStore.timeChangeConflict], ([warning]) => {
-  if (warning === true) {
-    videoObjectActionMessage.value = t("modal.calibration_asset.video_marker.warning", {
-      time: getTimecode(calibrationAssetStore.videoObjectTime ?? 0),
-    });
-    resetVideoObjectActionSnackbar();
-  }
 });
 </script>
 
@@ -1077,12 +1065,8 @@ watch([() => calibrationAssetStore.timeChangeConflict], ([warning]) => {
   opacity: 1;
 }
 
-.time-conflict-menu {
-  background-color: rgb(var(--v-theme-accent));
-  color: white;
-  border-radius: 4px;
-  /* font-size: 12px; */
-  width: 500px;
+.frame-active {
+  background-color: rgba(var(--v-theme-primary), 0.12);
 }
 
 ::v-deep(.object-hover-marker):hover {

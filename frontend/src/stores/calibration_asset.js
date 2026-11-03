@@ -1626,20 +1626,117 @@ export const useCalibrationAssetStore = defineStore(
       return map;
     });
 
-    const allAssetObjectsValid = computed(
-      () =>
-        calibrationAssetObjects.value.filter((object) =>
-          object.videoCoordsRel.some((p) => p.x !== null && p.y !== null)
-        ).length >= 4
+    // ----------------------------------------------------------------------------------------
+    // Annotated frames
+    //
+    // The clicks are kept per annotated frame, not on the objects: { [frame key]: { [object id]:
+    // [{x, y, z}, ...] } }. The frame the player sits on is the one being edited (activeFrameKey);
+    // the objects' videoCoordsRel are only a view of it, so everything that draws them keeps
+    // working unchanged. Jumping to another frame therefore no longer overwrites anything -- it
+    // shows that frame's clicks, or an empty frame to annotate.
+    //
+    // The backend pools every frame's clicks into one homography fit (tasks/calibration_static_dlt.py),
+    // so the gain of annotating several frames is coverage: a marker hidden behind a player in one
+    // frame can be placed in another. It assumes the camera does not move between those frames.
+    //
+    // Frame keys are the player's time in whole milliseconds, as a string. UNKNOWN_FRAME holds the
+    // clicks of assets saved before the time was recorded -- there is no frame to jump back to.
+    const UNKNOWN_FRAME = "unknown";
+    const frameKey = (time) =>
+      time === null || time === undefined ? UNKNOWN_FRAME : String(Math.round(time));
+    const frameAnnotations = ref({});
+    const activeFrameKey = ref(UNKNOWN_FRAME);
+
+    const isPlaced = (points) =>
+      Array.isArray(points) && points.some((p) => p && p.x !== null && p.y !== null);
+    // the shape an unplaced object has: one null point per point of its pitch geometry
+    const emptyCoords = (object) =>
+      (object.compAreaCoordsRel?.length ? object.compAreaCoordsRel : [null]).map(() => ({
+        x: null,
+        y: null,
+        z: null,
+      }));
+    const clonePoints = (points) => points.map((p) => ({ ...p }));
+
+    // frames -> objects: the only writer of videoCoordsRel
+    const applyFrameToObjects = () => {
+      const frame = frameAnnotations.value[activeFrameKey.value] ?? {};
+      calibrationAssetObjects.value.forEach((object) => {
+        const points = frame[object.id];
+        object.videoCoordsRel = isPlaced(points) ? clonePoints(points) : emptyCoords(object);
+      });
+    };
+    const setActiveFrame = (key) => {
+      if (activeFrameKey.value === key) return;
+      // Scrubbing between two frames that carry no clicks leaves the objects as they are (already
+      // empty), so playback doesn't rewrite every object on every frame.
+      const touched = frameAnnotations.value[activeFrameKey.value] || frameAnnotations.value[key];
+      activeFrameKey.value = key;
+      if (touched) applyFrameToObjects();
+    };
+    // The frame being edited follows the player: what is shown over the video always belongs to the
+    // frame on screen.
+    watch(
+      () => playerStore.currentTime,
+      (time) => setActiveFrame(frameKey(time))
     );
 
-    const isAddingCustomMarker = ref(false);
+    const writeFrame = (key, objects) => {
+      const frames = { ...frameAnnotations.value };
+      if (objects && Object.keys(objects).length) {
+        frames[key] = objects;
+      } else {
+        delete frames[key];
+      }
+      frameAnnotations.value = frames;
+    };
 
-    const filteredReferenceObjects = computed(() => {
-      return calibrationAssetObjects.value.filter((object) =>
-        object.videoCoordsRel.some((p) => p.x !== null && p.y !== null)
+    // [{ key, time (ms, null when unknown), count }], in video order -- what the frame picker lists
+    const annotatedFrames = computed(() =>
+      Object.entries(frameAnnotations.value)
+        .map(([key, objects]) => ({
+          key,
+          time: key === UNKNOWN_FRAME ? null : Number(key),
+          count: Object.values(objects).filter(isPlaced).length,
+        }))
+        .filter((frame) => frame.count > 0)
+        .sort((a, b) => (a.time ?? -1) - (b.time ?? -1))
+    );
+    // every click of every frame: what the homography is fitted on
+    const placedPointCount = computed(() =>
+      annotatedFrames.value.reduce((sum, frame) => sum + frame.count, 0)
+    );
+    // How many different objects are placed somewhere. This, not the number of clicks, is what the
+    // minimum of 4 is about: a homography needs 4 points in general position, and the same marker
+    // clicked on three frames is still one point on the pitch (it only averages out click noise).
+    const placedObjectCount = computed(() => {
+      const ids = new Set();
+      Object.values(frameAnnotations.value).forEach((objects) =>
+        Object.entries(objects).forEach(([id, points]) => {
+          if (isPlaced(points)) ids.add(String(id));
+        })
       );
+      return ids.size;
     });
+    const goToFrame = (key) => {
+      if (key === UNKNOWN_FRAME) return;
+      // setTargetTime is the one that actually seeks the <video> element (VideoPlayer.vue watches it)
+      playerStore.setTargetTime(Number(key));
+    };
+    const deleteFrame = (key) => {
+      writeFrame(key, null);
+      applyFrameToObjects();
+      isAssetEdited.value = true;
+    };
+
+    // One minimum for both calibration plugins. The plain DLT fit needs 4 points, the lens solver 6,
+    // and which of the two runs is derived from the video's lens profile rather than picked -- so the
+    // UI asks for the higher number throughout and the choice can never fall short. The backend keeps
+    // its own, truthful minimum per plugin (4 / 6), which is what lets older 4-point assets still run.
+    const MIN_PLACED_OBJECTS = 6;
+    const allAssetObjectsValid = computed(() => placedObjectCount.value >= MIN_PLACED_OBJECTS);
+
+    const isAddingCustomMarker = ref(false);
 
     const isAnyReferenceObjectActive = computed(() =>
       calibrationAssetObjects.value.some((object) => object.active)
@@ -1699,6 +1796,14 @@ export const useCalibrationAssetStore = defineStore(
     };
     const deleteCustomMarker = (id) => {
       calibrationAssetObjects.value = calibrationAssetObjects.value.filter((m) => m.id !== id);
+      // the object is gone from the pitch, so its clicks go with it -- on every frame
+      const frames = {};
+      Object.entries(frameAnnotations.value).forEach(([key, objects]) => {
+        const rest = { ...objects };
+        delete rest[id];
+        if (Object.keys(rest).length) frames[key] = rest;
+      });
+      frameAnnotations.value = frames;
     };
     const placeCustomMarkerByCoords = (relX, relY) => {
       const lastObject = calibrationAssetObjects.value[calibrationAssetObjects.value.length - 1];
@@ -1707,15 +1812,17 @@ export const useCalibrationAssetStore = defineStore(
       }
       isAddingCustomMarker.value = false;
     };
+    // Takes the object's click off the frame on screen; its clicks on other frames stay.
     const unmapObject = (id) => {
-      const obj = calibrationAssetObjects.value.find((o) => o.id === id);
-      if (!obj) return;
-      obj.videoCoordsRel = obj.videoCoordsRel.map(() => ({ x: null, y: null, z: null }));
+      const frame = frameAnnotations.value[activeFrameKey.value];
+      if (!frame || !frame[id]) return;
+      const rest = { ...frame };
+      delete rest[id];
+      writeFrame(activeFrameKey.value, rest);
+      applyFrameToObjects();
       isAssetEdited.value = true;
     };
 
-    const timeChangeConflict = ref(false);
-    const videoObjectTime = ref(null);
     const isAssetEdited = ref(false);
 
     const showVideoAsset = ref(false);
@@ -1727,15 +1834,20 @@ export const useCalibrationAssetStore = defineStore(
       );
     });
 
+    // Places the active object on the frame the player is on, which becomes the frame being edited.
     const setVideoObject = (coords) => {
       const activeObject = calibrationAssetObjects.value.find((m) => m.active);
       if (!activeObject) return;
 
-      activeObject.videoCoordsRel = coords.map((p) => ({
+      const points = coords.map((p) => ({
         x: p.x ?? null,
         y: p.y ?? null,
         z: p.z ?? null,
       }));
+      const key = frameKey(playerStore.currentTime);
+      writeFrame(key, { ...(frameAnnotations.value[key] ?? {}), [activeObject.id]: points });
+      activeFrameKey.value = key;
+      applyFrameToObjects();
       isAssetEdited.value = true;
       activeObject.active = false;
     };
@@ -1754,6 +1866,8 @@ export const useCalibrationAssetStore = defineStore(
       topViewStore.onSportChange(sport);
       calibrationSport.value = topViewStore.currentSport.key;
       calibrationAssetObjects.value = JSON.parse(JSON.stringify(currentTemplate.value));
+      frameAnnotations.value = {};
+      activeFrameKey.value = frameKey(playerStore.currentTime);
 
       calibrationAssetId.value = null;
       calibrationMatrixPersisted.value = [];
@@ -1800,13 +1914,59 @@ export const useCalibrationAssetStore = defineStore(
         return false;
       }
     };
+    // The backend stores one row per object and annotated frame (plus one click-less row for an
+    // object that was never placed), so loading splits them back into the pitch objects -- one per
+    // name -- and the per-frame clicks.
+    const readObjectData = (rows) => {
+      const objects = [];
+      const byName = new Map();
+      const frames = {};
+      (rows ?? []).forEach((row) => {
+        let object = byName.get(row.name);
+        if (!object) {
+          object = {
+            id: row.id,
+            name: row.name,
+            active: false,
+            compAreaCoordsRel: row.compAreaCoordsRel,
+            videoCoordsRel: emptyCoords(row),
+          };
+          byName.set(row.name, object);
+          objects.push(object);
+        }
+        if (!isPlaced(row.videoCoordsRel)) return;
+        const key = frameKey(row.time);
+        frames[key] = { ...(frames[key] ?? {}), [object.id]: clonePoints(row.videoCoordsRel) };
+      });
+      calibrationAssetObjects.value = objects;
+      frameAnnotations.value = frames;
+      // show the frame the player is on; its clicks if it has some, an empty one to annotate if not
+      activeFrameKey.value = frameKey(playerStore.currentTime);
+      applyFrameToObjects();
+    };
+    // The payload of a save: the pitch objects spread back out over the frames they were clicked on.
+    const writeObjectData = () =>
+      calibrationAssetObjects.value.flatMap((object) => {
+        const base = {
+          name: object.name,
+          active: false,
+          compAreaCoordsRel: object.compAreaCoordsRel,
+        };
+        const rows = annotatedFrames.value
+          .map((frame) => [frame, frameAnnotations.value[frame.key]?.[object.id]])
+          .filter(([, points]) => isPlaced(points))
+          .map(([frame, points]) => ({ ...base, time: frame.time, videoCoordsRel: points }));
+        // an object nobody placed is still part of the asset (the custom markers above all)
+        return rows.length ? rows : [{ ...base, time: null, videoCoordsRel: emptyCoords(object) }];
+      });
+
     const loadCalibrationAsset = (id) => {
       const calibrationAsset = calibrationAssetsList.value.find((asset) => asset.id === id);
       if (calibrationAsset) {
         calibrationAssetType.value = calibrationAsset.object_type;
         topViewStore.onSportChange(calibrationAsset.sport);
         calibrationSport.value = topViewStore.currentSport.key;
-        calibrationAssetObjects.value = calibrationAsset.object_data;
+        readObjectData(calibrationAsset.object_data);
 
         calibrationAssetId.value = id;
         calibrationMatrixPersisted.value = [];
@@ -1819,7 +1979,7 @@ export const useCalibrationAssetStore = defineStore(
         name: name,
         sport: sport,
         object_type: objectType,
-        object_data: [...calibrationAssetObjects.value],
+        object_data: writeObjectData(),
         video_id: playerStore.videoId,
       };
 
@@ -1828,7 +1988,6 @@ export const useCalibrationAssetStore = defineStore(
         if (res.data.status === "ok") {
           calibrationAssetSaveSuccess.value = true;
           isAssetEdited.value = false;
-          timeChangeConflict.value = false;
           loadCalibrationAssetsList();
         }
       } finally {
@@ -1843,7 +2002,7 @@ export const useCalibrationAssetStore = defineStore(
         name: name,
         sport: sport,
         object_type: objectType,
-        object_data: [...calibrationAssetObjects.value],
+        object_data: writeObjectData(),
         video_id: playerStore.videoId,
       };
       try {
@@ -1851,7 +2010,6 @@ export const useCalibrationAssetStore = defineStore(
         if (res.data.status === "ok") {
           calibrationAssetUpdateSuccess.value = true;
           isAssetEdited.value = false;
-          timeChangeConflict.value = false;
           loadCalibrationAssetsList();
         }
       } finally {
@@ -1876,11 +2034,11 @@ export const useCalibrationAssetStore = defineStore(
     const resetCalibrationAsset = () => {
       calibrationMode.value = false;
       calibrationAssetObjects.value = [];
+      frameAnnotations.value = {};
+      activeFrameKey.value = UNKNOWN_FRAME;
       calibrationAssetId.value = null;
       calibrationMatrixPersisted.value = [];
       isAssetEdited.value = false;
-      timeChangeConflict.value = false;
-      videoObjectTime.value = null;
       showVideoAsset.value = false;
     };
 
@@ -1970,9 +2128,11 @@ export const useCalibrationAssetStore = defineStore(
     const pitchOverlay = computed(() => calibrationOverlay.value.markings);
     // per clicked object: where the calibration puts it in the video ([{x, y}, ...])
     const videoObjectReprojection = computed(() => {
-      const clicked = new Set(filteredVideoObject.value.map((o) => o.id));
+      // matched by name, not by id: the ids of the objects in the store are the template's until the
+      // asset has been saved and loaded back, while the names are the same on both sides
+      const clicked = new Set(filteredVideoObject.value.map((o) => o.name));
       return calibrationOverlay.value.objects
-        .filter((o) => clicked.has(o.id))
+        .filter((o) => clicked.has(o.name))
         .map((o) => o.points.filter((p) => p !== null).map(([x, y]) => ({ x, y })))
         .filter((points) => points.length);
     });
@@ -2016,7 +2176,6 @@ export const useCalibrationAssetStore = defineStore(
       calibrationAssetObjects,
       currentTemplate,
       allAssetObjectsValid,
-      filteredReferenceObjects,
       filteredVideoObject,
       toggleObject,
       isAnyReferenceObjectActive,
@@ -2058,8 +2217,13 @@ export const useCalibrationAssetStore = defineStore(
       calibrationAssetSaveSuccess,
       calibrationAssetUpdateSuccess,
       calibrationAssetDeleteSuccess,
-      timeChangeConflict,
-      videoObjectTime,
+      annotatedFrames,
+      activeFrameKey,
+      placedPointCount,
+      placedObjectCount,
+      minPlacedObjects: MIN_PLACED_OBJECTS,
+      goToFrame,
+      deleteFrame,
       isAssetEdited,
       calibrationAssetType,
       setCalibrationAssetType,
@@ -2072,6 +2236,8 @@ export const useCalibrationAssetStore = defineStore(
         "calibrationSport",
         "calibrationAssetType",
         "calibrationAssetObjects",
+        "frameAnnotations",
+        "activeFrameKey",
         "calibrationMatrixPersisted",
         "calibrationAssetId",
         "showPitchOverlay",

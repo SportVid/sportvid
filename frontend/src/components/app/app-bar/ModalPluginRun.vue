@@ -41,7 +41,7 @@
 
         <v-row class="mt-4">
           <v-spacer />
-          <v-btn :data-tour="runButtonDataTour" @click="run">
+          <v-btn :data-tour="runButtonDataTour" :disabled="hasMissingRequired" @click="run">
             {{ $t("button.run_plugin") }}
           </v-btn>
         </v-row>
@@ -55,11 +55,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { useUserStore } from "@/stores/user";
-import {
-  applyLensProfileSelection,
-  pluginFromParams,
-  submitPlugin,
-} from "@/composables/usePluginParams";
+import { applyLensProfileSelection, submitPlugin } from "@/composables/usePluginParams";
 import { useCalibrationCreateFlow } from "@/composables/useCalibrationCreateFlow";
 import Parameters from "./Parameters.vue";
 import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
@@ -100,19 +96,30 @@ watch(
   }
 );
 
-const { parameters, optionalParameters } = props.paramsFactory();
+const { parameters, optionalParameters, plugin: derivedPlugin } = props.paramsFactory();
 
 const { showCalibrationCreate, onCreateCalibration, onSelectCalibration } =
   useCalibrationCreateFlow(dialog);
 
-// A params factory can carry the plugin to run among its parameters (calibrationParams derives
-// it from the video's lens profile) -- the `plugin` prop is then the fallback for the moment
-// before that field has a value.
+// A params factory can derive the plugin to run itself (calibrationParams does, from the video's
+// lens profile) and hand it back as a computed; for every other factory the `plugin` prop says
+// what runs.
 const allParams = computed(() => [...parameters.value, ...optionalParameters.value]);
 const visibleOptionalParameters = computed(
   () => optionalParameters.value?.filter((p) => !p.hidden && !p.simpleHidden) ?? []
 );
-const activePlugin = computed(() => pluginFromParams(allParams.value, props.plugin));
+const activePlugin = computed(() => derivedPlugin?.value ?? props.plugin);
+
+// A parameter marked `required` has to carry a value before the run can be started: the
+// calibration asset is that case -- a calibration run without one fails in the backend, while
+// every other field of a parameter set has a usable default. `hidden` parameters are left out of
+// the check for the same reason submitPlugin drops them from the payload: they are not
+// applicable to the current selection.
+const hasMissingRequired = computed(() =>
+  allParams.value.some(
+    (p) => p.required && !p.hidden && (p.value === null || p.value === undefined || p.value === "")
+  )
+);
 
 const run = async () => {
   // A lens profile picked in this dialog is a property of the video and has to be saved before

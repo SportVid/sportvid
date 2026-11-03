@@ -109,11 +109,15 @@ class CalibrationLensSolve(CalibrationStaticDlt):
             logger.warning(
                 f"Video {video_db.id}: camera motion is '{motion}', the lens solver assumes a static camera"
             )
-        if len(keypoints) < self.MIN_KEYPOINTS:
+        # Several annotated frames can carry the same keypoint more than once; those repeats are extra
+        # observations of one pitch point, so the minimum counts the different keypoints.
+        distinct_keypoints = {k["name"] for k in keypoints}
+        if len(distinct_keypoints) < self.MIN_KEYPOINTS:
             raise TaskFailure(
                 "not_enough_keypoints",
-                f"The lens solver needs at least {self.MIN_KEYPOINTS} clicked soccer keypoints, got {len(keypoints)}",
-                count=len(keypoints),
+                f"The lens solver needs at least {self.MIN_KEYPOINTS} different clicked soccer keypoints, "
+                f"got {len(distinct_keypoints)} ({len(keypoints)} click(s) in total)",
+                count=len(distinct_keypoints),
                 required=self.MIN_KEYPOINTS,
             )
 

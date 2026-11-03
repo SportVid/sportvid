@@ -44,8 +44,8 @@
                   </v-btn>
 
                   <!-- One entry for camera calibration; which plugin runs (DLT+RANSAC vs.
-                       lens self-calibration) is picked as the first parameter inside the
-                       modal, see calibrationParams. -->
+                       lens self-calibration) follows from the lens profile picked inside
+                       the modal, see calibrationParams. -->
                   <v-btn data-tour="posdata-generate-dlt" @click="showDltModal = true">
                     {{ $t("position_data.generate.calibration") }}
                   </v-btn>

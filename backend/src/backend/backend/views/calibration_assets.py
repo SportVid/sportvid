@@ -54,7 +54,8 @@ class CalibrationAssetsCreate(ApiView):
                         name=obj.get("name"),
                         active=obj.get("active"),
                         comp_area_coords_rel=obj.get("compAreaCoordsRel"),
-                        video_coords_rel=obj.get("videoCoordsRel")
+                        video_coords_rel=obj.get("videoCoordsRel"),
+                        time=obj.get("time"),
                     )
 
         return JsonResponse({"status": "ok", "entry": data_db.to_dict()})
@@ -82,7 +83,8 @@ class CalibrationAssetsChange(ApiView):
                         name=obj.get("name"),
                         active=obj.get("active"),
                         comp_area_coords_rel=obj.get("compAreaCoordsRel"),
-                        video_coords_rel=obj.get("videoCoordsRel")
+                        video_coords_rel=obj.get("videoCoordsRel"),
+                        time=obj.get("time"),
                     )
                 # the marker set changed, so any previously computed
                 # homography no longer corresponds to it -- invalidate the
@@ -202,7 +204,14 @@ class CalibrationAssetsOverlay(ApiView):
             clicks = _clicked_points(calibration_assets)
             markings = project_polylines(pitch_markings(sport, field_length, field_width), H, lens, clicks)
             objects = []
+            seen = set()
             for obj in calibration_assets.object_data.all():
+                # An object annotated on several frames has one row per frame, but they all share the
+                # pitch position this projects, so it is reported once (keyed by name, as the frontend
+                # matches it).
+                if obj.name in seen:
+                    continue
+                seen.add(obj.name)
                 _, positions = object_pitch_positions(
                     sport, calibration_assets.object_type, obj.name, obj.comp_area_coords_rel or [],
                     field_length, field_width,

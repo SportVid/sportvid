@@ -21,6 +21,14 @@ export const useLensProfileStore = defineStore("lens_profile", () => {
   // assignment doesn't require browsing to its brand first
   const byId = ref({});
 
+  // The browsing state of whichever picker is currently open. Cleared when one starts so a
+  // previous picker's results -- fetched for another video, whose resolution decides the
+  // per-video fields, or for another brand -- can never be read as the current one's.
+  const reset = () => {
+    models.value = [];
+    profiles.value = [];
+  };
+
   const fetchBrands = async () => {
     try {
       const res = await axios.get(`${config.API_LOCATION}/lens_profile/brands`);
@@ -124,6 +132,7 @@ export const useLensProfileStore = defineStore("lens_profile", () => {
     models,
     profiles,
     byId,
+    reset,
     fetchBrands,
     fetchModels,
     fetchProfiles,

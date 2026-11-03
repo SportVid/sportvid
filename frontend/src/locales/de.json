@@ -216,7 +216,14 @@
       "delete_ref_marker": "Referenzmarker löschen"
     },
     "view_pitch_overlay": "Spielfeldlinien anzeigen",
-    "go_to_marker_time": "Zurück zu {time}"
+    "frames": {
+      "title": "Markierte Frames ({count})",
+      "points": "{count} Pkt.",
+      "distinct": "{count} / {required} verschiedene Marker gesetzt",
+      "min_hint": "Die Punkte aller Frames werden gemeinsam gefittet, derselbe Marker auf mehreren Frames zählt einmal -- Wiederholungen mitteln nur den Klickfehler.",
+      "unknown_time": "Zeit nicht gespeichert",
+      "delete": "Punkte dieses Frames entfernen"
+    }
   },
   "position_data": {
     "not_selected": "Keine Positionsdaten vorhanden.",

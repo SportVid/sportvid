@@ -259,8 +259,14 @@
       "view_vid_segments": "View video segments"
     },
     "view_pitch_overlay": "View pitch lines",
-    "time-conflict": "Video markers were set at {time}. Adding a new marker on another timestamp will overwrite the existing ones.",
-    "go_to_marker_time": "Go back to {time}"
+    "frames": {
+      "title": "Marked frames ({count})",
+      "points": "{count} pts",
+      "distinct": "{count} / {required} different markers placed",
+      "min_hint": "The points of all frames are fitted together, and the same marker placed on several frames counts once -- repeats only average out the click error.",
+      "unknown_time": "Time not recorded",
+      "delete": "Remove this frame's points"
+    }
   },
   "position_data": {
     "not_selected": "No position data available yet.",
@@ -1346,9 +1352,6 @@
       },
       "delete": {
         "success": "Calibration Asset successfully deleted"
-      },
-      "video_marker": {
-        "warning": "Attention: Video markers were set at {time}. Adding a new marker will overwrite the existing ones."
       }
     },
     "position_data": {

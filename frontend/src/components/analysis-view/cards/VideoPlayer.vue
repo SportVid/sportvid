@@ -406,7 +406,13 @@
                  on), so the menu is swapped out wholesale. These two used to live in the
                  calibration card's "Marker" menu on the top-view side. -->
             <template v-if="calibrationAssetStore.calibrationMode">
-              <v-list-item class="menu-item" @click="calibrationAssetStore.toggleVideoAsset()">
+              <!-- Nothing has been clicked yet, so there is no overlay to switch on -- disabled
+                   for the same reason as the pitch lines below without a calibration. -->
+              <v-list-item
+                class="menu-item"
+                :disabled="!calibrationAssetStore.placedObjectCount"
+                @click="calibrationAssetStore.toggleVideoAsset()"
+              >
                 <v-list-item-title class="d-flex justify-space-between">
                   {{
                     calibrationAssetStore.calibrationAssetType === "marker"
@@ -415,7 +421,9 @@
                   }}
                   <tab-window-icon
                     :class="{
-                      'text-disabled': !calibrationAssetStore.showVideoAsset,
+                      'text-disabled':
+                        !calibrationAssetStore.showVideoAsset ||
+                        !calibrationAssetStore.placedObjectCount,
                       'text-red': calibrationAssetStore.showVideoAsset,
                     }"
                   >

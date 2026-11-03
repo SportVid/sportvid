@@ -75,6 +75,24 @@ class CalibrationStaticDlt(Task):
         field_width = (video_db.field_width if video_db else None) or 68.0
         sport = normalize_sport(data_db.sport, video_db.sport if video_db else None)
 
+        # The asset may be annotated on several frames (one row per object and frame). All of them are
+        # fitted into a single homography, so a marker hidden behind a player in one frame can simply be
+        # placed in another. That pooling assumes the camera stands still between the annotated frames --
+        # with a pan or a zoom in between, every frame would need its own homography.
+        annotated_times = sorted({p.time for p in point_correspondences if p.time is not None})
+        if len(annotated_times) > 1:
+            motion = video_db.camera_motion if video_db else None
+            logging.info(
+                f"Calibration asset {data_db.id}: {len(point_correspondences)} point(s) clicked on "
+                f"{len(annotated_times)} frame(s) ({', '.join(f'{t:.0f} ms' for t in annotated_times)})"
+            )
+            if motion in (Video.CAMERA_MOTION_PAN, Video.CAMERA_MOTION_ZOOM, Video.CAMERA_MOTION_PAN_ZOOM):
+                logging.warning(
+                    f"Calibration asset {data_db.id}: the points of {len(annotated_times)} frames are fitted "
+                    f"into one homography, but the camera is classified as '{motion}' -- if it moved between "
+                    f"those frames, the fit mixes incompatible views"
+                )
+
         # convert point correspondences; markers get their metric position on this pitch by name (the
         # template's relative position is only right on a pitch of the template's reference size)
         point_correspondences_dict = []
@@ -97,6 +115,20 @@ class CalibrationStaticDlt(Task):
                     "y": point.video_coords_rel[0]["y"]
                 }
             })
+        # With several annotated frames the same marker can be clicked more than once. Those repeats
+        # average out click noise, but they are one point on the pitch -- a homography needs 4 of them
+        # in general position, so that is what the minimum counts.
+        distinct_positions = {
+            (round(p["dst"]["x"], 9), round(p["dst"]["y"], 9)) for p in point_correspondences_dict
+        }
+        if len(distinct_positions) < 4:
+            raise TaskFailure(
+                "not_enough_distinct_points",
+                f"The calibration needs placed points at 4 different pitch positions, got "
+                f"{len(distinct_positions)} ({len(point_correspondences_dict)} click(s) in total)",
+                count=len(distinct_positions),
+                required=4,
+            )
         logging.info(
             f"Calibration asset {data_db.id}: {len(keypoints)}/{len(point_correspondences_dict)} point(s) placed by the "
             f"{sport or 'unknown'} pitch model on {field_length} x {field_width} m, the rest by template position"

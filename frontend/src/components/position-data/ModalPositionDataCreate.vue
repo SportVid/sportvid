@@ -157,7 +157,6 @@ import {
   objectTrackerParams,
   teamClusteringParams,
   osnetReidParams,
-  pluginFromParams,
   submitPlugin,
 } from "@/composables/usePluginParams";
 import LensProfileSelect from "@/components/video/LensProfileSelect.vue";
@@ -200,8 +199,11 @@ const { showCalibrationCreate, onCreateCalibration, onSelectCalibration } =
 // auto-unwraps it -- a nested `dlt.parameters` access in the template stays a Ref object
 // instead of the array Parameters.vue expects (see the "$props.parameters.filter is not a
 // function" crash this used to cause).
-const { parameters: dltParameters, optionalParameters: dltOptionalParameters } =
-  calibrationParams();
+const {
+  parameters: dltParameters,
+  optionalParameters: dltOptionalParameters,
+  plugin: dltPlugin,
+} = calibrationParams();
 // Writable so the split-out v-selects below (see template) can drive the same underlying
 // dltParameters fields the calibration run reads from -- same values, just no longer rendered
 // together with the create/select-for-editing buttons above them.
@@ -215,7 +217,7 @@ const calibrationId = computed({
 });
 // This modal lays its fields out itself instead of rendering <Parameters>, so the lens-profile
 // field of the shared params set is bound by hand -- same field, same effect on which
-// calibration plugin the run below uses.
+// calibration plugin (dltPlugin) the run below uses.
 const lensProfile = computed({
   get: () => dltField("lens_profile")?.value,
   set: (value) => {
@@ -302,11 +304,7 @@ const runPlugins = async () => {
   // from there, and it decides which calibration plugin runs.
   const calibrationRunParams = [...dltParameters.value, ...dltOptionalParameters.value];
   if (!(await applyLensProfileSelection(calibrationRunParams, props.videoId))) return;
-  submitPlugin(
-    pluginFromParams(calibrationRunParams, "calibration_static_dlt"),
-    calibrationRunParams,
-    props.videoId
-  );
+  submitPlugin(dltPlugin.value, calibrationRunParams, props.videoId);
 
   if (ballTracking.value) {
     submitObjectTracker(ballTrackerParams);
