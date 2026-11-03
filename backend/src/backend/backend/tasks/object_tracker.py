@@ -16,6 +16,8 @@ from django.conf import settings
 
 @PluginManager.export_plugin("object_tracker")
 class ObjectTracker(Task):
+    ray_plugins = ("object_tracker",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

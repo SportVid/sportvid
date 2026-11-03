@@ -2,7 +2,6 @@ FROM python:3.10-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-# NOTE: better disable post-install .pyc compilation
 ENV UV_COMPILE_BYTECODE=0
 ENV UV_LINK_MODE=copy
 
@@ -17,14 +16,20 @@ RUN apt-get update && apt-get install -y \
 
 COPY uv.lock pyproject.toml .python-version /app/
 
+# every workspace member backend depends on (backend -> analyser -> inference_ray -> packages/*);
+# the analyser service runs from this image too
 COPY packages/data /app/packages/data
 COPY packages/interface /app/packages/interface
 COPY packages/utils /app/packages/utils
+COPY analyser/pyproject.toml analyser/README.md /app/analyser/
+COPY analyser/src /app/analyser/src
+COPY inference_ray/pyproject.toml inference_ray/README.md /app/inference_ray/
+COPY inference_ray/src /app/inference_ray/src
 COPY backend /app/backend
 
 
-ARG UID=1003
-ARG GID=1003
+ARG UID=1000
+ARG GID=1000
 RUN groupadd -g ${GID} appuser && \
     useradd -m -u ${UID} -g ${GID} -s /bin/bash appuser
 
@@ -39,8 +44,10 @@ USER appuser
 # COPY packages/utils/pyproject.toml /app/packages/utils/pyproject.toml
 # COPY backend/pyproject.toml /app/backend/pyproject.toml
 
+# Installs the workspace packages editable, pointing at /app/...: the compose files bind-mount the
+# current sources there, so containers start with `uv run --no-sync` and never build at startup.
 RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=${UID},gid=${GID} \
-    uv sync --frozen --no-dev --no-install-workspace --package backend
+    uv sync --frozen --no-dev --package backend
 
 # Copy only the source actually needed by backend
 

@@ -51,3 +51,9 @@ interface = { workspace = true }
 data = { workspace = true }
 utils = { workspace = true }
 analyser = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-django>=4.14.0",
+]

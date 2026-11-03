@@ -1,0 +1,154 @@
+import json
+import logging
+from typing import Dict, List, Optional
+
+from backend.models import PluginRun, Video
+from backend.plugin_manager import PluginManager
+from backend.utils.lens import angular_snapshot
+from backend.utils.pitch import soccer_fits
+from backend.utils.task import TaskFailure
+from .calibration_static_dlt import CalibrationStaticDlt
+from ..utils.analyser_client import TaskAnalyserClient
+
+
+logger = logging.getLogger(__name__)
+
+# solver parameters passed through to the calibration_lens_solve analyser plugin when set
+SOLVER_PARAMETERS = ("num_frames", "rounds", "poly_degree", "outlier_px", "first_round_outlier_px")
+
+
+@PluginManager.export_plugin("calibration_lens_solve")
+class CalibrationLensSolve(CalibrationStaticDlt):
+    """The static DLT calibration with a lens self-calibrated from the same clicks and the painted pitch markings,
+    instead of a lens profile (inference_ray/calib, a prior-free distortion solver).
+
+    Wants a soccer calibration asset of markers on a static camera: the markings are detected in frames sampled
+    across the video. The lens is stored on the calibration asset (``lens_intrinsics``, model ``angular``) and the
+    homography is fitted on the clicks undistorted with it. The video's lens profile is not used.
+
+    Whatever the solver needs and doesn't get, the run still produces a calibration: a lens that cannot be solved
+    falls back to the inherited one (the video's lens profile, or none at all), i.e. to a plain DLT+RANSAC fit.
+    That is what lets the frontend pick this plugin for every video without a lens profile -- as long as the video
+    is classified as a static camera (``camera_motion``, see usePluginParams.js calibrationParams); the
+    ``camera_not_static`` check below is the backstop for runs started some other way.
+    """
+
+    dlt_progress_range = (0.9, 1.0)
+    MIN_KEYPOINTS = 6
+
+    # the lens solve runs first, then the inherited homography fit
+    ray_plugins = ("calibration_lens_solve", "calibration_static_dlt")
+
+    def __call__(self, parameters: Dict, **kwargs):
+        self.solver_parameters = {k: parameters[k] for k in SOLVER_PARAMETERS if parameters.get(k) is not None}
+        return super().__call__(parameters, **kwargs)
+
+    def lens_intrinsics(
+        self,
+        client: TaskAnalyserClient,
+        video_db: Optional[Video],
+        keypoints: List[Dict],
+        field_length: float,
+        field_width: float,
+        sport: Optional[str],
+        plugin_run: Optional[PluginRun],
+    ) -> Optional[Dict]:
+        """The lens solved from the video, or the inherited one when it can't be solved (see the class docstring).
+
+        The fallback is not recorded as a failure reason: the run succeeds, and whether a lens was solved is
+        visible on the calibration asset itself (``lens_intrinsics`` carries the solver's log, or is null).
+        """
+        try:
+            return self.solve_lens(client, video_db, keypoints, field_length, field_width, sport, plugin_run)
+        except TaskFailure as failure:
+            logger.warning(
+                f"Calibration of video {video_db.id if video_db else None}: the lens solver was skipped "
+                f"({failure.type}: {failure.message}), falling back to a fit without a solved lens"
+            )
+        except Exception:
+            logger.exception(
+                f"Calibration of video {video_db.id if video_db else None}: the lens solver failed, falling "
+                f"back to a fit without a solved lens"
+            )
+        return super().lens_intrinsics(
+            client, video_db, keypoints, field_length, field_width, sport, plugin_run
+        )
+
+    def solve_lens(
+        self,
+        client: TaskAnalyserClient,
+        video_db: Optional[Video],
+        keypoints: List[Dict],
+        field_length: float,
+        field_width: float,
+        sport: Optional[str],
+        plugin_run: Optional[PluginRun],
+    ) -> Optional[Dict]:
+        """The lens solved from the clicks and the painted markings; raises TaskFailure when it can't be."""
+        if video_db is None or not video_db.width or not video_db.height:
+            raise TaskFailure(
+                "video_resolution_unknown", "The lens solver needs the calibration asset's video and its resolution"
+            )
+        if sport != "soccer":
+            raise TaskFailure(
+                "unsupported_sport", f"The lens solver only supports soccer pitches, not '{sport}'", sport=sport
+            )
+        if not soccer_fits(field_length, field_width):
+            raise TaskFailure(
+                "pitch_too_small",
+                f"A {field_length} x {field_width} m pitch is too small for the standard markings the solver fits",
+                field_length=field_length,
+                field_width=field_width,
+            )
+        motion = video_db.camera_motion
+        if motion in (Video.CAMERA_MOTION_PAN, Video.CAMERA_MOTION_ZOOM, Video.CAMERA_MOTION_PAN_ZOOM):
+            raise TaskFailure(
+                "camera_not_static",
+                f"The lens solver needs a static camera, the video was classified as '{motion}'",
+                camera_motion=motion,
+            )
+        if motion != Video.CAMERA_MOTION_STATIC:
+            logger.warning(
+                f"Video {video_db.id}: camera motion is '{motion}', the lens solver assumes a static camera"
+            )
+        # Several annotated frames can carry the same keypoint more than once; those repeats are extra
+        # observations of one pitch point, so the minimum counts the different keypoints.
+        distinct_keypoints = {k["name"] for k in keypoints}
+        if len(distinct_keypoints) < self.MIN_KEYPOINTS:
+            raise TaskFailure(
+                "not_enough_keypoints",
+                f"The lens solver needs at least {self.MIN_KEYPOINTS} different clicked soccer keypoints, "
+                f"got {len(distinct_keypoints)} ({len(keypoints)} click(s) in total)",
+                count=len(distinct_keypoints),
+                required=self.MIN_KEYPOINTS,
+            )
+
+        video_id = self.upload_video(client, video_db)
+        result = self.run_analyser(
+            client,
+            "calibration_lens_solve",
+            parameters={
+                "keypoints": json.dumps(keypoints),
+                "field_length": field_length,
+                "field_width": field_width,
+                **self.solver_parameters,
+            },
+            inputs={"video": video_id},
+            downloads=["lens"],
+            progress_range=(0.0, 0.9),
+        )
+        if result is None:
+            # the analyser does not pass on why yet
+            raise TaskFailure("lens_solver_failed", "The lens solver could not fit a lens to this video")
+        with result[1]["lens"] as data:
+            solver_result = json.loads(data.text)
+
+        snapshot = angular_snapshot(solver_result, video_db.width, video_db.height)
+        solver = snapshot["solver"]
+        logger.info(
+            f"Video {video_db.id}: lens solved in {len(solver['rounds'] or [])} round(s) from "
+            f"{len(solver['markings'] or [])} marking(s) (dropped: {solver['dropped_markings'] or 'none'}), "
+            f"line RMS {solver['line_rms_px']:.2f} px, pose RMSE {solver['pose_rmse_px']:.2f} px, "
+            f"horizontal FoV {solver['horizontal_fov_deg']:.1f} deg"
+        )
+        return snapshot

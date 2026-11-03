@@ -363,20 +363,51 @@ export const useTopViewStore = defineStore(
     const teamClusteringRunId = ref(null);
     const reidRunId = ref(null);
 
-    // Applies the calibration homography to a plain-object bbox dataset (time -> [tracklet, ...]),
-    // matching the tracklet layout produced by bytetrack/object_tracker (b[3]/b[4] = x/y).
-    function _applyHomographyToBboxData(bboxData) {
+    // Foot points projected onto the pitch by the backend (calibration_assets/project: homography + lens), by
+    // "x,y" of the video point. Box positions never change client-side (edits and merges only touch ids/teams,
+    // deletes drop boxes), so after the first load only new points are requested. Cleared when the calibration
+    // changes.
+    const _pitchProjectionCache = new Map();
+    let _pitchProjectionKey = null;
+
+    async function _projectToPitch(points) {
+      const key = calibrationAssetStore.calibrationKey;
+      if (key !== _pitchProjectionKey) {
+        _pitchProjectionCache.clear();
+        _pitchProjectionKey = key;
+      }
+      const missing = [...new Set(points.map(([x, y]) => `${x},${y}`))].filter(
+        (k) => !_pitchProjectionCache.has(k)
+      );
+      if (missing.length) {
+        const projected = await calibrationAssetStore.projectPoints(
+          missing.map((k) => k.split(",").map(Number))
+        );
+        if (key !== _pitchProjectionKey) return null; // the calibration changed meanwhile
+        missing.forEach((k, i) => _pitchProjectionCache.set(k, projected[i]));
+      }
+      return points.map(([x, y]) => _pitchProjectionCache.get(`${x},${y}`));
+    }
+
+    // Projects a plain-object bbox dataset (time -> [tracklet, ...]) onto the pitch, matching the tracklet
+    // layout produced by bytetrack/object_tracker (b[3]/b[4] = foot x/y); boxes the calibration can't map
+    // (beyond its lens's range) are dropped. Null without a calibration.
+    async function _projectBboxDataToPitch(bboxData) {
       if (!calibrationAssetStore.calibrationMatrix) return null;
+      const entries = Object.entries(bboxData);
+      const projected = await _projectToPitch(
+        entries.flatMap(([, boxes]) => boxes.map((b) => [b[3], b[4]]))
+      );
+      if (!projected) return null;
+      let i = 0;
       const transformed = {};
-      for (const [time, boxes] of Object.entries(bboxData)) {
-        transformed[time] = boxes.map((b) => {
-          const { x, y } = calibrationAssetStore.applyHomography(
-            calibrationAssetStore.calibrationMatrix,
-            { x: b[3], y: b[4] }
-          );
-          b[3] = x;
-          b[4] = 1 - y;
-          return b;
+      for (const [time, boxes] of entries) {
+        transformed[time] = boxes.filter((b) => {
+          const p = projected[i++];
+          if (!p) return false;
+          b[3] = p[0];
+          b[4] = 1 - p[1];
+          return true;
         });
       }
       return transformed;
@@ -385,7 +416,7 @@ export const useTopViewStore = defineStore(
     // Combines the player run's raw bboxes (bboxesStore.bboxDataActive) with the
     // separately-tracked ball run's raw bboxes (bboxesStore.bboxBallDataActive), both in
     // video-space (b[5..8] = x,y,w,h), keyed by frame time. Re-parses fresh each call so
-    // callers can safely pass the result into _applyHomographyToBboxData (which mutates
+    // callers can safely pass the result into _projectBboxDataToPitch (which mutates
     // its input in place) without corrupting bboxDataInterpolated.
     function _mergeRawBboxSources() {
       const tagSource = (boxes, runId) =>
@@ -424,16 +455,27 @@ export const useTopViewStore = defineStore(
     }
 
     // Rebuilds bboxDataInterpolated (video overlay) and positionDataTopView (pitch view)
-    // from the current player + ball raw sources. Called after loading either run and
-    // after editing/deleting a bbox in either run, so the merged view never goes stale.
-    function _applyMergedBboxData() {
+    // from the current player + ball raw sources, then the aggregates. Called after loading either
+    // run and after editing/deleting a bbox in either run, so the merged view never goes stale. The
+    // pitch projection comes from the backend: a rebuild superseded by a newer one while waiting
+    // for it is dropped.
+    let _mergeRequest = 0;
+    async function _applyMergedBboxData() {
       bboxesStore.bboxDataInterpolated = _mergeRawBboxSources();
 
-      const newPosData = _applyHomographyToBboxData(_mergeRawBboxSources());
+      const request = ++_mergeRequest;
+      let newPosData = null;
+      try {
+        newPosData = await _projectBboxDataToPitch(_mergeRawBboxSources());
+      } catch (e) {
+        console.error("Failed to project the bounding boxes onto the pitch", e);
+      }
+      if (request !== _mergeRequest) return;
       if (newPosData) {
         positionDataTopView.value = newPosData;
         _isCompact.value = false;
       }
+      _recomputeAggregates(_combinedStoredMeta());
     }
 
     // Rebuilds metaDataTopView and the four precomputed*List aggregates from the current
@@ -518,8 +560,7 @@ export const useTopViewStore = defineStore(
       }
 
       if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
-        _applyMergedBboxData();
-        _recomputeAggregates(_combinedStoredMeta());
+        await _applyMergedBboxData();
       }
     }
 
@@ -546,19 +587,17 @@ export const useTopViewStore = defineStore(
       bboxesStore.bboxBallDataActive = ballResult.data.bboxes;
       bboxesStore.bboxBallMetaData = ballResult.data.meta_data ?? null;
 
-      _applyMergedBboxData();
-      _recomputeAggregates(_combinedStoredMeta());
+      await _applyMergedBboxData();
     }
 
     // Refreshes the ball run's raw bboxes/meta after an edit or delete targeting the ball
     // plugin run (see bboxesStore.updateBboxData/deleteBboxData), then rebuilds the merged
     // view so the change shows up immediately without dropping the player run's data.
-    function refreshBallBboxData(updatedBboxes, updatedMeta) {
+    async function refreshBallBboxData(updatedBboxes, updatedMeta) {
       bboxesStore.bboxBallDataActive = updatedBboxes;
       bboxesStore.bboxBallMetaData = updatedMeta ?? null;
 
-      _applyMergedBboxData();
-      _recomputeAggregates(_combinedStoredMeta());
+      await _applyMergedBboxData();
     }
 
     // team_clustering writes raw cluster indices (0..K-1, or -1 for HDBSCAN noise) into
@@ -606,8 +645,7 @@ export const useTopViewStore = defineStore(
       bboxesStore.bboxDataActive = bakedBboxes;
       teamClusteringRunId.value = teamClusteringPluginRunId;
 
-      _applyMergedBboxData();
-      _recomputeAggregates(_combinedStoredMeta());
+      await _applyMergedBboxData();
 
       // Bake the merge into the tracker run itself instead of leaving it as a browser-only
       // overlay: without this, any bbox edit's response (the tracker run's own un-merged
@@ -687,8 +725,7 @@ export const useTopViewStore = defineStore(
       bboxesStore.bboxMetaData = JSON.stringify(playerMeta);
       reidRunId.value = reidPluginRunId;
 
-      _applyMergedBboxData();
-      _recomputeAggregates(_combinedStoredMeta());
+      await _applyMergedBboxData();
     }
 
     // Mirrors what BoundingBoxesChange applies server-side (backend/.../views/bounding_boxes.py),
@@ -703,7 +740,7 @@ export const useTopViewStore = defineStore(
     // bboxData is the UN-translated (as-displayed) edit request -- i.e. before bboxesStore.translatePlayerId
     // reverses a reid id back to its original track_id -- since the merged bboxDataActive already
     // stores reid/cluster-translated ids that match what's shown on screen.
-    function applyLocalBboxEdit(bboxData) {
+    async function applyLocalBboxEdit(bboxData) {
       const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
 
       if (!bboxData.applyAllPlayerId && !bboxData.applyAllTeamId) {
@@ -734,13 +771,12 @@ export const useTopViewStore = defineStore(
       }
 
       bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
-      _applyMergedBboxData();
-      _recomputeAggregates(_combinedStoredMeta());
+      await _applyMergedBboxData();
     }
 
     // Delete counterpart of applyLocalBboxEdit above -- see that function's comment for why
     // this local mirror is needed instead of trusting BoundingBoxesDelete's response.
-    function applyLocalBboxDelete(bboxData) {
+    async function applyLocalBboxDelete(bboxData) {
       const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
 
       if (!bboxData.applyAllPlayerId && !bboxData.applyAllTeamId) {
@@ -760,8 +796,7 @@ export const useTopViewStore = defineStore(
       }
 
       bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
-      _applyMergedBboxData();
-      _recomputeAggregates(_combinedStoredMeta());
+      await _applyMergedBboxData();
     }
 
     const showSportZones = ref(false);

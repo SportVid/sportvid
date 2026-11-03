@@ -1,4 +1,8 @@
 #!/bin/bash
+# Server control: ./manage.sh {prod|dev|shared} <command> [service...]
+# Every docker command first checks out and hard-resets the environment's deploy branch
+# (deploy-dev / deploy-prod) in the current directory, discarding local changes.
+# The systemd units sportvid_{dev,prod,shared} call `build` (= build and start) and `down`/`stop`.
 
 set -u
 
@@ -9,7 +13,7 @@ else
 fi
 
 usage() {
-    echo "Usage: $0 {prod|production|dev|development|shared} {build|rebuild|up|down|restart|logs|shell|migrate|frontend-install|frontend-build|wipe} [service...]"
+    echo "Usage: $0 {prod|production|dev|development|shared} {build|rebuild|up|down|stop|restart|logs|shell|migrate|frontend-build|frontend-rebuild|complete-rebuild|clean-build-artifacts|wipe} [service...]"
 }
 
 safe_exit() {
@@ -82,8 +86,14 @@ docker_compose() {
         "$@"
 }
 
+PREPARED=false
+
+# checks out the deploy branch once per call, then runs one docker compose command
 run_docker() {
-    prepare || return $?
+    if [[ "$PREPARED" == "false" ]]; then
+        prepare || return $?
+        PREPARED=true
+    fi
     docker_compose "$@" || die "Running docker compose command failed."
     echo "Done!"
 }
@@ -119,8 +129,9 @@ wipe_environment() {
 main() {
     case "$COMMAND" in
         "build")
-            echo "Building..."
-            run_docker build "${SERVICES[@]}"
+            # builds and (re)starts: the systemd units use this as their start command
+            echo "Building and starting..."
+            run_docker up --build -d "${SERVICES[@]}"
             ;;
         "rebuild")
             echo "Rebuilding without cache and recreating containers..."
@@ -134,6 +145,10 @@ main() {
         "down")
             echo "Shutting down..."
             run_docker down
+            ;;
+        "stop")
+            echo "Stopping..."
+            run_docker stop "${SERVICES[@]}"
             ;;
         "complete-rebuild")
             echo "Rebuilding (rmi & remove-orphans)..."
@@ -149,7 +164,7 @@ main() {
             run_docker logs -f "${SERVICES[@]}"
             ;;
         "shell")
-            local target="${1:-backend}"
+            local target="${SERVICES[0]:-backend}"
             run_docker exec "$target" bash
             ;;
         "migrate")
@@ -183,6 +198,8 @@ main() {
     esac
 }
 
+# prepare() resets this very file when it runs from the deploy checkout; bash reads scripts
+# while running them, so main and exit share one line and nothing after it is read.
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-    main "$@"
+    main "$@"; exit $?
 fi

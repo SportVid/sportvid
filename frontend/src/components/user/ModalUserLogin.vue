@@ -106,6 +106,8 @@ const login = async () => {
   const status = await userStore.login(user.value);
   if (status.status === "ok") {
     dialog.value = false;
+  } else if (status.type === "not_approved") {
+    errorMessage.value = t("user.login.not_approved");
   } else {
     errorMessage.value = status.message;
   }

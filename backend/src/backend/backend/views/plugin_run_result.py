@@ -6,24 +6,23 @@ from django.http import JsonResponse
 from django.conf import settings
 
 from backend.models import PluginRunResult, Video, PluginRun
+from backend.permissions import readable
 from data import DataManager
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
 
 
-class PluginRunResultList(View):
+class PluginRunResultList(ApiView):
     def get(self, request):
-        if not request.user.is_authenticated:
-            logger.error("PluginRunResultList::not_authenticated")
-            return JsonResponse({"status": "error"})
 
         data_manager = DataManager("/predictions/")
         try:
             query_dict = {}
             video_id = request.GET.get("video_id")
             if video_id:
-                try: video_db = Video.objects.get(id=video_id)
+                try: video_db = readable(Video, request.user).get(id=video_id)
                 except Video.DoesNotExist: return JsonResponse({"status": "error", "type": "not_exist"})
 
                 query_dict["plugin_run__video"] = video_db
@@ -31,14 +30,16 @@ class PluginRunResultList(View):
             plugin_run_id = request.GET.get("plugin_run_id")
             if plugin_run_id:
                 try:
-                    plugin_run_db = PluginRun.objects.get(id=plugin_run_id)
+                    plugin_run_db = readable(PluginRun, request.user).get(id=plugin_run_id)
                 except PluginRun.DoesNotExist: return JsonResponse({"status": "error", "type": "not_exist"})
                 query_dict["plugin_run"] = plugin_run_db
 
-            analyzes = PluginRunResult.objects.filter(**query_dict).select_related("plugin_run")
+            analyzes = readable(PluginRunResult, request.user).filter(**query_dict).select_related("plugin_run")
 
             add_results = request.GET.get("add_results", True)
-            # TODO: this should be include_types (see code logic)
+            # exclude_types[] (type names, e.g. "KPI") makes this a light listing: the listed types
+            # are left out and the others come without data. The analysis view loads data per
+            # run on demand (stores/plugin_run_result.js forPluginRunWithData).
             exclude_types = request.GET.getlist("exclude_types[]")
             if add_results:
                 entries = []

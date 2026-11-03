@@ -5,7 +5,6 @@ from typing import Dict, List
 
 from backend.models import PluginRun, PluginRunResult, Video, Timeline
 from backend.plugin_manager import PluginManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
@@ -13,6 +12,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("color_analysis")
 class ColorAnalyser(Task):
+    ray_plugins = ("color_analyser",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

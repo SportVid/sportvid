@@ -16,7 +16,6 @@ from backend.models import (
     TimelineSegmentAnnotation,
 )
 from backend.plugin_manager import PluginManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 
 from data import Shot, ShotsData
@@ -36,6 +35,8 @@ LABEL_LUT = {
 
 @PluginManager.export_plugin("shot_type_classification")
 class ShotTypeClassifier(Task):
+    ray_plugins = ("shot_annotator", "shot_type_classifier")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

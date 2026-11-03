@@ -1,6 +1,7 @@
 import logging
 import sys
 import os
+import re
 import argparse
 import time
 import uuid
@@ -128,8 +129,8 @@ class AnalyserCacheWrapper:
                 )
         return results
 
-# TODO: Add explicit timeouts to plugin HTTP calls and ensure session.close()
-# actually interrupts in-flight requests quickly enough.
+# TODO: Ensure session.close() actually interrupts in-flight requests quickly enough
+# (the Ray HTTP call has a timeout, see inference_ray.plugin.PLUGIN_RUN_TIMEOUT).
 # TODO: Implement periodic cleanup of cancel_events and sessions dicts to
 # prevent unbounded growth in long-running analyser processes.
 def run_plugin(args):
@@ -283,9 +284,14 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
     def list_plugins(self, request, context):
         reply = analyser_pb2.ListPluginsReply()
 
-        # print(self.managers["plugin_manager"].plugin_status())
-        for _, plugin_class in self.managers["plugin_manager"].plugins().items():
-            reply.plugins.extend([analyser_pb2.PluginInfo(name=plugin_class._name)])
+        # Only plugins whose Ray Serve application is running can be used;
+        # the version is the one the result cache keys on.
+        for status in self.managers["plugin_manager"].plugin_status():
+            if not status.get("is_running"):
+                continue
+            reply.plugins.append(
+                analyser_pb2.PluginInfo(name=status["plugin"], version=str(status.get("version") or ""))
+            )
 
         return reply
 
@@ -518,9 +524,16 @@ class Server:
 
 def read_config(path):
     with open(path, "r") as f:
-        raw_cfg_str = f.read()
-        expanded_cfg_str = os.path.expandvars(raw_cfg_str)
-        return yaml.safe_load(expanded_cfg_str)
+        expanded_cfg_str = os.path.expandvars(f.read())
+    # expandvars keeps unset variables as "${VAR}", which would only fail much later
+    unset = sorted({
+        name
+        for line in expanded_cfg_str.splitlines() if not line.lstrip().startswith("#")
+        for name in re.findall(r"\$\{(\w+)\}", line)
+    })
+    if unset:
+        raise ValueError(f"{path}: environment variables not set: {', '.join(unset)}")
+    return yaml.safe_load(expanded_cfg_str)
 
 
 def parse_args():
@@ -535,7 +548,6 @@ def parse_args():
     parser.add_argument("--no_cache", action="store_true", help="disable cache")
     parser.add_argument("--cache_valkey_host", help="valkey cache host")
     parser.add_argument("--cache_valkey_port", type=int, help="valkey cache port")
-    parser.add_argument("--cache_valkey_password", help="valkey cache password")
     parser.add_argument("--inference_ray_host", help="inference ray host")
     parser.add_argument("--inference_ray_port", type=int, help="inference ray port")
     parser.add_argument(
@@ -601,13 +613,6 @@ def main():
             config["data"]["cache"] = {"type": "valkey", "params": {}}
         config["data"]["cache"]["params"]["port"] = args.cache_valkey_port
 
-    if args.cache_valkey_password:
-        if "data" not in config:
-            config["data"] = {}
-        if "cache" not in config["data"]:
-            config["data"]["cache"] = {"type": "valkey", "params": {}}
-        config["data"]["cache"]["params"]["password"] = args.cache_valkey_password
-
     if args.inference_ray_host:
         if "inference" not in config:
             config["inference"] = {
@@ -615,14 +620,14 @@ def main():
                 "params": {
                     "host": "inference_ray", 
                     "status_port": 52365, 
-                    "port": 8001,
+                    "port": 8010,
                 },
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
                 "host": "inference_ray",
                 "status_port": 52365,
-                "port": 8001,
+                "port": 8010,
             }
         config["inference"]["params"]["host"] = args.inference_ray_host
 
@@ -633,14 +638,14 @@ def main():
                 "params": {
                     "host": "inference_ray", 
                     "status_port": 52365, 
-                    "port": 8001,
+                    "port": 8010,
                 },
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
                 "host": "inference_ray",
                 "status_port": 52365,
-                "port": 8001,
+                "port": 8010,
             }
         config["inference"]["params"]["status_port"] = args.inference_ray_status_port
 
@@ -651,14 +656,14 @@ def main():
                 "params": {
                     "host": "inference_ray", 
                     "status_port": 52365, 
-                    "port": 8001,
+                    "port": 8010,
                 },
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
                 "host": "inference_ray",
                 "status_port": 52365,
-                "port": 8001,
+                "port": 8010,
             }
         config["inference"]["params"]["port"] = args.inference_ray_port
 

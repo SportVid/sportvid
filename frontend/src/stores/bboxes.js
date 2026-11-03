@@ -79,61 +79,6 @@ export const useBboxesStore = defineStore(
       }
     };
 
-    function interpolateBboxData(bboxData, VideoFPS, bboxDataFPS) {
-      const factor = VideoFPS / bboxDataFPS;
-      if (factor == 1) return bboxData;
-      const _bboxDatainterpolated = [];
-
-      // Group bboxes by image_id
-      const bboxMap = new Map();
-      bboxData.forEach((bbox) => {
-        if (!bboxMap.has(bbox.image_id)) {
-          bboxMap.set(bbox.image_id, []);
-        }
-        bboxMap.get(bbox.image_id).push(bbox);
-      });
-
-      // Determine maximum frame
-      const maxFrame = Math.max(...bboxMap.keys());
-
-      for (let frame = 0; frame <= maxFrame * factor; frame++) {
-        const srcFrame = frame / factor;
-        const prevFrame = Math.floor(srcFrame);
-        const nextFrame = Math.ceil(srcFrame);
-
-        if (bboxMap.has(prevFrame) && bboxMap.has(nextFrame) && prevFrame !== nextFrame) {
-          // Interpolation between two known frames
-          const prevBboxes = bboxMap.get(prevFrame);
-          const nextBboxes = bboxMap.get(nextFrame);
-
-          prevBboxes.forEach((prev, index) => {
-            const next = nextBboxes.find((b) => b.player_id === prev.player_id);
-
-            if (next) {
-              const alpha = srcFrame - prevFrame;
-              _bboxDatainterpolated.push({
-                x: prev.x + (next.x - prev.x) * alpha,
-                y: prev.y + (next.y - prev.y) * alpha,
-                w: prev.w + (next.w - prev.w) * alpha,
-                h: prev.h + (next.h - prev.h) * alpha,
-                team_id: prev.team_id,
-                image_id: frame,
-                time: frame / VideoFPS,
-                player_id: prev.player_id,
-                det_score: prev.det_score + (next.det_score - prev.det_score) * alpha,
-              });
-            }
-          });
-        } else if (bboxMap.has(prevFrame)) {
-          bboxMap.get(prevFrame).forEach((bbox) => {
-            _bboxDatainterpolated.push({ ...bbox, image_id: frame, time: frame / VideoFPS });
-          });
-        }
-      }
-
-      return _bboxDatainterpolated;
-    }
-
     // Once a ReID run is merged (bboxReidMapping set), the player_id shown/edited in the UI is
     // the new reid id. Single-box edits (bbox tab) are translated back to the original
     // track_id for the affected frame so the existing edit endpoint (which only knows the
@@ -340,7 +285,6 @@ export const useBboxesStore = defineStore(
       updateBboxData,
       deleteBboxData,
       replaceBboxData,
-      interpolateBboxData,
       bboxDataActive,
       bboxMetaData,
       bboxDataLoaded,

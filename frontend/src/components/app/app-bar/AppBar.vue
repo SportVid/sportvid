@@ -171,7 +171,7 @@ import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
-import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunStore, isInternalPluginRun } from "@/stores/plugin_run";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useLanguageStore } from "@/stores/languages";
 import { useThemeStore } from "@/stores/theme";
@@ -213,10 +213,9 @@ watch(
 const pluginRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
-    // "thumbnail" is an internal asset (video-gallery cover image, see VideoView.vue),
-    // not a user-facing analysis result -- it has no place in the status overview, its
-    // delete pickers, or the running-plugins badge count.
-    .filter((run) => run.type !== "thumbnail")
+    // Automatic internal runs (gallery thumbnail, camera motion classification) are not
+    // user-facing analysis results -- see INTERNAL_PLUGIN_TYPES in stores/plugin_run.js.
+    .filter((run) => !isInternalPluginRun(run))
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .map((pluginRun) => {
       return {
@@ -264,6 +263,7 @@ const pluginName = (type) => {
     bytetrack: "modal.plugin.bytetrack.plugin_name",
     object_tracker: "modal.plugin.object_tracker.plugin_name",
     calibration_static_dlt: "modal.plugin.calibration_static_dlt.plugin_name",
+    calibration_lens_solve: "modal.plugin.calibration_lens_solve.plugin_name",
     posdata_convert: "modal.plugin.posdata_convert.plugin_name",
     kpi_computation: "modal.plugin.kpi_computation.plugin_name",
     team_clustering: "modal.plugin.team_clustering.plugin_name",

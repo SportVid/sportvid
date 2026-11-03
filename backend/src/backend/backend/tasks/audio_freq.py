@@ -5,7 +5,6 @@ from django.db import transaction
 
 from backend.models import PluginRun, PluginRunResult, Video, Timeline
 from backend.plugin_manager import PluginManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
@@ -13,6 +12,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("audio_freq")
 class AudioFreq(Task):
+    ray_plugins = ("audio_freq_analysis", "video_to_audio")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

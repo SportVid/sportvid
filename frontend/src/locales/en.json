@@ -39,7 +39,8 @@
       "rules": {
         "min": "Min. 5 characters.",
         "max": "Max. 50 characters."
-      }
+      },
+      "not_approved": "Your account has not been approved by an administrator yet."
     },
     "logout": {
       "title": "Logout",
@@ -51,7 +52,8 @@
       "rules": {
         "min": "Min. 5 characters.",
         "max": "Max. 50 characters."
-      }
+      },
+      "pending_approval": "Thanks for registering! An administrator has to approve your account before you can log in."
     },
     "experience_mode": {
       "heading": "How do you want to use plugins?",
@@ -108,6 +110,7 @@
   "video_view": {
     "video_processing": "Video is being processed",
     "rename_video": "Rename Video",
+    "lens_profile": "Camera & Lens",
     "delete_video": "Delete Video",
     "toggle_details": "Show/hide details",
     "data": "Data",
@@ -197,7 +200,44 @@
       }
     }
   },
+  "lens_profile": {
+    "title": "Camera & Lens",
+    "heading": "Camera & lens",
+    "video_not_ready": "A lens profile can be assigned once the video has finished processing -- its resolution decides which profiles fit.",
+    "brand": "Camera brand",
+    "model": "Camera model",
+    "profile": "Lens profile",
+    "no_profiles": "No lens profiles for this camera.",
+    "no_profiles_compatible": "No lens profile calibrated for this video's aspect ratio.",
+    "recording_mode": "Recording mode (image stabilization)",
+    "recording_mode_hint": "A stabilized recording shows a cropped part of the calibrated frame. Pick the mode the video was recorded in.",
+    "mode_unlisted": "other aspect ratio",
+    "show_incompatible": "Also show profiles of other aspect ratios",
+    "none_hint": "Without a profile the lens is either ignored or solved from the video itself.",
+    "incompatible": "other aspect ratio",
+    "official": "official",
+    "rms": "RMS {value} px",
+    "eis_on": "stabilization on",
+    "eis_off": "stabilization off",
+    "eis_unknown": "stabilization unknown",
+    "eis_unknown_warning": "It is unclear whether this profile was calibrated with in-camera stabilization. If the calibration ends up distorted, try another profile or another recording mode.",
+    "aspect_row_crop": "This profile was calibrated at a taller frame. It is applied as a centred crop, which fits most cameras but is less reliable than a profile of this video's aspect ratio.",
+    "aspect_row_extension": "This profile was calibrated at a wider frame. The lens model has to be extrapolated to the outer rows of the image, which makes it less reliable towards the top and bottom edges.",
+    "error_unsupported_lens_profile": "This profile needs more than the plain fisheye model and cannot be used.",
+    "error_incompatible_resolution": "This profile does not fit the video's resolution.",
+    "error_invalid_lens_crop": "The selected recording mode has an invalid crop.",
+    "error_generic": "The lens profile could not be assigned."
+  },
   "calibration_asset": {
+    "calibration": {
+      "heading": "Pick the calibration this asset should use:",
+      "none": "No calibration yet -- just select this asset",
+      "lens_profile": "Lens profile: {name}",
+      "lens_solved": "Lens solved from the video",
+      "no_lens": "No lens correction",
+      "error": "{value} m error",
+      "error_unknown": "error unknown"
+    },
     "not_selected": "No calibration asset selected.<br>Please create a new calibration asset or choose an existing one.",
     "title": "Calibration Asset",
     "save": "Save Calibration Asset",
@@ -218,8 +258,15 @@
       "title": "Segments",
       "view_vid_segments": "View video segments"
     },
-    "time-conflict": "Video markers were set at {time}. Adding a new marker on another timestamp will overwrite the existing ones.",
-    "go_to_marker_time": "Go back to {time}"
+    "view_pitch_overlay": "View pitch lines",
+    "frames": {
+      "title": "Marked frames ({count})",
+      "points": "{count} pts",
+      "distinct": "{count} / {required} different markers placed",
+      "min_hint": "The points of all frames are fitted together, and the same marker placed on several frames counts once -- repeats only average out the click error.",
+      "unknown_time": "Time not recorded",
+      "delete": "Remove this frame's points"
+    }
   },
   "position_data": {
     "not_selected": "No position data available yet.",
@@ -232,7 +279,7 @@
       "or": "or",
       "bytetrack": "ByteTrack",
       "object_tracker": "Object Tracker",
-      "dlt": "DLT calibration",
+      "calibration": "Camera calibration",
       "team_assignment": "Team Assignment",
       "re_identification": "Re-Identification",
       "upload_heading": "Via file upload",
@@ -506,7 +553,7 @@
       "create_select": "If you don't have a calibration asset yet, click <em>Create</em> to set one up. Use <em>Select</em> to load an existing asset.",
       "create_modal": "Choose the calibration type: <em>Marker</em> uses individual landmark points (e.g. corner flags, penalty spots), <em>Segment</em> uses line segments. Select the type matching your setup, then click <em>Create</em>.",
       "calibration_asset_btn": "Via this button you can create a new calibration asset, save the current one, update an existing one, or switch to a different saved asset.",
-      "object_btn": "This button shows your current calibration type (<em>Marker</em> or <em>Segments</em>). Click it to toggle the video marker overlay — this highlights reference landmarks on the pitch view. In <em>Marker</em> mode, you can also add custom markers or remove existing ones.",
+      "object_btn": "This button shows your current calibration type (<em>Marker</em> or <em>Segments</em>). In <em>Marker</em> mode you can add custom markers or remove existing ones through it. The two overlays — the markers you placed in the video and the projected pitch markings — are switched in the video player's display settings.",
       "object_info": "Left-click a marker in the pitch view to open a zoomed video overlay, where you can precisely place it on the corresponding video position. Right-click a marker to de-toggle it and remove the video mapping.<br><br>Once all markers are set, save the asset via the <em>Calibration Asset</em> button, then go back to the empty pitch view and click <em>Apply Calibration</em> on the DLT+RANSAC card with the saved asset selected."
     },
     "posdata_bytetrack": {
@@ -904,12 +951,27 @@
         "crop_x2_offset": "Crop Offset Right",
         "crop_y2_offset": "Crop Offset Bottom"
       },
+      "calibration": {
+        "plugin_name": "Camera Calibration",
+        "plugin_description": "Calibrates the camera for this video from the annotated landmarks of a calibration asset. Which calibration runs follows from the camera and lens below: with a lens profile the landmarks are undistorted with it, without one the lens is solved from the video itself."
+      },
       "calibration_static_dlt": {
         "plugin_name": "DLT+RANSAC from annotated landmarks",
         "plugin_description": "This plugin performs a static calibration of the video using the Direct Linear Transformation (DLT) + RANSAC method. It uses the annotated marker correspondences from a calibration asset to estimate the homography matrix.",
         "timeline_name": "Calibration Static DLT",
         "calibration_id": "Select Calibration Asset",
         "calibration_id_hint": "Select a calibration asset to use for the calibration."
+      },
+      "calibration_lens_solve": {
+        "plugin_name": "Lens self-calibration + DLT from annotated landmarks",
+        "plugin_description": "Estimates the lens distortion of a static camera from the video itself: the annotated landmarks plus the field markings painted around them, without needing a lens profile. The homography is then fitted on the undistorted landmarks. Needs a static camera and at least 6 annotated landmarks spread over the image.",
+        "calibration_id_hint": "Select a calibration asset whose landmarks are placed on the field template.",
+        "num_frames": "Frames",
+        "num_frames_hint": "Number of frames sampled across the video to detect the field markings in.",
+        "rounds": "Detection Rounds",
+        "rounds_hint": "Maximum detect-and-fit rounds; stops earlier once no further field markings are found.",
+        "poly_degree": "Polynomial Degree",
+        "poly_degree_hint": "Degree of the angular polynomial fitted as the lens distortion model."
       },
       "posdata_convert": {
         "plugin_name": "Position Data Convert"
@@ -1157,7 +1219,7 @@
       "source": {
         "player_tracking": "Player Tracking",
         "object_tracking": "Object Tracking (Ball)",
-        "dlt": "DLT calibration",
+        "calibration": "Camera calibration",
         "upload": "Upload"
       },
       "variant": {
@@ -1290,9 +1352,6 @@
       },
       "delete": {
         "success": "Calibration Asset successfully deleted"
-      },
-      "video_marker": {
-        "warning": "Attention: Video markers were set at {time}. Adding a new marker will overwrite the existing ones."
       }
     },
     "position_data": {
@@ -1453,7 +1512,8 @@
       "max_video_size": "Max. Video Size",
       "max_file_size": "Max. File Size",
       "date_joined": "Joined",
-      "actions": "Actions"
+      "actions": "Actions",
+      "is_active": "Active"
     }
   },
   "loading_screen": "Loading ...",

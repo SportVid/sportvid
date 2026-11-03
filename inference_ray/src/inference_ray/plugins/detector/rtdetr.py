@@ -1,4 +1,5 @@
 import logging
+from utils.model_paths import checked_model_path
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -28,6 +29,8 @@ class RTDetr:
         self.detector_params = detector_params
 
         self.checkpoint = detector_params.get("checkpoint", model_path)
+        if "checkpoint" in detector_params:
+            self.checkpoint = checked_model_path(self.checkpoint)
         self.model = RTDETR(self.checkpoint)
         self.model.to(self.device)
 
@@ -85,6 +88,9 @@ class RTDetr:
             frames = torch.from_numpy(frames)
         
         _, self.h, self.w, _ = frames.shape
+        # NOTE: boxes are reported in frame pixels (detector contract): the padding below only
+        # adds rows / columns at the bottom / right
+        self.frame_shape = (int(self.h), int(self.w))
         
         frames = frames.permute(0, 3, 1, 2).contiguous()    # (N,C,H,W)
         
@@ -101,7 +107,7 @@ class RTDetr:
 
         self.h = self.h + pad_h
         self.w = self.w + pad_w
-        self.det_shape = (self.h + pad_h, self.w + pad_w)
+        self.det_shape = (self.h, self.w)  # was padded twice
 
         frames = frames.float().div_(255.0)
 

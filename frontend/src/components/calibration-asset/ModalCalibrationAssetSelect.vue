@@ -12,27 +12,32 @@
       </v-toolbar>
 
       <v-card-text>
-        <v-list density="compact" style="height: 210px; overflow-y: auto">
-          <v-list-item
-            v-for="asset in calibrationAssetStore.calibrationAssetsList"
-            :key="asset.id"
-            @click="loadCalibrationAsset(asset.id)"
-            class="mr-4"
-          >
-            <template #append>
-              <v-btn
-                size="x-small"
-                color="red"
-                variant="plain"
-                class="mr-2"
-                @click.stop="calibrationAssetStore.deleteCalibrationAsset(asset.id)"
-              >
-                <v-icon>mdi-delete</v-icon>
-              </v-btn>
-            </template>
-            {{ asset.name }}
-          </v-list-item>
-        </v-list>
+        <!-- One row per asset, its name alone; what distinguishes its calibrations is only
+             interesting once that asset is the one in question, so it lives behind the fold.
+             Picking one of them selects the asset and that calibration in a single click. -->
+        <v-expansion-panels variant="accordion" style="max-height: 400px; overflow-y: auto">
+          <v-expansion-panel v-for="asset in calibrationAssetStore.calibrationAssetsList" :key="asset.id">
+            <v-expansion-panel-title>
+              <div class="d-flex align-center w-100">
+                <span>{{ asset.name }}</span>
+                <v-spacer />
+                <v-btn
+                  size="x-small"
+                  color="red"
+                  variant="plain"
+                  class="mr-2"
+                  @click.stop="calibrationAssetStore.deleteCalibrationAsset(asset.id)"
+                >
+                  <v-icon>mdi-delete</v-icon>
+                </v-btn>
+              </div>
+            </v-expansion-panel-title>
+
+            <v-expansion-panel-text>
+              <CalibrationList :asset="asset" @select="select(asset, $event)" />
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -41,6 +46,7 @@
 <script setup>
 import { ref, onMounted, watch } from "vue";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
+import CalibrationList from "@/components/calibration-asset/CalibrationList.vue";
 
 const calibrationAssetStore = useCalibrationAssetStore();
 
@@ -54,10 +60,15 @@ const emit = defineEmits(["update:modelValue", "selected"]);
 
 const dialog = ref(props.modelValue);
 
-const loadCalibrationAsset = (id) => {
-  calibrationAssetStore.loadCalibrationAsset(id);
+// One click does both: make the picked calibration the asset's active one (what the overlay,
+// the metrics and the position data use) and load the asset itself into the editor.
+const select = async (asset, calibration) => {
+  if (calibration && asset.active_calibration_id !== calibration.id) {
+    await calibrationAssetStore.activateCalibration(calibration.id);
+  }
+  calibrationAssetStore.loadCalibrationAsset(asset.id);
   dialog.value = false;
-  emit("selected", id);
+  emit("selected", asset.id);
 };
 
 onMounted(() => {

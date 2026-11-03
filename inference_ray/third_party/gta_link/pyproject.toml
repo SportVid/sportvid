@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gta-link"
+version = "0.1.0"
+description = "GTA-Link global tracklet association (vendored from sjc042/gta-link via Alexk1704/gta-link)"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scipy",
+    "scikit-learn",
+    "torch",
+    "loguru",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib", "seaborn"]   # display_Dist only
+
+[tool.setuptools]
+packages = ["gta_link"]

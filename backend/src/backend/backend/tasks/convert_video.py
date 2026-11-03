@@ -13,10 +13,13 @@ from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 
 from backend.utils import media_dir_to_file, media_path_to_file, publish_video
+from backend.log_context import log_context, log_event
 from backend.utils.events import cancellation_watcher
 from backend.models import Video
 from backend.plugin_manager import PluginManager
-from utils.video_converter import convert_to_hls, probe_media_start, terminate_process_group
+from utils.video_converter import (
+    convert_to_hls, hls_encoder_args, probe_media_start, resolve_hls_encoder, terminate_process_group,
+)
 from utils.helper import remove_file, remove_dir
 
 from backend.utils.eta import EtaEstimator
@@ -85,7 +88,6 @@ def _report_conversion_progress(video_id_hex, progress, eta_seconds=None):
         progress=progress, eta_seconds=eta_seconds
     )
     if updated:
-        logging.error(f'updating ETA (p {progress}, eta {eta_seconds}) on {video_id_hex}')
         # .update() bypasses post_save, so the live event is sent explicitly.
         publish_video(video_id_hex)
     return updated
@@ -201,6 +203,28 @@ def _metadata(file_in: Path) -> tuple[float, float | None, Any]:
 
 @shared_task(bind=True, time_limit=7200, soft_time_limit=5400, queue="gpu")
 def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
+    ffmpeg = {}  # the FFmpeg process once it runs, for the cancel callback
+
+    def kill_ffmpeg():
+        if ffmpeg.get("proc") is not None:
+            terminate_process_group(ffmpeg["proc"])
+
+    # The watcher subscribes before the task first reads the video. video/delete deletes the
+    # row before it publishes the cancel, so a deletion is either seen by that read or
+    # arrives as a message. Only a SUBSCRIBE still in flight can miss both; the existence
+    # check in the progress loop covers that.
+    with log_context(video_id=video_id_hex, task_id=self.request.id), \
+            cancellation_watcher("video", video_id_hex, on_cancel=kill_ffmpeg) as cancel_event:
+        return _convert_video_to_hls(video_id_hex, original_ext, analyzers, cancel_event, ffmpeg)
+
+
+def _cancelled(source, *paths):
+    """The video was deleted while it was converted: drop what this task wrote, no error."""
+    log_event(logger, "video.conversion.cancelled", source=source)
+    safe_delete([p for p in paths if p])
+
+
+def _convert_video_to_hls(video_id_hex, original_ext, analyzers, cancel_event, ffmpeg):
     started = time.monotonic()
     video_db = None
     ffmpeg_proc: subprocess.Popen[str] | None = None
@@ -209,7 +233,11 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
     file_in: Path | None = None
 
     try:
-        video_db = Video.objects.get(id=video_id_hex)
+        video_db = Video.objects.filter(id=video_id_hex).first()
+        if video_db is None:
+            # deleted while queued, and the revoke came too late (or there was no task_id yet)
+            _cancelled("deleted_before_start")
+            return
 
         output_root = Path(media_dir_to_file(video_id_hex))
         file_in = Path(media_path_to_file(video_id_hex, original_ext))
@@ -222,7 +250,8 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         segment_time = 5
         gop = max(1, round(fps * segment_time))
         
-        # TODO: dynamic decoding based on GPU availability and deployment mode.
+        # NVENC or libx264 by HLS_ENCODER; decoding stays on the CPU either way
+        encoder = resolve_hls_encoder(settings.HLS_ENCODER)
         fmp4 = True
         
         conversion_args = {
@@ -232,39 +261,16 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
                 # $ top -H -p <ffmpeg_pid>
             "hls_playlist_type": "vod",
             "segment_time" : segment_time,
-            # -------- input: hardware acceleration
-            # NOTE: uncomment these lines if running without a GPU.
-            "hwaccel": "cuda",
-            "hwaccel_output_format": "cuda",
-            # -------- output: video/audio options
-            "vcodec" : "h264_nvenc", # NOTE: use "h264_nvenc" for GPU conversion via NVENC.
+            # -------- output: video/audio options (vcodec and rate control: hls_encoder_args)
+            **hls_encoder_args(encoder),
             "acodec" : "aac",
             "audio_bitrate" : "128k",
             # -------- HLS stuff
             "g": gop, # GOP size should match segment duration
             "keyint_min": gop, # same as GOP
             # "sc_threshold": 0, # no unpredictable keyframe insertions
-            # "crf": 23,  # NOTE: comment in for "libx264". This is the constant rate factor [0-51], lower: higher quality & larger file; higher: more compression & lower quality 
-            # -------- NVENC tuning
-            "preset": "p4", # NOTE: uncomment if using GPU conversion. This controls encoding speed --vs.-- compression trade-off [p1-p7].
-            "rc": "vbr",
-            "cq": 23,
             # -------- output compat
-            # No B-frames. Their reordering makes FFmpeg's HLS/fMP4 muxer write a
-            # bogus baseMediaDecodeTime into the fragments, so the media carries
-            # timestamps starting somewhere else entirely while the playlist still
-            # claims the stream starts at 0. hls.js passes fMP4 straight through to
-            # MSE, so the browser buffers the data out at that offset, the playhead
-            # at 0 finds nothing, and the video never renders -- no error anywhere,
-            # while the byte ranges keep loading happily.
-            #
-            # How far off it lands depends on the encoder: libx264 produces a
-            # harmless ~66 ms that hls.js' gap controller skips over, h264_nvenc
-            # produced 100.2 s on a 60 s clip. Which is why this stayed invisible
-            # on the CPU path and broke the moment deploy-dev switched to NVENC.
-            # Keep this at 0 on every encoder so the branches behave alike; it
-            # costs roughly 4 % bitrate on libx264 and nothing measurable on NVENC.
-            "bf": 0,
+            "bf": 0, # no B-frames
             # "pix_fmt": "yuv420p", # pixel format of the output
             "loglevel": "error"
         }
@@ -284,8 +290,9 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             })
             
         logger.info(
-            "Starting HLS conversion for %s: %s -> %s",
+            "Starting HLS conversion for %s with %s: %s -> %s",
             video_id_hex,
+            encoder,
             file_in,
             manifest,
         )
@@ -297,6 +304,10 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
             asynchronous=True,
             **conversion_args,
         )
+        ffmpeg["proc"] = ffmpeg_proc
+        if cancel_event.is_set():
+            # the cancel came before there was a process for on_cancel to stop
+            terminate_process_group(ffmpeg_proc)
         
         # denominator for the conversion progress --> may be missing for some containers
         source_duration = duration_ms / 1000. if duration_ms is not None else None
@@ -307,82 +318,73 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
     
         eta_estimator = EtaEstimator() # time ETA from here
 
-        # listener thread reacts to VideoDelete and publishes a cancel request for this video to kill ffmpeg immediately
+        # The watcher (convert_video_to_hls) kills FFmpeg the moment video/delete publishes the cancel.
         # TODO: cancellation relies on Valkey
         # --> add a fallback timeout to kill FFmpeg if it appears stuck.
-        with cancellation_watcher(
-            "video",
-            video_id_hex,
-            on_cancel=lambda: terminate_process_group(ffmpeg_proc),
-        ) as cancel_event:
-            try:
-                # drains ffmpeg's error & "-progress" output line by line
-                while True:
-                    # TODO: can block indefinitely if FFmpeg stops writing but hasn’t exited
-                    # --> use a non-blocking reader (e.g. a separate thread or select/queue) for stderr
-                    line = ffmpeg_proc.stdout.readline()
-                    if not line:
-                        if ffmpeg_proc.poll() is not None:
+        try:
+            # drains ffmpeg's error & "-progress" output line by line
+            while True:
+                # TODO: can block indefinitely if FFmpeg stops writing but hasn’t exited
+                # --> use a non-blocking reader (e.g. a separate thread or select/queue) for stdout; stderr goes to the worker log
+                line = ffmpeg_proc.stdout.readline()
+                if not line:
+                    if ffmpeg_proc.poll() is not None:
+                        break
+                    continue
+    
+                line = line.rstrip()
+                is_progress_line = bool(_FFMPEG_PROGRESS_LINE.match(line)) # identifies progress lines
+                
+                if not is_progress_line:
+                    # non-progress lines on stdout are unexpected; ignore quietly.
+                    continue
+                
+                if line.startswith("out_time_us=") and source_duration:
+                    try:
+                        elapsed = int(line.split("=", 1)[1]) / 1_000_000.0
+                    except ValueError:
+                        elapsed = None
+                    if elapsed is not None:
+                        encoded_fraction = min(elapsed / float(source_duration), 1.0)
+                        # reserves the last few percent for archive packing and writing metadata
+                        progress = encoded_fraction * 0.95
+                        if progress - last_reported >= _PROGRESS_STEP:
+                            last_reported = progress
+                            # ETA is estimated against the true encode fraction so it
+                            # predicts when ffmpeg finishes, not when the scaled bar would reach 100%.
+                            _report_conversion_progress(
+                                video_id_hex,
+                                progress,
+                                eta_estimator.update(encoded_fraction),
+                            )
+                
+                if line.startswith("progress="):
+                    now = time.monotonic()
+                    if now - last_delete_check >= _DELETE_CHECK_INTERVAL:
+                        last_delete_check = now
+                        # fallback existence check in case Valkey is unavailable.
+                        if not Video.objects.filter(id=video_id_hex).exists():
+                            cancelled = True
+                            terminate_process_group(ffmpeg_proc)
                             break
-                        continue
-        
-                    line = line.rstrip()
-                    is_progress_line = bool(_FFMPEG_PROGRESS_LINE.match(line)) # identifies progress lines
-                    
-                    logging.error(f'{is_progress_line} - {line}')
-                    
-                    if not is_progress_line:
-                        # non-progress lines on stdout are unexpected; ignore quietly.
-                        continue
-                    
-                    if line.startswith("out_time_us=") and source_duration:
-                        try:
-                            elapsed = int(line.split("=", 1)[1]) / 1_000_000.0
-                        except ValueError:
-                            elapsed = None
-                        if elapsed is not None:
-                            encoded_fraction = min(elapsed / float(source_duration), 1.0)
-                            # reserves the last few percent for archive packing and writing metadata
-                            progress = encoded_fraction * 0.95
-                            if progress - last_reported >= _PROGRESS_STEP:
-                                last_reported = progress
-                                # ETA is estimated against the true encode fraction so it
-                                # predicts when ffmpeg finishes, not when the scaled bar would reach 100%.
-                                logging.error(f'reporting conversion progress -> {progress}')
-                                _report_conversion_progress(
-                                    video_id_hex,
-                                    progress,
-                                    eta_estimator.update(encoded_fraction),
-                                )
-                    
-                    if line.startswith("progress="):
-                        now = time.monotonic()
-                        if now - last_delete_check >= _DELETE_CHECK_INTERVAL:
-                            last_delete_check = now
-                            # fallback existence check in case Valkey is unavailable.
-                            if not Video.objects.filter(id=video_id_hex).exists():
-                                logger.info(
-                                    "Video %s deleted; terminating FFmpeg (fallback).",
-                                    video_id_hex,
-                                )
-                                cancelled = True
-                                terminate_process_group(ffmpeg_proc)
-                                break
-                # drains any remaining stdout after FFmpeg exits.
-                rest = ffmpeg_proc.stdout.read()
-                if rest:
-                    for extra_line in rest.splitlines():
-                        if not _FFMPEG_PROGRESS_LINE.match(extra_line):
-                            logger.debug("[ffmpeg progress] %s", extra_line)    
-            finally:
-                if ffmpeg_proc.stdout:
-                    ffmpeg_proc.stdout.close() 
-                    
-            cancelled = cancelled or cancel_event.is_set()
+            # drains any remaining stdout after FFmpeg exits.
+            rest = ffmpeg_proc.stdout.read()
+            if rest:
+                for extra_line in rest.splitlines():
+                    if not _FFMPEG_PROGRESS_LINE.match(extra_line):
+                        logger.debug("[ffmpeg progress] %s", extra_line)    
+        finally:
+            if ffmpeg_proc.stdout:
+                ffmpeg_proc.stdout.close() 
+                
+        cancelled = cancelled or cancel_event.is_set()
         
         # waits for the return code and raises on error if not cancelled
         rc = ffmpeg_proc.wait()
-        if not cancelled and rc != 0:
+        if cancelled:
+            _cancelled("valkey" if cancel_event.is_set() else "db_fallback", asset_dir)
+            return
+        if rc != 0:
             raise RuntimeError(
                 f"FFmpeg exited with code {rc}"
             )        
@@ -443,15 +445,12 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         )
 
         if not upd:
-            raise RuntimeError(
-                f"Video disappeared before completion: {video_id_hex}"
-            )
+            _cancelled("deleted_while_packing", archive_path, asset_dir)
+            return
 
         # Queryset .update() doesn't fire post_save --> push the "done" state explicitly,
         # so the gallery card resolves itself without a reload.
         publish_video(video_id_hex)
-        
-        video_db = Video.objects.get(id=video_id_hex) # refresh local db instance
 
         logger.info(
             "HLS conversion took %.2f seconds for %s",
@@ -461,8 +460,9 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
 
         if video_db is not None and video_db.owner_id is not None:
             plugin_manager = PluginManager()
-            # always runs "thumbnail"; plus any analyzers the upload asked for.
-            for plugin in dict.fromkeys(["thumbnail", *(analyzers or [])]):
+            # always runs "thumbnail" and "camera_motion_classification" (sets Video.camera_motion,
+            # which the calibration plugins check for a static camera); plus any analyzers the upload asked for.
+            for plugin in dict.fromkeys(["thumbnail", "camera_motion_classification", *(analyzers or [])]):
                 if not plugin:
                     continue
                 try:
@@ -498,7 +498,15 @@ def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
         safe_delete([archive_path, asset_dir])
         raise
 
-    except Exception:
+    except Exception as e:
+        if not Video.objects.filter(id=video_id_hex).exists():
+            # deleted meanwhile; the failure is most likely video/delete removing the files
+            if ffmpeg_proc is not None:
+                terminate_process_group(ffmpeg_proc)
+            logger.debug("Conversion of a deleted video stopped with %r", e)
+            _cancelled("deleted", archive_path, asset_dir)
+            return
+
         logger.exception(
             "Video conversion failed: %s", 
             video_id_hex

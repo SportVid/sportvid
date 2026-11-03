@@ -317,6 +317,28 @@
               </template>
             </svg>
 
+            <!-- pitch markings projected through the calibration's homography and lens (by the backend) -->
+            <svg
+              v-if="calibrationAssetStore.showPitchOverlay"
+              :width="videoSize.width"
+              :height="videoSize.height"
+              style="position: absolute; top: 0; left: 0; pointer-events: none"
+            >
+              <polyline
+                v-for="(line, i) in calibrationAssetStore.pitchOverlay"
+                :key="`${line.name}-${i}`"
+                :points="
+                  line.points
+                    .map(([x, y]) => `${x * videoSize.width},${y * videoSize.height}`)
+                    .join(' ')
+                "
+                stroke="#ff00ff"
+                stroke-width="2"
+                stroke-opacity="0.8"
+                fill="none"
+              />
+            </svg>
+
             <v-icon v-if="isPip" class="pip-resize-handle" @pointerdown.stop="onPipResizeStart">
               mdi-resize-bottom-right
             </v-icon>
@@ -379,6 +401,59 @@
             width="190px"
             data-tour="video-display-settings-list"
           >
+            <!-- Calibration mode has its own two overlays and nothing else in here applies to
+                 it (the bounding-box overlay is off, position data isn't what is being worked
+                 on), so the menu is swapped out wholesale. These two used to live in the
+                 calibration card's "Marker" menu on the top-view side. -->
+            <template v-if="calibrationAssetStore.calibrationMode">
+              <!-- Nothing has been clicked yet, so there is no overlay to switch on -- disabled
+                   for the same reason as the pitch lines below without a calibration. -->
+              <v-list-item
+                class="menu-item"
+                :disabled="!calibrationAssetStore.placedObjectCount"
+                @click="calibrationAssetStore.toggleVideoAsset()"
+              >
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{
+                    calibrationAssetStore.calibrationAssetType === "marker"
+                      ? $t("calibration_asset.marker.view_vid_marker")
+                      : $t("calibration_asset.segments.view_vid_segments")
+                  }}
+                  <tab-window-icon
+                    :class="{
+                      'text-disabled':
+                        !calibrationAssetStore.showVideoAsset ||
+                        !calibrationAssetStore.placedObjectCount,
+                      'text-red': calibrationAssetStore.showVideoAsset,
+                    }"
+                  >
+                    mdi-check
+                  </tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+
+              <v-list-item
+                class="menu-item"
+                :disabled="!calibrationAssetStore.calibrationMatrix"
+                @click="calibrationAssetStore.togglePitchOverlay()"
+              >
+                <v-list-item-title class="d-flex justify-space-between">
+                  {{ $t("calibration_asset.view_pitch_overlay") }}
+                  <tab-window-icon
+                    :class="{
+                      'text-disabled':
+                        !calibrationAssetStore.showPitchOverlay ||
+                        !calibrationAssetStore.calibrationMatrix,
+                      'text-red': calibrationAssetStore.showPitchOverlay,
+                    }"
+                  >
+                    mdi-check
+                  </tab-window-icon>
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+
+            <template v-else>
             <v-list-item
               class="menu-item"
               @click="bboxesStore.viewBoundingBox"
@@ -472,6 +547,7 @@
                 </v-list-item>
               </v-list>
             </v-menu>
+            </template>
           </v-list>
         </v-menu>
         <ModalPositionDataUpload
@@ -1295,9 +1371,6 @@ watch(
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         updateVideoSize();
       });
-      hls.on(Hls.Events.ERROR, (_e, d) =>
-        console.error("[hls]", d.type, d.details, "fatal:", d.fatal, "http:", d.response?.code)
-      );
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = hlsUrl;
     }

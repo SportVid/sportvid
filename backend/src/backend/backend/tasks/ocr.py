@@ -13,7 +13,6 @@ from backend.models import (
     TimelineSegment
 )
 from backend.plugin_manager import PluginManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
@@ -21,6 +20,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("ocr_video_detector_onnx")
 class OCRTask(Task):
+    ray_plugins = ("ocr_video_detector_onnx",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

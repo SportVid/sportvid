@@ -6,7 +6,9 @@ from django.http import JsonResponse
 from django.conf import settings
 
 from backend.models import PluginRun, PluginRunResult, Video
+from backend.permissions import readable
 from data import DataManager
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
@@ -19,7 +21,9 @@ Avoids re-reading the JSON file on every chunk request.
 _kpi_data_cache = {}
 
 
-class PluginRunResultKpiChunk(View):
+class PluginRunResultKpiChunk(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     """
     Serves KPI data in paginated chunks.
 
@@ -36,11 +40,6 @@ class PluginRunResultKpiChunk(View):
 
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse(
-                    {"status": "error", "type": "not_authenticated"}, status=403
-                )
-
             tracking_data_id = request.GET.get("tracking_data_id")
             video_id = request.GET.get("video_id")
 
@@ -58,7 +57,7 @@ class PluginRunResultKpiChunk(View):
             except (ValueError, TypeError):
                 limit = 5000
             try:
-                video_db = Video.objects.get(id=video_id)
+                video_db = readable(Video, request.user).get(id=video_id)
             except Video.DoesNotExist:
                 return JsonResponse(
                     {"status": "error", "type": "video_not_found"}, status=404

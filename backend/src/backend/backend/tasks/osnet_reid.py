@@ -15,6 +15,8 @@ from django.conf import settings
 
 @PluginManager.export_plugin("osnet_reid")
 class OSNetReID(Task):
+    ray_plugins = ("osnet_reid",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

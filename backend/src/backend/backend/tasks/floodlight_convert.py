@@ -10,7 +10,6 @@ from backend.models import (
 )
 from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_file
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager, Data
 from ..utils.analyser_client import TaskAnalyserClient
@@ -18,6 +17,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("floodlight_convert")
 class FloodlightConvert(Task):
+    ray_plugins = ("floodlight_convert",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

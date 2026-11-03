@@ -13,8 +13,8 @@ from django.http import JsonResponse
 from django.conf import settings
 
 from celery.app.control import Control
-from sportvid.celery import app as celery_app
 
+from backend.utils.storage import add_used_storage, quota_exceeded_response, release_used_storage, would_exceed_quota
 from backend.plugin_manager import PluginManager
 from backend.utils import (
     download_file,
@@ -22,10 +22,13 @@ from backend.utils import (
     media_dir_to_file,
     media_path_to_file
 )
-from backend.models import Video
-from backend.utils.events import publish_cancel
+from backend.models import PluginRun, Video
+from backend.permissions import can_read_all, readable, writable
+from backend.log_context import log_event
+from backend.utils.cancellation import active_plugin_runs, cancel_conversion, cancel_plugin_runs
 from utils.helper import remove_file, remove_dir
 from backend.tasks.convert_video import convert_video_to_hls
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
@@ -46,23 +49,24 @@ def parse_number(val):
         return None
             
                 
-class VideoUpload(View):
+class VideoUpload(ApiView):
+    json_body = False  # multipart/form data
+
+    legacy_errors = False  # already answered errors with error status codes
+
     def submit_analyse(self, plugins, **kwargs):
         plugin_manager = PluginManager()
         for plugin in plugins:
             plugin_manager(plugin, **kwargs)
 
     def post(self, request):
-        if not request.user.is_authenticated:
-            logger.error("VideoUpload::not_authenticated")
-            return JsonResponse(
-                {"status": "error", "type": "not_authenticated"}, status=500
-            )
         try:
             video_id_uuid = uuid.uuid4()
             video_id = video_id_uuid.hex
 
             if "file" in request.FILES:
+                if would_exceed_quota(request.user, request.FILES["file"].size):
+                    return quota_exceeded_response()
                 output_dir = media_dir_to_file(video_id)
                 download_result = download_file(
                     output_dir=output_dir,
@@ -146,12 +150,13 @@ class VideoUpload(View):
                 #     except Exception:
                 #         logger.exception(f"Failed to schedule plugin {plugin}")
                 
+                # Counted before the video can be seen: a delete right after the upload releases it again.
+                add_used_storage(request.user, request.FILES["file"].size)
+
                 task = convert_video_to_hls.apply_async((video_db.id.hex, ext, analyzers))
                 video_db.task_id = task.id
-                video_db.save(update_fields=["task_id"])
-
-                request.user.used_storage_size += request.FILES["file"].size
-                request.user.save()
+                # .update(): if the video is already deleted again, save() would fail the upload
+                Video.objects.filter(id=video_db.id).update(task_id=task.id)
 
                 video_id_hex = video_db.id.hex if not video_db.file.hex else video_db.id.hex
                 return JsonResponse(
@@ -167,21 +172,21 @@ class VideoUpload(View):
                     }
                 )
 
-            return JsonResponse({"status": "error"}, status=500)
+            return JsonResponse({"status": "error", "type": "missing_values"}, status=500)  # no file
 
         except Exception:
             logger.exception("Video upload by user failed")
             return JsonResponse({"status": "error"}, status=500)
 
 
-class VideoList(View):
+class VideoList(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
 
-            can_see_all = request.user.role in ("admin", "researcher")
-            queryset = Video.objects.all() if can_see_all else Video.objects.filter(owner=request.user)
+            can_see_all = can_read_all(request.user, "Video")
+            queryset = readable(Video, request.user)
             if can_see_all:
                 queryset = queryset.select_related("owner")
 
@@ -197,16 +202,14 @@ class VideoList(View):
             return JsonResponse({"status": "error"}, status=500)
 
 
-class VideoGet(View):
+class VideoGet(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
 
-            can_see_all = request.user.role in ("admin", "researcher")
-            qs = Video.objects.filter(id=request.GET.get("id"))
-            if not can_see_all:
-                qs = qs.filter(owner=request.user)
+            can_see_all = can_read_all(request.user, "Video")
+            qs = readable(Video, request.user).filter(id=request.GET.get("id"))
             if can_see_all:
                 qs = qs.select_related("owner")
             entries = []
@@ -220,27 +223,19 @@ class VideoGet(View):
                     entry["owner_username"] = video.owner.username if video.owner else None
                 entries.append(entry)
             if len(entries) != 1:
-                return JsonResponse({"status": "error"}, status=500)
+                return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
             return JsonResponse({"status": "ok", "entry": entries[0]})
         except Exception:
             logger.exception("Failed to get video")
             return JsonResponse({"status": "error"}, status=500)
 
 
-class VideoRename(View):
+class VideoRename(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error"}, status=500)
+            data = request.data
 
             if "id" not in data:
                 return JsonResponse(
@@ -256,14 +251,11 @@ class VideoRename(View):
                 )
 
             try:
-                video_db = Video.objects.get(id=data.get("id"))
+                video_db = writable(Video, request.user).get(id=data.get("id"))
             except Video.DoesNotExist:
                 return JsonResponse(
                     {"status": "error", "type": "not_exist"}, status=500
                 )
-
-            if video_db.owner != request.user and request.user.role != "admin":
-                return JsonResponse({"status": "error", "type": "not_authorized"}, status=403)
 
             video_db.name = data.get("name")
             video_db.save()
@@ -273,48 +265,33 @@ class VideoRename(View):
             return JsonResponse({"status": "error"}, status=500)
 
 
-class VideoDelete(View):
+class VideoDelete(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error"}, status=500)
+            data = request.data
             
-            is_admin = request.user.role == "admin"
-            if is_admin:
-                video = Video.objects.select_related("owner").filter(id=data.get("id")).first()
-            else:
-                video = Video.objects.select_related("owner").filter(id=data.get("id"), owner=request.user).first()
+            video = writable(Video, request.user).select_related("owner").filter(id=data.get("id")).first()
             if not video:
-                return JsonResponse({"status": "error"}, status=500)
+                return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
 
-            # TODO: Add structured logging for video deletion (task_id, revoke vs cancel)
-            # and consider tracking "pending deletion" videos to avoid races with
-            # conversion tasks.
-            # NOTE: If a conversion is queued, Celery revoke prevents it from starting.
-            # If conversion is already running, the conversion task's watcher receives the message and kills the FFmpeg subprocess.
-            if video.task_id:
-                celery_app.control.revoke(video.task_id, terminate=False)
-            publish_cancel("video", video.id.hex)
-
+            # The runs cascade away with the row, so the ones to cancel are read first.
+            active_runs = active_plugin_runs(PluginRun.objects.filter(video=video))
             file_size = video.file_size
             video_owner = video.owner
             video_id_hex = video.id.hex
-            # video row can then be deleted safely, without sending a termination signal to the Celery worker.
-            if is_admin:
-                count, _ = Video.objects.filter(id=video.id).delete()
-            else:
-                count, _ = Video.objects.filter(id=video.id, owner=request.user).delete()
+            # The missing row is the "pending deletion" marker the tasks check, so it goes before
+            # the cancel: a task that subscribes after the cancel was sent still finds it gone.
+            count, _ = writable(Video, request.user).filter(id=video.id).delete()
 
             if count:
+                if video.status == Video.STATUS_PROCESSING:
+                    # NOTE: If a conversion is queued, Celery revoke prevents it from starting.
+                    # If conversion is already running, the conversion task's watcher receives the message and kills the FFmpeg subprocess.
+                    cancel_conversion(video, reason="video_delete")
+                cancel_plugin_runs(active_runs, reason="video_delete")
+
                 # Clean up files on disk
                 try:
                     output_dir = media_dir_to_file(video_id_hex)
@@ -322,14 +299,18 @@ class VideoDelete(View):
                     for ext in (video.ext, ".mp4", ".mkv", ".ogv"):
                         remove_file(media_path_to_file(video_id_hex, ext))
                 except Exception:
+                    files_removed = False
                     logger.exception("Failed to clean up video files after delete")
+                else:
+                    files_removed = True
 
                 if video_owner:
-                    video_owner.used_storage_size = max(0, video_owner.used_storage_size - file_size)
-                    video_owner.save()
+                    release_used_storage(video_owner, file_size)
+                log_event(logger, "video.delete", video_id=video_id_hex, storage_released=file_size,
+                          files_removed=files_removed)
                 return JsonResponse({"status": "ok"})
 
-            return JsonResponse({"status": "error"}, status=500)
+            return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
         except Exception:
             logger.exception("Failed to delete video")
             return JsonResponse({"status": "error"}, status=500)

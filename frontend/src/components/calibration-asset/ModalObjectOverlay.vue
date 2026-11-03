@@ -148,13 +148,8 @@ const setVideoObject = (event) => {
   const rect = videoOverlayElement.value?.getBoundingClientRect();
   if (!rect) return;
 
-  if (calibrationAssetStore.timeChangeConflict) {
-    calibrationAssetStore.calibrationAssetObjects.forEach((m) => {
-      m.videoCoordsRel = [{ x: null, y: null, z: null }];
-    });
-    calibrationAssetStore.timeChangeConflict = false;
-  }
-
+  // Clicks land on the frame the player is on (the store keeps one set of clicks per annotated
+  // frame), so there is nothing to clear here when the frame changed.
   const normX = (event.clientX - rect.left) / rect.width;
   const normY = (event.clientY - rect.top) / rect.height;
 

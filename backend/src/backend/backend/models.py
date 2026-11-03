@@ -64,7 +64,8 @@ class SportVidUser(AbstractUser):
             "date_joined": self.date_joined,
             "dashboard_layout": self.dashboard_layout,
             "video_view_mode": self.video_view_mode,
-            "experience_mode": self.experience_mode
+            "experience_mode": self.experience_mode,
+            "is_active": self.is_active,
         }
 
     def __str__(self):
@@ -117,6 +118,30 @@ class Video(models.Model):
     asset_dir = models.CharField(max_length=1024, blank=True, null=True)
     manifest_path = models.CharField(max_length=1024, blank=True, null=True)
     media_path = models.CharField(max_length=1024, blank=True, null=True)
+    # camera motion category, set by the camera_motion_classification plugin
+    CAMERA_MOTION_STATIC = "static"
+    CAMERA_MOTION_PAN = "pan"
+    CAMERA_MOTION_ZOOM = "zoom"
+    CAMERA_MOTION_PAN_ZOOM = "pan_zoom"
+    CAMERA_MOTION_UNKNOWN = "unknown"
+    CAMERA_MOTION = {
+        CAMERA_MOTION_STATIC: "STATIC",
+        CAMERA_MOTION_PAN: "PAN",
+        CAMERA_MOTION_ZOOM: "ZOOM",
+        CAMERA_MOTION_PAN_ZOOM: "PAN_ZOOM",
+        CAMERA_MOTION_UNKNOWN: "UNKNOWN",
+    }
+    camera_motion = models.CharField(
+        max_length=16,
+        choices=[(k, v) for k, v in CAMERA_MOTION.items()],
+        blank=True,
+        null=True,
+    )
+    lens_profile = models.ForeignKey(
+        "LensProfile", blank=True, null=True, on_delete=models.SET_NULL, related_name="videos"
+    )
+    # EIS crop of the recording mode (zoom about the frame centre, f / crop), see utils/lens.py:recording_modes
+    lens_crop = models.FloatField(default=1.0)
 
     def to_dict(self, include_refs_hashes=True, include_refs=False, **kwargs):
         return {
@@ -141,6 +166,9 @@ class Video(models.Model):
             "total_number_of_teams": self.total_number_of_teams,
             "age_group": self.age_group,
             "sport": self.sport,
+            "camera_motion": self.camera_motion,
+            "lens_profile_id": self.lens_profile_id.hex if self.lens_profile_id else None,
+            "lens_crop": self.lens_crop,
             "status": self.status,
             "progress": self.progress,
             "eta_seconds": self.eta_seconds,
@@ -256,6 +284,14 @@ class PluginRun(models.Model):
     # reports enough to extrapolate, and reset to null on QUEUED / DONE / ERROR.
     eta_seconds = models.FloatField(blank=True, null=True)
     in_scheduler = models.BooleanField(default=False)
+    # ML provenance: the validated parameters the run was started
+    # with (incl. checkpoint and thresholds) and the Ray plugins with their versions that
+    # produced the results. Empty for runs from before migration 0065.
+    parameters = models.JSONField(blank=True, null=True)
+    provenance = models.JSONField(blank=True, null=True)
+    # why the run ended in ERROR: {"type": "<snake_case>", "message": ..., "details": {...}}
+    # (backend.utils.task.TaskFailure); {"type": "internal_error"} for unexpected errors
+    failure_reason = models.JSONField(blank=True, null=True)
     # TODO: Consider adding db_index=True to task_id if we ever query by it, and
     # optionally add a validator for Celery task ID format.
     task_id = models.CharField(max_length=256, blank=True, null=True) # associate PluginRun DB entry with Celery run_plugin task.
@@ -289,6 +325,9 @@ class PluginRun(models.Model):
             "progress": self.progress,
             "eta_seconds": self.eta_seconds,
             "status": self.STATUS[self.status],
+            "parameters": self.parameters,
+            "provenance": self.provenance,
+            "failure_reason": self.failure_reason,
         }
         if include_refs_hashes:
             result["video_id"] = self.video.id.hex
@@ -638,7 +677,7 @@ class Shortcut(models.Model):
             "keys": self.keys,
         }
         if include_refs_hashes:
-            result["video_id"] = self.video.id.hex
+            result["video_id"] = self.video.id.hex if self.video else None
         return result
 
     @classmethod
@@ -803,6 +842,34 @@ class CalibrationAssets(models.Model):
     # store 3x3 matrix as JSON array of arrays, default to identity matrix
     homography_matrix = models.JSONField(default=default_homography_matrix)
     object_type = models.CharField(max_length=1024, null=True)
+    # intrinsics (scaled to the video) the point correspondences were undistorted with before
+    # the homography fit; null means the homography works on raw (distorted) video coordinates
+    lens_intrinsics = models.JSONField(blank=True, null=True)
+    # camera position/orientation recovered from the homography and lens_intrinsics
+    camera_pose = models.JSONField(blank=True, null=True)
+    # RMS error (metres on the pitch) of the point correspondences under the homography; these
+    # are the points it was fitted on, so it is a lower bound (always 0 with exactly 4 points)
+    reprojection_error = models.FloatField(blank=True, null=True)
+    # Which of this asset's Calibrations the four fields above mirror, i.e. the one everything
+    # downstream (the overlay, KPI computation, position data) works with. Every run over the
+    # asset adds one and becomes the active one; the user can switch back (views/calibration_assets.py: CalibrationActivate).
+    active_calibration = models.ForeignKey(
+        "Calibration",
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
+
+    def apply_calibration(self, calibration):
+        """Make one of this asset's calibrations the active one and mirror it onto the asset, where every
+        consumer reads it from. Saves the asset."""
+        self.active_calibration = calibration
+        self.homography_matrix = calibration.homography_matrix
+        self.lens_intrinsics = calibration.lens_intrinsics
+        self.camera_pose = calibration.camera_pose
+        self.reprojection_error = calibration.reprojection_error
+        self.save()
 
     def to_dict(self, include_refs_hashes=True, include_refs=True, **kwargs):
         result = {
@@ -810,11 +877,59 @@ class CalibrationAssets(models.Model):
             "name": self.name,
             "sport": self.sport,
             "homography_matrix": self.homography_matrix,
-            "object_type": self.object_type
+            "object_type": self.object_type,
+            "lens_intrinsics": self.lens_intrinsics,
+            "camera_pose": self.camera_pose,
+            "reprojection_error": self.reprojection_error,
+            "active_calibration_id": self.active_calibration_id.hex if self.active_calibration_id else None,
         }
         if include_refs:
             result["object_data"] = [x.to_dict() for x in self.object_data.all()]
+            result["calibrations"] = [x.to_dict() for x in self.calibrations.all()]
         return result
+
+
+class Calibration(models.Model):
+    """One calibration of a CalibrationAssets, as computed by one plugin run.
+
+    The asset holds the clicked points; each run over it (DLT+RANSAC with or without a lens profile, or with a
+    lens solved from the video) fits its own homography from them. Keeping them all is what lets the user
+    compare the variants and pick one, instead of only ever seeing the last run's result.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    calibration_asset = models.ForeignKey(
+        CalibrationAssets, on_delete=models.CASCADE, related_name="calibrations"
+    )
+    # the run that computed it; kept as a plain name in `plugin` so a deleted run doesn't take that with it
+    plugin_run = models.ForeignKey(
+        PluginRun, blank=True, null=True, on_delete=models.SET_NULL, related_name="calibrations"
+    )
+    plugin = models.CharField(max_length=256, blank=True, default="")
+    date = models.DateTimeField(auto_now_add=True)
+    homography_matrix = models.JSONField(default=default_homography_matrix)
+    lens_intrinsics = models.JSONField(blank=True, null=True)
+    camera_pose = models.JSONField(blank=True, null=True)
+    reprojection_error = models.FloatField(blank=True, null=True)
+
+    class Meta: ordering = ["-date"]
+
+    def to_dict(self, **kwargs):
+        # The homography and the full lens snapshot are left out: of all the calibrations of an asset only the
+        # active one is applied, and it is mirrored onto the asset itself. This is what the picker needs to
+        # tell them apart.
+        lens = self.lens_intrinsics or {}
+        return {
+            "id": self.id.hex,
+            "plugin": self.plugin,
+            "plugin_run_id": self.plugin_run_id.hex if self.plugin_run_id else None,
+            "date": self.date.isoformat(),
+            "reprojection_error": self.reprojection_error,
+            # "fisheye" for a lens profile (with its name), "angular" for one solved from the video,
+            # null when the homography was fitted on the raw video coordinates
+            "lens_model": lens.get("model"),
+            "lens_profile_name": lens.get("lens_profile_name"),
+            "camera_pose": self.camera_pose,
+        }
 
 
 class PointCorrespondence(models.Model):
@@ -828,6 +943,12 @@ class PointCorrespondence(models.Model):
     active = models.BooleanField(default=False)
     comp_area_coords_rel = models.JSONField(default=list)
     video_coords_rel = models.JSONField(default=list)
+    # The video time (ms) this object was clicked at. An asset may be annotated on several frames --
+    # one row per (object, annotated frame), plus one row with no clicks for an object that was never
+    # placed. Null for assets annotated before frames were recorded, and for those unplaced rows.
+    # All frames' clicks are pooled into one homography fit (tasks/calibration_static_dlt.py), which
+    # only holds for a camera that does not move between the annotated frames.
+    time = models.FloatField(blank=True, null=True)
 
     def to_dict(self):
         return {
@@ -835,6 +956,68 @@ class PointCorrespondence(models.Model):
             "name": self.name,
             "active": self.active,
             "compAreaCoordsRel": self.comp_area_coords_rel,
-            "videoCoordsRel": self.video_coords_rel
+            "videoCoordsRel": self.video_coords_rel,
+            "time": self.time,
         }
 
+
+class LensProfile(models.Model):
+    """A lens profile imported from Gyroflow's lens profile database (OpenCV fisheye model)."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # path of the profile inside the lens_profiles repository, stable across re-imports
+    key = models.CharField(max_length=512, unique=True)
+    name = models.CharField(max_length=512)
+    group = models.CharField(max_length=128)
+    brand = models.CharField(max_length=128, db_index=True)
+    model = models.CharField(max_length=256, db_index=True)
+    lens_model = models.CharField(max_length=256, blank=True, default="")
+    camera_setting = models.CharField(max_length=256, blank=True, default="")
+    note = models.CharField(max_length=1024, blank=True, default="")
+    calib_width = models.IntegerField()
+    calib_height = models.IntegerField()
+    fps = models.FloatField(blank=True, null=True)
+    camera_matrix = models.JSONField()
+    distortion_coeffs = models.JSONField()
+    rms_error = models.FloatField(blank=True, null=True)
+    official = models.BooleanField(default=False)
+
+    EIS_ON = "on"
+    EIS_OFF = "off"
+    EIS_UNKNOWN = "unknown"
+    EIS = {
+        EIS_ON: "ON",
+        EIS_OFF: "OFF",
+        EIS_UNKNOWN: "UNKNOWN",
+    }
+    # in-camera stabilization during calibration, parsed from the profile's free-text fields
+    eis = models.CharField(
+        max_length=8,
+        choices=[(k, v) for k, v in EIS.items()],
+        default=EIS_UNKNOWN,
+    )
+    # set when the profile needs more than the plain fisheye model (e.g. GoPro SuperView)
+    unsupported_reason = models.CharField(max_length=256, blank=True, null=True)
+    source_commit = models.CharField(max_length=64)
+    raw = models.JSONField()
+
+    class Meta: ordering = ["brand", "model", "lens_model", "calib_width"]
+
+    def to_dict(self, **kwargs):
+        return {
+            "id": self.id.hex,
+            "name": self.name,
+            "group": self.group,
+            "brand": self.brand,
+            "model": self.model,
+            "lens_model": self.lens_model,
+            "camera_setting": self.camera_setting,
+            "note": self.note,
+            "calib_width": self.calib_width,
+            "calib_height": self.calib_height,
+            "fps": self.fps,
+            "rms_error": self.rms_error,
+            "official": self.official,
+            "eis": self.eis,
+            "supported": self.unsupported_reason is None,
+            "unsupported_reason": self.unsupported_reason,
+        }

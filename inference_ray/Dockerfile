@@ -3,9 +3,7 @@ FROM pytorch/pytorch:2.12.1-cuda12.6-cudnn9-runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-# NOTE: better disable post-install .pyc compilation
-ENV UV_COMPILE_BYTECODE=0 
+ENV UV_COMPILE_BYTECODE=0
 ENV UV_LINK_MODE=copy
 ENV UV_PROJECT_ENVIRONMENT=/app/.venv
 ENV PATH="/app/.venv/bin:${PATH}"
@@ -41,16 +39,13 @@ COPY packages/interface /app/packages/interface
 COPY packages/utils /app/packages/utils
 COPY inference_ray /app/inference_ray
 
-ARG UID=1003
-ARG GID=1003
-
+# the image's "ubuntu" user takes the host user's ids (1000 locally, 1003 on the servers)
+ARG UID=1000
+ARG GID=1000
 RUN groupmod -g ${GID} ubuntu && \
     usermod -u ${UID} -g ${GID} ubuntu && \
     mkdir -p /data /home/ubuntu/.cache/uv /app && \
     chown -R ${UID}:${GID} /app /data /home/ubuntu
-
-# RUN mkdir -p /data /home/ubuntu/.cache/uv /app \
-#     && chown -R ubuntu:ubuntu /app /data /home/ubuntu
 
 USER ubuntu
 

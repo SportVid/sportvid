@@ -1,8 +1,11 @@
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePositionDataStore } from "@/stores/position_data";
 import { usePluginRunStore } from "@/stores/plugin_run";
 import { useUserStore } from "@/stores/user";
+import { usePlayerStore } from "@/stores/player";
+import { useLensProfileStore } from "@/stores/lens_profile";
+import { useVideoStore } from "@/stores/video";
 
 // Hides the given (always-required-until-now) parameter names from the UI in "simple"
 // experience mode, showing them all again in "complex" mode -- their current values (the
@@ -12,7 +15,7 @@ import { useUserStore } from "@/stores/user";
 // (e.g. a detector-specific param for a different detector). These fields are still
 // required by the backend, just defaulted instead of user-editable, so they must keep being
 // submitted with whatever value they currently hold. Shared by objectTrackerParams/
-// teamClusteringParams/osnetReidParams below; kpi_computation and calibration_static_dlt are
+// teamClusteringParams/osnetReidParams below; kpi_computation and calibrationParams are
 // already minimal enough not to need this.
 function hideInSimpleMode(parameters, names) {
   const userStore = useUserStore();
@@ -939,20 +942,171 @@ export function osnetReidParams() {
   return { parameters, optionalParameters };
 }
 
-export function dltParams() {
+// The two calibration plugins, in the order the rule below prefers them. There is no method
+// picker: which one runs follows from the lens profile picked for the video and its camera motion
+// (the solver needs a static camera), and the lens solver
+// falls back to the plain DLT inside the backend task when it cannot solve a lens (see
+// tasks/calibration_lens_solve.py's lens_intrinsics), so there is nothing left to choose.
+export const CALIBRATION_METHODS = ["calibration_static_dlt", "calibration_lens_solve"];
+
+// Writes the lens profile a calibrationParams set has picked onto the video. The hosts call this
+// right before they submit the run: the backend task reads the profile off the video, so it has
+// to land first. Returns false when it couldn't be saved, which aborts the run rather than
+// quietly calibrating with the old profile.
+export async function applyLensProfileSelection(parameters, videoId) {
+  const field = parameters.find((p) => p.field === "select_lens_profile");
+  const picked = field?.value ?? null;
+  // No picker in this parameter set, or one that never got as far as reporting a selection (the
+  // video isn't converted yet, so no profile can be assigned): the video keeps what it carries.
+  if (!picked || !videoId) return true;
+
+  // Written out unconditionally, without comparing against a video entry held in some store
+  // first: that comparison is what used to skip the save whenever the local copy had drifted
+  // (an entry replaced over the live event stream, a profile assigned in the other dialog), and
+  // the run then went out with the previously stored profile. One extra request per run.
+  const res = await useLensProfileStore().setForVideo({
+    videoId,
+    lensProfileId: picked.lensProfileId ?? null,
+    lensCrop: picked.lensCrop ?? 1.0,
+  });
+  if (res.status !== "ok") {
+    console.error("Could not save the video's lens profile, not starting the calibration:", res);
+    return false;
+  }
+  // Two stores hold a video: the player's single open one and the gallery's map (which the video
+  // overview and its own camera/lens dialog read). The response is the updated entry, so both
+  // are brought up to date -- otherwise the change only shows up in the dialog it was made in.
+  const playerStore = usePlayerStore();
+  useVideoStore().upsert(res.entry);
+  if (playerStore.video?.id === res.entry.id) {
+    await playerStore.fetchVideo({ videoId });
+  }
+  return true;
+}
+
+// Camera calibration is offered as one entry instead of one button per plugin. Which of the two
+// plugins actually runs is derived state, returned as `plugin` for the hosts to submit with --
+// not a parameter that something writes into: deriving it is what keeps it from going stale
+// against the picked lens profile.
+export function calibrationParams() {
   const { t } = useI18n();
+  const pluginRunStore = usePluginRunStore();
+  const playerStore = usePlayerStore();
+
+  // Plugins the backend can run right now (deployed Ray plugins); null until the answer is in,
+  // which means "assume everything is there" as everywhere else.
+  const available = ref(null);
+  pluginRunStore.fetchAvailable().then((plugins) => {
+    available.value = plugins;
+  });
+  const canRun = (plugin) => available.value === null || available.value.includes(plugin);
+
+  // The { lensProfileId, lensCrop } the picker has reported, null until it has mounted.
+  const lensProfileSelection = ref(null);
+
+  // Which profile the run will use: what the picker reported, or -- in the moment before it has
+  // -- what the video already carries.
+  const lensProfileId = computed(() =>
+    lensProfileSelection.value
+      ? (lensProfileSelection.value.lensProfileId ?? null)
+      : (playerStore.video?.lens_profile_id ?? null)
+  );
+
+  // The lens solver detects the painted markings in frames sampled across the whole video, so it
+  // only makes sense for a camera that stands still. video.camera_motion is set by the
+  // camera_motion_classification run the backend starts after every upload; anything but a
+  // confirmed "static" (pan/zoom, "unknown", or not classified yet) keeps the solver out. The
+  // gallery store's entry is read first: the live event stream updates it ("video.update") when
+  // the classification lands, the player's copy only on its next fetch.
+  const videoStore = useVideoStore();
+  const cameraStatic = computed(() => {
+    const id = playerStore.video?.id;
+    const video = (id && videoStore.get(id)) || playerStore.video;
+    return video?.camera_motion === "static";
+  });
+
+  // The rule: with a lens profile the clicked points are undistorted with it, without one the
+  // lens is solved from the video -- if the camera is static. Everything else the solver needs
+  // (enough landmarks, a pitch model for the sport) is the backend's business -- it falls back
+  // to the plain DLT fit on its own, so the choice here is not second-guessed.
+  const plugin = computed(() =>
+    !lensProfileId.value && cameraStatic.value && canRun("calibration_lens_solve")
+      ? "calibration_lens_solve"
+      : "calibration_static_dlt"
+  );
 
   const parameters = ref([
+    {
+      // The video's lens profile: a property of the video, not a plugin parameter (hence
+      // `uiOnly`), and only written to the video when the run is started
+      // (applyLensProfileSelection above). Backed by the ref so everything derived from it has
+      // one explicit source.
+      field: "select_lens_profile",
+      name: "lens_profile",
+      uiOnly: true,
+      get value() {
+        return lensProfileSelection.value;
+      },
+      set value(selection) {
+        lensProfileSelection.value = selection;
+      },
+    },
     {
       field: "select_calibration",
       name: "calibration_id",
       value: "",
+      // Which asset is calibrated is the one thing the run cannot be started without (see
+      // ModalPluginRun's hasMissingRequired); the lens profile and the solver's parameters below
+      // are all optional.
+      required: true,
       text: t("modal.plugin.calibration_static_dlt.calibration_id"),
-      hint: t("modal.plugin.calibration_static_dlt.calibration_id_hint"),
+      // Reads which plugin the run would use, so it changes with the picked profile.
+      get hint() {
+        return plugin.value === "calibration_lens_solve"
+          ? t("modal.plugin.calibration_lens_solve.calibration_id_hint")
+          : t("modal.plugin.calibration_static_dlt.calibration_id_hint");
+      },
     },
   ]);
 
-  return { parameters, optionalParameters: ref([]) };
+  // The lens solver's own parameters (see the calibration_lens_solve serializer); defaults match
+  // the analyser plugin's own, so leaving them untouched changes nothing. They stay offered
+  // whichever plugin the rule picks -- calibration_static_dlt's serializer ignores parameters it
+  // doesn't declare, and a run that falls back to it was meant to try the solver first.
+  const optionalParameters = ref([
+    {
+      field: "slider",
+      min: 2,
+      max: 20,
+      value: 8,
+      step: 1,
+      name: "num_frames",
+      text: t("modal.plugin.calibration_lens_solve.num_frames"),
+      hint: t("modal.plugin.calibration_lens_solve.num_frames_hint"),
+    },
+    {
+      field: "slider",
+      min: 1,
+      max: 10,
+      value: 5,
+      step: 1,
+      name: "rounds",
+      text: t("modal.plugin.calibration_lens_solve.rounds"),
+      hint: t("modal.plugin.calibration_lens_solve.rounds_hint"),
+    },
+    {
+      field: "slider",
+      min: 3,
+      max: 8,
+      value: 6,
+      step: 1,
+      name: "poly_degree",
+      text: t("modal.plugin.calibration_lens_solve.poly_degree"),
+      hint: t("modal.plugin.calibration_lens_solve.poly_degree_hint"),
+    },
+  ]);
+
+  return { parameters, optionalParameters, plugin };
 }
 
 export function kpiComputationParams() {
@@ -1097,7 +1251,9 @@ export function kpiComputationParams() {
 
 export function submitPlugin(plugin, parameters, videoId) {
   const pluginRunStore = usePluginRunStore();
-  parameters = [...parameters];
+  // `uiOnly` fields drive the dialog rather than the plugin and never go into the payload (the
+  // lens profile block, explanatory notes) -- they carry no parameter at all.
+  parameters = parameters.filter((p) => !p.uiOnly);
 
   if (plugin === "object_tracker") {
     const targetIndex = parameters.findIndex((p) => p.name === "tracking_target");

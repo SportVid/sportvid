@@ -1,12 +1,12 @@
 """ Django settings for the sportvid project.
     Run manage.py check --deploy to make sure this settings file is suited for a production environment.
 """
-
 import os
 import json
 import logging
 
 from celery.schedules import crontab
+from django.core.exceptions import ImproperlyConfigured
 from kombu import Queue
 
 # now using two separate celery workers for IO/gpu-bound processing
@@ -16,64 +16,72 @@ CELERY_TASK_QUEUES = (
     Queue("gpu")
 )
 
-CELERY_TASK_ROUTES = {
-    "sportvid.tasks.convert_video_to_hls": {
-        "queue": "gpu",
-    }
-}
-
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-
 
 # build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ENVIRONMENT = os.getenv('ENVIRONMENT')
 
-SECURE_SSL_REDIRECT = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-CSRF_COOKIE_SECURE = True  # avoid transmitting CSRF cookie over HTTP
-SESSION_COOKIE_SECURE = True
+# One settings file for every environment. ENVIRONMENT is "local" for
+# the docker-compose*.yml stacks on a developer machine, "dev" or "prod" on the servers.
+# Anything else, including unset, is treated like a server, so a missing variable fails
+# closed (see the checks at the end of this file).
+ENVIRONMENT = os.getenv("ENVIRONMENT", "prod")
+IS_LOCAL = ENVIRONMENT == "local"
 
-# Code-Defaults, werden zur Laufzeit von der Secrets-Datei (django_settings)
-# ueberschrieben, falls dort gesetzt - dienen hier nur als Fallback.
+DEBUG = False  # only the settings secret may turn it on, and only for local development
+
+# defaults; the settings secret (allowed_hosts, csrf_trusted_origins) may override them
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "backend", "backend-dev"]
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-]
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-]
+if IS_LOCAL:
+    CORS_ALLOWED_ORIGINS = ["http://localhost:8080", "http://127.0.0.1:8080"]
+elif ENVIRONMENT == "dev":
+    CORS_ALLOWED_ORIGINS = ["https://www.dev.sportvid.dshs-koeln.de", "https://dev.sportvid.dshs-koeln.de"]
+else:
+    CORS_ALLOWED_ORIGINS = ["https://www.sportvid.dshs-koeln.de", "https://sportvid.dshs-koeln.de"]
+CSRF_TRUSTED_ORIGINS = list(CORS_ALLOWED_ORIGINS)
 CORS_ALLOW_CREDENTIALS = True
 
-SECURE_HSTS_SECONDS = 31536000  # 1 year
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
+if IS_LOCAL:
+    # the local stack runs over plain HTTP
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+else:
+    # the servers sit behind the nginx proxy, which terminates TLS
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
-if ENVIRONMENT == 'prod':
-    CORS_ALLOWED_ORIGINS = [  # define allowed origins
-        # "http://www.sportvid.dshs-koeln.de",
-        # "http://sportvid.dshs-koeln.de",
-        "https://www.sportvid.dshs-koeln.de",
-        "https://sportvid.dshs-koeln.de"
-    ]
-elif ENVIRONMENT == 'dev':
-    # NOTE: only should be used for debugging purposes 
-    # CORS_ALLOW_ALL_ORIGINS = True  
-    CORS_ALLOWED_ORIGINS = [
-        "https://www.dev.sportvid.dshs-koeln.de",
-        "https://dev.sportvid.dshs-koeln.de"
-    ]
+# Valkey (Celery broker, live events, plugin progress). The password is required on
+# the servers and empty for the local stack, which only listens on 127.0.0.1.
+VALKEY_HOST = os.getenv("VALKEY_CLIENT_HOST", "valkey")
+VALKEY_PORT = int(os.getenv("VALKEY_INTERNAL_PORT", "6380"))
+VALKEY_PASSWORD = os.getenv("VALKEY_PASSWD") or None
 
-CORS_ALLOW_CREDENTIALS = True  # include cookies in cross-sitze HTTP requests
+# Seconds one analyser job of a plugin run may take. The analyser reads the
+# same variable for its HTTP call to Ray Serve. Celery's time_limit cannot do this:
+# it is not enforced by the threads pool the workers use.
+PLUGIN_RUN_TIMEOUT = int(os.getenv("PLUGIN_RUN_TIMEOUT", str(12 * 3600)))
+
+# Video encoder of the HLS conversion: "nvenc" (GPU), "x264" (CPU) or "auto", which uses
+# NVENC when the gpu worker can encode with it (utils.video_converter.nvenc_available).
+HLS_ENCODER = os.getenv("HLS_ENCODER", "auto").strip().lower()
+if HLS_ENCODER not in ("auto", "nvenc", "x264"):
+    raise ImproperlyConfigured(f"HLS_ENCODER must be auto, nvenc or x264, not {HLS_ENCODER!r}")
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "[%(asctime)s][%(levelname)s][%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            # appends the correlation IDs bound with backend.log_context (video_id=..., plugin_run_id=...)
+            "()": "backend.log_context.ContextFormatter",
+            "fmt": "[%(asctime)s][%(levelname)s][%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         }
     },
@@ -99,6 +107,11 @@ LOGGING = {
             "level": "WARNING", 
             "propagate": False  # NOTE: True?
         },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
     },
 }
 
@@ -120,6 +133,8 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "backend.SportVidUser"
 
 MIDDLEWARE = [
+    # first, so every line logged for the request (other middleware included) carries request_id
+    "backend.middleware.RequestIdMiddleware",
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -127,6 +142,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # "mozilla_django_oidc.middleware.SessionRefresh",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
@@ -164,11 +180,12 @@ CACHES = {
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv('DB_NAME'),
-        "USER": os.getenv('DB_USER'),
-        "PASSWORD": os.getenv('DB_PASSWORD'),
-        "HOST": "postgres",
-        "PORT": os.getenv('DB_PORT'),
+        # DB_* on the servers; the local stack's .env only defines POSTGRES_*
+        "NAME": os.getenv("DB_NAME") or os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("DB_USER") or os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD") or os.getenv("POSTGRES_PASSWORD"),
+        "HOST": os.getenv("DB_HOST", "postgres"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
@@ -192,7 +209,6 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_L10N = True
@@ -201,14 +217,16 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 STATICFILES_DIRS = []
 
-# last resolution is used for indexing
-IMAGE_RESOLUTIONS = [{"min_dim": 200, "suffix": "_m"}, {"min_dim": 1080, "suffix": ""}]
-
-try: from .user_settings import * # type: ignore
-except: pass
+try:
+    from .user_settings import *  # noqa: F401,F403
+except ModuleNotFoundError:
+    pass
 
 MEDIA_URL = "/media/"
-THUMBNAIL_URL = "http://localhost/thumbnails/"
+# Origin under which nginx serves /media and /thumbnails ("public_base_url" in the
+# settings secret, e.g. https://dev.sportvid.dshs-koeln.de on the dev server).
+PUBLIC_BASE_URL = "http://localhost"
+THUMBNAIL_URL = None  # derived from PUBLIC_BASE_URL below unless the secret sets it
 
 # the last resolution will use for indexing
 IMAGE_RESOLUTIONS = [{"min_dim": 200, "suffix": "_m"}, {"min_dim": 1080, "suffix": ""}]
@@ -244,24 +262,46 @@ config_lut = {
     "grpc_port": "GRPC_PORT",
     "image_resolutions": "IMAGE_RESOLUTIONS",
     "pipelines": "PIPELINES",
-    "annotation_max_length": "ANNOTATION_MAX_LENGTH"
+    "annotation_max_length": "ANNOTATION_MAX_LENGTH",
+    "public_base_url": "PUBLIC_BASE_URL",
 }
 
-config_path = "/run/secrets/django_settings"
-
-# logging.error(f"SETTINGS FILE: {__file__}")
-# logging.error(f"SECRET EXISTS: {os.path.exists(config_path)}")
-# logging.error(f"MEDIA_ROOT BEFORE LOAD: {repr(globals().get('MEDIA_ROOT'))}")
+config_path = os.getenv("DJANGO_SETTINGS_SECRET", "/run/secrets/django_settings")
 
 if os.path.exists(config_path):
     try:
         with open(config_path, "r") as f:
             config = json.load(f)
-            for k, v in config_lut.items():
-                if k in config:
-                    globals()[v] = config[k]
-        logging.error(f"Successfully parsed django settings file: {config_path}")
-    except Exception as e:
-        logging.error(f"Failed to load or parse django settings file: {e}")
+    except (OSError, ValueError) as e:
+        # A broken secret must stop the app instead of silently running on defaults.
+        raise ImproperlyConfigured(f"Cannot read the settings secret {config_path}: {e}") from e
+    for k, v in config_lut.items():
+        if k in config:
+            globals()[v] = config[k]
 
-# logging.error(f"MEDIA_ROOT AFTER LOAD: {repr(globals().get('MEDIA_ROOT'))}")
+PUBLIC_BASE_URL = PUBLIC_BASE_URL.rstrip("/")
+if not THUMBNAIL_URL:
+    THUMBNAIL_URL = f"{PUBLIC_BASE_URL}/thumbnails/"
+
+# ---------- fail closed on the servers
+if IS_LOCAL:
+    SECRET_KEY = globals().get("SECRET_KEY") or "local-development-only-not-a-secret"
+else:
+    _problems = []
+    _key = str(globals().get("SECRET_KEY") or "")
+    if len(_key) < 50 or len(set(_key)) < 5 or _key.lower().startswith(("secret", "default", "django-insecure")):
+        _problems.append("secret_key is missing or a placeholder (need 50+ random characters)")
+    if DEBUG:
+        _problems.append("debug must be false")
+    for _name in ("NAME", "USER", "PASSWORD"):
+        if not DATABASES["default"][_name]:
+            _problems.append(f"database {_name.lower()} is missing (DB_{_name})")
+    if not VALKEY_PASSWORD:
+        _problems.append("VALKEY_PASSWD is missing")
+    if not PUBLIC_BASE_URL.startswith("https://"):
+        _problems.append("public_base_url must be the https:// origin of the site")
+    if _problems:
+        raise ImproperlyConfigured(
+            f"Refusing to start with ENVIRONMENT={ENVIRONMENT!r}: " + "; ".join(_problems)
+            + ". Set ENVIRONMENT=local for local development."
+        )

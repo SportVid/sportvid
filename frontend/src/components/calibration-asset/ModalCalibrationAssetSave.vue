@@ -37,8 +37,8 @@
         >
           {{
             $t("modal.calibration_asset.required", {
-              current: calibrationAssetStore.filteredReferenceObjects.length,
-              required: 4,
+              current: calibrationAssetStore.placedObjectCount,
+              required: calibrationAssetStore.minPlacedObjects,
               type: $t(
                 `modal.calibration_asset.object_types.${calibrationAssetStore.calibrationAssetType}`
               ),

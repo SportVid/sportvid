@@ -15,6 +15,8 @@ from django.conf import settings
 
 @PluginManager.export_plugin("team_clustering")
 class TeamClustering(Task):
+    ray_plugins = ("team_clustering",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

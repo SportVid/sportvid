@@ -32,7 +32,8 @@
       "rules": {
         "min": "Mindestens 5 Zeichen.",
         "max": "Maximal 50 Zeichen."
-      }
+      },
+      "not_approved": "Ihr Konto wurde noch nicht von einem Administrator freigeschaltet."
     },
     "logout": {
       "title": "Abmelden",
@@ -44,7 +45,8 @@
       "rules": {
         "min": "Mindestens 5 Zeichen.",
         "max": "Maximal 50 Zeichen."
-      }
+      },
+      "pending_approval": "Danke für die Registrierung! Ein Administrator muss Ihr Konto freischalten, bevor Sie sich anmelden können."
     },
     "experience_mode": {
       "heading": "Wie möchten Sie Plugins nutzen?",
@@ -98,6 +100,7 @@
     "timelines": "Zeitleisten:",
     "video_processing": "Video wird verarbeitet",
     "rename_video": "Video umbenennen",
+    "lens_profile": "Kamera & Objektiv",
     "delete_video": "Video löschen",
     "toggle_details": "Details anzeigen/ausblenden",
     "data": "Daten",
@@ -162,7 +165,44 @@
       "climbing": "Klettern"
     }
   },
+  "lens_profile": {
+    "title": "Kamera & Objektiv",
+    "heading": "Kamera & Objektiv",
+    "video_not_ready": "Ein Objektivprofil kann zugewiesen werden, sobald das Video fertig verarbeitet ist -- seine Auflösung entscheidet, welche Profile passen.",
+    "brand": "Kameramarke",
+    "model": "Kameramodell",
+    "profile": "Objektivprofil",
+    "no_profiles": "Keine Objektivprofile für diese Kamera.",
+    "no_profiles_compatible": "Kein Objektivprofil für das Seitenverhältnis dieses Videos kalibriert.",
+    "recording_mode": "Aufnahmemodus (Bildstabilisierung)",
+    "recording_mode_hint": "Eine stabilisierte Aufnahme zeigt einen beschnittenen Teil des kalibrierten Bildes. Wählen Sie den Modus, in dem das Video aufgenommen wurde.",
+    "mode_unlisted": "anderes Seitenverhältnis",
+    "show_incompatible": "Auch Profile anderer Seitenverhältnisse anzeigen",
+    "none_hint": "Ohne Profil wird das Objektiv entweder ignoriert oder aus dem Video selbst gelöst.",
+    "incompatible": "anderes Seitenverhältnis",
+    "official": "offiziell",
+    "rms": "RMS {value} px",
+    "eis_on": "Stabilisierung ein",
+    "eis_off": "Stabilisierung aus",
+    "eis_unknown": "Stabilisierung unbekannt",
+    "eis_unknown_warning": "Es ist unklar, ob dieses Profil mit kamerainterner Bildstabilisierung kalibriert wurde. Falls die Kalibrierung verzerrt ausfällt, probieren Sie ein anderes Profil oder einen anderen Aufnahmemodus.",
+    "aspect_row_crop": "Dieses Profil wurde für ein höheres Bild kalibriert. Es wird als zentrierter Beschnitt angewendet, was bei den meisten Kameras passt, aber unsicherer ist als ein Profil im Seitenverhältnis dieses Videos.",
+    "aspect_row_extension": "Dieses Profil wurde für ein breiteres Bild kalibriert. Das Objektivmodell muss auf die äußeren Bildzeilen extrapoliert werden und ist am oberen und unteren Rand entsprechend unsicherer.",
+    "error_unsupported_lens_profile": "Dieses Profil benötigt mehr als das reine Fisheye-Modell und kann nicht verwendet werden.",
+    "error_incompatible_resolution": "Dieses Profil passt nicht zur Auflösung des Videos.",
+    "error_invalid_lens_crop": "Der gewählte Aufnahmemodus hat einen ungültigen Crop.",
+    "error_generic": "Das Objektivprofil konnte nicht zugewiesen werden."
+  },
   "calibration_asset": {
+    "calibration": {
+      "heading": "Kalibrierung wählen, die dieses Asset verwenden soll:",
+      "none": "Noch keine Kalibrierung -- nur dieses Asset auswählen",
+      "lens_profile": "Objektivprofil: {name}",
+      "lens_solved": "Objektiv aus dem Video gelöst",
+      "no_lens": "Ohne Entzerrung",
+      "error": "{value} m Fehler",
+      "error_unknown": "Fehler unbekannt"
+    },
     "not_selected": "Kein Kalibrierungs-Asset ausgewählt.<br>Bitte erstellen Sie ein neues Kalibrierungs-Asset oder wählen Sie ein bestehendes aus.",
     "title": "Kalibrierungs-Asset",
     "save": "Kalibrierungs-Asset speichern",
@@ -175,7 +215,15 @@
       "add_ref_marker": "Referenzmarker hinzufügen",
       "delete_ref_marker": "Referenzmarker löschen"
     },
-    "go_to_marker_time": "Zurück zu {time}"
+    "view_pitch_overlay": "Spielfeldlinien anzeigen",
+    "frames": {
+      "title": "Markierte Frames ({count})",
+      "points": "{count} Pkt.",
+      "distinct": "{count} / {required} verschiedene Marker gesetzt",
+      "min_hint": "Die Punkte aller Frames werden gemeinsam gefittet, derselbe Marker auf mehreren Frames zählt einmal -- Wiederholungen mitteln nur den Klickfehler.",
+      "unknown_time": "Zeit nicht gespeichert",
+      "delete": "Punkte dieses Frames entfernen"
+    }
   },
   "position_data": {
     "not_selected": "Keine Positionsdaten vorhanden.",
@@ -188,7 +236,7 @@
       "or": "oder",
       "bytetrack": "ByteTrack",
       "object_tracker": "Object Tracker",
-      "dlt": "DLT-Kalibrierung",
+      "calibration": "Kamerakalibrierung",
       "team_assignment": "Team-Zuordnung",
       "re_identification": "Re-Identification",
       "upload_heading": "Per Datei-Upload",
@@ -767,12 +815,27 @@
         "crop_x2_offset": "Crop-Offset rechts",
         "crop_y2_offset": "Crop-Offset unten"
       },
+      "calibration": {
+        "plugin_name": "Kamerakalibrierung",
+        "plugin_description": "Kalibriert die Kamera dieses Videos anhand der annotierten Landmarken eines Kalibrierungs-Assets. Welche Kalibrierung läuft, ergibt sich aus Kamera und Objektiv unten: mit Objektivprofil werden die Landmarken damit entzerrt, ohne Profil wird das Objektiv aus dem Video selbst gelöst."
+      },
       "calibration_static_dlt": {
         "plugin_name": "DLT+RANSAC aus annotierten Landmarken",
         "plugin_description": "Dieses Plugin führt eine statische Kalibrierung des Videos mittels Direct Linear Transformation (DLT) + RANSAC durch. Es nutzt die annotierten Marker-Korrespondenzen eines Kalibrierungs-Assets, um die Homographiematrix zu schätzen.",
         "timeline_name": "Calibration Static DLT",
         "calibration_id": "Kalibrierungs-Asset auswählen",
         "calibration_id_hint": "Wählen Sie ein Kalibrierungs-Asset zur Verwendung bei der Kalibrierung aus."
+      },
+      "calibration_lens_solve": {
+        "plugin_name": "Objektiv-Selbstkalibrierung + DLT aus annotierten Landmarken",
+        "plugin_description": "Schätzt die Objektivverzeichnung einer statischen Kamera aus dem Video selbst: aus den annotierten Landmarken und den darum herum aufgemalten Spielfeldmarkierungen, ohne Objektivprofil. Die Homographie wird anschließend auf den entzerrten Landmarken bestimmt. Benötigt eine statische Kamera und mindestens 6 über das Bild verteilte Landmarken.",
+        "calibration_id_hint": "Wählen Sie ein Kalibrierungs-Asset, dessen Landmarken auf der Spielfeldvorlage platziert sind.",
+        "num_frames": "Frames",
+        "num_frames_hint": "Anzahl der über das Video verteilten Frames, in denen die Spielfeldmarkierungen gesucht werden.",
+        "rounds": "Erkennungs-Durchläufe",
+        "rounds_hint": "Maximale Anzahl an Erkennungs- und Fit-Durchläufen; bricht früher ab, sobald keine weiteren Spielfeldmarkierungen gefunden werden.",
+        "poly_degree": "Polynomgrad",
+        "poly_degree_hint": "Grad des Winkelpolynoms, das als Modell der Objektivverzeichnung gefittet wird."
       },
       "posdata_convert": {
         "plugin_name": "Positionsdaten konvertieren"
@@ -1019,7 +1082,7 @@
       "source": {
         "player_tracking": "Spieler-Tracking",
         "object_tracking": "Objekt-Tracking (Ball)",
-        "dlt": "DLT-Kalibrierung",
+        "calibration": "Kamerakalibrierung",
         "upload": "Upload"
       },
       "variant": {

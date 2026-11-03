@@ -1,8 +1,7 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import axios from "../plugins/axios";
 import config from "../../app.config";
-import { inv } from "mathjs";
 import { useTopViewStore } from "./top_view";
 import { usePlayerStore } from "@/stores/player";
 
@@ -241,6 +240,35 @@ export const useCalibrationAssetStore = defineStore(
             id: "31",
             active: false,
             compAreaCoordsRel: [{ x: 1, y: 0.365, z: 0 }],
+            videoCoordsRel: [{ x: null, y: null, z: null }],
+          },
+          // where the goal posts stand on the goal line (7.32 m apart)
+          {
+            name: "Goal-post-left-top",
+            id: "32",
+            active: false,
+            compAreaCoordsRel: [{ x: 0, y: 0.5538, z: 0 }],
+            videoCoordsRel: [{ x: null, y: null, z: null }],
+          },
+          {
+            name: "Goal-post-left-bottom",
+            id: "33",
+            active: false,
+            compAreaCoordsRel: [{ x: 0, y: 0.4462, z: 0 }],
+            videoCoordsRel: [{ x: null, y: null, z: null }],
+          },
+          {
+            name: "Goal-post-right-top",
+            id: "34",
+            active: false,
+            compAreaCoordsRel: [{ x: 1, y: 0.5538, z: 0 }],
+            videoCoordsRel: [{ x: null, y: null, z: null }],
+          },
+          {
+            name: "Goal-post-right-bottom",
+            id: "35",
+            active: false,
+            compAreaCoordsRel: [{ x: 1, y: 0.4462, z: 0 }],
             videoCoordsRel: [{ x: null, y: null, z: null }],
           },
         ],
@@ -1598,20 +1626,117 @@ export const useCalibrationAssetStore = defineStore(
       return map;
     });
 
-    const allAssetObjectsValid = computed(
-      () =>
-        calibrationAssetObjects.value.filter((object) =>
-          object.videoCoordsRel.some((p) => p.x !== null && p.y !== null)
-        ).length >= 4
+    // ----------------------------------------------------------------------------------------
+    // Annotated frames
+    //
+    // The clicks are kept per annotated frame, not on the objects: { [frame key]: { [object id]:
+    // [{x, y, z}, ...] } }. The frame the player sits on is the one being edited (activeFrameKey);
+    // the objects' videoCoordsRel are only a view of it, so everything that draws them keeps
+    // working unchanged. Jumping to another frame therefore no longer overwrites anything -- it
+    // shows that frame's clicks, or an empty frame to annotate.
+    //
+    // The backend pools every frame's clicks into one homography fit (tasks/calibration_static_dlt.py),
+    // so the gain of annotating several frames is coverage: a marker hidden behind a player in one
+    // frame can be placed in another. It assumes the camera does not move between those frames.
+    //
+    // Frame keys are the player's time in whole milliseconds, as a string. UNKNOWN_FRAME holds the
+    // clicks of assets saved before the time was recorded -- there is no frame to jump back to.
+    const UNKNOWN_FRAME = "unknown";
+    const frameKey = (time) =>
+      time === null || time === undefined ? UNKNOWN_FRAME : String(Math.round(time));
+    const frameAnnotations = ref({});
+    const activeFrameKey = ref(UNKNOWN_FRAME);
+
+    const isPlaced = (points) =>
+      Array.isArray(points) && points.some((p) => p && p.x !== null && p.y !== null);
+    // the shape an unplaced object has: one null point per point of its pitch geometry
+    const emptyCoords = (object) =>
+      (object.compAreaCoordsRel?.length ? object.compAreaCoordsRel : [null]).map(() => ({
+        x: null,
+        y: null,
+        z: null,
+      }));
+    const clonePoints = (points) => points.map((p) => ({ ...p }));
+
+    // frames -> objects: the only writer of videoCoordsRel
+    const applyFrameToObjects = () => {
+      const frame = frameAnnotations.value[activeFrameKey.value] ?? {};
+      calibrationAssetObjects.value.forEach((object) => {
+        const points = frame[object.id];
+        object.videoCoordsRel = isPlaced(points) ? clonePoints(points) : emptyCoords(object);
+      });
+    };
+    const setActiveFrame = (key) => {
+      if (activeFrameKey.value === key) return;
+      // Scrubbing between two frames that carry no clicks leaves the objects as they are (already
+      // empty), so playback doesn't rewrite every object on every frame.
+      const touched = frameAnnotations.value[activeFrameKey.value] || frameAnnotations.value[key];
+      activeFrameKey.value = key;
+      if (touched) applyFrameToObjects();
+    };
+    // The frame being edited follows the player: what is shown over the video always belongs to the
+    // frame on screen.
+    watch(
+      () => playerStore.currentTime,
+      (time) => setActiveFrame(frameKey(time))
     );
 
-    const isAddingCustomMarker = ref(false);
+    const writeFrame = (key, objects) => {
+      const frames = { ...frameAnnotations.value };
+      if (objects && Object.keys(objects).length) {
+        frames[key] = objects;
+      } else {
+        delete frames[key];
+      }
+      frameAnnotations.value = frames;
+    };
 
-    const filteredReferenceObjects = computed(() => {
-      return calibrationAssetObjects.value.filter((object) =>
-        object.videoCoordsRel.some((p) => p.x !== null && p.y !== null)
+    // [{ key, time (ms, null when unknown), count }], in video order -- what the frame picker lists
+    const annotatedFrames = computed(() =>
+      Object.entries(frameAnnotations.value)
+        .map(([key, objects]) => ({
+          key,
+          time: key === UNKNOWN_FRAME ? null : Number(key),
+          count: Object.values(objects).filter(isPlaced).length,
+        }))
+        .filter((frame) => frame.count > 0)
+        .sort((a, b) => (a.time ?? -1) - (b.time ?? -1))
+    );
+    // every click of every frame: what the homography is fitted on
+    const placedPointCount = computed(() =>
+      annotatedFrames.value.reduce((sum, frame) => sum + frame.count, 0)
+    );
+    // How many different objects are placed somewhere. This, not the number of clicks, is what the
+    // minimum of 4 is about: a homography needs 4 points in general position, and the same marker
+    // clicked on three frames is still one point on the pitch (it only averages out click noise).
+    const placedObjectCount = computed(() => {
+      const ids = new Set();
+      Object.values(frameAnnotations.value).forEach((objects) =>
+        Object.entries(objects).forEach(([id, points]) => {
+          if (isPlaced(points)) ids.add(String(id));
+        })
       );
+      return ids.size;
     });
+    const goToFrame = (key) => {
+      if (key === UNKNOWN_FRAME) return;
+      // setTargetTime is the one that actually seeks the <video> element (VideoPlayer.vue watches it)
+      playerStore.setTargetTime(Number(key));
+    };
+    const deleteFrame = (key) => {
+      writeFrame(key, null);
+      applyFrameToObjects();
+      isAssetEdited.value = true;
+    };
+
+    // One minimum for both calibration plugins. The plain DLT fit needs 4 points, the lens solver 6,
+    // and which of the two runs is derived from the video's lens profile rather than picked -- so the
+    // UI asks for the higher number throughout and the choice can never fall short. The backend keeps
+    // its own, truthful minimum per plugin (4 / 6), which is what lets older 4-point assets still run.
+    const MIN_PLACED_OBJECTS = 6;
+    const allAssetObjectsValid = computed(() => placedObjectCount.value >= MIN_PLACED_OBJECTS);
+
+    const isAddingCustomMarker = ref(false);
 
     const isAnyReferenceObjectActive = computed(() =>
       calibrationAssetObjects.value.some((object) => object.active)
@@ -1671,6 +1796,14 @@ export const useCalibrationAssetStore = defineStore(
     };
     const deleteCustomMarker = (id) => {
       calibrationAssetObjects.value = calibrationAssetObjects.value.filter((m) => m.id !== id);
+      // the object is gone from the pitch, so its clicks go with it -- on every frame
+      const frames = {};
+      Object.entries(frameAnnotations.value).forEach(([key, objects]) => {
+        const rest = { ...objects };
+        delete rest[id];
+        if (Object.keys(rest).length) frames[key] = rest;
+      });
+      frameAnnotations.value = frames;
     };
     const placeCustomMarkerByCoords = (relX, relY) => {
       const lastObject = calibrationAssetObjects.value[calibrationAssetObjects.value.length - 1];
@@ -1679,15 +1812,17 @@ export const useCalibrationAssetStore = defineStore(
       }
       isAddingCustomMarker.value = false;
     };
+    // Takes the object's click off the frame on screen; its clicks on other frames stay.
     const unmapObject = (id) => {
-      const obj = calibrationAssetObjects.value.find((o) => o.id === id);
-      if (!obj) return;
-      obj.videoCoordsRel = obj.videoCoordsRel.map(() => ({ x: null, y: null, z: null }));
+      const frame = frameAnnotations.value[activeFrameKey.value];
+      if (!frame || !frame[id]) return;
+      const rest = { ...frame };
+      delete rest[id];
+      writeFrame(activeFrameKey.value, rest);
+      applyFrameToObjects();
       isAssetEdited.value = true;
     };
 
-    const timeChangeConflict = ref(false);
-    const videoObjectTime = ref(null);
     const isAssetEdited = ref(false);
 
     const showVideoAsset = ref(false);
@@ -1699,15 +1834,20 @@ export const useCalibrationAssetStore = defineStore(
       );
     });
 
+    // Places the active object on the frame the player is on, which becomes the frame being edited.
     const setVideoObject = (coords) => {
       const activeObject = calibrationAssetObjects.value.find((m) => m.active);
       if (!activeObject) return;
 
-      activeObject.videoCoordsRel = coords.map((p) => ({
+      const points = coords.map((p) => ({
         x: p.x ?? null,
         y: p.y ?? null,
         z: p.z ?? null,
       }));
+      const key = frameKey(playerStore.currentTime);
+      writeFrame(key, { ...(frameAnnotations.value[key] ?? {}), [activeObject.id]: points });
+      activeFrameKey.value = key;
+      applyFrameToObjects();
       isAssetEdited.value = true;
       activeObject.active = false;
     };
@@ -1726,6 +1866,8 @@ export const useCalibrationAssetStore = defineStore(
       topViewStore.onSportChange(sport);
       calibrationSport.value = topViewStore.currentSport.key;
       calibrationAssetObjects.value = JSON.parse(JSON.stringify(currentTemplate.value));
+      frameAnnotations.value = {};
+      activeFrameKey.value = frameKey(playerStore.currentTime);
 
       calibrationAssetId.value = null;
       calibrationMatrixPersisted.value = [];
@@ -1744,13 +1886,87 @@ export const useCalibrationAssetStore = defineStore(
         console.error("Failed to list calibration assets:", error);
       }
     };
+    // Picks which of an asset's calibrations is applied. Every run over an asset keeps its own
+    // (backend: the Calibration model), the asset mirrors the active one -- which is what the
+    // overlay, KPI computation and position data read. Results computed earlier keep the
+    // calibration they were computed with, switching only affects what runs from now on.
+    const activateCalibration = async (calibrationId) => {
+      try {
+        const res = await axios.post(`${config.API_LOCATION}/calibration/activate`, {
+          id: calibrationId,
+        });
+        if (res.data.status !== "ok") {
+          console.error("Failed to activate the calibration:", res.data);
+          return false;
+        }
+        const entry = res.data.entry;
+        calibrationAssetsList.value = Object.values(calibrationAssetsList.value).map((asset) =>
+          asset.id === entry.id ? entry : asset
+        );
+        // the cached matrix wins over the asset's in calibrationMatrix -- drop it so the newly
+        // activated one is picked up and the overlay is redrawn
+        if (calibrationAssetId.value === entry.id) {
+          calibrationMatrixPersisted.value = [];
+        }
+        return true;
+      } catch (error) {
+        console.error("Failed to activate the calibration:", error);
+        return false;
+      }
+    };
+    // The backend stores one row per object and annotated frame (plus one click-less row for an
+    // object that was never placed), so loading splits them back into the pitch objects -- one per
+    // name -- and the per-frame clicks.
+    const readObjectData = (rows) => {
+      const objects = [];
+      const byName = new Map();
+      const frames = {};
+      (rows ?? []).forEach((row) => {
+        let object = byName.get(row.name);
+        if (!object) {
+          object = {
+            id: row.id,
+            name: row.name,
+            active: false,
+            compAreaCoordsRel: row.compAreaCoordsRel,
+            videoCoordsRel: emptyCoords(row),
+          };
+          byName.set(row.name, object);
+          objects.push(object);
+        }
+        if (!isPlaced(row.videoCoordsRel)) return;
+        const key = frameKey(row.time);
+        frames[key] = { ...(frames[key] ?? {}), [object.id]: clonePoints(row.videoCoordsRel) };
+      });
+      calibrationAssetObjects.value = objects;
+      frameAnnotations.value = frames;
+      // show the frame the player is on; its clicks if it has some, an empty one to annotate if not
+      activeFrameKey.value = frameKey(playerStore.currentTime);
+      applyFrameToObjects();
+    };
+    // The payload of a save: the pitch objects spread back out over the frames they were clicked on.
+    const writeObjectData = () =>
+      calibrationAssetObjects.value.flatMap((object) => {
+        const base = {
+          name: object.name,
+          active: false,
+          compAreaCoordsRel: object.compAreaCoordsRel,
+        };
+        const rows = annotatedFrames.value
+          .map((frame) => [frame, frameAnnotations.value[frame.key]?.[object.id]])
+          .filter(([, points]) => isPlaced(points))
+          .map(([frame, points]) => ({ ...base, time: frame.time, videoCoordsRel: points }));
+        // an object nobody placed is still part of the asset (the custom markers above all)
+        return rows.length ? rows : [{ ...base, time: null, videoCoordsRel: emptyCoords(object) }];
+      });
+
     const loadCalibrationAsset = (id) => {
       const calibrationAsset = calibrationAssetsList.value.find((asset) => asset.id === id);
       if (calibrationAsset) {
         calibrationAssetType.value = calibrationAsset.object_type;
         topViewStore.onSportChange(calibrationAsset.sport);
         calibrationSport.value = topViewStore.currentSport.key;
-        calibrationAssetObjects.value = calibrationAsset.object_data;
+        readObjectData(calibrationAsset.object_data);
 
         calibrationAssetId.value = id;
         calibrationMatrixPersisted.value = [];
@@ -1763,7 +1979,7 @@ export const useCalibrationAssetStore = defineStore(
         name: name,
         sport: sport,
         object_type: objectType,
-        object_data: [...calibrationAssetObjects.value],
+        object_data: writeObjectData(),
         video_id: playerStore.videoId,
       };
 
@@ -1772,7 +1988,6 @@ export const useCalibrationAssetStore = defineStore(
         if (res.data.status === "ok") {
           calibrationAssetSaveSuccess.value = true;
           isAssetEdited.value = false;
-          timeChangeConflict.value = false;
           loadCalibrationAssetsList();
         }
       } finally {
@@ -1787,7 +2002,7 @@ export const useCalibrationAssetStore = defineStore(
         name: name,
         sport: sport,
         object_type: objectType,
-        object_data: [...calibrationAssetObjects.value],
+        object_data: writeObjectData(),
         video_id: playerStore.videoId,
       };
       try {
@@ -1795,7 +2010,6 @@ export const useCalibrationAssetStore = defineStore(
         if (res.data.status === "ok") {
           calibrationAssetUpdateSuccess.value = true;
           isAssetEdited.value = false;
-          timeChangeConflict.value = false;
           loadCalibrationAssetsList();
         }
       } finally {
@@ -1820,11 +2034,11 @@ export const useCalibrationAssetStore = defineStore(
     const resetCalibrationAsset = () => {
       calibrationMode.value = false;
       calibrationAssetObjects.value = [];
+      frameAnnotations.value = {};
+      activeFrameKey.value = UNKNOWN_FRAME;
       calibrationAssetId.value = null;
       calibrationMatrixPersisted.value = [];
       isAssetEdited.value = false;
-      timeChangeConflict.value = false;
-      videoObjectTime.value = null;
       showVideoAsset.value = false;
     };
 
@@ -1850,37 +2064,118 @@ export const useCalibrationAssetStore = defineStore(
       if (!m) return null;
       return JSON.stringify(m) === JSON.stringify(identityMatrix) ? null : m;
     });
-    const calibrationMatrixInv = computed(() => {
-      if (!calibrationMatrix.value) return null;
-      return inv(calibrationMatrix.value);
-    });
-
-    function applyHomography(matrix, point) {
-      const X = matrix[0][0] * point.x + matrix[0][1] * point.y + matrix[0][2] * 1;
-      const Y = matrix[1][0] * point.x + matrix[1][1] * point.y + matrix[1][2] * 1;
-      const W = matrix[2][0] * point.x + matrix[2][1] * point.y + matrix[2][2] * 1;
-
-      return { x: X / W, y: Y / W };
-    }
     const videoObject = computed(() => calibrationAssetObjects.value.map((m) => m.videoCoordsRel));
-    const topViewObjectProjection = computed(() => {
-      if (!calibrationMatrix.value) return [];
-      return videoObject.value
-        .filter((pointList) => pointList.some((p) => p.x !== null && p.y !== null))
-        .map((pointList) => pointList.map((p) => applyHomography(calibrationMatrix.value, p)));
-    });
+
+    // Everything projected through the calibration (homography + lens) is computed by the backend
+    // (calibration_assets/overlay and calibration_assets/project); the store only keeps the results to render.
+    // The key changes with the asset and with its homography (e.g. after a new DLT run).
+    const calibrationKey = computed(() =>
+      calibrationMatrix.value
+        ? JSON.stringify([calibrationAssetId.value, calibrationMatrix.value])
+        : null
+    );
+
+    // Points through the current asset's calibration, relative coordinates both ways; [x, y] or null (can't be
+    // mapped) per point. direction: "video_to_pitch" or "pitch_to_video". Sent in chunks that keep each request
+    // body (~45 bytes per point, < 1 MB per chunk) well under Django's 2.5 MB upload limit.
+    const PROJECT_CHUNK_POINTS = 20000;
+    const projectPoints = async (points, direction = "video_to_pitch") => {
+      if (!calibrationAssetId.value || !points.length) return points.map(() => null);
+      const projected = [];
+      for (let start = 0; start < points.length; start += PROJECT_CHUNK_POINTS) {
+        const res = await axios.post(`${config.API_LOCATION}/calibration_assets/project`, {
+          id: calibrationAssetId.value,
+          points: points.slice(start, start + PROJECT_CHUNK_POINTS),
+          direction,
+        });
+        if (res.data.status !== "ok") {
+          throw new Error(`calibration_assets/project: ${res.data.type ?? res.data.status}`);
+        }
+        projected.push(...res.data.points);
+      }
+      return projected;
+    };
+
+    // The pitch lines projected into the video, and each calibration object's pitch position projected next to
+    // where it was clicked: lines and markers that sit on the painted ones show a good calibration.
+    // On by default -- in calibration mode the projected markings are the main feedback on
+    // whether a calibration is any good, so they are shown unless switched off. Entering
+    // calibration mode turns them back on, leaving it hides them (see AnalysisView).
+    const showPitchOverlay = ref(true);
+    const togglePitchOverlay = () => {
+      showPitchOverlay.value = !showPitchOverlay.value;
+    };
+    const calibrationOverlay = ref({ markings: [], objects: [] });
+    const loadCalibrationOverlay = async () => {
+      const key = calibrationKey.value;
+      if (!key) {
+        calibrationOverlay.value = { markings: [], objects: [] };
+        return;
+      }
+      try {
+        const res = await axios.get(`${config.API_LOCATION}/calibration_assets/overlay`, {
+          params: { id: calibrationAssetId.value },
+        });
+        if (res.data.status === "ok" && key === calibrationKey.value) {
+          calibrationOverlay.value = { markings: res.data.markings, objects: res.data.objects };
+        }
+      } catch (error) {
+        console.error("Failed to load the calibration overlay:", error);
+      }
+    };
+    watch(calibrationKey, loadCalibrationOverlay, { immediate: true });
+    // [{name, points: [[x, y], ...]}] in relative video coordinates
+    const pitchOverlay = computed(() => calibrationOverlay.value.markings);
+    // per clicked object: where the calibration puts it in the video ([{x, y}, ...])
     const videoObjectReprojection = computed(() => {
-      if (!calibrationMatrixInv.value) return [];
-      return topViewObjectProjection.value.map((pointList) =>
-        pointList.map((p) => applyHomography(calibrationMatrixInv.value, p))
-      );
+      // matched by name, not by id: the ids of the objects in the store are the template's until the
+      // asset has been saved and loaded back, while the names are the same on both sides
+      const clicked = new Set(filteredVideoObject.value.map((o) => o.name));
+      return calibrationOverlay.value.objects
+        .filter((o) => clicked.has(o.name))
+        .map((o) => o.points.filter((p) => p !== null).map(([x, y]) => ({ x, y })))
+        .filter((points) => points.length);
+    });
+
+    // The clicked points on the pitch (top view) through the current calibration, following unsaved edits.
+    const topViewObjectProjection = ref([]);
+    let topViewProjectionTimer = null;
+    let topViewProjectionRequest = 0;
+    const updateTopViewObjectProjection = () => {
+      clearTimeout(topViewProjectionTimer);
+      topViewProjectionTimer = setTimeout(async () => {
+        const request = ++topViewProjectionRequest;
+        const lists = filteredVideoObject.value.map((o) =>
+          o.videoCoordsRel.filter((p) => p.x !== null && p.y !== null)
+        );
+        if (!calibrationKey.value || !lists.length) {
+          topViewObjectProjection.value = [];
+          return;
+        }
+        try {
+          const projected = await projectPoints(lists.flat().map((p) => [p.x, p.y]));
+          if (request !== topViewProjectionRequest) return; // a newer request is underway
+          let i = 0;
+          topViewObjectProjection.value = lists.map((points) =>
+            points
+              .map(() => projected[i++])
+              .filter((p) => p !== null)
+              .map(([x, y]) => ({ x, y }))
+          );
+        } catch (error) {
+          console.error("Failed to project the clicked points onto the pitch:", error);
+        }
+      }, 150);
+    };
+    watch([calibrationKey, filteredVideoObject], updateTopViewObjectProjection, {
+      deep: true,
+      immediate: true,
     });
 
     return {
       calibrationAssetObjects,
       currentTemplate,
       allAssetObjectsValid,
-      filteredReferenceObjects,
       filteredVideoObject,
       toggleObject,
       isAnyReferenceObjectActive,
@@ -1900,16 +2195,21 @@ export const useCalibrationAssetStore = defineStore(
       createCalibrationAsset,
       loadCalibrationAsset,
       loadCalibrationAssetsList,
+      activateCalibration,
       saveCalibrationAsset,
       updateCalibrationAsset,
       deleteCalibrationAsset,
       calibrationMatrix,
       calibrationMatrixPersisted,
-      calibrationMatrixInv,
       videoObject,
       topViewObjectProjection,
       videoObjectReprojection,
-      applyHomography,
+      calibrationKey,
+      projectPoints,
+      showPitchOverlay,
+      togglePitchOverlay,
+      calibrationOverlay,
+      pitchOverlay,
       objectColorMap,
       calibrationMode,
       calibrationSport,
@@ -1917,8 +2217,13 @@ export const useCalibrationAssetStore = defineStore(
       calibrationAssetSaveSuccess,
       calibrationAssetUpdateSuccess,
       calibrationAssetDeleteSuccess,
-      timeChangeConflict,
-      videoObjectTime,
+      annotatedFrames,
+      activeFrameKey,
+      placedPointCount,
+      placedObjectCount,
+      minPlacedObjects: MIN_PLACED_OBJECTS,
+      goToFrame,
+      deleteFrame,
       isAssetEdited,
       calibrationAssetType,
       setCalibrationAssetType,
@@ -1931,8 +2236,11 @@ export const useCalibrationAssetStore = defineStore(
         "calibrationSport",
         "calibrationAssetType",
         "calibrationAssetObjects",
+        "frameAnnotations",
+        "activeFrameKey",
         "calibrationMatrixPersisted",
         "calibrationAssetId",
+        "showPitchOverlay",
       ],
       storage: sessionStorage,
     },

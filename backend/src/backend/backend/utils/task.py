@@ -1,6 +1,7 @@
 import logging
 from typing import Dict, List
 
+from backend.log_context import log_event
 from backend.models import PluginRun, PluginRunResult, Video, Timeline, TrackingData
 from backend.utils import media_path_to_file
 from ..utils.analyser_client import TaskAnalyserClient
@@ -9,7 +10,29 @@ from ..utils.analyser_client import TaskAnalyserClient
 logger = logging.getLogger(__name__)
 
 
+class TaskFailure(Exception):
+    """A plugin run failure the user can act on; stored as the run's failure_reason.
+
+    "type" is a stable snake_case code the frontend translates; "message" is the English text and
+    "details" the values it was built from (e.g. counts), so translations can fill them in. Other
+    exceptions are reported as "internal_error" without their text.
+    """
+
+    def __init__(self, type: str, message: str, **details):
+        super().__init__(message)
+        self.type = type
+        self.message = message
+        self.details = details
+
+    def to_dict(self) -> Dict:
+        return {"type": self.type, "message": self.message, "details": self.details}
+
+
 class Task:
+    # Ray Serve plugins this task calls through run_analyser(); the plugin is only offered
+    # and accepted when all of them are deployed (backend/plugin_catalogue.py).
+    ray_plugins: tuple = ()
+
     def __init__(self):
         pass
 
@@ -24,6 +47,22 @@ class Task:
     def upload_td(self, client: TaskAnalyserClient, file_hex: str, file_ext: str) -> tuple[str, str]:
         td_file = media_path_to_file(file_hex, file_ext)
         return client.upload_file(td_file)
+
+    @staticmethod
+    def _record_provenance(plugin_run, ray_plugin):
+        """Append the Ray plugin and its deployed version to plugin_run.provenance."""
+        if plugin_run is None:
+            return
+        from backend.plugin_catalogue import deployed_ray_plugins
+
+        deployed = deployed_ray_plugins() or {}
+        entry = {"ray_plugin": ray_plugin, "version": deployed.get(ray_plugin)}
+        try:
+            current = PluginRun.objects.filter(id=plugin_run.id).values_list("provenance", flat=True).first() or []
+            PluginRun.objects.filter(id=plugin_run.id).update(provenance=[*current, entry])
+            plugin_run.provenance = [*current, entry]
+        except Exception:
+            logger.warning("Could not record provenance for plugin run %s", plugin_run.id, exc_info=True)
 
     def run_analyser(
         self,
@@ -48,9 +87,7 @@ class Task:
         )
         if job_id is None:
             return None
-        logger.info(
-            f"Plugin started: analyser job_id: {job_id} plugin_run_id: {plugin_run}"
-        )
+        log_event(logger, "analyser.job.start", job_id=job_id, analyser=analyser)
 
         result = client.get_plugin_results(
             job_id=job_id,
@@ -58,10 +95,14 @@ class Task:
             progress_range=progress_range,
         )
         if result is None:
-            logger.error(
-                f"Plugin is crashing: analyser job_id: {job_id} plugin_run_id: {plugin_run}"
-            )
+            run = plugin_run or getattr(client, "plugin_run_db", None)
+            # no result after a cancel is expected; analyser_client logged why
+            deleted = run is not None and not PluginRun.objects.filter(id=run.id).exists()
+            log_event(logger, "analyser.job.no_result", level=logging.INFO if deleted else logging.ERROR,
+                      job_id=job_id, analyser=analyser, run_deleted=deleted)
             return None
+
+        self._record_provenance(plugin_run or getattr(client, "plugin_run_db", None), analyser)
 
         result_ids = {}
         for output in result.outputs:

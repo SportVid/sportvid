@@ -178,6 +178,68 @@ class VideoDecoder:
 
         container.close()
 
+    def sample(self, times_s):
+        """Frames at the given times (seconds), each the first frame at or after its time, found by seeking instead
+        of decoding the whole video (in a segmented archive, within the segment that holds the time). Yields
+        ``{"time" (ms), "frame"}`` in the order of ``times_s``; a time past the end yields nothing."""
+        def convert(frame):
+            frame = frame.reformat(format="rgb24")
+            if self._max_dimension is not None:
+                w, h = self._compute_resize(frame.width, frame.height)
+                frame = frame.reformat(width=w, height=h, format="rgb24")
+            return frame.to_ndarray()
+
+        def seek(container, t, offset):
+            """The first frame at or after ``t`` seconds of this container, whose own timeline starts at ``offset``
+            seconds of the video; None past its end."""
+            stream = container.streams.video[0]
+            start = float(stream.start_time * stream.time_base) if stream.start_time is not None else 0.0
+            target = t - offset + start
+            # seek to the keyframe before the target, then decode up to it
+            container.seek(int(target / stream.time_base), stream=stream, backward=True, any_frame=False)
+            for frame in container.decode(stream):
+                if frame.time is None or frame.time >= target - 1e-3:
+                    time = (frame.time - start + offset) if frame.time is not None else t
+                    return {"time": int(time * 1000), "frame": convert(frame)}
+            return None
+
+        if self._source["mode"] == "archive":
+            files = self._video_object.list_files()
+            segment_files = sorted([f for f in files if f.endswith((".ts", ".m4s", ".mp4"))])
+            # where each segment starts in the video, from the segments' own durations
+            starts, offset = [], 0.0
+            for segment_file in segment_files:
+                container = av.open(self._video_object.open_nested(segment_file))
+                try:
+                    stream = container.streams.video[0]
+                    starts.append(offset)
+                    offset += float(stream.duration * stream.time_base) if stream.duration and stream.time_base else 0.0
+                finally:
+                    container.close()
+            for t in times_s:
+                i = max(k for k, s in enumerate(starts) if s <= t) if starts and t >= 0 else None
+                if i is None:
+                    return
+                container = av.open(self._video_object.open_nested(segment_files[i]))
+                try:
+                    sample = seek(container, t, starts[i])
+                finally:
+                    container.close()
+                if sample is None:
+                    return
+                yield sample
+            return
+
+        container = av.open(self._source["path"] if self._source["mode"] == "path" else self._source["fileobj"])
+        try:
+            for t in times_s:
+                sample = seek(container, t, 0.0)
+                if sample is None:
+                    return
+                yield sample
+        finally:
+            container.close()
+
     def __len__(self):
         if self.duration() is None or self.fps() is None:
             return 0

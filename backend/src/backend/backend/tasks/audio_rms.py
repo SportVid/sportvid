@@ -6,7 +6,6 @@ from django.conf import settings
 from backend.models import PluginRun, PluginRunResult, Video, Timeline
 from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_file
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
@@ -14,6 +13,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("audio_rms")
 class AudioRms(Task):
+    ray_plugins = ("audio_rms_analysis", "video_to_audio")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

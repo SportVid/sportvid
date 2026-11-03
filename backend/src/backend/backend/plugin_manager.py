@@ -17,11 +17,24 @@ from backend.models import (
     Video,
     SportVidUser,
 )
+from backend.log_context import log_context, log_event
 from backend.utils.events import publish_plugin_run
+from backend.utils.task import TaskFailure
 from data import DataManager
 
 
 logger = logging.getLogger(__name__)
+
+
+def _failure_reason(plugin_run, exc):
+    """The failure_reason for a run that raised exc. A reason recorded earlier in the run (e.g. the
+    analyser timeout in analyser_client.py) is the root cause and is kept.
+    """
+    if plugin_run.failure_reason:
+        return plugin_run.failure_reason
+    if isinstance(exc, TaskFailure):
+        return exc.to_dict()
+    return {"type": "internal_error"}
 
 
 def _mark_running(plugin_run):
@@ -43,6 +56,36 @@ def _mark_running(plugin_run):
         logger.warning("Failed to publish plugin run RUNNING event", exc_info=True)
 
 
+# How often and how long a run waits for its video's HLS conversion (time_limit=7200 there).
+CONVERSION_POLL_SECONDS = 10
+CONVERSION_MAX_RETRIES = 7200 // CONVERSION_POLL_SECONDS
+
+
+def _mark_waiting(plugin_run):
+    """Show a run that waits for its video's conversion as WAITING (once) and push it live."""
+    if plugin_run.status == PluginRun.STATUS_WAITING:
+        return
+    PluginRun.objects.filter(id=plugin_run.id).update(status=PluginRun.STATUS_WAITING, update_date=timezone.now())
+    plugin_run.status = PluginRun.STATUS_WAITING
+    try:
+        publish_plugin_run(plugin_run)
+    except Exception:
+        logger.warning("Failed to publish plugin run WAITING event", exc_info=True)
+
+
+def _recordable_parameters(parameters):
+    """Validated parameters as stored on the PluginRun.
+
+    Uploaded files are recorded by their original name only; their temporary paths
+    mean nothing after the run.
+    """
+    recorded = dict(parameters or {})
+    files = recorded.pop("_files", None)
+    if files:
+        recorded["_files"] = {name: info.get("value") for name, info in files.items()}
+    return recorded
+
+
 class PluginManager:
     _plugins: Dict[str, Type] = {}
     _serializers: Dict[str, Type] = {}
@@ -56,6 +99,8 @@ class PluginManager:
             if name in cls._plugins:
                 raise ValueError(f"Plugin '{name}' is already registered")
             cls._plugins[name] = plugin_cls
+            # the name a task is run under, for tasks that record what computed a result
+            plugin_cls.plugin_name = name
             return plugin_cls
         return export_helper
 
@@ -94,7 +139,10 @@ class PluginManager:
         serializer = serializer_cls(data=parameters or {})
         serializer.is_valid(raise_exception=True)
         val_params = cls._stringify_uuids(dict(serializer.validated_data))
-        
+        # uploaded files (set by plugin/run/new, not a client parameter) aren't serializer fields
+        if "_files" in parameters:
+            val_params["_files"] = parameters["_files"]
+
         # logging.error(f'validated params: {val_params}')
 
         return val_params
@@ -170,6 +218,7 @@ class PluginManager:
                 video=video,
                 type=plugin,
                 status=PluginRun.STATUS_QUEUED,
+                parameters=_recordable_parameters(validated_parameters),
             )
             # Returns the plugin_run_id (hex) for the frontend to track the run.
             result["plugin_run_id"] = plugin_run.id.hex
@@ -195,7 +244,7 @@ class PluginManager:
         _mark_running(plugin_run)
         try:
             plugin_result = self._plugins[plugin]()(
-                parameters,
+                validated_parameters,
                 user=user,
                 video=video,
                 plugin_run=plugin_run,
@@ -216,11 +265,12 @@ class PluginManager:
             )
             if plugin_result: result["result"] = plugin_result
 
-        except Exception:
-            logger.exception(f"Failed to run plugin {plugin_run.type}")
+        except Exception as e:
+            logger.exception(f"Failed to run plugin {plugin}")
             if plugin_run is not None:
                 plugin_run.eta_seconds = None
                 plugin_run.status = PluginRun.STATUS_ERROR
+                plugin_run.failure_reason = _failure_reason(plugin_run, e)
                 plugin_run.save()
             result["status"] = False
 
@@ -268,8 +318,51 @@ def generate_plugin_run_result_cache(
                 logger.exception("Cache couldn't write")
 
 
+def _save_run(plugin_run):
+    """plugin_run.save() for a run that may have been deleted meanwhile; returns whether it still exists.
+
+    A plain save() of a deleted row inserts it again, so the user's delete would be undone by
+    the task's final status write. This writes the same fields with a queryset .update(),
+    which skips post_save, so the live event is sent here.
+
+    task_id is left out: the task may have read the run before PluginManager.run stored it,
+    and writing back None would leave a later delete nothing to revoke.
+    """
+    plugin_run.update_date = timezone.now()
+    fields = {
+        f.attname: getattr(plugin_run, f.attname)
+        for f in PluginRun._meta.concrete_fields
+        if not f.primary_key and f.name != "task_id"
+    }
+    if not PluginRun.objects.filter(id=plugin_run.id).update(**fields):
+        log_event(logger, "plugin_run.deleted_while_running",
+                  status=PluginRun.STATUS.get(plugin_run.status, plugin_run.status).lower())
+        return False
+    try:
+        publish_plugin_run(plugin_run)
+    except Exception:
+        logger.warning("Failed to publish plugin run event", exc_info=True)
+    return True
+
+
+def _hex(id):
+    """The payload's UUID strings in the hex form the views and the conversion log."""
+    try:
+        return uuid.UUID(str(id)).hex if id else None
+    except ValueError:
+        return id
+
+
 @shared_task(bind=True)
 def run_plugin(self, args):
+    with log_context(
+        plugin=args.get("plugin"), plugin_run_id=_hex(args.get("plugin_run")),
+        video_id=_hex(args.get("video")), task_id=self.request.id,
+    ):
+        return _run_plugin(self, args)
+
+
+def _run_plugin(self, args):
     plugin = args.get("plugin")
     parameters = args.get("parameters") or {}
     video = args.get("video")
@@ -281,12 +374,11 @@ def run_plugin(self, args):
     video_db = Video.objects.get(id=video)
     user_db = SportVidUser.objects.get(id=user)
     
-    # TODO: Race between task start and deletion. DoesNotExist guard is not enough.
-    # There is still a small window where the task starts, reads the run, and then the run is deleted before progress writes.
-    # Also, there is no explicit handling for "deleted but task started".
-    # Task will write progress to a non-existent run if it was deleted after the initial lookup.
-    # --> Consider checking existence periodically or before each progress write.
-    # --> Opt.: Mark runs as "cancelling" instead of deleting immediately, then clean up later.
+    # A run can be deleted at any point while this runs; the missing row is the signal.
+    # plugin/run/delete and video/delete delete it before they publish the cancel, the
+    # analyser poll aborts the job when its progress write finds no row, and every status
+    # write here goes through _save_run() (TaskAnalyserClient's through _fail_run()), which
+    # never inserts the deleted run again.
     plugin_run_db = None
     if not dry_run and plugin_run is not None:
         try:
@@ -297,6 +389,28 @@ def run_plugin(self, args):
             # Instead of failing with DoesNotExist, task exits without starting analyser work.
             logger.info("PluginRun %s deleted before it started, skipping", plugin_run)
             return
+        # The upload's HLS conversion still rewrites the video file, and a plugin reading it
+        # now fails (InvalidDataError in Ray). Wait as WAITING until it is done. Like the
+        # dependency wait below, this comes before the in_scheduler guard.
+        if video_db.status == Video.STATUS_PROCESSING:
+            _mark_waiting(plugin_run_db)
+            waited = args.get("conversion_retries", 0)
+            try:
+                self.retry(
+                    args=[{**args, "conversion_retries": waited + 1}],
+                    countdown=CONVERSION_POLL_SECONDS,
+                    max_retries=CONVERSION_MAX_RETRIES,
+                )
+            except MaxRetriesExceededError:
+                logger.error("Video %s still converting -- aborting %s", video_db.id.hex, plugin)
+                plugin_run_db.status = PluginRun.STATUS_ERROR
+                plugin_run_db.failure_reason = {
+                    "type": "video_conversion_timeout",
+                    "message": "The video was still being converted when the run gave up waiting",
+                    "details": {"video_id": video_db.id.hex},
+                }
+                _save_run(plugin_run_db)
+                return
         # NOTE: Some plugins take another plugin_run's id as input (object_tracker_id for
         # team_clustering/osnet_reid, object_tracker_run_id for kpi_computation) and need that
         # run's *results*, not just its id -- submitting them while it's still QUEUED/RUNNING
@@ -326,18 +440,29 @@ def run_plugin(self, args):
                         dependency_id, dependency_run.status, plugin,
                     )
                     plugin_run_db.status = PluginRun.STATUS_ERROR
-                    plugin_run_db.save()
+                    plugin_run_db.failure_reason = {
+                        "type": "dependency_failed",
+                        "message": f"The {dependency_run.type} run this run depends on failed",
+                        "details": {"plugin_run_id": dependency_run.id.hex, "plugin": dependency_run.type},
+                    }
+                    _save_run(plugin_run_db)
                     return
                 try:
-                    # ~30 minutes total (360 * 5s) before giving up.
-                    self.retry(countdown=5, max_retries=360)
+                    # ~30 minutes total (360 * 5s) before giving up. Celery counts every retry
+                    # of this task, so the ones spent waiting for the conversion don't count.
+                    self.retry(countdown=5, max_retries=360 + args.get("conversion_retries", 0))
                 except MaxRetriesExceededError:
                     logger.error(
                         "Dependency plugin run %s never finished -- aborting %s",
                         dependency_id, plugin,
                     )
                     plugin_run_db.status = PluginRun.STATUS_ERROR
-                    plugin_run_db.save()
+                    plugin_run_db.failure_reason = {
+                        "type": "dependency_timeout",
+                        "message": f"The {dependency_run.type} run this run depends on did not finish in time",
+                        "details": {"plugin_run_id": dependency_run.id.hex, "plugin": dependency_run.type},
+                    }
+                    _save_run(plugin_run_db)
                     return
 
         if plugin_run_db.in_scheduler:
@@ -345,14 +470,20 @@ def run_plugin(self, args):
             return
 
         plugin_run_db.in_scheduler = True
-        plugin_run_db.save()
+        if not _save_run(plugin_run_db):
+            return
 
     plugin_cls = PluginManager.get_plugin(plugin)
     if plugin_cls is None:
         logger.error("Plugin run failed: unknown plugin '%s'", plugin)
         if plugin_run_db is not None:
             plugin_run_db.status = PluginRun.STATUS_ERROR
-            plugin_run_db.save()
+            plugin_run_db.failure_reason = {
+                "type": "unknown_plugin",
+                "message": f"Unknown plugin '{plugin}'",
+                "details": {"plugin": plugin},
+            }
+            _save_run(plugin_run_db)
         return
 
     # The worker has the job now -- flip it to RUNNING before the (possibly slow) video
@@ -380,11 +511,16 @@ def run_plugin(self, args):
             plugin_run_db.progress = 1.0
             plugin_run_db.eta_seconds = None
             plugin_run_db.status = PluginRun.STATUS_DONE
-            plugin_run_db.save()
+            _save_run(plugin_run_db)
 
-    except Exception:
+    except Exception as e:
+        if plugin_run_db is not None and not PluginRun.objects.filter(id=plugin_run_db.id).exists():
+            # deleted while it ran: the failure is the cancel (no result) or the results losing their run
+            log_event(logger, "plugin_run.deleted_while_running", error=type(e).__name__)
+            return
         logger.exception("Plugin run failed for %s", plugin)
         if plugin_run_db is not None:
             plugin_run_db.eta_seconds = None
             plugin_run_db.status = PluginRun.STATUS_ERROR
-            plugin_run_db.save()
+            plugin_run_db.failure_reason = _failure_reason(plugin_run_db, e)
+            _save_run(plugin_run_db)

@@ -6,7 +6,6 @@ from typing import Dict, List
 from backend.models import PluginRun, PluginRunResult, Video, Timeline
 from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_file
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
@@ -14,6 +13,8 @@ from ..utils.analyser_client import TaskAnalyserClient
 
 @PluginManager.export_plugin("clip")
 class CLIP(Task):
+    ray_plugins = ("clip_image_embedding", "clip_probs", "min_max_norm")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

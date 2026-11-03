@@ -44,6 +44,18 @@
             density="comfortable"
             class="elevation-2"
           >
+            <template #item.is_active="{ item }">
+              <v-switch
+                :model-value="item.is_active"
+                :disabled="item.id === userStore.userId"
+                color="primary"
+                density="compact"
+                hide-details
+                @update:model-value="
+                  (value) => adminStore.updateUser({ update_type: 'admin', id: item.id, is_active: value })
+                "
+              />
+            </template>
             <template #item.date_joined="{ value }">
               {{ value.split("T")[0] }}
             </template>
@@ -123,6 +135,7 @@ const headers = [
   { title: t("admin_panel.user.username"), value: "username", sortable: true },
   { title: t("admin_panel.user.email"), value: "email", sortable: true },
   { title: t("admin_panel.user.role"), value: "role", sortable: true },
+  { title: t("admin_panel.user.is_active"), value: "is_active", sortable: true },
   { title: t("admin_panel.user.used_storage_size"), value: "used_storage_size", sortable: true },
   { title: t("admin_panel.user.max_storage_size"), value: "max_storage_size", sortable: true },
   { title: t("admin_panel.user.max_video_size"), value: "max_video_size", sortable: true },

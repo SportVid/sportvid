@@ -66,7 +66,7 @@ class Deployment:
 
 
 def app_builder(args) -> Application:
-    # logging.warning(args)
+    logging.warning(args)
     data_manager = DataManager(args.get("data_path"))
     manager = AnalyserPluginManager()
     plugin = manager.build_plugin(args.get("model"), args.get("params", {}))

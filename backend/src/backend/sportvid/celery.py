@@ -1,17 +1,24 @@
 import os
+from urllib.parse import quote
 from celery import Celery
+from celery.signals import before_task_publish, task_postrun, task_prerun
+
+from backend.log_context import bind, current, unbind
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "sportvid.settings")
 
-# set broker URL accordingly
-valkey_host = os.getenv("VALKEY_CLIENT_HOST")  # "valkey"
-valkey_port = os.getenv("VALKEY_INTERNAL_PORT")  # "6380"
-valkey_passwd = os.getenv("VALKEY_PASSWD")
 
-broker_url = f"redis://:{valkey_passwd}@{valkey_host}:{valkey_port}/0"
+def _broker_url():
+    """Valkey broker from the environment (same variables as sportvid.settings)."""
+    host = os.getenv("VALKEY_CLIENT_HOST", "valkey")
+    port = os.getenv("VALKEY_INTERNAL_PORT", "6380")
+    password = os.getenv("VALKEY_PASSWD")
+    auth = f":{quote(password, safe='')}@" if password else ""
+    return f"redis://{auth}{host}:{port}/0"
 
-app = Celery("sportvid", broker=broker_url) # type: ignore
+
+app = Celery("sportvid", broker=_broker_url())
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
@@ -25,6 +32,33 @@ app.config_from_object(
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
 
-@app.task(bind=True)
-def debug_task(self):
-    print(f"Request: {self.request!r}")
+
+# The request_id of the API request (backend.middleware.RequestIdMiddleware) that enqueued a
+# task travels as a message header and is bound to the task's log lines. A header, not an
+# argument: task signatures stay as they are, and workers of an older release ignore it.
+REQUEST_ID_HEADER = "sportvid_request_id"
+_bound = {}  # task id -> contextvar token; prerun and postrun run on the task's thread
+
+
+@before_task_publish.connect
+def _send_request_id(headers=None, **kwargs):
+    request_id = current().get("request_id")
+    if request_id and headers is not None:
+        headers.setdefault(REQUEST_ID_HEADER, request_id)
+
+
+@task_prerun.connect
+def _bind_request_id(task_id=None, task=None, **kwargs):
+    request_id = task.request.get(REQUEST_ID_HEADER) if task is not None else None
+    if request_id:
+        _bound[task_id] = bind(request_id=request_id)
+
+
+@task_postrun.connect
+def _unbind_request_id(task_id=None, **kwargs):
+    token = _bound.pop(task_id, None)
+    if token is not None:
+        try:
+            unbind(token)
+        except ValueError:  # bound in another context; nothing to undo here
+            pass
