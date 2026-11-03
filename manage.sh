@@ -1,7 +1,8 @@
 #!/bin/bash
 # Server control: ./manage.sh {prod|dev|shared} <command> [service...]
 # Every docker command first checks out and hard-resets the environment's deploy branch
-# (deploy-dev / deploy-prod) in the current directory, discarding local changes.
+# (deploy-dev / deploy-prod) in the current directory, discarding local changes. It refuses
+# to switch a working copy to another branch unless SPORTVID_SWITCH_BRANCH=1 is set.
 # The systemd units sportvid_{dev,prod,shared} call `build` (= build and start) and `down`/`stop`.
 
 set -u
@@ -70,6 +71,17 @@ prepare() {
     echo "Executing environment '$ENVIRONMENT' on branch '$BRANCH'"
     # ensure we're in a git repo
     git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "Not inside a git repository; aborting."
+    # Each working copy stays on its own deploy branch (/git/sportvid-dev: deploy-dev,
+    # /git/sportvid: deploy-prod for prod and shared). Switching it here would swap the code
+    # under the containers that bind-mount this directory, so only do it on request.
+    local current
+    current=$(git symbolic-ref --quiet --short HEAD) || current="(detached HEAD)"
+    if [[ "$current" != "$BRANCH" && "${SPORTVID_SWITCH_BRANCH:-}" != "1" ]]; then
+        die "Refusing to run '$ENVIRONMENT' here: this working copy is on '$current', '$ENVIRONMENT' needs '$BRANCH'.
+Checking out '$BRANCH' would change the code under the containers started from $(pwd).
+Run it from the working copy of '$BRANCH', or switch this one on purpose with:
+    SPORTVID_SWITCH_BRANCH=1 $0 $ENVIRONMENT $COMMAND ${SERVICES[*]}"
+    fi
     # make sure the correct branch is checked out
     git checkout -f "$BRANCH" || die "Failed to checkout branch: $BRANCH"
     # update from remote and discard local drift
