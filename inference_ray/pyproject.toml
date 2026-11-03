@@ -72,7 +72,8 @@ package = true
 [project.optional-dependencies]
 tracking = [
      "bytetrack",
-     "torchreid"
+     "torchreid",
+     "gta-link",
 ]
 
 [tool.uv.sources]
@@ -81,3 +82,4 @@ data = { workspace = true }
 utils = { workspace = true }
 bytetrack = { path = "third_party/ByteTrack" }
 torchreid = { path = "third_party/sportsreid" }
+gta-link = { path = "third_party/gta_link" }

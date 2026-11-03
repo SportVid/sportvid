@@ -33,6 +33,11 @@ class GlobalIDManager:
       - active / lost / retired states
       - re-entry matching to lost IDs
       - one-to-one assignment over candidate subsets
+
+    ``keep_tracker_binding``: a tracker id keeps its global id while that id is lost (not once retired), so a
+    track that reappears after more than ``active_ttl`` frames continues its id instead of having to win a
+    re-entry match. ReID then only merges new tracker ids into identities and never splits a tracker's track;
+    an offline tracker (GTA-Link) outputs long tracks with gaps that the default would split.
     """
     def __init__(
         self,
@@ -42,6 +47,7 @@ class GlobalIDManager:
         reentry_threshold: float = 0.68,
         spatial_gate_px: float = 150.0,
         use_spatial_gate: bool = True,
+        keep_tracker_binding: bool = False,
     ):
         self.gallery = gallery
 
@@ -50,6 +56,7 @@ class GlobalIDManager:
         self.reentry_threshold = reentry_threshold
         self.spatial_gate_px = spatial_gate_px
         self.use_spatial_gate = use_spatial_gate
+        self.keep_tracker_binding = keep_tracker_binding
 
         self.track_states: Dict[int, GlobalTrackState] = {}
 
@@ -86,7 +93,8 @@ class GlobalIDManager:
         st.state = "lost"
         self.active_ids.discard(global_id)
         self.lost_ids.add(global_id)
-        self._unbind_global(global_id)
+        if not self.keep_tracker_binding:
+            self._unbind_global(global_id)
 
     def _mark_retired(self, global_id: int) -> None:
         if global_id not in self.track_states:
@@ -206,16 +214,15 @@ class GlobalIDManager:
         n = len(feats)
         m = len(candidate_ids)
 
-        score_matrix = np.full((n, m), -1.0, dtype=np.float32)
+        # blended cosine scores in one shot; -1.0 is the gated-out sentinel
+        score_matrix = self.gallery._score_matrix(feats, candidate_ids)  # (n, m)
 
-        for i, feat in enumerate(feats):
-            for j, gid in enumerate(candidate_ids):
-                if apply_spatial_gate:
-                    box_i = None if boxes_xywh is None else boxes_xywh[i]
+        if apply_spatial_gate:
+            for i in range(n):
+                box_i = None if boxes_xywh is None else boxes_xywh[i]
+                for j, gid in enumerate(candidate_ids):
                     if not self._passes_spatial_gate(box_i, gid, frame_id):
-                        continue
-                score, _, _ = self.gallery._similarity_to_pid(feat, gid)
-                score_matrix[i, j] = score
+                        score_matrix[i, j] = -1.0
 
         row_ind, col_ind = linear_sum_assignment(score_matrix, maximize=True)
 

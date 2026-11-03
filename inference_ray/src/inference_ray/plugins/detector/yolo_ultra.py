@@ -71,34 +71,6 @@ class YoloUltralytics():
 
     @torch.no_grad()
     def preprocess(self, inputs, **kwargs):
-        input = torch.from_numpy(inputs['frame']).float().to(self.device)
-        input_shape = inputs["frame"].shape  # NOTE: VideoDecoder returns (N,H,W,C)
-        input = input.permute(0, 3, 1, 2)
-        self.h, self.w = input_shape[1], input_shape[2]
-        
-        # NOTE: adds a batch_size dim, if needed.
-        # img = img.unsqueeze(0) 
-        
-        # pad to stride-safe shape (32x stride is optional for transformers, but helps with efficiency)
-        pad_h = (32 - self.h % 32) % 32
-        pad_w = (32 - self.w % 32) % 32
-        
-        input_padded = F.pad(input, (0, pad_w, 0, pad_h), mode='constant', value=114) # fills with constant gray     
-        
-        self.h = self.h + pad_h
-        self.w = self.w + pad_w
-        self.det_shape = (self.h, self.w)
-        
-        # width (or fraction) of video resolution
-        if not self.detector_params['imgsz']: self.detector_params['imgsz'] = [self.h, self.w]
-        
-        return {
-            'inputs': input_padded.float() / 255.0,  # normalize inputs
-            'shape': (self.h, self.w)
-        }
-
-    @torch.no_grad()
-    def preprocess(self, inputs, **kwargs):
         frames = self._ensure_batched_hwc(inputs["frame"])   # NHWC
         n, h, w, c = frames.shape
         self.orig_h, self.orig_w = int(h), int(w)
@@ -140,6 +112,11 @@ class YoloUltralytics():
             self.w = target_w
             infer_shape = (target_h, target_w)
         self.det_shape = infer_shape
+        # NOTE: boxes are reported in frame pixels (see tracker/README.md, detector contract). Padding (rect) adds
+        # rows / columns at the bottom / right only, so it needs no correction; a resize to imgsz does.
+        self.frame_shape = (self.orig_h, self.orig_w)
+        self._box_scale = None if self.rect else np.array(
+            [self.orig_w / target_w, self.orig_h / target_h] * 2, dtype=np.float32)
         
         return {
             "inputs": x,
@@ -171,20 +148,23 @@ class YoloUltralytics():
             xywh = boxes.xywh.detach().cpu().numpy()
             conf = boxes.conf.detach().cpu().numpy()
             cls = boxes.cls.detach().cpu().numpy().astype(np.int32)
+            if self._box_scale is not None:
+                xyxy = xyxy * self._box_scale
+                xywh = xywh * self._box_scale
 
-            for i in range(len(xyxy)):
-                if int(cls[i]) not in self.classes:
-                    continue
-                bbox_list = [
-                    {
-                        "xyxy": xyxy[i],
-                        "xywh": xywh[i],
-                        "cls_id": int(cls[i]),
-                        "conf": float(conf[i]),
-                    }
-                ]
-
-                self.state.append(bbox_list)
-                self.img_id += 1
+            # NOTE: one state entry per frame (it used to be one per detection, which broke the frame <-> time
+            # alignment of every run with more or less than one detection in a frame)
+            bbox_list = [
+                {
+                    "xyxy": xyxy[i],
+                    "xywh": xywh[i],
+                    "cls_id": int(cls[i]),
+                    "conf": float(conf[i]),
+                }
+                for i in range(len(xyxy))
+                if int(cls[i]) in self.classes
+            ]
+            self.state.append(bbox_list)
+            self.img_id += 1
 
         return results

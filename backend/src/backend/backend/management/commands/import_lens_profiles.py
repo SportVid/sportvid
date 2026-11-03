@@ -42,6 +42,17 @@ def _iter_directory(path: str) -> Iterator[Tuple[str, bytes]]:
                     yield os.path.relpath(full_path, path).replace(os.sep, "/"), f.read()
 
 
+def _strip_nul(value):
+    # a few profiles contain NUL characters in strings, which PostgreSQL cannot store in text or jsonb
+    if isinstance(value, str):
+        return value.replace("\x00", "")
+    if isinstance(value, dict):
+        return {_strip_nul(k): _strip_nul(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_strip_nul(v) for v in value]
+    return value
+
+
 class Command(BaseCommand):
     help = "Import lens profiles from Gyroflow's lens profile database (https://github.com/gyroflow/lens_profiles)."
 
@@ -71,7 +82,7 @@ class Command(BaseCommand):
             if group not in groups:
                 continue
             try:
-                raw = json.loads(content.decode("utf-8-sig"))
+                raw = _strip_nul(json.loads(content.decode("utf-8-sig")))
             except (UnicodeDecodeError, json.JSONDecodeError):
                 skipped["unparsable"] += 1
                 continue
