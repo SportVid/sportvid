@@ -15,7 +15,7 @@ The upstream repository (hsiangwei0903/Deep-EIoU) has no license, so none of its
   when a lost track is re-found; no prediction step runs. Its box is used only to drop duplicate tracked / lost
   pairs (IoU > 0.85). Output boxes are the last detection boxes (``last_tlwh``).
 * Expanded boxes grow by floor((2 e + 1) * size / 2) on each side, and IoU uses the inclusive pixel convention
-  (+1 on widths and heights), as the evaluated version did.
+  (+1 on widths and heights).
 * The appearance embedding of a track is an exponential moving average (0.9) of its L2-normalised detection
   embeddings.
 """
@@ -203,7 +203,7 @@ class DeepEIoUAssociation:
         self.proximity = float(p.proximity_thresh)
         self.appearance = float(p.appearance_thresh)
         self.with_reid = bool(p.with_reid)
-        # track_buffer is given in frames at 30 fps, at least one frame (as for ByteTrack, tracker/README.md)
+        # track_buffer is given in frames at 30 fps, at least one frame (as for ByteTrack)
         self.max_time_lost = max(1, int(frame_rate / 30.0 * p.track_buffer))
         self.kf = _BoxKalman()
         self.frame_id = 0
@@ -296,7 +296,7 @@ class DeepEIoUAssociation:
         self.lost = _without(self.lost, {t.track_id for t in self.tracked})
         self.lost.extend(lost)
         # the ids removed in *earlier* frames: a track removed in this frame stays in the lost pool for one more
-        # frame (with state REMOVED it can still be re-found there), as in the evaluated version
+        # frame (with state REMOVED it can still be re-found there)
         self.lost = _without(self.lost, self.removed_ids)
         self.removed_ids.update(t.track_id for t in removed)
         self.tracked, self.lost = _drop_duplicates(self.tracked, self.lost)

@@ -45,14 +45,15 @@ class TeamClustering(
     AnalyserPlugin,
     config=default_config,
     parameters={},
-    version="0.3",
+    version="0.4",
     requires=requires,
     provides=provides,
 ):
-    """ Team per player track (``plugins/team/clustering.py``, tracker/README.md):
+    """ Team per player track (``plugins/team/clustering.py``):
 
     1. the player tracks from the tracklets: entity id 0 (ball, untracked detections) and the ball rows are left
-       out, and the referee tracks too with ``keep_referees`` (they keep object_tracker's class-based team);
+       out, the referee tracks too with ``keep_referees`` (they keep object_tracker's class-based team), and the
+       bystander tracks with ``skip_bystanders`` (pitch_filter marks the tracks off the pitch so);
     2. up to ``max_samples_per_track`` boxes per track, evenly spaced over the track, chosen from the geometry alone
        (boxes below ``min_box_w`` x ``min_box_h`` px or outside the frame do not crop);
     3. one decoding pass up to the last sampled frame: the sampled boxes are cropped (``roi_align``, as in
@@ -93,7 +94,8 @@ class TeamClustering(
                         ("crop_x1_offset", "crop_y1_offset", "crop_x2_offset", "crop_y2_offset"))
         # the ReID crop gate on the raw box; min_crop_w / _h gate the resized crop
         min_box_w, min_box_h = float(cfg.get("min_box_w", 16)), float(cfg.get("min_box_h", 32))
-        skip_teams = {int(TeamId.BALL)} | ({int(TeamId.REFEREE)} if cfg.get("keep_referees", True) else set())
+        skip_teams = ({int(TeamId.BALL)} | ({int(TeamId.REFEREE)} if cfg.get("keep_referees", True) else set())
+                      | ({int(TeamId.BYSTANDER)} if cfg.get("skip_bystanders", True) else set()))
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
         encoder = None

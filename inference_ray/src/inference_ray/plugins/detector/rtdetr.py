@@ -88,7 +88,7 @@ class RTDetr:
             frames = torch.from_numpy(frames)
         
         _, self.h, self.w, _ = frames.shape
-        # NOTE: boxes are reported in frame pixels (tracker/README.md, detector contract): the padding below only
+        # NOTE: boxes are reported in frame pixels (detector contract): the padding below only
         # adds rows / columns at the bottom / right
         self.frame_shape = (int(self.h), int(self.w))
         

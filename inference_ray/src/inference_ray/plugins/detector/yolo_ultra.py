@@ -112,7 +112,7 @@ class YoloUltralytics():
             self.w = target_w
             infer_shape = (target_h, target_w)
         self.det_shape = infer_shape
-        # NOTE: boxes are reported in frame pixels (see tracker/README.md, detector contract). Padding (rect) adds
+        # NOTE: boxes are reported in frame pixels (detector contract). Padding (rect) adds
         # rows / columns at the bottom / right only, so it needs no correction; a resize to imgsz does.
         self.frame_shape = (self.orig_h, self.orig_w)
         self._box_scale = None if self.rect else np.array(

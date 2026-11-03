@@ -24,9 +24,7 @@ MODEL_CHECKPOINT = {
 MODEL_CHECKPOINTS = list(MODEL_CHECKPOINT.values()) + ["/models/reid/osnet_ain_ms_d_c.pt.tarh"]
 
 
-# Defaults: the settings the ReID stage was evaluated with on the DSHS recordings (inference_ray plugins/tracker/
-# README.md), with OSNet-AIN MS+D+C, the best embedding on that footage's labelled player crops and the one the
-# trackers and team_clustering use, and keep_tracker_binding. The frontend sends its own values for most fields (usePluginParams.js).
+# Defaults: OSNet-AIN MS+D+C (the embedding the trackers and team_clustering use) and keep_tracker_binding. The frontend sends its own values for most fields (usePluginParams.js).
 @PluginManager.export_serializer("osnet_reid")
 class OSNetReIdentificationSerializer(serializers.Serializer):
     object_tracker_id = serializers.UUIDField(required=True)
@@ -135,8 +133,7 @@ class OSNetReIdentificationSerializer(serializers.Serializer):
         required=False,
         default=True,
     )
-    # a lost id stays bound to its tracker id, so ReID only merges tracks and never splits one (without it,
-    # the ReID stage split the long, gappy GTA-Link tracks and lowered IDF1)
+    # a lost id stays bound to its tracker id, so ReID only merges tracks and never splits one
     keep_tracker_binding = serializers.BooleanField(
         required=False,
         default=True,

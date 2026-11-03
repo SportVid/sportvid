@@ -8,3 +8,4 @@ from .kpi_computation import KPIComputationSerializer
 from .floodlight_convert import FloodlightConvertSerializer
 from .osnet_reid import OSNetReIdentificationSerializer
 from .team_clustering import TeamClusteringSeriaizer
+from .pitch_filter import PitchFilterSerializer
