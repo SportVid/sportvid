@@ -1,19 +1,18 @@
-import logging
-from utils.model_paths import checked_model_path
-import torch
 import json
-import numpy as np
-import cv2
-from typing import Any, Callable, Dict, List, Tuple, Optional
-from PIL import Image
+import logging
+import time
+from typing import Callable, Dict
+
 from data import (
     Data, DataManager,
     VideoData,
-    BboxesData
+    BboxesData,
+    ReIDData
 )
 from inference_ray.plugin import AnalyserPlugin, AnalyserPluginManager
-from utils import VideoDecoder, VideoBatcher
+from utils import VideoDecoder
 from .reid import GlobalIDManager, Gallery, ProtoGallery
+from .tracker.tracklets import TeamId, frame_time_ms, video_meta
 
 
 default_config = {
@@ -24,76 +23,15 @@ default_config = {
 
 requires = {
     "video": VideoData,
-}
-
-provides = {
     "tracklets": BboxesData,
 }
 
+provides = {
+    "reids": ReIDData,
+}
 
-def l2_normalize(x: np.ndarray, eps: float = 1e-12) -> np.ndarray:
-    x = np.asarray(x, dtype=np.float32)
-    if x.ndim == 1:
-        return x / (np.linalg.norm(x) + eps)
-    return x / (np.linalg.norm(x, axis=1, keepdims=True) + eps)
-
-
-def _crop_tracks(
-    img: np.ndarray,
-    track_boxes: np.ndarray,
-    track_ids: List[int],
-    crop_size: List[int] = [128, 256],
-    x1_offset: float = 0.0,
-    y1_offset: float = 0.0,
-    x2_offset: float = 0.0,
-    y2_offset: float = 0.0
-) -> List[Image.Image]:
-    """Crops track boxes and converts them to PIL RGB (H,W,C)."""
-
-    def torch_to_npy(img):
-        if isinstance(img, torch.Tensor):
-            img_npy = img.permute(1, 2, 0).cpu().numpy()
-            if img_npy.max() <= 1.0:
-                img_npy = (img_npy * 255).astype(np.uint8)
-            return img_npy
-        return img
-
-    img_npy = torch_to_npy(img)
-    logging.debug(f"img shape: {img_npy.shape}")
-
-    h_img, w_img = img_npy.shape[:2]
-    crops = []
-
-    for i, (tid, box) in enumerate(zip(track_ids, track_boxes)):
-        x1, y1, w, h = box.astype(float)
-
-        if w <= 0 or h <= 0:
-            logging.debug(f"Raw box: x1={x1}, y1={y1}, w={w}, h={h}")
-            logging.debug(f"Skipping invalid box {box}")
-            continue
-
-        x1 += w * x1_offset
-        y1 += h * y1_offset
-        x2 = x1 + w * (1.0 + x2_offset)
-        y2 = y1 + h * (1.0 + y2_offset)
-
-        x1, y1 = max(0, x1), max(0, y1)
-        x2, y2 = min(w_img, x2), min(h_img, y2)
-
-        if x2 <= x1 or y2 <= y1:
-            logging.debug(f"Skipping degenerate clipped box: {(x1, y1, x2, y2)}")
-            continue
-
-        crop_bgr = img_npy[int(y1):int(y2), int(x1):int(x2)]
-        if crop_bgr.size == 0:
-            continue
-
-        crop_rgb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2RGB)
-        crop_pil = Image.fromarray(crop_rgb)
-        crop_pil = crop_pil.resize(crop_size, Image.Resampling.LANCZOS)
-        crops.append(crop_pil)
-
-    return crops
+# the model when a request names none (the serializer always sets both)
+DEFAULT_MODEL = {"model_name": "osnet_ain_x1_0", "checkpoint": "/models/reid/osnet_ain_ms_d_c.pth.tar"}
 
 
 @AnalyserPluginManager.export("osnet_reid")
@@ -101,10 +39,25 @@ class OSNetReID(
     AnalyserPlugin,
     config=default_config,
     parameters={},
-    version="0.2",
+    version="0.4",
     requires=requires,
     provides=provides
 ):
+    """ Global identities for the player tracks (tracker/README.md):
+
+    1. per decoded frame the player boxes of the tracklets (entity id 0, the ball and untracked detections, and the
+       ball rows are left out);
+    2. crops by ``roi_align`` (bilinear, ``crop_size_x`` x ``crop_size_y``), embedded by a torchreid model loaded
+       strictly from the allowlisted checkpoint. Boxes below ``min_box_w`` x ``min_box_h`` px abstain: their
+       embedding is zero, so they never match a prototype;
+    3. ``gallery_mode: protos``: the prototype gallery with the global-id lifecycle (``GlobalIDManager``: active ->
+       lost after ``active_ttl`` unseen frames -> retired after ``lost_ttl``; re-entry matches, spatial gate,
+       ``keep_tracker_binding``), or ``tracks``: a plain gallery.
+
+    Output: ``mapping = {frame_time_ms: {track_id: global_id}}`` (the frontend's ``mergeReid`` reads it), and per
+    frame the arrays ``tracks`` (the player rows), ``reid_ids`` (int64) and ``features``.
+    """
+
     def __init__(self, config=None, **kwargs):
         super().__init__(config, **kwargs)
 
@@ -115,290 +68,145 @@ class OSNetReID(
         parameters: Dict = None,
         callbacks: Callable = None,
     ):
-        from torchreid.utils.feature_extractor import FeatureExtractor
+        import numpy as np
+        import torch
+        from .tracker.appearance import ReIDEncoder, reid_input_size, roi_crops, roi_windows
+
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        
-        self.cfg = parameters or {}
+        self.cfg = cfg = parameters or {}
 
-        self.model_name = self.cfg.get("model_name", "osnet_x1_0")
-        self.checkpoint = checked_model_path(self.cfg.get("checkpoint", "/models/reid/osnet_x1_0_ms_d_c.pth.tar"))
+        model_name = cfg.get("model_name") or DEFAULT_MODEL["model_name"]
+        checkpoint = cfg.get("checkpoint") or DEFAULT_MODEL["checkpoint"]
+        crop_hw = (int(cfg.get("crop_size_y", 256)), int(cfg.get("crop_size_x", 128)))
+        size = reid_input_size(model_name)
+        if size and tuple(size) != crop_hw:
+            raise ValueError(f"osnet_reid: {model_name} takes {size[1]}x{size[0]} crops "
+                             f"(crop_size_x / _y are {crop_hw[1]}x{crop_hw[0]}).")
+        offsets = tuple(float(cfg.get(k, 0.0)) for k in
+                        ("crop_x1_offset", "crop_y1_offset", "crop_x2_offset", "crop_y2_offset"))
+        # smaller boxes have too few pixels for the broadcast-trained models
+        min_box_w, min_box_h = float(cfg.get("min_box_w", 16)), float(cfg.get("min_box_h", 32))
 
-        self.gallery_mode = self.cfg.get("gallery_mode", "tracks")
-        self.match_threshold = self.cfg.get("match_threshold", 0.6)
-        self.update_threshold = self.cfg.get("update_threshold", 0.82)
-        self.ema_alpha = self.cfg.get("ema_alpha", 0.95)
-        self.cache_size = self.cfg.get("cache_size", 20)
-        self.margin = self.cfg.get("margin", 0.03)
-        self.prototype_weight = self.cfg.get("prototype_weight", 0.7)
-        self.cache_weight = self.cfg.get("cache_weight", 0.3)
+        self.gallery_mode = cfg.get("gallery_mode", "protos")
+        # the serializer's key is match_thresh (it used to be read as match_threshold, so it never applied)
+        match_threshold = float(cfg.get("match_thresh", cfg.get("match_threshold", 0.6)))
+        max_missed = int(cfg.get("max_missed", 150))
 
-        self.max_missed = self.cfg.get("max_missed", 30)
-        self.reid_cls = self.cfg.get("reid_cls", [])
-
-        self.crop_size_x = self.cfg.get("crop_size_x", 128)
-        self.crop_size_y = self.cfg.get("crop_size_y", 256)
-        self.crop_x1_offset = self.cfg.get("crop_x1_offset", 0)
-        self.crop_y1_offset = self.cfg.get("crop_y1_offset", 0)
-        self.crop_x2_offset = self.cfg.get("crop_x2_offset", 0)
-        self.crop_y2_offset = self.cfg.get("crop_y2_offset", 0)
-
-        self.feat_extr = FeatureExtractor(
-            model_name=self.model_name,
-            model_path=self.checkpoint,
-            device=self.device
-        )
-
-        self.gallery = None
+        self.encoder = ReIDEncoder(checkpoint, self.device, model_name=model_name)
         self.global_id_manager = None
-
+        self.tracker_binding = {}  # tracks mode: tracker id -> its last global id
         if self.gallery_mode == "tracks":
-            self.gallery = Gallery(
-                threshold=self.match_threshold,
-                max_missed=self.max_missed,
-            )
-
+            self.gallery = Gallery(threshold=match_threshold, max_missed=max_missed)
         elif self.gallery_mode == "protos":
             self.gallery = ProtoGallery(
-                match_threshold=self.match_threshold,
-                update_threshold=self.update_threshold,
-                max_missed=self.max_missed,
-                ema_alpha=self.ema_alpha,
-                cache_size=self.cache_size,
-                margin=self.margin,
-                prototype_weight=self.prototype_weight,
-                cache_weight=self.cache_weight,
+                match_threshold=match_threshold,
+                update_threshold=float(cfg.get("update_threshold", 0.88)),
+                max_missed=max_missed,
+                ema_alpha=float(cfg.get("ema_alpha", 0.99)),
+                cache_size=int(cfg.get("cache_size", 10)),
+                margin=float(cfg.get("margin", 0.06)),
+                prototype_weight=float(cfg.get("prototype_weight", 0.7)),
+                cache_weight=float(cfg.get("cache_weight", 0.3)),
             )
-
             self.global_id_manager = GlobalIDManager(
                 gallery=self.gallery,
-                active_ttl=30,
-                lost_ttl=300,
-                reentry_threshold=0.68,
-                spatial_gate_px=150.0,
-                use_spatial_gate=True,
+                active_ttl=int(cfg.get("active_ttl", 30)),
+                lost_ttl=int(cfg.get("lost_ttl", 300)),
+                reentry_threshold=float(cfg.get("reentry_threshold", 0.55)),
+                spatial_gate_px=float(cfg.get("spatial_gate_px", 150.0)),
+                use_spatial_gate=bool(cfg.get("use_spatial_gate", True)),
+                keep_tracker_binding=bool(cfg.get("keep_tracker_binding", True)),
             )
         else:
             raise ValueError(f"Unknown gallery_mode: {self.gallery_mode}")
 
-        with inputs["video"] as video_input_data, inputs["tracklets"] as tracklets_data:
+        with inputs["tracklets"] as tracklets_data:
+            # frame size the tracklet boxes are normalised by (object_tracker writes video.h / video.w)
+            self.fps, frame_h, frame_w = video_meta(json.loads(tracklets_data.meta_data or "{}"))
+            tracklets_by_time = json.loads(tracklets_data.bboxes)
+        scale = np.array([frame_w, frame_h, frame_w, frame_h], dtype=np.float64)
+        dim = self.encoder.feature_dim
+
+        mapping = {}
+        n_boxes = n_abstained = 0
+        with inputs["video"] as video_input_data:
             with video_input_data.open_video() as f_video:
                 video_decoder = VideoDecoder(
                     f_video,
+                    fps=self.fps,
                     extension=f".{video_input_data.ext}",
                     ref_id=video_input_data.id,
                 )
-    
-        self.frame_id = 0
-        with inputs["tracklets"] as tracklets_data:
-            # data unpacking
-            tracklets_meta = json.loads(tracklets_data.meta_data)
-            tracklets_meta = tracklets_meta.get('video', {})
-            self.fps = tracklets_meta.get('fps', 30)
-            self.detector_h = tracklets_meta.get('detector_h', 1080)
-            self.detector_w = tracklets_meta.get('detector_w', 1920)
-            
-            tracklets_data = json.loads(tracklets_data.bboxes)
-            # video decoding
-            with inputs["video"] as video_input_data: 
-                with video_input_data.open_video() as f_video:
-                    video_decoder = VideoDecoder(
-                        f_video,
-                        fps=self.fps,
-                        extension=f".{video_input_data.ext}",
-                        ref_id=video_input_data.id,
-                    )
-                    total_frames = (
-                        len(video_decoder) if hasattr(video_decoder, "__len__") else None
-                    )
-                    # main processing loop
-                    with data_manager.create_data("ReIDData") as reids:
-                        mapping = {}
-                        for frame_id, _frame in enumerate(video_decoder):
-                            self.frame_id = frame_id
-                            frame_time = round((frame_id/self.fps)*1000.)
-                            _tracklets = tracklets_data.get(f'{frame_time}', [])
-                            per_frame_reids = self.process(
-                                inputs={
-                                    "tracklets": _tracklets,
-                                    "image": _frame["frame"],
-                                }
-                            )
-                            # logging.error(per_frame_reids)
-                            for name, arr in per_frame_reids.items():
-                                if type(arr) is np.ndarray:
-                                    reids.add_array(str(frame_id), name, arr)
-                            mapping[frame_time] = per_frame_reids['mapping']
-                            if total_frames:
-                                self.update_callbacks(
-                                    callbacks,
-                                    progress=min((frame_id + 1) / total_frames, 1.0) * 0.98,
-                                )
-                        reids.mapping = mapping
-                        self.update_callbacks(callbacks, progress=1.0)
+                total_frames = len(video_decoder)
+                last_reported = 0.0
+                with data_manager.create_data("ReIDData") as reids:
+                    for frame_id, _frame in enumerate(video_decoder):
+                        frame_time = frame_time_ms(frame_id, self.fps)
+                        # player rows: no ball, no untracked detections (entity 0)
+                        rows = [r for r in tracklets_by_time.get(str(frame_time), [])
+                                if int(r[0]) != 0 and int(r[1]) != TeamId.BALL]
+                        if not rows:
+                            mapping[frame_time] = {}
+                            continue
+                        img = _frame["frame"]  # HWC uint8 RGB
+                        if img.shape[:2] != (frame_h, frame_w):
+                            raise ValueError(f"osnet_reid: decoded frame {img.shape[:2]} != the tracklets' "
+                                             f"frame {(frame_h, frame_w)}.")
+                        tracklets_npy = np.asarray(rows, dtype=np.float64)
+                        track_ids = tracklets_npy[:, 0].astype(np.int64).tolist()
+                        boxes = (tracklets_npy[:, 5:9] * scale).astype(np.float32)   # tlwh px, float32 as tracker states
 
-                    return { "reids" : reids }
+                        windows, valid = roi_windows(boxes, (frame_h, frame_w), offsets, min_box_w, min_box_h)
+                        feats = np.zeros((len(rows), dim), dtype=np.float32)
+                        if valid.any():
+                            feats[valid] = self.encoder.embed_crops(roi_crops(img, windows[valid], crop_hw, self.device))
+                        n_boxes += len(rows)
+                        n_abstained += int((~valid).sum())
 
-    def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
-        """ Encode tracklet crops using the feature extractor. """
-        # NOTE: Expects single tracklet/image pair as inputs.
-        tracklets = inputs.get('tracklets', []) # [[track_id, team_id, game_section, x_center, y_bottom,
-                                                 #   x_norm, y_norm, w_norm, h_norm, score], ...] (N,10)
-        img = inputs.get('image')               # full frame numpy BGR (H,W,C)
-        if not tracklets:
-            # Empty-frame shape must match the normal-path return below, since process()
-            # unconditionally reads preproc_inputs['inputs'] -- its own len(tracks)==0 branch
-            # (further down) is what actually handles the "no detections this frame" case.
-            return {'inputs': [{
-                'tracks': np.empty((0, 10), dtype=np.float32),
-                'features': np.empty((0, 512), dtype=np.float32),
-                'crops': [],
-            }]}
-        tracklets_npy = np.array(tracklets)
+                        global_ids = self._assign(frame_id, track_ids, feats, boxes, valid)
+                        reid_ids = np.array([-1 if g is None else int(g) for g in global_ids], dtype=np.int64)
+                        mapping[frame_time] = dict(zip(track_ids, reid_ids.tolist()))
+                        reids.add_array(str(frame_id), "tracks", tracklets_npy)
+                        reids.add_array(str(frame_id), "reid_ids", reid_ids)
+                        reids.add_array(str(frame_id), "features", feats)
 
-        # undo normalization of coords using in-place mul
-        tracklets_npy[:,5] *= self.detector_w  # x_n
-        tracklets_npy[:,6] *= self.detector_h  # y_n
-        tracklets_npy[:,7] *= self.detector_w  # w_n
-        tracklets_npy[:,8] *= self.detector_h  # h_n
-        
-        track_ids = tracklets_npy[:,0]    # [N,]
-        track_xywh = tracklets_npy[:,5:9] # [N,4] [x1,y1,w,h]
-        
-        # TODO: revert coordinate normalization of track_boxes using detector W/H
-        crops = _crop_tracks( # crops track boxes
-            img, 
-            track_xywh, 
-            track_ids,
-            (self.crop_size_x, self.crop_size_y),
-            self.crop_x1_offset,
-            self.crop_y1_offset,
-            self.crop_x2_offset,
-            self.crop_y2_offset
-        ) 
-        if not crops: crops = []
-        
-        crop_arrays_rgb = []
-        # NOTE: seems very inefficient, however feature extractor requires a list of PIL numpy arrays..
-        for crop_pil in crops:
-            crop_rgb_npy = np.array(crop_pil)  # PIL -> RGB numpy HWC uint8
-            crop_arrays_rgb.append(crop_rgb_npy)
-            
-        if len(crop_arrays_rgb) > 0:
-            features = self.feat_extr(crop_arrays_rgb).cpu().numpy() # extract features: PIL list of image bboxes -> [N,512] normalized
-        else:
-            features = np.empty((0,512), dtype=np.float32)
-        
-        # NOTE: returning per-frame processed input.
-        return { 
-            'inputs' : [{
-                'tracks': tracklets_npy,    # [N,10]
-                'features': features,       # [N,512] 
-                'crops': crop_arrays_rgb    # [N,H,W,C]
-            }]
-        }
+                        now = time.time()
+                        if total_frames and now - last_reported >= 1.0:
+                            last_reported = now
+                            self.update_callbacks(callbacks, progress=min((frame_id + 1) / total_frames, 1.0) * 0.98)
 
-    def process(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
-        """
-            1) Extract ReID features
-            2) Associate detections to identities
-            3) In ProtoGallery mode, use global-ID lifecycle management
-        """
-        preproc_inputs = self.preprocess(inputs, **kwargs)
-        per_frame_data = preproc_inputs['inputs']
-        
-        tracks = {}
-        for frame_data in per_frame_data:
-            tracklets = frame_data['tracks']    # expected: np.ndarray (N, 10)
-            feats = frame_data['features']      # expected: np.ndarray (N, F_DIM) or None
-            crops = frame_data['crops']
-            
-            # frame_id = tracks["frame_id"]
-            track_ids = list(tracks.get("track_ids", []))
-            track_boxes = list(tracks.get("track_boxes", []))
+                    n_ids = len({g for m in mapping.values() for g in m.values()})
+                    n_tracks = len({t for m in mapping.values() for t in m})
+                    logging.info(f"osnet_reid: {n_tracks} tracker ids -> {n_ids} global ids ({self.gallery_mode}, "
+                                 f"{model_name}); {n_abstained} of {n_boxes} boxes below {min_box_w:g}x{min_box_h:g} px.")
+                    reids.mapping = mapping
+                    self.update_callbacks(callbacks, progress=1.0)
 
-            if tracklets is None or len(tracklets) == 0:
-                tracks.update({
-                    "tracks": tracklets,
-                    "reid_ids": np.array([], dtype=np.int_),
-                    "mapping": {},
-                    "crops": crops,
-                    "features": feats,
-                })
-                self.frame_id += 1
-                continue
-            
-            old_ids = tracklets[:, 0].astype(np.int_)
-            track_ids = old_ids.tolist()
+        return {"reids": reids}
 
-            # adjust this slice if your old tracklet layout stores boxes elsewhere
-            track_boxes = tracklets[:, 5:9] if tracklets.shape[1] >= 5 else None
-
-            if feats is None or len(feats) == 0 or len(track_ids) == 0:
-                updated_ids = np.array([], dtype=np.int_)
-                mapping = {}
-                tracks.update({
-                    "tracks": tracklets,
-                    "reid_ids": updated_ids,
-                    "mapping": mapping,
-                    "crops": crops,
-                    "features": feats,
-                })
-                self.frame_id += 1
-                continue
-
-            if self.gallery_mode == "protos":
-                global_ids, reid_scores, reid_status = self.global_id_manager.update(
-                    frame_id=self.frame_id,
-                    track_ids=track_ids,
-                    feats=feats,
-                    boxes_xywh=track_boxes,
-                )
-                updated_ids = np.array(global_ids, dtype=object)
-            else:
-                matched_ids, matched_scores = self.gallery.match(feats, self.frame_id)
-
-                global_ids = list(matched_ids)
-                reid_scores = list(matched_scores)
-                reid_status = []
-
-                for i, pid in enumerate(global_ids):
-                    if pid is None:
-                        pid = self.gallery.register(feats[i], self.frame_id)
-                        global_ids[i] = pid
-                        reid_scores[i] = None
-                        reid_status.append("new")
-                    else:
-                        reid_status.append("matched")
-
-                self.gallery.prune(self.frame_id)
-                updated_ids = np.array(global_ids, dtype=object)
-
-            mapping = dict(zip(old_ids.tolist(), updated_ids.tolist()))
-
-            tracks.update({
-                "tracks": tracklets,
-                "reid_ids": updated_ids,
-                "mapping": mapping,
-                "crops": crops,
-                "features": feats,
-            })
-
-            logging.error(
-                f"Frame {self.frame_id}: tracks={len(track_ids)}, "
-                f"unique_global={len({gid for gid in updated_ids.tolist() if gid is not None})}, "
-                f"mapping={mapping}"
+    def _assign(self, frame_id: int, track_ids, feats, boxes, valid):
+        """ Global id per box. In ``tracks`` mode a box without an embedding continues its tracker id's last global
+        id; its zero embedding would register a new id in every frame. """
+        if self.gallery_mode == "protos":
+            global_ids, _, _ = self.global_id_manager.update(
+                frame_id=frame_id,
+                track_ids=track_ids,
+                feats=feats,
+                boxes_xywh=boxes,
             )
-            logging.error(f"Old tracker IDs: {old_ids.tolist()}")
-            logging.error(f"Global IDs: {updated_ids.tolist()}")
-
-            if self.gallery_mode == "protos":
-                logging.error(f"Status: {reid_status}")
-                logging.error(f"Scores: {reid_scores}")
-                tracks.update({
-                    "reid_status": reid_status,
-                    "reid_scores": reid_scores
-                })
-
-            self.frame_id += 1
-
-        return tracks
+            return global_ids
+        global_ids = [None] * len(track_ids)
+        idx = [i for i in range(len(track_ids)) if valid[i]]
+        if idx:
+            matched_ids, _ = self.gallery.match(feats[idx], frame_id)
+            for i, pid in zip(idx, matched_ids):
+                global_ids[i] = pid if pid is not None else self.gallery.register(feats[i], frame_id)
+        for i, tid in enumerate(track_ids):
+            if global_ids[i] is None:
+                global_ids[i] = self.tracker_binding.get(tid)
+                if global_ids[i] is None:
+                    global_ids[i] = self.gallery.next_id
+                    self.gallery.next_id += 1
+            self.tracker_binding[tid] = global_ids[i]
+        self.gallery.prune(frame_id)
+        return global_ids

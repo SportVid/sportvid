@@ -106,6 +106,7 @@ class RFDetr():
         frames = self._ensure_batched_hwc(frames)
         n, self.h, self.w, _ = frames.shape
         self.det_shape = (self.h, self.w)
+        self.frame_shape = (self.h, self.w)  # predict() returns boxes in frame pixels
         pil_images = []  # NOTE: RF-DETR expects PIL image format (H,W,C)
         for frame in frames:
             # permuted_img = frame.transpose(1, 2, 0)

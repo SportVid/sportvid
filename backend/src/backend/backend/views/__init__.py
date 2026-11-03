@@ -21,9 +21,6 @@ from .user import *
 from .cluster_timeline_item import *
 from .cluster_item import *
 
-# TODO this is not the best way to do it
-from backend.tasks import *
-
 from .video_analysis_state import *
 
 from .events import *

@@ -10,6 +10,7 @@ from analyser.client import AnalyserClient
 from backend.models import PluginRun
 from backend.utils import RetryOnRpcErrorClientInterceptor, ExponentialBackoff
 from backend.utils.eta import EtaEstimator
+from backend.log_context import log_context, log_event
 from backend.utils.events import cancellation_watcher, publish_plugin_run
 from interface import analyser_pb2
 from interface import analyser_pb2_grpc
@@ -39,6 +40,26 @@ def analyser_status_to_task_status(analyser_status):
     return None
 
 
+def _fail_run(plugin_run, **fields):
+    """Mark the run ERROR, unless it was deleted meanwhile: save() would insert it again.
+
+    .update() skips post_save, so the live event is sent here.
+    """
+    if plugin_run is None:
+        return
+    fields = {"status": PluginRun.STATUS_ERROR, "eta_seconds": None, **fields}
+    updated = PluginRun.objects.filter(id=plugin_run.id).update(update_date=timezone.now(), **fields)
+    for name, value in fields.items():
+        setattr(plugin_run, name, value)
+    if not updated:
+        log_event(logger, "plugin_run.deleted_while_running", plugin_run_id=plugin_run.id, status="error")
+        return
+    try:
+        publish_plugin_run(plugin_run)
+    except Exception:
+        logger.warning("Failed to publish plugin run ERROR event", exc_info=True)
+
+
 class TaskAnalyserClient(AnalyserClient):
     def __init__(self, *args, plugin_run_db=None, timeout=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -66,89 +87,66 @@ class TaskAnalyserClient(AnalyserClient):
             *interceptors,
         )
 
-    # TODO: error paths still use .save() on the instance --> should use: .filter(...).update(...) consistenly.
+    def _grpc_failed(self, call, rpc_error, plugin_run=None):
+        code = rpc_error.code()
+        log_event(logger, "analyser.grpc_error", level=logging.ERROR,
+                  call=call, code=getattr(code, "name", code), message=rpc_error.details())
+        _fail_run(plugin_run)
+
     def list_plugins(self, *args, **kwargs):
-        plugin_run_db = self.plugin_run_db
         try:
             return super().list_plugins(*args, **kwargs)
         except grpc.RpcError as rpc_error:
-            logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
-            if plugin_run_db:
-                plugin_run_db.status = PluginRun.STATUS_ERROR
-                plugin_run_db.save()
+            self._grpc_failed("list_plugins", rpc_error, self.plugin_run_db)
         return None
 
     def upload_data(self, *args, **kwargs):
-        plugin_run_db = self.plugin_run_db
         try:
             return super().upload_data(*args, **kwargs)
         except grpc.RpcError as rpc_error:
-            logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
-            if plugin_run_db:
-                plugin_run_db.status = PluginRun.STATUS_ERROR
-                plugin_run_db.save()
+            self._grpc_failed("upload_data", rpc_error, self.plugin_run_db)
         return None
 
     def upload_file(self, *args, **kwargs):
-        plugin_run_db = self.plugin_run_db
         try:
             return super().upload_file(*args, **kwargs)
         except grpc.RpcError as rpc_error:
-            logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
-            if plugin_run_db:
-                plugin_run_db.status = PluginRun.STATUS_ERROR
-                plugin_run_db.save()
+            self._grpc_failed("upload_file", rpc_error, self.plugin_run_db)
         return None
 
     def run_plugin(self, *args, **kwargs):
-        plugin_run_db = self.plugin_run_db
         try:
             return super().run_plugin(*args, **kwargs)
         except grpc.RpcError as rpc_error:
-            logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
-            if plugin_run_db:
-                plugin_run_db.status = PluginRun.STATUS_ERROR
-                plugin_run_db.save()
+            self._grpc_failed("run_plugin", rpc_error, self.plugin_run_db)
         return None
 
     def abort_plugin(self, *args, **kwargs):
         try:
             return super().abort_plugin(*args, **kwargs)
         except grpc.RpcError as rpc_error:
-            logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
+            self._grpc_failed("abort_plugin", rpc_error)
         return None
 
     def get_plugin_status(self, *args, **kwargs):
-        plugin_run_db = self.plugin_run_db
         try:
             return super().get_plugin_status(*args, **kwargs)
         except grpc.RpcError as rpc_error:
-            logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
-            if plugin_run_db:
-                plugin_run_db.status = PluginRun.STATUS_ERROR
-                plugin_run_db.save()
+            self._grpc_failed("get_plugin_status", rpc_error, self.plugin_run_db)
         return None
 
     def download_data(self, *args, **kwargs):
-        plugin_run_db = self.plugin_run_db
         try:
             return super().download_data(*args, **kwargs)
         except grpc.RpcError as rpc_error:
-            logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
-            if plugin_run_db:
-                plugin_run_db.status = PluginRun.STATUS_ERROR
-                plugin_run_db.save()
+            self._grpc_failed("download_data", rpc_error, self.plugin_run_db)
         return None
 
     def download_data_to_blob(self, *args, **kwargs):
-        plugin_run_db = self.plugin_run_db
         try:
             return super().download_data_to_blob(*args, **kwargs)
         except grpc.RpcError as rpc_error:
-            logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
-            if plugin_run_db:
-                plugin_run_db.status = PluginRun.STATUS_ERROR
-                plugin_run_db.save()
+            self._grpc_failed("download_data_to_blob", rpc_error, self.plugin_run_db)
         return None
 
     def get_plugin_results(
@@ -179,10 +177,10 @@ class TaskAnalyserClient(AnalyserClient):
                 "plugin_run", plugin_run_db.id.hex, on_cancel=lambda: self.abort_plugin(job_id)
             )
         )
-        with watch as cancel_event:
+        with log_context(job_id=job_id), watch as cancel_event:
             while True:
                 if cancel_event is not None and cancel_event.is_set():
-                    logger.info(f"Plugin run {plugin_run_db.id.hex} cancelled")
+                    log_event(logger, "plugin_run.cancelled", plugin_run_id=plugin_run_db.id, source="valkey")
                     return None
 
                 if timeout:
@@ -192,35 +190,17 @@ class TaskAnalyserClient(AnalyserClient):
                             self.abort_plugin(job_id)  # free the analyser worker and the Ray call
                         except Exception:
                             logger.warning("Could not abort analyser job %s", job_id, exc_info=True)
-                        if plugin_run_db:
-                            # Timeout and gRPC-error paths now use .update() instead of possibly saving stale plugin_run_db instance.
-                            failure_reason = {
-                                "type": "analyser_timeout",
-                                "message": f"The analysis did not finish within {timeout:g} s",
-                                "details": {"timeout_seconds": timeout},
-                            }
-                            PluginRun.objects.filter(id=plugin_run_db.id).update(
-                                status=PluginRun.STATUS_ERROR, eta_seconds=None, failure_reason=failure_reason
-                            )
-                            plugin_run_db.status, plugin_run_db.eta_seconds = PluginRun.STATUS_ERROR, None
-                            plugin_run_db.failure_reason = failure_reason
-                            publish_plugin_run(plugin_run_db)  # .update() skips the signal
+                        _fail_run(plugin_run_db, failure_reason={
+                            "type": "analyser_timeout",
+                            "message": f"The analysis did not finish within {timeout:g} s",
+                            "details": {"timeout_seconds": timeout},
+                        })
                         return None
-                try:
-                    result = self.get_plugin_status(job_id)
-                except grpc.RpcError as rpc_error:
-                    logger.error(f"GRPC error: code={rpc_error.code()} message={rpc_error.details()}")
-                    if plugin_run_db:
-                        PluginRun.objects.filter(id=plugin_run_db.id).update(
-                            status=PluginRun.STATUS_ERROR, eta_seconds=None
-                        )
-                    return None
+                result = self.get_plugin_status(job_id)
                 if result is None:
-                    logger.error(f"GRPC error: not a valid return Ccode")
-                    if plugin_run_db:
-                        PluginRun.objects.filter(id=plugin_run_db.id).update(
-                            status=PluginRun.STATUS_ERROR, eta_seconds=None
-                        )
+                    # gRPC error: get_plugin_status() logged it and marked self.plugin_run_db failed
+                    if plugin_run_db is not self.plugin_run_db:
+                        _fail_run(plugin_run_db)
                     return None
 
                 if plugin_run_db is not None:
@@ -243,7 +223,13 @@ class TaskAnalyserClient(AnalyserClient):
                         # auto_now doesn't fire on a queryset .update(), so bump it here
                         # -- the frontend uses update_date as a change signal.
                         update_fields.setdefault("update_date", timezone.now())
-                        PluginRun.objects.filter(id=plugin_run_db.id).update(**update_fields)
+                        if not PluginRun.objects.filter(id=plugin_run_db.id).update(**update_fields):
+                            # the run was deleted and its cancel message never arrived (Valkey down,
+                            # or sent before the watcher subscribed): stop the analyser job anyway
+                            log_event(logger, "plugin_run.cancelled", plugin_run_id=plugin_run_db.id,
+                                      source="db_fallback")
+                            self.abort_plugin(job_id)
+                            return None
                         # .update() skips post_save, so push the live event ourselves --
                         # otherwise the status list only ever sees QUEUED then DONE.
                         for field, value in update_fields.items():

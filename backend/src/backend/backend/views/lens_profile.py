@@ -5,8 +5,8 @@ from django.views import View
 from django.http import JsonResponse
 
 from backend.models import LensProfile, Video
-from backend.utils.decode_auth import decode_and_authenticate
 from backend.utils.lens import MAX_CROP, MIN_CROP, aspect_fit, is_compatible, recording_modes
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
@@ -40,12 +40,10 @@ def _entry(lens_profile, video):
     return entry
 
 
-class LensProfileBrandList(View):
+class LensProfileBrandList(ApiView):
     """Brands with their number of profiles, optionally restricted to a ?group=."""
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error", "type": "not_authenticated"})
 
             query = LensProfile.objects.all()
             if "group" in request.GET:
@@ -63,12 +61,10 @@ class LensProfileBrandList(View):
             return JsonResponse({"status": "error"})
 
 
-class LensProfileModelList(View):
+class LensProfileModelList(ApiView):
     """Camera models of a ?brand= with their number of profiles."""
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error", "type": "not_authenticated"})
             if "brand" not in request.GET:
                 return JsonResponse({"status": "error", "type": "missing_values"})
 
@@ -86,7 +82,7 @@ class LensProfileModelList(View):
             return JsonResponse({"status": "error"})
 
 
-class LensProfileList(View):
+class LensProfileList(ApiView):
     """Lens profiles filtered by ?brand=, ?model=, ?group=, ?eis=, ?search=.
 
     With ?video_id= each entry also carries
@@ -97,8 +93,6 @@ class LensProfileList(View):
     """
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error", "type": "not_authenticated"})
 
             video, error = _get_video(request)
             if error is not None:
@@ -129,7 +123,7 @@ class LensProfileList(View):
             return JsonResponse({"status": "error"})
 
 
-class LensProfileGet(View):
+class LensProfileGet(ApiView):
     """One lens profile by ?id=, e.g. the one a video is assigned (video "lens_profile_id"), so the
     picker can be pre-filled. With ?video_id= the entry carries the same per-video fields as LensProfileList.
 
@@ -138,8 +132,6 @@ class LensProfileGet(View):
     """
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error", "type": "not_authenticated"})
             if "id" not in request.GET:
                 return JsonResponse({"status": "error", "type": "missing_values"})
 
@@ -157,7 +149,7 @@ class LensProfileGet(View):
             return JsonResponse({"status": "error"})
 
 
-class VideoSetLensProfile(View):
+class VideoSetLensProfile(ApiView):
     """Assign a lens profile to a video ({"video_id", "lens_profile_id", "lens_crop"}); a null lens_profile_id
     clears it. "lens_crop" is the EIS crop of the recording mode (one of the profile's "recording_modes" or a
     measured value), default 1.0.
@@ -165,8 +157,8 @@ class VideoSetLensProfile(View):
     Existing calibrations keep the intrinsics they were computed with; rerun the
     calibration to apply a changed profile.
     """
-    @decode_and_authenticate(require_name=False)
-    def post(self, request, data):
+    def post(self, request):
+        data = request.data
         if "video_id" not in data or "lens_profile_id" not in data:
             return JsonResponse({"status": "error", "type": "missing_values"})
         try:

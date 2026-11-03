@@ -20,7 +20,7 @@ SOLVER_PARAMETERS = ("num_frames", "rounds", "poly_degree", "outlier_px", "first
 @PluginManager.export_plugin("calibration_lens_solve")
 class CalibrationLensSolve(CalibrationStaticDlt):
     """The static DLT calibration with a lens self-calibrated from the same clicks and the painted pitch markings,
-    instead of a lens profile (inference_ray/calib, ported from trak's prior-free distortion solver).
+    instead of a lens profile (inference_ray/calib, a prior-free distortion solver).
 
     Wants a soccer calibration asset of markers on a static camera: the markings are detected in frames sampled
     across the video. The lens is stored on the calibration asset (``lens_intrinsics``, model ``angular``) and the

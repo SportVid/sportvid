@@ -88,6 +88,9 @@ class RTDetr:
             frames = torch.from_numpy(frames)
         
         _, self.h, self.w, _ = frames.shape
+        # NOTE: boxes are reported in frame pixels (tracker/README.md, detector contract): the padding below only
+        # adds rows / columns at the bottom / right
+        self.frame_shape = (int(self.h), int(self.w))
         
         frames = frames.permute(0, 3, 1, 2).contiguous()    # (N,C,H,W)
         
@@ -104,7 +107,7 @@ class RTDetr:
 
         self.h = self.h + pad_h
         self.w = self.w + pad_w
-        self.det_shape = (self.h + pad_h, self.w + pad_w)
+        self.det_shape = (self.h, self.w)  # was padded twice
 
         frames = frames.float().div_(255.0)
 

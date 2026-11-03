@@ -16,12 +16,6 @@ CELERY_TASK_QUEUES = (
     Queue("gpu")
 )
 
-CELERY_TASK_ROUTES = {
-    "sportvid.tasks.convert_video_to_hls": {
-        "queue": "gpu",
-    }
-}
-
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 
 # build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -85,7 +79,9 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "[%(asctime)s][%(levelname)s][%(name)s.%(funcName)s:%(lineno)d] %(message)s",
+            # appends the correlation IDs bound with backend.log_context (video_id=..., plugin_run_id=...)
+            "()": "backend.log_context.ContextFormatter",
+            "fmt": "[%(asctime)s][%(levelname)s][%(name)s.%(funcName)s:%(lineno)d] %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
         }
     },
@@ -137,6 +133,8 @@ INSTALLED_APPS = [
 AUTH_USER_MODEL = "backend.SportVidUser"
 
 MIDDLEWARE = [
+    # first, so every line logged for the request (other middleware included) carries request_id
+    "backend.middleware.RequestIdMiddleware",
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
@@ -218,9 +216,6 @@ USE_TZ = True
 
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 STATICFILES_DIRS = []
-
-# last resolution is used for indexing
-IMAGE_RESOLUTIONS = [{"min_dim": 200, "suffix": "_m"}, {"min_dim": 1080, "suffix": ""}]
 
 try:
     from .user_settings import *  # noqa: F401,F403

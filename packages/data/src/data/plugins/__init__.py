@@ -14,7 +14,8 @@ from .image_embedding import ImageEmbedding, ImageEmbeddings
 from .text_embedding import TextEmbedding, TextEmbeddings
 from .bounding_box_data import (
     BboxData,
-    BboxesData
+    BboxesData,
+    compute_bboxes_meta
 )
 from .shot_data import Shot, ShotsData
 from .face_data import FaceData, FacesData

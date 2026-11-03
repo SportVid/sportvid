@@ -1,20 +1,20 @@
 import logging
 import json
 from django.views import View
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import JsonResponse
 
 from backend.models import ClusterItem, ClusterTimelineItem
 from backend.permissions import readable, writable
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
 
 
-class ClusterItemFetch(View):
+class ClusterItemFetch(ApiView):
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error_user_auth"})
 
             entries = [
                 item.to_dict()
@@ -27,20 +27,10 @@ class ClusterItemFetch(View):
             return JsonResponse({"status": "error"})
 
 
-class ClusterItemDelete(View):
+class ClusterItemDelete(ApiView):
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception:
-                return JsonResponse({"status": "error"})
+            data = request.data
 
             if "item_ids" not in data:
                 return JsonResponse(
@@ -51,32 +41,29 @@ class ClusterItemDelete(View):
                     {"status": "error", "type": "missing_values_cluster_id"}
                 )
 
-            item_ids = list(data.get("item_ids"))
-            writable(ClusterItem, request.user).filter(id__in=item_ids).delete()
+            items = writable(ClusterItem, request.user).filter(id__in=list(data.get("item_ids")))
+            deleted_ids = [item_id.hex for item_id in items.values_list("id", flat=True)]
+            items.delete()
 
-            return JsonResponse({"status": "ok", "entries": item_ids})
+            return JsonResponse({"status": "ok", "entries": deleted_ids})
 
         except Exception:
             logger.exception('Failed to delete cluster item set')
             return JsonResponse({"status": "error_cluster_item_set_deleted"})
 
 
-class ClusterItemMove(View):
+class ClusterItemMove(ApiView):
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error", "type": "user_auth"})
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-            data = json.loads(body)
+            data = request.data
 
             # the target cluster must be writable too
             writable(ClusterTimelineItem, request.user).get(id=data['new_cluster_id'])
             (writable(ClusterItem, request.user).filter(id__in=data['item_ids'])
                                 .update(cluster_timeline_item=data['new_cluster_id']))
             return JsonResponse({"status": "ok"})
+        except ObjectDoesNotExist:
+            return JsonResponse({"status": "error", "type": "not_exist"})
         except Exception:
             logger.exception('Failed to delete cluster timeline item')
             return JsonResponse({"status": "error"})

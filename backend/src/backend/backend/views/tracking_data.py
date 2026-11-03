@@ -14,13 +14,18 @@ from backend.utils import (
     media_dir_to_file,
 )
 from backend.models import TrackingData, Video
-from backend.permissions import writable
+from backend.permissions import readable, writable
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
 
 
-class TrackingDataUpload(View):
+class TrackingDataUpload(ApiView):
+    json_body = False  # multipart/form data
+
+    legacy_errors = False  # already answered errors with error status codes
+
     
     def submit_analyse(self, plugins, **kwargs):
         plugin_manager = PluginManager()
@@ -31,11 +36,6 @@ class TrackingDataUpload(View):
 
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                logger.error("TrackingDataUpload::not_authenticated")
-                return JsonResponse(
-                    {"status": "error", "type": "not_authenticated"}, status=500)
-
             if request.method != "POST":
                 logger.error("TrackingDataUpload::wrong_method")
                 return JsonResponse(
@@ -105,8 +105,7 @@ class TrackingDataUpload(View):
                 else:
                     if request.POST.get("format") == 'dfl':  # meta_data file is mandatory for DFL data
                         logger.error("TrackingDataUpload::failed")
-                        return JsonResponse(
-                            {"status": "error"}, status=500)
+                        return JsonResponse({"status": "error", "type": "missing_values"}, status=500)
 
                 tracking_data_db, created = TrackingData.objects.get_or_create(**db_params)
                 if not created:
@@ -159,25 +158,21 @@ class TrackingDataUpload(View):
                         "entries": json_entries
                     }
                 )
-            return JsonResponse({"status": "error"}, status=500)
+            return JsonResponse({"status": "error", "type": "missing_values"}, status=500)  # no file
 
         except Exception:
             logger.exception("TrackingDataUpload::failed")
             return JsonResponse({"status": "error"}, status=500)
 
 
-class TrackingDataList(View):
+class TrackingDataList(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
-            can_see_all = request.user.role in ("admin", "researcher")
             video_id = request.GET.get("video_id")
             if video_id:
-                if can_see_all:
-                    queryset = TrackingData.objects.filter(video_id=video_id)
-                else:
-                    queryset = TrackingData.objects.filter(video_id=video_id, owner=request.user)
+                queryset = readable(TrackingData, request.user).filter(video_id=video_id)
             else:
                 queryset = TrackingData.objects.filter(owner=request.user)
             entries = [tdata.to_dict() for tdata in queryset]
@@ -187,11 +182,11 @@ class TrackingDataList(View):
             return JsonResponse({"status": "error"}, status=500)
 
 
-class TrackingDataGet(View):
+class TrackingDataGet(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
 
             entries = []
             for tdata in TrackingData.objects.filter(id=request.GET.get("id"), owner=request.user):
@@ -203,27 +198,19 @@ class TrackingDataGet(View):
                     }
                 )
             if len(entries) != 1:
-                return JsonResponse({"status": "error"}, status=500)
+                return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
             return JsonResponse({"status": "ok", "entry": entries[0]})
         except Exception:
             logger.exception("Failed to get tracking data")
             return JsonResponse({"status": "error"}, status=500)
 
 
-class TrackingDataRename(View):
+class TrackingDataRename(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error"}, status=500)
+            data = request.data
 
             if "id" not in data:
                 return JsonResponse(
@@ -253,20 +240,12 @@ class TrackingDataRename(View):
             return JsonResponse({"status": "error"}, status=500)
 
 
-class TrackingDataDelete(View):
+class TrackingDataDelete(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"}, status=500)
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error"}, status=500)
+            data = request.data
             
             # "all" deletes the caller's own tracking data only.
             if data.get("id") == 'all':
@@ -287,7 +266,7 @@ class TrackingDataDelete(View):
                 if count:
                     release_used_storage(request.user, file_size)
                     return JsonResponse({"status": "ok"})
-            return JsonResponse({"status": "error"}, status=500)
+            return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
         except Exception:
             logger.exception("Failed to delete tracking data")
             return JsonResponse({"status": "error"}, status=500)

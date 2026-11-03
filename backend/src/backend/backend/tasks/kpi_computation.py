@@ -11,7 +11,6 @@ from backend.models import (
     CalibrationAssets,
 )
 from backend.plugin_manager import PluginManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from backend.utils.lens import undistort_with_snapshot
 from data import DataManager, Data

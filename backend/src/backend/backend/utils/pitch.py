@@ -18,14 +18,14 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# IFAB Laws of the Game, law 1 (the same constants as trak's SoccerPitch)
+# IFAB Laws of the Game, law 1 (the same constants as inference_ray/calib/pitch.py)
 GOAL_LINE_TO_PENALTY_MARK = 11.0
 PENALTY_AREA_LENGTH = 16.5
 PENALTY_AREA_WIDTH = 40.32
 GOAL_AREA_LENGTH = 5.5
 GOAL_AREA_WIDTH = 18.32
 CENTER_CIRCLE_RADIUS = 9.15
-GOAL_WIDTH = 7.32                  # between the inner edges of the posts (trak's SoccerPitch.GOAL_LENGTH)
+GOAL_WIDTH = 7.32                  # between the inner edges of the posts
 
 # a template point whose relative position is farther than this from the model point (both at the
 # reference size) is not that keypoint
@@ -82,7 +82,7 @@ def soccer_keypoints(length: float, width: float) -> Dict[str, Tuple[float, floa
             f"Goal-area-{side}-corner-bottom": (ga_x, cy - ga_y),
             f"Goal-line-{side}-goal-area-top": (goal_x, cy + ga_y),
             f"Goal-line-{side}-goal-area-bottom": (goal_x, cy - ga_y),
-            # where the posts stand on the goal line (their inner edges, as in trak's pitch model)
+            # where the posts stand on the goal line (their inner edges)
             f"Goal-post-{side}-top": (goal_x, cy + GOAL_WIDTH / 2.0),
             f"Goal-post-{side}-bottom": (goal_x, cy - GOAL_WIDTH / 2.0),
         })

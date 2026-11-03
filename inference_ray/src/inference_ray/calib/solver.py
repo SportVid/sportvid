@@ -390,7 +390,7 @@ DEFAULT_PARAMETERS = {
     "search_px": 20.0,                # line search window either side of the projection
     "arc_search_m": 2.0,              # circle search window in pitch metres ...
     "arc_max_search_px": 150.0,       # ... clipped in px
-    "contrast": 25.0,                 # grey levels a marking ridge must rise above its surroundings (trak). 12 recovered
+    "contrast": 25.0,                 # grey levels a marking ridge must rise above its surroundings. 12 recovered
                                       # faint lines on one re-encoded clip but hurt on three others
     "out_scale": "auto",
     "physical_max_px": 0.05,          # physical gauge: warn if the refit moves the undistortion by more ...

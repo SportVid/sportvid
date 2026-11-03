@@ -6,15 +6,16 @@ from django.conf import settings
 
 from backend.permissions import readable, writable
 from backend.models import Video, VideoAnalysisState, Timeline, PluginRun
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
 
 
-class VideoAnalysisStateGet(View):
+class VideoAnalysisStateGet(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def get(self, request):
-        if not request.user.is_authenticated:
-            return JsonResponse({"status": "error"}, status=500)
         try:
             video_db = readable(Video, request.user).get(id=request.GET.get("video_id"))
         except Video.DoesNotExist:
@@ -29,20 +30,12 @@ class VideoAnalysisStateGet(View):
         )
 
 
-class VideoAnalysisStateSetSelectedShots(View):
+class VideoAnalysisStateSetSelectedShots(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def post(self, request):
-        if not request.user.is_authenticated:
-            return JsonResponse({"status": "error"}, status=500)
         
-        try:
-            body = request.body.decode("utf-8")
-        except (UnicodeDecodeError, AttributeError):
-            body = request.body
-        
-        try:
-            data = json.loads(body)
-        except Exception as e:
-            return JsonResponse({"status": "error"}, status=500)
+        data = request.data
 
         if "video_id" not in data:
             return JsonResponse(
@@ -58,7 +51,7 @@ class VideoAnalysisStateSetSelectedShots(View):
             return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
 
         video_analysis_state_db, _ = VideoAnalysisState.objects.get_or_create(
-            video__id=data["video_id"]
+            video_id=data["video_id"]
         )
 
         try:
@@ -74,20 +67,12 @@ class VideoAnalysisStateSetSelectedShots(View):
         return JsonResponse({"status": "ok"})
 
 
-class VideoAnalysisStateSetSelectedPlaceClustering(View):
+class VideoAnalysisStateSetSelectedPlaceClustering(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def post(self, request):
-        if not request.user.is_authenticated:
-            return JsonResponse({"status": "error"}, status=500)
 
-        try:
-            body = request.body.decode("utf-8")
-        except (UnicodeDecodeError, AttributeError):
-            body = request.body
-
-        try:
-            data = json.loads(body)
-        except Exception as e:
-            return JsonResponse({"status": "error"}, status=500)
+        data = request.data
 
         if "video_id" not in data:
             return JsonResponse(
@@ -103,7 +88,7 @@ class VideoAnalysisStateSetSelectedPlaceClustering(View):
             return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
 
         video_analysis_state_db, _ = VideoAnalysisState.objects.get_or_create(
-            video__id=data["video_id"]
+            video_id=data["video_id"]
         )
 
         try:
@@ -121,20 +106,12 @@ class VideoAnalysisStateSetSelectedPlaceClustering(View):
         return JsonResponse({"status": "ok"})
 
 
-class VideoAnalysisStateSetSelectedFaceClustering(View):
+class VideoAnalysisStateSetSelectedFaceClustering(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     def post(self, request):
-        if not request.user.is_authenticated:
-            return JsonResponse({"status": "error"}, status=500)
 
-        try:
-            body = request.body.decode("utf-8")
-        except (UnicodeDecodeError, AttributeError):
-            body = request.body
-
-        try:
-            data = json.loads(body)
-        except Exception as e:
-            return JsonResponse({"status": "error"}, status=500)
+        data = request.data
 
         if "video_id" not in data:
             return JsonResponse(
@@ -150,7 +127,7 @@ class VideoAnalysisStateSetSelectedFaceClustering(View):
             return JsonResponse({"status": "error", "type": "not_exist"}, status=500)
 
         video_analysis_state_db, _ = VideoAnalysisState.objects.get_or_create(
-            video__id=data["video_id"]
+            video_id=data["video_id"]
         )
 
         try:

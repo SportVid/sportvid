@@ -30,9 +30,11 @@ class Gallery:
         self.features = {}       # pid -> list[features] (append history)
         self.last_seen = {}      # pid -> frame_idx
 
-    def match(self, feats: np.ndarray, frame_id: int) -> Optional[int]:
-        """ Given some feature vector, match it othe mean gallery features & return matched_id or None. """
-        if not self.features: return None # (N,D)
+    def match(self, feats: np.ndarray, frame_id: int) -> Tuple[List[Optional[int]], List[Optional[float]]]:
+        """ Match each feature (N, D) to the mean gallery features: the matched id (or None) and its similarity per
+        feature. It used to return None for an empty gallery and the ids alone otherwise, while every caller
+        unpacked (ids, scores): gallery_mode 'tracks' failed on its first frame. """
+        if not self.features: return [None] * len(feats), [None] * len(feats)
         # compute cosine similarity between feat and the mean feature of each id
         gallery_means = np.array([np.mean(feats_, axis=0) for feats_ in self.features.values()])
         if len(gallery_means.shape) == 3: gallery_means = np.squeeze(gallery_means, axis=0)
@@ -42,7 +44,7 @@ class Gallery:
         best_indices = np.argmax(sims, axis=1)  # (N,)
         best_sims = sims[np.arange(len(feats)), best_indices]
         
-        matched_pids = []
+        matched_pids, matched_sims = [], []
         gallery_pids = list(self.features.keys())
         
         for i, (best_idx, best_sim) in enumerate(zip(best_indices, best_sims)):
@@ -52,10 +54,12 @@ class Gallery:
                 self.features[pid].append(feats[i])  # add new feature to the gallery
                 self.last_seen[pid] = frame_id
                 matched_pids.append(pid)
+                matched_sims.append(float(best_sim))
             else:
                 matched_pids.append(None)
-        
-        return matched_pids
+                matched_sims.append(None)
+
+        return matched_pids, matched_sims
         
     def register(self, feat: np.ndarray, frame_id: int) -> int:
         """ Register new track ID. """
@@ -108,6 +112,34 @@ class ProtoGallery:
         self.cache: Dict[int, deque] = {}
         self.last_seen: Dict[int, int] = {}      # pid -> frame_idx
 
+    def _score_matrix(self, feats: np.ndarray, pids: List[int]) -> np.ndarray:
+        """Blended prototype+cache cosine score for every (feat, pid) pair.
+
+        ``feats`` must already be L2-normalized (so must the stored prototypes
+        and cache entries). Equivalent to calling ``_similarity_to_pid`` for
+        each pair, but computed as two matmuls plus a short per-id loop instead
+        of an ``n * m`` Python loop that re-stacks each id's cache every time.
+        """
+        n = len(feats)
+        m = len(pids)
+        if n == 0 or m == 0:
+            return np.zeros((n, m), dtype=np.float32)
+
+        F = np.asarray(feats, dtype=np.float32)
+        P = np.stack([_vec(self.prototype[pid]) for pid in pids], axis=0).astype(np.float32)  # (m, d)
+        proto_sim = F @ P.T  # (n, m)
+
+        cache_sim = np.empty((n, m), dtype=np.float32)
+        for j, pid in enumerate(pids):
+            cached = self.cache[pid]
+            if len(cached) > 0:
+                C = np.stack([_vec(f) for f in cached], axis=0).astype(np.float32)  # (c, d)
+                cache_sim[:, j] = (F @ C.T).max(axis=1)
+            else:
+                cache_sim[:, j] = proto_sim[:, j]
+
+        return self.prototype_weight * proto_sim + self.cache_weight * cache_sim
+
     def _similarity_to_pid(self, feat: np.ndarray, pid: int):
         feat = _vec(feat)
         proto = _vec(self.prototype[pid])
@@ -133,21 +165,22 @@ class ProtoGallery:
     def match_one(self, feat: np.ndarray, frame_id: int):
         feat = _l2_normalize(x=_vec(feat))
 
-        logging.error(f"feat shape={feat.shape}")
-        logging.error(f"num ids in gallery={len(self.prototype)}")
+        logging.debug(f"feat shape={feat.shape}")
+        logging.debug(f"num ids in gallery={len(self.prototype)}")
 
         if not self.prototype:
             return None, None
 
         pids = list(self.prototype.keys())
-        
-        for pid in pids:
-            score, proto_sim, cache_sim = self._similarity_to_pid(feat, pid)
-            logging.error(
-                f"pid={pid} score={score:.4f} proto={proto_sim:.4f} cache={cache_sim:.4f} "
-                f"proto_shape={self.prototype[pid].shape}"
-            )
-        
+
+        if logging.getLogger().isEnabledFor(logging.DEBUG):
+            for pid in pids:
+                score, proto_sim, cache_sim = self._similarity_to_pid(feat, pid)
+                logging.debug(
+                    f"pid={pid} score={score:.4f} proto={proto_sim:.4f} cache={cache_sim:.4f} "
+                    f"proto_shape={self.prototype[pid].shape}"
+                )
+
         scores = np.array([self._similarity_to_pid(feat, pid)[0] for pid in pids], dtype=np.float32)
 
         best_idx = int(np.argmax(scores))
@@ -170,7 +203,7 @@ class ProtoGallery:
         if best_score >= self.update_threshold:
             self._update_identity(pid, feat, frame_id)
 
-        logging.error(
+        logging.debug(
             f"best={best_score:.3f}, second={second_score:.3f}, "
             f"match_th={self.match_threshold:.3f}, margin={self.margin:.3f}"
         )
@@ -195,16 +228,7 @@ class ProtoGallery:
         pids = list(self.prototype.keys())
         m = len(pids)
 
-        score_matrix = np.full((n, m), -1.0, dtype=np.float32)
-        proto_matrix = np.full((n, m), -1.0, dtype=np.float32)
-        cache_matrix = np.full((n, m), -1.0, dtype=np.float32)
-
-        for i, feat in enumerate(feats):
-            for j, pid in enumerate(pids):
-                score, proto_sim, cache_sim = self._similarity_to_pid(feat, pid)
-                score_matrix[i, j] = score
-                proto_matrix[i, j] = proto_sim
-                cache_matrix[i, j] = cache_sim
+        score_matrix = self._score_matrix(feats, pids)
 
         row_ind, col_ind = linear_sum_assignment(score_matrix, maximize=True)
 

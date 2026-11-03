@@ -4,8 +4,11 @@ Who may access an object:
 
     role        own objects     other users' objects
     user        read + write    -
-    researcher  read + write    read
+    researcher  read + write    read, except RESEARCHER_OWN_ONLY
     admin       read + write    read + write
+
+For now researchers see only their own timeline segments and annotations
+(RESEARCHER_OWN_ONLY, decided 2026-10-30); this may be widened later.
 
 Views resolve every ID taken from a request through `readable()` or `writable()`, so an
 object the user may not access behaves exactly like one that does not exist.
@@ -14,6 +17,11 @@ from django.db.models import Model, QuerySet
 
 READ_ALL_ROLES = frozenset({"admin", "researcher"})
 WRITE_ALL_ROLES = frozenset({"admin"})
+
+# Models whose other-user objects researchers may not read.
+RESEARCHER_OWN_ONLY = frozenset({
+    "TimelineSegment", "TimelineSegmentAnnotation", "Annotation", "AnnotationCategory", "AnnotationShortcut",
+})
 
 # Lookup path from each model to the user that owns it.
 OWNER_PATHS = {
@@ -39,8 +47,12 @@ def _role(user):
     return getattr(user, "role", None) if user is not None and user.is_authenticated else None
 
 
-def can_read_all(user) -> bool:
-    return _role(user) in READ_ALL_ROLES
+def can_read_all(user, model_name=None) -> bool:
+    """Whether `user` may read every user's objects (of `model_name`, if given)."""
+    role = _role(user)
+    if role == "researcher" and model_name in RESEARCHER_OWN_ONLY:
+        return False
+    return role in READ_ALL_ROLES
 
 
 def can_write_all(user) -> bool:
@@ -57,13 +69,14 @@ def _scoped(model_or_queryset, user, write: bool) -> QuerySet:
 
     if user is None or not user.is_authenticated:
         return queryset.none()
-    if (can_write_all if write else can_read_all)(user):
+    model_name = queryset.model.__name__
+    if can_write_all(user) if write else can_read_all(user, model_name):
         return queryset
-    return queryset.filter(**{OWNER_PATHS[queryset.model.__name__]: user})
+    return queryset.filter(**{OWNER_PATHS[model_name]: user})
 
 
 def readable(model_or_queryset, user) -> QuerySet:
-    """Objects `user` may read: their own, or all of them for admins and researchers."""
+    """Objects `user` may read: their own, or all of them for admins and (except RESEARCHER_OWN_ONLY) researchers."""
     return _scoped(model_or_queryset, user, write=False)
 
 

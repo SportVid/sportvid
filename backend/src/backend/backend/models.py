@@ -677,7 +677,7 @@ class Shortcut(models.Model):
             "keys": self.keys,
         }
         if include_refs_hashes:
-            result["video_id"] = self.video.id.hex
+            result["video_id"] = self.video.id.hex if self.video else None
         return result
 
     @classmethod

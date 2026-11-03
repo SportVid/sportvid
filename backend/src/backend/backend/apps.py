@@ -19,3 +19,6 @@ class BackendConfig(AppConfig):
 
         # import serializers so their @PluginManager.export_serializer runs
         import backend.serializers  # noqa: F401
+
+        # import the tasks so their @PluginManager.export_plugin runs, in every process
+        import backend.tasks  # noqa: F401

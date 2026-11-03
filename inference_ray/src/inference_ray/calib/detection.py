@@ -1,4 +1,4 @@
-"""Detection of the pitch markings in video frames (trak ``fitting/detection.py``): white marking pixels
+"""Detection of the pitch markings in video frames : white marking pixels
 found perpendicular to a guide projection of the model."""
 from typing import Dict, List, Optional, Tuple
 
@@ -19,7 +19,7 @@ def detect_markings(frames: List[np.ndarray], project, lines: Dict[str, np.ndarr
                     curves: Dict[str, Tuple[np.ndarray, np.ndarray, float]], rect, cfg: Dict) -> Dict[str, np.ndarray]:
     """``detect_line_points`` for the straight lines (``search_px``) and the arcs (``arc_search_m``, a metric
     window: the near-field center circle can lie far off a guide fitted to distant keypoints). ``contrast``: grey levels
-    a ridge must rise above its profile's median (trak: 25)."""
+    a ridge must rise above its profile's median (default 25)."""
     sp = float(cfg.get("search_px", 20.0))
     contrast = float(cfg.get("contrast", 25.0))
     out = detect_line_points(frames, project, lines, rect, sp, contrast=contrast, nearest=True)

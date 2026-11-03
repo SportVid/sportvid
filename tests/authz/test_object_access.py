@@ -101,3 +101,24 @@ def test_tracking_data_upload_cannot_attach_to_other_users_video(as_user, world)
         "file": SimpleUploadedFile("pos.csv", b"a;b\n1;2\n"),
     })
     assert db_fingerprint() == before
+
+
+# ---------- status codes (T13): anonymous 401, another user's object 404
+
+@pytest.mark.parametrize("endpoint", ENDPOINTS, ids=lambda e: e.id)
+def test_anonymous_gets_401(endpoint, as_user, world):
+    response, _ = endpoint.call(as_user(None), world)
+    assert (response.status_code, response.json()["type"]) == (401, "not_authenticated")
+
+
+# List endpoints answer an empty list; plugin/run/new reports the unknown video as a validation error.
+NOT_404_FOR_OTHER_USERS = {
+    "timeline/segment/annotation/list": 200, "cluster/timeline/item/fetch": 200, "cluster/item/fetch": 200,
+    "annotation/shortcut/list": 200, "cluster/item/delete": 200, "plugin/run/new": 400,
+}
+
+
+@pytest.mark.parametrize("endpoint", ENDPOINTS, ids=lambda e: e.id)
+def test_other_users_objects_answer_404(endpoint, as_user, world):
+    response, _ = endpoint.call(as_user("bob"), world)
+    assert response.status_code == NOT_404_FOR_OTHER_USERS.get(endpoint.path, 404)

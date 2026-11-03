@@ -53,6 +53,27 @@ def enqueued_tasks(monkeypatch):
     return calls
 
 
+@pytest.fixture
+def cancel_messages(monkeypatch):
+    """Record publish_cancel messages (channel, message) instead of sending them to Valkey."""
+    from backend.utils import events
+
+    messages = []
+    client = types.SimpleNamespace(publish=lambda channel, message: messages.append((channel, message)))
+    monkeypatch.setattr(events, "get_client", lambda: client)
+    return messages
+
+
+@pytest.fixture
+def register_plugin(monkeypatch):
+    """Register a throwaway backend plugin whose __call__ is `call`, for this test only."""
+    from backend.plugin_manager import PluginManager
+
+    def register(name, call):
+        monkeypatch.setitem(PluginManager._plugins, name, type(name, (), {"__call__": call}))
+    return register
+
+
 @pytest.fixture(autouse=True)
 def deployed_ray_plugins(request, monkeypatch):
     """Pretend every Ray plugin is deployed (no analyser in tests); tests may edit the dict.
@@ -68,3 +89,23 @@ def deployed_ray_plugins(request, monkeypatch):
     deployed = {name: "test" for cls in PluginManager._plugins.values() for name in cls.ray_plugins}
     monkeypatch.setattr(plugin_catalogue, "deployed_ray_plugins", lambda: deployed)
     return deployed
+
+
+@pytest.fixture
+def log_lines():
+    """Lines of the backend loggers as "LEVEL message fields", formatted like the console handler.
+
+    caplog can't show the correlation IDs: ContextFormatter reads them when a line is written,
+    so this handler has to be attached while the code under test runs.
+    """
+    import io
+    import logging
+    from backend.log_context import ContextFormatter
+
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(ContextFormatter(fmt="%(levelname)s %(message)s"))
+    logger = logging.getLogger("backend")
+    logger.addHandler(handler)
+    yield lambda: stream.getvalue().splitlines()
+    logger.removeHandler(handler)

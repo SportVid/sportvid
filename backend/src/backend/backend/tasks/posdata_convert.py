@@ -11,7 +11,6 @@ from backend.models import (
 )
 from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_file
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager, Data
 from ..utils.analyser_client import TaskAnalyserClient

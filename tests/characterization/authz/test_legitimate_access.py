@@ -2,8 +2,8 @@
 
 Pinned on the unchanged code (develop @ bfa2cf9): the HTTP status and the body's "status"
 field for the video owner, an admin, and a researcher reading. Some pinned responses are
-errors that already happen today for valid input (e.g. shortcut/create is broken); they
-are pinned on purpose.
+errors that already happen today for valid input; they are pinned on purpose. Entries
+changed by a later fix say so.
 """
 import pytest
 
@@ -29,7 +29,7 @@ OWNER_RESPONSES = {
     "timeline/setcollapse": (200, "ok"),
     "timeline/setorder": (200, "ok"),
     "timeline/delete": (200, "ok"),
-    "timeline/import/eaf": (200, "error"),
+    "timeline/import/eaf": (400, "error"),  # no file; (200, "error") before T13
     "timeline/segment/annotate": (200, "ok"),
     "timeline/segment/annotate/range": (200, "ok"),
     "timeline/segment/merge": (200, "ok"),
@@ -41,7 +41,8 @@ OWNER_RESPONSES = {
     "annotation/update": (200, "ok"),
     "annotation/category/create": (200, "ok"),
     "annotation/shortcut/update": (200, "ok"),
-    "shortcut/create": (200, "error"),
+    "shortcut/create": (200, "ok"),  # was (200, "error") until the fix of 2026-10-30
+    "annotation/shortcut/create": (200, "ok"),
     "position_data/bboxes/edit": (200, "ok"),
     "position_data/bboxes/replace": (200, "ok"),
     "position_data/bboxes/delete": (200, "ok"),
@@ -55,8 +56,8 @@ OWNER_RESPONSES = {
     "cluster/item/delete": (200, "ok"),
     "cluster/item/move": (200, "ok"),
     "video/analysis/setselectedshots": (200, "ok"),
-    "video/analysis/setselectedplaceclustering": (500, "error"),
-    "video/analysis/setselectedfaceclustering": (500, "error"),
+    "video/analysis/setselectedplaceclustering": (404, "error"),  # (500, "error") before T13
+    "video/analysis/setselectedfaceclustering": (404, "error"),  # (500, "error") before T13
     "tracking_data/rename": (200, "ok"),
     "plugin/run/new": (200, "ok"),
 }

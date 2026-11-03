@@ -77,5 +77,11 @@ def test_detector_accepts_its_preset_checkpoint_explicitly(db, detector):
     "/models/reid/osnet_ibn_ms_d_c.pth.tar",
 ])
 def test_reid_accepts_frontend_checkpoints(world, checkpoint):
-    params = _validate("osnet_reid", {"object_tracker_id": world.plugin_run.id.hex, "checkpoint": checkpoint})
-    assert params["checkpoint"] == checkpoint
+    from backend.serializers.osnet_reid import MODEL_CHECKPOINT
+
+    # accepted, but the checkpoint follows model_name (weights are loaded strictly; the frontend sends
+    # osnet_x1_0's checkpoint for every model it offers)
+    for model_name, expected in MODEL_CHECKPOINT.items():
+        params = _validate("osnet_reid", {"object_tracker_id": world.plugin_run.id.hex, "model_name": model_name,
+                                          "checkpoint": checkpoint})
+        assert params["checkpoint"] == expected

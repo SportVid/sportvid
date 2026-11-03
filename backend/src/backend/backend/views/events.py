@@ -5,19 +5,20 @@ from django.http import JsonResponse, StreamingHttpResponse
 from django.views import View
 
 from backend.utils.events import subscribe
+from backend.utils.api import ApiView
 
 logger = logging.getLogger(__name__)
 
 
-class EventStream(View):
+class EventStream(ApiView):
+    legacy_errors = False  # already answered errors with error status codes
+
     """Implements server-sent events (SSE) that streams per-user events.
     Replaces the frontend's polling loops: the browser holds one connection open and
     the backend pushes whenever something actually changed.
     """
 
     def get(self, request):
-        if not request.user.is_authenticated:
-            return JsonResponse({"status": "error"}, status=401)
 
         response = StreamingHttpResponse(
             self._stream(request.user.id),

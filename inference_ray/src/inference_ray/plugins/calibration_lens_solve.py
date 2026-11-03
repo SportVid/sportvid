@@ -48,7 +48,7 @@ class CalibrationLensSolve(
     provides=provides,
 ):
     """Self-calibrates the lens distortion of a static camera from clicked pitch keypoints and the painted pitch
-    markings (prior-free angular-polynomial solver ported from trak, see inference_ray/calib). Returns the lens in
+    markings (prior-free angular-polynomial solver, see inference_ray/calib). Returns the lens in
     physical units as JSON, with the solver rounds, the pose fit under the lens and the frames used."""
 
     def __init__(self, config=None, **kwargs):
