@@ -460,8 +460,9 @@ def _convert_video_to_hls(video_id_hex, original_ext, analyzers, cancel_event, f
 
         if video_db is not None and video_db.owner_id is not None:
             plugin_manager = PluginManager()
-            # always runs "thumbnail"; plus any analyzers the upload asked for.
-            for plugin in dict.fromkeys(["thumbnail", *(analyzers or [])]):
+            # always runs "thumbnail" and "camera_motion_classification" (sets Video.camera_motion,
+            # which the calibration plugins check for a static camera); plus any analyzers the upload asked for.
+            for plugin in dict.fromkeys(["thumbnail", "camera_motion_classification", *(analyzers or [])]):
                 if not plugin:
                     continue
                 try:

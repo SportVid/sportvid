@@ -470,7 +470,7 @@ import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { useVideoStore } from "@/stores/video";
 import { useUserStore } from "@/stores/user";
-import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunStore, isInternalPluginRun } from "@/stores/plugin_run";
 import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { getDisplayTime, getEtaDisplay } from "@/plugins/time";
 import ModalVideoRename from "@/components/video/ModalVideoRename.vue";
@@ -644,7 +644,7 @@ const batchIndeterminate = (videoId) => {
     .forVideo(videoId)
     .some(
       (r) =>
-        r.type !== "thumbnail" &&
+        !isInternalPluginRun(r) &&
         r.status === "RUNNING" &&
         !(r.progress > 0) &&
         r.eta_seconds == null

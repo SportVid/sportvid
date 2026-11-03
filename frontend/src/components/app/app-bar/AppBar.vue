@@ -171,7 +171,7 @@ import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
-import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunStore, isInternalPluginRun } from "@/stores/plugin_run";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useLanguageStore } from "@/stores/languages";
 import { useThemeStore } from "@/stores/theme";
@@ -213,10 +213,9 @@ watch(
 const pluginRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
-    // "thumbnail" is an internal asset (video-gallery cover image, see VideoView.vue),
-    // not a user-facing analysis result -- it has no place in the status overview, its
-    // delete pickers, or the running-plugins badge count.
-    .filter((run) => run.type !== "thumbnail")
+    // Automatic internal runs (gallery thumbnail, camera motion classification) are not
+    // user-facing analysis results -- see INTERNAL_PLUGIN_TYPES in stores/plugin_run.js.
+    .filter((run) => !isInternalPluginRun(run))
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .map((pluginRun) => {
       return {

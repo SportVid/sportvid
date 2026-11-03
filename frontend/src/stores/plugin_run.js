@@ -11,6 +11,14 @@ import { useTimelineSegmentStore } from "@/stores/timeline_segment";
 import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 
+// Runs the backend starts on its own after every upload (tasks/convert_video.py) and that can't be
+// started by hand: "thumbnail" (gallery cover image, see VideoView.vue) and
+// "camera_motion_classification" (fills video.camera_motion, see calibrationParams in
+// usePluginParams.js). Not user-facing work, so they stay out of the status list, its delete
+// pickers, the running-plugins badge and the video card's plugin batch bar.
+export const INTERNAL_PLUGIN_TYPES = ["thumbnail", "camera_motion_classification"];
+export const isInternalPluginRun = (run) => INTERNAL_PLUGIN_TYPES.includes(run?.type);
+
 export const usePluginRunStore = defineStore("pluginRun", () => {
   const state = reactive({
     pluginRuns: {},
@@ -38,9 +46,8 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
   const activeBatches = reactive({});
 
   const trackBatch = (run) => {
-    // Internal asset run behind the gallery cover image, not user-facing work
-    // (filtered out of the status list too, see AppBar.vue).
-    if (!run || !run.video_id || run.type === "thumbnail") return;
+    // Automatic internal runs are not user-facing work (see INTERNAL_PLUGIN_TYPES).
+    if (!run || !run.video_id || isInternalPluginRun(run)) return;
 
     if (!isActive(run)) return;
 

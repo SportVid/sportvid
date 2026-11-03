@@ -28,7 +28,9 @@ class CalibrationLensSolve(CalibrationStaticDlt):
 
     Whatever the solver needs and doesn't get, the run still produces a calibration: a lens that cannot be solved
     falls back to the inherited one (the video's lens profile, or none at all), i.e. to a plain DLT+RANSAC fit.
-    That is what lets the frontend pick this plugin for every video without a lens profile.
+    That is what lets the frontend pick this plugin for every video without a lens profile -- as long as the video
+    is classified as a static camera (``camera_motion``, see usePluginParams.js calibrationParams); the
+    ``camera_not_static`` check below is the backstop for runs started some other way.
     """
 
     dlt_progress_range = (0.9, 1.0)
