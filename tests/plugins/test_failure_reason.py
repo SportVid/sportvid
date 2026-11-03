@@ -111,12 +111,16 @@ def test_lens_solver_rejects_a_moving_camera(video, motion, grpc_settings):
     assert failure.value.details == {"camera_motion": motion}
 
 
+def keypoints(count):
+    return [{"name": f"keypoint_{i}"} for i in range(count)]
+
+
 def test_lens_solver_needs_enough_keypoints(video, grpc_settings):
     from backend.tasks.calibration_lens_solve import CalibrationLensSolve
 
     video.camera_motion = Video.CAMERA_MOTION_STATIC
     with pytest.raises(TaskFailure) as failure:
-        CalibrationLensSolve().solve_lens(None, video, [{}] * 5, 105.0, 68.0, "soccer", None)
+        CalibrationLensSolve().solve_lens(None, video, keypoints(5), 105.0, 68.0, "soccer", None)
     assert failure.value.type == "not_enough_keypoints"
     assert failure.value.details == {"count": 5, "required": 6}
 
@@ -124,9 +128,11 @@ def test_lens_solver_needs_enough_keypoints(video, grpc_settings):
 @pytest.mark.parametrize(
     "motion, sport, keypoints",
     [
-        (Video.CAMERA_MOTION_PAN, "soccer", [{}] * 6),       # moving camera
-        (Video.CAMERA_MOTION_STATIC, "handball", [{}] * 6),  # no pitch model
-        (Video.CAMERA_MOTION_STATIC, "soccer", [{}] * 5),    # too few landmarks
+        (Video.CAMERA_MOTION_PAN, "soccer", keypoints(6)),       # moving camera
+        (Video.CAMERA_MOTION_STATIC, "handball", keypoints(6)),  # no pitch model
+        (Video.CAMERA_MOTION_STATIC, "soccer", keypoints(5)),    # too few landmarks
+        # repeated clicks of one keypoint (several frames) count once
+        (Video.CAMERA_MOTION_STATIC, "soccer", keypoints(5) + keypoints(5)),
     ],
 )
 def test_lens_solver_falls_back_instead_of_failing(video, motion, sport, keypoints, grpc_settings):

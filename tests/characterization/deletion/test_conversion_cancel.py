@@ -61,7 +61,7 @@ def test_conversion_finishes_done_and_schedules_the_thumbnail(video, conversion,
     assert video.ext == ".tar.gz"
     assert os.path.isfile(archive(video.id.hex))
     assert watcher.subscribed == [("video", video.id.hex)]
-    assert scheduled_plugins(enqueued_tasks) == ["thumbnail"]
+    assert scheduled_plugins(enqueued_tasks) == ["thumbnail", "camera_motion_classification"]
     assert cancelled_sources(log) == []
 
 
