@@ -3,9 +3,15 @@ from copy import deepcopy
 from typing import Any, Dict, Iterable, Mapping
 from rest_framework import serializers
 from backend.plugin_manager import PluginManager
+from .reid_models import DEFAULT_REID_PRESET, REID_PRESET_CHOICES, REID_PRESETS, REID_TRACKER_DEFAULTS, reid_model
 
 
-DETECTOR_CHOICES = ["yolox", "yolox_sn_player", "yolox_sn_ball", "yolo10", "yolo11", "yolo12", "yolo26", "rfdetr", "rtdetr"]
+DETECTOR_CHOICES = [
+    "yolox", "yolox_l", "yolox_dancetrack", "yolox_sportsmot",          # people / multi-sport (one person class)
+    "yolox_sn_player", "yolox_sn_ball", "yolox_sn_ball_zoom2",           # football (SoccerNet-GSR fine-tunes)
+    "yolo11", "yolo11_l", "yolo11_sn_player",
+    "rfdetr", "rfdetr_sn_player", "rfdetr_sn_ball",
+]
 TRACKER_CHOICES = ["bytetrack", "deep_eiou"]
 BALL_TRACKER_CHOICES = ["kalman"]
 
@@ -34,8 +40,28 @@ default_yolox_params = {
     }
 }
 
+# The other ByteTrack / MixSort YOLOX person detectors (legacy input, one person class), at their training size.
+# YOLOX-L MOT17: the lighter one, for CPU deployments.
+default_yolox_l_params = {
+    **default_yolox_params,
+    "model_path": "yolox-l",
+    "checkpoint": "/models/yolox/bytetrack_l_mot17.pth.tar",
+}
+# YOLOX-X DanceTrack: dancers, i.e. people of similar appearance in irregular motion and heavy occlusion.
+default_yolox_dancetrack_params = {
+    **default_yolox_params,
+    "checkpoint": "/models/yolox/bytetrack_x_dancetrack.pth.tar",
+    "test_size": [800, 1440],
+}
+# YOLOX-X SportsMOT (MixSort): players in broadcast basketball, volleyball and football.
+default_yolox_sportsmot_params = {
+    **default_yolox_params,
+    "checkpoint": "/models/yolox/mixsort_yolox_sports_mix.pth.tar",
+    "test_size": [800, 1440],
+}
+
 # YOLOX-L fine-tuned on SoccerNet-GSR (broadcast football) for one person class, COCO initialisation, multi-scale
-# training 0.8-1.6 at 736x1280 (BGR 0-255 input, tagged in the checkpoint). API-only (the frontend does not offer it).
+# training 0.8-1.6 at 736x1280 (BGR 0-255 input, read from the checkpoint's stem statistics).
 default_yolox_sn_player_params = {
     "batch_size": 1,
     "conf_thresh": 0.35,
@@ -45,7 +71,7 @@ default_yolox_sn_player_params = {
     "num_classes": 1,
     "decode": True,
     "model_path": "yolox-l",
-    "checkpoint": "/models/yolox/yolox_l_sn_player.pth",
+    "checkpoint": "/models/yolox/yolox_l-sn-player-coco-ms08-16.pth",
     "input_format": "auto",
     "test_size": [736, 1280],     # the training size
     "output_class_mapping": {
@@ -71,7 +97,7 @@ default_yolox_sn_ball_params = {
     "num_classes": 1,
     "decode": True,
     "model_path": "yolox-l",
-    "checkpoint": "/models/yolox/yolox_l_sn_ball_tiles.pth",
+    "checkpoint": "/models/yolox/yolox_l-sahi-sn-ball-native.pth",
     "input_format": "auto",
     "test_size": [576, 576],      # each 560 px tile at native scale, as trained
     "sahi": {
@@ -87,7 +113,14 @@ default_yolox_sn_ball_params = {
     }
 }
 
-default_yolo10_params = {
+# The same tiles enlarged x2 (560 -> 1120 px), with the model trained that way: about 4x the cost of yolox_sn_ball.
+default_yolox_sn_ball_zoom2_params = {
+    **default_yolox_sn_ball_params,
+    "checkpoint": "/models/yolox/yolox_l-sahi-sn-ball-zoom2.pth",
+    "test_size": [1120, 1120],
+}
+
+default_yolo11_params = {
     "batch_size": 1,
     "conf": 0.15,               # min confidence threshold [0.15 - 0.6]
     "iou": 0.4,                 # threshold for NMS; lower values -> less detections [0.3 - 0.6]
@@ -98,8 +131,8 @@ default_yolo10_params = {
     "max_det": 100,             # max amount of detections per frame
     "embed": None,              # specify layers from which to extract feature vectors or embeddings
     "verbose": False,
-    "model_path": "yolov10",
-    "checkpoint": "/models/yolo_ultra/yolov10x.pt",
+    "model_path": "yolo11",
+    "checkpoint": "/models/yolo_ultra/yolo11x.pt",
     "output_class_mapping": {
         -1: {
             "entity_type": "unknown",
@@ -116,75 +149,87 @@ default_yolo10_params = {
     }
 }
 
-default_yolo11_params = {
-    **default_yolo10_params,
-    "model_path": "yolo11",
-    "checkpoint": "/models/yolo_ultra/yolo11x.pt",
+# YOLO11-L COCO: the lighter one, for CPU deployments.
+default_yolo11_l_params = {
+    **default_yolo11_params,
+    "checkpoint": "/models/yolo_ultra/yolo11l.pt",
 }
 
-default_yolo12_params = {
-    **default_yolo10_params,
-    "model_path": "yolo12",
-    "checkpoint": "/models/yolo_ultra/yolo12x.pt",
-}
-
-default_yolo26_params = {
-    **default_yolo10_params,
-    "model_path": "yolo26",
-    "checkpoint": "/models/yolo_ultra/yolo26x.pt",
-}
-
-default_rfdetr_params = {
-    "batch_size": 1,
-    "conf": 0.6,               
-    # "classes": [0, 32],  # default COCO: 0 - person, 32 - ball
-    "classes": ['ball', 'player', 'referee', 'goalkeeper'], # SoccerNet checkpoint
-    "resolution": 1288,  # divisible by 56 -> [672,728,784,896,1008,1064,1120]
-    "verbose": False,
-    "fp16": False,
-    "model_path": "RFDETRLarge",
-    "checkpoint": "/models/detr/rfdetr-large-sn.pth",
+# YOLO11-X fine-tuned on SoccerNet-GSR for one person class (raw class 0), run at the frame's own size.
+default_yolo11_sn_player_params = {
+    **default_yolo11_params,
+    "conf": 0.35,
+    "iou": 0.45,
+    "classes": [0],
+    "checkpoint": "/models/yolo_ultra/yolo11x-sn-player-s05.pt",
     "output_class_mapping": {
         -1: {
             "entity_type": "unknown",
             "default_team": -1
         },
         0: {
-            "entity_type": "ball",
-            "default_team": 0
-        },
-        1: {
             "entity_type": "player",
-            "default_team": 3
-        },
-        2: {
-            "entity_type": "referee",
-            "default_team": 2
-        },
-        3: {
-            "entity_type": "goalkeeper",
             "default_team": 3
         }
     }
 }
 
-default_rtdetr_params = {
+# RF-DETR (rfdetr >= 1.5; the resolution must be a multiple of 32). The COCO model reports COCO category ids:
+# 1 person, 37 sports ball.
+default_rfdetr_params = {
     "batch_size": 1,
-    "conf": 0.25,
-    "classes": [0, 32],  # default COCO: 0 - person, 32 - ball
-    "verbose": False, 
-    "model_path": "RTDETR",
-    "checkpoint": "/models/detr/rtdetr-x.pt",
+    "conf": 0.5,
+    "classes": [1, 37],
+    "resolution": 704,          # the COCO training resolution
+    "verbose": False,
+    "fp16": False,
+    "model_path": "RFDETRLarge",
+    "checkpoint": "/models/rf-detr/rfdetr-l-2026.pth",
+    "output_class_mapping": {
+        -1: {
+            "entity_type": "unknown",
+            "default_team": -1
+        },
+        1: {
+            "entity_type": "athlete",
+            "default_team": 3
+        },
+        37: {
+            "entity_type": "ball",
+            "default_team": 0
+        }
+    }
+}
+
+# RF-DETR-L fine-tuned on SoccerNet-GSR full frames, one class each (raw class 0), at its training resolution.
+default_rfdetr_sn_player_params = {
+    **default_rfdetr_params,
+    "conf": 0.35,
+    "classes": [0],
+    "resolution": 1280,
+    "fp16": True,               # on CUDA only
+    "checkpoint": "/models/rf-detr/rfdetr_l-sn-player.pth",
     "output_class_mapping": {
         -1: {
             "entity_type": "unknown",
             "default_team": -1
         },
         0: {
-            "entity_type": "person",
+            "entity_type": "player",
             "default_team": 3
-        },
-        32: {
+        }
+    }
+}
+
+default_rfdetr_sn_ball_params = {
+    **default_rfdetr_params,
+    "conf": 0.1,                # the low confidence floor: the ball tracker gates weak candidates
+    "classes": [0],
+    "resolution": 1920,
+    "fp16": True,               # on CUDA only
+    "checkpoint": "/models/rf-detr/rfdetr_l-sn-ball.pth",
+    "output_class_mapping": {
+        0: {
             "entity_type": "ball",
             "default_team": 0
         }
@@ -208,22 +253,24 @@ default_bytetrack_params = {
 
 DETECTOR_DEFAULTS = {
     "yolox": default_yolox_params,
+    "yolox_l": default_yolox_l_params,
+    "yolox_dancetrack": default_yolox_dancetrack_params,
+    "yolox_sportsmot": default_yolox_sportsmot_params,
     "yolox_sn_player": default_yolox_sn_player_params,
     "yolox_sn_ball": default_yolox_sn_ball_params,
-    "yolo10": default_yolo10_params,
+    "yolox_sn_ball_zoom2": default_yolox_sn_ball_zoom2_params,
     "yolo11": default_yolo11_params,
-    "yolo12": default_yolo12_params,
-    "yolo26": default_yolo26_params,
+    "yolo11_l": default_yolo11_l_params,
+    "yolo11_sn_player": default_yolo11_sn_player_params,
     "rfdetr": default_rfdetr_params,
-    "rtdetr": default_rtdetr_params, 
+    "rfdetr_sn_player": default_rfdetr_sn_player_params,
+    "rfdetr_sn_ball": default_rfdetr_sn_ball_params,
 }
 
 # Offline refinements (inference_ray plugins/tracker/refine.py), available to every tracker. The ReID model files
-# are fixed presets (weights are unpickled when loaded, so a client must never choose the file).
-REID_MODEL = {
-    "model_name": "osnet_ain_x1_0",
-    "model_path": "/models/reid/osnet_ain_ms_d_c.pth.tar",
-}
+# are fixed presets (reid_models.py; weights are unpickled when loaded, so a client must never choose the file):
+# tracker_params.reid_preset picks one for Deep-EIoU and GTA-Link.
+REID_MODEL = reid_model(DEFAULT_REID_PRESET)
 # GTA-Link (third_party/gta_link): the general parameters of its README
 default_gta_link_params = {
     "enabled": False,
@@ -279,13 +326,12 @@ TRACKER_DEFAULTS = {
 # detectors whose preset model has a ball class; the low confidence floor (0.10) is deliberate: the ball tracker gates
 # weak candidates itself (min_conf / init_conf below).
 BALL_DETECTOR_OVERRIDES = {
-    "yolo10": {"classes": [32], "conf": 0.1},
     "yolo11": {"classes": [32], "conf": 0.1},
-    "yolo12": {"classes": [32], "conf": 0.1},
-    "yolo26": {"classes": [32], "conf": 0.1},
-    "rtdetr": {"classes": [32], "conf": 0.1},
-    "rfdetr": {"classes": ["ball"], "conf": 0.1},
-    "yolox_sn_ball": {},          # a ball model already
+    "yolo11_l": {"classes": [32], "conf": 0.1},
+    "rfdetr": {"classes": [37], "conf": 0.1},
+    "yolox_sn_ball": {},          # ball models already
+    "yolox_sn_ball_zoom2": {},
+    "rfdetr_sn_ball": {},
 }
 BALL_DETECTOR_CHOICES = list(BALL_DETECTOR_OVERRIDES)
 
@@ -426,7 +472,7 @@ class DetectorParamsSerializer(serializers.Serializer):
         allow_empty=False,
     )
 
-    resolution = serializers.IntegerField(required=False, min_value=56)
+    resolution = serializers.IntegerField(required=False, min_value=32)
     model_path = serializers.CharField(required=False, allow_blank=False)
     model_checkpoint = serializers.CharField(required=False, allow_blank=False)
     input_format = serializers.ChoiceField(choices=["auto", "legacy", "bgr255"], required=False)
@@ -464,6 +510,7 @@ class InterpolationParamsSerializer(StrictSerializer):
 
 class TrackerParamsSerializer(StrictSerializer):
     """ ByteTrack. """
+    reid_preset = serializers.ChoiceField(choices=REID_PRESET_CHOICES, required=False)   # GTA-Link's embedding
     track_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     track_buffer = serializers.IntegerField(required=False, min_value=1)
     match_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
@@ -475,6 +522,7 @@ class TrackerParamsSerializer(StrictSerializer):
 
 
 class DeepEIoUParamsSerializer(StrictSerializer):
+    reid_preset = serializers.ChoiceField(choices=REID_PRESET_CHOICES, required=False)   # Deep-EIoU's and GTA-Link's
     track_high_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     track_low_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     new_track_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
@@ -695,7 +743,28 @@ class ObjectTrackerSerializer(serializers.Serializer):
         tracker: str,
         user_params: Mapping[str, Any] | None = None,
     ) -> Dict[str, Any]:
-        return cls._merge_with_presets(TRACKER_DEFAULTS, tracker, user_params)
+        user_params = dict(user_params or {})
+        preset = cls._with_reid_preset(TRACKER_DEFAULTS[tracker], user_params.pop("reid_preset", None))
+        return cls._merge_with_presets({tracker: preset}, tracker, user_params)
+
+    @staticmethod
+    def _with_reid_preset(tracker_preset: Mapping[str, Any], reid_preset: str | None) -> Dict[str, Any]:
+        """ The tracker preset with another embedding: its model files and fp16 setting in Deep-EIoU and GTA-Link,
+        then the tracker settings that go with it (REID_TRACKER_DEFAULTS). """
+        out = deepcopy(dict(tracker_preset))
+        if reid_preset in (None, ""):
+            return out
+        model, amp = REID_PRESETS[reid_preset], bool(REID_PRESETS[reid_preset].get("amp", False))
+        if "reid_model_path" in out:
+            out.update(reid_model_name=model["model_name"], reid_model_path=model["model_path"], reid_amp=amp)
+        out["gta_link"] = {**out["gta_link"], "model_name": model["model_name"], "model_path": model["model_path"],
+                           "amp": amp}
+        for k, v in REID_TRACKER_DEFAULTS.get(reid_preset, {}).items():
+            if isinstance(v, Mapping):
+                out[k] = {**out[k], **v}
+            elif k in out:
+                out[k] = v
+        return out
 
     @staticmethod
     def _validated_group(group_name: str, serializer_cls, params: Mapping[str, Any]) -> Dict[str, Any]:
@@ -748,18 +817,12 @@ class ObjectTrackerSerializer(serializers.Serializer):
                 )
 
     def _get_detector_validator(self, detector: str):
-        mapping = {
-            "yolox": self._validate_yolox_params,
-            "yolox_sn_player": self._validate_yolox_params,
-            "yolox_sn_ball": self._validate_yolox_params,
-            "yolo10": self._validate_yoloultra_params,
-            "yolo11": self._validate_yoloultra_params,
-            "yolo12": self._validate_yoloultra_params,
-            "yolo26": self._validate_yoloultra_params,
-            "rfdetr": self._validate_rfdetr_params,
-            "rtdetr": self._validate_rtdetr_params,
-        }
-        return mapping[detector]
+        # by model family: every preset name starts with its family's
+        for family, validator in (("yolox", self._validate_yolox_params), ("yolo11", self._validate_yoloultra_params),
+                                  ("rfdetr", self._validate_rfdetr_params)):
+            if detector.startswith(family):
+                return validator
+        raise KeyError(detector)
 
     def _get_tracker_validator(self, tracker: str):
         mapping = {
@@ -849,48 +912,25 @@ class ObjectTrackerSerializer(serializers.Serializer):
         }
         self._reject_unknown_keys("detector_params", params, allowed)
 
-        # TODO: validation of classes should be flexible enough to handle both cases, i.e. integers & class names should be accetable.
-        # classes = params.get("classes")
-        # if classes is not None:
-        #     invalid = [x for x in classes if x not in RFDETR_CLASS_CHOICES]
-        #     if invalid:
-        #         self._raise_field_error(
-        #             "detector_params",
-        #             "classes",
-        #             f"Invalid RFDETR class names: {invalid}. Allowed values: {list(RFDETR_CLASS_CHOICES)}"
-        #         )
-
-        resolution = params.get("resolution")
-        if resolution is not None and resolution % 56 != 0:
-            self._raise_field_error(
-                "detector_params",
-                "resolution",
-                "RFDETR resolution must be divisible by 56."
-            )
-
-    def _validate_rtdetr_params(self, params: Mapping[str, Any]) -> None:
-        allowed = {
-            "batch_size",
-            "conf",
-            "classes",
-            "verbose",
-            "checkpoint",
-            "confidence_threshold",
-            "output_class_mapping",
-            "sahi",
-        }
-        self._reject_unknown_keys("detector_params", params, allowed)
-
         classes = params.get("classes")
         if classes is not None and not all(isinstance(x, int) for x in classes):
             self._raise_field_error(
                 "detector_params",
                 "classes",
-                "RTDETR expects integer class IDs."
+                "RF-DETR expects integer class IDs."
+            )
+
+        resolution = params.get("resolution")
+        if resolution is not None and resolution % 32 != 0:
+            self._raise_field_error(
+                "detector_params",
+                "resolution",
+                "RF-DETR resolution must be divisible by 32."
             )
 
     def _validate_bytetrack_params(self, params: Mapping[str, Any]) -> None:
         allowed = {
+            "reid_preset",
             "track_thresh",
             "track_buffer",
             "match_thresh",

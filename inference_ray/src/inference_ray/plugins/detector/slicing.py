@@ -179,7 +179,7 @@ def merge_detections(dets: list[dict], cfg: SliceConfig) -> list[dict]:
 
 class SlicedDetector:
     """
-    A detector wrapper (YoloX, YoloUltralytics, RFDetr, RTDetr) with sliced inference, behind the same interface:
+    A detector wrapper (YoloX, YoloUltralytics, RFDetr) with sliced inference, behind the same interface:
     ``preprocess`` / ``run_inference`` append one list of detections per frame to ``state``, boxes in frame pixels
     (``frame_shape``). Every frame is cut into overlapping tiles that go through the backend's preprocess /
     run_inference like frames would, plus the whole frame when ``full_frame`` is set; the detections are moved

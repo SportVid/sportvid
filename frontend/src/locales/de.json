@@ -777,7 +777,8 @@
         "proximity_thresh": "ReID-Nähe-Schwelle",
         "appearance_thresh": "ReID-Aussehens-Schwelle",
         "gta_link_enabled": "GTA-Link-Nachbearbeitung (Tracklets trennen / zusammenführen)",
-        "interpolation_enabled": "Kurze Lücken interpolieren"
+        "interpolation_enabled": "Kurze Lücken interpolieren",
+        "reid_preset": "Aussehensmodell (ReID)"
       },
       "team_clustering": {
         "plugin_name": "Team-Zuordnung",
@@ -814,7 +815,8 @@
         "crop_x1_offset": "Crop-Offset links",
         "crop_y1_offset": "Crop-Offset oben",
         "crop_x2_offset": "Crop-Offset rechts",
-        "crop_y2_offset": "Crop-Offset unten"
+        "crop_y2_offset": "Crop-Offset unten",
+        "reid_preset": "Aussehensmodell (ReID)"
       },
       "osnet_reid": {
         "plugin_name": "Re-Identification (OSNet)",
@@ -839,7 +841,8 @@
         "crop_x1_offset": "Crop-Offset links",
         "crop_y1_offset": "Crop-Offset oben",
         "crop_x2_offset": "Crop-Offset rechts",
-        "crop_y2_offset": "Crop-Offset unten"
+        "crop_y2_offset": "Crop-Offset unten",
+        "reid_preset": "Aussehensmodell (ReID)"
       },
       "calibration": {
         "plugin_name": "Kamerakalibrierung",

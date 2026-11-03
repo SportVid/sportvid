@@ -913,7 +913,8 @@
         "proximity_thresh": "ReID Proximity Threshold",
         "appearance_thresh": "ReID Appearance Threshold",
         "gta_link_enabled": "GTA-Link Refinement (split / merge tracklets)",
-        "interpolation_enabled": "Interpolate Short Gaps"
+        "interpolation_enabled": "Interpolate Short Gaps",
+        "reid_preset": "Appearance model (ReID)"
       },
       "team_clustering": {
         "plugin_name": "Team Assignment",
@@ -950,7 +951,8 @@
         "crop_x1_offset": "Crop Offset Left",
         "crop_y1_offset": "Crop Offset Top",
         "crop_x2_offset": "Crop Offset Right",
-        "crop_y2_offset": "Crop Offset Bottom"
+        "crop_y2_offset": "Crop Offset Bottom",
+        "reid_preset": "Appearance model (ReID)"
       },
       "osnet_reid": {
         "plugin_name": "Re-Identification (OSNet)",
@@ -975,7 +977,8 @@
         "crop_x1_offset": "Crop Offset Left",
         "crop_y1_offset": "Crop Offset Top",
         "crop_x2_offset": "Crop Offset Right",
-        "crop_y2_offset": "Crop Offset Bottom"
+        "crop_y2_offset": "Crop Offset Bottom",
+        "reid_preset": "Appearance model (ReID)"
       },
       "calibration": {
         "plugin_name": "Camera Calibration",

@@ -25,9 +25,9 @@ https://sportvid.github.io/
     sudo mkdir -p ./data/predictions
     sudo mkdir -p ./data/backend_cache
     sudo mkdir -p ./data/models
-    sudo wget https://next.hessenbox.de/public.php/dav/files/JDnBxSKynARpwWm/?accept=zip -O ./data/models/models.tar.gz
-    sudo tar -xf ./data/models/models.tar.gz --directory ./data/models
-    sudo rm -rf ./data/models/models.tar.gz
+    sudo wget https://next.hessenbox.de/public.php/dav/files/JDnBxSKynARpwWm/?accept=zip -O ./data/models/sportvid_models.tar.gz
+    sudo tar -xf ./data/models/sportvid_models.tar.gz --directory ./data/models
+    sudo rm -rf ./data/models/sportvid_models.tar.gz
     sudo chown -R 1000:1000 ./data/
     sudo chmod -R u+rwX ./data/
     sudo chown -R 999:999 "data/shared/db"

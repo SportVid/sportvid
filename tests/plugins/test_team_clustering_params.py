@@ -72,3 +72,17 @@ def test_defaults_match_the_inference_plugin():
     data["clustering_method"] = data.pop("clustering_algo")
     for key, value in module.DEFAULTS.items():
         assert data[key] == value, key
+
+
+def test_reid_preset_picks_the_model_and_its_crop_size():
+    data = validate({"reid_preset": "deit_l_sportsreid"})
+    assert data["reid_model"] == {"model_name": "deit_l_16_ls", "model_path": "/models/reid/model_soup.deit_l.pth"}
+    assert data["reid_amp"] and (data["crop_size_x"], data["crop_size_y"]) == (224, 224)
+    data = validate({"reid_preset": "osnet_sportsmot", "crop_size_x": 64, "crop_size_y": 128})
+    assert data["reid_model"]["model_path"] == "/models/reid/sports_model.pth.tar-60"
+    assert not data["reid_amp"] and (data["crop_size_x"], data["crop_size_y"]) == (64, 128)
+
+
+def test_reid_amp_from_the_request_wins():
+    assert not validate({"reid_preset": "deit_l_sportsreid", "reid_amp": False})["reid_amp"]
+    assert "reid_preset" in errors({"reid_preset": "unknown"})

@@ -38,39 +38,45 @@ function hideInSimpleMode(parameters, names) {
 // object_tracker runs (backend: "bboxes" vs. "bboxes_ball" results). Shared with the
 // batch ModalPlugin.vue via watchObjectTrackerSelection/objectTrackerClasses below.
 //
-// The SoccerNet models (backend serializers/object_tracker.py): yolox_sn_player is a
-// person-only YOLOX-L, yolox_sn_ball a ball-only YOLOX-L that always runs tiled (SAHI) --
-// hence each is offered only for its own tracking_target.
+// The presets (backend serializers/object_tracker.py): the YOLOX person detectors and the
+// COCO models are generic; the *_sn_* models are SoccerNet (football) fine-tunes with one
+// class each -- player or ball, the ball ones partly tiled (SAHI) -- hence each is offered
+// only for its own tracking_target.
 const OBJECT_TRACKER_DETECTOR_ITEMS = {
-  yolox: { title: "YOLOX", value: "yolox" },
+  yolox: { title: "YOLOX-X MOT17 (people)", value: "yolox" },
+  yolox_l: { title: "YOLOX-L MOT17 (people, lighter)", value: "yolox_l" },
+  yolox_dancetrack: { title: "YOLOX-X DanceTrack (dance)", value: "yolox_dancetrack" },
+  yolox_sportsmot: { title: "YOLOX-X SportsMOT (team sports)", value: "yolox_sportsmot" },
   yolox_sn_player: { title: "YOLOX-L SoccerNet (Player)", value: "yolox_sn_player" },
   yolox_sn_ball: { title: "YOLOX-L SoccerNet (Ball)", value: "yolox_sn_ball" },
-  yolo10: { title: "YOLOv10 (Ultralytics)", value: "yolo10" },
-  yolo11: { title: "YOLOv11 (Ultralytics)", value: "yolo11" },
-  yolo12: { title: "YOLOv12 (Ultralytics)", value: "yolo12" },
-  yolo26: { title: "YOLOv26 (Ultralytics)", value: "yolo26" },
-  rfdetr: { title: "RF-DETR", value: "rfdetr" },
-  rtdetr: { title: "RT-DETR", value: "rtdetr" },
+  yolox_sn_ball_zoom2: { title: "YOLOX-L SoccerNet x2 (Ball, slow)", value: "yolox_sn_ball_zoom2" },
+  yolo11: { title: "YOLO11-X COCO (Ultralytics)", value: "yolo11" },
+  yolo11_l: { title: "YOLO11-L COCO (Ultralytics, lighter)", value: "yolo11_l" },
+  yolo11_sn_player: { title: "YOLO11-X SoccerNet (Player)", value: "yolo11_sn_player" },
+  rfdetr: { title: "RF-DETR-L COCO", value: "rfdetr" },
+  rfdetr_sn_player: { title: "RF-DETR-L SoccerNet (Player)", value: "rfdetr_sn_player" },
+  rfdetr_sn_ball: { title: "RF-DETR-L SoccerNet (Ball)", value: "rfdetr_sn_ball" },
 };
 const PLAYER_TARGET_DETECTORS = [
   "yolox",
+  "yolox_l",
+  "yolox_dancetrack",
+  "yolox_sportsmot",
   "yolox_sn_player",
-  "yolo10",
   "yolo11",
-  "yolo12",
-  "yolo26",
+  "yolo11_l",
+  "yolo11_sn_player",
   "rfdetr",
-  "rtdetr",
+  "rfdetr_sn_player",
 ];
 // the detectors whose model has a ball class (backend BALL_DETECTOR_OVERRIDES)
 const BALL_TARGET_DETECTORS = [
   "yolox_sn_ball",
-  "yolo10",
+  "yolox_sn_ball_zoom2",
+  "rfdetr_sn_ball",
   "yolo11",
-  "yolo12",
-  "yolo26",
+  "yolo11_l",
   "rfdetr",
-  "rtdetr",
 ];
 // detector a ball run falls back to when the selected one has no ball class
 const BALL_TARGET_FALLBACK_DETECTOR = "yolo11";
@@ -92,18 +98,23 @@ const YOLO_ULTRALYTICS_PARAMS = [
   "max_det",
   "verbose",
 ];
+const RFDETR_PARAMS = ["confidence_threshold", "batch_size", "max_det", "resolution", "verbose"];
 const DETECTOR_PARAM_VISIBILITY = {
-  // num_classes only for the generic YOLOX: the SoccerNet checkpoints have one class each
+  // num_classes only for the generic YOLOX: the other checkpoints have one class each
   // (the backend reads it from the checkpoint anyway)
   yolox: [...YOLOX_PARAMS, "num_classes"],
+  yolox_l: YOLOX_PARAMS,
+  yolox_dancetrack: YOLOX_PARAMS,
+  yolox_sportsmot: YOLOX_PARAMS,
   yolox_sn_player: YOLOX_PARAMS,
   yolox_sn_ball: YOLOX_PARAMS,
-  yolo10: YOLO_ULTRALYTICS_PARAMS,
+  yolox_sn_ball_zoom2: YOLOX_PARAMS,
   yolo11: YOLO_ULTRALYTICS_PARAMS,
-  yolo12: YOLO_ULTRALYTICS_PARAMS,
-  yolo26: YOLO_ULTRALYTICS_PARAMS,
-  rfdetr: ["confidence_threshold", "batch_size", "max_det", "resolution", "verbose"],
-  rtdetr: ["confidence_threshold", "batch_size", "verbose"],
+  yolo11_l: YOLO_ULTRALYTICS_PARAMS,
+  yolo11_sn_player: YOLO_ULTRALYTICS_PARAMS,
+  rfdetr: RFDETR_PARAMS,
+  rfdetr_sn_player: RFDETR_PARAMS,
+  rfdetr_sn_ball: RFDETR_PARAMS,
 };
 
 // Values set whenever the detector changes. The YOLOX-family presets differ in nms and
@@ -111,15 +122,19 @@ const DETECTOR_PARAM_VISIBILITY = {
 // sends overrides the backend preset, so these mirror the backend presets.
 const DETECTOR_PARAM_DEFAULTS = {
   yolox: { confidence_threshold: 0.2, nms_thresh: 0.65, batch_size: 1 },
+  yolox_l: { confidence_threshold: 0.2, nms_thresh: 0.65, batch_size: 1 },
+  yolox_dancetrack: { confidence_threshold: 0.2, nms_thresh: 0.65, batch_size: 1 },
+  yolox_sportsmot: { confidence_threshold: 0.2, nms_thresh: 0.65, batch_size: 1 },
   yolox_sn_player: { confidence_threshold: 0.35, nms_thresh: 0.45, batch_size: 1 },
   // low floor on purpose: the backend's ball tracker gates weak candidates itself
   yolox_sn_ball: { confidence_threshold: 0.1, nms_thresh: 0.45, batch_size: 4 },
-  yolo10: { confidence_threshold: 0.2, batch_size: 1 },
+  yolox_sn_ball_zoom2: { confidence_threshold: 0.1, nms_thresh: 0.45, batch_size: 4 },
   yolo11: { confidence_threshold: 0.2, batch_size: 1 },
-  yolo12: { confidence_threshold: 0.2, batch_size: 1 },
-  yolo26: { confidence_threshold: 0.2, batch_size: 1 },
+  yolo11_l: { confidence_threshold: 0.2, batch_size: 1 },
+  yolo11_sn_player: { confidence_threshold: 0.35, batch_size: 1 },
   rfdetr: { confidence_threshold: 0.5, batch_size: 1 },
-  rtdetr: { confidence_threshold: 0.25, batch_size: 1 },
+  rfdetr_sn_player: { confidence_threshold: 0.35, batch_size: 1 },
+  rfdetr_sn_ball: { confidence_threshold: 0.1, batch_size: 1 },
 };
 // on top of DETECTOR_PARAM_DEFAULTS, per tracking_target
 const PLAYER_IOU_DEFAULT = 0.3;
@@ -127,10 +142,8 @@ const BALL_YOLO_IOU_DEFAULT = 0.5;
 const TARGET_PARAM_DEFAULTS = {
   ball: {
     rfdetr: { confidence_threshold: 0.2 },
-    yolo10: { iou: BALL_YOLO_IOU_DEFAULT },
     yolo11: { iou: BALL_YOLO_IOU_DEFAULT },
-    yolo12: { iou: BALL_YOLO_IOU_DEFAULT },
-    yolo26: { iou: BALL_YOLO_IOU_DEFAULT },
+    yolo11_l: { iou: BALL_YOLO_IOU_DEFAULT },
   },
   player: Object.fromEntries(PLAYER_TARGET_DETECTORS.map((d) => [d, { iou: PLAYER_IOU_DEFAULT }])),
 };
@@ -140,24 +153,27 @@ const TARGET_PARAM_DEFAULTS = {
 // submitPlugin() below, which then strips tracking_target from the payload since the
 // backend doesn't know that field.
 const OBJECT_TRACKER_CLASSES_BY_TARGET = {
+  // raw class ids: COCO for yolo11 (0 person, 32 sports ball) and rfdetr (COCO category ids:
+  // 1 person, 37 sports ball); the single-class checkpoints use 0
   ball: {
     yolox_sn_ball: [0],
-    yolo10: [32],
+    yolox_sn_ball_zoom2: [0],
+    rfdetr_sn_ball: [0],
     yolo11: [32],
-    yolo12: [32],
-    yolo26: [32],
-    rtdetr: [32],
-    rfdetr: ["ball"],
+    yolo11_l: [32],
+    rfdetr: [37],
   },
   player: {
     yolox: [0],
+    yolox_l: [0],
+    yolox_dancetrack: [0],
+    yolox_sportsmot: [0],
     yolox_sn_player: [0],
-    yolo10: [0],
     yolo11: [0],
-    yolo12: [0],
-    yolo26: [0],
-    rtdetr: [0],
-    rfdetr: ["player", "referee", "goalkeeper"],
+    yolo11_l: [0],
+    yolo11_sn_player: [0],
+    rfdetr: [1],
+    rfdetr_sn_player: [0],
   },
 };
 
@@ -170,6 +186,29 @@ export function objectTrackerClasses(target, detector) {
 export function defaultObjectTrackerFps(videoFps) {
   const fps = Math.round(Number(videoFps));
   return Number.isFinite(fps) ? Math.min(30, Math.max(1, fps)) : 30;
+}
+
+// Appearance (ReID) embeddings (backend serializers/reid_models.py REID_PRESETS), shared by
+// object_tracker's Deep-EIoU / GTA-Link, team_clustering and osnet_reid. The backend fixes
+// each preset's model file (and its crop size and fp16 setting where the model needs them).
+export const REID_PRESET_ITEMS = [
+  { title: "OSNet-AIN (people, MS+D+C)", value: "osnet_ain" },
+  { title: "OSNet x1.0 (people, MS+D+C)", value: "osnet_x1_0" },
+  { title: "OSNet-IBN (people, MS+D+C)", value: "osnet_ibn" },
+  { title: "OSNet x1.0 SportsMOT (team sports)", value: "osnet_sportsmot" },
+  { title: "DeiT-L sportsreid (football, slow)", value: "deit_l_sportsreid" },
+];
+export const DEFAULT_REID_PRESET = "osnet_ain";
+
+export function reidPresetField(t, textKey, extra = {}) {
+  return {
+    field: "select_options",
+    name: "reid_preset",
+    value: DEFAULT_REID_PRESET,
+    items: REID_PRESET_ITEMS,
+    text: t(textKey),
+    ...extra,
+  };
 }
 
 // Player trackers (backend TRACKER_CHOICES). Their tracker_params differ, so each field is
@@ -198,6 +237,7 @@ const TRACKER_PARAM_VISIBILITY = {
     "min_box_area",
     "remove_edge_dets",
     "with_reid",
+    "reid_preset",
     "proximity_thresh",
     "appearance_thresh",
     "gta_link_enabled",
@@ -223,6 +263,7 @@ const TRACKER_PARAM_DEFAULTS = {
     min_box_area: 10,
     remove_edge_dets: false,
     with_reid: true,
+    reid_preset: DEFAULT_REID_PRESET,
     proximity_thresh: 0.5,
     appearance_thresh: 0.25,
     gta_link_enabled: true,
@@ -261,6 +302,8 @@ export function deepEiouTrackerFields(t) {
     slider("new_track_thresh"),
     checkbox("remove_edge_dets"),
     checkbox("with_reid"),
+    // the embedding of Deep-EIoU and GTA-Link; the backend adds the tracker settings that go with it
+    reidPresetField(t, "modal.plugin.object_tracker.reid_preset", { group: "tracker_params", hidden: true }),
     slider("proximity_thresh"),
     slider("appearance_thresh"),
     checkbox("gta_link_enabled", { subgroup: "gta_link", subname: "enabled" }),
@@ -480,10 +523,10 @@ export function objectTrackerParams() {
     },
     {
       field: "slider",
-      min: 56,
-      max: 1400,
-      value: 1288,
-      step: 56,
+      min: 320,
+      max: 1920,
+      value: 704,
+      step: 32,
       name: "resolution",
       text: t("modal.plugin.object_tracker.resolution"),
       group: "detector_params",
@@ -603,6 +646,7 @@ export function teamClusteringParams() {
   ]);
 
   const optionalParameters = ref([
+    reidPresetField(t, "modal.plugin.team_clustering.reid_preset"),
     {
       field: "slider",
       min: 1,
@@ -880,12 +924,6 @@ const OSNET_REID_PROTOS_ONLY_PARAMS = [
   "cache_weight",
 ];
 
-const OSNET_REID_MODEL_CHECKPOINT_MAP = {
-  osnet_x1_0: "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
-  osnet_ain_x1_0: "/models/reid/osnet_ain_ms_d_c.pt.tarh",
-  osnet_ibn_x1_0: "/models/reid/osnet_ibn_ms_d_c.pth.tar",
-};
-
 export function osnetReidParams() {
   const { t } = useI18n();
 
@@ -908,26 +946,10 @@ export function osnetReidParams() {
       ],
       text: t("modal.plugin.osnet_reid.gallery_mode"),
     },
-    {
-      field: "select_options",
-      name: "model_name",
-      value: "osnet_x1_0",
-      items: [
-        { title: "OSNet x1.0", value: "osnet_x1_0" },
-        { title: "OSNet-IBN x1.0", value: "osnet_ibn_x1_0" },
-        { title: "OSNet-AIN x1.0", value: "osnet_ain_x1_0" },
-      ],
-      text: t("modal.plugin.osnet_reid.model_name"),
-    },
+    reidPresetField(t, "modal.plugin.osnet_reid.reid_preset"),
   ]);
 
   const optionalParameters = ref([
-    {
-      field: "text_field",
-      name: "checkpoint",
-      value: "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
-      hidden: true,
-    },
     {
       field: "slider",
       min: 0.6,
@@ -1072,18 +1094,7 @@ export function osnetReidParams() {
     { immediate: true }
   );
 
-  watch(
-    () => parameters.value.find((p) => p.name === "model_name")?.value,
-    (modelName) => {
-      const checkpointParam = optionalParameters.value.find((p) => p.name === "checkpoint");
-      if (checkpointParam && modelName in OSNET_REID_MODEL_CHECKPOINT_MAP) {
-        checkpointParam.value = OSNET_REID_MODEL_CHECKPOINT_MAP[modelName];
-      }
-    },
-    { immediate: true }
-  );
-
-  hideInSimpleMode(parameters, ["gallery_mode", "model_name"]);
+  hideInSimpleMode(parameters, ["gallery_mode", "reid_preset"]);
 
   return { parameters, optionalParameters };
 }

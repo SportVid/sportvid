@@ -94,7 +94,6 @@ class ObjectTracker(
             YoloX,
             YoloUltralytics,
             RFDetr,
-            RTDetr,
             SliceConfig,
             SlicedDetector,
         )
@@ -107,14 +106,18 @@ class ObjectTracker(
 
         DETECTOR_MAP = {
             "yolox": YoloX,
+            "yolox_l": YoloX,
+            "yolox_dancetrack": YoloX,
+            "yolox_sportsmot": YoloX,
             "yolox_sn_player": YoloX,
             "yolox_sn_ball": YoloX,
-            "yolo10": YoloUltralytics,
+            "yolox_sn_ball_zoom2": YoloX,
             "yolo11": YoloUltralytics,
-            "yolo12": YoloUltralytics,
-            "yolo26": YoloUltralytics,
+            "yolo11_l": YoloUltralytics,
+            "yolo11_sn_player": YoloUltralytics,
             "rfdetr": RFDetr,
-            "rtdetr": RTDetr,
+            "rfdetr_sn_player": RFDetr,
+            "rfdetr_sn_ball": RFDetr,
         }
         TRACKER_MAP = {
            "bytetrack": ByteTrack,

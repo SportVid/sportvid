@@ -134,6 +134,7 @@ import {
   PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS,
   deepEiouTrackerFields,
   defaultObjectTrackerFps,
+  reidPresetField,
   setGroupedValue,
   objectTrackerClasses,
   watchObjectTrackerSelection,
@@ -1292,6 +1293,7 @@ const plugins = ref([
           },
         ],
         optional_parameters: [
+          reidPresetField(t, "modal.plugin.team_clustering.reid_preset"),
           {
             field: "slider",
             min: 1,

@@ -49,3 +49,17 @@ def test_checkpoints_exist_under_their_real_names():
     assert all(path.endswith(".pth.tar") for path in MODEL_CHECKPOINT.values())
     s = OSNetReIdentificationSerializer(data={"object_tracker_id": TRACKER_RUN, "checkpoint": "/etc/passwd"})
     assert not s.is_valid() and "checkpoint" in s.errors
+
+
+def test_reid_preset_replaces_model_name_and_checkpoint():
+    data = validate({**UI_PARAMS, "reid_preset": "deit_l_sportsreid"})
+    assert (data["model_name"], data["checkpoint"]) == ("deit_l_16_ls", "/models/reid/model_soup.deit_l.pth")
+    assert data["reid_amp"] and (data["crop_size_x"], data["crop_size_y"]) == (224, 224)
+    data = validate({"object_tracker_id": TRACKER_RUN, "reid_preset": "osnet_sportsmot"})
+    assert (data["model_name"], data["checkpoint"]) == ("osnet_x1_0", "/models/reid/sports_model.pth.tar-60")
+
+
+def test_model_name_alone_maps_to_its_preset():
+    data = validate({"object_tracker_id": TRACKER_RUN, "model_name": "osnet_ibn_x1_0"})
+    assert data["reid_preset"] == "osnet_ibn" and not data["reid_amp"]
+    assert data["checkpoint"] == "/models/reid/osnet_ibn_ms_d_c.pth.tar"
