@@ -130,6 +130,7 @@ import { useTutorialStore } from "@/stores/tutorial";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePositionDataStore } from "@/stores/position_data";
 import {
+  DEFAULT_PLAYER_DETECTOR,
   OBJECT_TRACKER_TRACKER_ITEMS,
   PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS,
   deepEiouTrackerFields,
@@ -1073,7 +1074,7 @@ const plugins = ref([
           {
             field: "select_options",
             name: "detector",
-            value: "yolox",
+            value: DEFAULT_PLAYER_DETECTOR,
             items: PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS,
             text: t("modal.plugin.object_tracker.detector"),
           },
@@ -1180,10 +1181,10 @@ const plugins = ref([
           },
           {
             field: "slider",
-            min: 56,
-            max: 1400,
-            value: 1288,
-            step: 56,
+            min: 320,
+            max: 1920,
+            value: 1280, // set per RF-DETR preset (usePluginParams DETECTOR_PARAM_DEFAULTS)
+            step: 32,
             name: "resolution",
             text: t("modal.plugin.object_tracker.resolution"),
             group: "detector_params",

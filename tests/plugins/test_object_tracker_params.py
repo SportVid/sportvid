@@ -206,6 +206,13 @@ def test_every_preset_validates_with_a_model_file_under_models(detector):
     assert p["checkpoint"].startswith("/models/") and p["output_class_mapping"]
 
 
+def test_default_detector_is_yolox_sportsmot():
+    data = validate({"tracker": "deep_eiou"})
+    assert data["detector"] == "yolox_sportsmot"
+    p = data["detector_params"]
+    assert p["checkpoint"] == "/models/yolox/mixsort_yolox_sports_mix.pth.tar" and p["test_size"] == [800, 1440]
+
+
 @pytest.mark.parametrize("detector", ["yolo10", "yolo12", "yolo26", "rtdetr"])
 def test_removed_presets_are_rejected(detector):
     assert "detector" in errors({"detector": detector})
@@ -218,7 +225,7 @@ def test_yolox_sn_ball_zoom2_preset_runs_sliced_at_twice_the_tile_size():
 
 
 @pytest.mark.parametrize("detector, checkpoint, resolution, classes", [
-    ("rfdetr", "/models/rf-detr/rfdetr-l-2026.pth", 704, [1, 37]),
+    ("rfdetr", "/models/rf-detr/rfdetr-l-2026.pth", 1280, [1, 37]),
     ("rfdetr_sn_player", "/models/rf-detr/rfdetr_l-sn-player.pth", 1280, [0]),
     ("rfdetr_sn_ball", "/models/rf-detr/rfdetr_l-sn-ball.pth", 1920, [0]),
 ])

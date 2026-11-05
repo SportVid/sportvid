@@ -3,15 +3,30 @@ from copy import deepcopy
 from typing import Any, Dict, Iterable, Mapping
 from rest_framework import serializers
 from backend.plugin_manager import PluginManager
-from .reid_models import DEFAULT_REID_PRESET, REID_PRESET_CHOICES, REID_PRESETS, REID_TRACKER_DEFAULTS, reid_model
-
+from .reid_models import (
+    DEFAULT_REID_PRESET,
+    REID_PRESET_CHOICES,
+    REID_PRESETS,
+    REID_TRACKER_DEFAULTS,
+    reid_model,
+)
 
 DETECTOR_CHOICES = [
-    "yolox", "yolox_l", "yolox_dancetrack", "yolox_sportsmot",          # people / multi-sport (one person class)
-    "yolox_sn_player", "yolox_sn_ball", "yolox_sn_ball_zoom2",           # football (SoccerNet-GSR fine-tunes)
-    "yolo11", "yolo11_l", "yolo11_sn_player",
-    "rfdetr", "rfdetr_sn_player", "rfdetr_sn_ball",
+    "yolox",
+    "yolox_l",
+    "yolox_dancetrack",
+    "yolox_sportsmot",  # people / multi-sport (one person class)
+    "yolox_sn_player",
+    "yolox_sn_ball",
+    "yolox_sn_ball_zoom2",  # football (SoccerNet-GSR fine-tunes)
+    "yolo11",
+    "yolo11_l",
+    "yolo11_sn_player",
+    "rfdetr",
+    "rfdetr_sn_player",
+    "rfdetr_sn_ball",
 ]
+DEFAULT_DETECTOR = "yolox_sportsmot"
 TRACKER_CHOICES = ["bytetrack", "deep_eiou"]
 BALL_TRACKER_CHOICES = ["kalman"]
 
@@ -23,21 +38,15 @@ default_yolox_params = {
     "nms_thresh": 0.4,
     "classes": [0],
     "fp16": False,
-    "num_classes": 1, 
+    "num_classes": 1,
     "decode": True,
-    "model_path": "yolox-x",      # the model family; depth, width and the number of classes come from the checkpoint
+    "model_path": "yolox-x",  # the model family; depth, width and the number of classes come from the checkpoint
     "checkpoint": "/models/yolox/bytetrack_x_mot17.pth.tar",
-    "input_format": "auto",       # auto: read from the checkpoint (legacy RGB / ImageNet, or BGR 0-255); or force one
+    "input_format": "auto",  # auto: read from the checkpoint (legacy RGB / ImageNet, or BGR 0-255); or force one
     "output_class_mapping": {
-        -1: {
-            "entity_type": "unknown",
-            "default_team": -1
-        },
-        0: {
-            "entity_type": "athlete",
-            "default_team": 3
-        }
-    }
+        -1: {"entity_type": "unknown", "default_team": -1},
+        0: {"entity_type": "athlete", "default_team": 3},
+    },
 }
 
 # The other ByteTrack / MixSort YOLOX person detectors (legacy input, one person class), at their training size.
@@ -53,7 +62,7 @@ default_yolox_dancetrack_params = {
     "checkpoint": "/models/yolox/bytetrack_x_dancetrack.pth.tar",
     "test_size": [800, 1440],
 }
-# YOLOX-X SportsMOT (MixSort): players in broadcast basketball, volleyball and football.
+# YOLOX-X SportsMOT (MixSort): players in broadcast basketball, volleyball and football; the default detector.
 default_yolox_sportsmot_params = {
     **default_yolox_params,
     "checkpoint": "/models/yolox/mixsort_yolox_sports_mix.pth.tar",
@@ -73,44 +82,33 @@ default_yolox_sn_player_params = {
     "model_path": "yolox-l",
     "checkpoint": "/models/yolox/yolox_l-sn-player-coco-ms08-16.pth",
     "input_format": "auto",
-    "test_size": [736, 1280],     # the training size
+    "test_size": [736, 1280],  # the training size
     "output_class_mapping": {
-        -1: {
-            "entity_type": "unknown",
-            "default_team": -1
-        },
-        0: {
-            "entity_type": "player",
-            "default_team": 3
-        }
-    }
+        -1: {"entity_type": "unknown", "default_team": -1},
+        0: {"entity_type": "player", "default_team": 3},
+    },
 }
 
 # YOLOX-L ball model trained on 560 px tiles of SoccerNet-GSR at native scale: it runs sliced (SAHI) and never on the
 # whole frame, which would show it the ball 2-3x too small. 1920x1080 is 5 x 3 tiles per frame. A ball detector (ball_detector: yolox_sn_ball), or the detector of a ball-only run.
 default_yolox_sn_ball_params = {
-    "batch_size": 4,              # tiles per forward pass
-    "conf_thresh": 0.1,           # the low confidence floor: the ball tracker gates weak candidates
+    "batch_size": 4,  # tiles per forward pass
+    "conf_thresh": 0.1,  # the low confidence floor: the ball tracker gates weak candidates
     "nms_thresh": 0.45,
     "classes": [0],
-    "fp16": True,                 # on CUDA only; matched fp32 on this model family
+    "fp16": True,  # on CUDA only; matched fp32 on this model family
     "num_classes": 1,
     "decode": True,
     "model_path": "yolox-l",
     "checkpoint": "/models/yolox/yolox_l-sahi-sn-ball-native.pth",
     "input_format": "auto",
-    "test_size": [576, 576],      # each 560 px tile at native scale, as trained
+    "test_size": [576, 576],  # each 560 px tile at native scale, as trained
     "sahi": {
         "enabled": True,
         "slice_size": [560, 560],
         "full_frame": False,
     },
-    "output_class_mapping": {
-        0: {
-            "entity_type": "ball",
-            "default_team": 0
-        }
-    }
+    "output_class_mapping": {0: {"entity_type": "ball", "default_team": 0}},
 }
 
 # The same tiles enlarged x2 (560 -> 1120 px), with the model trained that way: about 4x the cost of yolox_sn_ball.
@@ -122,31 +120,25 @@ default_yolox_sn_ball_zoom2_params = {
 
 default_yolo11_params = {
     "batch_size": 1,
-    "conf": 0.15,               # min confidence threshold [0.15 - 0.6]
-    "iou": 0.4,                 # threshold for NMS; lower values -> less detections [0.3 - 0.6]
-    "agnostic_nms": False,      # class-agnostic NMS; merge overlapping boxes of different classes
-    "classes": [0, 32],         # filters predictions to specified class set: 'person','sports_ball' for COCO dataset
+    "conf": 0.15,  # min confidence threshold [0.15 - 0.6]
+    "iou": 0.4,  # threshold for NMS; lower values -> less detections [0.3 - 0.6]
+    "agnostic_nms": False,  # class-agnostic NMS; merge overlapping boxes of different classes
+    "classes": [
+        0,
+        32,
+    ],  # filters predictions to specified class set: 'person','sports_ball' for COCO dataset
     "half": False,
-    "imgsz": None,              # e.g. [640, 1280] or null to use img dims
-    "max_det": 100,             # max amount of detections per frame
-    "embed": None,              # specify layers from which to extract feature vectors or embeddings
+    "imgsz": None,  # e.g. [640, 1280] or null to use img dims
+    "max_det": 100,  # max amount of detections per frame
+    "embed": None,  # specify layers from which to extract feature vectors or embeddings
     "verbose": False,
     "model_path": "yolo11",
     "checkpoint": "/models/yolo_ultra/yolo11x.pt",
     "output_class_mapping": {
-        -1: {
-            "entity_type": "unknown",
-            "default_team": -1
-        },
-        0: {
-            "entity_type": "athlete",
-            "default_team": 3
-        },
-        32: {
-            "entity_type": "ball",
-            "default_team": 0
-        }
-    }
+        -1: {"entity_type": "unknown", "default_team": -1},
+        0: {"entity_type": "athlete", "default_team": 3},
+        32: {"entity_type": "ball", "default_team": 0},
+    },
 }
 
 # YOLO11-L COCO: the lighter one, for CPU deployments.
@@ -163,42 +155,27 @@ default_yolo11_sn_player_params = {
     "classes": [0],
     "checkpoint": "/models/yolo_ultra/yolo11x-sn-player-s05.pt",
     "output_class_mapping": {
-        -1: {
-            "entity_type": "unknown",
-            "default_team": -1
-        },
-        0: {
-            "entity_type": "player",
-            "default_team": 3
-        }
-    }
+        -1: {"entity_type": "unknown", "default_team": -1},
+        0: {"entity_type": "player", "default_team": 3},
+    },
 }
 
 # RF-DETR (rfdetr >= 1.5; the resolution must be a multiple of 32). The COCO model reports COCO category ids:
-# 1 person, 37 sports ball.
+# 1 person, 37 sports ball. Runs at 1280 (trained at 704).
 default_rfdetr_params = {
     "batch_size": 1,
     "conf": 0.5,
     "classes": [1, 37],
-    "resolution": 704,          # the COCO training resolution
+    "resolution": 1280,
     "verbose": False,
     "fp16": False,
     "model_path": "RFDETRLarge",
     "checkpoint": "/models/rf-detr/rfdetr-l-2026.pth",
     "output_class_mapping": {
-        -1: {
-            "entity_type": "unknown",
-            "default_team": -1
-        },
-        1: {
-            "entity_type": "athlete",
-            "default_team": 3
-        },
-        37: {
-            "entity_type": "ball",
-            "default_team": 0
-        }
-    }
+        -1: {"entity_type": "unknown", "default_team": -1},
+        1: {"entity_type": "athlete", "default_team": 3},
+        37: {"entity_type": "ball", "default_team": 0},
+    },
 }
 
 # RF-DETR-L fine-tuned on SoccerNet-GSR full frames, one class each (raw class 0), at its training resolution.
@@ -207,33 +184,22 @@ default_rfdetr_sn_player_params = {
     "conf": 0.35,
     "classes": [0],
     "resolution": 1280,
-    "fp16": True,               # on CUDA only
+    "fp16": True,  # on CUDA only
     "checkpoint": "/models/rf-detr/rfdetr_l-sn-player.pth",
     "output_class_mapping": {
-        -1: {
-            "entity_type": "unknown",
-            "default_team": -1
-        },
-        0: {
-            "entity_type": "player",
-            "default_team": 3
-        }
-    }
+        -1: {"entity_type": "unknown", "default_team": -1},
+        0: {"entity_type": "player", "default_team": 3},
+    },
 }
 
 default_rfdetr_sn_ball_params = {
     **default_rfdetr_params,
-    "conf": 0.1,                # the low confidence floor: the ball tracker gates weak candidates
+    "conf": 0.1,  # the low confidence floor: the ball tracker gates weak candidates
     "classes": [0],
     "resolution": 1920,
-    "fp16": True,               # on CUDA only
+    "fp16": True,  # on CUDA only
     "checkpoint": "/models/rf-detr/rfdetr_l-sn-ball.pth",
-    "output_class_mapping": {
-        0: {
-            "entity_type": "ball",
-            "default_team": 0
-        }
-    }
+    "output_class_mapping": {0: {"entity_type": "ball", "default_team": 0}},
 }
 
 # Example parameter settings:
@@ -243,12 +209,12 @@ default_rfdetr_sn_ball_params = {
 # track_buffer counts frames at 30 fps (ByteTrack's convention): the plugin scales it to the decoding rate, so it
 # is a duration (150 = 5 s at any fps).
 default_bytetrack_params = {
-    "track_thresh": 0.45,       # tracking confidence threshold (0.6 = default)
-    "track_buffer": 150,        # keep lost tracks this many frames at 30 fps (150 = 5 s)
-    "match_thresh": 0.7,        # [0.8, 0.6, 0.4]; high = fewer ID switches, low -> More MOTA; IoU matching threshold for associating detections to existing tracks
-    "mot20": False,             # 'True' skips fusing scores?
-    "aspect_ratio_thresh": 5.0, # reject tracking artifacts / FPs of unrealistic shape
-    "min_box_area": 0,          # min box area thresholds (px^2)
+    "track_thresh": 0.45,  # tracking confidence threshold (0.6 = default)
+    "track_buffer": 150,  # keep lost tracks this many frames at 30 fps (150 = 5 s)
+    "match_thresh": 0.7,  # [0.8, 0.6, 0.4]; high = fewer ID switches, low -> More MOTA; IoU matching threshold for associating detections to existing tracks
+    "mot20": False,  # 'True' skips fusing scores?
+    "aspect_ratio_thresh": 5.0,  # reject tracking artifacts / FPs of unrealistic shape
+    "min_box_area": 0,  # min box area thresholds (px^2)
 }
 
 DETECTOR_DEFAULTS = {
@@ -275,40 +241,40 @@ REID_MODEL = reid_model(DEFAULT_REID_PRESET)
 default_gta_link_params = {
     "enabled": False,
     **REID_MODEL,
-    "amp": False,                 # fp16 autocast for the embeddings
+    "amp": False,  # fp16 autocast for the embeddings
     "use_split": True,
-    "min_len": 100,               # tracklets shorter than this are not split
-    "eps": 0.6,                   # DBSCAN neighbourhood (cosine) when looking for identity switches
+    "min_len": 100,  # tracklets shorter than this are not split
+    "eps": 0.6,  # DBSCAN neighbourhood (cosine) when looking for identity switches
     "min_samples": 10,
-    "max_k": 3,                   # at most this many sub-tracklets per tracklet
-    "use_connect": True,          # upstream always runs the connect step
-    "spatial_factor": 1.0,        # scales the max exit / entry distance between merged tracklets
-    "merge_dist_thres": 0.4,      # merge tracklets whose mean cosine distance is below this
+    "max_k": 3,  # at most this many sub-tracklets per tracklet
+    "use_connect": True,  # upstream always runs the connect step
+    "spatial_factor": 1.0,  # scales the max exit / entry distance between merged tracklets
+    "merge_dist_thres": 0.4,  # merge tracklets whose mean cosine distance is below this
 }
 # linear interpolation of short gaps (Deep-EIoU's SportsMOT post-processing, re-implemented)
 default_interpolation_params = {
     "enabled": False,
-    "n_min": 5,                   # only tracks with more boxes than this
-    "n_dti": 20,                  # fill gaps shorter than this many frames
-    "distance_thres": 200,        # ... unless the box centre moves more than this (px) across the gap
+    "n_min": 5,  # only tracks with more boxes than this
+    "n_dti": 20,  # fill gaps shorter than this many frames
+    "distance_thres": 200,  # ... unless the box centre moves more than this (px) across the gap
 }
 
 # Deep-EIoU (re-implemented, inference_ray plugins/tracker/deep_eiou.py) -> GTA-Link, with OSNet-AIN MS+D+C
 # embeddings in both. Tracker thresholds are upstream's SportsMOT setting; track_buffer counts frames at 30 fps.
 default_deep_eiou_params = {
-    "track_high_thresh": 0.6,     # first association: detections above this
-    "track_low_thresh": 0.1,      # detections at or below are dropped; between low and high: second association
-    "new_track_thresh": 0.7,      # an unmatched detection starts a track from this score on
-    "track_buffer": 60,           # keep lost tracks this many frames at 30 fps (60 = 2 s)
-    "match_thresh": 0.8,          # max fused cost of a first-round match
-    "min_box_area": 10,           # output filter (px^2)
-    "remove_edge_dets": False,    # drop detections touching the top / left image edge
-    "with_reid": True,            # fuse appearance embeddings into the first-round cost
+    "track_high_thresh": 0.6,  # first association: detections above this
+    "track_low_thresh": 0.1,  # detections at or below are dropped; between low and high: second association
+    "new_track_thresh": 0.7,  # an unmatched detection starts a track from this score on
+    "track_buffer": 60,  # keep lost tracks this many frames at 30 fps (60 = 2 s)
+    "match_thresh": 0.8,  # max fused cost of a first-round match
+    "min_box_area": 10,  # output filter (px^2)
+    "remove_edge_dets": False,  # drop detections touching the top / left image edge
+    "with_reid": True,  # fuse appearance embeddings into the first-round cost
     "reid_model_name": REID_MODEL["model_name"],
     "reid_model_path": REID_MODEL["model_path"],
     "reid_amp": False,
-    "proximity_thresh": 0.5,      # appearance only counts where the EIoU cost is at most this
-    "appearance_thresh": 0.25,    # ... and the halved cosine distance at most this
+    "proximity_thresh": 0.5,  # appearance only counts where the EIoU cost is at most this
+    "appearance_thresh": 0.25,  # ... and the halved cosine distance at most this
     "gta_link": {**default_gta_link_params, "enabled": True},
     "interpolation": dict(default_interpolation_params),
 }
@@ -329,7 +295,7 @@ BALL_DETECTOR_OVERRIDES = {
     "yolo11": {"classes": [32], "conf": 0.1},
     "yolo11_l": {"classes": [32], "conf": 0.1},
     "rfdetr": {"classes": [37], "conf": 0.1},
-    "yolox_sn_ball": {},          # ball models already
+    "yolox_sn_ball": {},  # ball models already
     "yolox_sn_ball_zoom2": {},
     "rfdetr_sn_ball": {},
 }
@@ -339,50 +305,52 @@ BALL_DETECTOR_CHOICES = list(BALL_DETECTOR_OVERRIDES)
 # Frame-based values are given at 30 fps and scaled to the decoding rate by the plugin. Below min_fps the ball
 # candidates are written untracked.
 default_kalman_ball_params = {
-    "min_conf": 0.10,             # candidates below are ignored
-    "init_conf": 0.40,            # confidence needed to (re)acquire the ball
-    "gate_px": 60.0,              # association radius around the predicted position (px / frame)
-    "gate_growth_px": 20.0,       # + per frame without a match, scaled by the candidate's confidence
-    "max_missed": 15,             # frames without a match before the track is dropped
-    "switch_frames": 3,           # re-acquire elsewhere after this many frames with a confident candidate outside the gate
-    "max_gap": 10,                # fill gaps up to this many frames within a track segment
-    "outlier_px": 25.0,           # a weak detection this far off the smoothed path is dropped, unless supported
-    "corner_dv_px": 5.0,          # kick corner: velocity change (px / frame) where the path may change direction
-    "kick_vel_px": 30.0,          # expected kick speed (px / frame): widens the gate after a touch
-    "player_hint": True,          # ball at a player's foot -> a kick may happen there (needs a player tracker)
-    "foot_reach": 1.5,            # "at a player's foot": within this many player box widths of the foot point
-    "confirm_frames": 4,          # weak detections needed to confirm a provisional track
-    "tentative_gate_px": 30.0,    # association radius of a provisional track (px / frame)
-    "tentative_max_missed": 2,    # frames a provisional track may go unseen
-    "reacquire_px": 60.0,         # starting this close to the last known ball position: accepted
+    "min_conf": 0.10,  # candidates below are ignored
+    "init_conf": 0.40,  # confidence needed to (re)acquire the ball
+    "gate_px": 60.0,  # association radius around the predicted position (px / frame)
+    "gate_growth_px": 20.0,  # + per frame without a match, scaled by the candidate's confidence
+    "max_missed": 15,  # frames without a match before the track is dropped
+    "switch_frames": 3,  # re-acquire elsewhere after this many frames with a confident candidate outside the gate
+    "max_gap": 10,  # fill gaps up to this many frames within a track segment
+    "outlier_px": 25.0,  # a weak detection this far off the smoothed path is dropped, unless supported
+    "corner_dv_px": 5.0,  # kick corner: velocity change (px / frame) where the path may change direction
+    "kick_vel_px": 30.0,  # expected kick speed (px / frame): widens the gate after a touch
+    "player_hint": True,  # ball at a player's foot -> a kick may happen there (needs a player tracker)
+    "foot_reach": 1.5,  # "at a player's foot": within this many player box widths of the foot point
+    "confirm_frames": 4,  # weak detections needed to confirm a provisional track
+    "tentative_gate_px": 30.0,  # association radius of a provisional track (px / frame)
+    "tentative_max_missed": 2,  # frames a provisional track may go unseen
+    "reacquire_px": 60.0,  # starting this close to the last known ball position: accepted
     "reacquire_growth_px": 15.0,  # further away: must move, and start within a radius growing by this per frame
-    "reacquire_max_px": 400.0,    # ... up to this
-    "min_move_px": 20.0,          # "moving": distance covered along the longest recent smooth run
-    "tentative_resid_px": 6.0,    # ... which must fit a constant-velocity line within this RMS (px)
+    "reacquire_max_px": 400.0,  # ... up to this
+    "min_move_px": 20.0,  # "moving": distance covered along the longest recent smooth run
+    "tentative_resid_px": 6.0,  # ... which must fit a constant-velocity line within this RMS (px)
     "tentative_skip_body": 0.75,  # provisional tracks ignore weak candidates on the upper part of a player box
-    "accel_px": 4.0,              # Kalman process noise: ball acceleration std (px / frame^2)
-    "meas_px": 2.0,               # Kalman measurement noise of a conf=1 detection (px), scales with 1 / conf
-    "static_filter": True,        # drop ball candidates that never move (cones, spare balls, markings)
-    "static_radius_px": 12.0,     # "same spot": within this radius
-    "static_min_hits": 60,        # ... for at least this many frames
-    "static_min_span": 150,       # ... spanning more than this many frames
-    "min_fps": 10.0,              # below this decoding rate the ball is not tracked
+    "accel_px": 4.0,  # Kalman process noise: ball acceleration std (px / frame^2)
+    "meas_px": 2.0,  # Kalman measurement noise of a conf=1 detection (px), scales with 1 / conf
+    "static_filter": True,  # drop ball candidates that never move (cones, spare balls, markings)
+    "static_radius_px": 12.0,  # "same spot": within this radius
+    "static_min_hits": 60,  # ... for at least this many frames
+    "static_min_span": 150,  # ... spanning more than this many frames
+    "min_fps": 10.0,  # below this decoding rate the ball is not tracked
 }
 
-BALL_TRACKER_DEFAULTS = {
-    "kalman": default_kalman_ball_params
-}
+BALL_TRACKER_DEFAULTS = {"kalman": default_kalman_ball_params}
 
 
 class StrictSerializer(serializers.Serializer):
-    """ Rejects keys it does not declare (DRF drops them silently, and their default would be used). """
+    """Rejects keys it does not declare (DRF drops them silently, and their default would be used)."""
 
     def to_internal_value(self, data):
         if not isinstance(data, Mapping):
-            raise serializers.ValidationError({"non_field_errors": ["Expected an object."]})
+            raise serializers.ValidationError(
+                {"non_field_errors": ["Expected an object."]}
+            )
         unknown = sorted(set(data) - set(self.fields))
         if unknown:
-            raise serializers.ValidationError({"non_field_errors": [f"Unknown parameters: {unknown}."]})
+            raise serializers.ValidationError(
+                {"non_field_errors": [f"Unknown parameters: {unknown}."]}
+            )
         return super().to_internal_value(data)
 
 
@@ -390,17 +358,32 @@ class StrictSerializer(serializers.Serializer):
 # slicing.SliceConfig's. Costs ~(tiles + 1) plain passes per frame.
 class SahiParamsSerializer(StrictSerializer):
     enabled = serializers.BooleanField(required=False)
-    slice_size = serializers.ListField(      # [h, w] tile size in frame px; each tile is resized to the model input
-        required=False, child=serializers.IntegerField(min_value=32), min_length=2, max_length=2)
-    overlap = serializers.ListField(         # [h, w] min. overlap ratio of neighbouring tiles
-        required=False, child=serializers.FloatField(min_value=0.0, max_value=0.95), min_length=2, max_length=2)
-    full_frame = serializers.BooleanField(required=False)   # also detect on the whole frame
-    tile_batch_size = serializers.IntegerField(required=False, allow_null=True, min_value=1)  # null: batch_size
-    tile_classes = serializers.ListField(    # keep only these raw class ids from the tiles; null -> all
-        required=False, allow_null=True, child=serializers.IntegerField(min_value=0))
+    slice_size = serializers.ListField(  # [h, w] tile size in frame px; each tile is resized to the model input
+        required=False,
+        child=serializers.IntegerField(min_value=32),
+        min_length=2,
+        max_length=2,
+    )
+    overlap = serializers.ListField(  # [h, w] min. overlap ratio of neighbouring tiles
+        required=False,
+        child=serializers.FloatField(min_value=0.0, max_value=0.95),
+        min_length=2,
+        max_length=2,
+    )
+    full_frame = serializers.BooleanField(
+        required=False
+    )  # also detect on the whole frame
+    tile_batch_size = serializers.IntegerField(
+        required=False, allow_null=True, min_value=1
+    )  # null: batch_size
+    tile_classes = serializers.ListField(  # keep only these raw class ids from the tiles; null -> all
+        required=False, allow_null=True, child=serializers.IntegerField(min_value=0)
+    )
     merge = serializers.ChoiceField(choices=["nmm", "nms"], required=False)
     match_metric = serializers.ChoiceField(choices=["ios", "iou"], required=False)
-    match_threshold = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    match_threshold = serializers.FloatField(
+        required=False, min_value=0.0, max_value=1.0
+    )
     class_agnostic = serializers.BooleanField(required=False)
 
 
@@ -412,8 +395,8 @@ SAHI_DEFAULTS = {
     "full_frame": True,
     "tile_batch_size": None,
     "tile_classes": None,
-    "merge": "nmm",                 # nmm: union of the matched boxes (SAHI default) | nms: keep the best box
-    "match_metric": "ios",          # ios: intersection over the smaller box, matches boxes cut by a tile border | iou
+    "merge": "nmm",  # nmm: union of the matched boxes (SAHI default) | nms: keep the best box
+    "match_metric": "ios",  # ios: intersection over the smaller box, matches boxes cut by a tile border | iou
     "match_threshold": 0.5,
     "class_agnostic": False,
 }
@@ -431,7 +414,7 @@ class DetectorParamsSerializer(serializers.Serializer):
     )
     conf = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     conf_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
-    
+
     iou = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     nms_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
 
@@ -475,18 +458,23 @@ class DetectorParamsSerializer(serializers.Serializer):
     resolution = serializers.IntegerField(required=False, min_value=32)
     model_path = serializers.CharField(required=False, allow_blank=False)
     model_checkpoint = serializers.CharField(required=False, allow_blank=False)
-    input_format = serializers.ChoiceField(choices=["auto", "legacy", "bgr255"], required=False)
+    input_format = serializers.ChoiceField(
+        choices=["auto", "legacy", "bgr255"], required=False
+    )
     sahi = SahiParamsSerializer(required=False)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         if "confidence_threshold" in attrs:
             if "conf" in attrs or "conf_thresh" in attrs:
-                raise serializers.ValidationError({
-                    "confidence_threshold": [
-                        "Use either confidence_threshold or a backend-specific confidence field, not both."
-                    ]
-                })
+                raise serializers.ValidationError(
+                    {
+                        "confidence_threshold": [
+                            "Use either confidence_threshold or a backend-specific confidence field, not both."
+                        ]
+                    }
+                )
         return attrs
+
 
 class GTALinkParamsSerializer(StrictSerializer):
     enabled = serializers.BooleanField(required=False)
@@ -499,7 +487,9 @@ class GTALinkParamsSerializer(StrictSerializer):
     use_connect = serializers.BooleanField(required=False)
     spatial_factor = serializers.FloatField(required=False, min_value=0.0)
     # at most 1: tracklets sharing a frame are 1 apart, and merging such a pair fails GTA-Link's spatial check
-    merge_dist_thres = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    merge_dist_thres = serializers.FloatField(
+        required=False, min_value=0.0, max_value=1.0
+    )
 
 
 class InterpolationParamsSerializer(StrictSerializer):
@@ -510,8 +500,11 @@ class InterpolationParamsSerializer(StrictSerializer):
 
 
 class TrackerParamsSerializer(StrictSerializer):
-    """ ByteTrack. """
-    reid_preset = serializers.ChoiceField(choices=REID_PRESET_CHOICES, required=False)   # GTA-Link's embedding
+    """ByteTrack."""
+
+    reid_preset = serializers.ChoiceField(
+        choices=REID_PRESET_CHOICES, required=False
+    )  # GTA-Link's embedding
     track_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     track_buffer = serializers.IntegerField(required=False, min_value=1)
     match_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
@@ -523,31 +516,53 @@ class TrackerParamsSerializer(StrictSerializer):
 
 
 class DeepEIoUParamsSerializer(StrictSerializer):
-    reid_preset = serializers.ChoiceField(choices=REID_PRESET_CHOICES, required=False)   # Deep-EIoU's and GTA-Link's
-    track_high_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
-    track_low_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
-    new_track_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    reid_preset = serializers.ChoiceField(
+        choices=REID_PRESET_CHOICES, required=False
+    )  # Deep-EIoU's and GTA-Link's
+    track_high_thresh = serializers.FloatField(
+        required=False, min_value=0.0, max_value=1.0
+    )
+    track_low_thresh = serializers.FloatField(
+        required=False, min_value=0.0, max_value=1.0
+    )
+    new_track_thresh = serializers.FloatField(
+        required=False, min_value=0.0, max_value=1.0
+    )
     track_buffer = serializers.IntegerField(required=False, min_value=1)
     match_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     min_box_area = serializers.FloatField(required=False, min_value=0.0)
     remove_edge_dets = serializers.BooleanField(required=False)
     with_reid = serializers.BooleanField(required=False)
     reid_amp = serializers.BooleanField(required=False)
-    proximity_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
-    appearance_thresh = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    proximity_thresh = serializers.FloatField(
+        required=False, min_value=0.0, max_value=1.0
+    )
+    appearance_thresh = serializers.FloatField(
+        required=False, min_value=0.0, max_value=1.0
+    )
     gta_link = GTALinkParamsSerializer(required=False)
     interpolation = InterpolationParamsSerializer(required=False)
 
     def validate(self, attrs):
-        low = attrs.get("track_low_thresh", default_deep_eiou_params["track_low_thresh"])
-        high = attrs.get("track_high_thresh", default_deep_eiou_params["track_high_thresh"])
+        low = attrs.get(
+            "track_low_thresh", default_deep_eiou_params["track_low_thresh"]
+        )
+        high = attrs.get(
+            "track_high_thresh", default_deep_eiou_params["track_high_thresh"]
+        )
         if low >= high:
-            raise serializers.ValidationError({"track_low_thresh": ["track_low_thresh must be below track_high_thresh."]})
+            raise serializers.ValidationError(
+                {
+                    "track_low_thresh": [
+                        "track_low_thresh must be below track_high_thresh."
+                    ]
+                }
+            )
         return attrs
 
 
 def json_safe(value):
-    """ Validated data (OrderedDicts, nested) as plain dicts / lists. """
+    """Validated data (OrderedDicts, nested) as plain dicts / lists."""
     if isinstance(value, Mapping):
         return {k: json_safe(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
@@ -582,7 +597,9 @@ class KalmanBallTrackerParamsSerializer(serializers.Serializer):
     reacquire_max_px = serializers.FloatField(required=False, min_value=0.0)
     min_move_px = serializers.FloatField(required=False, min_value=0.0)
     tentative_resid_px = serializers.FloatField(required=False, min_value=0.0)
-    tentative_skip_body = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    tentative_skip_body = serializers.FloatField(
+        required=False, min_value=0.0, max_value=1.0
+    )
     accel_px = serializers.FloatField(required=False, min_value=0.0)
     meas_px = serializers.FloatField(required=False, min_value=1e-6)
     static_filter = serializers.BooleanField(required=False)
@@ -595,35 +612,33 @@ class KalmanBallTrackerParamsSerializer(serializers.Serializer):
         # a misspelt key would otherwise be dropped silently and its default used
         unknown = sorted(set(data or {}) - set(self.fields))
         if unknown:
-            raise serializers.ValidationError({"non_field_errors": [f"Unknown parameters: {unknown}."]})
+            raise serializers.ValidationError(
+                {"non_field_errors": [f"Unknown parameters: {unknown}."]}
+            )
         return super().to_internal_value(data)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         min_conf = attrs.get("min_conf", default_kalman_ball_params["min_conf"])
         init_conf = attrs.get("init_conf", default_kalman_ball_params["init_conf"])
         if init_conf <= min_conf:
-            raise serializers.ValidationError({"init_conf": ["init_conf must be greater than min_conf."]})
+            raise serializers.ValidationError(
+                {"init_conf": ["init_conf must be greater than min_conf."]}
+            )
         return attrs
 
 
 @PluginManager.export_serializer("object_tracker")
 class ObjectTrackerSerializer(serializers.Serializer):
     fps = serializers.IntegerField(
-        required=False, 
-        min_value=1, 
-        max_value=30,
-        default=10
+        required=False, min_value=1, max_value=30, default=10
     )
     detector = serializers.ChoiceField(
         choices=DETECTOR_CHOICES,
         required=False,
-        default="yolox",
+        default=DEFAULT_DETECTOR,
     )
     tracker = serializers.ChoiceField(
-        choices=TRACKER_CHOICES,
-        required=False,
-        default=None,
-        allow_blank=True
+        choices=TRACKER_CHOICES, required=False, default=None, allow_blank=True
     )
     detector_params = DetectorParamsSerializer(required=False, default=dict)
     # validated per tracker in validate() (TRACKER_PARAM_SERIALIZERS); deep_eiou is API-only for now
@@ -645,12 +660,14 @@ class ObjectTrackerSerializer(serializers.Serializer):
         allow_blank=True,
         allow_null=True,
     )
-    ball_tracker_params = KalmanBallTrackerParamsSerializer(required=False, default=dict)
+    ball_tracker_params = KalmanBallTrackerParamsSerializer(
+        required=False, default=dict
+    )
 
     def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        detector = data.get("detector", "yolox")
+        detector = data.get("detector", DEFAULT_DETECTOR)
         tracker = data.get("tracker", "bytetrack")
-        
+
         detector_params = data.get("detector_params", {})
         tracker_params = data.get("tracker_params", {})
 
@@ -663,7 +680,9 @@ class ObjectTrackerSerializer(serializers.Serializer):
             user_params=detector_params,
         )
         if tracker not in (None, ""):
-            tracker_params = self._validated_group("tracker_params", TRACKER_PARAM_SERIALIZERS[tracker], tracker_params)
+            tracker_params = self._validated_group(
+                "tracker_params", TRACKER_PARAM_SERIALIZERS[tracker], tracker_params
+            )
             tracker_validator = self._get_tracker_validator(tracker)
             tracker_validator(tracker_params)
             data["tracker_params"] = self.build_tracker_runtime_params(
@@ -672,39 +691,59 @@ class ObjectTrackerSerializer(serializers.Serializer):
             )
         else:
             if tracker_params:
-                raise serializers.ValidationError({
-                    "tracker_params": ["tracker_params cannot be provided when tracker is null or omitted."]
-                })
+                raise serializers.ValidationError(
+                    {
+                        "tracker_params": [
+                            "tracker_params cannot be provided when tracker is null or omitted."
+                        ]
+                    }
+                )
             data["tracker_params"] = {}
 
         ball_detector = data.get("ball_detector")
         ball_detector_params = data.get("ball_detector_params", {})
         if ball_detector not in (None, ""):
-            self._validate_as_group("ball_detector_params", self._get_detector_validator(ball_detector),
-                                    ball_detector_params)
-            self._validate_as_group("ball_detector_params", lambda p: self._validate_model_files(ball_detector, p),
-                                    ball_detector_params)
+            self._validate_as_group(
+                "ball_detector_params",
+                self._get_detector_validator(ball_detector),
+                ball_detector_params,
+            )
+            self._validate_as_group(
+                "ball_detector_params",
+                lambda p: self._validate_model_files(ball_detector, p),
+                ball_detector_params,
+            )
             data["ball_detector_params"] = self.build_ball_detector_runtime_params(
                 detector=ball_detector,
                 user_params=ball_detector_params,
             )
         else:
             if ball_detector_params:
-                raise serializers.ValidationError({
-                    "ball_detector_params": ["ball_detector_params cannot be provided when ball_detector is null or omitted."]
-                })
+                raise serializers.ValidationError(
+                    {
+                        "ball_detector_params": [
+                            "ball_detector_params cannot be provided when ball_detector is null or omitted."
+                        ]
+                    }
+                )
             data["ball_detector"] = None
             data["ball_detector_params"] = {}
 
         ball_tracker = data.get("ball_tracker")
         ball_tracker_params = data.get("ball_tracker_params", {})
         if ball_tracker not in (None, ""):
-            data["ball_tracker_params"] = self._merge_with_presets(BALL_TRACKER_DEFAULTS, ball_tracker, ball_tracker_params)
+            data["ball_tracker_params"] = self._merge_with_presets(
+                BALL_TRACKER_DEFAULTS, ball_tracker, ball_tracker_params
+            )
         else:
             if ball_tracker_params:
-                raise serializers.ValidationError({
-                    "ball_tracker_params": ["ball_tracker_params cannot be provided when ball_tracker is null."]
-                })
+                raise serializers.ValidationError(
+                    {
+                        "ball_tracker_params": [
+                            "ball_tracker_params cannot be provided when ball_tracker is null."
+                        ]
+                    }
+                )
             data["ball_tracker"] = None
             data["ball_tracker_params"] = {}
 
@@ -716,17 +755,30 @@ class ObjectTrackerSerializer(serializers.Serializer):
         detector: str,
         user_params: Mapping[str, Any] | None = None,
     ) -> Dict[str, Any]:
-        """ The detector preset with the ball overrides (classes, confidence floor), then the user's values. """
-        presets = {detector: {**deepcopy(dict(DETECTOR_DEFAULTS[detector])), **deepcopy(BALL_DETECTOR_OVERRIDES[detector])}}
-        return cls._normalize_detector_params(detector, cls._merge_with_presets(presets, detector, user_params))
+        """The detector preset with the ball overrides (classes, confidence floor), then the user's values."""
+        presets = {
+            detector: {
+                **deepcopy(dict(DETECTOR_DEFAULTS[detector])),
+                **deepcopy(BALL_DETECTOR_OVERRIDES[detector]),
+            }
+        }
+        return cls._normalize_detector_params(
+            detector, cls._merge_with_presets(presets, detector, user_params)
+        )
 
     @staticmethod
-    def _validate_as_group(group_name: str, validator, params: Mapping[str, Any]) -> None:
-        """ Run a detector_params validator on another parameter group, reporting errors under that group. """
+    def _validate_as_group(
+        group_name: str, validator, params: Mapping[str, Any]
+    ) -> None:
+        """Run a detector_params validator on another parameter group, reporting errors under that group."""
         try:
             validator(params)
         except serializers.ValidationError as ex:
-            detail = ex.detail.get("detector_params", ex.detail) if isinstance(ex.detail, dict) else ex.detail
+            detail = (
+                ex.detail.get("detector_params", ex.detail)
+                if isinstance(ex.detail, dict)
+                else ex.detail
+            )
             raise serializers.ValidationError({group_name: detail})
 
     @classmethod
@@ -745,21 +797,35 @@ class ObjectTrackerSerializer(serializers.Serializer):
         user_params: Mapping[str, Any] | None = None,
     ) -> Dict[str, Any]:
         user_params = dict(user_params or {})
-        preset = cls._with_reid_preset(TRACKER_DEFAULTS[tracker], user_params.pop("reid_preset", None))
+        preset = cls._with_reid_preset(
+            TRACKER_DEFAULTS[tracker], user_params.pop("reid_preset", None)
+        )
         return cls._merge_with_presets({tracker: preset}, tracker, user_params)
 
     @staticmethod
-    def _with_reid_preset(tracker_preset: Mapping[str, Any], reid_preset: str | None) -> Dict[str, Any]:
-        """ The tracker preset with another embedding: its model files and fp16 setting in Deep-EIoU and GTA-Link,
-        then the tracker settings that go with it (REID_TRACKER_DEFAULTS). """
+    def _with_reid_preset(
+        tracker_preset: Mapping[str, Any], reid_preset: str | None
+    ) -> Dict[str, Any]:
+        """The tracker preset with another embedding: its model files and fp16 setting in Deep-EIoU and GTA-Link,
+        then the tracker settings that go with it (REID_TRACKER_DEFAULTS)."""
         out = deepcopy(dict(tracker_preset))
         if reid_preset in (None, ""):
             return out
-        model, amp = REID_PRESETS[reid_preset], bool(REID_PRESETS[reid_preset].get("amp", False))
+        model, amp = REID_PRESETS[reid_preset], bool(
+            REID_PRESETS[reid_preset].get("amp", False)
+        )
         if "reid_model_path" in out:
-            out.update(reid_model_name=model["model_name"], reid_model_path=model["model_path"], reid_amp=amp)
-        out["gta_link"] = {**out["gta_link"], "model_name": model["model_name"], "model_path": model["model_path"],
-                           "amp": amp}
+            out.update(
+                reid_model_name=model["model_name"],
+                reid_model_path=model["model_path"],
+                reid_amp=amp,
+            )
+        out["gta_link"] = {
+            **out["gta_link"],
+            "model_name": model["model_name"],
+            "model_path": model["model_path"],
+            "amp": amp,
+        }
         for k, v in REID_TRACKER_DEFAULTS.get(reid_preset, {}).items():
             if isinstance(v, Mapping):
                 out[k] = {**out[k], **v}
@@ -768,7 +834,9 @@ class ObjectTrackerSerializer(serializers.Serializer):
         return out
 
     @staticmethod
-    def _validated_group(group_name: str, serializer_cls, params: Mapping[str, Any]) -> Dict[str, Any]:
+    def _validated_group(
+        group_name: str, serializer_cls, params: Mapping[str, Any]
+    ) -> Dict[str, Any]:
         s = serializer_cls(data=params)
         if not s.is_valid():
             raise serializers.ValidationError({group_name: s.errors})
@@ -790,7 +858,9 @@ class ObjectTrackerSerializer(serializers.Serializer):
         return merged
 
     @classmethod
-    def _normalize_detector_params(cls, detector: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_detector_params(
+        cls, detector: str, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
         params = deepcopy(params)
         if "sahi" in params:
             params["sahi"] = {**SAHI_DEFAULTS, **json_safe(params["sahi"])}
@@ -819,8 +889,11 @@ class ObjectTrackerSerializer(serializers.Serializer):
 
     def _get_detector_validator(self, detector: str):
         # by model family: every preset name starts with its family's
-        for family, validator in (("yolox", self._validate_yolox_params), ("yolo11", self._validate_yoloultra_params),
-                                  ("rfdetr", self._validate_rfdetr_params)):
+        for family, validator in (
+            ("yolox", self._validate_yolox_params),
+            ("yolo11", self._validate_yoloultra_params),
+            ("rfdetr", self._validate_rfdetr_params),
+        ):
             if detector.startswith(family):
                 return validator
         raise KeyError(detector)
@@ -828,7 +901,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
     def _get_tracker_validator(self, tracker: str):
         mapping = {
             "bytetrack": self._validate_bytetrack_params,
-            "deep_eiou": lambda params: None,   # DeepEIoUParamsSerializer.validate
+            "deep_eiou": lambda params: None,  # DeepEIoUParamsSerializer.validate
         }
         return mapping[tracker]
 
@@ -858,7 +931,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
                 self._raise_field_error(
                     "detector_params",
                     "test_size",
-                    "YOLOX test_size should typically be divisible by 32."
+                    "YOLOX test_size should typically be divisible by 32.",
                 )
 
     def _validate_yoloultra_params(self, params: Mapping[str, Any]) -> None:
@@ -885,7 +958,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
             self._raise_field_error(
                 "detector_params",
                 "classes",
-                "Ultralytics detectors expect integer class IDs."
+                "Ultralytics detectors expect integer class IDs.",
             )
 
         imgsz = params.get("imgsz")
@@ -895,7 +968,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
                 self._raise_field_error(
                     "detector_params",
                     "imgsz",
-                    "imgsz should typically use stride-compatible values, usually divisible by 32."
+                    "imgsz should typically use stride-compatible values, usually divisible by 32.",
                 )
 
     def _validate_rfdetr_params(self, params: Mapping[str, Any]) -> None:
@@ -916,9 +989,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
         classes = params.get("classes")
         if classes is not None and not all(isinstance(x, int) for x in classes):
             self._raise_field_error(
-                "detector_params",
-                "classes",
-                "RF-DETR expects integer class IDs."
+                "detector_params", "classes", "RF-DETR expects integer class IDs."
             )
 
         resolution = params.get("resolution")
@@ -926,7 +997,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
             self._raise_field_error(
                 "detector_params",
                 "resolution",
-                "RF-DETR resolution must be divisible by 32."
+                "RF-DETR resolution must be divisible by 32.",
             )
 
     def _validate_bytetrack_params(self, params: Mapping[str, Any]) -> None:
@@ -945,11 +1016,15 @@ class ObjectTrackerSerializer(serializers.Serializer):
 
         track_thresh = params.get("track_thresh")
         match_thresh = params.get("match_thresh")
-        if track_thresh is not None and match_thresh is not None and match_thresh < track_thresh:
+        if (
+            track_thresh is not None
+            and match_thresh is not None
+            and match_thresh < track_thresh
+        ):
             self._raise_field_error(
                 "tracker_params",
                 "match_thresh",
-                "match_thresh should usually be greater than or equal to track_thresh."
+                "match_thresh should usually be greater than or equal to track_thresh.",
             )
 
     @staticmethod
@@ -960,18 +1035,16 @@ class ObjectTrackerSerializer(serializers.Serializer):
     ) -> None:
         unknown = sorted(set(payload.keys()) - set(allowed))
         if unknown:
-            raise serializers.ValidationError({
-                group_name: {
-                    "non_field_errors": [
-                        f"Unknown parameters: {unknown}. Allowed keys: {sorted(set(allowed))}"
-                    ]
+            raise serializers.ValidationError(
+                {
+                    group_name: {
+                        "non_field_errors": [
+                            f"Unknown parameters: {unknown}. Allowed keys: {sorted(set(allowed))}"
+                        ]
+                    }
                 }
-            })
+            )
 
     @staticmethod
     def _raise_field_error(group_name: str, field_name: str, message: str) -> None:
-        raise serializers.ValidationError({
-            group_name: {
-                field_name: [message]
-            }
-        })
+        raise serializers.ValidationError({group_name: {field_name: [message]}})

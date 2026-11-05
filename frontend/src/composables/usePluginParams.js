@@ -80,7 +80,9 @@ const BALL_TARGET_DETECTORS = [
 ];
 // detector a ball run falls back to when the selected one has no ball class
 const BALL_TARGET_FALLBACK_DETECTOR = "yolo11";
-const PLAYER_TARGET_FALLBACK_DETECTOR = "yolox";
+// backend DEFAULT_DETECTOR
+export const DEFAULT_PLAYER_DETECTOR = "yolox_sportsmot";
+const PLAYER_TARGET_FALLBACK_DETECTOR = DEFAULT_PLAYER_DETECTOR;
 export const PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS = PLAYER_TARGET_DETECTORS.map(
   (d) => OBJECT_TRACKER_DETECTOR_ITEMS[d]
 );
@@ -132,9 +134,9 @@ const DETECTOR_PARAM_DEFAULTS = {
   yolo11: { confidence_threshold: 0.2, batch_size: 1 },
   yolo11_l: { confidence_threshold: 0.2, batch_size: 1 },
   yolo11_sn_player: { confidence_threshold: 0.35, batch_size: 1 },
-  rfdetr: { confidence_threshold: 0.5, batch_size: 1 },
-  rfdetr_sn_player: { confidence_threshold: 0.35, batch_size: 1 },
-  rfdetr_sn_ball: { confidence_threshold: 0.1, batch_size: 1 },
+  rfdetr: { confidence_threshold: 0.5, batch_size: 1, resolution: 1280 },
+  rfdetr_sn_player: { confidence_threshold: 0.35, batch_size: 1, resolution: 1280 },
+  rfdetr_sn_ball: { confidence_threshold: 0.1, batch_size: 1, resolution: 1920 },
 };
 // on top of DETECTOR_PARAM_DEFAULTS, per tracking_target
 const PLAYER_IOU_DEFAULT = 0.3;
@@ -415,7 +417,7 @@ export function objectTrackerParams() {
     {
       field: "select_options",
       name: "detector",
-      value: "yolox",
+      value: DEFAULT_PLAYER_DETECTOR,
       items: PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS,
       text: t("modal.plugin.object_tracker.detector"),
     },
@@ -525,7 +527,7 @@ export function objectTrackerParams() {
       field: "slider",
       min: 320,
       max: 1920,
-      value: 704,
+      value: 1280,          // set per RF-DETR preset (DETECTOR_PARAM_DEFAULTS)
       step: 32,
       name: "resolution",
       text: t("modal.plugin.object_tracker.resolution"),
