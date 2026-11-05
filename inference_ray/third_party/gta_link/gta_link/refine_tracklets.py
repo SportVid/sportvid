@@ -177,9 +177,35 @@ def display_Dist(Dist, seq_name=None, isMerged=False, isSplit=False):
     plt.title(f"{seq_name}{info}")
     plt.show()
 
+def _unit_feature_sum(track):
+    """Sum of the tracklet's L2-normalised features (float64) and their count. The mean pairwise cosine distance of
+    two tracklets (``get_distance``) is 1 - (s1 . s2) / (n1 * n2) of these: the cosine similarity is bilinear in the
+    normalised features, so the mean over all pairs is the dot product of the two means."""
+    f = np.asarray(np.stack(track.features), dtype=np.float64)
+    return (f / np.linalg.norm(f, axis=1, keepdims=True)).sum(axis=0), len(f)
+
+
+def _overlap_matrix(tracks):
+    """(n, n) bool: tracklets i and j share a frame (sparse frame-occupancy product)."""
+    from scipy.sparse import csr_matrix
+    rows, cols = [], []
+    for i, t in enumerate(tracks):
+        frames = np.unique(np.asarray(t.times, dtype=np.int64))
+        rows.append(np.full(len(frames), i))
+        cols.append(frames)
+    rows, cols = np.concatenate(rows), np.concatenate(cols)
+    occ = csr_matrix((np.ones(len(rows), dtype=np.int32), (rows, cols - cols.min())),
+                     shape=(len(tracks), int(cols.max() - cols.min()) + 1))
+    return (occ @ occ.T).toarray() > 0
+
+
 def get_distance_matrix(tid2track):
     """
     Constructs and returns a distance matrix between all tracklets based on overlapping times and feature similarities.
+
+    The same values as ``get_distance`` for every pair (up to float rounding), from each tracklet's normalised
+    feature sum instead of all feature pairs: tracklets sharing a frame are 1 apart, the others their mean
+    pairwise cosine distance.
 
     Args:
         tid2track (dict): Dictionary mapping track IDs to their respective track objects.
@@ -187,16 +213,17 @@ def get_distance_matrix(tid2track):
     Returns:
         ndarray: A square matrix where each element (i, j) represents the calculated distance between track i and track j.
     """
-    # print("number of tracks:", len(tid2track))
-    Dist = np.zeros((len(tid2track), len(tid2track)))
-
-    for i, (track1_id, track1) in enumerate(tid2track.items()):
-        assert len(track1.times) == len(track1.bboxes)
-        for j, (track2_id, track2) in enumerate(tid2track.items()):
-            if j < i:
-                Dist[i][j] = Dist[j][i]
-            else:
-                Dist[i][j] = get_distance(track1_id, track2_id, track1, track2)
+    tracks = list(tid2track.values())
+    for t in tracks:
+        assert len(t.times) == len(t.bboxes)
+    if not tracks:
+        return np.zeros((0, 0))
+    sums, counts = zip(*(_unit_feature_sum(t) for t in tracks))
+    sums, counts = np.stack(sums), np.asarray(counts, dtype=np.float64)
+    Dist = 1.0 - (sums @ sums.T) / np.outer(counts, counts)
+    overlap = _overlap_matrix(tracks)
+    np.fill_diagonal(overlap, False)          # a tracklet's distance to itself is its own mean pairwise distance
+    Dist[overlap] = 1.0
     return Dist
 
 def get_distance(track1_id, track2_id, track1, track2):
@@ -292,67 +319,59 @@ def check_spatial_constraints(trk_1, trk_2, max_x_range, max_y_range):
     return inSpatialRange
 
 def merge_tracklets(tracklets, seq2Dist, Dist, seq_name=None, max_x_range=None, max_y_range=None, merge_dist_thres=None):
+    """
+    Greedy agglomerative merging of tracklets, closest pair first, as long as a pair is closer than
+    ``merge_dist_thres``; a pair outside the spatial constraints is skipped until one of the two tracklets changes.
+    Merging appends the second tracklet's features, times and boxes to the first (the one earlier in ``tracklets``)
+    and drops the second.
+
+    The same merges, in the same order, as the original loop over the full distance matrix (argmin over all pairs per
+    step, ties to the first pair in row-major order, the merged tracklet's row recomputed with ``get_distance``):
+    candidate pairs are kept in a heap ordered by (distance, rank of the first, rank of the second) and invalidated
+    when a tracklet changes, and the distances of a merged tracklet come from its normalised feature sum. Cost per
+    merge: one distance per remaining tracklet, instead of a full-matrix argmin and all feature pairs again.
+    """
+    import heapq
     seq2Dist[seq_name] = Dist                               # save all seqs distance matrix, debug line, delete later
-    # displayDist(seq2Dist, seq_name, isMerged=False, isSplit=True)         # used to display Dist, debug line, delete later=
 
-    idx2tid = {idx: tid for idx, tid in enumerate(tracklets.keys())}
-    
-    # Hierarchical Clustering
-    # While there are still values (exclude diagonal) in distance matrix lower than merging distance threshold
-    #   Step 1: find minimal distance for tracklet pair
-    #   Step 2: merge tracklet pair
-    #   Step 3: update distance matrix
-    diagonal_mask = np.eye(Dist.shape[0], dtype=bool)
-    non_diagonal_mask = ~diagonal_mask
-    # print("Enter merge while loop")
-    while (np.any(Dist[non_diagonal_mask] < merge_dist_thres)):
-        # print(np.sum(np.any(Dist[non_diagonal_mask] < merge_dist_thres)))
-        # Get the indices of the minimum value considering the mask
-        min_index = np.argmin(Dist[non_diagonal_mask])
-        min_value = np.min(Dist[non_diagonal_mask])
-        # Translate this index to the original array's indices
-        masked_indices = np.where(non_diagonal_mask)
-        track1_idx, track2_idx = masked_indices[0][min_index], masked_indices[1][min_index]
-        # print("Tracks idx to merge:", track1_idx, track2_idx)
-        # print(f"Minimum value in masked Dist: {min_value}")
-        # print(f"Corresponding value in Dist using recalculated indices: {Dist[track1_idx, track2_idx]}")
+    tids = list(tracklets.keys())          # a tracklet's rank: its position, which merges never change
+    n = len(tids)
+    if n < 2:
+        return tracklets
+    sums, counts = zip(*(_unit_feature_sum(tracklets[t]) for t in tids))
+    sums, counts = np.stack(sums), np.asarray(counts, dtype=np.float64)
+    frames = [set(tracklets[t].times) for t in tids]
+    alive, version = [True] * n, [0] * n
 
-        assert min_value == Dist[track1_idx, track2_idx] == Dist[track2_idx, track1_idx], "Values should match!"
-
-        track1 = tracklets[idx2tid[track1_idx]]
-        track2 = tracklets[idx2tid[track2_idx]]
-
-        inSpatialRange = check_spatial_constraints(track1, track2, max_x_range, max_y_range)
-        # print("In spatial range:", inSpatialRange)
-        if inSpatialRange:
-            track1.features += track2.features      # Note: currently we merge track 2 to track 1 without creating a new track
-            track1.times += track2.times
-            track1.bboxes += track2.bboxes
-            
-            # update tracklets dictionary
-            tracklets[idx2tid[track1_idx]] = track1
-            tracklets.pop(idx2tid[track2_idx])
-
-            # Remove the merged tracklet (track2) from the distance matrix
-            Dist = np.delete(Dist, track2_idx, axis=0)  # Remove row for track2
-            Dist = np.delete(Dist, track2_idx, axis=1)  # Remove column for track2
-            # update idx2tid
-            idx2tid = {idx: tid for idx, tid in enumerate(tracklets.keys())}
-            
-            # Update distance matrix only for the merged tracklet's row and column
-            for idx in range(Dist.shape[0]):
-                Dist[track1_idx, idx] = get_distance(idx2tid[track1_idx], idx2tid[idx], tracklets[idx2tid[track1_idx]], tracklets[idx2tid[idx]])
-                Dist[idx, track1_idx] = Dist[track1_idx, idx]  # Ensure symmetry
-            
-            seq2Dist[seq_name] = Dist                   # used to display Dist
-            
-            # update mask
-            diagonal_mask = np.eye(Dist.shape[0], dtype=bool)
-            non_diagonal_mask = ~diagonal_mask
-        else:
-            # change distance between track pair to threshold
-            Dist[track1_idx, track2_idx], Dist[track2_idx, track1_idx] = merge_dist_thres, merge_dist_thres
-    # print("Finish merge while loop")
+    rows, cols = np.nonzero(np.triu(Dist < merge_dist_thres, k=1))
+    heap = [(float(Dist[i, j]), int(i), int(j), 0, 0) for i, j in zip(rows, cols)]
+    heapq.heapify(heap)
+    while heap:
+        d, i, j, vi, vj = heapq.heappop(heap)
+        if not (alive[i] and alive[j] and version[i] == vi and version[j] == vj):
+            continue                       # a tracklet of this pair has merged since
+        track1, track2 = tracklets[tids[i]], tracklets[tids[j]]
+        if not check_spatial_constraints(track1, track2, max_x_range, max_y_range):
+            continue                       # the original sets the pair to the threshold: out until one changes
+        track1.features += track2.features      # Note: currently we merge track 2 to track 1 without creating a new track
+        track1.times += track2.times
+        track1.bboxes += track2.bboxes
+        tracklets.pop(tids[j])
+        alive[j] = False
+        sums[i] += sums[j]
+        counts[i] += counts[j]
+        frames[i] |= frames[j]
+        version[i] += 1
+        dist_i = 1.0 - (sums @ sums[i]) / (counts * counts[i])
+        # tracklets sharing a frame are 1 apart, which counts only for a threshold above 1
+        ks = range(n) if merge_dist_thres > 1.0 else np.nonzero(dist_i < merge_dist_thres)[0].tolist()
+        for k in ks:
+            if k == i or not alive[k]:
+                continue
+            dk = 1.0 if not frames[i].isdisjoint(frames[k]) else float(dist_i[k])
+            if dk < merge_dist_thres:
+                lo, hi = (i, k) if i < k else (k, i)
+                heapq.heappush(heap, (dk, lo, hi, version[lo], version[hi]))
     return tracklets
 
 def detect_id_switch(embs, eps=None, min_samples=None, max_clusters=None):

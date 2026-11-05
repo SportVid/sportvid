@@ -275,3 +275,9 @@ def test_bytetrack_reid_preset_is_gta_links():
 def test_unknown_reid_preset_rejected(tracker):
     assert "tracker_params" in errors({"detector": "yolox", "tracker": tracker,
                                        "tracker_params": {"reid_preset": "/models/reid/other.pth"}})
+
+
+def test_gta_link_merge_threshold_is_at_most_one():
+    params = {"detector": "yolox", "tracker": "deep_eiou"}
+    assert validate({**params, "tracker_params": {"gta_link": {"merge_dist_thres": 1.0}}})
+    assert "tracker_params" in errors({**params, "tracker_params": {"gta_link": {"merge_dist_thres": 1.2}}})

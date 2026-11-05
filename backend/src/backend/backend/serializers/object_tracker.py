@@ -498,7 +498,8 @@ class GTALinkParamsSerializer(StrictSerializer):
     max_k = serializers.IntegerField(required=False, min_value=1)
     use_connect = serializers.BooleanField(required=False)
     spatial_factor = serializers.FloatField(required=False, min_value=0.0)
-    merge_dist_thres = serializers.FloatField(required=False, min_value=0.0, max_value=2.0)
+    # at most 1: tracklets sharing a frame are 1 apart, and merging such a pair fails GTA-Link's spatial check
+    merge_dist_thres = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
 
 
 class InterpolationParamsSerializer(StrictSerializer):
