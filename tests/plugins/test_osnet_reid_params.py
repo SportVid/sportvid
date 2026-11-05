@@ -47,8 +47,9 @@ def test_checkpoint_follows_the_model():
 
 def test_checkpoints_exist_under_their_real_names():
     assert all(path.endswith(".pth.tar") for path in MODEL_CHECKPOINT.values())
-    s = OSNetReIdentificationSerializer(data={"object_tracker_id": TRACKER_RUN, "checkpoint": "/etc/passwd"})
-    assert not s.is_valid() and "checkpoint" in s.errors
+    for bad in ("/etc/passwd", "/models/reid/osnet_ain_ms_d_c.pt.tarh"):
+        s = OSNetReIdentificationSerializer(data={"object_tracker_id": TRACKER_RUN, "checkpoint": bad})
+        assert not s.is_valid() and "checkpoint" in s.errors, bad
 
 
 def test_reid_preset_replaces_model_name_and_checkpoint():

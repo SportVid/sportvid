@@ -1573,13 +1573,8 @@ const plugins = ref([
             text: t("modal.plugin.osnet_reid.model_name"),
           },
         ],
+        // no checkpoint parameter: the backend picks the file from model_name
         optional_parameters: [
-          {
-            field: "text_field",
-            name: "checkpoint",
-            value: "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
-            hidden: true,
-          },
           {
             field: "slider",
             min: 0.6,
@@ -1996,23 +1991,6 @@ watch(
   (galleryMode) => {
     for (const p of osnetReidOptionalParams.value) {
       if (PROTOS_ONLY_PARAMS.includes(p.name)) p.hidden = galleryMode !== "protos";
-    }
-  },
-  { immediate: true }
-);
-
-const MODEL_CHECKPOINT_MAP = {
-  osnet_x1_0: "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
-  osnet_ain_x1_0: "/models/reid/osnet_ain_ms_d_c.pt.tarh",
-  osnet_ibn_x1_0: "/models/reid/osnet_ibn_ms_d_c.pth.tar",
-};
-
-watch(
-  () => osnetReidParams.value.find((p) => p.name === "model_name")?.value,
-  (modelName) => {
-    const checkpointParam = osnetReidOptionalParams.value.find((p) => p.name === "checkpoint");
-    if (checkpointParam && modelName in MODEL_CHECKPOINT_MAP) {
-      checkpointParam.value = MODEL_CHECKPOINT_MAP[modelName];
     }
   },
   { immediate: true }

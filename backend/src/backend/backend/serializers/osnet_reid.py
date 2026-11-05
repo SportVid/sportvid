@@ -4,13 +4,13 @@ from .reid_models import REID_PRESET_CHOICES, REID_PRESETS, fit_crop_size, reid_
 
 
 # The embedding is a preset (reid_models.py, ``reid_preset``). Older clients name an architecture instead
-# (``model_name``, the MS+D+C OSNets) and send a checkpoint: both stay accepted, and validate() replaces the
+# (``model_name``, the MS+D+C OSNets) and may send a checkpoint: both stay accepted, and validate() replaces the
 # checkpoint with the preset's file (the weights are loaded strictly, so the file follows the model).
 MODEL_PRESET = {"osnet_x1_0": "osnet_x1_0", "osnet_ibn_x1_0": "osnet_ibn", "osnet_ain_x1_0": "osnet_ain"}
 MODEL_CHOICES = list(MODEL_PRESET)
 MODEL_CHECKPOINT = {name: REID_PRESETS[preset]["model_path"] for name, preset in MODEL_PRESET.items()}
-# every preset file, and the old, misspelt OSNet-AIN choice
-MODEL_CHECKPOINTS = sorted({p["model_path"] for p in REID_PRESETS.values()}) + ["/models/reid/osnet_ain_ms_d_c.pt.tarh"]
+# only the preset files are accepted
+MODEL_CHECKPOINTS = sorted({p["model_path"] for p in REID_PRESETS.values()})
 
 
 # Defaults: OSNet-AIN MS+D+C (the embedding the trackers and team_clustering use) and keep_tracker_binding. The frontend sends its own values for most fields (usePluginParams.js).

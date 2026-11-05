@@ -72,9 +72,9 @@ def test_detector_accepts_its_preset_checkpoint_explicitly(db, detector):
 
 
 @pytest.mark.parametrize("checkpoint", [
-    # the values frontend/src/composables/usePluginParams.js sends
+    # the MS+D+C OSNet files older clients send
     "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
-    "/models/reid/osnet_ain_ms_d_c.pt.tarh",
+    "/models/reid/osnet_ain_ms_d_c.pth.tar",
     "/models/reid/osnet_ibn_ms_d_c.pth.tar",
 ])
 def test_reid_accepts_frontend_checkpoints(world, checkpoint):
