@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 
 class Tracker(ABC):
-    """ Interface of the player trackers run by ``object_tracker`` .
+    """Interface of the player trackers run by ``object_tracker`` .
 
     - ``process`` tracks a sequence of frames and appends one ``track_frame`` dict per input frame to ``self.state``.
     - ``finalize`` runs once after the last frame: the offline refinements over the whole clip configured in the
@@ -16,21 +16,27 @@ class Tracker(ABC):
     """
 
     def __init__(self, tracker_params: Dict[Any, Any], device: str = "cuda", **kwargs):
-        import torch
-        self.device = device if torch.cuda.is_available() else "cpu"
+        if device != "cpu":
+            import torch
+
+            device = device if torch.cuda.is_available() else "cpu"
+        self.device = device
         self.tracker_params = dict(tracker_params)
         self.state: List[Dict[str, Any]] = list()
         self.frame_id = 0
         from .refine import build_refiners
-        self.gta_link, self.interpolation = build_refiners(self.tracker_params, self.device)
+
+        self.gta_link, self.interpolation = build_refiners(
+            self.tracker_params, self.device
+        )
 
     @abstractmethod
     def preprocess(self, inputs: Dict[Any, Any], **kwargs) -> Dict[Any, Any]:
-        """ Bring the detections into the format the tracker consumes. """
+        """Bring the detections into the format the tracker consumes."""
 
     @abstractmethod
     def process(self, inputs: Dict[Any, Any], **kwargs) -> List[Dict[str, Any]]:
-        """ Track the given frames; appends one ``track_frame`` per input frame to ``self.state``.
+        """Track the given frames; appends one ``track_frame`` per input frame to ``self.state``.
 
         Args: Dict[str, Any]
             'detections': per-frame lists of detector dicts ({'xyxy', 'xywh', 'cls_id', 'conf'})
@@ -39,8 +45,8 @@ class Tracker(ABC):
         """
 
     def finalize(self) -> List[Dict[str, Any]]:
-        """ Post-hoc refinement after the last frame (the caller runs it once). Replaces ``self.state`` with new
-        frame dicts: GTA-Link renumbers the track ids. """
+        """Post-hoc refinement after the last frame (the caller runs it once). Replaces ``self.state`` with new
+        frame dicts: GTA-Link renumbers the track ids."""
         if self.gta_link is not None:
             self.state = self.gta_link.refine(self.state)
         if self.interpolation is not None:
@@ -48,7 +54,7 @@ class Tracker(ABC):
         return self.state
 
     def _record(self, track_results: Dict[str, Any], frame=None) -> None:
-        """ Append one frame's tracks; ``frame`` (HWC uint8 RGB) lets GTA-Link embed the output boxes. """
+        """Append one frame's tracks; ``frame`` (HWC uint8 RGB) lets GTA-Link embed the output boxes."""
         self.state.append(track_results)
         if self.gta_link is not None:
             if frame is None:
@@ -64,7 +70,7 @@ class Tracker(ABC):
 
 
 def track_frame(frame_id: int, tlwhs, ids, scores) -> Dict[str, Any]:
-    """ One frame of the tracker state; boxes are tlwh in image pixels. """
+    """One frame of the tracker state; boxes are tlwh in image pixels."""
     return {
         "frame_id": frame_id,
         "track_ids": [int(i) for i in ids],
@@ -74,11 +80,13 @@ def track_frame(frame_id: int, tlwhs, ids, scores) -> Dict[str, Any]:
 
 
 def detections_xyxy_conf(frame_dets) -> np.ndarray:
-    """ One frame's detector dicts as (N, 5) [x1, y1, x2, y2, conf] in the detector's coordinate space. """
+    """One frame's detector dicts as (N, 5) [x1, y1, x2, y2, conf] in the detector's coordinate space."""
     if not frame_dets:
         # np.array([]) of an empty list comes out 1-D and breaks the hstack below
         return np.empty((0, 5), dtype=np.float64)
     # float64 like the arrays BYTETracker got before (float32 boxes promoted by the Python-float scores)
-    boxes = np.array([np.asarray(d['xyxy']).reshape(4) for d in frame_dets], dtype=np.float64)
-    scores = np.array([d['conf'] for d in frame_dets], dtype=np.float64)
+    boxes = np.array(
+        [np.asarray(d["xyxy"]).reshape(4) for d in frame_dets], dtype=np.float64
+    )
+    scores = np.array([d["conf"] for d in frame_dets], dtype=np.float64)
     return np.hstack([boxes, scores[:, np.newaxis]])
