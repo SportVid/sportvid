@@ -910,6 +910,10 @@ class Calibration(models.Model):
     lens_intrinsics = models.JSONField(blank=True, null=True)
     camera_pose = models.JSONField(blank=True, null=True)
     reprojection_error = models.FloatField(blank=True, null=True)
+    # Set when the homography was fitted on the raw (not undistorted) clicks because no lens could be used: why,
+    # as {"type", "message", "details"} (the shape of PluginRun.failure_reason, so the frontend translates both
+    # alike). Shown to the user as a hint that the calibration is probably less precise. Null with a lens.
+    lens_notice = models.JSONField(blank=True, null=True)
 
     class Meta: ordering = ["-date"]
 
@@ -928,6 +932,7 @@ class Calibration(models.Model):
             # null when the homography was fitted on the raw video coordinates
             "lens_model": lens.get("model"),
             "lens_profile_name": lens.get("lens_profile_name"),
+            "lens_notice": self.lens_notice,
             "camera_pose": self.camera_pose,
         }
 

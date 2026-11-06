@@ -142,27 +142,16 @@ class CalibrationStaticDlt(Task):
         )
 
         # with a lens the homography is fitted on undistorted video coordinates
+        self.lens_notice = None
         lens_intrinsics = self.lens_intrinsics(
             client, video_db, keypoints, field_length, field_width, sport, plugin_run
         )
         if lens_intrinsics is not None:
-            undistorted = undistort_with_snapshot(
-                [[p["src"]["x"], p["src"]["y"]] for p in point_correspondences_dict], lens_intrinsics
-            )
-            valid = []
-            for point, (x, y) in zip(point_correspondences_dict, undistorted):
-                # NaN: beyond the lens model's valid range
-                if x == x and y == y:
-                    point["src"] = {"x": float(x), "y": float(y)}
-                    valid.append(point)
-            if len(valid) < 4:
-                raise TaskFailure(
-                    "not_enough_points_after_undistortion",
-                    f"Only {len(valid)} placed point(s) lie within the lens model's valid range, at least 4 are needed",
-                    count=len(valid),
-                    required=4,
-                )
-            point_correspondences_dict = valid
+            try:
+                point_correspondences_dict = self.undistort_points(point_correspondences_dict, lens_intrinsics)
+            except TaskFailure as failure:
+                self.lens_notice = self.lens_unusable(failure, video_db, plugin_run)
+                lens_intrinsics = None
 
         # all parameters are serialized based on strings when calling run_analyser
         plugin_parameters = {
@@ -215,6 +204,7 @@ class CalibrationStaticDlt(Task):
                     lens_intrinsics=lens_intrinsics,
                     camera_pose=camera_pose,
                     reprojection_error=reprojection_error,
+                    lens_notice=self.lens_notice if lens_intrinsics is None else None,
                 )
                 data_db.apply_calibration(calibration)
                 logging.debug(f"Updated homography matrix {homography_matrix} for calibration asset {data_db.id}")
@@ -235,7 +225,40 @@ class CalibrationStaticDlt(Task):
         sport: Optional[str],
         plugin_run: Optional[PluginRun],
     ) -> Optional[Dict]:
-        """The lens the clicks are undistorted with before the homography fit: the video's lens profile, if any."""
+        """The lens the clicks are undistorted with before the homography fit: the video's lens profile, if any.
+
+        Returning None fits the homography on the raw clicks (pinhole); a subclass that does so because its lens
+        could not be determined sets ``self.lens_notice`` to say why (see ``lens_unusable``).
+        """
         if video_db is None or video_db.lens_profile is None:
             return None
         return lens_intrinsics_snapshot(video_db.lens_profile, video_db.width, video_db.height, crop=video_db.lens_crop)
+
+    @staticmethod
+    def undistort_points(point_correspondences: List[Dict], lens_intrinsics: Dict) -> List[Dict]:
+        """The correspondences with their video side undistorted with the lens, dropping the points beyond the lens
+        model's valid range. Raises TaskFailure when fewer than 4 remain. Doesn't modify its input."""
+        undistorted = undistort_with_snapshot(
+            [[p["src"]["x"], p["src"]["y"]] for p in point_correspondences], lens_intrinsics
+        )
+        valid = [
+            {**point, "src": {"x": float(x), "y": float(y)}}
+            for point, (x, y) in zip(point_correspondences, undistorted)
+            if x == x and y == y  # NaN: beyond the lens model's valid range
+        ]
+        if len(valid) < 4:
+            raise TaskFailure(
+                "not_enough_points_after_undistortion",
+                f"Only {len(valid)} placed point(s) lie within the lens model's valid range, at least 4 are needed",
+                count=len(valid),
+                required=4,
+            )
+        return valid
+
+    def lens_unusable(
+        self, failure: TaskFailure, video_db: Optional[Video], plugin_run: Optional[PluginRun]
+    ) -> Dict:
+        """Called when the lens can't be used for this fit. A subclass that would rather fit without lens correction
+        returns the ``lens_notice`` to record for it; a lens profile the user picked is not silently dropped, so
+        here the run fails."""
+        raise failure

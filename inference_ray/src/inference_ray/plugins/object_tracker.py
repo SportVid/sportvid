@@ -72,7 +72,9 @@ class ObjectTracker(
        (GTA-Link, interpolation);
     4. per-track class votes (``TrackClassMapper``) give each track its default team;
     5. ball tracking (``ball_tracker``: ``kalman``) over the whole clip, with the player tracks as kick hints;
-       without a ball tracker, or below its ``min_fps``, the candidates are written untracked;
+       without a ball tracker, or below its ``min_fps``, the candidates are written untracked. For the ball
+       tracker the camera motion is estimated in the detection loop (``camera_motion_params``,
+       ``tracker/camera_motion.py``, the player detector's boxes masked) and compensated if the camera moves;
     6. output: player tracks, the ball (entity id 0, team ``BALL``), and in detection-only runs (no tracker)
        the other detections untracked (entity id 0).
     """
@@ -90,11 +92,11 @@ class ObjectTracker(
         import json
         import time
         from collections import defaultdict
+        import numpy as np
         from .detector import (
             YoloX,
             YoloUltralytics,
             RFDetr,
-            RTDetr,
             SliceConfig,
             SlicedDetector,
         )
@@ -104,17 +106,22 @@ class ObjectTracker(
             BallTracker,
             TrackClassMapper
         )
+        from .tracker.camera_motion import CameraMotionEstimator
 
         DETECTOR_MAP = {
             "yolox": YoloX,
+            "yolox_l": YoloX,
+            "yolox_dancetrack": YoloX,
+            "yolox_sportsmot": YoloX,
             "yolox_sn_player": YoloX,
             "yolox_sn_ball": YoloX,
-            "yolo10": YoloUltralytics,
+            "yolox_sn_ball_zoom2": YoloX,
             "yolo11": YoloUltralytics,
-            "yolo12": YoloUltralytics,
-            "yolo26": YoloUltralytics,
+            "yolo11_l": YoloUltralytics,
+            "yolo11_sn_player": YoloUltralytics,
             "rfdetr": RFDetr,
-            "rtdetr": RTDetr,
+            "rfdetr_sn_player": RFDetr,
+            "rfdetr_sn_ball": RFDetr,
         }
         TRACKER_MAP = {
            "bytetrack": ByteTrack,
@@ -136,6 +143,24 @@ class ObjectTracker(
         ball_tracker_name = parameters.get("ball_tracker")
         out_cls_map = parameters["detector_params"]["output_class_mapping"]
         ball_cls_ids = entity_class_ids(out_cls_map, "ball")
+
+        # the ball tracker runs after the detection loop; it is built first because the camera motion it
+        # compensates is estimated inside the loop
+        ball_tracker = None
+        if _is_set(ball_tracker_name):
+            ball_tracker = BALL_TRACKER_MAP[ball_tracker_name](
+                tracker_params=parameters.get("ball_tracker_params") or {},
+                fps=fps,
+            )
+            if not ball_tracker.usable:
+                logging.warning(f"object_tracker: ball tracking off at {fps} fps (min_fps {ball_tracker.min_fps:g}): "
+                                f"the ball moves too far between frames; writing the ball candidates untracked.")
+                ball_tracker = None
+        camera = None
+        if ball_tracker is not None:
+            camera = CameraMotionEstimator(parameters.get("camera_motion_params") or {}, fps=fps)
+            if camera.mode == "off":
+                camera = None
 
         with inputs["video"] as input_data:
             with input_data.open_video() as f_video:
@@ -177,6 +202,10 @@ class ObjectTracker(
                     for detector in (self.detector, self.ball_detector):
                         if detector is not None:
                             detector.run_inference(detector.preprocess(_frame))
+                    if camera is not None:
+                        # every detection of the player detector is masked: it moves on its own
+                        camera.add(_frame["frame"], np.asarray(
+                            [d["xyxy"] for d in self.detector.state[-1]], dtype=np.float64).reshape(-1, 4))
                     if self.tracker:
                         # every detector reports boxes in frame pixels (detector contract)
                         frame_shape = tuple(int(v) for v in self.detector.frame_shape)
@@ -254,21 +283,13 @@ class ObjectTracker(
                     )
 
         # -------> 5) ball
-        ball_tracker = None
-        if _is_set(ball_tracker_name):
-            ball_tracker = BALL_TRACKER_MAP[ball_tracker_name](
-                tracker_params=parameters.get("ball_tracker_params") or {},
-                fps=fps,
-            )
-            if not ball_tracker.usable:
-                logging.warning(f"object_tracker: ball tracking off at {fps} fps (min_fps {ball_tracker.min_fps:g}): "
-                                f"the ball moves too far between frames; writing the ball candidates untracked.")
-                ball_tracker = None
         if ball_tracker is not None:
             ball_state = ball_tracker.process({
                 'detections': ball_dets,
                 'players': player_tlwhs,     # kick hints at the players' feet (none in a ball-only run)
                 'box_format': 'tlwh',
+                # None for a fixed camera (mode auto) or mode off
+                'camera_motion': camera.finalize() if camera is not None else None,
             })
             for frame_id, ball in enumerate(ball_state):
                 if ball["ball_box"] is None:

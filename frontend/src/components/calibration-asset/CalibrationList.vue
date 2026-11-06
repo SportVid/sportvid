@@ -19,7 +19,21 @@
           {{ isActive(calibration) ? "mdi-radiobox-marked" : "mdi-radiobox-blank" }}
         </v-icon>
       </template>
-      <v-list-item-title class="text-caption">{{ lensLabel(calibration) }}</v-list-item-title>
+      <v-list-item-title class="text-caption">
+        {{ lensLabel(calibration) }}
+        <!-- A lens_solve run that found no usable lens and fell back to a fit on the raw clicks -->
+        <v-tooltip v-if="calibration.lens_notice" location="top" max-width="360">
+          <template #activator="{ props: tooltipProps }">
+            <v-icon v-bind="tooltipProps" size="x-small" color="warning" class="ml-1">
+              mdi-alert-outline
+            </v-icon>
+          </template>
+          <div>{{ $t("calibration_asset.calibration.lens_notice") }}</div>
+          <div v-if="noticeReason(calibration)" class="mt-1">
+            {{ $t("calibration_asset.calibration.lens_notice_reason", { reason: noticeReason(calibration) }) }}
+          </div>
+        </v-tooltip>
+      </v-list-item-title>
       <v-list-item-subtitle class="text-caption">
         {{ detailsLabel(calibration) }}
       </v-list-item-subtitle>
@@ -46,7 +60,7 @@
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 
 const props = defineProps({
   // a calibration asset entry as the list endpoint returns it (needs "calibrations" and
@@ -73,6 +87,18 @@ const lensLabel = (calibration) => {
     });
   }
   return t("calibration_asset.calibration.no_lens");
+};
+
+// Why no lens was used, from the calibration's lens_notice {type, message, details} -- the same
+// shape and codes as a run's failure_reason, so the same translations apply (see ModalStatus.vue).
+// The solver's own explanation (details.reason) is only available in English.
+const noticeReason = (calibration) => {
+  const notice = calibration.lens_notice;
+  if (!notice) return null;
+  const key = `modal.plugin.failure.${notice.type}`;
+  const text = te(key) ? t(key, notice.details || {}) : notice.message;
+  const reason = notice.details?.reason;
+  return reason ? `${text} (${reason})` : text;
 };
 
 const detailsLabel = (calibration) => {

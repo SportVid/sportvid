@@ -1,27 +1,16 @@
 from rest_framework import serializers
 from backend.plugin_manager import PluginManager
+from .reid_models import REID_PRESET_CHOICES, REID_PRESETS, fit_crop_size, reid_amp
 
 
-MODEL_CHOICES = [
-    "osnet_x1_0", 
-    "osnet_ibn_x1_0", 
-    "osnet_ain_x1_0"
-]
-
-
-# the checkpoint of each architecture, trained on multiple sources for domain generalization (MS+D+C). The weights are
-# loaded strictly, so a checkpoint must fit its architecture: it follows from model_name.
-MODEL_CHECKPOINT = {
-    "osnet_x1_0": "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
-    "osnet_ibn_x1_0": "/models/reid/osnet_ibn_ms_d_c.pth.tar",
-    "osnet_ain_x1_0": "/models/reid/osnet_ain_ms_d_c.pth.tar",
-    # TODO: test sportsreid package:
-    # "/models/reid/model.osnet.pth.tar-10",
-    # "/models/reid/model.deit_s.pth.tar-16",
-    # "/models/reid/model_soup.deit_l.pth",
-}
-# the old, misspelt OSNet-AIN choice stays accepted for existing clients; validate() replaces every value
-MODEL_CHECKPOINTS = list(MODEL_CHECKPOINT.values()) + ["/models/reid/osnet_ain_ms_d_c.pt.tarh"]
+# The embedding is a preset (reid_models.py, ``reid_preset``). Older clients name an architecture instead
+# (``model_name``, the MS+D+C OSNets) and may send a checkpoint: both stay accepted, and validate() replaces the
+# checkpoint with the preset's file (the weights are loaded strictly, so the file follows the model).
+MODEL_PRESET = {"osnet_x1_0": "osnet_x1_0", "osnet_ibn_x1_0": "osnet_ibn", "osnet_ain_x1_0": "osnet_ain"}
+MODEL_CHOICES = list(MODEL_PRESET)
+MODEL_CHECKPOINT = {name: REID_PRESETS[preset]["model_path"] for name, preset in MODEL_PRESET.items()}
+# only the preset files are accepted
+MODEL_CHECKPOINTS = sorted({p["model_path"] for p in REID_PRESETS.values()})
 
 
 # Defaults: OSNet-AIN MS+D+C (the embedding the trackers and team_clustering use) and keep_tracker_binding. The frontend sends its own values for most fields (usePluginParams.js).
@@ -29,17 +18,29 @@ MODEL_CHECKPOINTS = list(MODEL_CHECKPOINT.values()) + ["/models/reid/osnet_ain_m
 class OSNetReIdentificationSerializer(serializers.Serializer):
     object_tracker_id = serializers.UUIDField(required=True)
 
+    # the embedding; when omitted, the preset of model_name
+    reid_preset = serializers.ChoiceField(
+        choices=REID_PRESET_CHOICES,
+        required=False,
+        default=None,
+        allow_null=True,
+    )
     model_name = serializers.ChoiceField(
         choices=MODEL_CHOICES,
         required=False,
         default="osnet_ain_x1_0",
     )
-    # Accepted for the frontend, which always sends osnet_x1_0's checkpoint (a hidden field), whatever model it
-    # selects; validate() replaces it with the model's own checkpoint.
+    # accepted for older clients; validate() replaces it with the preset's file
     checkpoint = serializers.ChoiceField(
         choices=MODEL_CHECKPOINTS,
         required=False,
         default=MODEL_CHECKPOINT["osnet_ain_x1_0"])
+    # fp16 autocast of the embeddings (CUDA only); null: the preset's setting
+    reid_amp = serializers.BooleanField(
+        required=False,
+        allow_null=True,
+        default=None,
+    )
     
     gallery_mode = serializers.ChoiceField(
         choices=['tracks', 'protos'],
@@ -150,7 +151,7 @@ class OSNetReIdentificationSerializer(serializers.Serializer):
         min_value=1,
     )
     
-    # NOTE: crop_size_x & crop_size_y need to be set according to the crop size used by the embedding model!
+    # the embedding's crop size; replaced by the model's fixed input for the DeiT / ViT presets
     crop_size_x = serializers.IntegerField(
         required=False,
         default=128,
@@ -189,5 +190,11 @@ class OSNetReIdentificationSerializer(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        attrs["checkpoint"] = MODEL_CHECKPOINT[attrs.get("model_name", "osnet_ain_x1_0")]
+        preset = attrs.get("reid_preset") or MODEL_PRESET[attrs.get("model_name", "osnet_ain_x1_0")]
+        attrs["reid_preset"] = preset
+        attrs["model_name"] = REID_PRESETS[preset]["model_name"]
+        attrs["checkpoint"] = REID_PRESETS[preset]["model_path"]
+        if attrs.get("reid_amp") is None:
+            attrs["reid_amp"] = reid_amp(preset)
+        fit_crop_size(attrs, attrs["model_name"])
         return attrs

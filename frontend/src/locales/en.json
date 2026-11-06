@@ -234,6 +234,8 @@
       "lens_profile": "Lens profile: {name}",
       "lens_solved": "Lens solved from the video",
       "no_lens": "No lens correction",
+      "lens_notice": "No suitable lens could be found, so the points were not undistorted before the calibration. The calibration is probably less precise, especially near the image edges.",
+      "lens_notice_reason": "Reason: {reason}",
       "error": "{value} m error",
       "error_unknown": "error unknown"
     },
@@ -837,6 +839,7 @@
         "unsupported_sport": "The lens calibration only supports soccer pitches, not “{sport}”.",
         "pitch_too_small": "A {field_length} × {field_width} m pitch is too small for the standard markings.",
         "camera_not_static": "The lens calibration needs a static camera (detected: {camera_motion}).",
+        "camera_motion_unknown": "The lens calibration needs a static camera, but the camera motion of this video has not been classified as static (yet).",
         "not_enough_keypoints": "At least {required} different keypoints are needed, got {count}.",
         "lens_solver_failed": "No lens could be fitted to this video."
       },
@@ -913,7 +916,8 @@
         "proximity_thresh": "ReID Proximity Threshold",
         "appearance_thresh": "ReID Appearance Threshold",
         "gta_link_enabled": "GTA-Link Refinement (split / merge tracklets)",
-        "interpolation_enabled": "Interpolate Short Gaps"
+        "interpolation_enabled": "Interpolate Short Gaps",
+        "reid_preset": "Appearance model (ReID)"
       },
       "team_clustering": {
         "plugin_name": "Team Assignment",
@@ -950,7 +954,8 @@
         "crop_x1_offset": "Crop Offset Left",
         "crop_y1_offset": "Crop Offset Top",
         "crop_x2_offset": "Crop Offset Right",
-        "crop_y2_offset": "Crop Offset Bottom"
+        "crop_y2_offset": "Crop Offset Bottom",
+        "reid_preset": "Appearance model (ReID)"
       },
       "osnet_reid": {
         "plugin_name": "Re-Identification (OSNet)",
@@ -975,11 +980,12 @@
         "crop_x1_offset": "Crop Offset Left",
         "crop_y1_offset": "Crop Offset Top",
         "crop_x2_offset": "Crop Offset Right",
-        "crop_y2_offset": "Crop Offset Bottom"
+        "crop_y2_offset": "Crop Offset Bottom",
+        "reid_preset": "Appearance model (ReID)"
       },
       "calibration": {
         "plugin_name": "Camera Calibration",
-        "plugin_description": "Calibrates the camera for this video from the annotated landmarks of a calibration asset. Which calibration runs follows from the camera and lens below: with a lens profile the landmarks are undistorted with it, without one the lens is solved from the video itself."
+        "plugin_description": "Calibrates the camera for this video from the annotated landmarks of a calibration asset. Which calibration runs follows from the lens below: with a lens profile the landmarks are undistorted with it, without one the lens is solved from the video itself. If no suitable lens can be found that way, the calibration is fitted without lens correction and marked accordingly, as it is probably less precise."
       },
       "calibration_static_dlt": {
         "plugin_name": "DLT+RANSAC from annotated landmarks",
@@ -990,7 +996,7 @@
       },
       "calibration_lens_solve": {
         "plugin_name": "Lens self-calibration + DLT from annotated landmarks",
-        "plugin_description": "Estimates the lens distortion of a static camera from the video itself: the annotated landmarks plus the field markings painted around them, without needing a lens profile. The homography is then fitted on the undistorted landmarks. Needs a static camera and at least 6 annotated landmarks spread over the image.",
+        "plugin_description": "Estimates the lens distortion of a static camera from the video itself: the annotated landmarks plus the field markings painted around them, without needing a lens profile. The homography is then fitted on the undistorted landmarks. Needs a static camera and at least 6 annotated landmarks spread over the image; otherwise the homography is fitted on the landmarks without lens correction and the calibration is marked accordingly.",
         "calibration_id_hint": "Select a calibration asset whose landmarks are placed on the field template.",
         "num_frames": "Frames",
         "num_frames_hint": "Number of frames sampled across the video to detect the field markings in.",

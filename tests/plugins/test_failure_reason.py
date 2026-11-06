@@ -136,14 +136,24 @@ def test_lens_solver_needs_enough_keypoints(video, grpc_settings):
     ],
 )
 def test_lens_solver_falls_back_instead_of_failing(video, motion, sport, keypoints, grpc_settings):
-    """What the solver needs and doesn't get doesn't fail the run: lens_intrinsics returns the inherited
-    lens (here none, the video has no profile), so the homography is fitted without undistortion."""
+    """What the solver needs and doesn't get doesn't fail the run: lens_intrinsics returns no lens, so the
+    homography is fitted without undistortion, and the reason is kept as the calibration's lens_notice."""
     from backend.tasks.calibration_lens_solve import CalibrationLensSolve
 
     video.camera_motion = motion
-    assert (
-        CalibrationLensSolve().lens_intrinsics(None, video, keypoints, 105.0, 68.0, sport, None) is None
-    )
+    task = CalibrationLensSolve()
+    assert task.lens_intrinsics(None, video, keypoints, 105.0, 68.0, sport, None) is None
+    assert task.lens_notice["type"] in ("camera_not_static", "unsupported_sport", "not_enough_keypoints")
+
+
+@pytest.mark.parametrize("motion", [Video.CAMERA_MOTION_UNKNOWN, None])
+def test_lens_solver_needs_a_classified_static_camera(video, motion, grpc_settings):
+    from backend.tasks.calibration_lens_solve import CalibrationLensSolve
+
+    video.camera_motion = motion
+    with pytest.raises(TaskFailure) as failure:
+        CalibrationLensSolve().solve_lens(None, video, keypoints(6), 105.0, 68.0, "soccer", None)
+    assert failure.value.type == "camera_motion_unknown"
 
 
 def test_analyser_timeout_records_its_reason(video, settings, monkeypatch):

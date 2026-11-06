@@ -130,10 +130,12 @@ import { useTutorialStore } from "@/stores/tutorial";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePositionDataStore } from "@/stores/position_data";
 import {
+  DEFAULT_PLAYER_DETECTOR,
   OBJECT_TRACKER_TRACKER_ITEMS,
   PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS,
   deepEiouTrackerFields,
   defaultObjectTrackerFps,
+  reidPresetField,
   setGroupedValue,
   objectTrackerClasses,
   watchObjectTrackerSelection,
@@ -1072,7 +1074,7 @@ const plugins = ref([
           {
             field: "select_options",
             name: "detector",
-            value: "yolox",
+            value: DEFAULT_PLAYER_DETECTOR,
             items: PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS,
             text: t("modal.plugin.object_tracker.detector"),
           },
@@ -1179,10 +1181,10 @@ const plugins = ref([
           },
           {
             field: "slider",
-            min: 56,
-            max: 1400,
-            value: 1288,
-            step: 56,
+            min: 320,
+            max: 1920,
+            value: 1280, // set per RF-DETR preset (usePluginParams DETECTOR_PARAM_DEFAULTS)
+            step: 32,
             name: "resolution",
             text: t("modal.plugin.object_tracker.resolution"),
             group: "detector_params",
@@ -1292,6 +1294,7 @@ const plugins = ref([
           },
         ],
         optional_parameters: [
+          reidPresetField(t, "modal.plugin.team_clustering.reid_preset"),
           {
             field: "slider",
             min: 1,
@@ -1570,13 +1573,8 @@ const plugins = ref([
             text: t("modal.plugin.osnet_reid.model_name"),
           },
         ],
+        // no checkpoint parameter: the backend picks the file from model_name
         optional_parameters: [
-          {
-            field: "text_field",
-            name: "checkpoint",
-            value: "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
-            hidden: true,
-          },
           {
             field: "slider",
             min: 0.6,
@@ -1993,23 +1991,6 @@ watch(
   (galleryMode) => {
     for (const p of osnetReidOptionalParams.value) {
       if (PROTOS_ONLY_PARAMS.includes(p.name)) p.hidden = galleryMode !== "protos";
-    }
-  },
-  { immediate: true }
-);
-
-const MODEL_CHECKPOINT_MAP = {
-  osnet_x1_0: "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
-  osnet_ain_x1_0: "/models/reid/osnet_ain_ms_d_c.pt.tarh",
-  osnet_ibn_x1_0: "/models/reid/osnet_ibn_ms_d_c.pth.tar",
-};
-
-watch(
-  () => osnetReidParams.value.find((p) => p.name === "model_name")?.value,
-  (modelName) => {
-    const checkpointParam = osnetReidOptionalParams.value.find((p) => p.name === "checkpoint");
-    if (checkpointParam && modelName in MODEL_CHECKPOINT_MAP) {
-      checkpointParam.value = MODEL_CHECKPOINT_MAP[modelName];
     }
   },
   { immediate: true }

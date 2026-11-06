@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from backend.plugin_manager import PluginManager
-from .object_tracker import REID_MODEL
+from .reid_models import DEFAULT_REID_PRESET, REID_PRESET_CHOICES, fit_crop_size, reid_amp, reid_model
 
 
 CLUSTERING_ALGORITHM_CHOICE = ["KMEANS", "HDBSCAN"]
@@ -67,9 +67,17 @@ class TeamClusteringSeriaizer(serializers.Serializer):
         required=False,
         default=True
     )
+    # the embedding (reid_models.py); its model file is fixed per preset
+    reid_preset = serializers.ChoiceField(
+        choices=REID_PRESET_CHOICES,
+        required=False,
+        default=DEFAULT_REID_PRESET
+    )
+    # fp16 autocast of the embeddings (CUDA only); null: the preset's setting
     reid_amp = serializers.BooleanField(
         required=False,
-        default=False
+        allow_null=True,
+        default=None
     )
     # number depends on number of detections in the video
     min_cluster_size = serializers.IntegerField(
@@ -200,7 +208,7 @@ class TeamClusteringSeriaizer(serializers.Serializer):
         default=True
     )
 
-    # NOTE: crop_size_x & crop_size_y need to be set according to the crop size used by the embedding model!
+    # the embedding's crop size; replaced by the model's fixed input for the DeiT / ViT presets
     crop_size_x = serializers.IntegerField(
         required=False,
         default=128,
@@ -243,5 +251,9 @@ class TeamClusteringSeriaizer(serializers.Serializer):
         if attrs.get("clustering_algo", "KMEANS") == "KMEANS" and attrs.get("num_teams", 2) > attrs.get("K", 3):
             raise serializers.ValidationError({"num_teams": "num_teams must not exceed K."})
         # the embedding model is a fixed preset: a client never chooses a model file
-        attrs["reid_model"] = dict(REID_MODEL)
+        preset = attrs.get("reid_preset", DEFAULT_REID_PRESET)
+        attrs["reid_model"] = reid_model(preset)
+        if attrs.get("reid_amp") is None:
+            attrs["reid_amp"] = reid_amp(preset)
+        fit_crop_size(attrs, attrs["reid_model"]["model_name"])
         return attrs

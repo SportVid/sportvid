@@ -53,7 +53,8 @@ def _validate(plugin, parameters):
     return PluginManager.validate_parameters(plugin, parameters)
 
 
-@pytest.mark.parametrize("detector", ["yolox", "yolo10", "yolo11", "yolo12", "yolo26", "rfdetr", "rtdetr"])
+@pytest.mark.parametrize("detector", ["yolox", "yolox_dancetrack", "yolox_sportsmot", "yolox_sn_player", "yolo11",
+                                      "yolo11_sn_player", "rfdetr", "rfdetr_sn_player"])
 def test_detector_presets_validate(db, detector):
     from backend.serializers.object_tracker import DETECTOR_DEFAULTS
 
@@ -61,7 +62,7 @@ def test_detector_presets_validate(db, detector):
     assert params["detector_params"]["checkpoint"] == DETECTOR_DEFAULTS[detector]["checkpoint"]
 
 
-@pytest.mark.parametrize("detector", ["yolo11", "rfdetr", "rtdetr"])
+@pytest.mark.parametrize("detector", ["yolo11", "rfdetr", "rfdetr_sn_ball"])
 def test_detector_accepts_its_preset_checkpoint_explicitly(db, detector):
     from backend.serializers.object_tracker import DETECTOR_DEFAULTS
 
@@ -71,9 +72,9 @@ def test_detector_accepts_its_preset_checkpoint_explicitly(db, detector):
 
 
 @pytest.mark.parametrize("checkpoint", [
-    # the values frontend/src/composables/usePluginParams.js sends
+    # the MS+D+C OSNet files older clients send
     "/models/reid/osnet_x1_0_ms_d_c.pth.tar",
-    "/models/reid/osnet_ain_ms_d_c.pt.tarh",
+    "/models/reid/osnet_ain_ms_d_c.pth.tar",
     "/models/reid/osnet_ibn_ms_d_c.pth.tar",
 ])
 def test_reid_accepts_frontend_checkpoints(world, checkpoint):

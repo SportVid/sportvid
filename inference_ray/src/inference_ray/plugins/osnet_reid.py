@@ -92,7 +92,8 @@ class OSNetReID(
         match_threshold = float(cfg.get("match_thresh", cfg.get("match_threshold", 0.6)))
         max_missed = int(cfg.get("max_missed", 150))
 
-        self.encoder = ReIDEncoder(checkpoint, self.device, model_name=model_name)
+        self.encoder = ReIDEncoder(checkpoint, self.device, model_name=model_name,
+                                   amp=bool(cfg.get("reid_amp", False)))
         self.global_id_manager = None
         self.tracker_binding = {}  # tracks mode: tracker id -> its last global id
         if self.gallery_mode == "tracks":

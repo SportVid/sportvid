@@ -6,21 +6,6 @@ from PIL import Image
 from typing import Any, Dict
 
 
-MERGED_CLASS_IDs = {
-    0: 0,  # ball -> ball
-    1: 1,  # player -> player
-    2: 1,  # referee -> player
-    3: 1,  # goalkeeper -> player
-}
-
-CLASS_MAP = {
-    "ball" : 0,
-    "player" : 1,
-    "referee": 2,
-    "goalkeeper": 3
-}
-
-
 @staticmethod
 def xyxy_to_xywh(xyxy):
     xyxy = np.asarray(xyxy)
@@ -47,16 +32,9 @@ class RFDetr():
         
         self.detector_params = detector_params
     
-        # NOTE: classes may be given as names (see CLASS_MAP) or as raw class ids.
+        # raw class ids of the checkpoint (COCO category ids for the COCO model, 0 for a single-class fine-tune)
         self.classes = detector_params.get('classes', [])
-        self.classes_to_detect = []
-        for c in self.classes:
-            if isinstance(c, str):
-                if c not in CLASS_MAP:
-                    raise RuntimeError(f"Unknown RF-DETR class '{c}', expected one of {list(CLASS_MAP)}.")
-                c = CLASS_MAP[c]
-            if int(c) not in self.classes_to_detect:
-                self.classes_to_detect.append(int(c))
+        self.classes_to_detect = list(dict.fromkeys(int(c) for c in self.classes))
         self.num_classes = len(self.classes_to_detect)
         if self.num_classes == 0:
             raise RuntimeError("Expected at least 1 class to detect, please check the 'classes' args.")

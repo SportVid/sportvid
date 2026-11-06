@@ -16,7 +16,7 @@ ATTACKER_VALUES = [
 
 
 @pytest.mark.parametrize("value", ATTACKER_VALUES)
-@pytest.mark.parametrize("detector", ["yolo11", "rfdetr", "rtdetr"])
+@pytest.mark.parametrize("detector", ["yolox_sn_player", "yolo11", "yolo11_sn_player", "rfdetr", "rfdetr_sn_ball"])
 def test_detector_rejects_non_preset_checkpoint(db, detector, value):
     with pytest.raises(serializers.ValidationError):
         PluginManager.validate_parameters("object_tracker", {"detector": detector, "detector_params": {"checkpoint": value}})
