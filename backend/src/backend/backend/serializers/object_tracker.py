@@ -307,6 +307,7 @@ BALL_DETECTOR_CHOICES = list(BALL_DETECTOR_OVERRIDES)
 default_kalman_ball_params = {
     "min_conf": 0.10,  # candidates below are ignored
     "init_conf": 0.40,  # confidence needed to (re)acquire the ball
+    "linking": "global",  # global: tracklets + one best path over the clip | online: frame by frame
     "gate_px": 60.0,  # association radius around the predicted position (px / frame)
     "gate_growth_px": 20.0,  # + per frame without a match, scaled by the candidate's confidence
     "max_missed": 15,  # frames without a match before the track is dropped
@@ -326,16 +327,57 @@ default_kalman_ball_params = {
     "min_move_px": 20.0,  # "moving": distance covered along the longest recent smooth run
     "tentative_resid_px": 6.0,  # ... which must fit a constant-velocity line within this RMS (px)
     "tentative_skip_body": 0.75,  # provisional tracks ignore weak candidates on the upper part of a player box
+    # global linking
+    "tracklet_max_missed": 5,  # a tracklet ends after this many frames without a match
+    "min_tracklet_len": 2,  # shorter tracklets without a confident detection are discarded
+    "link_max_gap": 60,  # continuation link (same segment): at most this many frames between tracklets
+    "link_trim_max": 3,  # a continuation may drop this many weak trailing detections of its predecessor
+    "resume_max_gap": 900,  # resume link (ball at rest where it was lost): at most this many frames
+    "det_reward": 2.0,  # path score per detection
+    "miss_cost": 0.2,  # path cost per frame of a continuation gap
+    "resume_cost": 3.0,  # path cost of a resume link
+    "birth_cost": 6.0,  # path cost of starting a new segment elsewhere
+    "lr_scale": 2.0,  # weight of the detection confidence (log-likelihood ratio, neutral at init_conf)
+    "support_sigma_px": 60.0,  # a short, unconfirmed tracklet is linked only where the prediction is this precise
+    "motion_model": "cwna",  # cwna: continuous white-noise acceleration | pwca: piecewise-constant per frame
     "accel_px": 4.0,  # Kalman process noise: ball acceleration std (px / frame^2)
     "meas_px": 2.0,  # Kalman measurement noise of a conf=1 detection (px), scales with 1 / conf
+    "cam_fail_px": 20.0,  # with camera motion: extra position std (px / frame) where its estimate failed
     "static_filter": True,  # drop ball candidates that never move (cones, spare balls, markings)
     "static_radius_px": 12.0,  # "same spot": within this radius
-    "static_min_hits": 60,  # ... for at least this many frames
-    "static_min_span": 150,  # ... spanning more than this many frames
+    "static_min_hits": 60,  # ... in at least this many frames
+    "static_min_span": 150,  # ... spanning at least this many frames
+    "static_cooccur": 0.0,  # > 0: drop a static spot only if another candidate is seen in this share of its frames
+    "static_cooccur_conf": 0.25,  # ... with at least this confidence
     "min_fps": 10.0,  # below this decoding rate the ball is not tracked
 }
 
 BALL_TRACKER_DEFAULTS = {"kalman": default_kalman_ball_params}
+
+# Camera motion for the ball tracker (inference_ray plugins/tracker/camera_motion.py): estimated in the detection
+# loop, compensated by the ball tracker if the camera moves. Frame-based values are given at 30 fps.
+default_camera_motion_params = {
+    "mode": "auto",  # auto: pass the motion on only if the camera moves | on: always | off: skip the estimation
+    "static_px": 0.5,  # auto: a step "moves" if the image corners shift by more than this (px) ...
+    "moving_share": 0.02,  # ... and the camera moves if at least this share of the steps does
+    "features": "klt",  # klt: corners tracked by optical flow | orb: descriptor matching
+    "model": "auto",  # auto: similarity, or a homography where it explains clearly more point pairs
+    "auto_margin": 0.1,  # auto: the homography needs this many more inliers (relative)
+    "scale": 1.0,  # image scale for the points
+    "max_corners": 2000,  # klt
+    "min_distance": 8.0,  # klt: px at scale, between corners
+    "fb_px": 1.0,  # klt: forward-backward limit (px at scale)
+    "win": 21,  # klt: Lucas-Kanade window (px)
+    "levels": 4,  # klt: Lucas-Kanade pyramid levels
+    "max_features": 3000,  # orb
+    "ratio": 0.75,  # orb: Lowe's ratio test
+    "ransac_px": 3.0,  # RANSAC reprojection threshold (full-resolution px)
+    "min_inliers": 30,
+    "min_inlier_share": 0.25,
+    "max_step": 0.1,  # largest plausible corner motion per frame, as a fraction of the image diagonal
+    "max_scale_step": 0.05,  # largest plausible zoom per frame (relative)
+    "box_margin": 0.15,  # masked detection boxes grow by this share of their size
+}
 
 
 class StrictSerializer(serializers.Serializer):
@@ -579,6 +621,7 @@ TRACKER_PARAM_SERIALIZERS = {
 class KalmanBallTrackerParamsSerializer(serializers.Serializer):
     min_conf = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     init_conf = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    linking = serializers.ChoiceField(choices=["global", "online"], required=False)
     gate_px = serializers.FloatField(required=False, min_value=0.0)
     gate_growth_px = serializers.FloatField(required=False, min_value=0.0)
     max_missed = serializers.IntegerField(required=False, min_value=1)
@@ -600,12 +643,27 @@ class KalmanBallTrackerParamsSerializer(serializers.Serializer):
     tentative_skip_body = serializers.FloatField(
         required=False, min_value=0.0, max_value=1.0
     )
+    tracklet_max_missed = serializers.IntegerField(required=False, min_value=1)
+    min_tracklet_len = serializers.IntegerField(required=False, min_value=1)
+    link_max_gap = serializers.IntegerField(required=False, min_value=1)
+    link_trim_max = serializers.IntegerField(required=False, min_value=0)
+    resume_max_gap = serializers.IntegerField(required=False, min_value=1)
+    det_reward = serializers.FloatField(required=False, min_value=0.0)
+    miss_cost = serializers.FloatField(required=False, min_value=0.0)
+    resume_cost = serializers.FloatField(required=False, min_value=0.0)
+    birth_cost = serializers.FloatField(required=False, min_value=0.0)
+    lr_scale = serializers.FloatField(required=False, min_value=0.0)
+    support_sigma_px = serializers.FloatField(required=False, min_value=0.0)
+    motion_model = serializers.ChoiceField(choices=["cwna", "pwca"], required=False)
     accel_px = serializers.FloatField(required=False, min_value=0.0)
     meas_px = serializers.FloatField(required=False, min_value=1e-6)
+    cam_fail_px = serializers.FloatField(required=False, min_value=0.0)
     static_filter = serializers.BooleanField(required=False)
     static_radius_px = serializers.FloatField(required=False, min_value=0.0)
     static_min_hits = serializers.IntegerField(required=False, min_value=1)
     static_min_span = serializers.IntegerField(required=False, min_value=1)
+    static_cooccur = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    static_cooccur_conf = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     min_fps = serializers.FloatField(required=False, min_value=1.0)
 
     def to_internal_value(self, data):
@@ -625,6 +683,31 @@ class KalmanBallTrackerParamsSerializer(serializers.Serializer):
                 {"init_conf": ["init_conf must be greater than min_conf."]}
             )
         return attrs
+
+
+class CameraMotionParamsSerializer(StrictSerializer):
+    mode = serializers.ChoiceField(choices=["auto", "on", "off"], required=False)
+    static_px = serializers.FloatField(required=False, min_value=0.0)
+    moving_share = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    features = serializers.ChoiceField(choices=["klt", "orb"], required=False)
+    model = serializers.ChoiceField(
+        choices=["auto", "homography", "affine", "similarity"], required=False
+    )
+    auto_margin = serializers.FloatField(required=False, min_value=0.0)
+    scale = serializers.FloatField(required=False, min_value=0.1, max_value=1.0)
+    max_corners = serializers.IntegerField(required=False, min_value=8)
+    min_distance = serializers.FloatField(required=False, min_value=1.0)
+    fb_px = serializers.FloatField(required=False, min_value=0.0)
+    win = serializers.IntegerField(required=False, min_value=3)
+    levels = serializers.IntegerField(required=False, min_value=0, max_value=8)
+    max_features = serializers.IntegerField(required=False, min_value=8)
+    ratio = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    ransac_px = serializers.FloatField(required=False, min_value=0.0)
+    min_inliers = serializers.IntegerField(required=False, min_value=4)
+    min_inlier_share = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    max_step = serializers.FloatField(required=False, min_value=0.0)
+    max_scale_step = serializers.FloatField(required=False, min_value=0.0)
+    box_margin = serializers.FloatField(required=False, min_value=0.0)
 
 
 @PluginManager.export_serializer("object_tracker")
@@ -663,6 +746,8 @@ class ObjectTrackerSerializer(serializers.Serializer):
     ball_tracker_params = KalmanBallTrackerParamsSerializer(
         required=False, default=dict
     )
+    # validated in validate(): merged with default_camera_motion_params; only used with a ball tracker
+    camera_motion_params = serializers.DictField(required=False, default=dict)
 
     def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
         detector = data.get("detector", DEFAULT_DETECTOR)
@@ -746,6 +831,25 @@ class ObjectTrackerSerializer(serializers.Serializer):
                 )
             data["ball_tracker"] = None
             data["ball_tracker_params"] = {}
+
+        camera_motion_params = data.get("camera_motion_params", {})
+        if data["ball_tracker"] is not None:
+            data["camera_motion_params"] = {
+                **default_camera_motion_params,
+                **self._validated_group(
+                    "camera_motion_params", CameraMotionParamsSerializer, camera_motion_params
+                ),
+            }
+        else:
+            if camera_motion_params:
+                raise serializers.ValidationError(
+                    {
+                        "camera_motion_params": [
+                            "camera_motion_params cannot be provided when ball_tracker is null."
+                        ]
+                    }
+                )
+            data["camera_motion_params"] = {}
 
         return data
 

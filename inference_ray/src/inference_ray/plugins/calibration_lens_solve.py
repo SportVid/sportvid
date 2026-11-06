@@ -43,13 +43,15 @@ class CalibrationLensSolve(
     AnalyserPlugin,
     config=default_config,
     parameters=default_parameters,
-    version="0.1",
+    version="0.2",
     requires=requires,
     provides=provides,
 ):
     """Self-calibrates the lens distortion of a static camera from clicked pitch keypoints and the painted pitch
     markings (prior-free angular-polynomial solver, see inference_ray/calib). Returns the lens in
-    physical units as JSON, with the solver rounds, the pose fit under the lens and the frames used."""
+    physical units as JSON, with the solver rounds, the pose fit under the lens and the frames used.
+
+    When the solver finds no usable lens, the JSON carries ``failure`` ({"type", "message"}) instead of a lens."""
 
     def __init__(self, config=None, **kwargs):
         super().__init__(config, **kwargs)
@@ -105,10 +107,26 @@ class CalibrationLensSolve(
             "outlier_px": float(parameters.get("outlier_px")),
             "first_round_outlier_px": float(parameters.get("first_round_outlier_px")),
         }
-        result = calibrate(
-            frames, raw, pitch_xy, SoccerPitch(length, width), rect, solver_params,
-            progress=lambda p: self.update_callbacks(callbacks, progress=0.1 + 0.85 * p),
-        )
+        try:
+            result = calibrate(
+                frames, raw, pitch_xy, SoccerPitch(length, width), rect, solver_params,
+                progress=lambda p: self.update_callbacks(callbacks, progress=0.1 + 0.85 * p),
+            )
+        except ValueError as e:
+            # The solver's ValueErrors are its "no usable lens from this input" outcomes (no markings found,
+            # no physical pose, a lens that constrains too little, ...). They are reported as a result, not
+            # raised: the backend task falls back to a fit without lens correction and tells the user why,
+            # and a raised error would mark the plugin run as failed while that fallback still runs.
+            logger.warning(f"Lens solver: no usable lens ({e})")
+            with data_manager.create_data("StringData") as output_data:
+                output_data.text = json.dumps({
+                    "failure": {"type": "lens_solver_failed", "message": str(e)},
+                    "frame_size": [frame_w, frame_h],
+                    "keypoints": [k["name"] for k in keypoints],
+                    "parameters": solver_params,
+                })
+                self.update_callbacks(callbacks, progress=1.0)
+                return {"lens": output_data}
         # camera position in sportvid's frame: metres from the lower-left corner, height above the pitch
         cx, cy, cz = result["pose"].pop("camera_position")
         result["pose"]["position"] = {"x": cx + length / 2.0, "y": width / 2.0 - cy}

@@ -5,6 +5,7 @@ from backend.serializers.object_tracker import (
     ObjectTrackerSerializer,
     DETECTOR_CHOICES,
     DETECTOR_DEFAULTS,
+    default_camera_motion_params,
     default_kalman_ball_params,
 )
 
@@ -37,6 +38,7 @@ def test_ui_player_run_gets_the_kalman_ball_tracker_and_no_ball_detector():
     assert data["ball_detector"] is None and data["ball_detector_params"] == {}
     assert data["ball_tracker"] == "kalman"
     assert data["ball_tracker_params"] == default_kalman_ball_params
+    assert data["camera_motion_params"] == default_camera_motion_params
 
 
 def test_ui_ball_run_without_tracker():
@@ -288,3 +290,21 @@ def test_gta_link_merge_threshold_is_at_most_one():
     params = {"detector": "yolox", "tracker": "deep_eiou"}
     assert validate({**params, "tracker_params": {"gta_link": {"merge_dist_thres": 1.0}}})
     assert "tracker_params" in errors({**params, "tracker_params": {"gta_link": {"merge_dist_thres": 1.2}}})
+
+
+def test_camera_motion_params_are_merged_with_the_defaults():
+    data = validate({"detector": "rfdetr", "camera_motion_params": {"features": "orb", "mode": "on"}})
+    p = data["camera_motion_params"]
+    assert p["features"] == "orb" and p["mode"] == "on" and p["fb_px"] == default_camera_motion_params["fb_px"]
+
+
+def test_camera_motion_params_are_validated():
+    for bad in ({"features": "sift"}, {"mode": "always"}, {"scale": 2.0}, {"fb": 1.0}):
+        assert "camera_motion_params" in errors({"detector": "rfdetr", "camera_motion_params": bad})
+
+
+def test_camera_motion_params_need_a_ball_tracker():
+    data = validate({"detector": "rfdetr", "ball_tracker": None})
+    assert data["camera_motion_params"] == {}
+    assert "camera_motion_params" in errors({"detector": "rfdetr", "ball_tracker": None,
+                                             "camera_motion_params": {"mode": "on"}})

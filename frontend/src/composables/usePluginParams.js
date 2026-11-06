@@ -1102,10 +1102,11 @@ export function osnetReidParams() {
 }
 
 // The two calibration plugins, in the order the rule below prefers them. There is no method
-// picker: which one runs follows from the lens profile picked for the video and its camera motion
-// (the solver needs a static camera), and the lens solver
-// falls back to the plain DLT inside the backend task when it cannot solve a lens (see
-// tasks/calibration_lens_solve.py's lens_intrinsics), so there is nothing left to choose.
+// picker: which one runs follows from whether a lens profile is picked for the video. Without one
+// the lens solver runs, and the backend task decides whether it can (static camera, enough
+// landmarks, ...) and falls back to the plain DLT on the raw landmarks when it cannot solve a lens,
+// flagging the calibration with a lens_notice (see tasks/calibration_lens_solve.py's
+// lens_intrinsics), so there is nothing left to choose.
 export const CALIBRATION_METHODS = ["calibration_static_dlt", "calibration_lens_solve"];
 
 // Writes the lens profile a calibrationParams set has picked onto the video. The hosts call this
@@ -1171,25 +1172,13 @@ export function calibrationParams() {
       : (playerStore.video?.lens_profile_id ?? null)
   );
 
-  // The lens solver detects the painted markings in frames sampled across the whole video, so it
-  // only makes sense for a camera that stands still. video.camera_motion is set by the
-  // camera_motion_classification run the backend starts after every upload; anything but a
-  // confirmed "static" (pan/zoom, "unknown", or not classified yet) keeps the solver out. The
-  // gallery store's entry is read first: the live event stream updates it ("video.update") when
-  // the classification lands, the player's copy only on its next fetch.
-  const videoStore = useVideoStore();
-  const cameraStatic = computed(() => {
-    const id = playerStore.video?.id;
-    const video = (id && videoStore.get(id)) || playerStore.video;
-    return video?.camera_motion === "static";
-  });
-
   // The rule: with a lens profile the clicked points are undistorted with it, without one the
-  // lens is solved from the video -- if the camera is static. Everything else the solver needs
-  // (enough landmarks, a pitch model for the sport) is the backend's business -- it falls back
-  // to the plain DLT fit on its own, so the choice here is not second-guessed.
+  // lens is solved from the video. Everything the solver needs (a static camera, enough landmarks,
+  // a pitch model for the sport) is the backend's business -- it falls back to the plain DLT fit
+  // without lens correction on its own and tells the user so on the calibration, so the choice here
+  // is not second-guessed.
   const plugin = computed(() =>
-    !lensProfileId.value && cameraStatic.value && canRun("calibration_lens_solve")
+    !lensProfileId.value && canRun("calibration_lens_solve")
       ? "calibration_lens_solve"
       : "calibration_static_dlt"
   );

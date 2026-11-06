@@ -199,6 +199,8 @@
       "lens_profile": "Objektivprofil: {name}",
       "lens_solved": "Objektiv aus dem Video gelöst",
       "no_lens": "Ohne Entzerrung",
+      "lens_notice": "Es konnte keine passende Linse gefunden werden, die Punkte wurden vor der Kalibrierung daher nicht entzerrt. Die Kalibrierung ist wahrscheinlich ungenauer, besonders zu den Bildrändern hin.",
+      "lens_notice_reason": "Grund: {reason}",
       "error": "{value} m Fehler",
       "error_unknown": "Fehler unbekannt"
     },
@@ -701,6 +703,7 @@
         "unsupported_sport": "Die Linsenkalibrierung unterstützt nur Fußballfelder, nicht „{sport}“.",
         "pitch_too_small": "Ein Spielfeld von {field_length} × {field_width} m ist zu klein für die Standardmarkierungen.",
         "camera_not_static": "Die Linsenkalibrierung braucht eine statische Kamera (erkannt: {camera_motion}).",
+        "camera_motion_unknown": "Die Linsenkalibrierung braucht eine statische Kamera, die Kamerabewegung dieses Videos wurde aber (noch) nicht als statisch erkannt.",
         "not_enough_keypoints": "Mindestens {required} verschiedene Keypoints nötig, gesetzt: {count}.",
         "lens_solver_failed": "Für dieses Video konnte keine Linse bestimmt werden."
       },
@@ -846,7 +849,7 @@
       },
       "calibration": {
         "plugin_name": "Kamerakalibrierung",
-        "plugin_description": "Kalibriert die Kamera dieses Videos anhand der annotierten Landmarken eines Kalibrierungs-Assets. Welche Kalibrierung läuft, ergibt sich aus Kamera und Objektiv unten: mit Objektivprofil werden die Landmarken damit entzerrt, ohne Profil wird das Objektiv aus dem Video selbst gelöst."
+        "plugin_description": "Kalibriert die Kamera dieses Videos anhand der annotierten Landmarken eines Kalibrierungs-Assets. Welche Kalibrierung läuft, ergibt sich aus dem Objektiv unten: mit Objektivprofil werden die Landmarken damit entzerrt, ohne Profil wird das Objektiv aus dem Video selbst gelöst. Lässt sich so kein passendes Objektiv finden, wird ohne Entzerrung kalibriert und die Kalibrierung entsprechend markiert, da sie wahrscheinlich ungenauer ist."
       },
       "calibration_static_dlt": {
         "plugin_name": "DLT+RANSAC aus annotierten Landmarken",
@@ -857,7 +860,7 @@
       },
       "calibration_lens_solve": {
         "plugin_name": "Objektiv-Selbstkalibrierung + DLT aus annotierten Landmarken",
-        "plugin_description": "Schätzt die Objektivverzeichnung einer statischen Kamera aus dem Video selbst: aus den annotierten Landmarken und den darum herum aufgemalten Spielfeldmarkierungen, ohne Objektivprofil. Die Homographie wird anschließend auf den entzerrten Landmarken bestimmt. Benötigt eine statische Kamera und mindestens 6 über das Bild verteilte Landmarken.",
+        "plugin_description": "Schätzt die Objektivverzeichnung einer statischen Kamera aus dem Video selbst: aus den annotierten Landmarken und den darum herum aufgemalten Spielfeldmarkierungen, ohne Objektivprofil. Die Homographie wird anschließend auf den entzerrten Landmarken bestimmt. Benötigt eine statische Kamera und mindestens 6 über das Bild verteilte Landmarken; andernfalls wird die Homographie ohne Entzerrung auf den Landmarken bestimmt und die Kalibrierung entsprechend markiert.",
         "calibration_id_hint": "Wählen Sie ein Kalibrierungs-Asset, dessen Landmarken auf der Spielfeldvorlage platziert sind.",
         "num_frames": "Frames",
         "num_frames_hint": "Anzahl der über das Video verteilten Frames, in denen die Spielfeldmarkierungen gesucht werden.",
