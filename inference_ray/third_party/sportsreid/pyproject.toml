@@ -1,0 +1,29 @@
+[build-system]
+requires = [
+    "setuptools>=61",
+    "wheel",
+    "Cython",
+    "numpy"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "torchreid"
+version = "0.0.0"
+description = "torchreid package"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "h5py",
+    "Pillow",
+    "six",
+    "scipy",
+    "opencv-python",
+    "matplotlib",
+    "future",
+    "yacs",
+    "gdown",
+    "imageio",
+    "soccernet~=0.1.25"
+]

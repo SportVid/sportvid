@@ -129,6 +129,17 @@ import { usePlayerStore } from "@/stores/player";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePositionDataStore } from "@/stores/position_data";
+import {
+  DEFAULT_PLAYER_DETECTOR,
+  OBJECT_TRACKER_TRACKER_ITEMS,
+  PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS,
+  deepEiouTrackerFields,
+  defaultObjectTrackerFps,
+  reidPresetField,
+  setGroupedValue,
+  objectTrackerClasses,
+  watchObjectTrackerSelection,
+} from "@/composables/usePluginParams";
 import Parameters from "./Parameters.vue";
 import ModalCalibrationAssetCreate from "@/components/calibration-asset/ModalCalibrationAssetCreate.vue";
 
@@ -169,843 +180,844 @@ watch(showCalibrationCreate, (newVal, oldVal) => {
     calibrationAssetStore.calibrationMode = true;
   }
 });
+
 const plugins = ref([
-  // {
-  //   id: 1,
-  //   name: t("modal.plugin.groups.audio"),
-  //   children: [
-  //     {
-  //       name: t("modal.plugin.audio_rms.plugin_name"),
-  //       description: t("modal.plugin.audio_rms.plugin_description"),
-  //       icon: "mdi-waveform",
-  //       plugin: "audio_rms",
-  //       id: 101,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.audio_rms.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1000,
-  //           max: 24000,
-  //           value: 8000,
-  //           step: 1000,
-  //           name: "sr",
-  //           text: t("modal.plugin.audio_waveform.sr"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.audio_frequency.plugin_name"),
-  //       description: t("modal.plugin.audio_frequency.plugin_description"),
-  //       icon: "mdi-waveform",
-  //       plugin: "audio_freq",
-  //       id: 102,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.audio_frequency.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1000,
-  //           max: 24000,
-  //           value: 8000,
-  //           step: 1000,
-  //           name: "sr",
-  //           text: t("modal.plugin.audio_frequency.sr"),
-  //         },
-  //         {
-  //           field: "slider",
-  //           min: 64,
-  //           max: 512,
-  //           value: 256,
-  //           step: 64, // TODO: only valid for values with power of 2
-  //           name: "n_fft",
-  //           text: t("modal.plugin.audio_frequency.n_fft"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.audio_waveform.plugin_name"),
-  //       description: t("modal.plugin.audio_waveform.plugin_description"),
-  //       icon: "mdi-waveform",
-  //       plugin: "audio_amp",
-  //       id: 103,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.audio_waveform.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1000,
-  //           max: 24000,
-  //           value: 8000,
-  //           step: 1000,
-  //           name: "sr",
-  //           text: t("modal.plugin.audio_waveform.sr"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.whisper.plugin_name"),
-  //       description: t("modal.plugin.whisper.plugin_description"),
-  //       icon: "mdi-waveform",
-  //       plugin: "whisper",
-  //       id: 104,
-  //       parameters: [],
-  //       optional_parameters: [],
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: 2,
-  //   name: t("modal.plugin.groups.face"),
-  //   children: [
-  //     {
-  //       name: t("modal.plugin.face_clustering.plugin_name"),
-  //       description: t("modal.plugin.face_clustering.plugin_description"),
-  //       icon: "mdi-ungroup",
-  //       plugin: "face_clustering",
-  //       id: 201,
-  //       parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 0.3,
-  //           max: 0.7,
-  //           value: 0.5,
-  //           step: 0.01,
-  //           name: "cluster_threshold",
-  //           hint_right: t("modal.plugin.face_clustering.threshold.hint_right"),
-  //           hint_left: t("modal.plugin.face_clustering.threshold.hint_left"),
-  //         },
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 100,
-  //           value: 50,
-  //           step: 1,
-  //           name: "max_cluster",
-  //           hint_right: t("modal.plugin.face_clustering.max_cluster.hint_right"),
-  //           hint_left: t("modal.plugin.face_clustering.max_cluster.hint_left"),
-  //         },
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 100,
-  //           value: 20,
-  //           step: 1,
-  //           name: "max_samples_per_cluster",
-  //           hint_right: t("modal.plugin.face_clustering.max_faces.hint_right"),
-  //           hint_left: t("modal.plugin.face_clustering.max_faces.hint_left"),
-  //         },
-  //         {
-  //           field: "slider",
-  //           min: 0,
-  //           max: 1.0,
-  //           value: 0.1,
-  //           step: 0.05,
-  //           name: "min_face_height",
-  //           hint_right: t("modal.plugin.face_clustering.min_face_height.hint_right"),
-  //           hint_left: t("modal.plugin.face_clustering.min_face_height.hint_left"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "select_options",
-  //           text: t("modal.plugin.face_clustering.clustering_method_name"),
-  //           items: ["Agglomerative", "DBScan"],
-  //           name: "clustering_method",
-  //           value: "DBScan",
-  //         },
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.face_identification.plugin_name"),
-  //       description: t("modal.plugin.face_identification.plugin_description"),
-  //       icon: "mdi-account-search",
-  //       plugin: "insightface_identification",
-  //       id: 202,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.face_identification.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "image_input",
-  //           file: null,
-  //           name: "query_images",
-  //           text: t("modal.plugin.face_identification.query_images"),
-  //           hint: t("modal.plugin.face_identification.query_images_hint"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.faceemotion.plugin_name"),
-  //       description: t("modal.plugin.faceemotion.plugin_description"),
-  //       icon: "mdi-emoticon-happy-outline",
-  //       plugin: "deepface_emotion",
-  //       id: 203,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.faceemotion.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "select_timeline",
-  //           name: "shot_timeline_id",
-  //           // value: this.shot_timelines_names[0],
-  //           // items: this.shot_timelines_names,
-  //           text: t("modal.plugin.shot_timeline_name"),
-  //           hint: t("modal.plugin.shot_timeline_hint"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //         {
-  //           field: "slider",
-  //           min: 24,
-  //           max: 256,
-  //           value: 48,
-  //           step: 8,
-  //           name: "min_facesize",
-  //           text: t("modal.plugin.faceemotion.min_facesize"),
-  //           disabled: true,
-  //         },
-  //       ],
-  //     },
-  //     // {
-  //     //   name: t("modal.plugin.facesize.plugin_name"),
-  //     //   icon: "mdi-face-recognition",
-  //     //   plugin: "insightface_facesize",
-  //     //   id: 204,
-  //     //   parameters: [
-  //     //     {
-  //     //       field: "text_field",
-  //     //       name: "timeline",
-  //     //       value: t("modal.plugin.facesize.timeline_name"),
-  //     //       text: t("modal.plugin.timeline_name"),
-  //     //     },
-  //     //     {
-  //     //       field: "select_timeline",
-  //     //       name: "shot_timeline_id",
-  //     //       // value: this.shot_timelines_names[0],
-  //     //       // items: this.shot_timelines_names,
-  //     //       text: t("modal.plugin.shot_timeline_name"),
-  //     //       hint: t("modal.plugin.shot_timeline_hint"),
-  //     //     },
-  //     //   ],
-  //     //   optional_parameters: [
-  //     //     {
-  //     //       field: "slider",
-  //     //       min: 1,
-  //     //       max: 10,
-  //     //       value: 2,
-  //     //       step: 1,
-  //     //       name: "fps",
-  //     //       text: t("modal.plugin.fps"),
-  //     //     },
-  //     //   ],
-  //     // },
-  //   ],
-  // },
-  // {
-  //   id: 3,
-  //   name: t("modal.plugin.groups.color"),
-  //   children: [
-  //     {
-  //       name: t("modal.plugin.color_analysis.plugin_name"),
-  //       description: t("modal.plugin.color_analysis.plugin_description"),
-  //       icon: "mdi-palette",
-  //       plugin: "color_analysis",
-  //       id: 301,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.color_analysis.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 8,
-  //           value: 1,
-  //           step: 1,
-  //           name: "k",
-  //           text: t("modal.plugin.color_analysis.slider"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //         {
-  //           field: "slider",
-  //           min: 24,
-  //           max: 128,
-  //           value: 48,
-  //           step: 4,
-  //           name: "max_resolution",
-  //           text: t("modal.plugin.color_analysis.max_resolution"),
-  //         },
-  //         {
-  //           field: "slider",
-  //           min: 5,
-  //           max: 25,
-  //           value: 10,
-  //           step: 5,
-  //           name: "max_iter",
-  //           text: t("modal.plugin.color_analysis.max_iter"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.color_brightness_analysis.plugin_name"),
-  //       description: t("modal.plugin.color_brightness_analysis.plugin_description"),
-  //       icon: "mdi-palette",
-  //       plugin: "color_brightness_analysis",
-  //       id: 302,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.color_brightness_analysis.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //         {
-  //           field: "checkbox",
-  //           name: "normalize",
-  //           text: t("modal.plugin.normalize"),
-  //           value: true,
-  //         },
-  //       ],
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: 4,
-  //   name: t("modal.plugin.groups.identification"),
-  //   children: [
-  //     {
-  //       name: t("modal.plugin.clip.plugin_name"),
-  //       description: t("modal.plugin.clip.plugin_description"),
-  //       icon: "mdi-eye",
-  //       plugin: "clip",
-  //       id: 403,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.clip.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "text_field",
-  //           name: "search_term",
-  //           value: "",
-  //           text: t("modal.plugin.clip.search_term"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.clip_ontology.plugin_name"),
-  //       description: t("modal.plugin.clip_ontology.plugin_description"),
-  //       icon: "mdi-eye",
-  //       plugin: "clip_ontology",
-  //       id: 402,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.clip_ontology.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "select_timeline",
-  //           name: "shot_timeline_id",
-  //           // value: this.shot_timelines_names[0],
-  //           // items: this.shot_timelines_names,
-  //           text: t("modal.plugin.shot_timeline_name"),
-  //           hint: t("modal.plugin.shot_timeline_hint"),
-  //         },
-  //         {
-  //           field: "csv_input",
-  //           file: null,
-  //           name: "concept_csv",
-  //           text: t("modal.plugin.clip_ontology.concepts"),
-  //           hint: t("modal.plugin.clip_ontology.concepts_hint"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.x_clip.plugin_name"),
-  //       description: t("modal.plugin.x_clip.plugin_description"),
-  //       icon: "mdi-eye",
-  //       plugin: "x_clip",
-  //       id: 404,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.x_clip.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "text_field",
-  //           name: "search_term",
-  //           value: "",
-  //           text: t("modal.plugin.x_clip.search_term"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.places_classification.plugin_name"),
-  //       description: t("modal.plugin.places_classification.plugin_description"),
-  //       icon: "mdi-map-marker",
-  //       plugin: "places_classification",
-  //       id: 401,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.places_classification.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "select_timeline",
-  //           name: "shot_timeline_id",
-  //           // value: this.shot_timelines_names[0],
-  //           // items: this.shot_timelines_names,
-  //           text: t("modal.plugin.shot_timeline_name"),
-  //           hint: t("modal.plugin.shot_timeline_hint"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.place_clustering.plugin_name"),
-  //       description: t("modal.plugin.place_clustering.plugin_description"),
-  //       icon: "mdi-ungroup",
-  //       plugin: "place_clustering",
-  //       id: 405,
-  //       parameters: [
-  //         {
-  //           field: "select_timeline",
-  //           name: "shot_timeline_id",
-  //           text: t("modal.plugin.shot_timeline_name"),
-  //           hint: t("modal.plugin.shot_timeline_hint"),
-  //         },
-  //         //                {
-  //         //                  field: "select_options",
-  //         //                  text: t("modal.plugin.place_clustering.encoder_name"),
-  //         //                  hint: t("modal.plugin.place_clustering.encoder_hint"),
-  //         //                  items: ["CLIP", "Places"],
-  //         //                  name: "encoder",
-  //         //                },
-  //         {
-  //           field: "slider",
-  //           min: 0.05,
-  //           max: 0.3,
-  //           value: 0.15,
-  //           step: 0.01,
-  //           name: "cluster_threshold",
-  //           hint_right: t("modal.plugin.place_clustering.threshold.hint_right"),
-  //           hint_left: t("modal.plugin.place_clustering.threshold.hint_left"),
-  //         },
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 100,
-  //           value: 50,
-  //           step: 1,
-  //           name: "max_cluster",
-  //           hint_right: t("modal.plugin.place_clustering.max_cluster.hint_right"),
-  //           hint_left: t("modal.plugin.place_clustering.max_cluster.hint_left"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "select_options",
-  //           text: t("modal.plugin.place_clustering.clustering_method_name"),
-  //           items: ["Agglomerative", "DBScan"],
-  //           name: "clustering_method",
-  //           value: "DBScan",
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.blip.plugin_name"),
-  //       description: t("modal.plugin.blip.plugin_description"),
-  //       icon: "mdi-eye",
-  //       plugin: "blip_vqa",
-  //       id: 406,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.blip.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "select_timeline",
-  //           name: "shot_timeline_id",
-  //           // value: this.shot_timelines_names[0],
-  //           // items: this.shot_timelines_names,
-  //           text: t("modal.plugin.shot_timeline_name"),
-  //           hint: t("modal.plugin.shot_timeline_hint"),
-  //         },
-  //         {
-  //           field: "text_field",
-  //           name: "query_term",
-  //           value: "",
-  //           text: t("modal.plugin.blip.search_term"),
-  //         },
-  //       ],
-  //       optional_parameters: [],
-  //     },
-  //     {
-  //       name: t("modal.plugin.ocr.plugin_name"),
-  //       icon: "mdi-text-shadow",
-  //       plugin: "ocr_video_detector_onnx",
-  //       id: 407,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.ocr.timeline_name"),
-  //           text: t("modal.plugin.ocr.timeline_name"),
-  //         },
-  //         {
-  //           field: "text_field",
-  //           name: "search_term",
-  //           value: "",
-  //           text: t("modal.plugin.ocr.search_term"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //       ],
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: 5,
-  //   name: t("modal.plugin.groups.shot"),
-  //   children: [
-  //     {
-  //       name: t("modal.plugin.shot_detection.plugin_name"),
-  //       description: t("modal.plugin.shot_detection.plugin_description"),
-  //       icon: "mdi-arrow-expand-horizontal",
-  //       plugin: "shotdetection",
-  //       id: 501,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.shot_detection.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.shot_density.plugin_name"),
-  //       description: t("modal.plugin.shot_density.plugin_description"),
-  //       icon: "mdi-sine-wave",
-  //       plugin: "shot_density",
-  //       id: 503,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.shot_density.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "select_timeline",
-  //           name: "shot_timeline_id",
-  //           text: t("modal.plugin.shot_density.input_timeline"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 60,
-  //           value: 10,
-  //           step: 1,
-  //           name: "bandwidth",
-  //           text: t("modal.plugin.shot_density.bandwidth"),
-  //         },
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 10,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.shot_type_classification.plugin_name"),
-  //       description: t("modal.plugin.shot_type_classification.plugin_description"),
-  //       icon: "mdi-video-switch",
-  //       plugin: "shot_type_classification",
-  //       id: 504,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.shot_type_classification.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "select_timeline",
-  //           name: "shot_timeline_id",
-  //           text: t("modal.plugin.shot_timeline_name"),
-  //           hint: t("modal.plugin.shot_timeline_hint"),
-  //         },
-  //       ],
-  //       optional_parameters: [
-  //         {
-  //           field: "slider",
-  //           min: 1,
-  //           max: 10,
-  //           value: 2,
-  //           step: 1,
-  //           name: "fps",
-  //           text: t("modal.plugin.fps"),
-  //         },
-  //       ],
-  //     },
-  //     {
-  //       name: t("modal.plugin.shot_scalar_annotation.plugin_name"),
-  //       description: t("modal.plugin.shot_scalar_annotation.plugin_description"),
-  //       icon: "mdi-label-outline",
-  //       plugin: "shot_scalar_annotation",
-  //       id: 505,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.shot_scalar_annotation.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "select_timeline",
-  //           name: "shot_timeline_id",
-  //           text: t("modal.plugin.shot_timeline_name"),
-  //           hint: t("modal.plugin.shot_timeline_hint"),
-  //         },
-  //         {
-  //           field: "select_scalar_timeline",
-  //           name: "scalar_timeline_id",
-  //           text: t("modal.plugin.scalar_timeline_name"),
-  //           hint: t("modal.plugin.scalar_timeline_hint"),
-  //         },
-  //       ],
-  //       optional_parameters: [],
-  //     },
-  //     {
-  //       name: t("modal.plugin.thumbnail.plugin_name"),
-  //       description: t("modal.plugin.thumbnail.plugin_description"),
-  //       icon: "mdi-image-multiple",
-  //       plugin: "thumbnail",
-  //       id: 502,
-  //       parameters: [],
-  //       optional_parameters: [],
-  //     },
-  //   ],
-  // },
-  // {
-  //   id: 6,
-  //   name: t("modal.plugin.groups.aggregation"),
-  //   children: [
-  //     {
-  //       name: t("modal.plugin.aggregation.plugin_name"),
-  //       description: t("modal.plugin.aggregation.plugin_description"),
-  //       icon: "mdi-sigma",
-  //       plugin: "aggregate_scalar",
-  //       id: 601,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.aggregation.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "select_scalar_timelines",
-  //           name: "timeline_ids",
-  //           text: t("modal.plugin.scalar_timeline_name"),
-  //           hint: t("modal.plugin.scalar_timeline_hint"),
-  //         },
-  //         {
-  //           field: "buttongroup",
-  //           text: t("modal.plugin.aggregation.method"),
-  //           name: "aggregation",
-  //           value: 0,
-  //           buttons: [
-  //             t("modal.plugin.aggregation.logical_or"),
-  //             t("modal.plugin.aggregation.logical_and"),
-  //             t("modal.plugin.aggregation.mean"),
-  //             t("modal.plugin.aggregation.prod"),
-  //           ],
-  //         },
-  //       ],
-  //       optional_parameters: [],
-  //     },
-  //     {
-  //       name: t("modal.plugin.invert.plugin_name"),
-  //       description: t("modal.plugin.invert.plugin_description"),
-  //       icon: "mdi-numeric-negative-1",
-  //       plugin: "invert_scalar",
-  //       id: 602,
-  //       parameters: [
-  //         {
-  //           field: "text_field",
-  //           name: "timeline",
-  //           value: t("modal.plugin.invert.timeline_name"),
-  //           text: t("modal.plugin.timeline_name"),
-  //         },
-  //         {
-  //           field: "select_scalar_timeline",
-  //           name: "scalar_timeline_id",
-  //           text: t("modal.plugin.scalar_timeline_name"),
-  //           hint: t("modal.plugin.scalar_timeline_hint"),
-  //         },
-  //       ],
-  //       optional_parameters: [],
-  //     },
-  //   ],
-  // },
+  {
+    id: 1,
+    name: t("modal.plugin.groups.audio"),
+    children: [
+      {
+        name: t("modal.plugin.audio_rms.plugin_name"),
+        description: t("modal.plugin.audio_rms.plugin_description"),
+        icon: "mdi-waveform",
+        plugin: "audio_rms",
+        id: 101,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.audio_rms.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1000,
+            max: 24000,
+            value: 8000,
+            step: 1000,
+            name: "sr",
+            text: t("modal.plugin.audio_waveform.sr"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.audio_frequency.plugin_name"),
+        description: t("modal.plugin.audio_frequency.plugin_description"),
+        icon: "mdi-waveform",
+        plugin: "audio_freq",
+        id: 102,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.audio_frequency.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1000,
+            max: 24000,
+            value: 8000,
+            step: 1000,
+            name: "sr",
+            text: t("modal.plugin.audio_frequency.sr"),
+          },
+          {
+            field: "slider",
+            min: 64,
+            max: 512,
+            value: 256,
+            step: 64, // TODO: only valid for values with power of 2
+            name: "n_fft",
+            text: t("modal.plugin.audio_frequency.n_fft"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.audio_waveform.plugin_name"),
+        description: t("modal.plugin.audio_waveform.plugin_description"),
+        icon: "mdi-waveform",
+        plugin: "audio_amp",
+        id: 103,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.audio_waveform.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1000,
+            max: 24000,
+            value: 8000,
+            step: 1000,
+            name: "sr",
+            text: t("modal.plugin.audio_waveform.sr"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.whisper.plugin_name"),
+        description: t("modal.plugin.whisper.plugin_description"),
+        icon: "mdi-waveform",
+        plugin: "whisper",
+        id: 104,
+        parameters: [],
+        optional_parameters: [],
+      },
+    ],
+  },
+  {
+    id: 2,
+    name: t("modal.plugin.groups.face"),
+    children: [
+      {
+        name: t("modal.plugin.face_clustering.plugin_name"),
+        description: t("modal.plugin.face_clustering.plugin_description"),
+        icon: "mdi-ungroup",
+        plugin: "face_clustering",
+        id: 201,
+        parameters: [
+          {
+            field: "slider",
+            min: 0.3,
+            max: 0.7,
+            value: 0.5,
+            step: 0.01,
+            name: "cluster_threshold",
+            hint_right: t("modal.plugin.face_clustering.threshold.hint_right"),
+            hint_left: t("modal.plugin.face_clustering.threshold.hint_left"),
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 100,
+            value: 50,
+            step: 1,
+            name: "max_cluster",
+            hint_right: t("modal.plugin.face_clustering.max_cluster.hint_right"),
+            hint_left: t("modal.plugin.face_clustering.max_cluster.hint_left"),
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 100,
+            value: 20,
+            step: 1,
+            name: "max_samples_per_cluster",
+            hint_right: t("modal.plugin.face_clustering.max_faces.hint_right"),
+            hint_left: t("modal.plugin.face_clustering.max_faces.hint_left"),
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 1.0,
+            value: 0.1,
+            step: 0.05,
+            name: "min_face_height",
+            hint_right: t("modal.plugin.face_clustering.min_face_height.hint_right"),
+            hint_left: t("modal.plugin.face_clustering.min_face_height.hint_left"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "select_options",
+            text: t("modal.plugin.face_clustering.clustering_method_name"),
+            items: ["Agglomerative", "DBScan"],
+            name: "clustering_method",
+            value: "DBScan",
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.face_identification.plugin_name"),
+        description: t("modal.plugin.face_identification.plugin_description"),
+        icon: "mdi-account-search",
+        plugin: "insightface_identification",
+        id: 202,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.face_identification.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "image_input",
+            file: null,
+            name: "query_images",
+            text: t("modal.plugin.face_identification.query_images"),
+            hint: t("modal.plugin.face_identification.query_images_hint"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.faceemotion.plugin_name"),
+        description: t("modal.plugin.faceemotion.plugin_description"),
+        icon: "mdi-emoticon-happy-outline",
+        plugin: "deepface_emotion",
+        id: 203,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.faceemotion.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "select_timeline",
+            name: "shot_timeline_id",
+            // value: this.shot_timelines_names[0],
+            // items: this.shot_timelines_names,
+            text: t("modal.plugin.shot_timeline_name"),
+            hint: t("modal.plugin.shot_timeline_hint"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+          {
+            field: "slider",
+            min: 24,
+            max: 256,
+            value: 48,
+            step: 8,
+            name: "min_facesize",
+            text: t("modal.plugin.faceemotion.min_facesize"),
+            disabled: true,
+          },
+        ],
+      },
+      // {
+      //   name: t("modal.plugin.facesize.plugin_name"),
+      //   icon: "mdi-face-recognition",
+      //   plugin: "insightface_facesize",
+      //   id: 204,
+      //   parameters: [
+      //     {
+      //       field: "text_field",
+      //       name: "timeline",
+      //       value: t("modal.plugin.facesize.timeline_name"),
+      //       text: t("modal.plugin.timeline_name"),
+      //     },
+      //     {
+      //       field: "select_timeline",
+      //       name: "shot_timeline_id",
+      //       // value: this.shot_timelines_names[0],
+      //       // items: this.shot_timelines_names,
+      //       text: t("modal.plugin.shot_timeline_name"),
+      //       hint: t("modal.plugin.shot_timeline_hint"),
+      //     },
+      //   ],
+      //   optional_parameters: [
+      //     {
+      //       field: "slider",
+      //       min: 1,
+      //       max: 10,
+      //       value: 2,
+      //       step: 1,
+      //       name: "fps",
+      //       text: t("modal.plugin.fps"),
+      //     },
+      //   ],
+      // },
+    ],
+  },
+  {
+    id: 3,
+    name: t("modal.plugin.groups.color"),
+    children: [
+      {
+        name: t("modal.plugin.color_analysis.plugin_name"),
+        description: t("modal.plugin.color_analysis.plugin_description"),
+        icon: "mdi-palette",
+        plugin: "color_analysis",
+        id: 301,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.color_analysis.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 8,
+            value: 1,
+            step: 1,
+            name: "k",
+            text: t("modal.plugin.color_analysis.slider"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+          {
+            field: "slider",
+            min: 24,
+            max: 128,
+            value: 48,
+            step: 4,
+            name: "max_resolution",
+            text: t("modal.plugin.color_analysis.max_resolution"),
+          },
+          {
+            field: "slider",
+            min: 5,
+            max: 25,
+            value: 10,
+            step: 5,
+            name: "max_iter",
+            text: t("modal.plugin.color_analysis.max_iter"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.color_brightness_analysis.plugin_name"),
+        description: t("modal.plugin.color_brightness_analysis.plugin_description"),
+        icon: "mdi-palette",
+        plugin: "color_brightness_analysis",
+        id: 302,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.color_brightness_analysis.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+          {
+            field: "checkbox",
+            name: "normalize",
+            text: t("modal.plugin.normalize"),
+            value: true,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 4,
+    name: t("modal.plugin.groups.identification"),
+    children: [
+      {
+        name: t("modal.plugin.clip.plugin_name"),
+        description: t("modal.plugin.clip.plugin_description"),
+        icon: "mdi-eye",
+        plugin: "clip",
+        id: 403,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.clip.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "text_field",
+            name: "search_term",
+            value: "",
+            text: t("modal.plugin.clip.search_term"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.clip_ontology.plugin_name"),
+        description: t("modal.plugin.clip_ontology.plugin_description"),
+        icon: "mdi-eye",
+        plugin: "clip_ontology",
+        id: 402,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.clip_ontology.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "select_timeline",
+            name: "shot_timeline_id",
+            // value: this.shot_timelines_names[0],
+            // items: this.shot_timelines_names,
+            text: t("modal.plugin.shot_timeline_name"),
+            hint: t("modal.plugin.shot_timeline_hint"),
+          },
+          {
+            field: "csv_input",
+            file: null,
+            name: "concept_csv",
+            text: t("modal.plugin.clip_ontology.concepts"),
+            hint: t("modal.plugin.clip_ontology.concepts_hint"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.x_clip.plugin_name"),
+        description: t("modal.plugin.x_clip.plugin_description"),
+        icon: "mdi-eye",
+        plugin: "x_clip",
+        id: 404,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.x_clip.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "text_field",
+            name: "search_term",
+            value: "",
+            text: t("modal.plugin.x_clip.search_term"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.places_classification.plugin_name"),
+        description: t("modal.plugin.places_classification.plugin_description"),
+        icon: "mdi-map-marker",
+        plugin: "places_classification",
+        id: 401,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.places_classification.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "select_timeline",
+            name: "shot_timeline_id",
+            // value: this.shot_timelines_names[0],
+            // items: this.shot_timelines_names,
+            text: t("modal.plugin.shot_timeline_name"),
+            hint: t("modal.plugin.shot_timeline_hint"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.place_clustering.plugin_name"),
+        description: t("modal.plugin.place_clustering.plugin_description"),
+        icon: "mdi-ungroup",
+        plugin: "place_clustering",
+        id: 405,
+        parameters: [
+          {
+            field: "select_timeline",
+            name: "shot_timeline_id",
+            text: t("modal.plugin.shot_timeline_name"),
+            hint: t("modal.plugin.shot_timeline_hint"),
+          },
+          //                {
+          //                  field: "select_options",
+          //                  text: t("modal.plugin.place_clustering.encoder_name"),
+          //                  hint: t("modal.plugin.place_clustering.encoder_hint"),
+          //                  items: ["CLIP", "Places"],
+          //                  name: "encoder",
+          //                },
+          {
+            field: "slider",
+            min: 0.05,
+            max: 0.3,
+            value: 0.15,
+            step: 0.01,
+            name: "cluster_threshold",
+            hint_right: t("modal.plugin.place_clustering.threshold.hint_right"),
+            hint_left: t("modal.plugin.place_clustering.threshold.hint_left"),
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 100,
+            value: 50,
+            step: 1,
+            name: "max_cluster",
+            hint_right: t("modal.plugin.place_clustering.max_cluster.hint_right"),
+            hint_left: t("modal.plugin.place_clustering.max_cluster.hint_left"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "select_options",
+            text: t("modal.plugin.place_clustering.clustering_method_name"),
+            items: ["Agglomerative", "DBScan"],
+            name: "clustering_method",
+            value: "DBScan",
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.blip.plugin_name"),
+        description: t("modal.plugin.blip.plugin_description"),
+        icon: "mdi-eye",
+        plugin: "blip_vqa",
+        id: 406,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.blip.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "select_timeline",
+            name: "shot_timeline_id",
+            // value: this.shot_timelines_names[0],
+            // items: this.shot_timelines_names,
+            text: t("modal.plugin.shot_timeline_name"),
+            hint: t("modal.plugin.shot_timeline_hint"),
+          },
+          {
+            field: "text_field",
+            name: "query_term",
+            value: "",
+            text: t("modal.plugin.blip.search_term"),
+          },
+        ],
+        optional_parameters: [],
+      },
+      {
+        name: t("modal.plugin.ocr.plugin_name"),
+        icon: "mdi-text-shadow",
+        plugin: "ocr_video_detector_onnx",
+        id: 407,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.ocr.timeline_name"),
+            text: t("modal.plugin.ocr.timeline_name"),
+          },
+          {
+            field: "text_field",
+            name: "search_term",
+            value: "",
+            text: t("modal.plugin.ocr.search_term"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 5,
+    name: t("modal.plugin.groups.shot"),
+    children: [
+      {
+        name: t("modal.plugin.shot_detection.plugin_name"),
+        description: t("modal.plugin.shot_detection.plugin_description"),
+        icon: "mdi-arrow-expand-horizontal",
+        plugin: "shotdetection",
+        id: 501,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.shot_detection.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.shot_density.plugin_name"),
+        description: t("modal.plugin.shot_density.plugin_description"),
+        icon: "mdi-sine-wave",
+        plugin: "shot_density",
+        id: 503,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.shot_density.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "select_timeline",
+            name: "shot_timeline_id",
+            text: t("modal.plugin.shot_density.input_timeline"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 60,
+            value: 10,
+            step: 1,
+            name: "bandwidth",
+            text: t("modal.plugin.shot_density.bandwidth"),
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 10,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.shot_type_classification.plugin_name"),
+        description: t("modal.plugin.shot_type_classification.plugin_description"),
+        icon: "mdi-video-switch",
+        plugin: "shot_type_classification",
+        id: 504,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.shot_type_classification.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "select_timeline",
+            name: "shot_timeline_id",
+            text: t("modal.plugin.shot_timeline_name"),
+            hint: t("modal.plugin.shot_timeline_hint"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 2,
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.shot_scalar_annotation.plugin_name"),
+        description: t("modal.plugin.shot_scalar_annotation.plugin_description"),
+        icon: "mdi-label-outline",
+        plugin: "shot_scalar_annotation",
+        id: 505,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.shot_scalar_annotation.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "select_timeline",
+            name: "shot_timeline_id",
+            text: t("modal.plugin.shot_timeline_name"),
+            hint: t("modal.plugin.shot_timeline_hint"),
+          },
+          {
+            field: "select_scalar_timeline",
+            name: "scalar_timeline_id",
+            text: t("modal.plugin.scalar_timeline_name"),
+            hint: t("modal.plugin.scalar_timeline_hint"),
+          },
+        ],
+        optional_parameters: [],
+      },
+      {
+        name: t("modal.plugin.thumbnail.plugin_name"),
+        description: t("modal.plugin.thumbnail.plugin_description"),
+        icon: "mdi-image-multiple",
+        plugin: "thumbnail",
+        id: 502,
+        parameters: [],
+        optional_parameters: [],
+      },
+    ],
+  },
+  {
+    id: 6,
+    name: t("modal.plugin.groups.aggregation"),
+    children: [
+      {
+        name: t("modal.plugin.aggregation.plugin_name"),
+        description: t("modal.plugin.aggregation.plugin_description"),
+        icon: "mdi-sigma",
+        plugin: "aggregate_scalar",
+        id: 601,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.aggregation.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "select_scalar_timelines",
+            name: "timeline_ids",
+            text: t("modal.plugin.scalar_timeline_name"),
+            hint: t("modal.plugin.scalar_timeline_hint"),
+          },
+          {
+            field: "buttongroup",
+            text: t("modal.plugin.aggregation.method"),
+            name: "aggregation",
+            value: 0,
+            buttons: [
+              t("modal.plugin.aggregation.logical_or"),
+              t("modal.plugin.aggregation.logical_and"),
+              t("modal.plugin.aggregation.mean"),
+              t("modal.plugin.aggregation.prod"),
+            ],
+          },
+        ],
+        optional_parameters: [],
+      },
+      {
+        name: t("modal.plugin.invert.plugin_name"),
+        description: t("modal.plugin.invert.plugin_description"),
+        icon: "mdi-numeric-negative-1",
+        plugin: "invert_scalar",
+        id: 602,
+        parameters: [
+          {
+            field: "text_field",
+            name: "timeline",
+            value: t("modal.plugin.invert.timeline_name"),
+            text: t("modal.plugin.timeline_name"),
+          },
+          {
+            field: "select_scalar_timeline",
+            name: "scalar_timeline_id",
+            text: t("modal.plugin.scalar_timeline_name"),
+            hint: t("modal.plugin.scalar_timeline_hint"),
+          },
+        ],
+        optional_parameters: [],
+      },
+    ],
+  },
   {
     id: 7,
     name: t("modal.plugin.groups.tracking"),
@@ -1031,6 +1043,673 @@ const plugins = ref([
         optional_parameters: [],
       },
       {
+        name: t("modal.plugin.object_tracker.plugin_name"),
+        description: t("modal.plugin.object_tracker.plugin_description"),
+        icon: "mdi-radar",
+        plugin: "object_tracker",
+        id: 704,
+        parameters: [
+          {
+            field: "slider",
+            min: 1,
+            max: 30,
+            value: defaultObjectTrackerFps(playerStore.videoFPS),
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
+          },
+          {
+            field: "select_options",
+            name: "tracking_target",
+            value: "player",
+            items: [
+              {
+                title: t("modal.plugin.object_tracker.tracking_target_player"),
+                value: "player",
+              },
+              { title: t("modal.plugin.object_tracker.tracking_target_ball"), value: "ball" },
+            ],
+            text: t("modal.plugin.object_tracker.tracking_target"),
+          },
+          {
+            field: "select_options",
+            name: "detector",
+            value: DEFAULT_PLAYER_DETECTOR,
+            items: PLAYER_OBJECT_TRACKER_DETECTOR_ITEMS,
+            text: t("modal.plugin.object_tracker.detector"),
+          },
+          {
+            field: "select_options",
+            name: "tracker",
+            value: "bytetrack",
+            items: OBJECT_TRACKER_TRACKER_ITEMS,
+            text: t("modal.plugin.object_tracker.tracker"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 0,
+            max: 1,
+            value: 0.2,
+            step: 0.05,
+            name: "confidence_threshold",
+            text: t("modal.plugin.object_tracker.confidence_threshold"),
+            group: "detector_params",
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 16,
+            value: 1,
+            step: 1,
+            name: "batch_size",
+            text: t("modal.plugin.object_tracker.batch_size"),
+            group: "detector_params",
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 1,
+            value: 0.65,
+            step: 0.05,
+            name: "nms_thresh",
+            text: t("modal.plugin.object_tracker.nms_thresh"),
+            group: "detector_params",
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 1,
+            value: 0.3,
+            step: 0.05,
+            name: "iou",
+            text: t("modal.plugin.object_tracker.iou"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "agnostic_nms",
+            text: t("modal.plugin.object_tracker.agnostic_nms"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "checkbox",
+            value: true,
+            name: "fp16",
+            text: t("modal.plugin.object_tracker.fp16"),
+            group: "detector_params",
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "half",
+            text: t("modal.plugin.object_tracker.half"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "checkbox",
+            value: true,
+            name: "decode",
+            text: t("modal.plugin.object_tracker.decode"),
+            group: "detector_params",
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 10,
+            value: 1,
+            step: 1,
+            name: "num_classes",
+            text: t("modal.plugin.object_tracker.num_classes"),
+            group: "detector_params",
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 300,
+            value: 100,
+            step: 1,
+            name: "max_det",
+            text: t("modal.plugin.object_tracker.max_det"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 320,
+            max: 1920,
+            value: 1280, // set per RF-DETR preset (usePluginParams DETECTOR_PARAM_DEFAULTS)
+            step: 32,
+            name: "resolution",
+            text: t("modal.plugin.object_tracker.resolution"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "verbose",
+            text: t("modal.plugin.object_tracker.verbose"),
+            group: "detector_params",
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 1,
+            value: 0.4,
+            step: 0.05,
+            name: "track_thresh",
+            text: t("modal.plugin.object_tracker.track_thresh"),
+            group: "tracker_params",
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 600,
+            value: 300,
+            step: 10,
+            name: "track_buffer",
+            text: t("modal.plugin.object_tracker.track_buffer"),
+            group: "tracker_params",
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 1,
+            value: 0.8,
+            step: 0.05,
+            name: "match_thresh",
+            text: t("modal.plugin.object_tracker.match_thresh"),
+            group: "tracker_params",
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "mot20",
+            text: t("modal.plugin.object_tracker.mot20"),
+            group: "tracker_params",
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 10,
+            value: 5.0,
+            step: 0.1,
+            name: "aspect_ratio_thresh",
+            text: t("modal.plugin.object_tracker.aspect_ratio_thresh"),
+            group: "tracker_params",
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 500,
+            value: 0,
+            step: 10,
+            name: "min_box_area",
+            text: t("modal.plugin.object_tracker.min_box_area"),
+            group: "tracker_params",
+          },
+          ...deepEiouTrackerFields(t),
+        ],
+      },
+      {
+        name: t("modal.plugin.team_clustering.plugin_name"),
+        description: t("modal.plugin.team_clustering.plugin_description"),
+        icon: "mdi-account-group",
+        plugin: "team_clustering",
+        id: 705,
+        parameters: [
+          {
+            field: "select_object_tracker_run",
+            name: "object_tracker_id",
+            value: "",
+            text: t("modal.plugin.team_clustering.object_tracker_id"),
+            hint: t("modal.plugin.team_clustering.object_tracker_id_hint"),
+            no_data_text: "modal.plugin.team_clustering.object_tracker_run_none",
+          },
+          {
+            field: "select_options",
+            name: "clustering_algo",
+            value: "KMEANS",
+            items: [
+              { title: "K-Means", value: "KMEANS" },
+              { title: "HDBSCAN", value: "HDBSCAN" },
+            ],
+            text: t("modal.plugin.team_clustering.clustering_algo"),
+          },
+          {
+            field: "slider",
+            min: 2,
+            max: 16,
+            value: 2,
+            step: 1,
+            name: "K",
+            text: t("modal.plugin.team_clustering.K"),
+          },
+        ],
+        optional_parameters: [
+          reidPresetField(t, "modal.plugin.team_clustering.reid_preset"),
+          {
+            field: "slider",
+            min: 1,
+            max: 50,
+            value: 2,
+            step: 1,
+            name: "min_samples_per_track",
+            text: t("modal.plugin.team_clustering.min_samples_per_track"),
+          },
+          {
+            field: "slider",
+            min: 5,
+            max: 100,
+            value: 20,
+            step: 1,
+            name: "max_samples_per_track",
+            text: t("modal.plugin.team_clustering.max_samples_per_track"),
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 100,
+            value: 3,
+            step: 1,
+            name: "min_cluster_size",
+            text: t("modal.plugin.team_clustering.min_cluster_size"),
+          },
+          {
+            field: "slider",
+            min: 12,
+            max: 500,
+            value: 12,
+            step: 4,
+            name: "min_pixels",
+            text: t("modal.plugin.team_clustering.min_pixels"),
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "use_illumination_norm",
+            text: t("modal.plugin.team_clustering.use_illumination_norm"),
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "use_central_band",
+            text: t("modal.plugin.team_clustering.use_central_band"),
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "use_torso_crop",
+            text: t("modal.plugin.team_clustering.use_torso_crop"),
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "use_green_mask",
+            text: t("modal.plugin.team_clustering.use_green_mask"),
+          },
+          {
+            field: "checkbox",
+            value: false,
+            name: "use_gray_mask",
+            text: t("modal.plugin.team_clustering.use_gray_mask"),
+          },
+          {
+            field: "checkbox",
+            value: true,
+            name: "two_channel",
+            text: t("modal.plugin.team_clustering.two_channel"),
+          },
+          {
+            field: "checkbox",
+            value: true,
+            name: "use_pca",
+            text: t("modal.plugin.team_clustering.use_pca"),
+          },
+          {
+            field: "slider",
+            min: 2,
+            max: 128,
+            value: 16,
+            step: 1,
+            name: "pca_components",
+            text: t("modal.plugin.team_clustering.pca_components"),
+            hidden: true,
+          },
+          {
+            field: "select_options",
+            name: "metric",
+            value: "euclidean",
+            items: [
+              { title: "Euclidean", value: "euclidean" },
+              { title: "Cosine", value: "cosine" },
+            ],
+            text: t("modal.plugin.team_clustering.metric"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0.01,
+            max: 0.99,
+            value: 0.5,
+            step: 0.01,
+            name: "cluster_selection_epsilon",
+            text: t("modal.plugin.team_clustering.cluster_selection_epsilon"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 100,
+            value: 20,
+            step: 1,
+            name: "n_init",
+            text: t("modal.plugin.team_clustering.n_init"),
+            hidden: false,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 9999,
+            value: 42,
+            step: 1,
+            name: "random_state",
+            text: t("modal.plugin.team_clustering.random_state"),
+            hidden: false,
+          },
+          {
+            field: "slider",
+            min: 4,
+            max: 64,
+            value: 16,
+            step: 1,
+            name: "hist_h_bins",
+            text: t("modal.plugin.team_clustering.hist_h_bins"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 32,
+            value: 4,
+            step: 1,
+            name: "hist_s_bins",
+            text: t("modal.plugin.team_clustering.hist_s_bins"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 32,
+            value: 4,
+            step: 1,
+            name: "hist_v_bins",
+            text: t("modal.plugin.team_clustering.hist_v_bins"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 6,
+            max: 200,
+            value: 12,
+            step: 1,
+            name: "min_crop_w",
+            text: t("modal.plugin.team_clustering.min_crop_w"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 12,
+            max: 400,
+            value: 24,
+            step: 1,
+            name: "min_crop_h",
+            text: t("modal.plugin.team_clustering.min_crop_h"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 5,
+            max: 512,
+            value: 128,
+            step: 1,
+            name: "crop_size_x",
+            text: t("modal.plugin.team_clustering.crop_size_x"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 5,
+            max: 512,
+            value: 256,
+            step: 1,
+            name: "crop_size_y",
+            text: t("modal.plugin.team_clustering.crop_size_y"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_x1_offset",
+            text: t("modal.plugin.team_clustering.crop_x1_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_y1_offset",
+            text: t("modal.plugin.team_clustering.crop_y1_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_x2_offset",
+            text: t("modal.plugin.team_clustering.crop_x2_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_y2_offset",
+            text: t("modal.plugin.team_clustering.crop_y2_offset"),
+            hidden: true,
+          },
+        ],
+      },
+      {
+        name: t("modal.plugin.osnet_reid.plugin_name"),
+        description: t("modal.plugin.osnet_reid.plugin_description"),
+        icon: "mdi-account-search",
+        plugin: "osnet_reid",
+        id: 706,
+        parameters: [
+          {
+            field: "select_object_tracker_run",
+            name: "object_tracker_id",
+            value: "",
+            text: t("modal.plugin.osnet_reid.object_tracker_id"),
+            hint: t("modal.plugin.osnet_reid.object_tracker_id_hint"),
+            no_data_text: "modal.plugin.team_clustering.object_tracker_run_none",
+          },
+          {
+            field: "select_options",
+            name: "gallery_mode",
+            value: "protos",
+            items: [
+              { title: t("modal.plugin.osnet_reid.gallery_mode_protos"), value: "protos" },
+              { title: t("modal.plugin.osnet_reid.gallery_mode_tracks"), value: "tracks" },
+            ],
+            text: t("modal.plugin.osnet_reid.gallery_mode"),
+          },
+          {
+            field: "select_options",
+            name: "model_name",
+            value: "osnet_x1_0",
+            items: [
+              { title: "OSNet x1.0", value: "osnet_x1_0" },
+              { title: "OSNet-IBN x1.0", value: "osnet_ibn_x1_0" },
+              { title: "OSNet-AIN x1.0", value: "osnet_ain_x1_0" },
+            ],
+            text: t("modal.plugin.osnet_reid.model_name"),
+          },
+        ],
+        // no checkpoint parameter: the backend picks the file from model_name
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 0.6,
+            max: 0.9,
+            value: 0.72,
+            step: 0.01,
+            name: "match_thresh",
+            text: t("modal.plugin.osnet_reid.match_thresh"),
+          },
+          {
+            field: "slider",
+            min: 0.85,
+            max: 0.95,
+            value: 0.85,
+            step: 0.01,
+            name: "update_threshold",
+            text: t("modal.plugin.osnet_reid.update_threshold"),
+          },
+          {
+            field: "slider",
+            min: 0.98,
+            max: 0.99,
+            value: 0.98,
+            step: 0.001,
+            name: "ema_alpha",
+            text: t("modal.plugin.osnet_reid.ema_alpha"),
+          },
+          {
+            field: "slider",
+            min: 0.05,
+            max: 0.08,
+            value: 0.06,
+            step: 0.005,
+            name: "margin",
+            text: t("modal.plugin.osnet_reid.margin"),
+          },
+          {
+            field: "slider",
+            min: 0.65,
+            max: 0.8,
+            value: 0.7,
+            step: 0.01,
+            name: "prototype_weight",
+            text: t("modal.plugin.osnet_reid.prototype_weight"),
+          },
+          {
+            field: "slider",
+            min: 0.2,
+            max: 0.35,
+            value: 0.3,
+            step: 0.01,
+            name: "cache_weight",
+            text: t("modal.plugin.osnet_reid.cache_weight"),
+          },
+          {
+            field: "slider",
+            min: 8,
+            max: 12,
+            value: 10,
+            step: 1,
+            name: "cache_size",
+            text: t("modal.plugin.osnet_reid.cache_size"),
+          },
+          {
+            field: "slider",
+            min: 90,
+            max: 300,
+            value: 120,
+            step: 10,
+            name: "max_missed",
+            text: t("modal.plugin.osnet_reid.max_missed"),
+          },
+          {
+            field: "slider",
+            min: 5,
+            max: 512,
+            value: 128,
+            step: 1,
+            name: "crop_size_x",
+            text: t("modal.plugin.osnet_reid.crop_size_x"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 5,
+            max: 512,
+            value: 256,
+            step: 1,
+            name: "crop_size_y",
+            text: t("modal.plugin.osnet_reid.crop_size_y"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_x1_offset",
+            text: t("modal.plugin.osnet_reid.crop_x1_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_y1_offset",
+            text: t("modal.plugin.osnet_reid.crop_y1_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_x2_offset",
+            text: t("modal.plugin.osnet_reid.crop_x2_offset"),
+            hidden: true,
+          },
+          {
+            field: "slider",
+            min: 0,
+            max: 0.8,
+            value: 0,
+            step: 0.05,
+            name: "crop_y2_offset",
+            text: t("modal.plugin.osnet_reid.crop_y2_offset"),
+            hidden: true,
+          },
+        ],
+      },
+      {
         name: t("modal.plugin.calibration_static_dlt.plugin_name"),
         description: t("modal.plugin.calibration_static_dlt.plugin_description"),
         icon: "mdi-camera-enhance",
@@ -1049,6 +1728,34 @@ const plugins = ref([
         optional_parameters: [],
       },
       {
+        name: t("modal.plugin.calibration_lens_solve.plugin_name"),
+        description: t("modal.plugin.calibration_lens_solve.plugin_description"),
+        icon: "mdi-camera-iris",
+        plugin: "calibration_lens_solve",
+        id: 707,
+        parameters: [
+          {
+            field: "select_calibration",
+            name: "calibration_id",
+            value: "",
+            text: t("modal.plugin.calibration_static_dlt.calibration_id"),
+            hint: t("modal.plugin.calibration_lens_solve.calibration_id_hint"),
+          },
+        ],
+        optional_parameters: [
+          {
+            field: "slider",
+            min: 2,
+            max: 20,
+            value: 8,
+            step: 1,
+            name: "num_frames",
+            text: t("modal.plugin.calibration_lens_solve.num_frames"),
+            hint: t("modal.plugin.calibration_lens_solve.num_frames_hint"),
+          },
+        ],
+      },
+      {
         name: t("modal.plugin.kpi_computation.plugin_name"),
         description: t("modal.plugin.kpi_computation.plugin_description"),
         icon: "mdi-chart-line",
@@ -1061,7 +1768,7 @@ const plugins = ref([
             value: "kinexon",
             items: [
               ...positionDataStore.provider.map((p) => ({ title: p.name, value: p.id })),
-              { title: "SportVid (ByteTrack)", value: "sportvid" },
+              { title: "SportVid", value: "sportvid" },
             ],
             text: t("modal.plugin.kpi_computation.format"),
             dataTour: "kpi-format",
@@ -1076,11 +1783,11 @@ const plugins = ref([
             dataTour: "kpi-tracking-data",
           },
           {
-            field: "select_bytetrack_run",
-            name: "bytetrack_run_id",
+            field: "select_object_tracker_run",
+            name: "object_tracker_run_id",
             value: "",
-            text: t("modal.plugin.kpi_computation.bytetrack_run_id"),
-            hint: t("modal.plugin.kpi_computation.bytetrack_run_id_hint"),
+            text: t("modal.plugin.kpi_computation.object_tracker_run_id"),
+            hint: t("modal.plugin.kpi_computation.object_tracker_run_id_hint"),
             hidden: true,
             dataTour: "kpi-bytetrack-run",
           },
@@ -1179,7 +1886,7 @@ watch(
   { immediate: true }
 );
 
-// Toggle tracking_data_id / bytetrack_run_id visibility based on format
+// Toggle tracking_data_id / object_tracker_run_id visibility based on format
 const kpiParams = computed(() => {
   const group = plugins.value.find((g) => g.id === 7);
   const plugin = group?.children.find((p) => p.id === 703);
@@ -1190,7 +1897,7 @@ watch(
   () => kpiParams.value.find((p) => p.name === "format")?.value,
   (fmt) => {
     const trackingParam = kpiParams.value.find((p) => p.name === "tracking_data_id");
-    const bytetrackParam = kpiParams.value.find((p) => p.name === "bytetrack_run_id");
+    const bytetrackParam = kpiParams.value.find((p) => p.name === "object_tracker_run_id");
     const calibrationParam = kpiParams.value.find((p) => p.name === "calibration_id");
     if (trackingParam) {
       trackingParam.hidden = fmt === "sportvid";
@@ -1203,8 +1910,103 @@ watch(
   { immediate: true }
 );
 
+const objectTrackerParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 704);
+  return plugin?.parameters || [];
+});
+
+const objectTrackerOptionalParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 704);
+  return plugin?.optional_parameters || [];
+});
+
+watchObjectTrackerSelection(objectTrackerParams, objectTrackerOptionalParams);
+
+const teamClusteringParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 705);
+  return plugin?.parameters || [];
+});
+
+const teamClusteringOptionalParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 705);
+  return plugin?.optional_parameters || [];
+});
+
+// Only relevant for HDBSCAN: distance metric and cluster-selection epsilon.
+const HDBSCAN_ONLY_PARAMS = ["metric", "cluster_selection_epsilon"];
+// Only relevant for K-Means: number of initializations and the random seed.
+const KMEANS_ONLY_PARAMS = ["n_init", "random_state"];
+
+watch(
+  () => teamClusteringParams.value.find((p) => p.name === "clustering_algo")?.value,
+  (algo) => {
+    for (const p of teamClusteringOptionalParams.value) {
+      if (HDBSCAN_ONLY_PARAMS.includes(p.name)) p.hidden = algo !== "HDBSCAN";
+      if (KMEANS_ONLY_PARAMS.includes(p.name)) p.hidden = algo !== "KMEANS";
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => teamClusteringOptionalParams.value.find((p) => p.name === "use_pca")?.value,
+  (usePca) => {
+    const pcaComponentsParam = teamClusteringOptionalParams.value.find(
+      (p) => p.name === "pca_components"
+    );
+    if (pcaComponentsParam) pcaComponentsParam.hidden = !usePca;
+  },
+  { immediate: true }
+);
+
+const osnetReidParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 706);
+  return plugin?.parameters || [];
+});
+
+const osnetReidOptionalParams = computed(() => {
+  const group = plugins.value.find((g) => g.id === 7);
+  const plugin = group?.children.find((p) => p.id === 706);
+  return plugin?.optional_parameters || [];
+});
+
+// Only relevant for gallery_mode "protos" (ProtoGallery): prototype/cache-based matching
+// hyperparameters. "tracks" mode (Gallery) only uses match_thresh & max_missed.
+const PROTOS_ONLY_PARAMS = [
+  "update_threshold",
+  "ema_alpha",
+  "cache_size",
+  "margin",
+  "prototype_weight",
+  "cache_weight",
+];
+
+watch(
+  () => osnetReidParams.value.find((p) => p.name === "gallery_mode")?.value,
+  (galleryMode) => {
+    for (const p of osnetReidOptionalParams.value) {
+      if (PROTOS_ONLY_PARAMS.includes(p.name)) p.hidden = galleryMode !== "protos";
+    }
+  },
+  { immediate: true }
+);
+
+// Only offer plugins the backend can run now (deployed Ray plugins); null = unknown,
+// show everything.
+const availablePlugins = ref(null);
 const pluginsSorted = computed(() => {
-  return plugins.value.slice(0).sort((a, b) => a.name.localeCompare(b.name));
+  const available = availablePlugins.value ? new Set(availablePlugins.value) : null;
+  return plugins.value
+    .map((group) =>
+      available ? { ...group, children: group.children.filter((p) => available.has(p.plugin)) } : group
+    )
+    .filter((group) => group.children.length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
 });
 
 const selected = computed(() => {
@@ -1221,13 +2023,50 @@ const selected = computed(() => {
 
 const runPlugin = async (plugin, parameters, optional_parameters) => {
   parameters = [...parameters, ...optional_parameters];
-  parameters = parameters.map((e) => {
+
+  if (plugin === "object_tracker") {
+    const trackingTargetIndex = parameters.findIndex((e) => e.name === "tracking_target");
+    if (trackingTargetIndex >= 0) {
+      const target = parameters[trackingTargetIndex].value;
+      const detector = parameters.find((e) => e.name === "detector")?.value;
+      parameters.splice(trackingTargetIndex, 1);
+
+      const classes = objectTrackerClasses(target, detector);
+      if (classes) {
+        parameters.push({ name: "classes", value: classes, group: "detector_params" });
+      }
+    }
+  }
+
+  // `hidden` always means "not applicable to the current selection" (e.g.
+  // kpi_computation's format-dependent tracking_data_id / object_tracker_run_id /
+  // calibration_id, or object_tracker's detector-dependent params) -- such
+  // entries are dropped entirely rather than submitted with a stale/empty
+  // value, so the backend falls back to its own defaults / conditional logic.
+  // Parameters additionally tagged with `group` (e.g. object_tracker's
+  // detector_params / tracker_params) are bundled into a single nested
+  // object under that group name instead of being submitted individually.
+  const grouped = {};
+  const ungrouped = [];
+  for (const e of parameters) {
+    if (e.hidden) continue;
+    if (e.group) {
+      setGroupedValue(grouped, e);
+    } else {
+      ungrouped.push(e);
+    }
+  }
+
+  parameters = ungrouped.map((e) => {
     if ("file" in e) {
       return { name: e.name, file: e.file };
     } else {
       return { name: e.name, value: e.value };
     }
   });
+  for (const [name, value] of Object.entries(grouped)) {
+    parameters.push({ name, value });
+  }
 
   for (const video of props.videoIds) {
     const video_params = [];
@@ -1302,12 +2141,13 @@ watch(
   }
 );
 
-onMounted(() => {
+onMounted(async () => {
   // window.dispatchEvent(new Event("plugin-overview-mounted"));
   tutorialStore.modalPluginVisible = true;
   document
     .querySelector("#v-list-group--id-7")
-    .parentElement.setAttribute("data-tour", "plugin-object-tracking-overview");
+    ?.parentElement.setAttribute("data-tour", "plugin-object-tracking-overview");
+  availablePlugins.value = await pluginRunStore.fetchAvailable();
 });
 
 onBeforeUnmount(() => {

@@ -1,4 +1,9 @@
 #!/bin/bash
+# Server control: ./manage.sh {prod|dev|shared} <command> [service...]
+# Every docker command first checks out and hard-resets the environment's deploy branch
+# (deploy-dev / deploy-prod) in the current directory, discarding local changes. It refuses
+# to switch a working copy to another branch unless SPORTVID_SWITCH_BRANCH=1 is set.
+# The systemd units sportvid_{dev,prod,shared} call `build` (= build and start) and `down`/`stop`.
 
 set -u
 
@@ -9,7 +14,7 @@ else
 fi
 
 usage() {
-    echo "Usage: $0 {prod|production|dev|development|shared} {build|rebuild|up|down|restart|logs|shell|migrate|frontend-install|frontend-build|wipe}"
+    echo "Usage: $0 {prod|production|dev|development|shared} {build|rebuild|up|down|stop|restart|logs|shell|migrate|frontend-build|frontend-rebuild|complete-rebuild|clean-build-artifacts|wipe} [service...]"
 }
 
 safe_exit() {
@@ -29,6 +34,8 @@ die() {
 
 ENVIRONMENT="${1:-}"
 COMMAND="${2:-}"
+shift 2 || true
+SERVICES=("$@")
 
 ENV_NAME=""
 ENV_FILE=""
@@ -64,6 +71,17 @@ prepare() {
     echo "Executing environment '$ENVIRONMENT' on branch '$BRANCH'"
     # ensure we're in a git repo
     git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "Not inside a git repository; aborting."
+    # Each working copy stays on its own deploy branch (/git/sportvid-dev: deploy-dev,
+    # /git/sportvid: deploy-prod for prod and shared). Switching it here would swap the code
+    # under the containers that bind-mount this directory, so only do it on request.
+    local current
+    current=$(git symbolic-ref --quiet --short HEAD) || current="(detached HEAD)"
+    if [[ "$current" != "$BRANCH" && "${SPORTVID_SWITCH_BRANCH:-}" != "1" ]]; then
+        die "Refusing to run '$ENVIRONMENT' here: this working copy is on '$current', '$ENVIRONMENT' needs '$BRANCH'.
+Checking out '$BRANCH' would change the code under the containers started from $(pwd).
+Run it from the working copy of '$BRANCH', or switch this one on purpose with:
+    SPORTVID_SWITCH_BRANCH=1 $0 $ENVIRONMENT $COMMAND ${SERVICES[*]}"
+    fi
     # make sure the correct branch is checked out
     git checkout -f "$BRANCH" || die "Failed to checkout branch: $BRANCH"
     # update from remote and discard local drift
@@ -72,17 +90,23 @@ prepare() {
     git reset --hard "origin/$BRANCH" || die "Failed to reset to origin/$BRANCH"
 }
 
-run_docker(){
-    local -a docker_cmd=("$@")
-
-    prepare || return $?    
-
+docker_compose() {
     docker compose \
         -p "$ENV_NAME" \
         --env-file "$ENV_FILE" \
         "${DOCKER_FILES[@]}" \
-        "${docker_cmd[@]}" || die "Running docker compose command failed."
+        "$@"
+}
 
+PREPARED=false
+
+# checks out the deploy branch once per call, then runs one docker compose command
+run_docker() {
+    if [[ "$PREPARED" == "false" ]]; then
+        prepare || return $?
+        PREPARED=true
+    fi
+    docker_compose "$@" || die "Running docker compose command failed."
     echo "Done!"
 }
 
@@ -100,12 +124,10 @@ wipe_environment() {
     esac
 
     base="/mnt/data/${ENV_NAME}/data"
-
     [[ -d "$base" ]] || die "Refusing to wipe: base directory does not exist: $base"
 
     for d in predictions backend_cache cache analyser media tmp; do
         target="${base}/${d}"
-
         if [[ -d "$target" ]]; then
             sudo find "$target" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
         else
@@ -117,40 +139,48 @@ wipe_environment() {
 }
 
 main() {
-    case $COMMAND in
+    case "$COMMAND" in
         "build")
-            echo "Building..."
-            run_docker up --build -d
+            # builds and (re)starts: the systemd units use this as their start command
+            echo "Building and starting..."
+            run_docker up --build -d "${SERVICES[@]}"
             ;;
         "rebuild")
-            echo "Rebuilding (force recreate)..."
-            run_docker up --build --force-recreate -d
+            echo "Rebuilding without cache and recreating containers..."
+            run_docker build --no-cache "${SERVICES[@]}"
+            run_docker up -d --force-recreate "${SERVICES[@]}"
             ;;
         "up")
             echo "Up..."
-            run_docker up -d
+            run_docker up -d "${SERVICES[@]}"
             ;;
         "down")
             echo "Shutting down..."
             run_docker down
             ;;
+        "stop")
+            echo "Stopping..."
+            run_docker stop "${SERVICES[@]}"
+            ;;
         "complete-rebuild")
             echo "Rebuilding (rmi & remove-orphans)..."
             run_docker down --rmi all -v --remove-orphans
+            run_docker up --build -d
             ;;
         "restart")
             echo "Restarting..."
-            run_docker restart
+            run_docker restart "${SERVICES[@]}"
             ;;
         "logs")
             echo "Logs..."
-            run_docker logs -f
+            run_docker logs -f "${SERVICES[@]}"
             ;;
         "shell")
-            run_docker exec backend bash
+            local target="${SERVICES[0]:-backend}"
+            run_docker exec "$target" bash
             ;;
         "migrate")
-            if [[ "$ENVIRONMENT" == "shared" ]]; then   
+            if [[ "$ENVIRONMENT" == "shared" ]]; then
                 die "Cannot migrate shared environment."
             fi
             echo "Migrating..."
@@ -159,12 +189,15 @@ main() {
         "frontend-build")
             echo "Building frontend packages..."
             run_docker build frontend
-            run_docker up --no-deps frontend
+            run_docker up -d --no-deps frontend
             ;;
         "frontend-rebuild")
             echo "Rebuilding frontend packages..."
             run_docker build --no-cache frontend
-            run_docker up --no-deps frontend
+            run_docker up -d --no-deps --force-recreate frontend
+            ;;
+        "clean-build-artifacts")
+            find ./packages ./analyser ./backend ./inference_ray \( -name '*.egg-info' -o -name build -o -name dist \) -exec rm -rf {} +
             ;;
         "wipe")
             wipe_environment
@@ -177,6 +210,8 @@ main() {
     esac
 }
 
-if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
-    main "$@"
+# prepare() resets this very file when it runs from the deploy checkout; bash reads scripts
+# while running them, so main and exit share one line and nothing after it is read.
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"; exit $?
 fi

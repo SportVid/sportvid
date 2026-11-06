@@ -1,8 +1,3 @@
-# Project specific things
-README.md
-*.yml
-Dockerfile
-
 *Zone.Identifier
 *.tar.gz
 *.tar
@@ -171,33 +166,28 @@ cython_debug/
 
 .DS_Store
 
-# Allow CI/CD workflow files to be tracked
-# !.github/
-# !.github/workflows/
-# !.github/workflows/*.yml
-
-# Ignore GitHub Actions Runner
-/actions-runner/
-
+# Claude
+CLAUDE.md
 .claude/
+
+# Editor
 .vscode/
 
 # Copilot
-.github
 github/
 
-# Server-specific authentication files
-.proxy/auth/
+# Tests
+test_env/
 
 # SportVid models
 models/
 
-# Data dirs
+# Data dir of the local stack (DATA_PATH=./data); packages/data and vendored */data/ are code
 /data/
-!/packages/data/
 
 # Project specific things
-README.md
-*.yml
-Dockerfile
+# basic-auth list of the server proxy, copied into its image by proxy/Dockerfile
+proxy/auth/
+# docs of the vendored trackers that were never imported
+/inference_ray/third_party/**/README.md
 

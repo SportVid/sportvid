@@ -93,7 +93,7 @@ watch(
   }
 );
 
-// Special entity ids: 0=rest, 1=ball, 2=referee
+// Special entity ids: 0=ball, 1=rest, 2=referee
 const specialEntityIds = [0, 1, 2];
 
 const teamColors = ref({});

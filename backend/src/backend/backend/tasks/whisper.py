@@ -15,20 +15,15 @@ from backend.models import (
 )
 from backend.plugin_manager import PluginManager
 from backend.utils import media_path_to_file
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
 
 
-@PluginManager.export_parser("whisper")
-class WhisperParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {}
-
-
 @PluginManager.export_plugin("whisper")
 class Whisper(Task):
+    ray_plugins = ("video_to_audio", "whisper")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

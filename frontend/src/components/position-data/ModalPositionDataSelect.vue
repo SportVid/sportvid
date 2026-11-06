@@ -11,7 +11,7 @@
         </template>
       </v-toolbar>
 
-      <v-card-text style="max-height: 490px; overflow-y: auto">
+      <v-card-text style="height: 500px; overflow-y: auto">
         <v-row justify="center" class="mt-0 mb-1">
           <v-tabs v-model="selectedMode" fixed-tabs slider-color="primary">
             <v-tab v-for="mode in PositionDataModes" :key="mode.id" :value="mode.id">
@@ -24,26 +24,66 @@
           <v-col>
             <v-tabs-window v-model="selectedMode">
               <v-tabs-window-item v-for="mode in PositionDataModes" :key="mode.id" :value="mode.id">
-                <template v-if="mode.id === 'bytetrack'">
+                <template v-if="mode.id === 'object_tracker'">
                   <v-select
                     v-model="selectedCalibrationAsset"
-                    :items="Object.values(calibrationAssetStore.calibrationAssetsList)"
+                    :items="calibrationAssetItems"
                     item-title="name"
                     item-value="id"
+                    item-disabled="disabled"
                     :label="$t('modal.position_data.select.asset')"
                     variant="underlined"
                     class="mt-0 mx-4"
                   />
 
                   <v-select
-                    v-model="selectedBytetrack"
-                    :items="bytetrackRuns"
+                    v-model="selectedObjectTracker"
+                    :items="objectTrackerRuns"
                     item-title="date"
                     item-value="id"
-                    :label="$t('modal.position_data.select.bytetrack')"
+                    :label="$t('modal.position_data.select.object_tracker')"
                     variant="underlined"
                     class="mt-2 mx-4"
                   />
+
+                  <v-expansion-panels class="mt-2 ml-3 pr-6">
+                    <v-expansion-panel>
+                      <v-expansion-panel-title expand-icon="mdi-menu-down">
+                        {{ $t("modal.position_data.select.optional") }}
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <v-select
+                          v-model="selectedBallTracker"
+                          :items="ballTrackerRuns"
+                          item-title="date"
+                          item-value="id"
+                          clearable
+                          :label="$t('modal.position_data.select.ball_tracker')"
+                          variant="underlined"
+                        />
+
+                        <v-select
+                          v-model="selectedTeamClustering"
+                          :items="teamClusteringRuns"
+                          item-title="date"
+                          item-value="id"
+                          clearable
+                          :label="$t('modal.position_data.select.team_clustering')"
+                          variant="underlined"
+                        />
+
+                        <v-select
+                          v-model="selectedReid"
+                          :items="reidRuns"
+                          item-title="date"
+                          item-value="id"
+                          clearable
+                          :label="$t('modal.position_data.select.reid')"
+                          variant="underlined"
+                        />
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+                  </v-expansion-panels>
 
                   <v-select
                     v-model="areaSize"
@@ -52,7 +92,7 @@
                     item-value="value"
                     :label="$t('modal.position_data.select.area_size')"
                     variant="underlined"
-                    class="mt-2 mx-4"
+                    class="mt-4 mx-4"
                   />
 
                   <v-row class="justify-center my-2">
@@ -130,11 +170,11 @@
         </v-row>
 
         <v-btn
-          class="mt-2"
+          class="mt-2 mb-n2"
           @click="
             confirmSelection(
               selectedCalibrationAsset,
-              selectedBytetrack,
+              selectedTrackerRun,
               selectedPositionData,
               areaSize
             )
@@ -153,6 +193,7 @@ import { ref, computed, onMounted, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
 import { usePositionDataStore } from "@/stores/position_data";
@@ -165,6 +206,7 @@ const { t } = useI18n({ useScope: "global" });
 
 const playerStore = usePlayerStore();
 const pluginRunStore = usePluginRunStore();
+const pluginRunResultStore = usePluginRunResultStore();
 const calibrationAssetStore = useCalibrationAssetStore();
 const positionDataStore = usePositionDataStore();
 const topViewStore = useTopViewStore();
@@ -202,23 +244,44 @@ watch(
   }
 );
 
-const selectedMode = ref("bytetrack");
+const selectedMode = ref("object_tracker");
 const PositionDataModes = ref([
-  { id: "bytetrack", name: t("modal.position_data.select.modes.bytetrack") },
+  { id: "object_tracker", name: t("modal.position_data.select.modes.object_tracker") },
   { id: "manual", name: t("modal.position_data.select.modes.manual") },
 ]);
 
 const selectedCalibrationAsset = ref(null);
 onMounted(() => {
   calibrationAssetStore.loadCalibrationAssetsList();
+  // Cheap call (no add_results) so already-finished runs are classified as
+  // player- vs. ball-tracking runs via their result name (see objectTrackerRuns / ballTrackerRuns).
+  pluginRunResultStore.fetchForVideo({ videoId: playerStore.videoId });
 });
+
+const IDENTITY_HOMOGRAPHY = [
+  [1, 0, 0],
+  [0, 1, 0],
+  [0, 0, 1],
+];
+const isUncalibrated = (matrix) => JSON.stringify(matrix) === JSON.stringify(IDENTITY_HOMOGRAPHY);
+const calibrationAssetItems = computed(() =>
+  Object.values(calibrationAssetStore.calibrationAssetsList).map((asset) => {
+    const uncalibrated = isUncalibrated(asset.homography_matrix);
+    return {
+      ...asset,
+      disabled: uncalibrated,
+      name: uncalibrated
+        ? `${asset.name} (${t("modal.position_data.select.not_calibrated")})`
+        : asset.name,
+    };
+  })
+);
 
 const selectedPositionData = ref(null);
 onMounted(() => {
   positionDataStore.loadPositionDataList();
 });
 
-const selectedBytetrack = ref(null);
 const formatLocalDate = (dateString) => {
   if (!dateString) return "";
 
@@ -232,21 +295,74 @@ const formatLocalDate = (dateString) => {
 
   return `${isoDate} ${localTime}`;
 };
-const bytetrackRuns = computed(() => {
+
+// A "real" player-tracking object_tracker run has a bytetrack tracker attached, so its
+// result is named "bboxes" (see backend tasks/object_tracker.py). Ball-only runs (no
+// tracker, ball-class filtered detections) are named "bboxes_ball" and are offered
+// separately via ballTrackerRuns below.
+const isBallTrackerRun = (pluginRunId) =>
+  pluginRunResultStore.forPluginRun(pluginRunId).some((r) => r.name === "bboxes_ball");
+
+// bytetrack is the legacy plugin type object_tracker replaced -- old runs made before the
+// rename are included here too instead of needing their own now-removed tab/picker.
+const TRACKER_TYPES = ["bytetrack", "object_tracker"];
+
+const selectedObjectTracker = ref(null);
+const objectTrackerRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
-    .filter((e) => e.type === "bytetrack" && e.status === "DONE")
+    .filter((e) => TRACKER_TYPES.includes(e.type) && e.status === "DONE" && !isBallTrackerRun(e.id))
     .map((pluginRun) => ({
       id: pluginRun.id,
-      type: "Bytetrack",
+      type: "Object Tracker",
       date: formatLocalDate(pluginRun.date),
     }));
 });
 
+const selectedBallTracker = ref(null);
+const ballTrackerRuns = computed(() => {
+  return pluginRunStore
+    .forVideo(playerStore.videoId)
+    .filter((e) => TRACKER_TYPES.includes(e.type) && e.status === "DONE" && isBallTrackerRun(e.id))
+    .map((pluginRun) => ({
+      id: pluginRun.id,
+      type: "Ball Tracker",
+      date: formatLocalDate(pluginRun.date),
+    }));
+});
+
+const selectedTeamClustering = ref(null);
+const teamClusteringRuns = computed(() => {
+  return pluginRunStore
+    .forVideo(playerStore.videoId)
+    .filter((e) => e.type === "team_clustering" && e.status === "DONE")
+    .map((pluginRun) => ({
+      id: pluginRun.id,
+      type: "Team Clustering",
+      date: formatLocalDate(pluginRun.date),
+    }));
+});
+
+const selectedReid = ref(null);
+const reidRuns = computed(() => {
+  return pluginRunStore
+    .forVideo(playerStore.videoId)
+    .filter((e) => e.type === "osnet_reid" && e.status === "DONE")
+    .map((pluginRun) => ({
+      id: pluginRun.id,
+      type: "ReID",
+      date: formatLocalDate(pluginRun.date),
+    }));
+});
+
+const selectedTrackerRun = computed(() => selectedObjectTracker.value);
+
 const isButtonDisabled = computed(() => {
-  if (selectedMode.value === "bytetrack") {
+  if (selectedMode.value === "object_tracker") {
     return (
-      selectedCalibrationAsset.value === null || selectedBytetrack.value === null || !areaSize.value
+      selectedCalibrationAsset.value === null ||
+      (selectedObjectTracker.value === null && !selectedBallTracker.value) ||
+      !areaSize.value
     );
   } else if (selectedMode.value === "manual") {
     return !selectedPositionData.value || !areaSize.value;
@@ -254,20 +370,33 @@ const isButtonDisabled = computed(() => {
   return true;
 });
 
-const confirmSelection = async (
-  calibrationAssetId,
-  bytetrackPluginId,
-  positionDataId,
-  areaSize
-) => {
-  if (selectedMode.value === "bytetrack") {
-    await topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, bytetrackPluginId);
+const confirmSelection = async (calibrationAssetId, trackerPluginId, positionDataId, areaSize) => {
+  // Persisted (position_data.js) so a reload's restoreFromCache knows which
+  // of the two restore paths to take — see there for why bytetrack and
+  // object_tracker don't need to be told apart any further than that.
+  positionDataStore.positionDataMode = selectedMode.value;
+
+  if (selectedMode.value === "object_tracker") {
+    if (trackerPluginId) {
+      await topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, trackerPluginId);
+    }
+    if (selectedBallTracker.value) {
+      await topViewStore.mergeBallTracking(calibrationAssetId, selectedBallTracker.value);
+    }
+    if (selectedTeamClustering.value) {
+      await topViewStore.mergeTeamAssignment(selectedTeamClustering.value);
+    }
+    if (selectedReid.value) {
+      await topViewStore.mergeReid(selectedReid.value);
+    }
     const keys = topViewStore.sortedFrameKeys;
     if (keys.length > 0) {
       positionDataStore.setSelectedTimeRangeStart(keys[0]);
       positionDataStore.setSelectedTimeRangeEnd(keys[keys.length - 1]);
     }
-    visualizationStore.loadKpiData(bytetrackPluginId);
+    if (trackerPluginId) {
+      visualizationStore.loadKpiData(trackerPluginId);
+    }
   } else if (selectedMode.value === "manual") {
     positionDataStore.loadPositionData(positionDataId);
     visualizationStore.loadKpiData(positionDataId);
@@ -285,7 +414,7 @@ const areaOptions = computed(() => {
   const s = currentSportObj.value;
   if (!s || !s.areas) return [];
   return Object.keys(s.areas).map((areaKey) => ({
-    title: s.areas[areaKey].titleKey ? t(s.areas[areaKey].titleKey) : areaKey,
+    title: s.areas[areaKey].title || areaKey,
     value: areaKey,
   }));
 });

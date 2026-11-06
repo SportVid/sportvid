@@ -4,25 +4,17 @@ from django.views import View
 from django.http import JsonResponse
 
 from backend.models import AnnotationCategory, Video
+from backend.permissions import writable
+from backend.utils.api import ApiView
 
 
 logger = logging.getLogger(__name__)
 
 
-class AnnoatationCategoryCreate(View):
+class AnnoatationCategoryCreate(ApiView):
     def post(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
-            try:
-                body = request.body.decode("utf-8")
-            except (UnicodeDecodeError, AttributeError):
-                body = request.body
-
-            try:
-                data = json.loads(body)
-            except Exception as e:
-                return JsonResponse({"status": "error", "type": "wrong_request_body"})
+            data = request.data
 
             if "name" not in data:
                 return JsonResponse({"status": "error", "type": "missing_values"})
@@ -38,7 +30,7 @@ class AnnoatationCategoryCreate(View):
                     create_args["color"] = data.get("color")
                 if "video_id" in data:
                     try:
-                        video_db = Video.objects.get(id=data.get("video_id"))
+                        video_db = writable(Video, request.user).get(id=data.get("video_id"))
                     except Video.DoesNotExist:
                         return JsonResponse({"status": "error", "type": "not_exist"})
                     create_args["video"] = video_db
@@ -50,11 +42,9 @@ class AnnoatationCategoryCreate(View):
             return JsonResponse({"status": "error"})
 
 
-class AnnoatationCategoryList(View):
+class AnnoatationCategoryList(ApiView):
     def get(self, request):
         try:
-            if not request.user.is_authenticated:
-                return JsonResponse({"status": "error"})
 
             query_args = {}
 

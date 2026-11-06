@@ -17,6 +17,12 @@ from typing import Union, Dict, Any
 
 # from inference_ray.callback import AnalyserPluginCallback
 
+# Seconds one plugin call to Ray Serve may take (PLUGIN_RUN_TIMEOUT in .env, shared with
+# the backend). Connecting and the status query must answer quickly.
+PLUGIN_RUN_TIMEOUT = float(os.environ.get("PLUGIN_RUN_TIMEOUT", 12 * 3600))
+RAY_CONNECT_TIMEOUT = 10
+RAY_STATUS_TIMEOUT = 10
+
 
 def convert_name(name):
     s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
@@ -36,6 +42,35 @@ class AnalyserProgressCallback(AnalyserPluginCallback):
         self.shared_memory["progress"] = progress
 
 
+class ValkeyProgressCallback(AnalyserPluginCallback):
+    """Publishes plugin progress to the shared valkey channel keyed by job_id, so the
+    analyser's GetPluginStatus can report it back to the backend (utils.progress_channel).
+
+    Throttled on the value delta so a per-frame callback on a long video doesn't hammer
+    valkey; 1.0 is always flushed.
+    """
+
+    def __init__(self, job_id, min_delta: float = 0.01) -> None:
+        self._job_id = job_id
+        self._min_delta = min_delta
+        self._last = -1.0
+
+    def update(self, progress=0.0, **kwargs):
+        try:
+            progress = max(0.0, min(1.0, float(progress)))
+        except (TypeError, ValueError):
+            return
+        if progress < 1.0 and progress - self._last < self._min_delta:
+            return
+        self._last = progress
+        try:
+            from utils.progress_channel import publish_progress
+
+            publish_progress(self._job_id, progress)
+        except Exception:
+            logging.debug("ValkeyProgressCallback publish failed", exc_info=True)
+
+
 class AnalyserPlugin(Plugin):
     @classmethod
     def __init_subclass__(
@@ -46,6 +81,9 @@ class AnalyserPlugin(Plugin):
         **kwargs,
     ):
         super().__init_subclass__(**kwargs)
+        
+        # logging.debug(f'{cls}, {parameters}, {requires}, {provides}')
+        
         cls._requires = requires
         cls._provides = provides
         cls._parameters = parameters
@@ -80,14 +118,14 @@ class AnalyserPlugin(Plugin):
         parameters: Dict = None,
         callbacks: Callable = None,
     ) -> Dict[str, Data]:
-        input_parameters = self._parameters
+        input_parameters = dict(self._parameters or {})
         if parameters is not None:
             input_parameters.update(parameters)
-        logging.info(f"[Plugin] {self._name} starting")
 
+        logging.info(f"[Plugin] {self._name} started.")
         result = self.call(inputs, data_manager, input_parameters, callbacks=callbacks)
-
-        logging.info(f"[Plugin] {self._name} done")
+        logging.info(f"[Plugin] {self._name} done.")
+        
         return result
 
 
@@ -119,8 +157,6 @@ class AnalyserPluginManager(Manager):
         self.find()
         self.plugin_list = []
 
-        # logging.error(self.plugin_list)
-
     @classmethod
     def export(cls, name):
         def export_helper(plugin):
@@ -130,15 +166,14 @@ class AnalyserPluginManager(Manager):
         return export_helper
 
     # TODO I am not sure if this is fine here
-
     def plugin_status(self):
-        print(f"{self.status_base_url}/api/serve/applications/", flush=True)
+        # print(f"{self.status_base_url}/api/serve/applications/", flush=True)
         try:
             status = requests.get(
-                f"{self.status_base_url}/api/serve/applications/"
+                f"{self.status_base_url}/api/serve/applications/", timeout=RAY_STATUS_TIMEOUT
             ).json()
         except:
-            logging.error("AnalyserPluginMananger: Can get status from ray server")
+            logging.error("[AnalyserPluginMananger] Can't get status from ray server.")
             return []
 
         running_model_map = {}
@@ -150,9 +185,6 @@ class AnalyserPluginManager(Manager):
             is_running = app.get("status", "DEPLOY_FAILED") == "RUNNING"
             if model_name in running_model_map:
                 pass
-                # logging.warning(
-                #     f"The same plugin is running several times {model_name}"
-                # )
             running_model_map[model_name] = {
                 "plugin": model_name,
                 "route": route,
@@ -196,11 +228,13 @@ class AnalyserPluginManager(Manager):
                 plugin_to_run = plugin_cls
 
         if plugin_to_run is None:
-            logging.error(f"[AnalyserPluginManager] plugin: {plugin} not found")
+            logging.error(f"[AnalyserPluginManager] Plugin '{plugin}' not found.")
             return None
 
         return plugin_to_run(config)
 
+    # TODO: Long-running plugin implementations should periodically check cancel_event
+    # to exit early (the HTTP call itself has a timeout).
     def __call__(
         self,
         plugin: str,
@@ -208,33 +242,55 @@ class AnalyserPluginManager(Manager):
         data_manager: DataManager,
         parameters: Dict = None,
         callbacks: Callable = None,
+        cancel_event=None,
+        session=None,
+        job_id=None,
     ):
+        # check cancellation before work
+        if cancel_event is not None and cancel_event.is_set():
+            logging.info(f"[AnalyserPluginManager] '{plugin}' aborted before it started.")
+            return []
+
         plugins = {x["plugin"]: x for x in self.plugin_status()}
 
         if plugin not in plugins:
-            logging.error(f"[AnalyserPluginManager] plugin: {plugin} not found")
+            logging.error(f"[AnalyserPluginManager] Plugin '{plugin}' not found.")
             return None
 
         plugin_to_run = plugins[plugin]
 
+        # NOTE: Uses an injected HTTP session or the module-level requests object.
+        # `session` (a requests.Session), when given, is what `abort_plugin()` closes
+        # from another thread to force this call to unblock (see, analyser/server.py).
+        # Falls back to the plain `requests` module for callers that don't need that
+        # (e.g. the CLI client), which behaves the same for a single call.
+        http = session if session is not None else requests
+
         # logging.info(f"{self.base_url}{plugin_to_run['route']}", flush=True)
         try:
-            results = requests.post(
+            results = http.post(
                 f"{self.base_url}{plugin_to_run['route']}",
                 json={
                     "inputs": {x: y.id for x, y in inputs.items()},
                     "parameters": parameters,
+                    # carried so the Ray deployment can report progress back over
+                    # valkey under this id (see main.py / utils.progress_channel).
+                    "job_id": job_id,
                 },
+                timeout=(RAY_CONNECT_TIMEOUT, PLUGIN_RUN_TIMEOUT),
             )
-        except:
-            logging.error("AnalyserPluginMananger: Can start plugin on ray server")
+        except Exception:
+            if cancel_event is not None and cancel_event.is_set():
+                logging.info(f"[AnalyserPluginManager] '{plugin}' aborted while running.")
+            else:
+                logging.error("[AnalyserPluginMananger]: Can't start plugin on the ray server.")
             return []
 
         try:
             data = results.json()
         except:
-            logging.error(f"AnalyserPluginMananger: {results}")
-            logging.error("AnalyserPluginMananger: Can decode response from ray server")
+            logging.error(f"[AnalyserPluginMananger]: {results}")
+            logging.error("[AnalyserPluginMananger]: Can't decode response from ray server.")
             return []
 
         return data

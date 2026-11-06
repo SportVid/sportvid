@@ -4,7 +4,17 @@ import { useI18n } from "vue-i18n";
 import { useBboxesStore } from "@/stores/bboxes";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { usePlayerStore } from "@/stores/player";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { fromPosDataObject } from "../plugins/compact_posdata";
+
+// Trailing index used to tag each merged tracklet with the plugin run it was physically
+// loaded from (see _mergeRawBboxSources below). team_id is a mutable field that edits can
+// freely change -- including across the "0 = ball" boundary -- so it can no longer be used
+// to infer which backend PluginRunResult a bbox entry lives in once it's been reassigned.
+// Consumers (e.g. ModalBboxUpdate.vue) should read bbox[BBOX_SOURCE_RUN_IDX] to know which
+// plugin run to send edits/deletes to. Only ever set in-memory on the merged copies; never
+// sent back to the backend, which re-reads its own stored blob by run id.
+export const BBOX_SOURCE_RUN_IDX = 10;
 
 export const useTopViewStore = defineStore(
   "top_view",
@@ -12,6 +22,7 @@ export const useTopViewStore = defineStore(
     const bboxesStore = useBboxesStore();
     const calibrationAssetStore = useCalibrationAssetStore();
     const playerStore = usePlayerStore();
+    const pluginRunResultStore = usePluginRunResultStore();
 
     const { t } = useI18n();
 
@@ -22,6 +33,13 @@ export const useTopViewStore = defineStore(
       topViewSize.value = size;
     };
 
+    // Kept as this store's own local (persisted) state rather than proxying
+    // through the visualization store: currentAreaSize is set together with
+    // currentSport.areaImage/widthRel/heightRel in the same onSportChange()
+    // call below, and those live here too — cross-store proxying introduced a
+    // circular import (top_view <-> visualization) that caused the two to
+    // desync after a reload (pitch image stuck on "full" while player/zone
+    // positions correctly used the restored area).
     const currentAreaSize = ref("full");
 
     const currentSport = ref({
@@ -31,7 +49,6 @@ export const useTopViewStore = defineStore(
       areas: {
         full: {
           title: t("sports.soccer.areas.full"),
-          titleKey: "sports.soccer.areas.full",
           image: require("../assets/top-view/pitch_soccer_full.png"),
           templateCrop: { x: [0, 1], y: [0, 1] },
           widthRel: 2100 / 2260,
@@ -39,7 +56,6 @@ export const useTopViewStore = defineStore(
         },
         halfLeft: {
           title: t("sports.soccer.areas.half_left"),
-          titleKey: "sports.soccer.areas.half_left",
           image: require("../assets/top-view/pitch_soccer_half.png"),
           templateCrop: { x: [0, 0.5], y: [0, 1] },
           widthRel: 1050 / 1210,
@@ -47,7 +63,6 @@ export const useTopViewStore = defineStore(
         },
         halfRight: {
           title: t("sports.soccer.areas.half_right"),
-          titleKey: "sports.soccer.areas.half_right",
           image: require("../assets/top-view/pitch_soccer_half.png"),
           templateCrop: { x: [0.5, 1], y: [0, 1] },
           widthRel: 1050 / 1210,
@@ -55,7 +70,6 @@ export const useTopViewStore = defineStore(
         },
         boxToBox: {
           title: t("sports.soccer.areas.box_to_box"),
-          titleKey: "sports.soccer.areas.box_to_box",
           image: require("../assets/top-view/pitch_soccer_box_to_box.png"),
           templateCrop: { x: [0.1575, 0.8425], y: [0, 1] },
           widthRel: 1440 / 1600,
@@ -63,7 +77,6 @@ export const useTopViewStore = defineStore(
         },
         doubleBoxLeft: {
           title: t("sports.soccer.areas.double_box_left"),
-          titleKey: "sports.soccer.areas.double_box_left",
           image: require("../assets/top-view/pitch_soccer_double_box.png"),
           templateCrop: { x: [0, 0.315], y: [0.2025, 0.7975] },
           widthRel: 660 / 820,
@@ -71,7 +84,6 @@ export const useTopViewStore = defineStore(
         },
         doubleBoxRight: {
           title: t("sports.soccer.areas.double_box_right"),
-          titleKey: "sports.soccer.areas.double_box_right",
           image: require("../assets/top-view/pitch_soccer_double_box.png"),
           templateCrop: { x: [0.685, 1], y: [0.2025, 0.7975] },
           widthRel: 660 / 820,
@@ -87,7 +99,6 @@ export const useTopViewStore = defineStore(
         areas: {
           full: {
             title: t("sports.soccer.areas.full"),
-            titleKey: "sports.soccer.areas.full",
             image: require("../assets/top-view/pitch_soccer_full.png"),
             templateCrop: { x: [0, 1], y: [0, 1] },
             widthRel: 2100 / 2260,
@@ -95,7 +106,6 @@ export const useTopViewStore = defineStore(
           },
           halfLeft: {
             title: t("sports.soccer.areas.half_left"),
-            titleKey: "sports.soccer.areas.half_left",
             image: require("../assets/top-view/pitch_soccer_half.png"),
             templateCrop: { x: [0, 0.5], y: [0, 1] },
             widthRel: 1050 / 1210,
@@ -103,7 +113,6 @@ export const useTopViewStore = defineStore(
           },
           halfRight: {
             title: t("sports.soccer.areas.half_right"),
-            titleKey: "sports.soccer.areas.half_right",
             image: require("../assets/top-view/pitch_soccer_half.png"),
             templateCrop: { x: [0.5, 1], y: [0, 1] },
             widthRel: 1050 / 1210,
@@ -111,7 +120,6 @@ export const useTopViewStore = defineStore(
           },
           boxToBox: {
             title: t("sports.soccer.areas.box_to_box"),
-            titleKey: "sports.soccer.areas.box_to_box",
             image: require("../assets/top-view/pitch_soccer_box_to_box.png"),
             templateCrop: { x: [0.1575, 0.8425], y: [0, 1] },
             widthRel: 1440 / 1600,
@@ -119,7 +127,6 @@ export const useTopViewStore = defineStore(
           },
           doubleBoxLeft: {
             title: t("sports.soccer.areas.double_box_left"),
-            titleKey: "sports.soccer.areas.double_box_left",
             image: require("../assets/top-view/pitch_soccer_double_box.png"),
             templateCrop: { x: [0, 0.315], y: [0.2025, 0.7975] },
             widthRel: 660 / 820,
@@ -127,7 +134,6 @@ export const useTopViewStore = defineStore(
           },
           doubleBoxRight: {
             title: t("sports.soccer.areas.double_box_right"),
-            titleKey: "sports.soccer.areas.double_box_right",
             image: require("../assets/top-view/pitch_soccer_double_box.png"),
             templateCrop: { x: [0.685, 1], y: [0.2025, 0.7975] },
             widthRel: 660 / 820,
@@ -142,7 +148,6 @@ export const useTopViewStore = defineStore(
         areas: {
           full: {
             title: t("sports.handball.areas.full"),
-            titleKey: "sports.handball.areas.full",
             image: require("../assets/top-view/court_handball_full.png"),
             templateCrop: { x: [0, 1], y: [0, 1] },
             widthRel: 2400 / 2879,
@@ -150,7 +155,6 @@ export const useTopViewStore = defineStore(
           },
           halfLeft: {
             title: t("sports.handball.areas.half_left"),
-            titleKey: "sports.handball.areas.half_left",
             image: require("../assets/top-view/court_handball_half_left.png"),
             templateCrop: { x: [0, 0.5], y: [0, 1] },
             widthRel: 1200 / 1680,
@@ -158,7 +162,6 @@ export const useTopViewStore = defineStore(
           },
           halfRight: {
             title: t("sports.handball.areas.half_right"),
-            titleKey: "sports.handball.areas.half_right",
             image: require("../assets/top-view/court_handball_half_right.png"),
             templateCrop: { x: [0.5, 1], y: [0, 1] },
             widthRel: 1200 / 1680,
@@ -173,7 +176,6 @@ export const useTopViewStore = defineStore(
         areas: {
           full: {
             title: t("sports.basketball.areas.full"),
-            titleKey: "sports.basketball.areas.full",
             image: require("../assets/top-view/court_basketball_full.png"),
             templateCrop: { x: [0, 1], y: [0, 1] },
             widthRel: 1719 / 2199,
@@ -181,7 +183,6 @@ export const useTopViewStore = defineStore(
           },
           halfLeft: {
             title: t("sports.basketball.areas.half_left"),
-            titleKey: "sports.basketball.areas.half_left",
             image: require("../assets/top-view/court_basketball_half_left.png"),
             templateCrop: { x: [0, 0.5], y: [0, 1] },
             widthRel: 861 / 1340,
@@ -189,7 +190,6 @@ export const useTopViewStore = defineStore(
           },
           halfRight: {
             title: t("sports.basketball.areas.half_right"),
-            titleKey: "sports.basketball.areas.half_right",
             image: require("../assets/top-view/court_basketball_half_right.png"),
             templateCrop: { x: [0.5, 1], y: [0, 1] },
             widthRel: 861 / 1340,
@@ -204,7 +204,6 @@ export const useTopViewStore = defineStore(
         areas: {
           full: {
             title: t("sports.climbing.areas.full"),
-            titleKey: "sports.climbing.areas.full",
             image: require("../assets/top-view/area_climbing_full.png"),
             templateCrop: { x: [0, 1], y: [0, 1] },
             widthRel: 1600 / 1760,
@@ -238,9 +237,17 @@ export const useTopViewStore = defineStore(
       });
     };
 
-    const setSportFromVideo = (sportKey, areaSize = "full") => {
+    const setSportFromVideo = (sportKey, areaSize) => {
       const sport = sports.value.find((s) => s.key === sportKey);
-      if (sport) onSportChange(sport.title, areaSize);
+      if (!sport) return;
+      // Keep whatever area size was already selected (currentAreaSize is
+      // persisted across reloads, see its definition above) instead of always
+      // forcing it back to "full" on mount — but only if it's actually a
+      // valid area for this sport (a different video's sport might not define
+      // e.g. "halfLeft").
+      const effectiveAreaSize =
+        areaSize ?? (sport.areas?.[currentAreaSize.value] ? currentAreaSize.value : "full");
+      onSportChange(sport.title, effectiveAreaSize);
     };
 
     const showSpaceControl = ref(false);
@@ -284,7 +291,7 @@ export const useTopViewStore = defineStore(
 
     // Precomputed metadata - populated once in setPositionData() to avoid
     // multiple components independently scanning all 135k+ frames.
-    // Kinds split by team_id: 0=inactive, 1=ball, 2=ref, ≥3=active player.
+    // Kinds split by team_id: 0=ball, 1=inactive, 2=ref, ≥3=active player.
     const precomputedPlayerList = shallowRef([]); // active players only (team_id ≥ 3)
     const precomputedRefList = shallowRef([]);
     const precomputedBallList = shallowRef([]);
@@ -305,9 +312,9 @@ export const useTopViewStore = defineStore(
     // Lookup helpers: pick the right meta dict based on team_id semantics.
     const _kindFromTeamId = (tid) => {
       const n = Number(tid);
-      if (n === 1) return "ball";
+      if (n === 0) return "ball";
       if (n === 2) return "ref";
-      if (n === 0) return "rest";
+      if (n === 1) return "rest";
       return "player";
     };
     const getEntityName = (entityId, teamId) => {
@@ -326,8 +333,212 @@ export const useTopViewStore = defineStore(
       return num != null ? num : entityId;
     };
 
+    // Display name for a team_id: the custom name from meta if one was set, otherwise a
+    // stable "Team A"/"Team B"/... fallback letter derived from ascending team_id order
+    // among real player teams (team_id >= 3). Shared so the matchup title and the
+    // toggle-entities overlays (TopView, VideoPlayer) always agree on which letter a given
+    // team_id maps to, instead of each falling back to the raw numeric id on its own.
+    const getTeamDisplayName = (teamId) => {
+      const meta = metaDataTopView.value;
+      const tid = Number(teamId);
+      const customName = meta?.team_ids?.[tid]?.name;
+      if (customName) return customName;
+      if (tid < 3) return String(teamId);
+      const realTeamIds = Object.keys(meta?.team_ids ?? {})
+        .map(Number)
+        .filter((id) => id >= 3)
+        .sort((a, b) => a - b);
+      const index = realTeamIds.indexOf(tid);
+      if (index === -1) return String(teamId);
+      return t("position_data.team_fallback_name", { letter: String.fromCharCode(65 + index) });
+    };
+
     // Whether the current positionDataTopView is a CompactPositionData instance
     const _isCompact = ref(false);
+
+    // Plugin run ids of the last team_clustering/osnet_reid merges applied on top of the
+    // active tracker run (see mergeTeamAssignment/mergeReid below) — persisted (see this
+    // store's `persist` option) purely so a page reload can redo the same merges; they play
+    // no role in the merge logic itself.
+    const teamClusteringRunId = ref(null);
+    const reidRunId = ref(null);
+
+    // Foot points projected onto the pitch by the backend (calibration_assets/project: homography + lens), by
+    // "x,y" of the video point. Box positions never change client-side (edits and merges only touch ids/teams,
+    // deletes drop boxes), so after the first load only new points are requested. Cleared when the calibration
+    // changes.
+    const _pitchProjectionCache = new Map();
+    let _pitchProjectionKey = null;
+
+    async function _projectToPitch(points) {
+      const key = calibrationAssetStore.calibrationKey;
+      if (key !== _pitchProjectionKey) {
+        _pitchProjectionCache.clear();
+        _pitchProjectionKey = key;
+      }
+      const missing = [...new Set(points.map(([x, y]) => `${x},${y}`))].filter(
+        (k) => !_pitchProjectionCache.has(k)
+      );
+      if (missing.length) {
+        const projected = await calibrationAssetStore.projectPoints(
+          missing.map((k) => k.split(",").map(Number))
+        );
+        if (key !== _pitchProjectionKey) return null; // the calibration changed meanwhile
+        missing.forEach((k, i) => _pitchProjectionCache.set(k, projected[i]));
+      }
+      return points.map(([x, y]) => _pitchProjectionCache.get(`${x},${y}`));
+    }
+
+    // Projects a plain-object bbox dataset (time -> [tracklet, ...]) onto the pitch, matching the tracklet
+    // layout produced by bytetrack/object_tracker (b[3]/b[4] = foot x/y); boxes the calibration can't map
+    // (beyond its lens's range) are dropped. Null without a calibration.
+    async function _projectBboxDataToPitch(bboxData) {
+      if (!calibrationAssetStore.calibrationMatrix) return null;
+      const entries = Object.entries(bboxData);
+      const projected = await _projectToPitch(
+        entries.flatMap(([, boxes]) => boxes.map((b) => [b[3], b[4]]))
+      );
+      if (!projected) return null;
+      let i = 0;
+      const transformed = {};
+      for (const [time, boxes] of entries) {
+        transformed[time] = boxes.filter((b) => {
+          const p = projected[i++];
+          if (!p) return false;
+          b[3] = p[0];
+          b[4] = 1 - p[1];
+          return true;
+        });
+      }
+      return transformed;
+    }
+
+    // Combines the player run's raw bboxes (bboxesStore.bboxDataActive) with the
+    // separately-tracked ball run's raw bboxes (bboxesStore.bboxBallDataActive), both in
+    // video-space (b[5..8] = x,y,w,h), keyed by frame time. Re-parses fresh each call so
+    // callers can safely pass the result into _projectBboxDataToPitch (which mutates
+    // its input in place) without corrupting bboxDataInterpolated.
+    function _mergeRawBboxSources() {
+      const tagSource = (boxes, runId) =>
+        boxes.map((b) => {
+          b[BBOX_SOURCE_RUN_IDX] = runId;
+          return b;
+        });
+
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+      const ballRaw = bboxesStore.bboxBallDataActive
+        ? JSON.parse(bboxesStore.bboxBallDataActive)
+        : {};
+
+      const merged = {};
+      for (const [time, boxes] of Object.entries(playerRaw)) {
+        merged[time] = tagSource(boxes, bboxesStore.bboxPluginRunId);
+      }
+      for (const [time, boxes] of Object.entries(ballRaw)) {
+        const tagged = tagSource(boxes, bboxesStore.bboxBallPluginRunId);
+        merged[time] = merged[time] ? [...merged[time], ...tagged] : tagged;
+      }
+      return merged;
+    }
+
+    // Combines player + ball meta_data (team_ids/player_ids/ref_ids/ball_ids), so neither
+    // run's entity names/numbers get dropped when the other run is (re)loaded or edited.
+    function _combinedStoredMeta() {
+      const playerMeta = bboxesStore.bboxMetaData ? JSON.parse(bboxesStore.bboxMetaData) : {};
+      const ballMeta = bboxesStore.bboxBallMetaData ? JSON.parse(bboxesStore.bboxBallMetaData) : {};
+      return {
+        team_ids: { ...(playerMeta.team_ids ?? {}), ...(ballMeta.team_ids ?? {}) },
+        player_ids: { ...(playerMeta.player_ids ?? {}), ...(ballMeta.player_ids ?? {}) },
+        ref_ids: { ...(playerMeta.ref_ids ?? {}), ...(ballMeta.ref_ids ?? {}) },
+        ball_ids: { ...(playerMeta.ball_ids ?? {}), ...(ballMeta.ball_ids ?? {}) },
+      };
+    }
+
+    // Rebuilds bboxDataInterpolated (video overlay) and positionDataTopView (pitch view)
+    // from the current player + ball raw sources, then the aggregates. Called after loading either
+    // run and after editing/deleting a bbox in either run, so the merged view never goes stale. The
+    // pitch projection comes from the backend: a rebuild superseded by a newer one while waiting
+    // for it is dropped.
+    let _mergeRequest = 0;
+    async function _applyMergedBboxData() {
+      bboxesStore.bboxDataInterpolated = _mergeRawBboxSources();
+
+      const request = ++_mergeRequest;
+      let newPosData = null;
+      try {
+        newPosData = await _projectBboxDataToPitch(_mergeRawBboxSources());
+      } catch (e) {
+        console.error("Failed to project the bounding boxes onto the pitch", e);
+      }
+      if (request !== _mergeRequest) return;
+      if (newPosData) {
+        positionDataTopView.value = newPosData;
+        _isCompact.value = false;
+      }
+      _recomputeAggregates(_combinedStoredMeta());
+    }
+
+    // Rebuilds metaDataTopView and the four precomputed*List aggregates from the current
+    // positionDataTopView.value (plain-object path only). Shared by the initial bbox load
+    // and by mergeBallTracking, so both end up with consistent aggregates.
+    function _recomputeAggregates(storedMeta) {
+      const playerMap = new Map();
+      const refMap = new Map();
+      const ballMap = new Map();
+      const inactiveMap = new Map();
+      const sections = new Set();
+      const boundaries = {};
+      for (const [timeKey, boxes] of Object.entries(positionDataTopView.value ?? {})) {
+        const t = Number(timeKey);
+        for (const b of boxes) {
+          const tid = b[1];
+          if (tid === 0) {
+            ballMap.set(b[0], tid);
+            refMap.delete(b[0]);
+            inactiveMap.delete(b[0]);
+            playerMap.delete(b[0]);
+          } else if (tid === 2) {
+            refMap.set(b[0], tid);
+            ballMap.delete(b[0]);
+            inactiveMap.delete(b[0]);
+            playerMap.delete(b[0]);
+          } else if (tid === 1) {
+            if (!ballMap.has(b[0]) && !refMap.has(b[0]) && !playerMap.has(b[0]))
+              inactiveMap.set(b[0], tid);
+          } else {
+            playerMap.set(b[0], tid);
+            ballMap.delete(b[0]);
+            refMap.delete(b[0]);
+            inactiveMap.delete(b[0]);
+          }
+          const gs = b[2];
+          sections.add(gs);
+          if (!boundaries[gs]) {
+            boundaries[gs] = { first: t, last: t };
+          } else {
+            if (t < boundaries[gs].first) boundaries[gs].first = t;
+            if (t > boundaries[gs].last) boundaries[gs].last = t;
+          }
+        }
+      }
+      metaDataTopView.value = {
+        team_ids: storedMeta.team_ids ?? {},
+        player_ids: storedMeta.player_ids ?? {},
+        ref_ids: storedMeta.ref_ids ?? {},
+        ball_ids: storedMeta.ball_ids ?? {},
+      };
+      const _toList = (m) =>
+        Array.from(m, ([pid, tid]) => ({ playerId: pid, teamId: tid })).sort(
+          (a, b) => a.playerId - b.playerId
+        );
+      precomputedPlayerList.value = _toList(playerMap);
+      precomputedRefList.value = _toList(refMap);
+      precomputedBallList.value = _toList(ballMap);
+      precomputedInactiveList.value = _toList(inactiveMap);
+      precomputedPlayerIdSet.value = new Set(playerMap.keys());
+      precomputedGameSections.value = sections;
+      precomputedHalftimeBoundaries.value = boundaries;
+    }
 
     async function transformBBoxToPositionDataTopView(
       calibrationAssetId,
@@ -340,96 +551,252 @@ export const useTopViewStore = defineStore(
         bboxesStore.bboxDataActive = updatedBboxes;
         bboxesStore.bboxDataLoaded = true;
       } else {
+        // Fresh tracker run (not just a re-apply after a bbox edit) — any
+        // team_clustering/reid merge tracked below belonged to whichever run
+        // was active before, so it no longer applies here.
+        teamClusteringRunId.value = null;
+        reidRunId.value = null;
         await bboxesStore.loadBboxData(bytetrackPluginId);
       }
 
       if (bboxesStore.bboxDataActive && bboxesStore.bboxDataActive.length > 0) {
-        // const _parsedData = JSON.parse(bboxesStore.bboxDataActive);
-
-        const _bboxDataInterpolated = JSON.parse(bboxesStore.bboxDataActive);
-
-        // const _bboxDataInterpolated = bboxesStore.interpolateBboxData(
-        //   _parsedData,
-        //   playerStore.videoFPS,
-        //   30
-        // );
-        bboxesStore.bboxDataInterpolated = _bboxDataInterpolated;
-
-        if (calibrationAssetStore.calibrationMatrix) {
-          const newPosData = {};
-          for (const [time, boxes] of Object.entries(_bboxDataInterpolated)) {
-            newPosData[time] = boxes.map((b) => {
-              const { x, y } = calibrationAssetStore.applyHomography(
-                calibrationAssetStore.calibrationMatrix,
-                { x: b[3], y: b[4] }
-              );
-              b[3] = x;
-              b[4] = 1 - y;
-              return b;
-            });
-          }
-          positionDataTopView.value = newPosData;
-          _isCompact.value = false;
-        }
-
-        const storedMeta = bboxesStore.bboxMetaData ? JSON.parse(bboxesStore.bboxMetaData) : {};
-        const playerMap = new Map();
-        const refMap = new Map();
-        const ballMap = new Map();
-        const inactiveMap = new Map();
-        const sections = new Set();
-        const boundaries = {};
-        for (const [timeKey, boxes] of Object.entries(_bboxDataInterpolated)) {
-          const t = Number(timeKey);
-          for (const b of boxes) {
-            const tid = b[1];
-            if (tid === 1) {
-              ballMap.set(b[0], tid);
-              refMap.delete(b[0]);
-              inactiveMap.delete(b[0]);
-              playerMap.delete(b[0]);
-            } else if (tid === 2) {
-              refMap.set(b[0], tid);
-              ballMap.delete(b[0]);
-              inactiveMap.delete(b[0]);
-              playerMap.delete(b[0]);
-            } else if (tid === 0) {
-              if (!ballMap.has(b[0]) && !refMap.has(b[0]) && !playerMap.has(b[0]))
-                inactiveMap.set(b[0], tid);
-            } else {
-              playerMap.set(b[0], tid);
-              ballMap.delete(b[0]);
-              refMap.delete(b[0]);
-              inactiveMap.delete(b[0]);
-            }
-            const gs = b[2];
-            sections.add(gs);
-            if (!boundaries[gs]) {
-              boundaries[gs] = { first: t, last: t };
-            } else {
-              if (t < boundaries[gs].first) boundaries[gs].first = t;
-              if (t > boundaries[gs].last) boundaries[gs].last = t;
-            }
-          }
-        }
-        metaDataTopView.value = {
-          team_ids: storedMeta.team_ids ?? {},
-          player_ids: storedMeta.player_ids ?? {},
-          ref_ids: storedMeta.ref_ids ?? {},
-          ball_ids: storedMeta.ball_ids ?? {},
-        };
-        const _toList = (m) =>
-          Array.from(m, ([pid, tid]) => ({ playerId: pid, teamId: tid })).sort(
-            (a, b) => a.playerId - b.playerId
-          );
-        precomputedPlayerList.value = _toList(playerMap);
-        precomputedRefList.value = _toList(refMap);
-        precomputedBallList.value = _toList(ballMap);
-        precomputedInactiveList.value = _toList(inactiveMap);
-        precomputedPlayerIdSet.value = new Set(playerMap.keys());
-        precomputedGameSections.value = sections;
-        precomputedHalftimeBoundaries.value = boundaries;
+        await _applyMergedBboxData();
       }
+    }
+
+    // Merges an optional, separately-run ball-tracking result (object_tracker plugin run
+    // without a tracker, filtered to the ball class) into the currently loaded
+    // positionDataTopView and bboxesStore.bboxDataInterpolated, so both the pitch view and
+    // the video overlay (VideoPlayer.vue) render the ball. The ball run's own state
+    // (bboxBallDataActive/bboxBallMetaData/bboxBallPluginRunId) is tracked separately from
+    // bboxesStore.bboxDataActive/bboxPluginRunId, which must keep pointing at the player
+    // run for bbox editing. Plain-object path only (no manual/Compact merge).
+    async function mergeBallTracking(calibrationAssetId, ballPluginRunId) {
+      if (!ballPluginRunId) return;
+
+      calibrationAssetStore.loadCalibrationAsset(calibrationAssetId);
+
+      const results = await pluginRunResultStore.forPluginRunWithData(
+        ballPluginRunId,
+        playerStore.videoId
+      );
+      const ballResult = results.find((r) => r.data?.bboxes !== undefined);
+      if (!ballResult) return;
+
+      bboxesStore.bboxBallPluginRunId = ballPluginRunId;
+      bboxesStore.bboxBallDataActive = ballResult.data.bboxes;
+      bboxesStore.bboxBallMetaData = ballResult.data.meta_data ?? null;
+
+      await _applyMergedBboxData();
+    }
+
+    // Refreshes the ball run's raw bboxes/meta after an edit or delete targeting the ball
+    // plugin run (see bboxesStore.updateBboxData/deleteBboxData), then rebuilds the merged
+    // view so the change shows up immediately without dropping the player run's data.
+    async function refreshBallBboxData(updatedBboxes, updatedMeta) {
+      bboxesStore.bboxBallDataActive = updatedBboxes;
+      bboxesStore.bboxBallMetaData = updatedMeta ?? null;
+
+      await _applyMergedBboxData();
+    }
+
+    // team_clustering writes raw cluster indices (0..K-1, or -1 for HDBSCAN noise) into
+    // TeamsData, not the app's TeamId convention (0=ball, 1=bystander, 2=referee, 3+=teams,
+    // see inference_ray/.../object_tracker.py's TeamId enum and visualization.js's
+    // teamColorMapping). Cluster 0/1 must not be written to b[1] as-is, or players would be
+    // misclassified as ball/bystander -- offset active clusters into the team range and map
+    // noise to "bystander" (no confident team assignment).
+    const TEAM_CLUSTER_LABEL_OFFSET = 3;
+    const TEAM_CLUSTER_NOISE_TEAM_ID = 1;
+
+    // Applies a separately-run team_clustering result (TeamsData: {frame_time: {track_id:
+    // cluster_label}}) onto the currently loaded player run by overwriting b[1] (team_id) in
+    // bboxesStore.bboxDataActive, then persists (bakes) that result back into the tracker run
+    // itself (see the bboxesStore.replaceBboxData call below) -- not a live overlay like
+    // mergeBallTracking. ModalBboxUpdate.vue lets users manually correct individual team
+    // assignments afterwards; baking ensures those edits land on -- and stay on -- the same
+    // data a reload sees, instead of a browser-only copy that a reload or an unrelated edit's
+    // server response would silently revert.
+    async function mergeTeamAssignment(teamClusteringPluginRunId) {
+      if (!teamClusteringPluginRunId) return;
+
+      const results = await pluginRunResultStore.forPluginRunWithData(
+        teamClusteringPluginRunId,
+        playerStore.videoId
+      );
+      const teamsResult = results.find((r) => r.data?.teams_data !== undefined);
+      if (!teamsResult) return;
+
+      const teamsMapping = teamsResult.data.teams_data;
+
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+      for (const [frameTime, boxes] of Object.entries(playerRaw)) {
+        const frameAssignments = teamsMapping[frameTime];
+        if (!frameAssignments) continue;
+
+        for (const b of boxes) {
+          const label = frameAssignments[b[0]];
+          if (label === undefined || label === null) continue;
+
+          b[1] = label < 0 ? TEAM_CLUSTER_NOISE_TEAM_ID : label + TEAM_CLUSTER_LABEL_OFFSET;
+        }
+      }
+      const bakedBboxes = JSON.stringify(playerRaw);
+      bboxesStore.bboxDataActive = bakedBboxes;
+      teamClusteringRunId.value = teamClusteringPluginRunId;
+
+      await _applyMergedBboxData();
+
+      // Bake the merge into the tracker run itself instead of leaving it as a browser-only
+      // overlay: without this, any bbox edit's response (the tracker run's own un-merged
+      // data) or a page reload had to reapply the merge from teamsMapping from scratch,
+      // silently clobbering any manual per-box team correction made afterward via
+      // ModalBboxUpdate.vue. Once persisted, the tracker run's own data already carries the
+      // team ids, so clear the flag -- _restoreTracker (position_data.js) and
+      // bboxesStore.updateBboxData/deleteBboxData then treat it like a plain tracker run,
+      // and further edits (including bulk "all team" ones) persist normally since the
+      // backend's team_id now genuinely matches what's displayed.
+      try {
+        const res = await bboxesStore.replaceBboxData(bboxesStore.bboxPluginRunId, bakedBboxes);
+        if (res.status === "ok") {
+          bboxesStore.bboxMetaData = res.entry.meta_data ?? bboxesStore.bboxMetaData;
+          teamClusteringRunId.value = null;
+          _recomputeAggregates(_combinedStoredMeta());
+        }
+      } catch (e) {
+        // Persist failed (e.g. offline) -- leave teamClusteringRunId set so the merge is
+        // retried client-side (and baking re-attempted) on the next reload/edit instead of
+        // being silently lost.
+        console.error("Failed to persist team assignment merge", e);
+      }
+    }
+
+    // Applies a separately-run osnet_reid result (ReIDData: {frame_time: {old_track_id:
+    // new_reid_id}}) onto the currently loaded player run by overwriting b[0] (track_id/
+    // player_id) in bboxesStore.bboxDataActive. Like mergeTeamAssignment, this is a ONE-TIME
+    // mutation of the source and must run AFTER mergeTeamAssignment, since team_clustering's
+    // mapping is keyed by the ORIGINAL object_tracker track_ids -- swapping b[0] first would
+    // break that lookup. The raw reid mapping is also stashed on bboxesStore.bboxReidMapping
+    // so bbox edits/deletes (updateBboxData/deleteBboxData) can translate the currently
+    // displayed (new) id back to the original track_id the backend still knows about.
+    async function mergeReid(reidPluginRunId) {
+      if (!reidPluginRunId) return;
+
+      const results = await pluginRunResultStore.forPluginRunWithData(
+        reidPluginRunId,
+        playerStore.videoId
+      );
+      const reidResult = results.find((r) => r.data?.mapping !== undefined);
+      if (!reidResult) return;
+
+      const reidMapping = reidResult.data.mapping;
+      bboxesStore.bboxReidMapping = reidMapping;
+
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+      const newPlayerIds = new Set();
+      for (const [frameTime, boxes] of Object.entries(playerRaw)) {
+        const frameMapping = reidMapping[frameTime];
+        if (!frameMapping) continue;
+
+        for (const b of boxes) {
+          const newId = frameMapping[b[0]];
+          if (newId === undefined || newId === null) continue;
+
+          b[0] = newId;
+          newPlayerIds.add(newId);
+        }
+      }
+      bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
+
+      // player_ids meta is keyed by track_id -- entries under the old ids are now orphaned.
+      // Rebuild entries for the new (reid) ids using the same default naming convention as
+      // the backend (object_tracker.py: name=str(pid), number=pid). team_id is intentionally
+      // left alone here; team assignment already ran (and wrote b[1]) before this merge.
+      const playerMeta = bboxesStore.bboxMetaData ? JSON.parse(bboxesStore.bboxMetaData) : {};
+      const rebuiltPlayerIds = {};
+      for (const pid of newPlayerIds) {
+        rebuiltPlayerIds[pid] = playerMeta.player_ids?.[pid] ?? {
+          id: pid,
+          name: String(pid),
+          number: pid,
+        };
+      }
+      playerMeta.player_ids = { ...(playerMeta.player_ids ?? {}), ...rebuiltPlayerIds };
+      bboxesStore.bboxMetaData = JSON.stringify(playerMeta);
+      reidRunId.value = reidPluginRunId;
+
+      await _applyMergedBboxData();
+    }
+
+    // Mirrors what BoundingBoxesChange applies server-side (backend/.../views/bounding_boxes.py),
+    // but onto the client-only merged bboxDataActive instead of trusting the server's response as
+    // the new source of truth. Needed whenever a merge is still browser-only: an active
+    // mergeReid (never baked into the backend, unlike mergeTeamAssignment -- see its own
+    // comment), or the brief window before a fresh mergeTeamAssignment's own bake call has
+    // resolved. In both cases the server's response is still the run's raw (un-merged) data --
+    // replacing bboxDataActive with it would silently drop the merge for every row except the
+    // one just edited (bboxesStore.updateBboxData routes here instead of
+    // transformBBoxToPositionDataTopView whenever teamClusteringRunId/reidRunId is set).
+    // bboxData is the UN-translated (as-displayed) edit request -- i.e. before bboxesStore.translatePlayerId
+    // reverses a reid id back to its original track_id -- since the merged bboxDataActive already
+    // stores reid/cluster-translated ids that match what's shown on screen.
+    async function applyLocalBboxEdit(bboxData) {
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+
+      if (!bboxData.applyAllPlayerId && !bboxData.applyAllTeamId) {
+        const [frameId] = String(bboxData.bboxId).split("-");
+        for (const bbx of playerRaw[frameId] ?? []) {
+          if (`${frameId}-${bbx[0]}` === bboxData.bboxId) {
+            bbx[0] = bboxData.newPlayerId;
+            bbx[1] = bboxData.newTeamId;
+            break;
+          }
+        }
+      } else if (bboxData.applyAllPlayerId) {
+        for (const boxes of Object.values(playerRaw)) {
+          for (const bbx of boxes) {
+            if (bbx[0] === bboxData.playerId) {
+              bbx[0] = bboxData.newPlayerId;
+              bbx[1] = bboxData.newTeamId;
+            }
+          }
+        }
+      } else if (bboxData.applyAllTeamId) {
+        const teamId = bboxData.teamId?.id ?? bboxData.teamId;
+        for (const boxes of Object.values(playerRaw)) {
+          for (const bbx of boxes) {
+            if (bbx[1] === teamId) bbx[1] = bboxData.newTeamId;
+          }
+        }
+      }
+
+      bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
+      await _applyMergedBboxData();
+    }
+
+    // Delete counterpart of applyLocalBboxEdit above -- see that function's comment for why
+    // this local mirror is needed instead of trusting BoundingBoxesDelete's response.
+    async function applyLocalBboxDelete(bboxData) {
+      const playerRaw = bboxesStore.bboxDataActive ? JSON.parse(bboxesStore.bboxDataActive) : {};
+
+      if (!bboxData.applyAllPlayerId && !bboxData.applyAllTeamId) {
+        const [frameId] = String(bboxData.bboxId).split("-");
+        playerRaw[frameId] = (playerRaw[frameId] ?? []).filter(
+          (bbx) => `${frameId}-${bbx[0]}` !== bboxData.bboxId
+        );
+      } else if (bboxData.applyAllPlayerId) {
+        for (const frameId of Object.keys(playerRaw)) {
+          playerRaw[frameId] = playerRaw[frameId].filter((bbx) => bbx[0] !== bboxData.playerId);
+        }
+      } else if (bboxData.applyAllTeamId) {
+        const teamId = bboxData.teamId?.id ?? bboxData.teamId;
+        for (const frameId of Object.keys(playerRaw)) {
+          playerRaw[frameId] = playerRaw[frameId].filter((bbx) => bbx[1] !== teamId);
+        }
+      }
+
+      bboxesStore.bboxDataActive = JSON.stringify(playerRaw);
+      await _applyMergedBboxData();
     }
 
     const showSportZones = ref(false);
@@ -617,6 +984,14 @@ export const useTopViewStore = defineStore(
       metaDataTopView,
       setPositionData,
       transformBBoxToPositionDataTopView,
+      mergeBallTracking,
+      mergeTeamAssignment,
+      mergeReid,
+      teamClusteringRunId,
+      reidRunId,
+      refreshBallBboxData,
+      applyLocalBboxEdit,
+      applyLocalBboxDelete,
       showPlayerId,
       viewPlayerId,
       mirrorXY,
@@ -632,6 +1007,7 @@ export const useTopViewStore = defineStore(
       toggleEntityKind,
       getEntityName,
       getEntityNumber,
+      getTeamDisplayName,
       currentFramePlayers,
       getSubsetObject,
       getFrameAt,
@@ -649,7 +1025,15 @@ export const useTopViewStore = defineStore(
   },
   {
     persist: {
-      pick: ["currentSport", "currentAreaSize"],
+      pick: [
+        "currentSport",
+        "currentAreaSize",
+        "showSportZones",
+        "gridLongitudinal",
+        "gridTransverse",
+        "teamClusteringRunId",
+        "reidRunId",
+      ],
       storage: sessionStorage,
     },
   }

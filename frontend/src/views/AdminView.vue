@@ -44,6 +44,18 @@
             density="comfortable"
             class="elevation-2"
           >
+            <template #item.is_active="{ item }">
+              <v-switch
+                :model-value="item.is_active"
+                :disabled="item.id === userStore.userId"
+                color="primary"
+                density="compact"
+                hide-details
+                @update:model-value="
+                  (value) => adminStore.updateUser({ update_type: 'admin', id: item.id, is_active: value })
+                "
+              />
+            </template>
             <template #item.date_joined="{ value }">
               {{ value.split("T")[0] }}
             </template>
@@ -95,12 +107,12 @@ onMounted(() => {
 
 const search = ref("");
 const roleFilter = ref(null);
-const roleOptions = computed(() => [
+const roleOptions = [
   { title: t("admin_panel.role.all"), value: null },
   { title: t("admin_panel.role.admin"), value: "admin" },
   { title: t("admin_panel.role.researcher"), value: "researcher" },
   { title: t("admin_panel.role.user"), value: "user" },
-]);
+];
 const filteredUsers = computed(() => {
   let list = adminStore.users;
 
@@ -118,11 +130,12 @@ const filteredUsers = computed(() => {
   return list;
 });
 
-const headers = computed(() => [
+const headers = [
   { title: t("admin_panel.user.id"), value: "id", sortable: true },
   { title: t("admin_panel.user.username"), value: "username", sortable: true },
   { title: t("admin_panel.user.email"), value: "email", sortable: true },
   { title: t("admin_panel.user.role"), value: "role", sortable: true },
+  { title: t("admin_panel.user.is_active"), value: "is_active", sortable: true },
   { title: t("admin_panel.user.used_storage_size"), value: "used_storage_size", sortable: true },
   { title: t("admin_panel.user.max_storage_size"), value: "max_storage_size", sortable: true },
   { title: t("admin_panel.user.max_video_size"), value: "max_video_size", sortable: true },
@@ -135,7 +148,7 @@ const headers = computed(() => [
     width: "8%",
     align: "center",
   },
-]);
+];
 
 const editingUser = ref(null);
 const showModalUpdate = ref(false);

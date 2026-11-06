@@ -46,6 +46,10 @@ class DltCalibrationStatic(
         import cv2
         import json
 
+        # Single closed-form homography solve -- effectively instantaneous, so there's
+        # no meaningful intermediate progress to report, just "started" and "done".
+        self.update_callbacks(callbacks, progress=0.1)
+
         # Deserialize point_correspondences from JSON string
         logging.debug(f"Parameters: {parameters}")
 

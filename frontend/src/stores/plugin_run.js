@@ -11,17 +11,95 @@ import { useTimelineSegmentStore } from "@/stores/timeline_segment";
 import { useTimelineSegmentAnnotationStore } from "@/stores/timeline_segment_annotation";
 import { useClusterTimelineItemStore } from "@/stores/cluster_timeline_item";
 
+// Runs the backend starts on its own after every upload (tasks/convert_video.py) and that can't be
+// started by hand: "thumbnail" (gallery cover image, see VideoView.vue) and
+// "camera_motion_classification" (fills video.camera_motion, see calibrationParams in
+// usePluginParams.js). Not user-facing work, so they stay out of the status list, its delete
+// pickers, the running-plugins badge and the video card's plugin batch bar.
+export const INTERNAL_PLUGIN_TYPES = ["thumbnail", "camera_motion_classification"];
+export const isInternalPluginRun = (run) => INTERNAL_PLUGIN_TYPES.includes(run?.type);
+
 export const usePluginRunStore = defineStore("pluginRun", () => {
   const state = reactive({
     pluginRuns: {},
     pluginRunList: [],
     isLoading: false,
-    pluginInProgress: false,
   });
 
   const all = computed(() => {
     return state.pluginRunList.map((id) => state.pluginRuns[id]);
   });
+
+  const ACTIVE_STATUS = ["QUEUED", "RUNNING", "WAITING"];
+  const isActive = (run) => ACTIVE_STATUS.includes(run?.status);
+
+  // Derived instead of a hand-maintained flag -- as a plain state field it was never
+  // exposed by this store's return value, so every `pluginRunStore.pluginInProgress`
+  // watcher outside was silently watching `undefined`.
+  const pluginInProgress = computed(() => all.value.some((e) => isActive(e)));
+
+  // The batch of runs currently being worked on, per video. A run joins when it is
+  // first seen in flight and stays in the batch once it finishes, so the video card's
+  // progress bar runs cleanly through to 100% instead of jumping back whenever one run
+  // drops out. Runs from an earlier visit were never observed active, so they are never
+  // counted -- yesterday's plugin doesn't dilute what you just started.
+  const activeBatches = reactive({});
+
+  const trackBatch = (run) => {
+    // Automatic internal runs are not user-facing work (see INTERNAL_PLUGIN_TYPES).
+    if (!run || !run.video_id || isInternalPluginRun(run)) return;
+
+    if (!isActive(run)) return;
+
+    const batch = activeBatches[run.video_id];
+    if (!batch) {
+      activeBatches[run.video_id] = [run.id];
+      return;
+    }
+    if (batch.includes(run.id)) return;
+    // Previous batch fully finished -> this run opens a new one, so the bar restarts
+    // from zero rather than continuing a completed set.
+    const previousStillRunning = batch.some((id) => isActive(state.pluginRuns[id]));
+    activeBatches[run.video_id] = previousStillRunning ? [...batch, run.id] : [run.id];
+  };
+
+  // 0..100 for the video gallery's card bar: the mean progress across the current
+  // batch, counting finished runs as complete. Three queued plugins with the first at
+  // 24% therefore read as 8%, not as "0 of 3 done".
+  const batchProgress = (videoId) => {
+    const batch = activeBatches[videoId];
+    if (!batch || !batch.length) return 0;
+    // Runs deleted meanwhile (status panel) drop out of the average entirely instead of
+    // counting as unfinished forever.
+    const runs = batch.map((id) => state.pluginRuns[id]).filter(Boolean);
+    if (!runs.length) return 0;
+    const total = runs.reduce((sum, run) => {
+      if (run.status === "DONE" || run.status === "ERROR" || run.status === "UNKNOWN") {
+        return sum + 1;
+      }
+      return sum + (parseFloat(run.progress) || 0);
+    }, 0);
+    return (total / runs.length) * 100;
+  };
+
+  // Seconds until the current batch for this video finishes: the largest remaining ETA
+  // among its still-active runs (they run in parallel on the io worker, so the batch is
+  // done when the slowest one is). null while no run reports an ETA yet -- caller then
+  // keeps showing the indeterminate bar.
+  const batchEta = (videoId) => {
+    const batch = activeBatches[videoId];
+    if (!batch || !batch.length) return null;
+    const etas = batch
+      .map((id) => state.pluginRuns[id])
+      .filter((run) => run && isActive(run) && run.eta_seconds != null)
+      .map((run) => run.eta_seconds);
+    return etas.length ? Math.max(...etas) : null;
+  };
+
+  // Lets places outside the app bar (e.g. PositionDataMenu's disabled-Select tooltip) open
+  // ModalStatus, which the app bar owns/renders -- same remote-open pattern as
+  // tutorialStore.openTutorialModal: set true here, AppBar watches it and flips it back off.
+  const openStatusModal = ref(false);
 
   const forVideo = (videoId) => {
     return state.pluginRunList
@@ -33,12 +111,12 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     const formData = new FormData();
     formData.append("plugin", plugin);
 
-    const jsonParameters = [];
+    const jsonParameters = {};
     parameters.forEach((p) => {
       if ("file" in p) {
         formData.append(`file_${p.name}`, p.file);
       } else {
-        jsonParameters.push(p);
+        jsonParameters[p.name] = p.value;
       }
     });
     formData.append("parameters", JSON.stringify(jsonParameters));
@@ -53,11 +131,26 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
       const res = await axios.post(`${config.API_LOCATION}/plugin/run/new`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      if (res.data.status === "ok") {
-        state.pluginInProgress = true;
+      if (res.data.status === "ok" && res.data.entry) {
+        // Show the run in the status list/badge right away, without waiting for the
+        // live event -- and even if the event stream happens to be down.
+        updateAll([res.data.entry]);
       }
+      return res.data;
     } finally {
       state.isLoading = false;
+    }
+  };
+
+  // Names of the plugins that can run now (backend/plugin_catalogue.py), or null if the
+  // backend cannot tell; callers then offer every plugin.
+  const fetchAvailable = async () => {
+    try {
+      const res = await axios.get(`${config.API_LOCATION}/plugin/available`);
+      return res.data.status === "ok" ? res.data.plugins : null;
+    } catch (error) {
+      console.error("Failed to fetch available plugins:", error);
+      return null;
     }
   };
 
@@ -71,13 +164,52 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
       });
       if (res.data.status === "ok") {
         updateAll(res.data.entries);
-        state.pluginInProgress = all.value.some(
-          (e) => e.status === "RUNNING" || e.status === "QUEUED"
-        );
       }
     } finally {
       state.isLoading = false;
     }
+  };
+
+  // Everything that has to be reloaded once a run reaches DONE. Shared by the fetch
+  // path below and by the live event handler, so both stay in step.
+  const loadResultsForRun = async ({ pluginRunId, videoId }) => {
+    const pluginRunResultStore = usePluginRunResultStore();
+    const annotationCategoryStore = useAnnotationCategoryStore();
+    const annotationStore = useAnnotationStore();
+    const timelineStore = useTimelineStore();
+    const timelineSegmentStore = useTimelineSegmentStore();
+    const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
+    const clusterTimelineItemStore = useClusterTimelineItemStore();
+
+    await Promise.all([
+      pluginRunResultStore.fetchForVideo({ pluginRunId }),
+      annotationCategoryStore.clearStore(),
+      annotationStore.clearStore(),
+      annotationCategoryStore.fetchForVideo({ videoId }),
+      annotationStore.fetchForVideo({ videoId }),
+      timelineSegmentStore.fetchForVideo({ videoId }),
+      timelineSegmentAnnotationStore.fetchForVideo({ videoId }),
+      clusterTimelineItemStore.fetchAll(videoId),
+    ]);
+    timelineStore.fetchForVideo({ videoId });
+  };
+
+  // Patch a single run in from the live event stream. Replaces the polling loops that
+  // used to ask the backend every couple of seconds whether anything had changed.
+  const applyRunEvent = (entry) => {
+    if (!entry || !entry.id) return;
+    const previous = state.pluginRuns[entry.id];
+    updateAll([entry]);
+
+    const playerStore = usePlayerStore();
+    const justFinished = entry.status === "DONE" && previous?.status !== "DONE";
+    if (justFinished && entry.video_id === playerStore.videoId) {
+      loadResultsForRun({ pluginRunId: entry.id, videoId: entry.video_id });
+    }
+  };
+
+  const removeRunEvent = (id) => {
+    if (id && state.pluginRuns[id]) deleteItems([id]);
   };
 
   const fetchForVideo = async ({ videoId = null, fetchResults = false }) => {
@@ -92,10 +224,6 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
       status: e.status,
     }));
 
-    state.pluginInProgress = currentPluginRunStatus.some(
-      (e) => e.status === "RUNNING" || e.status === "QUEUED"
-    );
-
     try {
       const res = await axios.get(`${config.API_LOCATION}/plugin/run/list`, {
         params: { video_id: video_id },
@@ -108,41 +236,16 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
           status: e.status,
         }));
 
-        const result = {
-          allDone: newPluginRunStatus.every((e) => ["DONE", "ERROR", "UNKNOWN"].includes(e.status)),
-          newDone: newPluginRunStatus
-            .filter(
-              (e) =>
-                e.status === "DONE" &&
-                currentPluginRunStatus.find((t) => t.id === e.id)?.status !== "DONE"
-            )
-            .map((e) => e.id),
-        };
-
-        state.pluginInProgress = !result.allDone;
+        const newDone = newPluginRunStatus
+          .filter(
+            (e) =>
+              e.status === "DONE" &&
+              currentPluginRunStatus.find((t) => t.id === e.id)?.status !== "DONE"
+          )
+          .map((e) => e.id);
 
         if (fetchResults) {
-          const pluginRunResultStore = usePluginRunResultStore();
-          const annotationCategoryStore = useAnnotationCategoryStore();
-          const annotationStore = useAnnotationStore();
-          const timelineStore = useTimelineStore();
-          const timelineSegmentStore = useTimelineSegmentStore();
-          const timelineSegmentAnnotationStore = useTimelineSegmentAnnotationStore();
-          const clusterTimelineItemStore = useClusterTimelineItemStore();
-
-          result.newDone.forEach(async (id) => {
-            await Promise.all([
-              pluginRunResultStore.fetchForVideo({ pluginRunId: id }),
-              annotationCategoryStore.clearStore(),
-              annotationStore.clearStore(),
-              annotationCategoryStore.fetchForVideo({ videoId: video_id }),
-              annotationStore.fetchForVideo({ videoId: video_id }),
-              timelineSegmentStore.fetchForVideo({ videoId: video_id }),
-              timelineSegmentAnnotationStore.fetchForVideo({ videoId: video_id }),
-              clusterTimelineItemStore.fetchAll(video_id),
-            ]);
-            timelineStore.fetchForVideo({ videoId: video_id });
-          });
+          newDone.forEach((id) => loadResultsForRun({ pluginRunId: id, videoId: video_id }));
         }
       }
     } finally {
@@ -163,15 +266,20 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
         delete state.pluginRuns[id];
       }
     });
+    Object.keys(activeBatches).forEach((videoId) => {
+      activeBatches[videoId] = activeBatches[videoId].filter((id) => !idList.includes(id));
+    });
   };
 
   const updateAll = (pluginRuns) => {
     pluginRuns.forEach((e) => {
+      trackBatch(e);
       if (state.pluginRuns[e.id]) {
         const currPlugin = state.pluginRuns[e.id];
         if (
           e.status !== currPlugin.status ||
           e.progress !== currPlugin.progress ||
+          e.eta_seconds !== currPlugin.eta_seconds ||
           e.update_date !== currPlugin.update_date
         ) {
           state.pluginRuns = { ...state.pluginRuns, [e.id]: e };
@@ -229,12 +337,20 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
   };
 
   return {
+    fetchAvailable,
     state,
     all,
+    pluginInProgress,
+    batchProgress,
+    batchEta,
+    openStatusModal,
     forVideo,
     submit,
     fetchAll,
     fetchForVideo,
+    loadResultsForRun,
+    applyRunEvent,
+    removeRunEvent,
     clearStore,
     deleteItems,
     updateAll,

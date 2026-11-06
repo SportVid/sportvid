@@ -14,6 +14,12 @@ import { useUserStore } from "@/stores/user";
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
 
+window.addEventListener("error", (event) => {
+  if (event.message === "ResizeObserver loop completed with undelivered notifications.") {
+    event.stopImmediatePropagation();
+  }
+});
+
 async function bootstrap() {
   const app = createApp(App);
 

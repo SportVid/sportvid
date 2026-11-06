@@ -1,0 +1,36 @@
+name: deploy_dev
+
+# deploy-dev = develop merged in + server-only commits (compose, proxy, dependencies).
+# Runs on the server's self-hosted runner; the systemd unit runs manage.sh dev build.
+on:
+  push:
+    branches:
+      - deploy-dev
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # application code must be exactly what was merged from develop
+      - name: Application code matches develop
+        run: |
+          git fetch --no-tags origin develop
+          base=$(git merge-base HEAD origin/develop)
+          paths="backend/src analyser/src inference_ray/src packages/data/src packages/interface/src packages/utils/src frontend/src"
+          if ! git diff --quiet "$base" HEAD -- $paths; then
+            echo "::error::deploy-dev changes application code that is not on develop (since $(git rev-parse --short "$base")):"
+            git diff --stat "$base" HEAD -- $paths
+            exit 1
+          fi
+
+      - name: Restart dev systemd service
+        run: systemctl restart sportvid_dev

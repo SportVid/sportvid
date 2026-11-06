@@ -10,7 +10,6 @@ from backend.models import (
     Timeline,
 )
 from backend.plugin_manager import PluginManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager, ListData
 from ..utils.analyser_client import TaskAnalyserClient
@@ -19,17 +18,10 @@ from ..utils.analyser_client import TaskAnalyserClient
 logger = logging.getLogger(__name__)
 
 
-@PluginManager.export_parser("invert_scalar")
-class InvertScalarParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "timeline": {"parser": str, "default": "Inverted Timeline"},
-            "scalar_timeline_id": {"required": True},
-        }
-
-
 @PluginManager.export_plugin("invert_scalar")
 class InvertScalar(Task):
+    ray_plugins = ("invert_scalar",)
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

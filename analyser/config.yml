@@ -1,3 +1,5 @@
+# ${VAR} is expanded from the container environment (.env locally, /opt/deploy/.env.* and
+# the compose file on the servers); every variable used here must be set.
 data:
   data_dir: /data
   cache:
@@ -10,7 +12,7 @@ data:
         tag: analyser
 inference:
   type: ray
-  params: 
+  params:
     host: inference_ray
-    port: ${BACKEND_PORT}
+    port: ${INFERENCE_RAY_PORT}
     status_port: ${INFERENCE_RAY_STATUS_PORT}

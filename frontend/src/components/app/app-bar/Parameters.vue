@@ -1,6 +1,6 @@
 <template>
   <div>
-    <template v-for="parameter in parameters.filter((p) => !p.hidden)">
+    <template v-for="parameter in parameters.filter((p) => !p.hidden && !p.simpleHidden)">
       <v-text-field
         v-model="parameter.value"
         :label="parameter.text"
@@ -12,6 +12,8 @@
         v-model="parameter.value"
         :items="parameter.items"
         :label="parameter.text"
+        :hint="parameter.hint"
+        :persistent-hint="!!parameter.hint"
         v-if="parameter.field == 'select_options'"
         :key="parameter.name"
         :data-tour="parameter.dataTour || undefined"
@@ -62,6 +64,9 @@
           v-model="showModalCalibrationAssetSelectForEdit"
           @selected="onCalibrationAssetSelected"
         />
+        <!-- Separates "create/edit an asset" (above) from "pick which saved asset this plugin
+             run uses" (below) -- otherwise both read as one undifferentiated block. -->
+        <v-divider v-if="!parameter.dlt" class="mb-4" />
         <v-select
           v-model="parameter.value"
           :items="calibrationAssets"
@@ -95,17 +100,21 @@
 
       <v-select
         v-model="parameter.value"
-        :items="bytetrackRuns"
+        :items="objectTrackerPlayerRuns"
         :label="parameter.text"
         :hint="parameter.hint"
         item-title="name"
         item-value="id"
-        v-if="parameter.field == 'select_bytetrack_run'"
+        v-if="parameter.field == 'select_object_tracker_run'"
         :key="parameter.name"
         persistent-hint
         variant="underlined"
         class="mb-4"
-        :no-data-text="$t('modal.plugin.kpi_computation.bytetrack_run_none')"
+        :no-data-text="
+          parameter.no_data_text
+            ? $t(parameter.no_data_text)
+            : $t('modal.plugin.kpi_computation.object_tracker_run_none')
+        "
         :data-tour="parameter.dataTour || undefined"
       />
 
@@ -508,6 +517,16 @@
           class="ml-2 checkbox-label-spacing"
         />
       </div>
+
+      <!-- Not a plugin parameter but a property of the video (hence `uiOnly`, see submitPlugin):
+           which lens profile the calibration undistorts the clicked points with. Sits among the
+           parameters because that is where it is needed, and because it decides which
+           calibration plugin the run uses. Saved when the run is started, see
+           applyLensProfileSelection. -->
+      <div v-if="parameter.field == 'select_lens_profile'" :key="parameter.name">
+        <LensProfileSelect v-model="parameter.value" :video="playerStore.video" class="mb-6" />
+        <v-divider class="mb-4" />
+      </div>
     </template>
   </div>
 </template>
@@ -519,11 +538,13 @@ import { useTimelineStore } from "@/stores/timeline";
 import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useTopViewStore } from "@/stores/top_view";
 import ModalCalibrationAssetSelect from "@/components/calibration-asset/ModalCalibrationAssetSelect.vue";
+import LensProfileSelect from "@/components/video/LensProfileSelect.vue";
 import { useExportStore } from "@/stores/export";
 import { usePositionDataStore } from "@/stores/position_data";
 import { useVisualizationStore } from "@/stores/visualization";
-import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunResultStore } from "@/stores/plugin_run_result";
 import { usePlayerStore } from "@/stores/player";
+import { useObjectTrackerPlayerRuns } from "@/composables/useObjectTrackerPlayerRuns";
 
 const timelineStore = useTimelineStore();
 const calibrationAssetStore = useCalibrationAssetStore();
@@ -531,7 +552,7 @@ const topViewStore = useTopViewStore();
 const exportStore = useExportStore();
 const positionDataStore = usePositionDataStore();
 const visualizationStore = useVisualizationStore();
-const pluginRunStore = usePluginRunStore();
+const pluginRunResultStore = usePluginRunResultStore();
 const playerStore = usePlayerStore();
 
 const { t } = useI18n();
@@ -597,7 +618,7 @@ const positionDataTeams = computed(() => {
   // Use precomputed lists as source of truth — they are rebuilt from actual bbox data
   // by transformBBoxToPositionDataTopView and are always up-to-date after edits.
   if (topViewStore.precomputedBallList.length > 0) {
-    items.push({ id: 1, name: t("position_data.entity_kind.ball") });
+    items.push({ id: 0, name: t("position_data.entity_kind.ball") });
   }
   if (topViewStore.precomputedRefList.length > 0) {
     items.push({ id: 2, name: t("position_data.entity_kind.ref") });
@@ -611,7 +632,7 @@ const positionDataTeams = computed(() => {
   }
 
   if (topViewStore.precomputedInactiveList.length > 0) {
-    items.push({ id: 0, name: t("position_data.entity_kind.rest") });
+    items.push({ id: 1, name: t("position_data.entity_kind.rest") });
   }
 
   return items.length > 0 ? items : undefined;
@@ -745,31 +766,14 @@ const trackingDatasets = computed(() => {
   return Object.values(positionDataStore.positionDataList);
 });
 
-const formatLocalDate = (dateString) => {
-  if (!dateString) return "";
-  let isoString = dateString.replace(" ", "T");
-  if (!isoString.endsWith("Z")) {
-    isoString += "Z";
-  }
-  const date = new Date(isoString);
-  const isoDate = date.toISOString().slice(0, 10);
-  const localTime = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  return `${isoDate} ${localTime}`;
-};
-
-const bytetrackRuns = computed(() => {
-  return pluginRunStore
-    .forVideo(playerStore.videoId)
-    .filter((e) => e.type === "bytetrack" && e.status === "DONE")
-    .map((e) => ({
-      id: e.id,
-      name: formatLocalDate(e.date),
-    }));
-});
+const { objectTrackerPlayerRuns } = useObjectTrackerPlayerRuns();
 
 onMounted(() => {
   calibrationAssetStore.loadCalibrationAssetsList();
   positionDataStore.loadPositionDataList();
+  // Cheap call (no add_results) so finished object_tracker runs can be classified as
+  // player- vs. ball-tracking via their result name (see objectTrackerPlayerRuns above).
+  pluginRunResultStore.fetchForVideo({ videoId: playerStore.videoId });
 });
 </script>
 

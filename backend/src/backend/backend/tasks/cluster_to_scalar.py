@@ -13,7 +13,6 @@ from backend.models import (
     Timeline,
 )
 from backend.plugin_manager import PluginManager
-from backend.utils.parser import Parser
 from backend.utils.task import Task
 from data import DataManager, ImageEmbedding
 from ..utils.analyser_client import TaskAnalyserClient
@@ -22,17 +21,10 @@ from ..utils.analyser_client import TaskAnalyserClient
 logger = logging.getLogger(__name__)
 
 
-@PluginManager.export_parser("cluster_to_scalar")
-class ClusterToScalarParser(Parser):
-    def __init__(self):
-        self.valid_parameter = {
-            "timeline": {"parser": str, "default": "Cluster Similarity"},
-            "cluster_timeline_item_id": {"parser": str},
-        }
-
-
 @PluginManager.export_plugin("cluster_to_scalar")
 class ClusterToScalar(Task):
+    ray_plugins = ("aggregate_scalar_per_time", "cosine_similarity", "insightface_video_detector_torch", "insightface_video_feature_extractor")
+
     def __init__(self):
         self.config = {
             "output_path": "/predictions/",

@@ -110,6 +110,7 @@ class FloodlightConvert(
                                     sampled_data = data['firstHalf']['Home'].xy
                                     logging.error(sampled_data)
         # ----------------- COMPUTE
+        self.update_callbacks(callbacks, progress=0.4)  # position data parsed
         # TODO: KPI computation
         xy_pos = sampled_data
         meta_data = {"some_meta_data": 1337}
@@ -119,12 +120,16 @@ class FloodlightConvert(
         CentMod = CentroidModel()
 
         kpi_dict = {}
-        for half in ["firstHalf", "secondHalf"]:
+        _halves = ["firstHalf", "secondHalf"]
+        for _h_idx, half in enumerate(_halves):
             for team in ["Home", "Away"]:
                 DistMod.fit(xy[half][team])
                 VelMod.fit(xy[half][team])
                 MetPowMod.fit(xy[half][team])
                 CentMod.fit(xy[half][team])
+            self.update_callbacks(
+                callbacks, progress=0.4 + 0.5 * ((_h_idx + 1) / len(_halves))
+            )
 
             kpi_dict[f'distance_covered_{half}_{team}'] = np.array(DistMod.cumulative_distance_covered())
             kpi_dict[f'max_velocity_{half}_{team}'] = np.nanmax(VelMod.velocity(), axis=0).round(2)

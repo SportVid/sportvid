@@ -92,7 +92,7 @@ class KpiComputation(
             for int_id_str, info in pos_meta.get("player_ids", {}).items():
                 player_id_by_orig[info["id"]] = int(int_id_str)
 
-        # Skip teams that aren't real player teams: 1=ball, 2=refs, 0=inactive.
+        # Skip teams that aren't real player teams: 0=ball, 2=refs, 1=inactive.
         # `ball_team_ids` is kept (set of original team ids) but populated for both ball AND ref groups,
         # since both must be filtered out of KPI computation.
         SKIP_TEAM_IDS = {0, 1, 2}
@@ -133,48 +133,6 @@ class KpiComputation(
                                     group_id_map,
                                     on=["number"]
                                 )
-                            # ------------- alternative version using core API
-                            """
-                            from floodlight.core.xy import XY as _XY
-                            from floodlight.core.teamsheet import Teamsheet as _Teamsheet
-
-                            delim = parameters.get("delimiter", ";")
-                            csv_data = pd.read_csv(tmp_path, delimiter=delim)
-
-                            ts_vals = np.sort(csv_data["ts in ms"].unique())
-                            if len(ts_vals) > 1:
-                                median_diff = float(np.median(np.diff(ts_vals)))
-                                framerate_raw = int(round(1000.0 / median_diff)) if median_diff > 0 else 25
-                            else:
-                                framerate_raw = 25
-
-                            ts_to_frame = {ts: fi for fi, ts in enumerate(ts_vals)}
-                            n_frames_raw = len(ts_vals)
-
-                            groups = sorted(csv_data["group id"].unique())
-                            pos_data = []
-                            teamsheets = []
-
-                            for gid in groups:
-                                group_df = csv_data[csv_data["group id"] == gid].copy()
-                                players = sorted(group_df["number"].astype(int).unique())
-                                n_players = len(players)
-                                player_col_idx = {p: i for i, p in enumerate(players)}
-
-                                xy_arr = np.full((n_frames_raw, 2 * n_players), np.nan)
-                                for _, row in group_df.iterrows():
-                                    fi = ts_to_frame[row["ts in ms"]]
-                                    p_idx = player_col_idx[int(row["number"])]
-                                    xy_arr[fi, 2 * p_idx] = float(row["x in m"])
-                                    xy_arr[fi, 2 * p_idx + 1] = float(row["y in m"])
-
-                                pos_data.append(_XY(xy=xy_arr, framerate=framerate_raw))
-
-                                ts_rows = []
-                                for xi, p_num in enumerate(players):
-                                    ts_rows.append({"xID": xi, "number": p_num, "group id": gid})
-                                teamsheets.append(_Teamsheet(teamsheet=pd.DataFrame(ts_rows)))
-                            """
                         finally:
                             os.unlink(tmp_path)
 
@@ -251,7 +209,7 @@ class KpiComputation(
             sorted_ts_keys = sorted(pos_json.keys(), key=lambda k: int(k))
             n_frames_sportvid = len(sorted_ts_keys)
 
-            # Build player → team mapping. Skip non-player entities (ball=1, refs=2, inactive=0).
+            # Build player → team mapping. Skip non-player entities (ball=0, refs=2, inactive=1).
             player_team_map = {}
             for ts_key in sorted_ts_keys:
                 for row in pos_json[ts_key]:
@@ -293,7 +251,15 @@ class KpiComputation(
                             x_m = pos_x_norm * field_length - field_length / 2.0
                             y_m = (1.0 - pos_y_norm) * field_width - field_width / 2.0
 
-                        col = player_col_idx[p_id]
+                        # A player's per-frame team id can occasionally differ from their
+                        # "home" team (the first non-skip team id they were ever seen with,
+                        # see player_team_map above) -- e.g. transient team_clustering noise.
+                        # player_col_idx only has columns for tid's home-team players, so
+                        # such a frame is simply dropped (stays NaN) rather than crashing on
+                        # a KeyError for a player who isn't a home-team member here.
+                        col = player_col_idx.get(p_id)
+                        if col is None:
+                            continue
                         xy_arr[fi, 2 * col] = x_m
                         xy_arr[fi, 2 * col + 1] = y_m
 
@@ -320,6 +286,28 @@ class KpiComputation(
         # ----------------- COMPUTE KPIs
         all_frame_kpis = {}  # {absolute_frame_idx: [[player_id, dist, vel, metpow], ...]}
         frame_offset = 0
+
+        # ----------------- PROGRESS
+        # Flattening the KPI arrays into per-frame dicts is the bulk of the runtime for
+        # a full match, so progress is reported through it instead of only firing 1.0 at
+        # the very end. Throttled to once a second -- each call writes into the shared
+        # dict the analyser server polls. The last 5% stay for serializing the output.
+        import time as _time
+
+        _progress_state = {"last": 0.0}
+
+        def report_progress(done, total, window=(0.0, 1.0)):
+            if not total:
+                return
+            now = _time.time()
+            if now - _progress_state["last"] < 1.0:
+                return
+            _progress_state["last"] = now
+            fraction = min(max(done / total, 0.0), 1.0)
+            start, end = window
+            self.update_callbacks(
+                callbacks, progress=(start + fraction * (end - start)) * 0.95
+            )
 
 
         if fmt == "kinexon":
@@ -364,8 +352,9 @@ class KpiComputation(
                     n_frames = dist_arr.shape[0]
 
             if n_frames is not None:
-                for i, (df_sorted, dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr) in team_kpi_arrays.items():
+                for team_pos, (i, (df_sorted, dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr)) in enumerate(team_kpi_arrays.items()):
                     n_players = dist_arr.shape[1]
+                    total_steps = len(team_kpi_arrays) * n_frames
 
                     dist_list = dist_arr.tolist()
                     dist_cumulative_list = dist_cumulative_arr.tolist()
@@ -377,6 +366,7 @@ class KpiComputation(
                     cent_dist_list = cent_dist_arr.tolist()
 
                     for frame_idx in range(n_frames):
+                        report_progress(team_pos * n_frames + frame_idx, total_steps)
                         if frame_idx not in all_frame_kpis:
                             all_frame_kpis[frame_idx] = []
                         for p in range(n_players):
@@ -442,8 +432,9 @@ class KpiComputation(
                     n_frames = dist_arr.shape[0]
 
             if n_frames is not None:
-                for tid, (df_sorted, dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr) in team_kpi_arrays.items():
+                for team_pos, (tid, (df_sorted, dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr)) in enumerate(team_kpi_arrays.items()):
                     n_players = dist_arr.shape[1]
+                    total_steps = len(team_kpi_arrays) * n_frames
 
                     dist_list = dist_arr.tolist()
                     dist_cumulative_list = dist_cumulative_arr.tolist()
@@ -455,6 +446,7 @@ class KpiComputation(
                     cent_dist_list = cent_dist_arr.tolist()
 
                     for frame_idx in range(n_frames):
+                        report_progress(team_pos * n_frames + frame_idx, total_steps)
                         if frame_idx not in all_frame_kpis:
                             all_frame_kpis[frame_idx] = []
                         for p in range(n_players):
@@ -487,9 +479,12 @@ class KpiComputation(
             # Halves are concatenated into a flat frame index using frame_offset.
             # Ball is included as a regular group; its player_id falls back to "Ball_p0"
             # since it has no teamsheet entry.
-            for half_name, teams_dict in pos_data.items():
+            for half_pos, (half_name, teams_dict) in enumerate(pos_data.items()):
                 team_kpi_arrays = {}
                 n_frames = None
+                # Total frame count across halves isn't known upfront, so each half gets
+                # its own equal slice of the bar rather than a guessed denominator.
+                half_window = (half_pos / len(pos_data), (half_pos + 1) / len(pos_data))
 
                 for team_name, xy_obj in teams_dict.items():
                     if team_name not in teamsheets:
@@ -531,8 +526,9 @@ class KpiComputation(
                 if n_frames is None:
                     continue
 
-                for team_name, (dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr) in team_kpi_arrays.items():
+                for team_pos, (team_name, (dist_arr, dist_cumulative_arr, vel_arr, metpow_arr, metpow_cumulative_arr, equiv_dist_arr, equiv_dist_cumulative_arr, cent_dist_arr)) in enumerate(team_kpi_arrays.items()):
                     n_players = dist_arr.shape[1]
+                    total_steps = len(team_kpi_arrays) * n_frames
                     df_sorted = teamsheets[team_name].teamsheet.sort_values("xID").reset_index(drop=True)
 
                     dist_list = dist_arr.tolist()
@@ -544,6 +540,9 @@ class KpiComputation(
                     equiv_dist_cumulative_list = equiv_dist_cumulative_arr.tolist()
                     cent_dist_list = cent_dist_arr.tolist()
                     for frame_idx in range(n_frames):
+                        report_progress(
+                            team_pos * n_frames + frame_idx, total_steps, half_window
+                        )
                         abs_frame = frame_offset + frame_idx
                         if abs_frame not in all_frame_kpis:
                             all_frame_kpis[abs_frame] = []

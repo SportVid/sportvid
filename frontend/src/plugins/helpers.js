@@ -1,4 +1,8 @@
-export function toRgb(color, fade = 0) {
+// Shared by toRgb/getContrastColor: parses "#rgb"/"#rrggbb" and applies the
+// same white-blend `fade` (0 = color unchanged, 1 = white) both use, so the
+// two stay in sync -- getContrastColor needs the *displayed* (post-fade)
+// pixel, not the raw swatch color, to judge readability correctly.
+function fadedRgb(color, fade = 0) {
   let c = color.startsWith("#") ? color.slice(1) : color;
 
   if (c.length === 3) {
@@ -14,11 +18,41 @@ export function toRgb(color, fade = 0) {
   let g = (num >> 8) & 0xff;
   let b = num & 0xff;
 
-  r = Math.round(r + (255 - r) * fade);
-  g = Math.round(g + (255 - g) * fade);
-  b = Math.round(b + (255 - b) * fade);
+  r = r + (255 - r) * fade;
+  g = g + (255 - g) * fade;
+  b = b + (255 - b) * fade;
 
-  return `rgb(${r}, ${g}, ${b})`;
+  return [r, g, b];
+}
+
+export function toRgb(color, fade = 0) {
+  const [r, g, b] = fadedRgb(color, fade);
+  return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)})`;
+}
+
+// Picks whichever of black/white reads better on top of `color` (after the
+// same white-blend `fade` toRgb(color, fade) would paint as the background),
+// using WCAG relative luminance instead of a fixed "light vs. dark hex"
+// threshold. Needed because team colors come from a user-editable mapping
+// (visualization store's teamColorMapping) -- any hardcoded '#fff' becomes
+// unreadable the moment someone picks a light team color (white, yellow,
+// pink, cyan, ...).
+export function getContrastColor(color, fade = 0) {
+  const [r, g, b] = fadedRgb(color, fade);
+
+  // sRGB -> linear, per WCAG.
+  const lin = (v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+
+  // Contrast ratio formula is (L1 + 0.05) / (L2 + 0.05) with L1 the lighter
+  // of the two. White has L=1, black has L=0, so this compares both without
+  // needing an extra branch per color.
+  const contrastWithWhite = 1.05 / (luminance + 0.05);
+  const contrastWithBlack = (luminance + 0.05) / 0.05;
+  return contrastWithBlack >= contrastWithWhite ? "#000000" : "#FFFFFF";
 }
 // export function keyInObj(key, obj) {
 //   if (typeof obj !== 'object') return false;

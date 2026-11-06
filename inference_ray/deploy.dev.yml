@@ -1,0 +1,287 @@
+# Ray Serve config of the dev server (docker-compose.dev.yml). Local stacks use deploy.yml /
+# deploy.cuda.yml, prod uses deploy.prod.yml: a new plugin needs an entry in all four.
+proxy_location: EveryNode
+http_options:
+  host: 0.0.0.0
+  port: 8001
+logging_config:
+  encoding: TEXT # or JSON
+  log_level: WARNING # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  logs_dir: null # or a custom path; null = default
+  enable_access_log: false
+
+applications:
+  # ---------- NEW INTEGRATION (GPU required)
+  - name: team_clustering
+    route_prefix: /team_clustering
+    import_path: inference_ray.main:app_builder
+    args:
+      model: team_clustering
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 2 # at most 1 GPU worth of capacity are running for this service, so 2 replicas at once should be feasible.
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
+        ray_actor_options:
+          num_cpus: 2.0
+
+  - name: osnet_reid
+    route_prefix: /osnet_reid
+    import_path: inference_ray.main:app_builder
+    args:
+      model: osnet_reid
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 2 # at most 1 GPU worth of capacity are running for this service, so 2 replicas at once should be feasible.
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
+        ray_actor_options:
+          num_cpus: 2.0
+          num_gpus: 0.2
+
+  - name: object_tracker
+    route_prefix: /object_tracker
+    import_path: inference_ray.main:app_builder
+    args:
+      model: object_tracker
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 2 # at most 1 GPU worth of capacity are running for this service, so 2 replicas at once should be feasible.
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
+        ray_actor_options:
+          num_cpus: 2.0
+          num_gpus: 0.2
+        runtime_env:
+          env_vars:
+            PYTHONPATH: "/app:/app/inference_ray/third_party/ByteTrack"
+
+  # ---------- CRITICAL (GPU required)
+  # - name: bytetrack
+  #   route_prefix: /bytetrack
+  #   import_path: inference_ray.main:app_builder
+  #   args:
+  #     model: bytetrack
+  #     data_path: /data
+  #     params: {}
+  #   deployments:
+  #     - name: Deployment
+  #       num_replicas: auto
+  #       autoscaling_config:
+  #         initial_replicas: 0
+  #         min_replicas: 0
+  #         max_replicas: 2 # at most 1 GPU worth of capacity are running for this service, so 2 replicas at once should be feasible.
+  #         max_ongoing_requests: 2
+  #         target_ongoing_requests: 1
+  #         metrics_interval_s: 5
+  #         look_back_period_s: 15
+  #         upscale_delay_s: 5
+  #         downscale_delay_s: 180
+  #         downscale_to_zero_delay_s: 600
+  #       ray_actor_options:
+  #         num_cpus: 2.0
+  #         num_gpus: 0.2
+  #       runtime_env:
+  #           env_vars:
+  #             PYTHONPATH: "/app:/app/inference_ray/third_party/ByteTrack"
+  
+  # ---------- LOW (CPU only)
+  - name: calibration_static_dlt
+    route_prefix: /calibration_static_dlt
+    import_path: inference_ray.main:app_builder
+    args:
+      model: calibration_static_dlt
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 2
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0
+
+  - name: kpi_computation
+    route_prefix: /kpi_computation
+    import_path: inference_ray.main:app_builder
+    args:
+      model: kpi_computation
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 2
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0
+        runtime_env:
+          uv:
+            - pandas
+
+  - name: floodlight_convert
+    route_prefix: /floodlight_convert
+    import_path: inference_ray.main:app_builder
+    args:
+      model: floodlight_convert
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 2
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0
+        runtime_env:
+          uv:
+            - pandas
+
+  - name: posdata_convert
+    route_prefix: /posdata_convert
+    import_path: inference_ray.main:app_builder
+    args:
+      model: posdata_convert
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 2
+          max_ongoing_requests: 2
+          target_ongoing_requests: 1
+          metrics_interval_s: 5
+          look_back_period_s: 15
+          upscale_delay_s: 5
+          downscale_delay_s: 180
+          downscale_to_zero_delay_s: 600
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0
+        runtime_env:
+          uv:
+            - pandas
+            - lxml
+
+  - name: thumbnail_generator
+    route_prefix: /thumbnail_generator
+    import_path: inference_ray.main:app_builder
+    args:
+      model: thumbnail_generator
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0
+
+  - name: camera_motion_classifier
+    route_prefix: /camera_motion_classifier
+    import_path: inference_ray.main:app_builder
+    args:
+      model: camera_motion_classifier
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0
+
+  - name: calibration_lens_solve
+    route_prefix: /calibration_lens_solve
+    import_path: inference_ray.main:app_builder
+    args:
+      model: calibration_lens_solve
+      data_path: /data
+      params: {}
+    deployments:
+      - name: Deployment
+        num_replicas: auto
+        autoscaling_config:
+          max_ongoing_requests: 2
+          initial_replicas: 0
+          min_replicas: 0
+          max_replicas: 1
+        ray_actor_options:
+          num_cpus: 1.0
+          num_gpus: 0.0

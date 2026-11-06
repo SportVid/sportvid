@@ -60,6 +60,50 @@
 
         <v-row class="mt-2">
           <v-col cols="12">
+            <div class="text-h6">{{ $t("modal.settings.experience_mode.title") }}</div>
+          </v-col>
+          <!-- Same grouped toggle+sentence pattern as ModalUserRegister.vue (compact toggle,
+               a single docked sentence below that always reflects the current selection, no
+               hover) -- but capped to a comfortable max-width and centered rather than
+               stretched to this dialog's full (much wider) 750px content width, so the
+               buttons don't end up looking oversized and the sentence still gets enough room
+               to only wrap onto ~2 lines. -->
+          <v-col cols="12" class="mt-n4 mb-4">
+            <div>
+              <v-sheet border rounded class="experience-mode-group">
+                <v-btn-toggle
+                  v-model="experienceModeLocal"
+                  mandatory
+                  divided
+                  rounded="0"
+                  density="comfortable"
+                  class="d-flex"
+                >
+                  <v-btn
+                    v-for="mode in ['simple', 'complex']"
+                    :key="mode"
+                    :value="mode"
+                    class="flex-grow-1"
+                  >
+                    {{ $t(`user.experience_mode.${mode}_label`) }}
+                  </v-btn>
+                </v-btn-toggle>
+                <v-divider />
+                <div
+                  class="pa-2 text-caption text-medium-emphasis"
+                  :class="experienceModeLocal === 'complex' ? 'text-right' : 'text-left'"
+                >
+                  {{ $t(`user.experience_mode.${experienceModeLocal}_sentence`) }}
+                </div>
+              </v-sheet>
+            </div>
+          </v-col>
+        </v-row>
+
+        <v-divider class="my-2" />
+
+        <v-row class="mt-2">
+          <v-col cols="12">
             <div class="text-h6">{{ $t("modal.settings.security") }}</div>
           </v-col>
           <v-col cols="12" md="12" class="mt-n4">
@@ -165,6 +209,12 @@ watch(
 
 const emailLocal = ref(userStore.email);
 const hasEmailChanged = () => emailLocal.value !== userStore.email;
+
+// Unlike dashboardLayout/videoViewMode (saved immediately on change elsewhere), this needs to
+// go through the same explicit "Save" button as email/password below -- so the toggle only
+// edits this local copy; saveSettings() below is what actually persists it.
+const experienceModeLocal = ref(userStore.experienceMode);
+const hasExperienceModeChanged = () => experienceModeLocal.value !== userStore.experienceMode;
 watch(
   () => userStore.email,
   (val) => {
@@ -217,6 +267,7 @@ watch(
       emailLocal.value = userStore.email;
       usernameLocal.value = userStore.username;
       joinedLocal.value = formatDate(userStore.dateJoined);
+      experienceModeLocal.value = userStore.experienceMode;
     }
   }
 );
@@ -226,11 +277,12 @@ const generalServerError = ref(null);
 
 const canSave = computed(() => {
   const emailChanged = hasEmailChanged();
+  const experienceModeChanged = hasExperienceModeChanged();
   const pwdCurrentVal = currentPassword.value;
   const pwdNewVal = newPassword.value;
   const pwdAny = !!pwdCurrentVal || !!pwdNewVal;
 
-  if (!emailChanged && !pwdAny) return false;
+  if (!emailChanged && !experienceModeChanged && !pwdAny) return false;
 
   if (emailChanged) {
     if (checkLength(emailLocal.value) !== true) return false;
@@ -271,49 +323,65 @@ const saveSettings = async () => {
     params.password_new = pwdNewVal;
   }
 
-  if (Object.keys(params).length === 0) {
+  const experienceModeChanged = hasExperienceModeChanged();
+
+  if (Object.keys(params).length === 0 && !experienceModeChanged) {
     generalServerError.value = t("modal.settings.no_changes");
     return;
   }
 
-  params.update_type = "user";
-
   try {
-    const res = await userStore.updateUser(params);
-    if (res && res.status === "ok") {
-      showSettingsSnackbar.value = true;
+    let ok = true;
 
-      currentPassword.value = null;
-      newPassword.value = null;
-      passwordError.value = null;
-      generalServerError.value = null;
-    } else {
-      const msg = res && res.message ? res.message : null;
-
-      if (msg) {
-        if (msg === "Invalid current password") {
-          passwordError.value = t("modal.settings.invalid_current_password");
-        } else if (msg === "Both current and new passwords are required") {
-          passwordError.value = t("modal.settings.password_both_required");
-        } else {
-          const lmsg = msg.toLowerCase();
-          const numMatch = msg.match(/(\d+)/);
-          if (lmsg.includes("short") || lmsg.includes("must contain") || numMatch) {
-            const min = numMatch ? parseInt(numMatch[1], 10) : 5;
-            passwordError.value = t("modal.settings.password_min", { min });
-          } else if (
-            lmsg.includes("too similar") ||
-            lmsg.includes("too common") ||
-            lmsg.includes("password")
-          ) {
-            passwordError.value = t("modal.settings.password_invalid");
-          } else {
-            generalServerError.value = t("modal.settings.update_failed");
-          }
-        }
+    if (Object.keys(params).length > 0) {
+      params.update_type = "user";
+      const res = await userStore.updateUser(params);
+      if (res && res.status === "ok") {
+        currentPassword.value = null;
+        newPassword.value = null;
       } else {
+        ok = false;
+        const msg = res && res.message ? res.message : null;
+
+        if (msg) {
+          if (msg === "Invalid current password") {
+            passwordError.value = t("modal.settings.invalid_current_password");
+          } else if (msg === "Both current and new passwords are required") {
+            passwordError.value = t("modal.settings.password_both_required");
+          } else {
+            const lmsg = msg.toLowerCase();
+            const numMatch = msg.match(/(\d+)/);
+            if (lmsg.includes("short") || lmsg.includes("must contain") || numMatch) {
+              const min = numMatch ? parseInt(numMatch[1], 10) : 5;
+              passwordError.value = t("modal.settings.password_min", { min });
+            } else if (
+              lmsg.includes("too similar") ||
+              lmsg.includes("too common") ||
+              lmsg.includes("password")
+            ) {
+              passwordError.value = t("modal.settings.password_invalid");
+            } else {
+              generalServerError.value = t("modal.settings.update_failed");
+            }
+          }
+        } else {
+          generalServerError.value = t("modal.settings.update_failed");
+        }
+      }
+    }
+
+    if (ok && experienceModeChanged) {
+      const res = await userStore.saveExperienceMode(experienceModeLocal.value);
+      if (!(res && res.status === "ok")) {
+        ok = false;
         generalServerError.value = t("modal.settings.update_failed");
       }
+    }
+
+    if (ok) {
+      showSettingsSnackbar.value = true;
+      passwordError.value = null;
+      generalServerError.value = null;
     }
   } catch (err) {
     console.error(err);
@@ -338,5 +406,9 @@ const showSettingsSnackbar = ref(false);
 .scrollable-content {
   max-height: 500px;
   overflow-y: auto;
+}
+
+.experience-mode-group {
+  overflow: hidden;
 }
 </style>

@@ -1,0 +1,111 @@
+"""Shared test setup: isolate the backend from Valkey, Celery's broker and the real data folders."""
+import os
+import types
+import uuid
+
+import pytest
+from django.conf import settings
+
+
+@pytest.fixture(autouse=True)
+def _isolated_data_manager(monkeypatch):
+    """Code constructs DataManager("/predictions/") etc. directly; redirect it to a temp dir."""
+    from data import manager
+
+    original_init = manager.DataManager.__init__
+
+    def init(self, data_dir=None, cache=None):
+        if data_dir and str(data_dir).startswith("/"):
+            data_dir = os.path.join(settings.TEST_DATA_ROOT, str(data_dir).strip("/"))
+        original_init(self, data_dir=data_dir, cache=cache)
+
+    monkeypatch.setattr(manager.DataManager, "__init__", init)
+
+
+@pytest.fixture(autouse=True)
+def published_events(monkeypatch):
+    """Record SSE publishes instead of talking to Valkey."""
+    from backend.utils import events
+
+    calls = []
+    monkeypatch.setattr(events, "publish", lambda user_id, payload: calls.append((user_id, payload)))
+    return calls
+
+
+@pytest.fixture(autouse=True)
+def enqueued_tasks(monkeypatch):
+    """Record Celery enqueues and control calls instead of contacting the broker."""
+    from backend import plugin_manager
+    from backend.tasks import convert_video
+    from sportvid.celery import app
+
+    calls = []
+
+    def fake_apply_async(name):
+        def apply_async(*args, **kwargs):
+            calls.append((name, args, kwargs))
+            return types.SimpleNamespace(id=uuid.uuid4().hex)
+        return apply_async
+
+    monkeypatch.setattr(plugin_manager.run_plugin, "apply_async", fake_apply_async("run_plugin"))
+    monkeypatch.setattr(convert_video.convert_video_to_hls, "apply_async", fake_apply_async("convert_video_to_hls"))
+    monkeypatch.setattr(app.control, "revoke", lambda *a, **k: calls.append(("revoke", a, k)))
+    return calls
+
+
+@pytest.fixture
+def cancel_messages(monkeypatch):
+    """Record publish_cancel messages (channel, message) instead of sending them to Valkey."""
+    from backend.utils import events
+
+    messages = []
+    client = types.SimpleNamespace(publish=lambda channel, message: messages.append((channel, message)))
+    monkeypatch.setattr(events, "get_client", lambda: client)
+    return messages
+
+
+@pytest.fixture
+def register_plugin(monkeypatch):
+    """Register a throwaway backend plugin whose __call__ is `call`, for this test only."""
+    from backend.plugin_manager import PluginManager
+
+    def register(name, call):
+        monkeypatch.setitem(PluginManager._plugins, name, type(name, (), {"__call__": call}))
+    return register
+
+
+@pytest.fixture(autouse=True)
+def deployed_ray_plugins(request, monkeypatch):
+    """Pretend every Ray plugin is deployed (no analyser in tests); tests may edit the dict.
+
+    Tests marked @pytest.mark.real_catalogue keep the real analyser query.
+    """
+    if request.node.get_closest_marker("real_catalogue"):
+        return None
+    import backend.tasks  # noqa: F401  (registers the plugins)
+    from backend import plugin_catalogue
+    from backend.plugin_manager import PluginManager
+
+    deployed = {name: "test" for cls in PluginManager._plugins.values() for name in cls.ray_plugins}
+    monkeypatch.setattr(plugin_catalogue, "deployed_ray_plugins", lambda: deployed)
+    return deployed
+
+
+@pytest.fixture
+def log_lines():
+    """Lines of the backend loggers as "LEVEL message fields", formatted like the console handler.
+
+    caplog can't show the correlation IDs: ContextFormatter reads them when a line is written,
+    so this handler has to be attached while the code under test runs.
+    """
+    import io
+    import logging
+    from backend.log_context import ContextFormatter
+
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(ContextFormatter(fmt="%(levelname)s %(message)s"))
+    logger = logging.getLogger("backend")
+    logger.addHandler(handler)
+    yield lambda: stream.getvalue().splitlines()
+    logger.removeHandler(handler)

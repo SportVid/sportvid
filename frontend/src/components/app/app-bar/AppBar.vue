@@ -21,30 +21,25 @@
       </v-btn>
 
       <div v-if="analysisView" class="d-flex align-center" data-tour="analysis-appbar-actions">
-        <v-btn v-if="canWrite" @click="showModalPlugin = true" data-tour="modal-plugin-open">
-          <app-bar-icon>mdi-puzzle-outline</app-bar-icon>
-          <span class="text-primary">{{ $t("app_bar.plugin_menu") }}</span>
-        </v-btn>
-
-        <v-btn @click="showModalHistory = true" data-tour="modal-history-open">
-          <app-bar-icon>mdi-history</app-bar-icon>
+        <v-btn @click="showModalStatus = true" data-tour="modal-status-open">
+          <app-bar-icon>mdi-format-list-checks</app-bar-icon>
           <v-badge
             v-if="numRunningPlugins > 0"
             color="accent"
             :content="numRunningPlugins"
             floating
           >
-            <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
+            <span class="text-primary">{{ $t("app_bar.status_menu") }}</span>
           </v-badge>
           <span v-else>
-            <span class="text-primary">{{ $t("app_bar.history_menu") }}</span>
+            <span class="text-primary">{{ $t("app_bar.status_menu") }}</span>
           </span>
         </v-btn>
 
-        <!-- <v-btn @click="showModalShortcut = true">
+        <v-btn @click="showModalShortcut = true">
           <app-bar-icon>mdi-label-multiple-outline</app-bar-icon>
           <span class="text-primary">{{ $t("app_bar.shortcut_menu") }}</span>
-        </v-btn> -->
+        </v-btn>
 
         <v-btn @click="showModalExport = true" data-tour="modal-export-open">
           <app-bar-icon>mdi-swap-vertical-bold</app-bar-icon>
@@ -54,23 +49,13 @@
 
       <v-btn
         v-if="videoView && loggedIn"
-        @click="showModalVideoUpload = true"
-        :disabled="videoUploadStore.isUploading"
-        data-tour="modal-video-upload-open"
-      >
-        <app-bar-icon>mdi-plus</app-bar-icon>
-        <span class="text-primary">{{ $t("app_bar.video_upload_menu") }}</span>
-      </v-btn>
-
-      <!-- <v-btn
-        v-if="videoView && loggedIn"
         @click="showModalBatchPlugin = true"
         :videoIds="selectedVideosIds"
         :disabled="selectedVideosIds.length == 0"
       >
         <app-bar-icon>mdi-plus</app-bar-icon>
         <span class="text-primary">{{ $t("app_bar.batch_plugin_menu") }}</span>
-      </v-btn> -->
+      </v-btn>
 
       <v-divider vertical inset class="mx-2" />
 
@@ -160,11 +145,14 @@
       <UserMenu />
     </template>
 
-    <ModalPlugin v-if="showModalPlugin" v-model="showModalPlugin" :videoIds="[videoId]" />
-    <ModalHistory v-if="showModalHistory" v-model="showModalHistory" :pluginRuns="pluginRuns" :canWrite="canWrite" />
+    <ModalStatus
+      v-if="showModalStatus"
+      v-model="showModalStatus"
+      :pluginRuns="pluginRuns"
+      :canWrite="canWrite"
+    />
     <ModalShortcut v-if="showModalShortcut" v-model="showModalShortcut" />
     <ModalExport v-if="showModalExport" v-model="showModalExport" />
-    <ModalVideoUpload v-if="showModalVideoUpload" v-model="showModalVideoUpload" />
     <ModalPlugin
       v-if="showModalBatchPlugin"
       v-model="showModalBatchPlugin"
@@ -183,18 +171,16 @@ import { useI18n } from "vue-i18n";
 import { usePlayerStore } from "@/stores/player";
 import { useUserStore } from "@/stores/user";
 import { useVideoStore } from "@/stores/video";
-import { usePluginRunStore } from "@/stores/plugin_run";
+import { usePluginRunStore, isInternalPluginRun } from "@/stores/plugin_run";
 import { useTutorialStore } from "@/stores/tutorial";
 import { useLanguageStore } from "@/stores/languages";
-import { useVideoUploadStore } from "@/stores/video_upload";
 import { useThemeStore } from "@/stores/theme";
-import ModalHistory from "@/components/app/app-bar/ModalHistory.vue";
+import ModalStatus from "@/components/app/app-bar/ModalStatus.vue";
 import ModalPlugin from "@/components/app/app-bar/ModalPlugin.vue";
 import ModalShortcut from "@/components/app/app-bar/ModalShortcut.vue";
 import ModalExport from "@/components/app/app-bar/ModalExport.vue";
 import UserMenu from "@/components/user/UserMenu.vue";
 import ModalTutorial from "@/components/app/app-bar/ModalTutorial.vue";
-import ModalVideoUpload from "@/components/video/ModalVideoUpload.vue";
 
 const route = useRoute();
 const { t } = useI18n();
@@ -205,23 +191,31 @@ const videoStore = useVideoStore();
 const pluginRunStore = usePluginRunStore();
 const tutorialStore = useTutorialStore();
 const languageStore = useLanguageStore();
-const videoUploadStore = useVideoUploadStore();
 const themeStore = useThemeStore();
 
 const loggedIn = computed(() => userStore.loggedIn);
 
 const videoView = computed(() => route.name === "VideoView");
 const analysisView = computed(() => route.name === "AnalysisView");
-const termsOfUseView = computed(() => route.name === "termsOfUseView");
+const termsOfUseView = computed(() => route.name === "TermsOfUseView");
 const guidelinesView = computed(() => route.name === "GuidelinesView");
 
-const showModalPlugin = ref(false);
-const videoId = computed(() => playerStore.videoId);
-
-const showModalHistory = ref(false);
+const showModalStatus = ref(false);
+watch(
+  () => pluginRunStore.openStatusModal,
+  (val) => {
+    if (val) {
+      showModalStatus.value = true;
+      pluginRunStore.openStatusModal = false;
+    }
+  }
+);
 const pluginRuns = computed(() => {
   return pluginRunStore
     .forVideo(playerStore.videoId)
+    // Automatic internal runs (gallery thumbnail, camera motion classification) are not
+    // user-facing analysis results -- see INTERNAL_PLUGIN_TYPES in stores/plugin_run.js.
+    .filter((run) => !isInternalPluginRun(run))
     .sort((a, b) => new Date(b.date) - new Date(a.date))
     .map((pluginRun) => {
       return {
@@ -232,6 +226,7 @@ const pluginRuns = computed(() => {
           .replace("Z", "")
           .substring(0, pluginRun.date.length - 8),
         progress: parseFloat(pluginRun.progress),
+        eta_seconds: pluginRun.eta_seconds,
         status: pluginRun.status,
       };
     });
@@ -266,9 +261,13 @@ const pluginName = (type) => {
     shot_type_classification: "modal.plugin.shot_type_classification.plugin_name",
     thumbnail: "modal.plugin.thumbnail.plugin_name",
     bytetrack: "modal.plugin.bytetrack.plugin_name",
+    object_tracker: "modal.plugin.object_tracker.plugin_name",
     calibration_static_dlt: "modal.plugin.calibration_static_dlt.plugin_name",
+    calibration_lens_solve: "modal.plugin.calibration_lens_solve.plugin_name",
     posdata_convert: "modal.plugin.posdata_convert.plugin_name",
     kpi_computation: "modal.plugin.kpi_computation.plugin_name",
+    team_clustering: "modal.plugin.team_clustering.plugin_name",
+    osnet_reid: "modal.plugin.osnet_reid.plugin_name",
   };
   return t(typeMap[type] || type);
 };
@@ -276,8 +275,6 @@ const pluginName = (type) => {
 const showModalShortcut = ref(false);
 
 const showModalExport = ref(false);
-
-const showModalVideoUpload = ref(false);
 
 const canWrite = computed(() => {
   if (userStore.role === "admin") return true;

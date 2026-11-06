@@ -22,7 +22,7 @@ default_config = {
     "host": "localhost",
     "port": 6379,
     "model_name": "bytetrack",
-    "model_file": "/models/bytetrack/bytetrack_x_mot17.pth.tar",
+    "model_file": "/models/yolox/bytetrack_x_mot17.pth.tar",
 }
 
 # args from tools/demo_track.py
@@ -119,9 +119,8 @@ class ByteTrack(
         callbacks: Callable = None,
     ) -> Dict[str, Data]:        
         import json
-        from collections import defaultdict
-        
         import torch
+        from collections import defaultdict
         from yolox.exp import get_exp
 
         with inputs["video"] as input_data:
@@ -132,7 +131,7 @@ class ByteTrack(
                     extension=f".{input_data.ext}",
                     ref_id=input_data.id,
                 )
-
+                
                 args = argparse.Namespace(**parameters)
                 exp = get_exp(None, "yolox-x")
                 exp.num_classes = args.num_classes
@@ -148,11 +147,8 @@ class ByteTrack(
                 model.eval()
                 predictor = Predictor(model, exp, None, self.device, fp16=args.fp16)
 
-                results, img_info = self.track(video_decoder, predictor, args)
-
-                # New entity-classification scheme (see posdata_convert): team_id=1 ball, =2 refs,
-                # =0 inactive, ≥3 active teams. ByteTrack only knows "person" detections — assign
-                # all to team_id=3 (single team). A future classification plugin will reassign.
+                results, img_info = self.track(video_decoder, predictor, args, callbacks=callbacks)
+                
                 DEFAULT_TEAM_ID = 3
                 bboxes_dict = defaultdict(list)
                 unique_player_ids = set()
@@ -172,15 +168,12 @@ class ByteTrack(
                         bbox = [
                             id, DEFAULT_TEAM_ID, 0,
                             x_norm + (w_norm / 2), y_norm + h_norm,
-                            f'{i}-{id}',
                             x_norm, y_norm, w_norm, h_norm,
                             score
                         ]
                         bboxes_dict[frame_time].append(bbox)
                         unique_player_ids.add(id)
 
-                # New schema: separate dicts per entity kind. ByteTrack populates only player_ids
-                # (with team_id=3); ref_ids/ball_ids stay empty until a classification plugin runs.
                 team_id_meta = {
                     DEFAULT_TEAM_ID: {"id": DEFAULT_TEAM_ID, "name": "Team A"},
                 }
@@ -207,6 +200,7 @@ class ByteTrack(
         video_decoder: VideoDecoder,
         predictor: Predictor,
         args: argparse.Namespace,
+        callbacks: Callable = None,
     ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         """Performs object tracking
 
@@ -229,6 +223,8 @@ class ByteTrack(
         from yolox.tracker.byte_tracker import BYTETracker
 
         tracker = BYTETracker(args, frame_rate=args.fps)
+
+        total_frames = len(video_decoder) if hasattr(video_decoder, "__len__") else None
 
         results = []
         for frame_id, _frame in enumerate(video_decoder):
@@ -261,4 +257,11 @@ class ByteTrack(
                     "track_boxes": online_tlwhs,
                 }
             )
+            if total_frames:
+                # detection+tracking is the whole cost here; leave a sliver for the
+                # bbox post-processing / serialisation the caller does afterwards.
+                self.update_callbacks(
+                    callbacks,
+                    progress=min((frame_id + 1) / total_frames, 1.0) * 0.95,
+                )
         return results, img_info

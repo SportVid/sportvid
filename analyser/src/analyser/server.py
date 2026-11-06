@@ -1,11 +1,14 @@
 import logging
 import sys
 import os
+import re
 import argparse
 import time
 import uuid
+import threading
 
 import yaml
+import json
 import copy
 import traceback
 from concurrent import futures
@@ -24,6 +27,7 @@ from inference_ray.plugin import AnalyserPluginManager
 from data import DataManager, Data
 from utils.cache import get_hash_for_plugin
 from utils.cache import CacheManager
+from utils.progress_channel import read_progress, clear_progress
 
 
 class AnalyserCacheWrapper:
@@ -37,7 +41,7 @@ class AnalyserCacheWrapper:
     def plugins(self):
         return self.plugin._plugins
 
-    def __call__(self, plugin, inputs, parameters, data_manager, callbacks):
+    def __call__(self, plugin, inputs, parameters, data_manager, callbacks, cancel_event=None, session=None, job_id=None):
         cached = False
         if self.cache:
             plugins = {x["plugin"]: x for x in self.plugin.plugin_status()}
@@ -94,6 +98,9 @@ class AnalyserCacheWrapper:
                 data_manager=data_manager,
                 parameters=parameters,
                 callbacks=callbacks,
+                cancel_event=cancel_event,
+                session=session,
+                job_id=job_id,
             )
             logging.info(
                 f"[AnalyserPluginManager] {run_id} results: {[{k:x} for k,x in results.items()]}"
@@ -102,7 +109,7 @@ class AnalyserCacheWrapper:
         if self.cache:
             for output, data in results.items():
                 data_id = data
-                logging.error(f"#####DEBUG {data_id} {data} {isinstance(data, Data)}")
+                logging.debug(f"#####DEBUG {data_id} {data} {isinstance(data, Data)}")
 
                 result_hash = get_hash_for_plugin(
                     plugin=plugin,
@@ -122,15 +129,25 @@ class AnalyserCacheWrapper:
                 )
         return results
 
-
+# TODO: Ensure session.close() actually interrupts in-flight requests quickly enough
+# (the Ray HTTP call has a timeout, see inference_ray.plugin.PLUGIN_RUN_TIMEOUT).
+# TODO: Implement periodic cleanup of cancel_events and sessions dicts to
+# prevent unbounded growth in long-running analyser processes.
 def run_plugin(args):
     try:
         plugin_manager = globals().get("plugin_manager")
         data_manager = globals().get("data_manager")
         params = args.get("params")
         shared = args.get("shared")
+        cancel_event = args.get("cancel_event")
+        session_holder = args.get("session_holder")
         shared["progress"] = 0.0
         shared["status"] = analyser_pb2.GetPluginStatusResponse.RUNNING
+
+        if cancel_event is not None and cancel_event.is_set():
+            logging.info(f"[Analyser] {params.get('plugin')} aborted before it started")
+            return []
+
         plugin_inputs = {}
         if "inputs" in params:
             for data_in in params.get("inputs"):
@@ -143,31 +160,46 @@ def run_plugin(args):
         plugin_parameters = {}
         if "parameters" in params:
             for parameter in params.get("parameters"):
-                if parameter.get("type") == "FLOAT_TYPE":
-                    plugin_parameters[parameter.get("name")] = float(
+                if parameter.get("type") == "BOOL_TYPE":
+                    plugin_parameters[parameter.get("name")] = json.loads(
                         parameter.get("value")
                     )
                 if parameter.get("type") == "INT_TYPE":
                     plugin_parameters[parameter.get("name")] = int(
+                        parameter.get("value")
+                    )                
+                if parameter.get("type") == "FLOAT_TYPE":
+                    plugin_parameters[parameter.get("name")] = float(
                         parameter.get("value")
                     )
                 if parameter.get("type") == "STRING_TYPE":
                     plugin_parameters[parameter.get("name")] = str(
                         parameter.get("value")
                     )
-                if parameter.get("type") == "BOOL_TYPE":
-                    if parameter.get("value") == "False":
-                        plugin_parameters[parameter.get("name")] = False
-                    else:
-                        plugin_parameters[parameter.get("name")] = True
-
+                if parameter.get("type") == "DICT_TYPE":
+                    plugin_parameters[parameter.get("name")] = json.loads(
+                        parameter.get("value")
+                    )
+        
         callbacks = [AnalyserProgressCallback(shared)]
+
+        # Before invoking the plugin_manager the worker creates a dedicated HTTP session.
+        # Cancellation ahndler can later close this exact session from another thread.
+        # Closing it is intended to interrupt the HTTP request from the analyser service to Ray Serve.
+        import requests
+        session = requests.Session()
+        if session_holder is not None:
+            session_holder["session"] = session
+
         results = plugin_manager(
             plugin=params.get("plugin"),
             inputs=plugin_inputs,
             parameters=plugin_parameters,
             data_manager=data_manager,
             callbacks=callbacks,
+            cancel_event=cancel_event,
+            session=session,
+            job_id=args.get("id"),
         )
         if results is None:
             logging.error(f"[Analyser] {params.get('plugin')} without results")
@@ -236,21 +268,30 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
         self.config = config
         self.managers = init_plugins(config)
         self.process_pool = futures.ThreadPoolExecutor(
-            max_workers=self.config.get("num_worker", 1),
+            max_workers=self.config.get("num_worker", 4),
             initializer=init_process,
             initargs=(config,),
         )
         self.shared_manager = mp.Manager()
         self.futures = []
 
-        # self.max_results = config.get("Analyser", {}).get("max_results", 100)
+        # Cancellation bookkeeping, deliberately uses ordinary dicts rather than mp.Manager objects.
+        # This is because the jobs run through a ThreadPoolExecutor, not a process pool.
+        self._cancel_lock = threading.Lock()
+        self.cancel_events = {}
+        self.sessions = {}
 
     def list_plugins(self, request, context):
         reply = analyser_pb2.ListPluginsReply()
 
-        # print(self.managers["plugin_manager"].plugin_status())
-        for _, plugin_class in self.managers["plugin_manager"].plugins().items():
-            reply.plugins.extend([analyser_pb2.PluginInfo(name=plugin_class._name)])
+        # Only plugins whose Ray Serve application is running can be used;
+        # the version is the one the result cache keys on.
+        for status in self.managers["plugin_manager"].plugin_status():
+            if not status.get("is_running"):
+                continue
+            reply.plugins.append(
+                analyser_pb2.PluginInfo(name=status["plugin"], version=str(status.get("version") or ""))
+            )
 
         return reply
 
@@ -262,7 +303,6 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
             data_id = None
             with data:
                 data_id = data.id
-
             return analyser_pb2.UploadDataResponse(success=True, id=data_id, hash=hash)
 
         except Exception as e:
@@ -320,11 +360,64 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
         d["status"] = analyser_pb2.GetPluginStatusResponse.WAITING
         variable["shared"] = d
         process_args["shared"] = d
+
+        # Objects must remain shared references and must not be copied with deepcopy.
+        # Event/dict has to stay the *same* object in both self.cancel_events/self.sessions (for abort_plugin to reach) 
+        # & process_args (for the worker thread to see), which deepcopy would break.
+        cancel_event = threading.Event()
+        session_holder = {}
+        with self._cancel_lock:
+            self.cancel_events[job_id] = cancel_event
+            self.sessions[job_id] = session_holder
+        process_args["cancel_event"] = cancel_event
+        process_args["session_holder"] = session_holder
+
         future = self.process_pool.submit(run_plugin, process_args)
         variable["future"] = future
         self.futures.append(variable)
 
         return analyser_pb2.RunPluginResponse(success=True, id=job_id)
+
+    def abort_plugin(self, request, context):
+        job_id = request.id
+        # find the job
+        futures_lut = {x["id"]: i for i, x in enumerate(self.futures)}
+        if job_id not in futures_lut:
+            logging.warning(f"[Analyser] abort_plugin: unknown job {job_id}")
+            return analyser_pb2.AbortPluginResponse(success=False)
+
+        job_data = self.futures[futures_lut[job_id]]
+        # retrieve the cancellation status
+        with self._cancel_lock:
+            cancel_event = self.cancel_events.get(job_id)
+            session_holder = self.sessions.get(job_id)
+        if cancel_event is not None:
+            cancel_event.set() # set cancellation event -> inform worker and plugin that cancellation was requested
+
+        # cancel jobs that have not started -> if the future is still queued, shared status is set to ERROR, method returns
+        if job_data["future"].cancel():
+            job_data["shared"]["status"] = analyser_pb2.GetPluginStatusResponse.ERROR
+            logging.info(f"[Analyser] job {job_id} cancelled before it started")
+            return analyser_pb2.AbortPluginResponse(success=True)
+
+        # 1. Close the analyser-to-Ray HTTP session:
+        #   - retrieve the dedicated HTTP session for a running job
+        #   - forces blocked HTTP call to the ray serve deployment to unblock
+        # 2. Cause the Ray Serve request to be cancelled.
+        #   - worker thread notices cancel_event and returns
+        #   - closing the connection from here is also what makes Ray Serve's own request cancellation kick in on the
+        #   - deployment side (see inference_ray/main.py's run_in_executor + CancelledError).
+        # 3. Make the analyser-side plugin request return.
+        # 4. Let cancel_event terminate the backend polling loop.
+        session = (session_holder or {}).get("session")
+        if session is not None:
+            try:
+                session.close()
+            except Exception:
+                logging.exception(f"[Analyser] failed to close session for job {job_id}")
+
+        logging.info(f"[Analyser] abort requested for running job {job_id}")
+        return analyser_pb2.AbortPluginResponse(success=True)
 
     def get_plugin_status(self, request, context):
         futures_lut = {x["id"]: i for i, x in enumerate(self.futures)}
@@ -338,10 +431,15 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
             )
             response.status = status
 
-            progress = job_data["shared"].get("progress", 0.0)
+            progress = job_data["shared"].get("progress", 0.0) # read via valkey (see, utils.progress_channel.py)
+            
+            bridged = read_progress(request.id)
+            if bridged is not None:
+                progress = max(progress, bridged)
             response.progress = progress
             if not done:
                 return response
+            clear_progress(request.id)
 
             try:
                 results = job_data["future"].result()
@@ -426,9 +524,16 @@ class Server:
 
 def read_config(path):
     with open(path, "r") as f:
-        raw_cfg_str = f.read()
-        expanded_cfg_str = os.path.expandvars(raw_cfg_str)
-        return yaml.safe_load(expanded_cfg_str)
+        expanded_cfg_str = os.path.expandvars(f.read())
+    # expandvars keeps unset variables as "${VAR}", which would only fail much later
+    unset = sorted({
+        name
+        for line in expanded_cfg_str.splitlines() if not line.lstrip().startswith("#")
+        for name in re.findall(r"\$\{(\w+)\}", line)
+    })
+    if unset:
+        raise ValueError(f"{path}: environment variables not set: {', '.join(unset)}")
+    return yaml.safe_load(expanded_cfg_str)
 
 
 def parse_args():
@@ -443,7 +548,6 @@ def parse_args():
     parser.add_argument("--no_cache", action="store_true", help="disable cache")
     parser.add_argument("--cache_valkey_host", help="valkey cache host")
     parser.add_argument("--cache_valkey_port", type=int, help="valkey cache port")
-    parser.add_argument("--cache_valkey_password", help="valkey cache password")
     parser.add_argument("--inference_ray_host", help="inference ray host")
     parser.add_argument("--inference_ray_port", type=int, help="inference ray port")
     parser.add_argument(
@@ -509,13 +613,6 @@ def main():
             config["data"]["cache"] = {"type": "valkey", "params": {}}
         config["data"]["cache"]["params"]["port"] = args.cache_valkey_port
 
-    if args.cache_valkey_password:
-        if "data" not in config:
-            config["data"] = {}
-        if "cache" not in config["data"]:
-            config["data"]["cache"] = {"type": "valkey", "params": {}}
-        config["data"]["cache"]["params"]["password"] = args.cache_valkey_password
-
     if args.inference_ray_host:
         if "inference" not in config:
             config["inference"] = {
@@ -523,14 +620,14 @@ def main():
                 "params": {
                     "host": "inference_ray", 
                     "status_port": 52365, 
-                    "port": 8001,
+                    "port": 8010,
                 },
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
                 "host": "inference_ray",
                 "status_port": 52365,
-                "port": 8001,
+                "port": 8010,
             }
         config["inference"]["params"]["host"] = args.inference_ray_host
 
@@ -541,14 +638,14 @@ def main():
                 "params": {
                     "host": "inference_ray", 
                     "status_port": 52365, 
-                    "port": 8001,
+                    "port": 8010,
                 },
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
                 "host": "inference_ray",
                 "status_port": 52365,
-                "port": 8001,
+                "port": 8010,
             }
         config["inference"]["params"]["status_port"] = args.inference_ray_status_port
 
@@ -559,14 +656,14 @@ def main():
                 "params": {
                     "host": "inference_ray", 
                     "status_port": 52365, 
-                    "port": 8001,
+                    "port": 8010,
                 },
             }
         if "params" not in config["inference"]:
             config["inference"]["params"] = {
                 "host": "inference_ray",
                 "status_port": 52365,
-                "port": 8001,
+                "port": 8010,
             }
         config["inference"]["params"]["port"] = args.inference_ray_port
 

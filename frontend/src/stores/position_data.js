@@ -6,9 +6,11 @@ import config from "../../app.config";
 import { usePlayerStore } from "@/stores/player";
 import { useTopViewStore } from "./top_view";
 import { useBboxesStore } from "./bboxes";
+import { useCalibrationAssetStore } from "@/stores/calibration_asset";
 import { useVisualizationStore } from "@/stores/visualization";
 import { usePosdataWorkerStore } from "@/stores/posdata_worker";
 import { isInSportZone } from "@/plugins/sport_zones";
+import { useUploadTracker } from "@/composables/useUploadTracker";
 
 function isInSportZoneUtil(z, x, y) {
   return isInSportZone(z.sportKey, z.zoneId, x, y, z.half);
@@ -20,14 +22,28 @@ export const usePositionDataStore = defineStore(
     const playerStore = usePlayerStore();
     const topViewStore = useTopViewStore();
     const bboxesStore = useBboxesStore();
+    const calibrationAssetStore = useCalibrationAssetStore();
     const visualizationStore = useVisualizationStore();
 
     const positionDataList = ref([]);
     const positionDataId = ref(null);
+    // Which source ModalPositionDataSelect.vue's confirmSelection last picked —
+    // 'manual' | 'bytetrack' | 'object_tracker' | null (nothing chosen yet).
+    // Persisted (see this store's `persist` option) so restoreFromCache knows
+    // which of the two restore paths below to take after a reload; it's the
+    // only thing here that isn't itself a positionDataId, hence living in
+    // this store rather than bboxesStore/calibrationAssetStore.
+    const positionDataMode = ref(null);
     const isRestoringPosData = ref(false);
 
-    const isUploading = ref(false);
-    const progress = ref(0);
+    const {
+      isUploading,
+      progress,
+      etaSeconds: uploadEtaSeconds,
+      start: startUploadTracking,
+      finish: finishUploadTracking,
+      onUploadProgress: onUploadProgressTracked,
+    } = useUploadTracker();
 
     const positionDataUploadSuccess = ref(false);
     const positionDataRenameSuccess = ref(false);
@@ -94,7 +110,7 @@ export const usePositionDataStore = defineStore(
 
     const uploadPositionData = async (params) => {
       if (!params) return;
-      isUploading.value = true;
+      startUploadTracking();
       try {
         const formData = new FormData();
         formData.append("video_id", playerStore.videoId);
@@ -110,11 +126,7 @@ export const usePositionDataStore = defineStore(
 
         const res = await axios.post(`${config.API_LOCATION}/tracking_data/upload`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
-          onUploadProgress: (event) => {
-            if (event.lengthComputable) {
-              progress.value = Math.round((event.loaded * 100) / event.total);
-            }
-          },
+          onUploadProgress: onUploadProgressTracked,
         });
 
         if (res.data.status === "ok") {
@@ -124,8 +136,7 @@ export const usePositionDataStore = defineStore(
       } catch (error) {
         console.error("Failed to upload position data:", error);
       } finally {
-        isUploading.value = false;
-        progress.value = 0;
+        finishUploadTracking();
       }
     };
 
@@ -172,7 +183,10 @@ export const usePositionDataStore = defineStore(
     function isInAnyZone(x, y, zones) {
       if (!zones || zones.length === 0) return false;
       for (const z of zones) {
-        if (z.sportZone) { if (isInSportZoneUtil(z, x, y)) return true; continue; }
+        if (z.sportZone) {
+          if (isInSportZoneUtil(z, x, y)) return true;
+          continue;
+        }
         if (x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1) return true;
       }
       return false;
@@ -223,7 +237,7 @@ export const usePositionDataStore = defineStore(
           for (const p of playersPrev) prevMap.set(p[0], p);
 
           for (const currPlayer of playersCurr) {
-            if (currPlayer[1] === 1) continue;
+            if (currPlayer[1] === 0) continue;
 
             const prevPlayer = prevMap.get(currPlayer[0]);
             if (!prevPlayer) continue;
@@ -304,18 +318,102 @@ export const usePositionDataStore = defineStore(
       }
     }
 
-    /**
-     * Restore posData after navigation. Checks in-memory cache first,
-     * then falls back to a full reload from the backend.
-     */
-    async function restoreFromCache() {
+    async function _restoreManual() {
       const id = positionDataId.value;
       if (!id) return;
+      // positionDataList itself isn't persisted (it's just an index of what's
+      // available, cheap to refetch) — loadPositionData() looks the id up in
+      // it, so make sure it's populated before relying on a persisted id that
+      // may otherwise still be empty this early after a reload.
+      if (positionDataList.value.length === 0) {
+        await loadPositionDataList();
+      }
+      await loadPositionData(id);
+      await visualizationStore.loadKpiData(id);
+    }
+
+    // Mirrors ModalPositionDataSelect.vue's confirmSelection for the
+    // bytetrack/object_tracker branch, using the plugin run ids persisted on
+    // bboxesStore/topViewStore (see their `persist` options) instead of
+    // whatever the modal's own v-models held — those aren't persisted, the
+    // modal isn't even open across a reload. Deliberately does not touch
+    // selectedTimeRange (unlike confirmSelection): that's already persisted
+    // with whatever range was selected last, and re-deriving "full match"
+    // here would silently discard it on every reload.
+    async function _restoreTracker() {
+      const trackerPluginId = bboxesStore.bboxPluginRunId;
+      const calibrationAssetId = calibrationAssetStore.calibrationAssetId;
+      if (!trackerPluginId || !calibrationAssetId) return;
+
+      // Snapshot before the reload below -- transformBBoxToPositionDataTopView treats any
+      // full (re)load of the tracker run as fresh and resets both of these to null (it can't
+      // tell "just restoring after a browser refresh" apart from "a genuinely new tracker run
+      // was picked"), so reading topViewStore.teamClusteringRunId/reidRunId *after* that call
+      // would always see null and skip redoing the merges below.
+      const teamClusteringRunId = topViewStore.teamClusteringRunId;
+      const reidRunId = topViewStore.reidRunId;
+
+      // calibrationAssetsList (unlike positionDataList) isn't fetched anywhere
+      // by the time AnalysisView.vue calls restoreFromCache on mount — normally
+      // ModalPositionDataSelect.vue's own mount populates it well before the
+      // user can click confirm, but that modal never opens on a reload.
+      // transformBBoxToPositionDataTopView -> loadCalibrationAsset does a
+      // synchronous .find() on it, so without this it throws on the still-
+      // default `{}`.
+      await calibrationAssetStore.loadCalibrationAssetsList();
+      await topViewStore.transformBBoxToPositionDataTopView(calibrationAssetId, trackerPluginId);
+      if (bboxesStore.bboxBallPluginRunId) {
+        await topViewStore.mergeBallTracking(calibrationAssetId, bboxesStore.bboxBallPluginRunId);
+      }
+      if (teamClusteringRunId) {
+        await topViewStore.mergeTeamAssignment(teamClusteringRunId);
+      }
+      if (reidRunId) {
+        await topViewStore.mergeReid(reidRunId);
+      }
+      await visualizationStore.loadKpiData(trackerPluginId);
+    }
+
+    /**
+     * Clears the currently selected/loaded position data and everything derived from it -- the
+     * topView pitch data, the bbox overlay + tracker-run ids, KPI data -- without touching
+     * anything else (calibration mode, pitch grid/zones, event data stay as they are, unlike a
+     * full AnalysisView unmount). Used by the "Position data" menu on TopView/VideoPlayer/
+     * Heatmap/KPI cards so their empty state (PositionDataMenu) comes back and the user can
+     * create/upload/select something new right there, without navigating back to VideoView.
+     */
+    function resetPositionData() {
+      positionDataId.value = null;
+      positionDataMode.value = null;
+      selectedTimeRange.value = { start: 0, end: 0 };
+      topViewStore.setPositionData(null, {});
+      bboxesStore.bboxDataInterpolated = {};
+      // Also clear the persisted tracker-run ids -- otherwise a later restoreFromCache (e.g. a
+      // reload right after this) would try to restore the just-cleared selection right back.
+      bboxesStore.bboxPluginRunId = 0;
+      bboxesStore.bboxBallPluginRunId = null;
+      topViewStore.teamClusteringRunId = null;
+      topViewStore.reidRunId = null;
+      visualizationStore.resetKpiData();
+    }
+
+    /**
+     * Restore whichever position-data source was active before a reload,
+     * using positionDataMode plus the source-specific ids persisted on this
+     * store / bboxesStore / calibrationAssetStore / topViewStore (see each
+     * store's `persist` option) — a reload never re-fetches everything, just
+     * the one previously-selected dataset.
+     */
+    async function restoreFromCache() {
+      if (!positionDataMode.value) return;
       if (topViewStore.sortedFrameKeys.length > 0) return;
       isRestoringPosData.value = true;
       try {
-        await loadPositionData(id);
-        await visualizationStore.loadKpiData(id);
+        if (positionDataMode.value === "manual") {
+          await _restoreManual();
+        } else {
+          await _restoreTracker();
+        }
       } finally {
         isRestoringPosData.value = false;
       }
@@ -324,6 +422,7 @@ export const usePositionDataStore = defineStore(
     return {
       positionDataList,
       positionDataId,
+      positionDataMode,
       positionDataUploadSuccess,
       positionDataRenameSuccess,
       positionDataDeleteSuccess,
@@ -334,18 +433,20 @@ export const usePositionDataStore = defineStore(
       deletePositionData,
       isUploading,
       progress,
+      uploadEtaSeconds,
       provider,
       calculateRunningDistances,
       selectedTimeRange,
       setSelectedTimeRangeStart,
       setSelectedTimeRangeEnd,
+      resetPositionData,
       restoreFromCache,
       isRestoringPosData,
     };
   },
   {
     persist: {
-      pick: ["positionDataId", "selectedTimeRange"],
+      pick: ["positionDataId", "positionDataMode", "selectedTimeRange"],
       storage: sessionStorage,
     },
   }

@@ -1,9 +1,13 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "inference_ray"
 version = "0.1.0"
 description = "inference server package"
 readme = "README.md"
-requires-python = "==3.10.18"
+requires-python = ">=3.10,<3.11"
 dependencies = [
     "interface",
     "data",
@@ -16,16 +20,16 @@ dependencies = [
     "pip>=25.0.1",
     "protobuf>=5.29.3",
     "requests>=2.32.3",
-    "numpy>=2.1.1", # NOTE: old version -> "numpy==1.26.4"
+    "numpy>=2.1.1",
+    "torchvision",
     "pandas>=2.0.0",
     "tqdm>=4.67.1",
-    "transformers>=4.48.3",
+    "transformers==4.57.6",
     "valkey>=6.1.0",
     "h5py>=3.12.1",
     "imageio[ffmpeg,pyav]>=2.37.0",
     "librosa>=0.11.0",
     "onnx>=1.17.0",
-    "onnxruntime-gpu>=1.13.1",
     "onnx-simplifier>=0.3.5",
     "onnxruntime-gpu>=1.21.1",
     "qdrant-client>=1.13.2",
@@ -33,19 +37,31 @@ dependencies = [
     "scipy>=1.15.2",
     "scikit-learn>=1.6.1",
     "opencv-python-headless>=4.11.0.86",
-    # "opencv_python", Should be redundant with opencv-python-headless
     "floodlight==1.1.0",
     "lap",
     "motmetrics",
     "filterpy",
     "tabulate",
+    "tensorboard",
     "ninja",
     "thop",
     "Pillow",
     "loguru",
     "scikit-image",
+    "ultralytics>=8.0",
+    "rfdetr==1.5.0",
+    "timm>=1.0",                  # sportsreid's DeiT / ViT models import it; rfdetr < 1.5 used to pull it in
+    "open-clip-torch>=3.3",       # clip_embedding; rfdetr < 1.5 used to pull it in
+    # "torchreid",
+    "click==8.2.1",
     "gpustat>=1.1.1",
 ]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.uv]
 package = true
@@ -57,6 +73,8 @@ package = true
 [project.optional-dependencies]
 tracking = [
      "bytetrack",
+     "torchreid",
+     "gta-link",
 ]
 
 [tool.uv.sources]
@@ -64,3 +82,5 @@ interface = { workspace = true }
 data = { workspace = true }
 utils = { workspace = true }
 bytetrack = { path = "third_party/ByteTrack" }
+torchreid = { path = "third_party/sportsreid" }
+gta-link = { path = "third_party/gta_link" }
