@@ -12,7 +12,7 @@ from django.conf import settings
 from rest_framework import serializers
 
 
-from backend.models import Video, PluginRun, TrackingData
+from backend.models import Video, PluginRun, TrackingData, CalibrationAssets
 from backend.permissions import readable, unreadable_references, writable
 from backend.plugin_catalogue import is_available
 from backend.utils.storage import release_used_storage
@@ -177,7 +177,19 @@ class PluginRunDelete(ApiView):
                     for owner, size in size_by_owner.values():
                         release_used_storage(owner, size)
 
+            # The runs' calibrations go with them (Calibration.plugin_run cascades). An asset whose active calibration
+            # was among them falls back to its newest remaining one, so it keeps an active calibration if it has any.
+            affected_asset_ids = list(
+                CalibrationAssets.objects.filter(active_calibration__plugin_run__in=runs).values_list("id", flat=True)
+            )
+
             response, _ = runs.delete()
+
+            for asset in CalibrationAssets.objects.filter(id__in=affected_asset_ids):
+                newest = asset.calibrations.first()  # Calibration is ordered by -date
+                if newest is not None:
+                    asset.apply_calibration(newest)
+
             # After the delete, like video/delete: a task that misses the cancel finds its run gone.
             # Revokes the queued Celery tasks and tells the running ones' watchers to abort their analyser job.
             cancel_plugin_runs(active_runs, reason="user_delete")

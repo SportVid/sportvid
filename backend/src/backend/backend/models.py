@@ -907,9 +907,9 @@ class Calibration(models.Model):
     calibration_asset = models.ForeignKey(
         CalibrationAssets, on_delete=models.CASCADE, related_name="calibrations"
     )
-    # the run that computed it; kept as a plain name in `plugin` so a deleted run doesn't take that with it
+    # the run that computed it; deleting the run deletes its calibration with it
     plugin_run = models.ForeignKey(
-        PluginRun, blank=True, null=True, on_delete=models.SET_NULL, related_name="calibrations"
+        PluginRun, blank=True, null=True, on_delete=models.CASCADE, related_name="calibrations"
     )
     plugin = models.CharField(max_length=256, blank=True, default="")
     date = models.DateTimeField(auto_now_add=True)

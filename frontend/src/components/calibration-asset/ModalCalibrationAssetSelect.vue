@@ -86,6 +86,8 @@ watch(
   () => props.modelValue,
   (value) => {
     if (value) {
+      // reload on every open: runs (and with them their calibrations) may have been deleted meanwhile
+      calibrationAssetStore.loadCalibrationAssetsList();
       dialog.value = true;
     }
   }
