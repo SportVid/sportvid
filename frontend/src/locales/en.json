@@ -203,7 +203,7 @@
   "lens_profile": {
     "title": "Camera & Lens",
     "heading": "Camera & lens",
-    "video_not_ready": "A lens profile can be assigned once the video has finished processing -- its resolution decides which profiles fit.",
+    "video_not_ready": "A lens profile can be assigned once the video has finished processing. Its resolution decides which profiles fit.",
     "brand": "Camera brand",
     "model": "Camera model",
     "profile": "Lens profile",
@@ -230,7 +230,7 @@
   "calibration_asset": {
     "calibration": {
       "heading": "Pick the calibration this asset should use:",
-      "none": "No calibration yet -- just select this asset",
+      "none": "No calibration yet (just select this asset)",
       "lens_profile": "Lens profile: {name}",
       "lens_solved": "Lens solved from the video",
       "no_lens": "No lens correction",
@@ -264,7 +264,7 @@
       "title": "Marked frames ({count})",
       "points": "{count} pts",
       "distinct": "{count} / {required} different markers placed",
-      "min_hint": "The points of all frames are fitted together, and the same marker placed on several frames counts once -- repeats only average out the click error.",
+      "min_hint": "The points of all frames are fitted together, and the same marker placed on several frames counts once. Repeats only average out the click error.",
       "unknown_time": "Time not recorded",
       "delete": "Remove this frame's points"
     }
@@ -333,7 +333,7 @@
     "generate": {
       "cv_heading": "Via computer vision",
       "detect_events": "Event detection",
-      "coming_soon": "Coming soon — there's no automatic event detection plugin yet.",
+      "coming_soon": "Coming soon: there's no automatic event detection plugin yet.",
       "or": "or",
       "upload_heading": "Via file upload"
     },
@@ -524,37 +524,37 @@
       "video_view": "This is where all your uploaded videos are listed. Once uploaded, click on a video to open it in the analysis view.",
       "open_modal": "Click here to open the video upload modal.",
       "fill_form": "In the video upload modal, you can select a video file from your computer and fill in the required information about the video. Make sure to provide accurate information about the sport, division, age group, and field dimensions to ensure the best analysis results.",
-      "upload_video": "All required fields are filled — click the button to start the upload.",
+      "upload_video": "All required fields are filled. Click the button to start the upload.",
       "video_processing": "Your video is currently being processed. This may take some time depending on the video length and server load. Once processing is complete, it will be ready for analysis."
     },
     "analyse_video": {
       "video_view": "This is where all your uploaded videos are listed. Click the Analyse button on a video to open it in the analysis view.",
       "video_player": "This is the video player. You can play, pause and scrub through your video here. All visualizations can be synchronized to the current playback position.",
-      "top_view": "This is the top-view panel. It shows position data projected onto a 2D field — players, paths and team assignments. Use the controls to select which data to display.",
+      "top_view": "This is the top-view panel. It shows position data projected onto a 2D field: players, paths and team assignments. Use the controls to select which data to display.",
       "visualization_tabs": "These tabs give you different ways to explore your data: Timeline for annotated events, Events for a structured event list, Heatmap for spatial density, and Metrics for player and team performance data.",
       "appbar_actions": "The toolbar gives you quick access to the main tools: run plugins to process your video, check the run history, manage annotation shortcuts, and export your data."
     },
     "run_plugin": {
-      "position_data": "Actions that process your video now live right where their result is used, instead of behind a central menu. Here in the empty pitch view, you can generate position data — run ByteTrack for player tracking, set up a DLT+RANSAC camera calibration, or upload position data manually.",
+      "position_data": "Actions that process your video now live right where their result is used, instead of behind a central menu. Here in the empty pitch view, you can generate position data: run ByteTrack for player tracking, set up a DLT+RANSAC camera calibration, or upload position data manually.",
       "kpi_tab": "Once position data is available, open the Metrics tab: computing metrics (distance covered, velocity, metabolic power, and more) happens inline, right there."
     },
     "check_status": {
-      "open_modal": "Click here to open the plugin run history. This is where you can see the status of all your plugin runs — whether they are queued, running, completed, or if any errors occurred.",
+      "open_modal": "Click here to open the plugin run history. This is where you can see the status of all your plugin runs, whether they are queued, running, completed, or if any errors occurred.",
       "status_table": "This table lists all plugin runs for the current video. Each row shows the plugin name, the date it was run, its progress, and its current status. You can use this to track ongoing runs or review past results.",
       "delete_panel": "Expand this section to delete plugin runs. You can delete all runs for your account, all runs for the current video, all runs of a specific plugin type for the current video, or select individual runs to remove. This is useful to clean up old or failed runs."
     },
     "export": {
-      "open_modal": "Click here to open the export panel. Important: export options that rely on computed data — such as metrics or position data — will only work if that data has already been generated.",
+      "open_modal": "Click here to open the export panel. Important: export options that rely on computed data (such as metrics or position data) will only work if that data has already been generated.",
       "export_panel": "The left panel lists all available export formats. You can export raw position data, computed metrics (regular or aggregated), merged or individual CSV files, or annotation formats like ELAN. Choose the format that fits your needs.",
       "export_select": "To select an export format, just click it in the list. For this tutorial, select 'Metrics (aggregated)'.",
       "export_details": "After selecting a format, you see its configuration options. Depending on the format, you may need to choose teams, time ranges, specific metrics, or other parameters. Once configured, click the Export button to download the file. Remember: if the required data hasn't been computed yet, the dropdowns will be empty and the export won't be possible."
     },
     "dlt_ransac": {
-      "intro": "Click here to open the DLT+RANSAC card. It computes a static camera calibration by mapping annotated landmark points from the pitch view to their corresponding positions in the video. This calibration is needed to convert pixel coordinates into real-world pitch coordinates, enabling accurate position data generation.<br><br>To apply it, you first need a calibration asset — a set of reference points defined on the pitch view.",
+      "intro": "Click here to open the DLT+RANSAC card. It computes a static camera calibration by mapping annotated landmark points from the pitch view to their corresponding positions in the video. This calibration is needed to convert pixel coordinates into real-world pitch coordinates, enabling accurate position data generation.<br><br>To apply it, you first need a calibration asset: a set of reference points defined on the pitch view.",
       "create_select": "If you don't have a calibration asset yet, click <em>Create</em> to set one up. Use <em>Select</em> to load an existing asset.",
       "create_modal": "Choose the calibration type: <em>Marker</em> uses individual landmark points (e.g. corner flags, penalty spots), <em>Segment</em> uses line segments. Select the type matching your setup, then click <em>Create</em>.",
       "calibration_asset_btn": "Via this button you can create a new calibration asset, save the current one, update an existing one, or switch to a different saved asset.",
-      "object_btn": "This button shows your current calibration type (<em>Marker</em> or <em>Segments</em>). In <em>Marker</em> mode you can add custom markers or remove existing ones through it. The two overlays — the markers you placed in the video and the projected pitch markings — are switched in the video player's display settings.",
+      "object_btn": "This button shows your current calibration type (<em>Marker</em> or <em>Segments</em>). In <em>Marker</em> mode you can add custom markers or remove existing ones through it. The two overlays (the markers you placed in the video and the projected pitch markings) are switched in the video player's display settings.",
       "object_info": "Left-click a marker in the pitch view to open a zoomed video overlay, where you can precisely place it on the corresponding video position. Right-click a marker to de-toggle it and remove the video mapping.<br><br>Once all markers are set, save the asset via the <em>Calibration Asset</em> button, then go back to the empty pitch view and click <em>Apply Calibration</em> on the DLT+RANSAC card with the saved asset selected."
     },
     "posdata_bytetrack": {
@@ -565,7 +565,7 @@
     "posdata_manual": {
       "upload_open": "Click the upload button to open the position data upload dialog.",
       "upload_modal": "Fill in the required fields: give the data a name, select its format, and attach the corresponding file. Depending on the format, additional fields such as delimiter or coordinate origin may appear.",
-      "format_select": "Select the format that matches your position data file. Different providers use different conventions — choosing the correct format ensures the data is parsed and converted correctly.",
+      "format_select": "Select the format that matches your position data file. Different providers use different conventions, so choosing the correct format ensures the data is parsed and converted correctly.",
       "upload": "Once all fields are filled in, click 'Upload'. The system will automatically run the <em>Posdata Convert</em> plugin afterwards to normalize the data into the internal format, making it available for visualization and metric computation."
     },
     "kpi_computation": {
@@ -576,7 +576,7 @@
       "run_plugin": "Click 'Compute Metrics' to start the metric computation. The progress can be tracked in the History panel. Once completed, results will appear right here in the Metrics tab."
     },
     "top_view": {
-      "pitch_overview": "The top-view shows your position data projected onto a 2D area — this could be a soccer pitch, a handball court, a basketball court, a climbing wall, or any other defined playing field. Each tracked entity appears as a colored dot, grouped and colored by team or assignment.",
+      "pitch_overview": "The top-view shows your position data projected onto a 2D area. This could be a soccer pitch, a handball court, a basketball court, a climbing wall, or any other defined playing field. Each tracked entity appears as a colored dot, grouped and colored by team or assignment.",
       "controls": "When the top-view is not synchronized with the video player, you can control playback independently. Use the <em>play button</em> to start or pause, and the <em>slider</em> below to seek to any position. The time code next to the download button shows the current position within the position dataset.",
       "display_settings_open": "Click <em>Display Settings</em> to open the customization menu.",
       "display_settings": "The Display Settings menu lets you adjust everything about how the top-view looks:<br><br><strong>Playback:</strong> Toggle synchronization with the video player, or set a time offset to align position data and video.<br><br><strong>Visibility:</strong> Show or hide bounding boxes (if available), player IDs on the dots, or toggle individual players and teams on/off. You can also adjust team colors.<br><br><strong>Metric Overlays</strong> (View Metrics submenu): Overlay computed metrics like <em>Space Control</em> (Voronoi-based) or <em>Effective Playing Space</em> (convex hull) directly on the field.<br><br><strong>Area & Grid:</strong> Switch between different predefined area sizes, or configure longitudinal and transverse grid lines.<br><br><strong>Position Data:</strong> Upload a new position data file or switch to a different already-loaded dataset.",
@@ -584,7 +584,7 @@
     },
     "heatmap": {
       "tab_switch": "The <em>Heatmap</em> tab visualizes the spatial distribution of player positions over time.",
-      "pitch_overview": "This is the playing field. The heatmap or movement trace is rendered directly on top of it. The displayed area can be adjusted — for example, you can zoom in to show only one half of the pitch.",
+      "pitch_overview": "This is the playing field. The heatmap or movement trace is rendered directly on top of it. The displayed area can be adjusted. For example, you can zoom in to show only one half of the pitch.",
       "player_legend": "Below the pitch you can select which players to include in the visualization. Click an individual player dot to toggle them on or off. Click a team name to select or deselect the entire team at once.",
       "settings": "The toolbar above the pitch gives you several controls:<br><br><strong>Area size:</strong> switch between the full field and sub-areas such as one half or one penalty box.<br><strong>Display mode:</strong> toggle between a classic <em>heatmap</em> (density overlay) and a <em>movement trace</em> (individual dot paths).<br><strong>Save:</strong> export a high-resolution screenshot of the current visualization.<br><strong>Time sync:</strong> quickly sync the start or end of the time window to the current video position, or jump to the full match, first half, or second half.",
       "time_selector": "The time range selector (right) and the sync menu (left) work together to filter the heatmap to any time window.<br><br>Drag the left or right handle on the range selector to set the start and end time. The sync menu lets you snap either handle to the <em>current video position</em> for frame-accurate selection, or jump instantly to the <em>full match</em>, <em>first half</em>, or <em>second half</em>."
@@ -602,7 +602,7 @@
       "choose_manual": "Manual Upload",
       "choose_bytetrack": "ByteTrack (Automatic)",
       "manual_upload": "Use the upload button to import your position data file. See the <em>Position Data (Manual)</em> tutorial for a detailed walkthrough.",
-      "select_dlt": "This is the DLT+RANSAC calibration button. If you don't have a calibration asset yet, create one first — the <em>DLT+RANSAC</em> tutorial walks you through this step by step.",
+      "select_dlt": "This is the DLT+RANSAC calibration button. If you don't have a calibration asset yet, create one first. The <em>DLT+RANSAC</em> tutorial walks you through this step by step.",
       "select_bytetrack": "Now click this ByteTrack button to open its card, set the FPS to match your video's frame rate, then click <em>Start Tracking</em> to generate position data. See the <em>ByteTrack</em> tutorial for a detailed walkthrough."
     }
   },
@@ -899,7 +899,7 @@
         "tracking_target": "Tracking Target",
         "tracking_target_player": "Player",
         "tracking_target_ball": "Ball",
-        "ball_tracker_low_fps_hint": "Below {min} fps the Kalman ball tracker does not run – only the raw ball detections are output: no smoothing, possibly several candidates per frame and no gap filling.",
+        "ball_tracker_low_fps_hint": "Below {min} fps the Kalman ball tracker does not run. Only the raw ball detections are output: no smoothing, possibly several candidates per frame and no gap filling.",
         "detector": "Detector Model",
         "tracker": "Tracker",
         "confidence_threshold": "Confidence Threshold",

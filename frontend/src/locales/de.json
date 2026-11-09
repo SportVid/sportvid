@@ -52,7 +52,7 @@
       "heading": "Wie möchten Sie Plugins nutzen?",
       "simple_label": "Einfach",
       "complex_label": "Komplex",
-      "simple_sentence": "Ich möchte einfach loslegen, ohne mich mit technischen Details zu beschäftigen — zeig mir nur das Nötigste.",
+      "simple_sentence": "Ich möchte einfach loslegen, ohne mich mit technischen Details zu beschäftigen. Zeig mir nur das Nötigste.",
       "complex_sentence": "Ich kenne mich mit Machine Learning / Computer Vision aus und möchte jeden Parameter selbst einstellen können."
     }
   },
@@ -168,7 +168,7 @@
   "lens_profile": {
     "title": "Kamera & Objektiv",
     "heading": "Kamera & Objektiv",
-    "video_not_ready": "Ein Objektivprofil kann zugewiesen werden, sobald das Video fertig verarbeitet ist -- seine Auflösung entscheidet, welche Profile passen.",
+    "video_not_ready": "Ein Objektivprofil kann zugewiesen werden, sobald das Video fertig verarbeitet ist. Seine Auflösung entscheidet, welche Profile passen.",
     "brand": "Kameramarke",
     "model": "Kameramodell",
     "profile": "Objektivprofil",
@@ -195,7 +195,7 @@
   "calibration_asset": {
     "calibration": {
       "heading": "Kalibrierung wählen, die dieses Asset verwenden soll:",
-      "none": "Noch keine Kalibrierung -- nur dieses Asset auswählen",
+      "none": "Noch keine Kalibrierung (nur dieses Asset auswählen)",
       "lens_profile": "Objektivprofil: {name}",
       "lens_solved": "Objektiv aus dem Video gelöst",
       "no_lens": "Ohne Entzerrung",
@@ -221,7 +221,7 @@
       "title": "Markierte Frames ({count})",
       "points": "{count} Pkt.",
       "distinct": "{count} / {required} verschiedene Marker gesetzt",
-      "min_hint": "Die Punkte aller Frames werden gemeinsam gefittet, derselbe Marker auf mehreren Frames zählt einmal -- Wiederholungen mitteln nur den Klickfehler.",
+      "min_hint": "Die Punkte aller Frames werden gemeinsam gefittet, derselbe Marker auf mehreren Frames zählt einmal. Wiederholungen mitteln nur den Klickfehler.",
       "unknown_time": "Zeit nicht gespeichert",
       "delete": "Punkte dieses Frames entfernen"
     }
@@ -279,7 +279,7 @@
     "generate": {
       "cv_heading": "Über Computer Vision",
       "detect_events": "Eventerkennung",
-      "coming_soon": "Demnächst verfügbar – es gibt noch kein Plugin zur automatischen Event-Erkennung.",
+      "coming_soon": "Demnächst verfügbar: Es gibt noch kein Plugin zur automatischen Event-Erkennung.",
       "or": "oder",
       "upload_heading": "Per Datei-Upload"
     },
@@ -763,7 +763,7 @@
         "tracking_target": "Tracking-Ziel",
         "tracking_target_player": "Spieler",
         "tracking_target_ball": "Ball",
-        "ball_tracker_low_fps_hint": "Unter {min} fps läuft der Kalman-Ball-Tracker nicht – es werden nur die rohen Ball-Detektionen ausgegeben: keine Glättung, ggf. mehrere Kandidaten pro Frame und keine Lückenfüllung.",
+        "ball_tracker_low_fps_hint": "Unter {min} fps läuft der Kalman-Ball-Tracker nicht. Es werden nur die rohen Ball-Detektionen ausgegeben: keine Glättung, ggf. mehrere Kandidaten pro Frame und keine Lückenfüllung.",
         "detector": "Detektor-Modell",
         "tracker": "Tracker",
         "confidence_threshold": "Konfidenzschwelle",
@@ -1052,7 +1052,7 @@
       },
       "shot_type_classification": {
         "plugin_name": "Klassifikation der Shot-Größe",
-        "plugin_description": "Dieses Plugin prognostiziert die Shot-Größen im Video basierend auf einem Deep-Learning-Modell. Es unterscheidet zwischen fünf Shot-Größen: Extreme Nahaufnahme, Nahaufnahme, Halbtotale, Totale und Weitaufnahme. <br><br>Durch Auswahl einer Zeitleiste, die Schnitte enthält – z. B. der vom Plugin \"Schnittgrenzenerkennung\" erstellten Zeitleiste – wird jeder Schnitt automatisch mit seiner dominanten Shot-Größe beschriftet.",
+        "plugin_description": "Dieses Plugin prognostiziert die Shot-Größen im Video basierend auf einem Deep-Learning-Modell. Es unterscheidet zwischen fünf Shot-Größen: Extreme Nahaufnahme, Nahaufnahme, Halbtotale, Totale und Weitaufnahme. <br><br>Durch Auswahl einer Zeitleiste, die Schnitte enthält (z. B. die vom Plugin \"Schnittgrenzenerkennung\" erstellte Zeitleiste), wird jeder Schnitt automatisch mit seiner dominanten Shot-Größe beschriftet.",
         "timeline_name": "Shot-Größen"
       },
       "thumbnail": {
