@@ -23,16 +23,20 @@
       <div v-if="analysisView" class="d-flex align-center" data-tour="analysis-appbar-actions">
         <v-btn @click="showModalStatus = true" data-tour="modal-status-open">
           <app-bar-icon>mdi-format-list-checks</app-bar-icon>
-          <v-badge
-            v-if="numRunningPlugins > 0"
-            color="accent"
-            :content="numRunningPlugins"
-            floating
-          >
+          <span class="status-label">
             <span class="text-primary">{{ $t("app_bar.status_menu") }}</span>
-          </v-badge>
-          <span v-else>
-            <span class="text-primary">{{ $t("app_bar.status_menu") }}</span>
+            <span v-if="statusBadges.items.length" class="status-badge-stack">
+              <span
+                v-for="(badge, i) in statusBadges.items"
+                :key="badge.key"
+                class="status-badge"
+                :class="`bg-${badge.color}`"
+                :style="{ zIndex: 10 - i, opacity: STATUS_BADGE_OPACITY[i] }"
+              >
+                <v-icon v-if="badge.icon" size="11">{{ badge.icon }}</v-icon>
+                <template v-else>{{ badge.text }}</template>
+              </span>
+            </span>
           </span>
         </v-btn>
 
@@ -231,8 +235,57 @@ const pluginRuns = computed(() => {
       };
     });
 });
+const isFinalStatus = (status) => status === "DONE" || status === "ERROR";
 const numRunningPlugins = computed(() => {
-  return pluginRuns.value.filter((e) => e.status !== "DONE" && e.status !== "ERROR").length;
+  return pluginRuns.value.filter((e) => !isFinalStatus(e.status)).length;
+});
+
+// Runs that finished (DONE/ERROR) while the status modal was closed. They stay on the
+// button as a check / exclamation mark until the modal is opened. Only transitions we
+// actually observed count -- runs that were already finished when the video was loaded
+// never show up here.
+const unseenFinished = ref([]); // [{ id, status }], most recent first
+const lastSeenStatus = new Map();
+watch(
+  pluginRuns,
+  (runs) => {
+    for (const run of runs) {
+      const prev = lastSeenStatus.get(run.id);
+      lastSeenStatus.set(run.id, run.status);
+      if (prev === undefined || isFinalStatus(prev) || !isFinalStatus(run.status)) continue;
+      if (showModalStatus.value) continue;
+      unseenFinished.value = [
+        { id: run.id, status: run.status },
+        ...unseenFinished.value.filter((e) => e.id !== run.id),
+      ];
+    }
+  },
+  { immediate: true }
+);
+watch(showModalStatus, (open) => {
+  if (open) unseenFinished.value = [];
+});
+
+// The first two badges are fully visible, the ones behind fade out. Anything beyond
+// that is only in the status modal.
+const STATUS_BADGE_OPACITY = [1, 1, 0.45];
+const MAX_STATUS_BADGES = STATUS_BADGE_OPACITY.length;
+const statusBadges = computed(() => {
+  const items = [];
+  if (numRunningPlugins.value > 0) {
+    items.push({ key: "running", color: "accent", text: numRunningPlugins.value });
+  }
+  // Only runs of the current video (and still existing) -- same scope as the modal.
+  // Errors go before successes so a failure is never hidden behind a later check mark.
+  const currentIds = new Set(pluginRuns.value.map((r) => r.id));
+  const finished = unseenFinished.value.filter((run) => currentIds.has(run.id));
+  for (const run of finished.filter((r) => r.status === "ERROR")) {
+    items.push({ key: run.id, color: "error", icon: "mdi-exclamation-thick" });
+  }
+  for (const run of finished.filter((r) => r.status === "DONE")) {
+    items.push({ key: run.id, color: "success", icon: "mdi-check-bold" });
+  }
+  return { items: items.slice(0, MAX_STATUS_BADGES) };
 });
 const pluginName = (type) => {
   const typeMap = {
@@ -299,7 +352,36 @@ watch(
 </script>
 
 <style scoped>
-.tutorial-icon-tooltip ::v-deep(.v-overlay__content) {
+.status-label {
+  position: relative;
+  display: inline-block;
+}
+.status-badge-stack {
+  position: absolute;
+  top: -9px;
+  left: calc(100% - 8px);
+  display: flex;
+  pointer-events: none;
+}
+.status-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  box-shadow: 0 0 0 1.5px rgb(var(--v-theme-surface));
+}
+/* 16px badge, 6px of each following badge peeks out. */
+.status-badge + .status-badge {
+  margin-left: -10px;
+}.tutorial-icon-tooltip ::v-deep(.v-overlay__content) {
   background: rgb(var(--v-theme-primary));
   border-radius: 2px;
   font-size: 0.7rem;
