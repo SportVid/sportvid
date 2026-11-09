@@ -843,6 +843,17 @@
         "not_enough_keypoints": "At least {required} different keypoints are needed, got {count}.",
         "lens_solver_failed": "No lens could be fitted to this video."
       },
+      "outcome": {
+        "reason": "Reason: {reason}",
+        "calibration": {
+          "planned_calibration_static_dlt": "DLT with lens profile",
+          "planned_calibration_lens_solve": "Solving the lens from the video, then DLT",
+          "lens_profile": "DLT with lens profile “{name}”",
+          "lens_solved": "DLT with a lens solved from the video",
+          "no_lens": "DLT without lens correction",
+          "no_lens_hint": "No suitable lens could be found, so the points were not undistorted before the calibration. The calibration is probably less precise, especially towards the image edges."
+        }
+      },
       "advanced_options": "Advanced Options",
       "timeline_name": "Timeline name",
       "shot_timeline_name": "Shot boundaries from timeline",

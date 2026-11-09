@@ -105,6 +105,12 @@
           :row-props="({ item }) => (expandedIds.includes(item.id) ? { class: 'row-expanded' } : {})"
           class="mb-3 status-table"
         >
+          <template #item.type="{ item }">
+            <div>{{ item.type }}</div>
+            <div v-if="variantText(item)" class="text-caption text-medium-emphasis">
+              {{ variantText(item) }}
+            </div>
+          </template>
           <template #item.date="{ item }">
             {{ formatLocalDate(item.date) }}
           </template>
@@ -127,9 +133,10 @@
           </template>
           <template #item.status="{ item, value }">
             <v-chip
-              v-if="failureText(item)"
-              :color="progressColor(value)"
+              v-if="runDetail(item)"
+              :color="runDetail(item).kind === 'warning' ? 'warning' : progressColor(value)"
               variant="flat"
+              :prepend-icon="runDetail(item).kind === 'warning' ? 'mdi-alert-outline' : undefined"
               :append-icon="expandedIds.includes(item.id) ? 'mdi-chevron-up' : 'mdi-chevron-down'"
               @click="toggleExpanded(item.id)"
             >
@@ -140,11 +147,26 @@
             </v-chip>
           </template>
           <template #expanded-row="{ columns, item }">
-            <tr v-if="failureText(item)" class="failure-row">
+            <tr v-if="runDetail(item)" class="detail-row">
               <td :colspan="columns.length">
-                <div class="failure-reason text-body-2 d-flex align-start">
-                  <v-icon size="18" color="error" class="mr-2">mdi-alert-circle-outline</v-icon>
-                  <span>{{ failureText(item) }}</span>
+                <div
+                  v-for="(line, i) in runDetail(item).lines"
+                  :key="i"
+                  class="run-detail text-body-2 d-flex align-start"
+                >
+                  <v-icon
+                    v-if="i === 0"
+                    size="18"
+                    :color="runDetail(item).kind"
+                    class="mr-2"
+                  >
+                    {{
+                      runDetail(item).kind === "warning"
+                        ? "mdi-alert-outline"
+                        : "mdi-alert-circle-outline"
+                    }}
+                  </v-icon>
+                  <span :class="{ 'detail-indent': i > 0 }">{{ line }}</span>
                 </div>
               </td>
             </tr>
@@ -343,7 +365,7 @@ const getStatusText = (status) => {
   return t(`modal.plugin.status.${status.toLowerCase()}`);
 };
 
-// Rows whose failure reason is unfolded below them (toggled by clicking the status chip).
+// Rows whose failure reason / notices are unfolded below them (toggled by clicking the status chip).
 const expandedIds = ref([]);
 const toggleExpanded = (id) => {
   expandedIds.value = expandedIds.value.includes(id)
@@ -351,16 +373,54 @@ const toggleExpanded = (id) => {
     : [...expandedIds.value, id];
 };
 
-// Why a run ended in ERROR, from the backend's failure_reason {type, message, details}:
-// the translated type (details fill its placeholders), else the backend's English message,
-// else a generic internal error (runs from before failure_reason existed have none).
-const failureText = (run) => {
-  if (run.status !== "ERROR") return null;
-  const reason = run.failure_reason;
-  if (!reason) return t("modal.plugin.failure.internal_error");
+// A {type, message, details} reason (a run's failure_reason or one of its outcome.notices) as
+// text: the translated type (details fill its placeholders), else the backend's English message.
+// A solver's own explanation (details.reason) is only available in English and is appended.
+const reasonText = (reason) => {
   const key = `modal.plugin.failure.${reason.type}`;
-  if (te(key)) return t(key, reason.details || {});
-  return reason.message || t("modal.plugin.failure.internal_error");
+  const text = te(key) ? t(key, reason.details || {}) : reason.message;
+  if (!text) return null;
+  const extra = reason.details?.reason;
+  return extra && te(key) ? `${text} (${extra})` : text;
+};
+
+// Plugin types that share their outcome texts (modal.plugin.outcome.<group>.*).
+const OUTCOME_GROUPS = {
+  calibration_static_dlt: "calibration",
+  calibration_lens_solve: "calibration",
+};
+const outcomeKey = (run, suffix) => `modal.plugin.outcome.${OUTCOME_GROUPS[run.plugin] ?? run.plugin}.${suffix}`;
+
+// The method a run actually used, shown below its name: from the backend's outcome.variant once it
+// is through (calibration_lens_solve may have fallen back to no lens correction), before that what
+// its type plans to do. Plugins without outcome texts show nothing.
+const variantText = (run) => {
+  const variant = run.outcome?.variant;
+  let key = null;
+  if (variant) key = outcomeKey(run, variant);
+  else if (run.status !== "DONE" && run.status !== "ERROR") key = outcomeKey(run, `planned_${run.plugin}`);
+  return key && te(key) ? t(key, run.outcome?.details || {}) : null;
+};
+
+// What unfolds below a row: why it ended in ERROR (runs from before failure_reason existed get a
+// generic internal error), or for a DONE run the hints of its outcome.notices -- led by what the
+// variant means for the result when there is a text for it. Null when there is nothing to say,
+// which is the normal case for a successful run.
+const runDetail = (run) => {
+  if (run.status === "ERROR") {
+    const text = run.failure_reason && reasonText(run.failure_reason);
+    return { kind: "error", lines: [text || t("modal.plugin.failure.internal_error")] };
+  }
+  const notices = run.status === "DONE" ? run.outcome?.notices ?? [] : [];
+  if (!notices.length) return null;
+  const lines = [];
+  const hintKey = run.outcome.variant && outcomeKey(run, `${run.outcome.variant}_hint`);
+  if (hintKey && te(hintKey)) lines.push(t(hintKey));
+  for (const notice of notices) {
+    const text = reasonText(notice);
+    if (text) lines.push(lines.length ? t("modal.plugin.outcome.reason", { reason: text }) : text);
+  }
+  return lines.length ? { kind: "warning", lines } : null;
 };
 
 // Status overview (read-only), derived from raw plugin runs / position data -- shared with
@@ -491,9 +551,18 @@ const formatLocalDate = (dateString) => {
   border-bottom: none !important;
 }
 
-.failure-reason {
-  padding: 0 0 10px;
+.run-detail {
+  padding: 0 0 4px;
   line-height: 1.4;
+}
+
+.run-detail:last-child {
+  padding-bottom: 10px;
+}
+
+/* follow-up lines align with the text of the first one, past its icon */
+.detail-indent {
+  padding-left: 26px;
 }
 
 .delete-panel-title {

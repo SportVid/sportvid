@@ -292,6 +292,12 @@ class PluginRun(models.Model):
     # why the run ended in ERROR: {"type": "<snake_case>", "message": ..., "details": {...}}
     # (backend.utils.task.TaskFailure); {"type": "internal_error"} for unexpected errors
     failure_reason = models.JSONField(blank=True, null=True)
+    # What a run that got through actually did, when that is more than its type says. Set by the task:
+    # {"variant": "<snake_case>", "details": {...}, "notices": [{"type", "message", "details"}, ...]}.
+    # "variant" names the method the run ended up with (e.g. calibration_lens_solve falling back to
+    # "no_lens"), "notices" are hints/warnings for a successful run, in the shape of failure_reason so
+    # the frontend translates both alike. Null for runs that have nothing to add.
+    outcome = models.JSONField(blank=True, null=True)
     # TODO: Consider adding db_index=True to task_id if we ever query by it, and
     # optionally add a validator for Celery task ID format.
     task_id = models.CharField(max_length=256, blank=True, null=True) # associate PluginRun DB entry with Celery run_plugin task.
@@ -328,6 +334,7 @@ class PluginRun(models.Model):
             "parameters": self.parameters,
             "provenance": self.provenance,
             "failure_reason": self.failure_reason,
+            "outcome": self.outcome,
         }
         if include_refs_hashes:
             result["video_id"] = self.video.id.hex

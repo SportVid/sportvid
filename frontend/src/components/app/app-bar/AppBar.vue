@@ -225,6 +225,10 @@ const pluginRuns = computed(() => {
       return {
         id: pluginRun.id,
         type: pluginName(pluginRun.type),
+        // the technical type -- `type` is the display name; ModalStatus labels the outcome with it
+        plugin: pluginRun.type,
+        failure_reason: pluginRun.failure_reason,
+        outcome: pluginRun.outcome,
         date: pluginRun.date
           .replace("T", " ")
           .replace("Z", "")
@@ -277,12 +281,18 @@ const statusBadges = computed(() => {
   }
   // Only runs of the current video (and still existing) -- same scope as the modal.
   // Errors go before successes so a failure is never hidden behind a later check mark.
-  const currentIds = new Set(pluginRuns.value.map((r) => r.id));
-  const finished = unseenFinished.value.filter((run) => currentIds.has(run.id));
+  // A run that got through but left a hint (outcome.notices, e.g. a calibration without lens
+  // correction) sits between the two, as a warning.
+  const current = new Map(pluginRuns.value.map((r) => [r.id, r]));
+  const finished = unseenFinished.value.filter((run) => current.has(run.id));
+  const hasNotices = (run) => run.status === "DONE" && current.get(run.id).outcome?.notices?.length > 0;
   for (const run of finished.filter((r) => r.status === "ERROR")) {
     items.push({ key: run.id, color: "error", icon: "mdi-exclamation-thick" });
   }
-  for (const run of finished.filter((r) => r.status === "DONE")) {
+  for (const run of finished.filter(hasNotices)) {
+    items.push({ key: run.id, color: "warning", icon: "mdi-exclamation-thick" });
+  }
+  for (const run of finished.filter((r) => r.status === "DONE" && !hasNotices(r))) {
     items.push({ key: run.id, color: "success", icon: "mdi-check-bold" });
   }
   return { items: items.slice(0, MAX_STATUS_BADGES) };
@@ -315,8 +325,10 @@ const pluginName = (type) => {
     thumbnail: "modal.plugin.thumbnail.plugin_name",
     bytetrack: "modal.plugin.bytetrack.plugin_name",
     object_tracker: "modal.plugin.object_tracker.plugin_name",
-    calibration_static_dlt: "modal.plugin.calibration_static_dlt.plugin_name",
-    calibration_lens_solve: "modal.plugin.calibration_lens_solve.plugin_name",
+    // Both are "the" camera calibration to the user (which one runs follows from the lens profile,
+    // see usePluginParams.js); ModalStatus names the method that was actually used below it.
+    calibration_static_dlt: "modal.plugin.calibration.plugin_name",
+    calibration_lens_solve: "modal.plugin.calibration.plugin_name",
     posdata_convert: "modal.plugin.posdata_convert.plugin_name",
     kpi_computation: "modal.plugin.kpi_computation.plugin_name",
     team_clustering: "modal.plugin.team_clustering.plugin_name",

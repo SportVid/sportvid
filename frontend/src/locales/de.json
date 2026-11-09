@@ -707,6 +707,17 @@
         "not_enough_keypoints": "Mindestens {required} verschiedene Keypoints nötig, gesetzt: {count}.",
         "lens_solver_failed": "Für dieses Video konnte keine Linse bestimmt werden."
       },
+      "outcome": {
+        "reason": "Grund: {reason}",
+        "calibration": {
+          "planned_calibration_static_dlt": "DLT mit Objektivprofil",
+          "planned_calibration_lens_solve": "Objektiv wird aus dem Video bestimmt, danach DLT",
+          "lens_profile": "DLT mit Objektivprofil „{name}“",
+          "lens_solved": "DLT mit aus dem Video bestimmtem Objektiv",
+          "no_lens": "DLT ohne Objektiventzerrung",
+          "no_lens_hint": "Es konnte keine passende Linse gefunden werden, die Punkte wurden vor der Kalibrierung daher nicht entzerrt. Die Kalibrierung ist wahrscheinlich ungenauer, besonders zu den Bildrändern hin."
+        }
+      },
       "timeline_name": "Zeitleiste",
       "shot_timeline_name": "Schnittgrenzen aus Zeitleiste",
       "shot_timeline_hint": "Annotationen werden basierend auf den Schnittgrenzen der ausgewählten Zeitleiste erstellt.",
