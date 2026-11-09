@@ -1050,15 +1050,6 @@ const plugins = ref([
         id: 704,
         parameters: [
           {
-            field: "slider",
-            min: 1,
-            max: 30,
-            value: defaultObjectTrackerFps(playerStore.videoFPS),
-            step: 1,
-            name: "fps",
-            text: t("modal.plugin.fps"),
-          },
-          {
             field: "select_options",
             name: "tracking_target",
             value: "player",
@@ -1084,6 +1075,15 @@ const plugins = ref([
             value: "bytetrack",
             items: OBJECT_TRACKER_TRACKER_ITEMS,
             text: t("modal.plugin.object_tracker.tracker"),
+          },
+          {
+            field: "slider",
+            min: 1,
+            max: 30,
+            value: defaultObjectTrackerFps(playerStore.videoFPS),
+            step: 1,
+            name: "fps",
+            text: t("modal.plugin.fps"),
           },
         ],
         optional_parameters: [

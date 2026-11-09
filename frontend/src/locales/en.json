@@ -888,6 +888,7 @@
         "tracking_target": "Tracking Target",
         "tracking_target_player": "Player",
         "tracking_target_ball": "Ball",
+        "ball_tracker_low_fps_hint": "Below {min} fps the Kalman ball tracker does not run – only the raw ball detections are output: no smoothing, possibly several candidates per frame and no gap filling.",
         "detector": "Detector Model",
         "tracker": "Tracker",
         "confidence_threshold": "Confidence Threshold",

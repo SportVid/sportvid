@@ -752,6 +752,7 @@
         "tracking_target": "Tracking-Ziel",
         "tracking_target_player": "Spieler",
         "tracking_target_ball": "Ball",
+        "ball_tracker_low_fps_hint": "Unter {min} fps läuft der Kalman-Ball-Tracker nicht – es werden nur die rohen Ball-Detektionen ausgegeben: keine Glättung, ggf. mehrere Kandidaten pro Frame und keine Lückenfüllung.",
         "detector": "Detektor-Modell",
         "tracker": "Tracker",
         "confidence_threshold": "Konfidenzschwelle",

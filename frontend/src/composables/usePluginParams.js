@@ -179,6 +179,9 @@ const OBJECT_TRACKER_CLASSES_BY_TARGET = {
   },
 };
 
+// Keep in sync with default_kalman_ball_params["min_fps"] (backend serializers/object_tracker.py).
+const BALL_TRACKER_MIN_FPS = 10;
+
 export function objectTrackerClasses(target, detector) {
   return OBJECT_TRACKER_CLASSES_BY_TARGET[target]?.[detector];
 }
@@ -335,7 +338,27 @@ export function setGroupedValue(grouped, p) {
 //    so this must stay driven by tracking_target alone and never by experience mode.
 // `parameters`/`optionalParameters` are refs (or computeds) of parameter arrays.
 export function watchObjectTrackerSelection(parameters, optionalParameters) {
+  const { t } = useI18n();
   const find = (list, name) => list.value.find((p) => p.name === name);
+  // Below the Kalman ball tracker's min_fps the backend silently skips ball tracking and
+  // writes the raw ball candidates instead -- warn right under the fps slider. Only for
+  // ball runs: player runs detect no ball class, so the ball tracker has nothing to do.
+  watch(
+    () => [find(parameters, "tracking_target")?.value, find(parameters, "fps")?.value],
+    ([target, fps]) => {
+      const param = find(parameters, "fps");
+      if (!param) return;
+      // the parameter lists can arrive after setup (ModalPlugin's computed), so the slider's
+      // own hint is remembered on the parameter itself the first time it is seen
+      if (!("defaultHint" in param)) param.defaultHint = param.hint;
+      const lowFps = target === "ball" && Number(fps) < BALL_TRACKER_MIN_FPS;
+      param.hint = lowFps
+        ? t("modal.plugin.object_tracker.ball_tracker_low_fps_hint", { min: BALL_TRACKER_MIN_FPS })
+        : param.defaultHint;
+      param.hintWarning = lowFps;
+    },
+    { immediate: true }
+  );
   watch(
     () => [
       find(parameters, "tracking_target")?.value,
@@ -395,16 +418,6 @@ export function objectTrackerParams() {
 
   const parameters = ref([
     {
-      field: "slider",
-      min: 1,
-      max: 30,
-      value: defaultObjectTrackerFps(playerStore.videoFPS),
-      step: 1,
-      name: "fps",
-      text: t("modal.plugin.fps"),
-      dataTour: "bytetrack-fps",
-    },
-    {
       field: "select_options",
       name: "tracking_target",
       value: "player",
@@ -427,6 +440,16 @@ export function objectTrackerParams() {
       value: "bytetrack",
       items: OBJECT_TRACKER_TRACKER_ITEMS,
       text: t("modal.plugin.object_tracker.tracker"),
+    },
+    {
+      field: "slider",
+      min: 1,
+      max: 30,
+      value: defaultObjectTrackerFps(playerStore.videoFPS),
+      step: 1,
+      name: "fps",
+      text: t("modal.plugin.fps"),
+      dataTour: "bytetrack-fps",
     },
   ]);
 
