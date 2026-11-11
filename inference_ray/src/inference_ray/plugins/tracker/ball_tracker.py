@@ -12,15 +12,15 @@ detections are *candidates*, and the tracker picks at most one of them as the ba
 full candidate list of the clip (post-hoc, after the frame loop). Two ways to pick the path
 (``linking``) share the stages around them:
 
-1. **Static-object filter** (whole clip, below): decoys that never move are dropped.
+1. **Static-object filter** (whole clip, optional, off by default, below): decoys that never move are dropped.
 2. **Linking**: ``global`` (default) -- short tracklets, then one best path through them for the
    whole clip -- or ``online`` -- a frame-by-frame Kalman track with re-acquisition.
 3. **Segment refinement**: per track segment a confidence-weighted RTS smoother validates the weak
    detections, finds kick corners and fills gaps.
 
 Defaults: global linking, pixel gates, the continuous white-noise acceleration model, a fixed ``max_gap``
-for gap filling and a static filter without the co-occurrence rule (``static_cooccur`` off). Given the
-camera's motion it also handles a moving camera (below).
+for gap filling and no static-object filter (``static_filter`` off, below). Given the camera's motion it
+also handles a moving camera (below).
 
 Online linking
 --------------
@@ -131,9 +131,17 @@ Kicks (sudden changes of direction) are allowed where there is evidence for them
   so the final smoothing weights it as ``init_conf``; gap fills follow the smoothed path, shifted
   to meet the kept detections on both sides.
 
-Static-object filter
---------------------
-Before linking, a whole-clip pass finds clusters of ball-class candidates within
+Static-object filter (off by default)
+-------------------------------------
+Off by default (``static_filter: false``). Evaluated on the DSHS recordings (amateur football, GoPro HERO11,
+Kinexon positional ground truth), the filter removed more of the real ball than decoys: over a match the
+ball keeps passing the same image spots, and the cluster test does not require the object to stand still.
+Global linking already resists the decoys the filter was built for (ball recall on one clip 0.467 without
+the filter, 0.486 with it; the online pass 0.139 without). It is also a fixed-camera heuristic: a static
+object pans across the image of a moving camera. Kept as an option for fixed-camera footage where decoys
+defeat global linking.
+
+When enabled, a whole-clip pass before linking finds clusters of ball-class candidates within
 ``static_radius_px`` of one spot for at least ``static_min_hits`` frames spanning at least
 ``static_min_span`` frames -- a cone, a spare ball, a goal-area marking, anything the detector
 repeatedly calls "ball" without it ever moving. Nothing online reliably catches these: a single
@@ -234,7 +242,7 @@ DEFAULTS: Dict[str, Any] = {
     # segment refinement
     "max_gap": 10, "outlier_px": 25.0, "corner_dv_px": 5.0, "player_hint": True, "foot_reach": 1.5,
     # static-object filter
-    "static_filter": True, "static_radius_px": 12.0, "static_min_hits": 60, "static_min_span": 150,
+    "static_filter": False, "static_radius_px": 12.0, "static_min_hits": 60, "static_min_span": 150,
     "static_cooccur": 0.0, "static_cooccur_conf": 0.25,
     # below this decoding rate the ball is not tracked (``usable``)
     "min_fps": 10.0,

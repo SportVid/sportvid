@@ -65,11 +65,12 @@ def test_identity_camera_motion_changes_nothing():
     assert np.allclose(centres(a), centres(b))
 
 
-def test_static_decoy_is_dropped():
+def test_static_decoy_is_dropped_when_the_filter_is_on():
+    assert DEFAULTS["static_filter"] is False   # off by default, kept as an option for fixed cameras
     dets, _ = straight_clip(n=300, gap=())
     for frame in dets:
         frame.append(det((1500.0, 300.0), conf=0.9))
-    state = BallTracker({}).process({"detections": dets})
+    state = BallTracker({"static_filter": True}).process({"detections": dets})
     assert np.linalg.norm(centres(state) - [1500.0, 300.0], axis=1).min() > 50
 
 

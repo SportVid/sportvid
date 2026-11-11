@@ -343,7 +343,8 @@ default_kalman_ball_params = {
     "accel_px": 4.0,  # Kalman process noise: ball acceleration std (px / frame^2)
     "meas_px": 2.0,  # Kalman measurement noise of a conf=1 detection (px), scales with 1 / conf
     "cam_fail_px": 20.0,  # with camera motion: extra position std (px / frame) where its estimate failed
-    "static_filter": True,  # drop ball candidates that never move (cones, spare balls, markings)
+    "static_filter": False,  # drop ball candidates that never move (cones, spare balls, markings); off: it also
+    # removed real ball (it keeps passing the same image spots) and global linking already resists such decoys
     "static_radius_px": 12.0,  # "same spot": within this radius
     "static_min_hits": 60,  # ... in at least this many frames
     "static_min_span": 150,  # ... spanning at least this many frames
