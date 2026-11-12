@@ -5,21 +5,10 @@ name: e2e_dev
 # erzeugt echte GPU-Last auf sportvid01, das sich Host (und vermutlich GPU)
 # mit prod teilt. Doku: tests/e2e/README.md
 on:
-  # TEMPORAER, vor dem PR nach develop ENTFERNEN: workflow_dispatch (Button)
-  # gibt es erst, wenn diese Datei auf dem Default-Branch liegt. Damit der Test
-  # vorher schon echt laufen und nachjustiert werden kann, startet ihn jeder
-  # Push auf den Feature-Branch (nur bei Aenderungen am Test selbst), mit festen
-  # Defaults: Szenario both (standard + plugins), Video wird behalten (keep). Fork-PRs loesen
-  # keinen push-Event aus.
-  push:
-    branches: [feature/e2e-tests-develop]
-    paths:
-      - "tests/e2e/**"
-      - ".github/workflows/e2e-dev.yml"
   workflow_dispatch:
     inputs:
       scenario:
-        description: "standard = Upload+shotdetection, plugins = +shot_type_classification+face_clustering"
+        description: "standard = Upload+object_tracker, plugins = +team_clustering, both = beide nacheinander"
         type: choice
         options: [standard, plugins, both]
         default: standard
@@ -43,9 +32,8 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 90
     env:
-      # Bei push gibt es keine inputs -> Defaults (siehe TEMPORAER oben).
-      E2E_SCENARIO: ${{ inputs.scenario || 'both' }}
-      E2E_KEEP: ${{ (github.event_name == 'push' || inputs.keep) && '--keep' || '' }}
+      E2E_SCENARIO: ${{ inputs.scenario }}
+      E2E_KEEP: ${{ inputs.keep && '--keep' || '' }}
     steps:
       # Testvideos liegen NICHT im Repo, sondern auf sportvid01 unter
       # /opt/e2e-data (siehe E2E_VIDEO_DIR unten): Das Repo ist ein oeffentlicher

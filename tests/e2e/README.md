@@ -55,10 +55,6 @@ landet als Artifact und in der Job-Summary.
 > `workflow_dispatch` erscheint in der GitHub-Oberfläche erst, wenn
 > `e2e-dev.yml` auf dem Default-Branch liegt (`develop`). Danach lässt er sich
 > per *Use workflow from* auf jedem Branch starten.
->
-> **Temporär (vor dem PR entfernen):** Bis dahin startet jeder Push auf
-> `feature/e2e-tests-develop`, der `tests/e2e/**` oder die Workflow-Datei ändert,
-> einen Lauf (Szenario `both`, Video wird behalten).
 
 Lokal geht nur der Offline-Teil (es gibt keinen Zugriff auf das Prometheus von sportvid01):
 
