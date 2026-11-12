@@ -1,8 +1,8 @@
 """Minimaler HTTP-Client fuer die sportvid-API (Session-Login + CSRF).
 
 Bildet nur die Endpunkte ab, die der E2E-Test braucht. Verhalten der
-Endpunkte: siehe backend/src/backend/backend/views/{user,video,plugin_run,
-timeline}.py (Stand deploy-dev).
+Endpunkte: siehe backend/src/backend/backend/views/{user,video,plugin,
+plugin_run}.py (Stand deploy-dev).
 """
 
 import json
@@ -119,8 +119,13 @@ class SportvidClient:
     def plugin_runs(self, video_id: str) -> List[dict]:
         return self._get("plugin/run/list", "plugin/run/list", video_id=video_id)["entries"]
 
-    def timelines(self, video_id: str) -> List[dict]:
-        return self._get("timeline/list", "timeline/list", video_id=video_id)["entries"]
+    def available_plugins(self) -> Optional[List[str]]:
+        """Backend-Plugins, deren Ray-Plugins alle deployt sind (views/plugin.py).
+
+        None = das Backend konnte den Analyser nicht fragen und nimmt dann jedes
+        registrierte Plugin an.
+        """
+        return self._get("plugin/available", "plugin/available")["plugins"]
 
     def delete_video(self, video_id: str) -> None:
         # loescht per FK-CASCADE auch PluginRuns/Timelines des Videos

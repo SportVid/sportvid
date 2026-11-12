@@ -2,7 +2,7 @@
 """Funktionaler E2E-Test fuer sportvid **dev** mit Monitoring-Verifikation.
 
 Ablauf je Szenario:
-  Prometheus-Vorcheck -> Login -> Upload -> warten auf HLS-Konvertierung ->
+  Login -> Prometheus-Vorcheck -> Plugin-Vorcheck -> Upload -> warten auf HLS-Konvertierung ->
   Plugins starten/abwarten -> Scrape abwarten -> PromQL-Checks -> Cleanup.
 
 Ergebnis: PASS (Exit 0), FAIL (Exit 1), INCONCLUSIVE (Exit 2, z.B. Prometheus-
@@ -137,6 +137,26 @@ def run_scenario(name, client, prom, args, sleep=time.sleep, clock=time.time) ->
         return res
     res.log("Prometheus-Vorcheck ok")
 
+    # Plugin-Vorcheck: Plugins, deren Ray-Plugins auf dev nicht deployt sind, lehnt das
+    # Backend mit "plugin_unavailable" ab (erster echter Lauf, 2026-11-12). Das ist eine
+    # Deploy-Frage, kein App-Fehler -> INCONCLUSIVE, bevor ein Video hochgeladen wird.
+    try:
+        available = client.available_plugins()
+    except ApiError as e:
+        res.fail(f"Plugin-Vorcheck: {e}")
+        return res
+    if available is None:
+        # Backend erreicht den Analyser nicht; der Lauf zeigt dann selbst, ob das stoert.
+        res.log("WARN: plugin/available liefert null (Analyser nicht erreichbar), Vorcheck uebersprungen")
+    else:
+        unavailable = [s["plugin"] for s in plugins if s["plugin"] not in available]
+        if unavailable:
+            res.status = INCONCLUSIVE
+            res.errors.append(f"Plugins auf dev nicht deployt: {unavailable} (verfuegbar: {available})")
+            res.log(f"INCONCLUSIVE: Plugins auf dev nicht deployt: {unavailable} - Test nicht gestartet")
+            return res
+        res.log("Plugin-Vorcheck ok")
+
     res.t_start = clock()
     try:
         title = f"e2e-{name}-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
@@ -154,18 +174,14 @@ def run_scenario(name, client, prom, args, sleep=time.sleep, clock=time.time) ->
         )
         res.log("HLS-Konvertierung fertig (Status D)")
 
-        # shotdetection zuerst: shot_type_classification braucht deren Timeline.
-        first, rest = plugins[0], plugins[1:]
-        _run_plugins(client, res, [first], args, sleep)
-        if rest:
-            shot_tl = _find_timeline(client, res.video_id, cfg.SHOT_TIMELINE_NAME)
-            runs = []
-            for spec in rest:
-                params = dict(spec["parameters"])
-                if spec["plugin"] == "shot_type_classification":
-                    params["shot_timeline_id"] = shot_tl
-                runs.append({"plugin": spec["plugin"], "parameters": params})
-            _run_plugins(client, res, runs, args, sleep)
+        # Nacheinander in Config-Reihenfolge: ein Plugin kann per "needs" die
+        # PluginRun-ID eines frueheren brauchen (team_clustering <- object_tracker).
+        run_ids = {}
+        for spec in plugins:
+            params = dict(spec["parameters"])  # Config-Objekt nicht mutieren
+            for param, source in spec.get("needs", {}).items():
+                params[param] = run_ids[source]
+            run_ids.update(_run_plugins(client, res, [{"plugin": spec["plugin"], "parameters": params}], args, sleep))
     except ApiError as e:
         res.fail(str(e))
     finally:
@@ -180,7 +196,8 @@ def run_scenario(name, client, prom, args, sleep=time.sleep, clock=time.time) ->
     res.t_query = clock()
 
     try:
-        results = run_checks(prom, default_checks(), res.t_start, res.t_query)
+        ray_apps = [app for spec in plugins for app in spec.get("ray_apps", [])]
+        results = run_checks(prom, default_checks(ray_apps), res.t_start, res.t_query)
     except PrometheusError as e:
         results = []
         res.errors.append(str(e))
@@ -206,7 +223,8 @@ def run_scenario(name, client, prom, args, sleep=time.sleep, clock=time.time) ->
     return res
 
 
-def _run_plugins(client, res, specs, args, sleep) -> None:
+def _run_plugins(client, res, specs, args, sleep) -> dict:
+    """Startet specs, wartet auf DONE und liefert {plugin: run_id}."""
     run_ids = {}
     for spec in specs:
         run_id = client.start_plugin(spec["plugin"], res.video_id, spec["parameters"])
@@ -229,13 +247,7 @@ def _run_plugins(client, res, specs, args, sleep) -> None:
     for rid, status in final.items():
         res.plugin_runs.append({"plugin": run_ids[rid], "run_id": rid, "status": status})
     res.log(f"Plugins fertig: {sorted(run_ids.values())}")
-
-
-def _find_timeline(client, video_id: str, name: str) -> str:
-    matches = [t["id"] for t in client.timelines(video_id) if t.get("name") == name]
-    if len(matches) != 1:
-        raise ApiError(f"Timeline '{name}' nicht eindeutig gefunden ({len(matches)} Treffer)")
-    return matches[0]
+    return {plugin: rid for rid, plugin in run_ids.items()}
 
 
 def grafana_links(grafana_url: str, t_start: Optional[float], t_end: Optional[float]) -> dict:

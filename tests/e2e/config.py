@@ -2,9 +2,8 @@
 
 Alles, was umgebungs- oder versionsabhaengig ist (Hostnamen, Metrik-/Container-
 Namen, Plugin-Parameter, Schwellwerte), steht hier gebuendelt. Werte mit
-"UNVERIFIED" sind aus Code/Dashboards abgeleitet, aber noch nicht gegen die
-echte Prometheus-Instanz auf sportvid01 geprueft - siehe tests/e2e/README.md,
-Abschnitt "Vorbedingungen".
+"UNVERIFIED" waeren aus Code/Dashboards abgeleitet, aber noch nicht gegen die
+echte Prometheus-Instanz auf sportvid01 geprueft.
 """
 
 # --- Ziel-Guard -------------------------------------------------------------
@@ -30,52 +29,51 @@ GRAFANA_DASHBOARDS = {
 }
 
 # --- Testlaeufe -------------------------------------------------------------
-# Parameter 1:1 wie die Frontend-Defaults (frontend/src/components/app/app-bar/
-# ModalPlugin.vue, Stand deploy-dev). Auf deploy-dev haben diese drei Plugins
-# weder Parser noch Serializer -> KEINE Server-Defaults, alles muss explizit
-# mitgeschickt werden. Eigene Timeline-Namen, damit die shotdetection-Timeline
-# fuer shot_type_classification eindeutig gefunden wird.
-SHOT_TIMELINE_NAME = "E2E Shots"
-
-SHOTDETECTION = {
-    "plugin": "shotdetection",
-    "parameters": {"timeline": SHOT_TIMELINE_NAME, "fps": 2},
+# Nur Plugins, deren Ray-Plugins auf dev deployt sind (inference_ray/deploy.dev.yml).
+# Das Backend lehnt alle anderen mit HTTP 400 "plugin_unavailable" ab (plugin_catalogue.py).
+# shotdetection, shot_type_classification und face_clustering sind seit dem
+# Infra-Umbau vom 2026-10-27 weder auf dev noch auf prod deployt. Der erste echte
+# Lauf am 2026-11-12 scheiterte genau daran.
+#
+# Felder je Plugin:
+#   plugin      Backend-Plugin-Name fuer POST /api/plugin/run/new
+#   parameters  werden 1:1 geschickt
+#   ray_apps    Ray-Serve-Applications, die das Plugin aufruft (= Task.ray_plugins
+#               im Backend, = "name" in deploy.dev.yml). Fuer den PromQL-Nachweis, dass
+#               genau dieses Plugin gelaufen ist (Label application=...).
+#   needs       {parameter: plugin}: setzt die PluginRun-ID eines frueheren Plugins
+#               im selben Szenario als Parameter ein.
+OBJECT_TRACKER = {
+    "plugin": "object_tracker",
+    # detector/tracker wie Frontend-Default (usePluginParams.js DEFAULT_PLAYER_DETECTOR,
+    # ModalPlugin.vue tracker "bytetrack"). Den Rest (detector_params etc.) fuellt der
+    # Serializer (serializers/object_tracker.py). Abweichung: fps 10 (Server-Default)
+    # statt Video-fps (Frontend, meist 30), um Laufzeit und GPU-Last zu dritteln.
+    "parameters": {"fps": 10, "detector": "yolox_sportsmot", "tracker": "bytetrack"},
+    "ray_apps": ["object_tracker"],
 }
-SHOT_TYPE_CLASSIFICATION = {
-    "plugin": "shot_type_classification",
-    # shot_timeline_id wird zur Laufzeit aus der shotdetection-Timeline ergaenzt.
-    "parameters": {"timeline": "E2E Shot-Typen", "fps": 2},
-}
-FACE_CLUSTERING = {
-    "plugin": "face_clustering",
-    # "metric" schickt das Frontend fuer DBScan ebenfalls nicht mit.
-    "parameters": {
-        "cluster_threshold": 0.5,
-        "max_cluster": 50,
-        "max_samples_per_cluster": 20,
-        # Abweichung vom Frontend-Default 0.1: Der Wert ist relativ zur Bildhoehe
-        # (face_size_filter.py: bbox.h >= min_face_height). In typischem
-        # Sportmaterial, auch im Testclip, sind Gesichter nur ca. 1-3 % hoch,
-        # 0.1 wuerde also alle Gesichter verwerfen. 0.0 = kein Groessenfilter,
-        # nur der Detektor entscheidet. Ueber den Slider im Frontend ebenfalls einstellbar.
-        "min_face_height": 0.0,
-        "clustering_method": "DBScan",
-        "fps": 2,
-    },
+TEAM_CLUSTERING = {
+    "plugin": "team_clustering",
+    # Server-Defaults (KMEANS, K=3, 2 Teams), siehe serializers/team_clustering.py.
+    # Braucht die Tracklets (TYPE_BBOXES) eines object_tracker-Runs.
+    "parameters": {},
+    "ray_apps": ["team_clustering"],
+    "needs": {"object_tracker_id": "object_tracker"},
 }
 
 SCENARIOS = {
-    # Lauf A: Upload (HLS) + Standard-Analyse
-    "standard": [SHOTDETECTION],
-    # Lauf B: zusaetzliche GPU-lastige Plugins (nach shotdetection, s.o.)
-    "plugins": [SHOTDETECTION, SHOT_TYPE_CLASSIFICATION, FACE_CLUSTERING],
+    # Lauf A: Upload (HLS) + Spieler-Tracking (GPU)
+    "standard": [OBJECT_TRACKER],
+    # Lauf B: Tracking, danach Team-Zuordnung auf dessen Ergebnis (nacheinander)
+    "plugins": [OBJECT_TRACKER, TEAM_CLUSTERING],
 }
 
 # Testvideo je Szenario. Die Dateien liegen NICHT im Repo, sondern im Verzeichnis
 # E2E_VIDEO_DIR (Workflow: /opt/e2e-data auf sportvid01, lokal tests/e2e/data/). Grund:
-# oeffentlicher Fork, keine LFS-Uploads moeglich. Herkunft siehe
-# README). Lauf A: feste Weitwinkelkamera, keine erkennbaren Gesichter, was fuer
-# shotdetection reicht. Lauf B braucht fuer face_clustering naehere Spieler.
+# oeffentlicher Fork, keine LFS-Uploads moeglich. Herkunft siehe README.
+# Lauf A: feste Weitwinkelkamera, Spieler klein, reicht fuer Tracking. Lauf B: Kamera
+# naeher am Spiel, Trikotfarben besser erkennbar fuer team_clustering. (Der Clip wurde
+# urspruenglich fuer face_clustering ausgewaehlt, daher der Dateiname.)
 SCENARIO_VIDEOS = {
     "standard": "e2e_clip.mp4",
     "plugins": "e2e_clip_faces.mp4",
@@ -101,7 +99,8 @@ DEV_CONTAINER_REGEX = "analyser_dev|inference_ray_dev|celery-gpu_dev"
 # OOM-Kills der dev-Container laut cAdvisor. Ersetzt den frueheren Ray-Counter
 # (ray_memory_manager_worker_eviction_total): Eine Suche nach ray_.*(evict|oom|kill).*
 # lieferte am 2026-11-04 keine Daten, diese Ray-Version exportiert ihn also nicht.
-# UNVERIFIED: ob unser cAdvisor container_oom_events_total liefert.
+# Verifiziert 2026-11-12: Im ersten echten Lauf lieferte die Query einen Wert (0)
+# statt "ohne Daten", die Serien existieren also.
 OOM_METRIC = "container_oom_events_total"
 
 # Vorcheck: jedes Target muss UP sein (min(up) == 1), sonst INCONCLUSIVE.

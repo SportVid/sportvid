@@ -11,25 +11,36 @@ unter `docs/e2e-tests.md`.
 
 | Szenario | Ablauf |
 |---|---|
-| `standard` | Upload (HLS-Konvertierung) → `shotdetection` |
-| `plugins` | Upload → `shotdetection` → `shot_type_classification` (mit Shot-Timeline) + `face_clustering` parallel |
+| `standard` | Upload (HLS-Konvertierung) → `object_tracker` (Spieler-Tracking, GPU) |
+| `plugins` | Upload → `object_tracker` → `team_clustering` (auf den Tracklets des Trackers) |
 | `both` | `standard`, dann 5 min Cooldown, dann `plugins` |
 
 Die automatische Analyse beim Upload ist im Backend derzeit auskommentiert
 (`views/video.py`, `tasks/convert_video.py`). Deshalb startet der Test jedes
-Plugin explizit über `POST /api/plugin/run/new`. Auf deploy-dev haben diese
-Plugins **keine** Server-Defaults. Die Parameter entsprechen 1:1 den
-Frontend-Defaults (`ModalPlugin.vue`) und stehen in `config.py`.
+Plugin explizit über `POST /api/plugin/run/new`. Parameter und Begründungen
+stehen in `config.py`.
+
+Es kommen nur Plugins infrage, deren Ray-Plugins auf dev deployt sind
+(`inference_ray/deploy.dev.yml`). Alle anderen lehnt das Backend mit HTTP 400
+`plugin_unavailable` ab. Deshalb fragt der Test vorab `GET /api/plugin/available` ab.
+Fehlt ein Szenario-Plugin, endet er als INCONCLUSIVE, bevor ein Video hochgeladen wird.
+Die ursprünglich geplanten `shotdetection`, `shot_type_classification` und
+`face_clustering` sind seit dem Infra-Umbau vom 2026-10-27 nicht mehr deployt.
 
 ## Ergebnis
 
 - **PASS** (Exit 0): Video und alle Plugin-Runs sind `DONE`, kein HTTP-5xx und alle harten PromQL-Checks sind erfüllt.
 - **FAIL** (Exit 1): Ein funktionaler Fehler oder ein harter Check ist fehlgeschlagen.
-- **INCONCLUSIVE** (Exit 2): Prometheus ist nicht erreichbar oder Targets sind nicht UP. Der Test wird dann gar nicht erst gestartet.
+- **INCONCLUSIVE** (Exit 2): Prometheus ist nicht erreichbar, Targets sind nicht UP oder ein Szenario-Plugin ist auf dev nicht deployt. Der Test wird dann gar nicht erst gestartet.
+
+Der zentrale Nachweis ist je Plugin der Check „Ray Serve Requests `<application>`“.
+Er zählt nur Requests auf die Ray-Serve-Application des Plugins (`ray_apps` in
+`config.py`). Der allgemeine Request-Zähler ist nur weich, weil schon der Upload
+den `thumbnail_generator` aufruft.
 
 Weiche Checks (`hard=False`) erzeugen nur WARN. Das betrifft die GPU, weil sie
-wahrscheinlich mit prod geteilt wird, und den OOM-Counter, dessen Name noch
-nicht verifiziert ist. Alle Checks stehen in `promql_checks.py`.
+wahrscheinlich mit prod geteilt wird, und den allgemeinen Ray-Request-Zähler.
+Alle Checks stehen in `promql_checks.py`.
 
 Das Testvideo wird am Ende immer gelöscht, außer mit `--keep`. Die
 PluginRuns und Timelines verschwinden per FK-CASCADE mit.
@@ -73,7 +84,6 @@ lokales Prometheus hart ab. Ein Override-Flag gibt es bewusst nicht.
    (seit 2026-11-04 installiert). Die dev-Domain ist vom Host selbst aus **nicht**
    erreichbar (Hairpin), deshalb verbindet sich das Script per `--connect-ip 127.0.0.1`
    direkt mit dem lokalen Proxy. Verifiziert per `curl --resolve`.
-4. Ein Wert in `config.py` ist noch `UNVERIFIED`: ob cAdvisor `container_oom_events_total` liefert.
 
 ## Testvideo
 
@@ -96,11 +106,11 @@ Zwei Videos, Zuordnung zu den Szenarien in `config.SCENARIO_VIDEOS`:
 
 | Datei | Szenario | Inhalt |
 |---|---|---|
-| `e2e_clip.mp4` | `standard` | feste Weitwinkelkamera, Fußballplatz bei Tag, Spieler sehr klein, **keine erkennbaren Gesichter** |
-| `e2e_clip_faces.mp4` | `plugins` | Training bei Flutlicht, Kamera nah am Spiel, Gesichter klein (ca. 1-3 % der Bildhöhe), deshalb `min_face_height: 0.0` |
+| `e2e_clip.mp4` | `standard` | feste Weitwinkelkamera, Fußballplatz bei Tag, Spieler sehr klein |
+| `e2e_clip_faces.mp4` | `plugins` | Training bei Flutlicht, Kamera nah am Spiel, Trikots gut erkennbar (für `team_clustering`). Der Name stammt aus der ursprünglichen Auswahl für `face_clustering`. |
 
 `e2e_clip_faces.mp4`: 30 s (Sekunde 36-66 einer 181-s-Aufnahme), H.264
-1920x1080 (Auflösung bewusst behalten, damit die Gesichtserkennung genug Pixel hat), AAC, ca. 38 MB:
+1920x1080 (Auflösung bewusst behalten, damit die Detektion genug Pixel hat), AAC, ca. 38 MB:
 
     ffmpeg -ss 36 -i original2.mp4 -t 30 -map 0:v:0 -map 0:a:0? \
       -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p \

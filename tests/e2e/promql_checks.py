@@ -11,7 +11,7 @@ hard=False -> Nichterfuellung ergibt nur WARN (z.B. bei noch nicht
 """
 
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional
+from typing import Callable, Iterable, List, Optional
 
 import requests
 
@@ -108,13 +108,38 @@ def precheck_query(selector: str) -> str:
     return f"min({selector})"
 
 
-def default_checks() -> List[Check]:
+def ray_app_checks(ray_apps: Iterable[str]) -> List[Check]:
+    """Je Ray-Serve-Application ein harter Nachweis, dass sie im Fenster Requests bekam.
+
+    Der allgemeine Request-Zaehler reicht dafuer nicht: Am 2026-11-12 war er > 0, obwohl
+    kein Plugin lief, weil schon Upload/HLS den thumbnail_generator aufruft. Das Label
+    `application` ist dasselbe, nach dem das Ray-Serve-Dashboard filtert.
+    """
     return [
+        Check(
+            name=f"Ray Serve Requests {app}",
+            query=(
+                "sum(increase(ray_serve_num_http_requests_total"
+                f'{{{ENV},application="{app}"}}[{{w}}s]))'
+            ),
+            expect=_gt0,
+            expectation="> 0",
+        )
+        for app in dict.fromkeys(ray_apps)  # Reihenfolge behalten, Duplikate raus
+    ]
+
+
+def default_checks(ray_apps: Iterable[str] = ()) -> List[Check]:
+    return ray_app_checks(ray_apps) + [
         Check(
             name="Ray Serve HTTP-Requests",
             query=f"sum(increase(ray_serve_num_http_requests_total{{{ENV}}}[{{w}}s]))",
             expect=_gt0,
             expectation="> 0",
+            # Weich: zaehlt alle dev-Applications, auch die des Uploads (thumbnail_generator).
+            # Der harte Nachweis sind die Checks "Ray Serve Requests <app>".
+            hard=False,
+            note="alle Applications, inkl. Upload",
         ),
         Check(
             name="Ray Serve HTTP-Fehler",
@@ -201,8 +226,6 @@ def default_checks() -> List[Check]:
             expect=_eq0,
             expectation="== 0",
             empty_as_zero=True,
-            # Weich, bis verifiziert ist, dass cAdvisor die Metrik liefert.
-            hard=False,
         ),
     ]
 

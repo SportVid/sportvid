@@ -46,12 +46,19 @@ class FakeProm(pc.Prometheus):
 
 
 class FakeClient:
-    def __init__(self, plugin_status="DONE", start_error=None):
+    # Default: alle Szenario-Plugins verfuegbar
+    ALL_PLUGINS = sorted({s["plugin"] for specs in cfg.SCENARIOS.values() for s in specs})
+
+    def __init__(self, plugin_status="DONE", start_error=None, available=ALL_PLUGINS):
         self.plugin_status = plugin_status
         self.start_error = start_error
+        self.available = available
         self.started = []
         self.deleted = []
         self.server_errors = []
+
+    def available_plugins(self):
+        return self.available
 
     def upload_video(self, path, title, fields):
         return "vid1"
@@ -67,9 +74,6 @@ class FakeClient:
 
     def plugin_runs(self, video_id):
         return [{"id": f"run{i + 1}", "status": self.plugin_status} for i in range(len(self.started))]
-
-    def timelines(self, video_id):
-        return [{"id": "tl-shots", "name": cfg.SHOT_TIMELINE_NAME}, {"id": "tl-other", "name": "x"}]
 
     def delete_video(self, video_id):
         self.deleted.append(video_id)
@@ -179,18 +183,45 @@ class ScenarioTests(unittest.TestCase):
         client = FakeClient()
         res = run("standard", client, FakeProm())
         self.assertEqual(res.status, pc.PASS, res.errors)
-        self.assertEqual([p for p, _ in client.started], ["shotdetection"])
+        self.assertEqual([p for p, _ in client.started], ["object_tracker"])
         self.assertEqual(client.deleted, ["vid1"])
 
-    def test_plugins_pass_timeline_id(self):
+    def test_plugins_pass_tracker_run_id(self):
         client = FakeClient()
         res = run("plugins", client, FakeProm())
         self.assertEqual(res.status, pc.PASS, res.errors)
         started = dict(client.started)
-        self.assertEqual(list(started), ["shotdetection", "shot_type_classification", "face_clustering"])
-        self.assertEqual(started["shot_type_classification"]["shot_timeline_id"], "tl-shots")
+        self.assertEqual(list(started), ["object_tracker", "team_clustering"])
+        # PluginRun-ID des object_tracker (run1) geht an team_clustering
+        self.assertEqual(started["team_clustering"]["object_tracker_id"], "run1")
         # Config-Objekt darf nicht mutiert werden
-        self.assertNotIn("shot_timeline_id", cfg.SHOT_TYPE_CLASSIFICATION["parameters"])
+        self.assertNotIn("object_tracker_id", cfg.TEAM_CLUSTERING["parameters"])
+
+    def test_unavailable_plugin_inconclusive_without_upload(self):
+        client = FakeClient(available=["thumbnail", "object_tracker"])
+        res = run("plugins", client, FakeProm())
+        self.assertEqual(res.status, run_e2e.INCONCLUSIVE)
+        self.assertIsNone(res.video_id)
+        self.assertEqual(client.started, [])
+        self.assertTrue(any("team_clustering" in e for e in res.errors))
+
+    def test_unknown_catalogue_still_runs(self):
+        # plugin/available = null: Backend erreicht den Analyser nicht -> kein Vorcheck
+        res = run("standard", FakeClient(available=None), FakeProm())
+        self.assertEqual(res.status, pc.PASS, res.errors)
+
+    def test_ray_app_checks_per_scenario(self):
+        res = run("plugins", FakeClient(), FakeProm())
+        names = [c["name"] for c in res.checks]
+        self.assertIn("Ray Serve Requests object_tracker", names)
+        self.assertIn("Ray Serve Requests team_clustering", names)
+
+    def test_plugin_app_without_requests_fails(self):
+        # z.B. Upload lief (thumbnail_generator), aber object_tracker bekam keinen Request
+        prom = FakeProm(values={'application="object_tracker"': 0})
+        res = run("standard", FakeClient(), prom)
+        self.assertEqual(res.status, pc.FAIL)
+        self.assertIn("Check fehlgeschlagen: Ray Serve Requests object_tracker", res.errors)
 
     def test_missing_target_inconclusive_without_upload(self):
         client = FakeClient()
@@ -220,7 +251,7 @@ class ScenarioTests(unittest.TestCase):
         self.assertEqual(client.deleted, ["vid1"])
 
     def test_unknown_plugin_fails_but_cleans_up(self):
-        client = FakeClient(start_error="face_clustering")
+        client = FakeClient(start_error="team_clustering")
         res = run("plugins", client, FakeProm())
         self.assertEqual(res.status, pc.FAIL)
         self.assertTrue(any("Unknown plugin" in e for e in res.errors))
@@ -276,9 +307,21 @@ class CheckTests(unittest.TestCase):
         r = self.results(prom)["GPU-Auslastung (Ray)"]
         self.assertIn("gesaettigt", r.note)
 
-    def test_unverified_oom_metric_only_warns(self):
+    def test_oom_kill_fails(self):
+        # seit 2026-11-12 verifiziert -> harter Check
         prom = FakeProm(values={cfg.OOM_METRIC: 3})
-        self.assertEqual(self.results(prom)["OOM-Kills dev (cAdvisor)"].status, pc.WARN)
+        self.assertEqual(self.results(prom)["OOM-Kills dev (cAdvisor)"].status, pc.FAIL)
+
+    def test_generic_ray_requests_only_warns(self):
+        # allgemeiner Zaehler ist nur weich, der Nachweis laeuft je Application
+        prom = FakeProm(values={"ray_serve_num_http_requests_total{environment": None})
+        self.assertEqual(self.results(prom)["Ray Serve HTTP-Requests"].status, pc.WARN)
+
+    def test_ray_app_query_rendered(self):
+        prom = FakeProm()
+        pc.run_checks(prom, pc.default_checks(["object_tracker", "object_tracker"]), 1000.0, 1400.0)
+        q = 'sum(increase(ray_serve_num_http_requests_total{environment="dev",application="object_tracker"}[400s]))'
+        self.assertEqual(prom.queries.count(q), 1)  # Duplikate entfernt
 
 
 class ReportTests(unittest.TestCase):
@@ -378,10 +421,18 @@ class ClientTests(unittest.TestCase):
     def test_plugin_params_sent_as_dict(self):
         s = FakeSession([FakeResponse(200, {"status": "ok", "plugin_run_id": "r1"})])
         c = SportvidClient("https://dev.sportvid.dshs-koeln.de", session=s)
-        self.assertEqual(c.start_plugin("shotdetection", "v", {"fps": 2}), "r1")
+        self.assertEqual(c.start_plugin("object_tracker", "v", {"fps": 10}), "r1")
         import json
         sent = json.loads(s.calls[0][2]["data"])
-        self.assertEqual(sent["parameters"], {"fps": 2})
+        self.assertEqual(sent["parameters"], {"fps": 10})
+
+    def test_available_plugins(self):
+        s = FakeSession([FakeResponse(200, {"status": "ok", "plugins": ["object_tracker"]}),
+                         FakeResponse(200, {"status": "ok", "plugins": None})])
+        c = SportvidClient("https://dev.sportvid.dshs-koeln.de", session=s)
+        self.assertEqual(c.available_plugins(), ["object_tracker"])
+        self.assertIsNone(c.available_plugins())
+        self.assertTrue(s.calls[0][1].endswith("/api/plugin/available"))
 
 
 if __name__ == "__main__":
