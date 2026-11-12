@@ -1,0 +1,5 @@
+# Testvideos werden nie committet: Das Repo ist ein oeffentlicher Fork (keine
+# LFS-Uploads moeglich, Videos waeren oeffentlich). Ablage auf sportvid01 unter
+# /opt/e2e-data, siehe README.md, Abschnitt "Testvideo".
+data/
+__pycache__/

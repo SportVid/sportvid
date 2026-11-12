@@ -1,0 +1,67 @@
+name: e2e_dev
+
+# Funktionaler E2E-Test gegen sportvid DEV inkl. Prometheus-Verifikation.
+# Bewusst NUR manuell (workflow_dispatch) - kein push/schedule: der Test
+# erzeugt echte GPU-Last auf sportvid01, das sich Host (und vermutlich GPU)
+# mit prod teilt. Doku: tests/e2e/README.md
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "standard = Upload+shotdetection, plugins = +shot_type_classification+face_clustering"
+        type: choice
+        options: [standard, plugins, both]
+        default: standard
+      keep:
+        description: "Testvideo nach dem Lauf behalten (Debugging)"
+        type: boolean
+        default: false
+
+# Nie zwei E2E-Laeufe gleichzeitig (Last wuerde sich ueberlagern, Checks
+# waeren nicht mehr zuordenbar). Laufende Laeufe nicht abbrechen.
+concurrency:
+  group: e2e-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    # Laeuft auf sportvid01, weil Prometheus nur an 127.0.0.1:9090 lauscht.
+    runs-on: self-hosted
+    timeout-minutes: 90
+    steps:
+      # Testvideos liegen NICHT im Repo, sondern auf sportvid01 unter
+      # /opt/e2e-data (siehe E2E_VIDEO_DIR unten): Das Repo ist ein oeffentlicher
+      # Fork, und GitHub erlaubt dort keine neuen LFS-Objekte.
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Python-Umgebung
+        run: |
+          python3 -m venv "$RUNNER_TEMP/e2e-venv"
+          "$RUNNER_TEMP/e2e-venv/bin/pip" install -q -r tests/e2e/requirements.txt
+
+      - name: E2E-Test ausfuehren
+        env:
+          E2E_USER: ${{ secrets.E2E_DEV_USER }}
+          E2E_PASSWORD: ${{ secrets.E2E_DEV_PASSWORD }}
+          # nginx-Basic-Auth (.htpasswd) vor der gesamten dev-Domain
+          E2E_BASIC_USER: ${{ secrets.E2E_DEV_BASIC_USER }}
+          E2E_BASIC_PASSWORD: ${{ secrets.E2E_DEV_BASIC_PASSWORD }}
+          # Testvideos auf dem Runner-Host (manuell abgelegt, tests/e2e/README.md)
+          E2E_VIDEO_DIR: /opt/e2e-data
+        run: |
+          "$RUNNER_TEMP/e2e-venv/bin/python" tests/e2e/run_e2e.py \
+            --scenario "${{ inputs.scenario }}" \
+            --out-dir "$RUNNER_TEMP/e2e-report" \
+            ${{ inputs.keep && '--keep' || '' }}
+
+      - name: Report hochladen
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report-${{ inputs.scenario }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/e2e-report/
+          if-no-files-found: warn
