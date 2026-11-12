@@ -58,7 +58,7 @@ landet als Artifact und in der Job-Summary.
 >
 > **Temporär (vor dem PR entfernen):** Bis dahin startet jeder Push auf
 > `feature/e2e-tests-develop`, der `tests/e2e/**` oder die Workflow-Datei ändert,
-> einen Lauf (Szenario `standard`, Video wird behalten).
+> einen Lauf (Szenario `both`, Video wird behalten).
 
 Lokal geht nur der Offline-Teil (es gibt keinen Zugriff auf das Prometheus von sportvid01):
 

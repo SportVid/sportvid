@@ -9,7 +9,7 @@ on:
   # gibt es erst, wenn diese Datei auf dem Default-Branch liegt. Damit der Test
   # vorher schon echt laufen und nachjustiert werden kann, startet ihn jeder
   # Push auf den Feature-Branch (nur bei Aenderungen am Test selbst), mit festen
-  # Defaults: Szenario standard, Video wird behalten (keep). Fork-PRs loesen
+  # Defaults: Szenario both (standard + plugins), Video wird behalten (keep). Fork-PRs loesen
   # keinen push-Event aus.
   push:
     branches: [feature/e2e-tests-develop]
@@ -44,7 +44,7 @@ jobs:
     timeout-minutes: 90
     env:
       # Bei push gibt es keine inputs -> Defaults (siehe TEMPORAER oben).
-      E2E_SCENARIO: ${{ inputs.scenario || 'standard' }}
+      E2E_SCENARIO: ${{ inputs.scenario || 'both' }}
       E2E_KEEP: ${{ (github.event_name == 'push' || inputs.keep) && '--keep' || '' }}
     steps:
       # Testvideos liegen NICHT im Repo, sondern auf sportvid01 unter
