@@ -121,7 +121,9 @@ def test_video_deleted_while_packing(video, conversion, monkeypatch, enqueued_ta
     monkeypatch.setattr(convert_video, "probe_media_start", lambda path: delete(video) or 0.0)
 
     assert convert_video_to_hls(video.id.hex, video.ext) is None
-    assert cancelled_sources(log) == ["deleted_while_packing"]
+    # The delete removes the HLS folder with the row (post_delete), so packing finds it gone.
+    # "deleted_while_packing" remains for a delete that lands after the archive is written.
+    assert cancelled_sources(log) == ["deleted"]
     assert errors(log) == []
     assert_cleaned_up(video, enqueued_tasks)
 

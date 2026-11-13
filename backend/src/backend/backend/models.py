@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import uuid
 from random import random
 from django.conf import settings
@@ -8,7 +9,7 @@ from django.db import models
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 
-from backend.utils import media_path_to_file
+from backend.utils import media_dir_to_file, media_path_to_file
 from backend.utils.color import rgb_to_hex, random_rgb
 from data import DataManager
 from .managers import SportVidUserManager
@@ -226,17 +227,33 @@ class TrackingData(models.Model):
 
 @receiver_with_multiple_senders(signal=post_delete, senders=[Video,TrackingData])
 def delete_file(sender, instance, **kwargs):
-    logger.info(f"Deleting file(s) of user {instance.owner.username}")
-    path = media_path_to_file(instance.id.hex, instance.ext)
-    if os.path.exists(path): 
-        os.remove(path)
-        logger.info(f'Removed file with id: {instance.id.hex}')
+    """Remove the files of a deleted video or tracking data upload.
+
+    Runs for every delete, including cascades (deleting a user), the admin and the shell,
+    so it removes everything the row owned: for a video also the converted archive and the
+    HLS folder, which the video/delete view used to be the only one to remove.
+    """
+    id_hex = instance.id.hex
+    logger.info("Deleting file(s) of %s %s", sender.__name__, id_hex)
+    extensions = {instance.ext}
+    if sender == Video:
+        # the upload (original extension) and what the conversion made of it
+        extensions |= {".mp4", ".mkv", ".ogv", ".tar.gz", ".tar.gz.partial"}
+    for ext in extensions:
+        if not ext:
+            continue  # an empty extension would address the HLS folder, not a file
+        path = media_path_to_file(id_hex, ext)
+        if os.path.isfile(path):
+            os.remove(path)
+            logger.info("Removed file %s", path)
+    if sender == Video:
+        shutil.rmtree(os.path.join(media_dir_to_file(id_hex), id_hex), ignore_errors=True)
     if sender == TrackingData:
         if instance.meta_file:
             meta_path = media_path_to_file(instance.meta_file.hex, instance.meta_ext)
-            if os.path.exists(meta_path): 
+            if os.path.isfile(meta_path):
                 os.remove(meta_path)
-                logger.info(f'Removed file with id: {instance.meta_file.hex}')
+                logger.info("Removed file %s", meta_path)
 
 
 class Plugin(models.Model):
@@ -284,11 +301,18 @@ class PluginRun(models.Model):
     # reports enough to extrapolate, and reset to null on QUEUED / DONE / ERROR.
     eta_seconds = models.FloatField(blank=True, null=True)
     in_scheduler = models.BooleanField(default=False)
+    # how often the run was started again after a worker restart interrupted it (backend/plugin_runs.py)
+    restart_count = models.PositiveSmallIntegerField(default=0)
     # ML provenance: the validated parameters the run was started
     # with (incl. checkpoint and thresholds) and the Ray plugins with their versions that
     # produced the results. Empty for runs from before migration 0065.
     parameters = models.JSONField(blank=True, null=True)
     provenance = models.JSONField(blank=True, null=True)
+    # The parameters as they were submitted, before validation. `parameters` cannot be validated
+    # again (serializers add server-side values such as checkpoints), so a run that is started
+    # again after an interruption is validated from these. Null for runs with uploaded files,
+    # which cannot be started again, and for runs from before migration 0072.
+    request_parameters = models.JSONField(blank=True, null=True)
     # why the run ended in ERROR: {"type": "<snake_case>", "message": ..., "details": {...}}
     # (backend.utils.task.TaskFailure); {"type": "internal_error"} for unexpected errors
     failure_reason = models.JSONField(blank=True, null=True)
@@ -335,6 +359,7 @@ class PluginRun(models.Model):
             "provenance": self.provenance,
             "failure_reason": self.failure_reason,
             "outcome": self.outcome,
+            "restart_count": self.restart_count,
         }
         if include_refs_hashes:
             result["video_id"] = self.video.id.hex

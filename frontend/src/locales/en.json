@@ -608,7 +608,14 @@
   },
   "modal": {
     "error": {
-      "title": "Error"
+      "title": "Error",
+      "messages": {
+        "quota_exceeded": "Your storage quota is used up. Delete videos or tracking data to free space.",
+        "file_too_large": "The file is larger than the size allowed for your account.",
+        "wrong_file_extension": "This file type is not supported. Videos must be .mp4, .mkv or .ogv files.",
+        "downloading_error": "The file could not be stored on the server. Please try again.",
+        "unknown": "The upload failed. Please try again."
+      }
     },
     "admin": {
       "delete_account": {

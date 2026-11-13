@@ -24,10 +24,7 @@ class Deployment:
         inputs = data.get("inputs")
         parameters = data.get("parameters")
         job_id = data.get("job_id")
-        logging.error("###############")
-        logging.error(inputs)
-        logging.error(parameters)
-        logging.error("###############")
+        logging.debug("[Deployment] job %s inputs=%s parameters=%s", job_id, inputs, parameters)
 
         # NOTE: This callback pushes the progress reported by the plugin (self.update_callbacks())
         # to valkey, referenced via job_id. Analyser reads it from GetPluginStatus()..

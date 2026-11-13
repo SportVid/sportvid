@@ -90,3 +90,28 @@ def test_images_install_the_workspace():
 def test_analyser_config_only_uses_variables_from_the_env_file():
     text = "\n".join(l for l in (ROOT / "analyser" / "config.yml").read_text().splitlines() if not l.lstrip().startswith("#"))
     assert set(re.findall(r"\$\{(\w+)\}", text)) <= set(dotenv())
+
+
+COMPOSE_FILES = ["docker-compose.yml", "docker-compose.cuda.yml", "docker-compose.dev.yml", "docker-compose.prod.yml"]
+
+
+@pytest.mark.parametrize("name", COMPOSE_FILES)
+def test_every_stack_runs_one_beat_for_the_scheduled_tasks(name):
+    """CELERY_BEAT_SCHEDULE does nothing without a beat process; it runs the workers' image and mounts."""
+    services = yaml.safe_load((ROOT / name).read_text())["services"]
+    beat, worker = services["celery-beat"], services["celery-io"]
+    assert "beat" in beat["command"] and "worker" not in beat["command"]
+    # the schedule file must be writable: the image's working dir is a read-only bind mount for some users
+    assert "--schedule=/tmp/celerybeat-schedule" in beat["command"] and "/tmp" in beat["tmpfs"]
+    for key in ("image", "volumes", "env_file", "secrets", "working_dir"):
+        assert beat[key] == worker[key], key
+
+
+@pytest.mark.parametrize("env", ["dev", "prod"])
+def test_server_valkey_keeps_the_queue_across_restarts(env):
+    """Without it, `manage.sh … down` empties the broker and QUEUED runs wait forever."""
+    valkey = yaml.safe_load((ROOT / f"docker-compose.{env}.yml").read_text())["services"]["valkey"]
+    command = valkey["command"]
+    assert command[command.index("--appendonly") + 1] == "yes"
+    assert command[command.index("--dir") + 1] == "/data"
+    assert "${DATA_PATH}/valkey:/data" in valkey["volumes"]

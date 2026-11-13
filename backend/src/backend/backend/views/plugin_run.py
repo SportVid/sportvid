@@ -2,7 +2,7 @@ import re
 import json
 import uuid
 import logging
-import tempfile
+import shutil
 import tempfile
 import time
 
@@ -21,7 +21,7 @@ from backend.utils import download_url, download_file, media_url_to_file
 from backend.utils.cancellation import active_plugin_runs, cancel_plugin_runs
 
 from backend.serializers import PluginRunRequestSerializer
-from backend.utils.api import ApiView
+from backend.utils.api import ApiView, query_flag
 
 logger = logging.getLogger(__name__)
 
@@ -84,11 +84,15 @@ class PluginRunNew(ApiView):
                 if download_result.get("status") != "ok":
                     # e.g. file_too_large (over the user's max_file_size): don't start the
                     # run without the file the user meant to pass
+                    shutil.rmtree(output_dir, ignore_errors=True)  # with the files stored before this one
                     return JsonResponse(download_result, status=413 if download_result.get("type") == "file_too_large" else 400)
                 file_parameters[m.group(1)] = {
                     "value": download_result["origin"],
                     "path": download_result["path"],
                 }
+
+            if not file_parameters:
+                shutil.rmtree(output_dir, ignore_errors=True)  # nothing was uploaded
 
             parameters = data["parameters"].copy()
             parameters["_files"] = file_parameters
@@ -211,7 +215,7 @@ class PluginRunList(ApiView):
                 analyses = readable(PluginRun, request.user).filter(video__id=video_id)
             else:
                 analyses = PluginRun.objects.filter(video__owner=request.user)
-            add_results = request.GET.get("add_results")
+            add_results = query_flag(request, "add_results")
 
             analyses = analyses.prefetch_related("video")
 

@@ -4,12 +4,12 @@ import subprocess
 import shutil
 import time
 import tarfile
+import threading
 import logging
 import imageio
 from pathlib import Path
 from typing import Any
 from celery import shared_task
-from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 
 from backend.utils import media_dir_to_file, media_path_to_file, publish_video
@@ -44,6 +44,60 @@ _FFMPEG_PROGRESS_LINE = re.compile(
 )
 
 
+class ConversionTimeout(RuntimeError):
+    """The conversion ran into a limit of ConversionWatchdog."""
+
+
+class ConversionWatchdog:
+    """Stops an FFmpeg that runs too long or no longer reports progress.
+
+    Celery's time_limit/soft_time_limit are not enforced by the threads pool the workers
+    use, and the task reads FFmpeg's progress with a blocking readline(). So a thread
+    watches the clock and kills FFmpeg; the closed pipe then ends the read loop, and the
+    task raises ConversionTimeout with `reason`.
+
+    `deadline` is a time.monotonic() value for the whole conversion, `stall_timeout` the
+    seconds FFmpeg may stay silent (it writes a progress block about twice a second).
+    """
+
+    def __init__(self, kill, deadline, stall_timeout, interval=5.0):
+        self.reason = None
+        self._kill = kill
+        self._deadline = deadline
+        self._stall_timeout = stall_timeout
+        self._interval = interval
+        self._last_line = time.monotonic()
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._run, name="hls-watchdog", daemon=True)
+
+    def touch(self):
+        """FFmpeg wrote a line."""
+        self._last_line = time.monotonic()
+
+    def check(self, now=None):
+        """The limit that is exceeded at `now`: "timeout", "stalled" or None."""
+        now = time.monotonic() if now is None else now
+        if now >= self._deadline:
+            return "timeout"
+        if now - self._last_line >= self._stall_timeout:
+            return "stalled"
+        return None
+
+    def _run(self):
+        while not self._stop.wait(self._interval):
+            reason = self.check()
+            if reason:
+                self.reason = reason
+                self._kill()
+                return
+
+    def start(self):
+        self._thread.start()
+
+    def stop(self):
+        self._stop.set()
+
+
 def safe_delete(paths):
     if not isinstance(paths, (list, tuple, set)):
         paths = [paths]
@@ -62,22 +116,14 @@ def safe_delete(paths):
             logger.warning(f"Failed to delete {path}: {e}")
 
 @shared_task
-# TODO: get a cronjob running that cleans up orphaned videos.
-def cleanup_upload_orphans(self):
-    """ Delete files without DB Video record. """
-    media_root = Path(settings.MEDIA_ROOT)
-    db_files = set()
-    
-    # builds set of valid DB entries
-    for video in Video.objects.filter(status__in=
-        [Video.STATUS_UPLOADING, Video.STATUS_PROCESSING, Video.STATUS_ERROR]):
-        db_files.add(str(media_path_to_file(video.file.hex, f".{video.ext}")))
-    
-    # scan filesystem
-    for file_path in media_root.rglob('*.tar.gz'):
-        if str(file_path) not in db_files:
-            safe_delete(file_path)
-            logger.info(f"Removed orphan: {file_path}")
+def cleanup_orphans():
+    """Scheduled by Celery beat (CELERY_BEAT_SCHEDULE): report, and with ORPHAN_CLEANUP_DELETE
+    remove, the files under MEDIA_ROOT that belong to no row (backend/cleanup.py)."""
+    from backend.cleanup import cleanup_media_orphans
+
+    count, size = cleanup_media_orphans()
+    return {"count": count, "size": size}
+
 
 def _report_conversion_progress(video_id_hex, progress, eta_seconds=None):
     """Persist & push HLS conversion progress (including ETA).
@@ -201,7 +247,8 @@ def _metadata(file_in: Path) -> tuple[float, float | None, Any]:
 
         return fps, duration_ms, meta.get("size")
 
-@shared_task(bind=True, time_limit=7200, soft_time_limit=5400, queue="gpu")
+# No time_limit here: the threads pool ignores it. ConversionWatchdog enforces HLS_CONVERSION_TIMEOUT.
+@shared_task(bind=True, queue="gpu")
 def convert_video_to_hls(self, video_id_hex, original_ext, analyzers=None):
     ffmpeg = {}  # the FFmpeg process once it runs, for the cancel callback
 
@@ -319,19 +366,24 @@ def _convert_video_to_hls(video_id_hex, original_ext, analyzers, cancel_event, f
         eta_estimator = EtaEstimator() # time ETA from here
 
         # The watcher (convert_video_to_hls) kills FFmpeg the moment video/delete publishes the cancel.
-        # TODO: cancellation relies on Valkey
-        # --> add a fallback timeout to kill FFmpeg if it appears stuck.
+        # The watchdog kills it when the conversion takes too long or FFmpeg goes silent, which
+        # also ends a conversion whose cancel was lost because Valkey was down.
+        watchdog = ConversionWatchdog(
+            kill=lambda: terminate_process_group(ffmpeg_proc),
+            deadline=started + settings.HLS_CONVERSION_TIMEOUT,
+            stall_timeout=settings.HLS_STALL_TIMEOUT,
+        )
         try:
-            # drains ffmpeg's error & "-progress" output line by line
+            watchdog.start()
+            # drains ffmpeg's "-progress" output line by line; the read blocks, the watchdog unblocks it
             while True:
-                # TODO: can block indefinitely if FFmpeg stops writing but hasn’t exited
-                # --> use a non-blocking reader (e.g. a separate thread or select/queue) for stdout; stderr goes to the worker log
                 line = ffmpeg_proc.stdout.readline()
                 if not line:
                     if ffmpeg_proc.poll() is not None:
                         break
                     continue
-    
+                watchdog.touch()
+
                 line = line.rstrip()
                 is_progress_line = bool(_FFMPEG_PROGRESS_LINE.match(line)) # identifies progress lines
                 
@@ -374,6 +426,7 @@ def _convert_video_to_hls(video_id_hex, original_ext, analyzers, cancel_event, f
                     if not _FFMPEG_PROGRESS_LINE.match(extra_line):
                         logger.debug("[ffmpeg progress] %s", extra_line)    
         finally:
+            watchdog.stop()
             if ffmpeg_proc.stdout:
                 ffmpeg_proc.stdout.close() 
                 
@@ -384,6 +437,11 @@ def _convert_video_to_hls(video_id_hex, original_ext, analyzers, cancel_event, f
         if cancelled:
             _cancelled("valkey" if cancel_event.is_set() else "db_fallback", asset_dir)
             return
+        if watchdog.reason:
+            log_event(logger, "video.conversion.timeout", level=logging.ERROR, reason=watchdog.reason,
+                      elapsed_seconds=round(time.monotonic() - started),
+                      timeout_seconds=settings.HLS_CONVERSION_TIMEOUT, stall_seconds=settings.HLS_STALL_TIMEOUT)
+            raise ConversionTimeout(f"HLS conversion stopped by the watchdog: {watchdog.reason}")
         if rc != 0:
             raise RuntimeError(
                 f"FFmpeg exited with code {rc}"
@@ -478,25 +536,6 @@ def _convert_video_to_hls(video_id_hex, original_ext, analyzers, cancel_event, f
                         plugin,
                         video_id_hex,
                     )
-
-    except SoftTimeLimitExceeded:
-        logger.warning(
-            "Soft time limit exceeded for video %s",
-            video_id_hex,
-        )
-        
-        if ffmpeg_proc is not None:
-            terminate_process_group(ffmpeg_proc)
-            
-        if video_db is not None:
-            Video.objects.filter(id=video_id_hex).update(
-                status=Video.STATUS_ERROR,
-                eta_seconds=None,
-            )
-            publish_video(video_id_hex)
-            
-        safe_delete([archive_path, asset_dir])
-        raise
 
     except Exception as e:
         if not Video.objects.filter(id=video_id_hex).exists():

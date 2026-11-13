@@ -122,6 +122,17 @@ export const useVideoStore = defineStore("video", () => {
       promises.push(...pluginRunPromises);
       await Promise.all(pluginRunPromises);
 
+      // The listing above comes without data. The shot list reads the newest thumbnail run's
+      // images straight from the store (stores/shot.js), so load that run's data here.
+      const thumbnailRun = pluginRunStore
+        .forVideo(videoId)
+        .filter((e) => e.type == "thumbnail" && e.status == "DONE")
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .at(0);
+      if (addResults && thumbnailRun) {
+        promises.push(pluginRunResultStore.forPluginRunWithData(thumbnailRun.id, videoId));
+      }
+
       const timelinePromises = [
         timelineStore.fetchForVideo({ videoId }),
         timelineSegmentStore.fetchForVideo({ videoId }),

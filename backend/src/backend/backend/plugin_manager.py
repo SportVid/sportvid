@@ -56,9 +56,9 @@ def _mark_running(plugin_run):
         logger.warning("Failed to publish plugin run RUNNING event", exc_info=True)
 
 
-# How often and how long a run waits for its video's HLS conversion (time_limit=7200 there).
+# How often and how long a run waits for its video's HLS conversion (as long as the conversion may take).
 CONVERSION_POLL_SECONDS = 10
-CONVERSION_MAX_RETRIES = 7200 // CONVERSION_POLL_SECONDS
+CONVERSION_MAX_RETRIES = settings.HLS_CONVERSION_TIMEOUT // CONVERSION_POLL_SECONDS
 
 
 def _mark_waiting(plugin_run):
@@ -84,6 +84,32 @@ def _recordable_parameters(parameters):
     if files:
         recorded["_files"] = {name: info.get("value") for name, info in files.items()}
     return recorded
+
+
+def build_task_payload(plugin, parameters, video, user, plugin_run=None, dry_run=False, kwargs=None):
+    """The argument of the run_plugin task. Also used to start an interrupted run again
+    (backend/plugin_runs.py), so both paths enqueue the same shape."""
+    return {
+        "plugin": plugin,
+        "parameters": parameters,
+        "video": str(video.id),
+        "user": str(user.id),
+        "plugin_run": str(plugin_run.id) if plugin_run else None,
+        "dry_run": dry_run,
+        "kwargs": kwargs or {},
+    }
+
+
+def _request_parameters(parameters):
+    """The submitted parameters as stored in PluginRun.request_parameters, or None if the run
+    cannot be started again from them (uploaded files, values that are not JSON)."""
+    if parameters.get("_files"):
+        return None
+    try:
+        # an empty "_files" (plugin/run/new without uploads) stays, so the replay is the same call
+        return json.loads(json.dumps(parameters))
+    except (TypeError, ValueError):
+        return None
 
 
 class PluginManager:
@@ -219,22 +245,15 @@ class PluginManager:
                 type=plugin,
                 status=PluginRun.STATUS_QUEUED,
                 parameters=_recordable_parameters(validated_parameters),
+                request_parameters=_request_parameters(parameters),
             )
             # Returns the plugin_run_id (hex) for the frontend to track the run.
             result["plugin_run_id"] = plugin_run.id.hex
             # API response for starting a plugin run includes full plugin_run entry.
             result["entry"] = plugin_run.to_dict()
 
-        task_payload = {
-            "plugin": plugin,
-            "parameters": validated_parameters,
-            "video": str(video.id),
-            "user": str(user.id),
-            "plugin_run": str(plugin_run.id) if plugin_run else None,
-            "dry_run": dry_run,
-            "kwargs": kwargs,
-        }
-        
+        task_payload = build_task_payload(plugin, validated_parameters, video, user, plugin_run, dry_run, kwargs)
+
         if run_async:
             task = run_plugin.apply_async(args=[task_payload])
             if plugin_run is not None:

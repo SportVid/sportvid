@@ -505,7 +505,14 @@
   },
   "modal": {
     "error": {
-      "title": "Fehler"
+      "title": "Fehler",
+      "messages": {
+        "quota_exceeded": "Ihr Speicherplatz ist aufgebraucht. Löschen Sie Videos oder Trackingdaten, um Platz zu schaffen.",
+        "file_too_large": "Die Datei ist größer als für Ihr Konto erlaubt.",
+        "wrong_file_extension": "Dieser Dateityp wird nicht unterstützt. Videos müssen .mp4-, .mkv- oder .ogv-Dateien sein.",
+        "downloading_error": "Die Datei konnte nicht auf dem Server gespeichert werden. Bitte versuchen Sie es erneut.",
+        "unknown": "Der Upload ist fehlgeschlagen. Bitte versuchen Sie es erneut."
+      }
     },
     "video": {
       "rename": {
@@ -1253,6 +1260,30 @@
         "three_center": "Dreipunkt Mitte",
         "three_bottom": "Dreipunkt Unten"
       }
+    }
+  },
+  "admin_panel": {
+    "title": "Adminbereich",
+    "search": "Suche",
+    "role": {
+      "label": "Rolle",
+      "all": "Alle",
+      "admin": "Admin",
+      "researcher": "Forschende",
+      "user": "Nutzer"
+    },
+    "user": {
+      "id": "ID",
+      "username": "Benutzername",
+      "email": "E-Mail",
+      "role": "Rolle",
+      "used_storage_size": "Belegter Speicher",
+      "max_storage_size": "Max. Speicher",
+      "max_video_size": "Max. Videogröße",
+      "max_file_size": "Max. Dateigröße",
+      "date_joined": "Beigetreten",
+      "actions": "Aktionen",
+      "is_active": "Aktiv"
     }
   },
   "progress": {

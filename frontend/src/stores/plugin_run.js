@@ -182,7 +182,8 @@ export const usePluginRunStore = defineStore("pluginRun", () => {
     const clusterTimelineItemStore = useClusterTimelineItemStore();
 
     await Promise.all([
-      pluginRunResultStore.fetchForVideo({ pluginRunId }),
+      // with data: the finished run's results are drawn right away (thumbnails, scalar timelines)
+      pluginRunResultStore.fetchForVideo({ pluginRunId, addResults: true }),
       annotationCategoryStore.clearStore(),
       annotationStore.clearStore(),
       annotationCategoryStore.fetchForVideo({ videoId }),
