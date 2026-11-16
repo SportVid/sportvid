@@ -5,6 +5,7 @@ networks:
 services:
   postgres:
     container_name: postgres
+    restart: unless-stopped
     image: postgres:14.17
     volumes:
       - /mnt/data/shared/db/:/var/lib/postgresql/data

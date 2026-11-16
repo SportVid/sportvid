@@ -27,6 +27,7 @@ volumes:
 services:
   inference_ray:
     container_name: inference_ray_prod
+    restart: unless-stopped
     user: "${UID:-1003}:${GID:-1003}"
     image: sportvid_prod-inference_ray:latest
     build:
@@ -74,6 +75,7 @@ services:
 
   analyser:
     container_name: analyser_prod
+    restart: unless-stopped
     user: "${UID:-1003}:${GID:-1003}"
     image: sportvid_prod-analyser:latest
     build:
@@ -102,6 +104,7 @@ services:
 
   memcached:
     container_name: memcached_prod
+    restart: unless-stopped
     image: memcached:1.6.10-buster
     command: -I 32m
     logging: *logging
@@ -110,6 +113,7 @@ services:
 
   valkey:
     container_name: valkey_prod
+    restart: unless-stopped
     image: valkey/valkey:8.1.1-alpine
     env_file:
       - /opt/deploy/.env.prod
@@ -138,6 +142,7 @@ services:
 
   celery-io:
     container_name: celery-io_prod
+    restart: unless-stopped
     user: "${UID:-1003}:${GID:-1003}"
     image: sportvid-celery-io_prod:latest
     build:
@@ -192,6 +197,7 @@ services:
 
   celery-gpu:
     container_name: celery-gpu_prod
+    restart: unless-stopped
     user: "${UID:-1003}:${GID:-1003}"
     image: sportvid-celery-gpu_prod:latest
     build:
@@ -256,6 +262,7 @@ services:
 
   backend:
     container_name: backend_prod
+    restart: unless-stopped
     user: "${UID:-1003}:${GID:-1003}"
     image: sportvid_prod-backend:latest
     build:
@@ -328,6 +335,7 @@ services:
 
   celery-exporter:
     container_name: celery-exporter_prod
+    restart: unless-stopped
     image: danihodovic/celery-exporter:latest
     env_file:
       - /opt/deploy/.env.prod
