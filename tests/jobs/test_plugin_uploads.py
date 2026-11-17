@@ -17,11 +17,20 @@ from backend.plugin_manager import PluginManager, run_plugin
 from backend.plugin_uploads import plugin_upload_root, remove_uploaded_files, uploaded_file_path
 from tests.factories import make_run
 
+PROBE = "upload_probe"
+
 
 @pytest.fixture
 def uploads(settings, tmp_path):
     settings.DATA_CACHE_ROOT = f"{tmp_path}/cache/"
     return plugin_upload_root()
+
+
+@pytest.fixture(autouse=True)
+def probe(register_plugin):
+    """A plugin without a parameter serializer, so _files reaches the task as the view built it.
+    Tests that need it to do something register it again."""
+    register_plugin(PROBE, lambda self, **kwargs: {})
 
 
 @pytest.fixture
@@ -36,8 +45,8 @@ def video(alice):
     return Video.objects.create(owner=alice, name="v", ext=".mp4")
 
 
-def submit(client, video, plugin="whisper", parameters=None, **files):
-    # whisper has no parameter serializer, so _files reaches the task as the view built it
+def submit(client, video, plugin=None, parameters=None, **files):
+    plugin = plugin or PROBE
     return client.post("/plugin/run/new", {"plugin": plugin, "video_id": video.id.hex,
                                            "parameters": json.dumps(parameters or {}), **files})
 
@@ -117,7 +126,7 @@ def test_the_task_reads_the_upload_and_the_folder_goes_when_it_is_done(
         with open(uploaded_file_path(parameters, "query_images"), "rb") as f:
             read.append(f.read())
         return {}
-    register_plugin("whisper", call)
+    register_plugin(PROBE, call)
     payload, run = _run_with_upload(client, video, enqueued_tasks)
 
     run_plugin(payload)
@@ -130,7 +139,7 @@ def test_the_task_reads_the_upload_and_the_folder_goes_when_it_is_done(
 def test_the_folder_goes_when_the_run_fails(client, video, uploads, enqueued_tasks, register_plugin):
     def call(self, **kwargs):
         raise RuntimeError("model crashed")
-    register_plugin("whisper", call)
+    register_plugin(PROBE, call)
     payload, run = _run_with_upload(client, video, enqueued_tasks)
 
     run_plugin(payload)
@@ -142,7 +151,7 @@ def test_the_folder_goes_when_the_run_fails(client, video, uploads, enqueued_tas
 
 def test_the_folder_stays_while_the_task_waits_to_retry(client, video, uploads, enqueued_tasks, register_plugin):
     """Waiting for a dependency (or the conversion) retries the same task with the same files."""
-    register_plugin("whisper", lambda self, **kwargs: {})
+    register_plugin(PROBE, lambda self, **kwargs: {})
     payload, run = _run_with_upload(client, video, enqueued_tasks)
     tracker = make_run(video, type="object_tracker", status=PluginRun.STATUS_RUNNING)
     payload["parameters"]["object_tracker_id"] = tracker.id.hex

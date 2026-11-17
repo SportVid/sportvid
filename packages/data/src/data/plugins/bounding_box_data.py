@@ -9,7 +9,8 @@ from ..manager import DataManager
 from ..data import Data
 from interface import analyser_pb2
 
-# TODO: insightface_detector & ocr both use BBoxData and the previous BBoxesData types!
+# The removed insightface_detector and ocr plugins wrote BboxData lists and an older BboxesData
+# schema; results of theirs from before the plugin cleanup (2026-11-17) may still be stored.
 @dataclass(kw_only=True)
 class BboxData(Data):
     image_id: int = None

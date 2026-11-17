@@ -41,7 +41,6 @@ services:
     shm_size: "8g" # NOTE: should be 30% of total available memory?
     environment:
       - HF_HOME=/models
-      - NUMBA_CACHE_DIR=/tmp
       - NVIDIA_VISIBLE_DEVICES=all
     env_file:
       - /opt/deploy/.env.dev

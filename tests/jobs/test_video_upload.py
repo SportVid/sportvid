@@ -46,9 +46,9 @@ def test_upload_enqueues_the_hls_conversion(client, alice, enqueued_tasks):
 
 
 def test_upload_passes_the_requested_analysers_on(client, alice, enqueued_tasks):
-    upload(client, analyser="shotdetection,thumbnail")
+    upload(client, analyser="object_tracker,thumbnail")
     [(_, _, analysers)] = conversions(enqueued_tasks)
-    assert analysers == ["shotdetection", "thumbnail"]
+    assert analysers == ["object_tracker", "thumbnail"]
 
 
 @pytest.mark.parametrize("fields, expected", [
