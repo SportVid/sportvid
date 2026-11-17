@@ -6,13 +6,14 @@ import logging
 import tempfile
 import hashlib
 import shutil
+import uuid
 from typing import Iterator, List
 from collections.abc import Iterable
 from pathlib import Path
 
 from .data import Data
 from .fs_handler import ZipFSHandler
-from .utils import create_data_path, generate_id
+from .utils import content_data_id, create_data_path, generate_id
 from utils.cache import Cache
 from interface import analyser_pb2
 
@@ -146,6 +147,50 @@ class DataManager:
             except FileNotFoundError:
                 pass
 
+    def exists(self, data_id: str) -> bool:
+        """Whether data with this ID is stored completely (writes are moved into place when done)."""
+        if not data_id:
+            return False
+        return os.path.exists(create_data_path(self.data_dir, data_id, "zip")) or (Path(self.data_dir) / data_id).is_dir()
+
+    def _partial_path(self, final_path: str) -> str:
+        return f"{final_path}.partial-{uuid.uuid4().hex[:8]}"
+
+    def _load_content_addressed(self, first_pkg, data_stream) -> tuple[Data, str]:
+        """Store an upload whose ID the client derived from its content (utils.content_data_id).
+
+        The file is written next to its final place and moved there only when it is complete
+        and its content matches the ID, so a reader never sees half a file and a corrupted
+        transfer never takes the place of the real one. Two uploads of the same file at the
+        same time both end in the same, identical file.
+        """
+        data_type, data_id = first_pkg.type, first_pkg.id
+        hash_stream = hashlib.sha1()
+        final_path = create_data_path(self.data_dir, data_id, "zip")
+        partial_path = self._partial_path(final_path)
+
+        def data_generator():
+            yield first_pkg
+            hash_stream.update(first_pkg.data_encoded)
+            for x in data_stream:
+                hash_stream.update(x.data_encoded)
+                yield x
+
+        data = self._data_enum_lut[data_type](id=data_id)
+        try:
+            data._register_fs_handler(ZipFSHandler(partial_path, mode="w"))
+            with data as d:
+                d.load_file_from_stream(data_generator())
+            file_hash = hash_stream.hexdigest()
+            if content_data_id(data_type, first_pkg.ext, file_hash) != data_id:
+                logging.error(f"Upload does not match its content ID {data_id}; discarded")
+                return None, file_hash
+            os.replace(partial_path, final_path)
+        finally:
+            if os.path.exists(partial_path):
+                os.remove(partial_path)
+        return self.load(data_id), file_hash
+
     def load_file_from_stream(self, data_stream: Iterable) -> tuple[Data, str]:
         data_stream = iter(data_stream)
         first_pkg = next(data_stream)
@@ -154,15 +199,18 @@ class DataManager:
 
         if first_pkg.type not in self._data_enum_lut:
             logging.error(f"No data class register with index {first_pkg.type}")
-            return None
+            return None, None
 
         data_type = first_pkg.type
+
+        if first_pkg.id and not self._is_video_asset_type(data_type):
+            return self._load_content_addressed(first_pkg, data_stream)
 
         if first_pkg.id is not None and len(first_pkg.id) > 0:
             data_id = first_pkg.id
             if os.path.exists(create_data_path(self.data_dir, data_id, "zip")) or (Path(self.data_dir) / data_id).exists():
                 logging.error(f"Data with id already exists {data_id}")
-                return None
+                return None, None
             data = self._data_enum_lut[data_type](id=data_id)
         else:
             data = self._data_enum_lut[data_type]()
@@ -235,9 +283,16 @@ class DataManager:
                 pass
             return self.load(data_id), hash_stream.hexdigest()
 
-        with open(output_path, "wb") as f_out:
-            for x in data_generator():
-                f_out.write(x)
+        # moved into place when complete, so exists() never reports half a file
+        partial_path = self._partial_path(output_path)
+        try:
+            with open(partial_path, "wb") as f_out:
+                for x in data_generator():
+                    f_out.write(x)
+            os.replace(partial_path, output_path)
+        finally:
+            if os.path.exists(partial_path):
+                os.remove(partial_path)
 
         return self.load(data_id), hash_stream.hexdigest()
 
