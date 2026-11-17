@@ -35,6 +35,12 @@ def _known_ids():
     return ids
 
 
+def _any_rows():
+    from backend.models import TrackingData, Video
+
+    return Video.objects.exists() or TrackingData.objects.exists()
+
+
 def _size(path: Path) -> int:
     if path.is_dir():
         return sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
@@ -86,6 +92,11 @@ def cleanup_media_orphans(delete=None, min_age_seconds=None):
     """
     delete = settings.ORPHAN_CLEANUP_DELETE if delete is None else delete
     orphans = find_media_orphans(min_age_seconds)
+    if delete and orphans and not _any_rows():
+        # An empty table next to a full media folder is a wrong database (fresh volume, wrong
+        # env file), not a folder full of orphans.
+        logger.error("Orphan cleanup refuses to delete: no video or tracking data row exists")
+        delete = False
     for path, size in orphans:
         removed = False
         if delete:
