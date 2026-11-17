@@ -215,9 +215,11 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour=3, minute=30),  # daily, 03:30 UTC
     },
 }
-# The cleanup looks for files under MEDIA_ROOT that belong to no row and are at least this
-# old (seconds). It only reports them (log event media.orphan) unless ORPHAN_CLEANUP_DELETE
-# is on; `manage.py cleanup_orphans` lists them by hand.
+# The cleanup looks for files under MEDIA_ROOT and DATA_OUTPUT_PATH (plugin results) that
+# belong to no row and are at least this old (seconds; plugin results at least
+# PLUGIN_RUN_TIMEOUT, because a task stores its results before it creates their rows). It only
+# reports them (log events media.orphan, predictions.orphan) unless ORPHAN_CLEANUP_DELETE is on;
+# `manage.py cleanup_orphans` lists them by hand.
 ORPHAN_CLEANUP_MIN_AGE = int(os.getenv("ORPHAN_CLEANUP_MIN_AGE", str(24 * 3600)))
 ORPHAN_CLEANUP_DELETE = os.getenv("ORPHAN_CLEANUP_DELETE", "false").strip().lower() in ("1", "true", "yes", "on")
 

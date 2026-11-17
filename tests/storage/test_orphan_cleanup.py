@@ -31,6 +31,7 @@ def put(path, age=OLD, directory=False):
 @pytest.fixture
 def media(db, settings, tmp_path):
     settings.MEDIA_ROOT = f"{tmp_path}/media/"
+    settings.DATA_OUTPUT_PATH = f"{tmp_path}/predictions/"  # absent here
     os.makedirs(settings.MEDIA_ROOT)
     return settings.MEDIA_ROOT
 
@@ -82,12 +83,12 @@ def test_a_row_created_while_the_folder_is_listed_keeps_its_file(media, monkeypa
 
     late = uuid.uuid4()
     put(media_path_to_file(late.hex, ".mp4"))
-    known_ids = cleanup._known_ids
+    known_ids = cleanup._known_media_ids
 
     def row_appears():
         make_video(make_user(), id=late, file=late)
         return known_ids()
-    monkeypatch.setattr(cleanup, "_known_ids", row_appears)
+    monkeypatch.setattr(cleanup, "_known_media_ids", row_appears)
 
     assert found() == []
 
@@ -120,7 +121,7 @@ def test_nothing_is_deleted_when_the_rows_cannot_be_read(media, settings, monkey
 
     def database_down():
         raise OperationalError("connection refused")
-    monkeypatch.setattr(cleanup, "_known_ids", database_down)
+    monkeypatch.setattr(cleanup, "_known_media_ids", database_down)
 
     with pytest.raises(OperationalError):
         cleanup_media_orphans()
@@ -194,7 +195,7 @@ def test_the_scheduled_task_follows_the_setting(media):
     from backend.tasks.convert_video import cleanup_orphans
 
     orphan = put(media_path_to_file(uuid.uuid4().hex, ".mp4"))
-    assert cleanup_orphans() == {"count": 1, "size": 10}
+    assert cleanup_orphans()["media"] == {"count": 1, "size": 10}
     assert os.path.exists(orphan)
 
 
@@ -202,10 +203,10 @@ def test_the_command_lists_and_deletes_only_on_request(media, capsys):
     make_video(make_user())
     orphan = put(media_path_to_file(uuid.uuid4().hex, ".mp4"))
 
-    call_command("cleanup_orphans")
+    call_command("cleanup_orphans", store="media")
     assert orphan in capsys.readouterr().out and os.path.exists(orphan)
 
-    call_command("cleanup_orphans", delete=True)
+    call_command("cleanup_orphans", store="media", delete=True)
     assert not os.path.exists(orphan)
 
 
