@@ -5,7 +5,7 @@ import os
 import json
 import uuid
 from celery import shared_task
-from celery.exceptions import MaxRetriesExceededError
+from celery.exceptions import MaxRetriesExceededError, Retry
 from django.conf import settings
 from django.utils import timezone
 from typing import Any, Dict, List, Optional, Type
@@ -18,6 +18,7 @@ from backend.models import (
     SportVidUser,
 )
 from backend.log_context import log_context, log_event
+from backend.plugin_uploads import remove_uploaded_files
 from backend.utils.events import publish_plugin_run
 from backend.utils.task import TaskFailure
 from data import DataManager
@@ -378,7 +379,15 @@ def run_plugin(self, args):
         plugin=args.get("plugin"), plugin_run_id=_hex(args.get("plugin_run")),
         video_id=_hex(args.get("video")), task_id=self.request.id,
     ):
-        return _run_plugin(self, args)
+        retrying = False
+        try:
+            return _run_plugin(self, args)
+        except Retry:
+            retrying = True  # the same task comes back with the same files
+            raise
+        finally:
+            if not retrying:
+                remove_uploaded_files(args.get("parameters"))
 
 
 def _run_plugin(self, args):

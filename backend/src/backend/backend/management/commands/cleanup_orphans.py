@@ -3,21 +3,25 @@ from django.core.management.base import BaseCommand
 from backend.cleanup import (
     cleanup_media_orphans,
     cleanup_prediction_orphans,
+    cleanup_upload_orphans,
     find_media_orphans,
     find_prediction_orphans,
+    find_upload_orphans,
 )
 
 STORES = {
     "media": (find_media_orphans, cleanup_media_orphans),
     "predictions": (find_prediction_orphans, cleanup_prediction_orphans),
+    "uploads": (find_upload_orphans, cleanup_upload_orphans),
 }
 
 
 class Command(BaseCommand):
     help = (
         "List the files under MEDIA_ROOT that belong to no video or tracking data row, and under "
-        "DATA_OUTPUT_PATH that belong to no plugin result (older than ORPHAN_CLEANUP_MIN_AGE; "
-        "results at least PLUGIN_RUN_TIMEOUT). Removes them only with --delete."
+        "DATA_OUTPUT_PATH that belong to no plugin result, and plugin-run uploads that a crashed "
+        "worker left (older than ORPHAN_CLEANUP_MIN_AGE; results and uploads at least "
+        "PLUGIN_RUN_TIMEOUT). Removes them only with --delete."
     )
 
     def add_arguments(self, parser):

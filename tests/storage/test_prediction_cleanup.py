@@ -206,7 +206,8 @@ def test_anything_outside_the_layout_is_ignored(predictions, run):
     assert found() == []
 
 
-def test_the_scheduled_task_and_command_cover_both_folders(predictions, run, capsys):
+def test_the_scheduled_task_and_command_cover_every_folder(predictions, run, capsys, settings, tmp_path):
+    settings.DATA_CACHE_ROOT = f"{tmp_path}/cache/"
     from backend.tasks.convert_video import cleanup_orphans
 
     PluginRunResult.objects.create(plugin_run=run, name="k", data_id=store_scalar(predictions),
@@ -215,7 +216,8 @@ def test_the_scheduled_task_and_command_cover_both_folders(predictions, run, cap
     age(files(predictions))
     size = os.path.getsize(zip_path(predictions, stray))
 
-    assert cleanup_orphans() == {"media": {"count": 0, "size": 0}, "predictions": {"count": 1, "size": size}}
+    assert cleanup_orphans() == {"media": {"count": 0, "size": 0}, "predictions": {"count": 1, "size": size},
+                                 "uploads": {"count": 0, "size": 0}}
 
     call_command("cleanup_orphans", store="predictions")
     assert zip_path(predictions, stray) in capsys.readouterr().out

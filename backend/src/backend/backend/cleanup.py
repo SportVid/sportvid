@@ -190,6 +190,31 @@ def find_prediction_orphans(min_age_seconds=None, now=None):
     return _find_orphans(predictions_root(), _known_prediction_ids, min_age, now)
 
 
+def find_upload_orphans(min_age_seconds=None, now=None):
+    """[(path, size in bytes)] of plugin-run upload folders (backend/plugin_uploads.py) that
+    are older than the minimum age and PLUGIN_RUN_TIMEOUT.
+
+    run_plugin removes a run's folder when the run is over, so what is left belongs to a run
+    whose worker died. The folder holds nothing else.
+    """
+    from backend.plugin_uploads import plugin_upload_root
+
+    root = Path(plugin_upload_root())
+    if not root.is_dir():
+        return []
+    now = time.time() if now is None else now
+    min_age = max(_min_age(min_age_seconds), settings.PLUGIN_RUN_TIMEOUT)
+    orphans = []
+    for entry in sorted(root.iterdir()):
+        try:
+            if now - entry.stat().st_mtime < min_age:
+                continue
+            orphans.append((entry, _size(entry)))
+        except OSError:
+            continue  # removed meanwhile
+    return orphans
+
+
 def cleanup_media_orphans(delete=None, min_age_seconds=None):
     """Report the orphans under MEDIA_ROOT and, if `delete`, remove them.
 
@@ -204,3 +229,9 @@ def cleanup_prediction_orphans(delete=None, min_age_seconds=None):
     """Like cleanup_media_orphans() for DATA_OUTPUT_PATH; logs predictions.orphan."""
     delete = settings.ORPHAN_CLEANUP_DELETE if delete is None else delete
     return _cleanup("predictions", find_prediction_orphans(min_age_seconds), delete, _any_prediction_rows)
+
+
+def cleanup_upload_orphans(delete=None, min_age_seconds=None):
+    """Like cleanup_media_orphans() for leftover plugin-run uploads; logs uploads.orphan."""
+    delete = settings.ORPHAN_CLEANUP_DELETE if delete is None else delete
+    return _cleanup("uploads", find_upload_orphans(min_age_seconds), delete, lambda: True)

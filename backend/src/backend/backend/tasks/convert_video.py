@@ -118,11 +118,13 @@ def safe_delete(paths):
 @shared_task
 def cleanup_orphans():
     """Scheduled by Celery beat (CELERY_BEAT_SCHEDULE): report, and with ORPHAN_CLEANUP_DELETE
-    remove, the files under MEDIA_ROOT and DATA_OUTPUT_PATH that belong to no row (backend/cleanup.py)."""
-    from backend.cleanup import cleanup_media_orphans, cleanup_prediction_orphans
+    remove, the files under MEDIA_ROOT and DATA_OUTPUT_PATH that belong to no row, and plugin-run
+    uploads left by crashed workers (backend/cleanup.py)."""
+    from backend.cleanup import cleanup_media_orphans, cleanup_prediction_orphans, cleanup_upload_orphans
 
     summary = {}
-    for store, cleanup in (("media", cleanup_media_orphans), ("predictions", cleanup_prediction_orphans)):
+    for store, cleanup in (("media", cleanup_media_orphans), ("predictions", cleanup_prediction_orphans),
+                           ("uploads", cleanup_upload_orphans)):
         count, size = cleanup()
         summary[store] = {"count": count, "size": size}
     return summary

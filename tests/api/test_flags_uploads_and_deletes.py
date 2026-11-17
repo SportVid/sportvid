@@ -106,16 +106,10 @@ def test_tracking_upload_whose_conversion_cannot_start_leaves_nothing_behind(cli
     assert _csv_files(settings.MEDIA_ROOT) == before
 
 
-def test_plugin_upload_that_is_too_large_leaves_no_temp_folder(client, alice, monkeypatch, tmp_path):
-    import tempfile
+def test_plugin_upload_that_is_too_large_leaves_no_temp_folder(client, alice, settings, tmp_path):
+    from backend.plugin_uploads import plugin_upload_root
 
-    made = []
-    real = tempfile.mkdtemp
-
-    def mkdtemp(dir=None):
-        made.append(real(dir=str(tmp_path)))
-        return made[-1]
-    monkeypatch.setattr(tempfile, "mkdtemp", mkdtemp)
+    settings.DATA_CACHE_ROOT = f"{tmp_path}/cache/"
     video = Video.objects.create(owner=alice, name="v", ext=".mp4")
     alice.max_file_size = 10
     alice.save()
@@ -124,4 +118,4 @@ def test_plugin_upload_that_is_too_large_leaves_no_temp_folder(client, alice, mo
                                         "file_extra": SimpleUploadedFile("big.bin", b"x" * 11)})
 
     assert r.status_code == 413
-    assert made and not os.path.exists(made[0])
+    assert os.listdir(plugin_upload_root()) == []

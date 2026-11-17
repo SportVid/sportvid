@@ -6,6 +6,7 @@ from typing import Dict, List
 
 from backend.models import PluginRun, PluginRunResult, Video, Timeline, SportVidUser
 from backend.plugin_manager import PluginManager
+from backend.plugin_uploads import uploaded_file_path
 from backend.utils.task import Task
 from data import DataManager
 from ..utils.analyser_client import TaskAnalyserClient
@@ -47,7 +48,9 @@ class InsightfaceIdentification(Task):
             # load query image
             image_data = manager.create_data("ImagesData")
             with image_data:
-                image_path = parameters.get("query_images")
+                image_path = uploaded_file_path(parameters, "query_images")
+                if image_path is None:
+                    raise ValueError("No query image was uploaded")
                 image = iio.imread(image_path)
                 image_data.save_image(image)
 

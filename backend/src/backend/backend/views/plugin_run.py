@@ -17,6 +17,7 @@ from backend.permissions import readable, unreadable_references, writable
 from backend.plugin_catalogue import is_available
 from backend.utils.storage import release_used_storage
 from backend.plugin_manager import PluginManager
+from backend.plugin_uploads import new_upload_dir
 from backend.utils import download_url, download_file, media_url_to_file
 from backend.utils.cancellation import active_plugin_runs, cancel_plugin_runs
 
@@ -65,7 +66,7 @@ class PluginRunNew(ApiView):
             if not is_available(data["plugin"]):
                 return JsonResponse({"status": "error", "type": "plugin_unavailable"}, status=400)
 
-            output_dir = tempfile.mkdtemp(dir="/tmp")
+            output_dir = new_upload_dir()
             file_parameters = {}
 
             for key, uploaded_file in request.FILES.items():
@@ -88,7 +89,7 @@ class PluginRunNew(ApiView):
                     return JsonResponse(download_result, status=413 if download_result.get("type") == "file_too_large" else 400)
                 file_parameters[m.group(1)] = {
                     "value": download_result["origin"],
-                    "path": download_result["path"],
+                    "path": str(download_result["path"]),  # the task payload is JSON
                 }
 
             if not file_parameters:
@@ -99,13 +100,19 @@ class PluginRunNew(ApiView):
 
             plugin_manager = PluginManager()
 
-            result = plugin_manager(
-                data["plugin"],
-                user=request.user,
-                video=video_db,
-                run_async=True,
-                parameters=parameters,
-            )
+            result = None
+            try:
+                result = plugin_manager(
+                    data["plugin"],
+                    user=request.user,
+                    video=video_db,
+                    run_async=True,
+                    parameters=parameters,
+                )
+            finally:
+                if not result:
+                    # no task will read the files (invalid parameters, enqueue failed)
+                    shutil.rmtree(output_dir, ignore_errors=True)
 
             if not result:
                 return JsonResponse(
