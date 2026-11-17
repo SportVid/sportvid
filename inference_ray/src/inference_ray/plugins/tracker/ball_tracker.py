@@ -133,13 +133,11 @@ Kicks (sudden changes of direction) are allowed where there is evidence for them
 
 Static-object filter (off by default)
 -------------------------------------
-Off by default (``static_filter: false``). Evaluated on the DSHS recordings (amateur football, GoPro HERO11,
-Kinexon positional ground truth), the filter removed more of the real ball than decoys: over a match the
-ball keeps passing the same image spots, and the cluster test does not require the object to stand still.
-Global linking already resists the decoys the filter was built for (ball recall on one clip 0.467 without
-the filter, 0.486 with it; the online pass 0.139 without). It is also a fixed-camera heuristic: a static
-object pans across the image of a moving camera. Kept as an option for fixed-camera footage where decoys
-defeat global linking.
+Off by default (``static_filter: false``); global linking (above) already keeps static decoys off the path.
+The cluster test does not require the object to stand still, so over a long clip the real ball, which keeps
+passing the same image spots, can form a cluster and be dropped with the decoys. It is also a fixed-camera
+heuristic: a static object pans across the image of a moving camera. Use it for fixed-camera footage where
+decoys defeat global linking.
 
 When enabled, a whole-clip pass before linking finds clusters of ball-class candidates within
 ``static_radius_px`` of one spot for at least ``static_min_hits`` frames spanning at least
