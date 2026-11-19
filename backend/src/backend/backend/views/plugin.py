@@ -8,7 +8,7 @@ from backend.models import Video, PluginRun
 from backend.permissions import readable
 from backend.plugin_catalogue import available_plugins
 from backend.plugin_manager import PluginManager
-from backend.utils.api import ApiView
+from backend.utils.api import ApiView, query_flag
 
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class PluginList(ApiView):
             else:
                 analyses = readable(PluginRun, request.user)
 
-            add_results = request.GET.get("add_results")
+            add_results = query_flag(request, "add_results")
             if add_results:
                 entries = []
                 for x in analyses:

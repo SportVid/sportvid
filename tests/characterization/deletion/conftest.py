@@ -47,6 +47,10 @@ class FakeFFmpeg:
     def __call__(self, file_in, manifest, asynchronous=True, **args):
         self.calls.append((file_in, manifest))
         asset_dir = os.path.dirname(manifest)
+        if not os.path.isdir(asset_dir):
+            # The video was deleted and its folder went with it (post_delete): FFmpeg starts,
+            # cannot open its output and exits with an error.
+            return types.SimpleNamespace(stdout=io.StringIO(""), poll=lambda: 1, wait=lambda: 1)
         media = os.path.basename(manifest).replace(".m3u8", ".mp4")
         with open(manifest, "w") as f:
             f.write(f'#EXTM3U\n#EXT-X-MAP:URI="{media}"\n#EXTINF:5.0,\n{media}\n#EXT-X-ENDLIST\n')

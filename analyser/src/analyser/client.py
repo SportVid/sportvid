@@ -12,7 +12,16 @@ import msgpack
 
 
 from data import DataManager
+from data.utils import content_data_id
 from interface import analyser_pb2, analyser_pb2_grpc
+
+
+def _file_sha1(path, chunk_size=1024 * 1024):
+    sha1 = hashlib.sha1()
+    with open(path, "rb") as f:
+        while chunk := f.read(chunk_size):
+            sha1.update(chunk)
+    return sha1.hexdigest()
 
 
 def parse_args():
@@ -58,6 +67,10 @@ class AnalyserClient:
         return response
 
     def upload_data(self, data):
+        # data IDs are unique and data is never changed, so what the analyser has is the same
+        if self.check_data(data.id):
+            return data.id
+
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
 
         def generate_requests(data, chunk_size=128 * 1024):
@@ -92,6 +105,12 @@ class AnalyserClient:
             data_type = analyser_pb2.TRACKING_DATA
         stub = analyser_pb2_grpc.AnalyserStub(self.channel)
 
+        # The ID follows from the content: a file the analyser already has (every plugin run
+        # on a video uploads it) is not sent and not stored again.
+        data_id = content_data_id(data_type, ext, _file_sha1(path))
+        if self.check_data(data_id):
+            return data_id
+
         class RequestGenerator:
             def __init__(self, path, chunk_size=128 * 1024):
                 self.chunk_size = chunk_size
@@ -109,7 +128,7 @@ class AnalyserClient:
                         yield analyser_pb2.UploadFileRequest(
                             type=data_type,
                             data_encoded=data,
-                            id=None,
+                            id=data_id,
                             ext=ext,
                             filename=filename,
                         )
@@ -121,8 +140,7 @@ class AnalyserClient:
         while try_count > 0:
             generator = RequestGenerator(path)
             response = stub.upload_file(generator())
-            if response.hash == generator.hash() and response.success:
-                print(response.id)
+            if response.hash == generator.hash() and response.success and response.id == data_id:
                 return response.id
             logging.warning("Retrying to upload the data again...")
             try_count -= 1

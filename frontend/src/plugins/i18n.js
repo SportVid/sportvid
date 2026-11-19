@@ -51,7 +51,8 @@ if (messages.de) {
 
 export const i18n = createI18n({
   locale: process.env.VUE_APP_I18N_LOCALE,
-  fallbackLocale: process.env.VUE_APP_I18N_FALLBACK_LOCALE,
+  // keys missing in the active locale are shown in English instead of as raw keys
+  fallbackLocale: process.env.VUE_APP_I18N_FALLBACK_LOCALE || "en",
   messages,
   legacy: false,
   warnHtmlMessage: false,

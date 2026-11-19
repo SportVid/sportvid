@@ -23,10 +23,10 @@ def run_new(client, video, plugin, parameters=None):
 
 
 def test_available_lists_plugins_whose_ray_plugins_are_all_deployed(client, alice, deployed_ray_plugins):
-    del deployed_ray_plugins["whisper"]  # video_to_audio stays deployed
+    del deployed_ray_plugins["calibration_lens_solve"]  # calibration_static_dlt stays deployed
     plugins = client.get("/plugin/available").json()["plugins"]
-    assert "object_tracker" in plugins and "audio_rms" in plugins
-    assert "whisper" not in plugins
+    assert "object_tracker" in plugins and "calibration_static_dlt" in plugins
+    assert "calibration_lens_solve" not in plugins  # needs both
 
 
 def test_unavailable_plugin_is_rejected_before_a_run_exists(client, alice, deployed_ray_plugins, enqueued_tasks):

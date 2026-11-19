@@ -87,6 +87,14 @@ def map_error_status(response):
     return response
 
 
+def query_flag(request, name, default=False):
+    """A boolean query parameter. axios sends `false` as the string "false", which is truthy."""
+    value = request.GET.get(name)
+    if value is None or value == "":
+        return default
+    return value.strip().lower() not in ("false", "0", "no", "off")
+
+
 def parse_json_object(body):
     """The request body as a dict ({} when empty), or None if it isn't a JSON object."""
     if not body:

@@ -31,9 +31,10 @@ def test_run_records_the_validated_parameters(client, video, enqueued_tasks):
     assert r.json()["entry"]["parameters"] == run.parameters  # exposed in the API
 
 
-def test_uploaded_files_are_recorded_by_name_only(client, video, enqueued_tasks):
-    # whisper has no parameter serializer, so _files reaches the task (serializers drop it)
-    r = client.post("/plugin/run/new", {"plugin": "whisper", "video_id": video.id.hex, "parameters": "{}",
+def test_uploaded_files_are_recorded_by_name_only(client, video, enqueued_tasks, register_plugin):
+    # a plugin without a parameter serializer, so _files reaches the task (serializers drop it)
+    register_plugin("upload_probe", lambda self, **kwargs: {})
+    r = client.post("/plugin/run/new", {"plugin": "upload_probe", "video_id": video.id.hex, "parameters": "{}",
                                         "file_extra": SimpleUploadedFile("calib.json", b"{}")})
     run = PluginRun.objects.get(id=r.json()["plugin_run_id"])
     assert run.parameters["_files"] == {"extra": "calib.json"}
@@ -42,27 +43,27 @@ def test_uploaded_files_are_recorded_by_name_only(client, video, enqueued_tasks)
 def test_each_analyser_job_appends_the_ray_plugin_version(video, deployed_ray_plugins):
     from backend.utils.task import Task
 
-    run = PluginRun.objects.create(video=video, type="whisper", status=PluginRun.STATUS_RUNNING)
-    deployed_ray_plugins.update({"video_to_audio": "0.1", "whisper": "0.3"})
+    run = PluginRun.objects.create(video=video, type="calibration_lens_solve", status=PluginRun.STATUS_RUNNING)
+    deployed_ray_plugins.update({"calibration_static_dlt": "0.1", "calibration_lens_solve": "0.3"})
     client = types.SimpleNamespace(
         plugin_run_db=run,
         run_plugin=lambda *a, **k: "job",
         get_plugin_results=lambda **k: types.SimpleNamespace(outputs=[]),
     )
-    Task().run_analyser(client, "video_to_audio")
-    Task().run_analyser(client, "whisper")
+    Task().run_analyser(client, "calibration_static_dlt")
+    Task().run_analyser(client, "calibration_lens_solve")
     run.refresh_from_db()
-    assert run.provenance == [{"ray_plugin": "video_to_audio", "version": "0.1"},
-                              {"ray_plugin": "whisper", "version": "0.3"}]
+    assert run.provenance == [{"ray_plugin": "calibration_static_dlt", "version": "0.1"},
+                              {"ray_plugin": "calibration_lens_solve", "version": "0.3"}]
 
 
 def test_failed_analyser_job_records_nothing(video):
     from backend.utils.task import Task
 
-    run = PluginRun.objects.create(video=video, type="whisper", status=PluginRun.STATUS_RUNNING)
+    run = PluginRun.objects.create(video=video, type="calibration_static_dlt", status=PluginRun.STATUS_RUNNING)
     client = types.SimpleNamespace(plugin_run_db=run, run_plugin=lambda *a, **k: "job",
                                    get_plugin_results=lambda **k: None)
-    assert Task().run_analyser(client, "whisper") is None
+    assert Task().run_analyser(client, "calibration_static_dlt") is None
     run.refresh_from_db()
     assert run.provenance is None
 

@@ -68,6 +68,17 @@ VALKEY_PASSWORD = os.getenv("VALKEY_PASSWD") or None
 # it is not enforced by the threads pool the workers use.
 PLUGIN_RUN_TIMEOUT = int(os.getenv("PLUGIN_RUN_TIMEOUT", str(12 * 3600)))
 
+# A plugin run interrupted by a worker restart or crash is started again once, if it was last
+# heard of within this many seconds (backend/plugin_runs.py). 0 turns the re-queue off;
+# interrupted runs are then only marked UNKNOWN.
+PLUGIN_RUN_REQUEUE_WINDOW = int(os.getenv("PLUGIN_RUN_REQUEUE_WINDOW", str(24 * 3600)))
+
+# Limits of one HLS conversion, enforced inside the task (tasks/convert_video.py) for the same
+# reason: after HLS_CONVERSION_TIMEOUT seconds in total, or HLS_STALL_TIMEOUT seconds without
+# a progress line from FFmpeg, FFmpeg is stopped and the video ends in ERROR.
+HLS_CONVERSION_TIMEOUT = int(os.getenv("HLS_CONVERSION_TIMEOUT", "7200"))
+HLS_STALL_TIMEOUT = int(os.getenv("HLS_STALL_TIMEOUT", "600"))
+
 # Video encoder of the HLS conversion: "nvenc" (GPU), "x264" (CPU) or "auto", which uses
 # NVENC when the gpu worker can encode with it (utils.video_converter.nvenc_available).
 HLS_ENCODER = os.getenv("HLS_ENCODER", "auto").strip().lower()
@@ -197,15 +208,20 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"}
 ]
 
-# Celery beat (crontab)
-# TODO: not detecting task, fix this....
-# CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
-# CELERY_BEAT_SCHEDULE = {
-#     'cleanup-orphans': {
-#         'task': 'tibava.backend.tasks.convert_video.cleanup_upload_orphans',
-#         'schedule': crontab(hour='*/1'),  # hourly schedule for cleanup
-#     },
-# }
+# Celery beat (the celery-beat service in the compose files) runs the scheduled tasks.
+CELERY_BEAT_SCHEDULE = {
+    "cleanup-orphans": {
+        "task": "backend.tasks.convert_video.cleanup_orphans",
+        "schedule": crontab(hour=3, minute=30),  # daily, 03:30 UTC
+    },
+}
+# The cleanup looks for files under MEDIA_ROOT and DATA_OUTPUT_PATH (plugin results) that
+# belong to no row and are at least this old (seconds; plugin results at least
+# PLUGIN_RUN_TIMEOUT, because a task stores its results before it creates their rows). It only
+# reports them (log events media.orphan, predictions.orphan) unless ORPHAN_CLEANUP_DELETE is on;
+# `manage.py cleanup_orphans` lists them by hand.
+ORPHAN_CLEANUP_MIN_AGE = int(os.getenv("ORPHAN_CLEANUP_MIN_AGE", str(24 * 3600)))
+ORPHAN_CLEANUP_DELETE = os.getenv("ORPHAN_CLEANUP_DELETE", "false").strip().lower() in ("1", "true", "yes", "on")
 
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 LANGUAGE_CODE = "en-us"

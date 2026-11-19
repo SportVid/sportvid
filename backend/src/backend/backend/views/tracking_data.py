@@ -5,6 +5,7 @@ from django.views import View
 from django.http import JsonResponse
 from django.conf import settings
 from pathlib import Path
+from rest_framework import serializers
 
 from backend.utils.storage import add_used_storage, quota_exceeded_response, release_used_storage, would_exceed_quota
 from backend.plugin_manager import PluginManager
@@ -131,12 +132,18 @@ class TrackingDataUpload(ApiView):
                     if request.POST.get("team_id_ref"):
                         analyser_params["team_id_ref"] = request.POST.get("team_id_ref")
   
-                _ = self.submit_analyse(
-                    plugins=["posdata_convert"],
-                    video=video_db,
-                    user=request.user,
-                    parameters=analyser_params
-                )
+                try:
+                    _ = self.submit_analyse(
+                        plugins=["posdata_convert"],
+                        video=video_db,
+                        user=request.user,
+                        parameters=analyser_params
+                    )
+                except Exception:
+                    # Without its conversion the upload is of no use and was not counted against
+                    # the quota yet: remove the row, and with it the files (post_delete).
+                    tracking_data_db.delete()
+                    raise
 
                 tracking_data_id_hex = tracking_data_db.id.hex if not tracking_data_db.file.hex else tracking_data_db.id.hex
                 
@@ -160,6 +167,9 @@ class TrackingDataUpload(ApiView):
                 )
             return JsonResponse({"status": "error", "type": "missing_values"}, status=500)  # no file
 
+        except serializers.ValidationError as e:
+            # e.g. a kinexon upload for a video without a pitch size
+            return JsonResponse({"status": "error", "type": "validation_error", "errors": e.detail}, status=400)
         except Exception:
             logger.exception("TrackingDataUpload::failed")
             return JsonResponse({"status": "error"}, status=500)

@@ -420,6 +420,7 @@
         v-if="parameter.field == 'slider'"
         :key="parameter.name"
         :data-tour="parameter.dataTour || undefined"
+        :class="{ 'hint-warning mb-4': parameter.hintWarning }"
       >
         <v-row v-if="parameter.hint_left && parameter.hint_right">
           <v-col cols="3" style="display: flex; justify-content: flex-end">
@@ -437,7 +438,11 @@
               :hint="parameter.hint"
               thumb-label="always"
               persistent-hint
-            />
+            >
+              <template v-if="parameter.hintWarning" #message="{ message }">
+                <v-icon size="small" class="mr-1">mdi-alert-circle-outline</v-icon>{{ message }}
+              </template>
+            </v-slider>
           </v-col>
           <v-col cols="3">{{ parameter.hint_right }}</v-col>
         </v-row>
@@ -455,7 +460,11 @@
           thumb-label="always"
           persistent-hint
           class="mt-4"
-        />
+        >
+          <template v-if="parameter.hintWarning" #message="{ message }">
+            <v-icon size="small" class="mr-1">mdi-alert-circle-outline</v-icon>{{ message }}
+          </template>
+        </v-slider>
       </div>
 
       <div v-if="parameter.field == 'buttongroup'" :key="parameter.name" class="mt-8">
@@ -780,5 +789,15 @@ onMounted(() => {
 <style scoped>
 .checkbox-label-spacing .v-label {
   margin-left: 6px;
+}
+
+/* `hintWarning` on a parameter: its hint is a warning (orange, full opacity, icon) instead of
+   the usual grey helper text. */
+.hint-warning :deep(.v-messages) {
+  opacity: 1;
+}
+.hint-warning :deep(.v-messages__message) {
+  color: rgb(var(--v-theme-warning));
+  line-height: 1.3;
 }
 </style>

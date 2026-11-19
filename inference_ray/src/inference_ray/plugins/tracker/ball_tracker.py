@@ -9,75 +9,35 @@ Integration with SportVid:
 
 There is at most one ball in play, so this is not multi-object tracking: per frame the ball
 detections are *candidates*, and the tracker picks at most one of them as the ball. It works on the
-full candidate list of the clip (post-hoc, after the frame loop). Two ways to pick the path
-(``linking``) share the stages around them:
+full candidate list of the clip (post-hoc, after the frame loop), in two stages:
 
-1. **Static-object filter** (whole clip, below): decoys that never move are dropped.
-2. **Linking**: ``global`` (default) -- short tracklets, then one best path through them for the
-   whole clip -- or ``online`` -- a frame-by-frame Kalman track with re-acquisition.
-3. **Segment refinement**: per track segment a confidence-weighted RTS smoother validates the weak
+1. **Global linking**: short tracklets, decoy spots left out (below), then one best path through them for the
+   whole clip.
+2. **Segment refinement**: per track segment a confidence-weighted RTS smoother validates the weak
    detections, finds kick corners and fills gaps.
 
-Defaults: global linking, pixel gates, the continuous white-noise acceleration model, a fixed ``max_gap``
-for gap filling and a static filter without the co-occurrence rule (``static_cooccur`` off). Given the
-camera's motion it also handles a moving camera (below).
+Given the camera's motion it also handles a moving camera (below).
 
-Online linking
---------------
-A constant-velocity Kalman filter (image pixels) predicts where the ball should be next. The
-candidate nearest that prediction, weighted by its confidence, continues the track if it lies inside
-the gate. The track restarts (after ``max_missed`` frames, or after ``switch_frames`` frames with a
-confident candidate elsewhere while the gate holds only weak ones or none) at the most confident
-candidate >= ``init_conf`` *only* if it is within ``reacquire_px`` of where the ball was last
-genuinely seen -- a confident candidate anywhere else (including before the ball has ever been seen)
-is not trusted on a single frame; it goes through the re-acquisition path below like any weak
-detection, since confidence alone does not distinguish the ball from a static, clearly-lit decoy (a
-cone, a spare ball).
+Detection confidence is used throughout, so a weak false positive cannot hijack the track while the real
+ball is unseen:
 
-Detection confidence is used throughout, so a weak false positive cannot hijack the track
-while the real ball is unseen:
-
-* Gate: it grows by ``gate_growth_px`` per missed frame, but only in proportion to the
-  candidate's confidence (0 at ``min_conf``, full at ``init_conf``). A weak candidate is only
-  accepted near the prediction (``gate_px``), however long the ball has been missing.
+* Gate: it grows by ``gate_growth_px`` per missed frame, but only in proportion to the candidate's
+  confidence (0 at ``min_conf``, full at ``init_conf``). A weak candidate is only accepted near the
+  prediction (``gate_px``), however long the ball has been missing.
 * Kalman update: measurement noise ``meas_px / conf`` -- a weak detection barely moves the filter.
-
-Re-acquisition from weak detections: while the ball is unseen, candidates the active track
-does not take start *provisional* tracks with their own small Kalman filter
-(``tentative_gate_px``, up to ``tentative_max_missed`` unseen frames). One that collects
-``confirm_frames`` consistent detections is confirmed and its detections are written back.
-It must be plausible as the ball it replaces:
-
-* starting within ``reacquire_px`` of the last known ball position: accepted (a ball at rest
-  where it was lost is fine);
-* starting further away: it must move (>= ``min_move_px`` over its detections -- static clutter
-  such as a sign, a cone or a spare ball never confirms) and start within a radius that grows
-  from ``reacquire_px`` by ``reacquire_growth_px`` per frame since the loss, up to
-  ``reacquire_max_px``; once the radius is at its maximum, any moving track qualifies;
-* weak candidates on the upper part of a player box (``tentative_skip_body``: head / torso
-  clutter) are ignored -- the ball is at the feet or in the air, rarely in front of a torso;
-* in every case its last ``confirm_frames`` detections must fit a constant-velocity line within
-  ``tentative_resid_px`` RMS, and "moving" is the distance covered along the longest recent run
-  that does -- hopping between static clutter spots is neither smooth nor moving;
-* before the first track of the clip, any moving track qualifies.
-
-Provisional tracks run whenever the ball is unseen -- while the active track coasts as well as
-after it is lost -- and a confirmed one takes over. If it starts within ``max_gap`` frames of the
-last detection it continues that segment, so the gap between them is filled; otherwise it starts
-a new one. A candidate >= ``init_conf`` still (re)acquires immediately; if a provisional track
-runs into it (its prediction reaches the candidate), that track's weak detections are kept as
-the lead-in of the new one.
+* Weak candidates on the upper part of a player box (``tentative_skip_body``: head / torso clutter) start
+  no tracklet -- the ball is at the feet or in the air, rarely in front of a torso.
 
 Global linking
 --------------
-Association is solved for the whole clip instead of greedily frame by frame, with the same pixel
-gates as the online pass:
+Association is solved for the whole clip instead of greedily frame by frame:
 
 * **Tracklets**: short, unambiguous chains of candidates, each with its own constant-velocity Kalman
   filter (any number in parallel; every unclaimed candidate starts one, except weak ones on a
-  player's upper body, ``tentative_skip_body``). A candidate joins a chain inside the online gate
+  player's upper body, ``tentative_skip_body``). A candidate joins a chain inside the gate
   (``gate_px`` + ``gate_growth_px`` per unseen frame, scaled by confidence; + ``kick_vel_px`` after
-  a touch), greedily by the online cost. A chain ends after ``tracklet_max_missed`` unseen frames.
+  a touch), greedily by its distance to the prediction. A chain ends after ``tracklet_max_missed`` unseen
+  frames.
   Single weak detections (fewer than ``min_tracklet_len`` and none >= ``init_conf``) are discarded.
 * **One best path** through the tracklets (dynamic programming; tracklets on the path never overlap
   in time). Path score = sum of tracklet scores + link scores:
@@ -118,9 +78,9 @@ Kicks (sudden changes of direction) are allowed where there is evidence for them
   than ``corner_dv_px`` -- and significantly, given both filters' velocity uncertainty, so an
   unsettled estimate after a gap or at a segment end is no corner -- the velocity is reset there
   and the path bends instead of cutting the corner.
-* Players as a hint (``player_hint``): a ball within ``foot_reach`` player box widths of a
-  player's foot point may be kicked. The smoother resets the velocity there; the online pass and
-  the tracklets widen the gate after such a touch (``kick_vel_px`` extra, and full growth while the
+* Players as a hint (``player_hint``, off by default; the kick-corner test above finds kicks without players):
+  a ball within ``foot_reach`` player box widths of a player's foot point may be kicked. The smoother resets the velocity there; the tracklets widen
+  the gate after such a touch (``kick_vel_px`` extra, and full growth while the
   ball is unseen even for weak candidates, since a kicked ball is blurred); and at the foot the later
   side's support alone is enough to keep a weak detection (the earlier side can overshoot when
   the ball was trapped out of sight).
@@ -131,20 +91,20 @@ Kicks (sudden changes of direction) are allowed where there is evidence for them
   so the final smoothing weights it as ``init_conf``; gap fills follow the smoothed path, shifted
   to meet the kept detections on both sides.
 
-Static-object filter
---------------------
-Before linking, a whole-clip pass finds clusters of ball-class candidates within
-``static_radius_px`` of one spot for at least ``static_min_hits`` frames spanning at least
-``static_min_span`` frames -- a cone, a spare ball, a goal-area marking, anything the detector
-repeatedly calls "ball" without it ever moving. Nothing online reliably catches these: a single
-confident detection (re)acquires immediately when it lands near where the ball was last seen, which
-a decoy near the ball's own resting spot (kickoff, a stoppage) satisfies as well as the real ball.
+Decoy tracklets
+---------------
+A spot where the detector calls something "ball" that never moves -- a cone, a spare ball, a marking -- yields
+tracklets that stand still, and the more steadily it is detected, the longer they get. The path search rewards
+every detection, so a decoy seen in nearly every frame outscores the real ball's broken-up tracklets and the whole
+output sits on it. Before the path search (``decoy_tracklets``, on by default), tracklets that stand still (90 % of
+their detections within ``decoy_radius_px`` of their median) are grouped by location; a group whose detections span
+``decoy_min_span`` frames or more and fill at least ``decoy_min_share`` of that span is a decoy spot, and its
+tracklets, plus any tracklet lying entirely on it, are left out of the path.
 
-A cluster is dropped only if in at least ``static_cooccur`` of its frames another candidate (not
-static itself, conf >= ``static_cooccur_conf``, more than two radii away) is visible: a cone or a
-spare ball coexists with the ball in play, a ball resting alone for a set piece does not, and is
-kept. ``static_cooccur <= 0`` (the default) drops every static cluster. Where the detector often misses
-the real ball, decoys look "alone" as well, so the rule can keep them.
+Only tracklets that stand still count, so a ball that keeps passing the same image spot (in play, it moves) is never
+a decoy. ``decoy_min_span`` (60 s at 30 fps) is far longer than any rest of a ball in play (a set piece), and the
+share keeps a spot where the ball rests now and then over a match (a corner arc, the penalty spot) from qualifying.
+Clips shorter than ``decoy_min_span`` are never filtered.
 
 Frame rate and motion model
 ---------------------------
@@ -153,10 +113,9 @@ Frame-based parameters are given at ``REFERENCE_FPS`` (30) and scaled to the pro
 per-frame motion (px / frame) by 30 / fps, the acceleration by (30 / fps)^2, per-frame costs by 30 / fps.
 At 30 fps nothing changes.
 
-``motion_model``: ``"cwna"`` (default) -- continuous white-noise acceleration, Q_n = q [[n^3/3, n^2/2],
-[n^2/2, n]] per axis with q = ``accel_px``^2 at 30 fps: the noise injected per second does not depend on
-the frame rate, so the scaling is exact. ``"pwca"`` -- piecewise-constant acceleration per frame:
-Q_1 = ``accel_px``^2 [[1/4, 1/2], [1/2, 1]], only approximately rate-free.
+Motion model: continuous white-noise acceleration, Q_n = q [[n^3/3, n^2/2], [n^2/2, n]] per axis with
+q = ``accel_px``^2 at 30 fps: the noise injected per second does not depend on the frame rate, so the scaling
+is exact.
 
 Camera motion
 -------------
@@ -164,16 +123,15 @@ If the caller passes a camera motion (``inputs["camera_motion"]``, a ``CameraMot
 ``camera_motion.py``: frame-to-frame homographies; ``None`` for a fixed camera), the tracker compensates it. All tracking geometry stays in the *current frame's* pixels, so
 every pixel parameter keeps its meaning however far the camera moves:
 
-* every Kalman step (online track, provisional tracks, tracklets, the refinement's filters and
-  smoother) predicts in the previous frame and maps the state into the next one: position through the
+* every Kalman step (tracklets, the refinement's filters and smoother) predicts in the previous frame and maps the state into the next one: position through the
   homography, velocity and covariance through its Jacobian (the smoother uses the linearised step);
-* comparisons across frames (re-acquisition near the last seen position, continuation and resume
-  links, the constant-velocity checks of new chains) map the earlier position into the later frame;
+* comparisons across frames (continuation and resume links, the constant-velocity checks of new chains)
+  map the earlier position into the later frame;
 * a step whose estimate failed (``CameraMotion.ok``) adds ``cam_fail_px``^2 to the position variance
   instead of trusting a guess;
-* only the static-object filter needs one plane for the whole clip: frame 0's (the chained
-  homographies), with ``static_radius_px`` converted per candidate by the local scale of that mapping.
-  The chain drifts slowly, so a decoy seen across a long camera move may split into two clusters.
+* only the decoy rule needs one plane for the whole clip: frame 0's (the chained homographies,
+  ``CameraMotion.to_mosaic``), with ``decoy_radius_px`` converted by the local scale of that mapping. The chain
+  drifts slowly, so a decoy seen across a long camera move may split into two spots.
 
 
 State (one dict per frame):
@@ -181,7 +139,7 @@ State (one dict per frame):
         "frame_id": int,
         "ball_box": np.ndarray (4,) tlwh | None,
         "ball_score": float,           # detection confidence; 0 when interpolated / missing
-        "ball_segment": int,           # track segment (re-acquisitions start a new one); -1 if none
+        "ball_segment": int,           # track segment (a restart or resume starts a new one); -1 if none
         "ball_status": "detected" | "interpolated" | "none",
         "ball_sigma": float | None     # smoothed position std (px); None if no ball
     }
@@ -211,45 +169,38 @@ _START, _CONT, _RESUME, _RESTART = 0, 1, 2, 3
 
 REFERENCE_FPS = 30.0      # the rate the frame-based defaults are given at
 
-# the defaults; the backend serializer (default_kalman_ball_params) holds the same values
+# the defaults; the backend serializer (KalmanBallTrackerParamsSerializer) lets a request override a few of them
 DEFAULTS: Dict[str, Any] = {
     "min_conf": 0.10, "init_conf": 0.40,
-    "linking": "global",
-    # gating (online pass, tracklets, continuation links)
+    # gating (tracklets, continuation links)
     "gate_px": 60.0, "gate_growth_px": 20.0, "kick_vel_px": 30.0,
-    # online pass
-    "max_missed": 15, "switch_frames": 3,
-    # re-acquisition / eligibility of new chains
-    "confirm_frames": 4, "tentative_gate_px": 30.0, "tentative_max_missed": 2, "reacquire_px": 60.0,
-    "reacquire_growth_px": 15.0, "reacquire_max_px": 400.0, "min_move_px": 20.0, "tentative_resid_px": 6.0,
-    "tentative_skip_body": 0.75,
+    # eligibility of new chains, resume links
+    "confirm_frames": 4, "reacquire_px": 60.0, "reacquire_max_px": 400.0, "min_move_px": 20.0,
+    "tentative_resid_px": 6.0, "tentative_skip_body": 0.75,
     # global linking
     "tracklet_max_missed": 5, "min_tracklet_len": 2, "link_max_gap": 60, "link_trim_max": 3, "resume_max_gap": 900,
     "det_reward": 2.0, "miss_cost": 0.2, "resume_cost": 3.0, "birth_cost": 6.0, "lr_scale": 2.0,
     "support_sigma_px": 60.0,
     # motion / measurement model
-    "motion_model": "cwna", "accel_px": 4.0, "meas_px": 2.0,
+    "accel_px": 4.0, "meas_px": 2.0,
     # camera motion compensation (when the pipeline passes a camera motion)
     "cam_fail_px": 20.0,
     # segment refinement
-    "max_gap": 10, "outlier_px": 25.0, "corner_dv_px": 5.0, "player_hint": True, "foot_reach": 1.5,
-    # static-object filter
-    "static_filter": True, "static_radius_px": 12.0, "static_min_hits": 60, "static_min_span": 150,
-    "static_cooccur": 0.0, "static_cooccur_conf": 0.25,
+    "max_gap": 20, "outlier_px": 25.0, "corner_dv_px": 5.0, "player_hint": False, "foot_reach": 1.5,
+    # decoy tracklets (left out of the path)
+    "decoy_tracklets": True, "decoy_radius_px": 12.0, "decoy_min_span": 1800, "decoy_min_share": 0.25,
     # below this decoding rate the ball is not tracked (``usable``)
     "min_fps": 10.0,
 }
 
 # how each frame-based parameter scales with k = REFERENCE_FPS / fps
-_DURATION_FRAMES = ("max_missed", "switch_frames", "tentative_max_missed", "tracklet_max_missed", "link_max_gap",
-                    "resume_max_gap", "max_gap", "static_min_span")                  # / k
-_EVIDENCE_HITS = ("static_min_hits",)     # / k: hits of a static object over its (scaled) span; at least 3
-_PER_FRAME_PX = ("gate_px", "gate_growth_px", "kick_vel_px", "tentative_gate_px", "reacquire_growth_px",
-                 "corner_dv_px", "cam_fail_px")          # * k: motion per frame
+_DURATION_FRAMES = ("tracklet_max_missed", "link_max_gap", "resume_max_gap", "max_gap", "decoy_min_span")  # / k
+_PER_FRAME_PX = ("gate_px", "gate_growth_px", "kick_vel_px", "corner_dv_px", "cam_fail_px")    # * k: motion per frame
 _PER_FRAME2_PX = ("accel_px",)            # * k^2: acceleration per frame^2
 _PER_FRAME_COST = ("miss_cost",)          # * k: cost per frame -> constant cost per second
 # not scaled: confidences, likelihood terms (lr_scale, det_reward, *_cost per event), distances that do not depend
-# on the frame step (outlier_px, reacquire_px, reacquire_max_px, min_move_px, support_sigma_px, static_radius_px),
+# on the frame step (outlier_px, reacquire_px, reacquire_max_px, min_move_px, support_sigma_px, decoy_radius_px),
+# shares (decoy_min_share),
 # measurement noise (meas_px, tentative_resid_px), box fractions, counts of detections (confirm_frames,
 # min_tracklet_len, link_trim_max: evidence, not durations) and min_fps
 # keys of the tracker config read elsewhere (Tracker base class: refiners)
@@ -262,8 +213,6 @@ def scale_to_fps(params: Dict[str, Any], fps: float) -> Dict[str, Any]:
     out = dict(params)
     for key in _DURATION_FRAMES:
         out[key] = max(1, int(round(params[key] / k)))
-    for key in _EVIDENCE_HITS:
-        out[key] = max(3, int(round(params[key] / k)))
     for key in _PER_FRAME_PX + _PER_FRAME_COST:
         out[key] = float(params[key]) * k
     for key in _PER_FRAME2_PX:
@@ -329,18 +278,13 @@ class _Motion:
     """Constant-velocity model on the ball centre, state [x, y, vx, vy], one step per frame.
 
     ``accel_px`` is already scaled to the processing rate (``scale_to_fps``: * k^2, k = 30 / fps).
-    CWNA: Q_n = q [[n^3/3, n^2/2], [n^2/2, n]] per axis with q = accel_ref^2 * k^3 = accel_px^2 / k, so the
-    noise injected per second does not depend on fps. PWCA: Q_1 = accel_px^2 [[1/4, 1/2], [1/2, 1]] per
-    axis, Q_n by composing n steps. Measurement noise: (``meas_px`` / conf)^2. ``vel_scale`` k also scales
+    Continuous white-noise acceleration: Q_n = q [[n^3/3, n^2/2], [n^2/2, n]] per axis with
+    q = accel_ref^2 * k^3 = accel_px^2 / k, so the noise injected per second does not depend on fps. Measurement noise: (``meas_px`` / conf)^2. ``vel_scale`` k also scales
     the velocity priors (initial and kick variance, given in px / frame at 30 fps)."""
 
-    def __init__(self, kind: str, accel_px: float, meas_px: float, vel_scale: float = 1.0):
-        if kind not in ("cwna", "pwca"):
-            raise ValueError(f"ball_tracker: motion_model must be 'cwna' or 'pwca', got {kind!r}")
+    def __init__(self, accel_px: float, meas_px: float, vel_scale: float = 1.0):
         k = float(vel_scale)
-        self.kind = kind
         self.q = accel_px ** 2 / k
-        self.Q1_axis = accel_px ** 2 * np.array([[0.25, 0.5], [0.5, 1.0]])
         self.meas_px = float(meas_px)
         self.v0 = (30.0 * k) ** 2                                    # unknown initial velocity
         kv = _KICK_VAR * k ** 2
@@ -354,13 +298,7 @@ class _Motion:
         if n not in self._cache:
             F = np.eye(4)
             F[0, 2] = F[1, 3] = n
-            if self.kind == "cwna":
-                a = self.q * np.array([[n ** 3 / 3.0, n ** 2 / 2.0], [n ** 2 / 2.0, float(n)]])
-            else:
-                a = np.zeros((2, 2))
-                for i in range(n):
-                    Fi = np.array([[1.0, i], [0.0, 1.0]])
-                    a += Fi @ self.Q1_axis @ Fi.T
+            a = self.q * np.array([[n ** 3 / 3.0, n ** 2 / 2.0], [n ** 2 / 2.0, float(n)]])
             self._cache[n] = (F, np.kron(a, _I2))
         return self._cache[n]
 
@@ -409,21 +347,6 @@ class _Motion:
         return x, IKH @ P @ IKH.T + r2 * (K @ K.T)
 
 
-class _CVKalman:
-    """A running filter on ``_Motion`` (online pass and provisional tracks)."""
-
-    def __init__(self, xy, m: _Motion):
-        self.m = m
-        self.x, self.P = m.init(xy)
-
-    def predict(self, kick: bool = False, W: Optional[np.ndarray] = None, cam_var: float = 0.0) -> np.ndarray:
-        self.x, self.P, _ = self.m.predict(self.x, self.P, kick, W, cam_var)
-        return self.x[:2]
-
-    def update(self, xy, conf: float = 1.0) -> None:
-        self.x, self.P = self.m.update(self.x, self.P, xy, conf)
-
-
 def _filter(z: np.ndarray, conf: np.ndarray, kick_into: np.ndarray, m: _Motion,
             warps: Optional[Sequence] = None, cam_var: Optional[np.ndarray] = None):
     """Forward Kalman pass over consecutive frames.
@@ -459,27 +382,6 @@ def _smooth(xp, Pp, xf, Pf, Fe) -> Tuple[np.ndarray, np.ndarray]:
         xs[t] = xf[t] + C @ (xs[t + 1] - xp[t + 1])
         Ps[t] = Pf[t] + C @ (Ps[t + 1] - Pp[t + 1]) @ C.T
     return xs, Ps
-
-
-class _Tentative:
-    """A provisional track started from a weak candidate (online pass)."""
-
-    def __init__(self, i: int, row: np.ndarray, xy: np.ndarray, m: _Motion):
-        self.kf = _CVKalman(xy, m)
-        self.kf.update(xy, row[4])
-        self.picks = [(i, row.copy())]          # (frame, [x, y, w, h, conf])
-        self.xy = [np.asarray(xy, dtype=np.float64)]
-        self.misses = 0
-
-    def hit(self, i: int, row: np.ndarray, xy: np.ndarray) -> None:
-        self.kf.update(xy, row[4])
-        self.picks.append((i, row.copy()))
-        self.xy.append(np.asarray(xy, dtype=np.float64))
-        self.misses = 0
-
-    @property
-    def mean_conf(self) -> float:
-        return float(np.mean([r[4] for _, r in self.picks]))
 
 
 class _Tracklet:
@@ -518,10 +420,7 @@ class BallTracker(Tracker):
         self.params = c
         for key, default in DEFAULTS.items():
             setattr(self, key, type(default)(c[key]))
-        self.linking, self.motion_model = self.linking.lower(), self.motion_model.lower()
-        if self.linking not in ("online", "global"):
-            raise ValueError(f"ball_tracker: linking must be 'online' or 'global', got {self.linking!r}")
-        self.model = _Motion(self.motion_model, self.accel_px, self.meas_px, self.vel_scale)
+        self.model = _Motion(self.accel_px, self.meas_px, self.vel_scale)
         self.camera_motion: Optional[CameraMotion] = None    # of the last track() call
         self._cm: Optional[CameraMotion] = None
         self._failcum = None
@@ -547,94 +446,6 @@ class BallTracker(Tracker):
             a[:, 2:4] -= a[:, 0:2]              # xyxy -> tlwh
             cands.append(a)
         return cands
-
-    def _filter_static(self, candidates: List[np.ndarray]) -> List[np.ndarray]:
-        """Drop decoys (see the module docstring): clusters (radius ``static_radius_px``) with >=
-        ``static_min_hits`` hits spanning >= ``static_min_span`` frames, in >= ``static_cooccur`` of whose
-        frames another candidate (not static, conf >= ``static_cooccur_conf``, > 2 radii away) is visible.
-        Clusters are grown densest first from 3x3 grid neighbourhoods and re-centred on their median, so a
-        spot on a grid-cell edge is found as one. With camera motion, positions are in frame 0's plane and
-        distances are converted back to each candidate's own frame pixels (local scale ``sc``)."""
-        if not self.static_filter or sum(len(c) for c in candidates) < self.static_min_hits:
-            return candidates
-        fr = np.concatenate([np.full(len(c), i) for i, c in enumerate(candidates)]).astype(np.int64)
-        idx = np.concatenate([np.arange(len(c)) for c in candidates]).astype(np.int64)
-        xy = np.concatenate([c[:, :2] + c[:, 2:4] / 2.0 for c in candidates])
-        conf = np.concatenate([c[:, 4] for c in candidates])
-        sc = np.ones(len(xy))                                 # plane px per frame px
-        if self._cm is not None:
-            Hm = self._cm.to_mosaic(fr)
-            sc = np.sqrt(np.abs(np.linalg.det(h_jacobian(Hm, xy))))
-            xy = apply_h(Hm, xy)
-        rad = max(self.static_radius_px, 1e-6)
-        cell = np.floor(xy / (rad * float(np.median(sc)))).astype(np.int64)
-        keys = cell[:, 0] * 1_000_003 + cell[:, 1]
-        by_cell: Dict[int, List[int]] = {}
-        for p, kk in enumerate(keys):
-            by_cell.setdefault(int(kk), []).append(p)
-        cell_xy = {int(kk): (int(cx), int(cy)) for kk, cx, cy in zip(keys, cell[:, 0], cell[:, 1])}
-
-        def neighbourhood(cx, cy):
-            out = []
-            for dx in (-1, 0, 1):
-                for dy in (-1, 0, 1):
-                    out.extend(by_cell.get((cx + dx) * 1_000_003 + (cy + dy), ()))
-            return out
-
-        dens = sorted(((len(neighbourhood(*cell_xy[kk])), kk) for kk in by_cell), reverse=True)
-        assigned = np.zeros(len(xy), dtype=bool)
-        clusters = []
-        for cnt, kk in dens:
-            if cnt < self.static_min_hits:
-                break
-            pts = np.array([p for p in neighbourhood(*cell_xy[kk]) if not assigned[p]], dtype=np.int64)
-            if pts.size < self.static_min_hits:
-                continue
-            centre = np.median(xy[pts], axis=0)
-            member = pts
-            for _ in range(2):                                # re-centre on the points in range
-                member = pts[np.linalg.norm(xy[pts] - centre, axis=1) / sc[pts] <= rad]
-                if not member.size:
-                    break
-                centre = np.median(xy[member], axis=0)
-            frames = np.unique(fr[member]) if member.size else np.zeros(0, dtype=np.int64)
-            if frames.size < self.static_min_hits or frames[-1] - frames[0] < self.static_min_span:
-                continue
-            assigned[member] = True
-            clusters.append((member, centre, frames))
-        if not clusters:
-            return candidates
-
-        partner = ~assigned & (conf >= self.static_cooccur_conf)
-        drop = np.zeros(len(xy), dtype=bool)
-        n_drop_loc = n_keep_loc = 0
-        for member, centre, frames in clusters:
-            if self.static_cooccur <= 0:
-                frac = 1.0
-            else:
-                ok = partner & np.isin(fr, frames) & (np.linalg.norm(xy - centre, axis=1) / sc > 2.0 * rad)
-                frac = np.unique(fr[ok]).size / frames.size
-            if frac >= self.static_cooccur:
-                drop[member] = True
-                n_drop_loc += 1
-            else:
-                n_keep_loc += 1
-        if not drop.any():
-            logger.info("ball_tracker: static-object filter kept %d static location(s) seen alone (ball at rest)",
-                        n_keep_loc)
-            return candidates
-        dropped: Dict[int, set] = {}
-        for p in np.flatnonzero(drop):
-            dropped.setdefault(int(fr[p]), set()).add(int(idx[p]))
-        out = []
-        for i, c in enumerate(candidates):
-            if i in dropped:
-                c = c[[j for j in range(len(c)) if j not in dropped[i]]]
-            out.append(c)
-        logger.info("ball_tracker: static-object filter dropped %d candidate(s) at %d decoy location(s) (never moving "
-                    "ball-class detections, e.g. a cone or a spare ball), kept %d static location(s) seen alone "
-                    "(ball at rest)", int(drop.sum()), n_drop_loc, n_keep_loc)
-        return out
 
     def process(self, inputs: Dict[Any, Any], **kwargs) -> List[Dict[str, Any]]:
         """``inputs``: ``detections`` (per-frame detector output), optionally ``players`` (per-frame player
@@ -733,9 +544,8 @@ class BallTracker(Tracker):
         if camera_motion is not None:
             fv = np.array([self._fail_var(t) for t in range(n)])
             self._failcum = np.cumsum(fv)                     # sum of the failed steps' variance into frame t
-        cands = self._filter_static([np.asarray(c, dtype=np.float64).reshape(-1, 5) for c in candidates])
-        link = self._link_global if self.linking == "global" else self._link_online
-        box, score, seg, n_seg, info = link(cands, player_feet)
+        cands = [np.asarray(c, dtype=np.float64).reshape(-1, 5) for c in candidates]
+        box, score, seg, n_seg, info = self._link_global(cands, player_feet)
 
         status = np.where(seg >= 0, 1, 0)
         sigma = np.full(n, np.nan)
@@ -751,156 +561,19 @@ class BallTracker(Tracker):
                       for i in range(n)]
         self.frame_id = n
         n_det, n_int = int((status == 1).sum()), int((status == 2).sum())
-        logger.info("ball_tracker (%s linking): ball in %d/%d frames (%d detected, %d interpolated), %d segment(s), "
-                    "%s; %d weak detection(s) dropped as outliers, %d kick corner(s)%s%s.", self.linking, n_det + n_int,
+        logger.info("ball_tracker: ball in %d/%d frames (%d detected, %d interpolated), %d segment(s), "
+                    "%s; %d weak detection(s) dropped as outliers, %d kick corner(s)%s%s.", n_det + n_int,
                     n, n_det, n_int, n_seg, info, stats[0], stats[1],
                     "" if player_feet is not None else " (no player hint)",
                     "" if camera_motion is None else " (camera compensated)")
         return self.state
 
-    # -- online linking -------------------------------------------------------
-    def _link_online(self, candidates: List[np.ndarray], player_feet: Optional[List[np.ndarray]]):
-        """Frame-by-frame pass. Returns per-frame box, score, segment, the number of segments and a log note."""
-        n = len(candidates)
-        box = np.full((n, 4), np.nan)
-        score = np.zeros(n)
-        seg = np.full(n, -1, dtype=np.int64)
-
-        kf, missed, far_hits, segment = None, 0, 0, -1
-        at_foot = False                 # last seen at a player's foot -> may have been kicked since
-        last_seen = None                # (frame, centre) of the last detection of a confirmed track
-        tentatives: List[_Tentative] = []
-        n_confirmed = n_lead_in = 0
-        for i, c in enumerate(candidates):
-            centres = c[:, :2] + c[:, 2:4] / 2.0 if len(c) else np.zeros((0, 2))
-            W, cv = self._cam_step(i)                       # camera motion into this frame
-            pick = None
-            if kf is not None:
-                pred = kf.predict(at_foot and missed == 0, W, cv)  # the velocity jumps once, at the touch
-                gate = self._gate(missed, c[:, 4], at_foot) if len(c) else np.zeros(0)
-                d = np.linalg.norm(centres - pred, axis=1) if len(c) else np.zeros(0)
-                inside = np.flatnonzero(d <= gate)
-                # a confident candidate outside the gate while the track has only weak ones inside (or
-                # none): after switch_frames such frames the track is on clutter / the ball went elsewhere
-                strong_out = bool(len(c)) and bool((c[d > gate, 4] >= self.init_conf).any())
-                weak_in = not (c[inside, 4] >= self.init_conf).any() if inside.size else True
-                far_hits = far_hits + 1 if (strong_out and weak_in) else 0
-                if far_hits >= self.switch_frames:
-                    kf, inside = None, np.zeros(0, int)       # re-acquire below
-                elif inside.size:
-                    # nearest to the prediction, confident candidates preferred
-                    pick = int(inside[np.argmin(d[inside] / gate[inside] - 0.5 * c[inside, 4])])
-                    kf.update(centres[pick], c[pick, 4])
-                    missed = 0
-                else:
-                    missed += 1
-                    if missed > self.max_missed:
-                        kf = None           # lost -> re-acquire below
-            if kf is None:
-                strong = np.flatnonzero(c[:, 4] >= self.init_conf) if len(c) else np.zeros(0, int)
-                # an *immediate* re-acquire: only for a confident candidate near where the ball was
-                # last genuinely seen (a ball at rest where it was lost reappearing there, say). Any
-                # other confident candidate -- far away, or before the ball has ever been seen -- must
-                # instead earn it via the tentative/_plausible path below, same as a weak detection:
-                # otherwise a static, confidently-detected decoy (a cone, a spare ball) far from the
-                # last known position would be trusted on a single frame with no check it ever moves.
-                near = (strong[np.linalg.norm(centres[strong] - self._map(last_seen[1], last_seen[0], i), axis=1)
-                               <= self.reacquire_px]
-                        if strong.size and last_seen is not None else np.zeros(0, dtype=int))
-                if near.size:
-                    pick = int(near[np.argmax(c[near, 4])])
-                    segment += 1
-                    missed, far_hits = 0, 0
-                    lead = self._lead_in(tentatives, centres[pick], W, cv)
-                    if lead is not None:        # a provisional track runs into it: keep its detections
-                        for j, row in lead.picks:
-                            box[j], score[j], seg[j] = row[:4], row[4], segment
-                        kf = lead.kf
-                        kf.update(centres[pick], c[pick, 4])
-                        n_lead_in += len(lead.picks)
-                    else:
-                        kf = _CVKalman(centres[pick], self.model)
-            if pick is not None:
-                box[i], score[i], seg[i] = c[pick, :4], c[pick, 4], segment
-                at_foot = self._near_foot(player_feet, i, centres[pick])
-                last_seen = (i, centres[pick])
-                tentatives = []
-                continue
-            # the ball is unseen (track coasting or lost): look for it among the weak candidates
-            ok = ~self._on_body(player_feet, i, centres)
-            tr = self._step_tentatives(tentatives, i, c[ok], centres[ok], last_seen, W, cv)
-            if tr is not None:              # confirmed: take it over and write its detections back
-                first = tr.picks[0][0]
-                join = last_seen is not None and first - last_seen[0] <= self.max_gap + 1
-                segment += 0 if join else 1
-                for j, row in tr.picks:
-                    box[j], score[j], seg[j] = row[:4], row[4], segment
-                kf, missed, far_hits, tentatives = tr.kf, 0, 0, []
-                at_foot = self._near_foot(player_feet, tr.picks[-1][0], tr.xy[-1])
-                last_seen = (tr.picks[-1][0], tr.xy[-1])
-                n_confirmed += 1
-        info = f"{n_confirmed} re-acquired from weak detections, {n_lead_in} weak lead-in detection(s)"
-        return box, score, seg, segment + 1, info
-
-    def _step_tentatives(self, tentatives: List[_Tentative], i: int, c: np.ndarray, centres: np.ndarray,
-                         last_seen, W: Optional[np.ndarray] = None, cv: float = 0.0) -> Optional[_Tentative]:
-        """Advance the provisional tracks by frame ``i`` (in place; ``W``, ``cv``: the camera step into it)
-        and return one that is now confirmed, if any."""
-        used = set()
-        for tr in sorted(tentatives, key=lambda t: -len(t.picks)):   # longer tracks choose first
-            pred = tr.kf.predict(False, W, cv)
-            gate = self.tentative_gate_px + self.gate_growth_px * tr.misses
-            d = np.linalg.norm(centres - pred, axis=1) if len(c) else np.zeros(0)
-            free = [j for j in np.argsort(d) if j not in used and d[j] <= gate]
-            if free:
-                tr.hit(i, c[free[0]], centres[free[0]])
-                used.add(free[0])
-            else:
-                tr.misses += 1
-        tentatives[:] = [t for t in tentatives if t.misses <= self.tentative_max_missed]
-        for j in range(len(c)):                                        # unclaimed candidates start new ones
-            if j not in used:
-                tentatives.append(_Tentative(i, c[j], centres[j], self.model))
-        ready = [t for t in tentatives if t.misses == 0 and len(t.picks) >= self.confirm_frames
-                 and self._plausible(t, last_seen)]
-        return max(ready, key=lambda t: (len(t.picks), t.mean_conf)) if ready else None
-
-    def _lead_in(self, tentatives: List[_Tentative], xy: np.ndarray, W: Optional[np.ndarray] = None,
-                 cv: float = 0.0) -> Optional[_Tentative]:
-        """The provisional track (>= 2 detections) whose prediction for this frame reaches ``xy``,
-        i.e. the weak detections of the ball just before a confident one; longest first."""
-        for tr in sorted(tentatives, key=lambda t: -len(t.picks)):
-            if len(tr.picks) < 2:
-                continue
-            pred = tr.kf.predict(False, W, cv)
-            if np.linalg.norm(pred - xy) <= self.tentative_gate_px + self.gate_growth_px * tr.misses:
-                return tr
-        return None
-
-    def _plausible(self, tr: _Tentative, last_seen) -> bool:
-        """Could this provisional track be the ball that was lost at ``last_seen``? Its recent
-        detections must lie on a smooth (constant-velocity) path; "moving" means covering at least
-        ``min_move_px`` along it -- hopping between static clutter spots is neither."""
-        frames = [i for i, _ in tr.picks[-30:]]               # _cv_motion looks at the last 30 at most
-        xy = self._common_xy(frames, tr.xy[-30:], frames[-1])
-        covered = _cv_motion(np.asarray(frames), xy, self.confirm_frames, self.tentative_resid_px)
-        if covered < 0:
-            return False
-        moving = covered >= self.min_move_px
-        if last_seen is None:
-            return moving
-        f0 = tr.picks[0][0]
-        dist = float(np.linalg.norm(tr.xy[0] - self._map(last_seen[1], last_seen[0], f0)))
-        if dist <= self.reacquire_px:
-            return True
-        radius = self.reacquire_px + self.reacquire_growth_px * (tr.picks[0][0] - last_seen[0])
-        return moving and (dist <= radius or radius >= self.reacquire_max_px)
-
     # -- global linking: tracklets --------------------------------------------
     def _link_global(self, candidates: List[np.ndarray], player_feet: Optional[List[np.ndarray]]):
-        """Tracklets, then the best path through them. Same outputs as ``_link_online``."""
+        """Tracklets, then the best path through them. Returns per-frame box, score, segment, the number of
+        segments and a log note."""
         n = len(candidates)
-        tracklets = self._build_tracklets(candidates, player_feet)
+        tracklets, decoy_info = self._drop_decoys(self._build_tracklets(candidates, player_feet))
         path = self._best_path(tracklets)
         box = np.full((n, 4), np.nan)
         score = np.zeros(n)
@@ -916,7 +589,7 @@ class BallTracker(Tracker):
             box[f], score[f], seg[f] = tr["rows"][:keep, :4], tr["rows"][:keep, 4], segment
         info = (f"{len(path)} of {len(tracklets)} tracklet(s) on the path ({n_links[_CONT]} continued, "
                 f"{n_links[_RESUME]} resumed, {n_links[_RESTART] + n_links[_START]} started; {n_trimmed} weak tail "
-                f"detection(s) trimmed)")
+                f"detection(s) trimmed){decoy_info}")
         return box, score, seg, segment + 1, info
 
     def _build_tracklets(self, candidates: List[np.ndarray], feet: Optional[List[np.ndarray]]) -> List[Dict[str, Any]]:
@@ -1009,6 +682,59 @@ class BallTracker(Tracker):
                 "start": int(a0), "end": int(a1), "xs": xs0, "Ps": Ps0,
                 "xfd": np.asarray(tr.xf), "Pfd": np.asarray(tr.Pf), "dscore": dscore, "weak": conf < self.init_conf,
                 "eligible": bool(eligible), "node": float(dscore.sum())}
+
+    def _drop_decoys(self, T: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], str]:
+        """Remove the tracklets of decoy spots (see the module docstring) before the path search. A tracklet
+        stands still if 90 % of its detections lie within ``decoy_radius_px`` of their median (one plane for
+        the clip: frame 0's with camera motion, the radius converted by the mapping's local scale); still
+        tracklets with >= ``confirm_frames`` detections are grouped by location, largest first; a group is a
+        decoy spot if its first to last detection span >= ``decoy_min_span`` frames and its detections fill
+        >= ``decoy_min_share`` of that span. Removed: the group's tracklets and any tracklet whose detections
+        all lie on a decoy spot. Returns the kept tracklets and a note for the log."""
+        if not self.decoy_tracklets or not T:
+            return T, ""
+        rad = max(self.decoy_radius_px, 1e-6)
+        plane, scale = [], []
+        for t in T:
+            xy = np.asarray(t["xy"], dtype=np.float64).reshape(-1, 2)
+            sc = np.ones(len(xy))
+            if self._cm is not None:
+                Hm = self._cm.to_mosaic(np.asarray(t["frames"]))
+                sc = np.sqrt(np.abs(np.linalg.det(h_jacobian(Hm, xy))))
+                xy = apply_h(Hm, xy)
+            plane.append(xy)
+            scale.append(sc)
+        centre = np.array([np.median(xy, axis=0) for xy in plane])
+        still = np.array([len(t["frames"]) >= self.confirm_frames and
+                          np.quantile(np.linalg.norm(plane[k] - centre[k], axis=1) / scale[k], 0.9) <= rad
+                          for k, t in enumerate(T)])
+        idx = np.flatnonzero(still)
+        idx = idx[np.argsort([-len(T[k]["frames"]) for k in idx], kind="stable")]
+        assigned = np.zeros(len(T), dtype=bool)
+        spots = []                                           # (centre in the plane, member tracklets)
+        for k in idx:
+            if assigned[k]:
+                continue
+            near = idx[~assigned[idx] & (np.linalg.norm(centre[idx] - centre[k], axis=1)
+                                         / float(np.median(scale[k])) <= rad)]
+            assigned[near] = True
+            frames = np.unique(np.concatenate([T[j]["frames"] for j in near]))
+            span = int(frames[-1] - frames[0]) + 1
+            if span >= self.decoy_min_span and frames.size >= self.decoy_min_share * span:
+                spots.append((np.median(np.vstack([plane[j] for j in near]), axis=0), near))
+        if not spots:
+            return T, ""
+        drop = np.zeros(len(T), dtype=bool)
+        for c, near in spots:
+            drop[near] = True
+            for k in np.flatnonzero(~drop):                  # short pieces on the spot (any length)
+                if (np.linalg.norm(plane[k] - c, axis=1) / scale[k] <= rad).all():
+                    drop[k] = True
+        n_det = int(sum(len(T[k]["frames"]) for k in np.flatnonzero(drop)))
+        logger.info("ball_tracker: %d decoy spot(s) (still for >= %d frames): %d tracklet(s), %d detection(s) not "
+                    "linked", len(spots), self.decoy_min_span, int(drop.sum()), n_det)
+        return ([t for k, t in enumerate(T) if not drop[k]],
+                f"; {len(spots)} decoy spot(s), {int(drop.sum())} tracklet(s) removed")
 
     # -- global linking: best path --------------------------------------------
     def _continuations(self, b: Dict[str, Any], s: int, xe: np.ndarray, Pe: np.ndarray, fe: np.ndarray,

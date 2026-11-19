@@ -209,10 +209,29 @@ class CalibrationStaticDlt(Task):
                 data_db.apply_calibration(calibration)
                 logging.debug(f"Updated homography matrix {homography_matrix} for calibration asset {data_db.id}")
 
+        if plugin_run is not None:
+            # Saved with the run's final DONE status (the plugin manager writes the whole instance).
+            plugin_run.outcome = self.calibration_outcome(lens_intrinsics, calibration.lens_notice)
+
         return {
             "plugin_run": plugin_run.id.hex,
             # "plugin_run_results": [plugin_run_result_db.id.hex],
             # "data": {"homography": result[1]["homography"].id},
+        }
+
+    @staticmethod
+    def calibration_outcome(lens_intrinsics: Optional[Dict], lens_notice: Optional[Dict]) -> Dict:
+        """The run's outcome (PluginRun.outcome): which lens the homography was fitted with -- the run type
+        alone doesn't say, calibration_lens_solve may have fallen back to none -- and, for that fallback,
+        why as a notice."""
+        if lens_intrinsics is None:
+            return {"variant": "no_lens", "details": {}, "notices": [lens_notice] if lens_notice else []}
+        if lens_intrinsics.get("model") == "angular":
+            return {"variant": "lens_solved", "details": {}, "notices": []}
+        return {
+            "variant": "lens_profile",
+            "details": {"name": lens_intrinsics.get("lens_profile_name") or lens_intrinsics.get("model")},
+            "notices": [],
         }
 
     def lens_intrinsics(

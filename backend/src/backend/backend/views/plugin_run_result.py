@@ -8,7 +8,7 @@ from django.conf import settings
 from backend.models import PluginRunResult, Video, PluginRun
 from backend.permissions import readable
 from data import DataManager
-from backend.utils.api import ApiView
+from backend.utils.api import ApiView, query_flag
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class PluginRunResultList(ApiView):
 
             analyzes = readable(PluginRunResult, request.user).filter(**query_dict).select_related("plugin_run")
 
-            add_results = request.GET.get("add_results", True)
+            add_results = query_flag(request, "add_results", default=True)
             # exclude_types[] (type names, e.g. "KPI") makes this a light listing: the listed types
             # are left out and the others come without data. The analysis view loads data per
             # run on demand (stores/plugin_run_result.js forPluginRunWithData).

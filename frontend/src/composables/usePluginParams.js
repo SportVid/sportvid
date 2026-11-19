@@ -48,6 +48,10 @@ const OBJECT_TRACKER_DETECTOR_ITEMS = {
   yolox_dancetrack: { title: "YOLOX-X DanceTrack (dance)", value: "yolox_dancetrack" },
   yolox_sportsmot: { title: "YOLOX-X SportsMOT (team sports)", value: "yolox_sportsmot" },
   yolox_sn_player: { title: "YOLOX-L SoccerNet (Player)", value: "yolox_sn_player" },
+  yolox_sn_player_sahi: {
+    title: "YOLOX-L SoccerNet tiles (Player, far players, slow)",
+    value: "yolox_sn_player_sahi",
+  },
   yolox_sn_ball: { title: "YOLOX-L SoccerNet (Ball)", value: "yolox_sn_ball" },
   yolox_sn_ball_zoom2: { title: "YOLOX-L SoccerNet x2 (Ball, slow)", value: "yolox_sn_ball_zoom2" },
   yolo11: { title: "YOLO11-X COCO (Ultralytics)", value: "yolo11" },
@@ -63,6 +67,7 @@ const PLAYER_TARGET_DETECTORS = [
   "yolox_dancetrack",
   "yolox_sportsmot",
   "yolox_sn_player",
+  "yolox_sn_player_sahi",
   "yolo11",
   "yolo11_l",
   "yolo11_sn_player",
@@ -109,6 +114,7 @@ const DETECTOR_PARAM_VISIBILITY = {
   yolox_dancetrack: YOLOX_PARAMS,
   yolox_sportsmot: YOLOX_PARAMS,
   yolox_sn_player: YOLOX_PARAMS,
+  yolox_sn_player_sahi: YOLOX_PARAMS,
   yolox_sn_ball: YOLOX_PARAMS,
   yolox_sn_ball_zoom2: YOLOX_PARAMS,
   yolo11: YOLO_ULTRALYTICS_PARAMS,
@@ -128,6 +134,8 @@ const DETECTOR_PARAM_DEFAULTS = {
   yolox_dancetrack: { confidence_threshold: 0.2, nms_thresh: 0.65, batch_size: 1 },
   yolox_sportsmot: { confidence_threshold: 0.2, nms_thresh: 0.65, batch_size: 1 },
   yolox_sn_player: { confidence_threshold: 0.35, nms_thresh: 0.45, batch_size: 1 },
+  // batch_size = tiles per forward pass
+  yolox_sn_player_sahi: { confidence_threshold: 0.35, nms_thresh: 0.45, batch_size: 2 },
   // low floor on purpose: the backend's ball tracker gates weak candidates itself
   yolox_sn_ball: { confidence_threshold: 0.1, nms_thresh: 0.45, batch_size: 4 },
   yolox_sn_ball_zoom2: { confidence_threshold: 0.1, nms_thresh: 0.45, batch_size: 4 },
@@ -171,6 +179,7 @@ const OBJECT_TRACKER_CLASSES_BY_TARGET = {
     yolox_dancetrack: [0],
     yolox_sportsmot: [0],
     yolox_sn_player: [0],
+    yolox_sn_player_sahi: [0],
     yolo11: [0],
     yolo11_l: [0],
     yolo11_sn_player: [0],
@@ -178,6 +187,9 @@ const OBJECT_TRACKER_CLASSES_BY_TARGET = {
     rfdetr_sn_player: [0],
   },
 };
+
+// Keep in sync with default_kalman_ball_params["min_fps"] (backend serializers/object_tracker.py).
+const BALL_TRACKER_MIN_FPS = 10;
 
 export function objectTrackerClasses(target, detector) {
   return OBJECT_TRACKER_CLASSES_BY_TARGET[target]?.[detector];
@@ -335,7 +347,27 @@ export function setGroupedValue(grouped, p) {
 //    so this must stay driven by tracking_target alone and never by experience mode.
 // `parameters`/`optionalParameters` are refs (or computeds) of parameter arrays.
 export function watchObjectTrackerSelection(parameters, optionalParameters) {
+  const { t } = useI18n();
   const find = (list, name) => list.value.find((p) => p.name === name);
+  // Below the Kalman ball tracker's min_fps the backend silently skips ball tracking and
+  // writes the raw ball candidates instead -- warn right under the fps slider. Only for
+  // ball runs: player runs detect no ball class, so the ball tracker has nothing to do.
+  watch(
+    () => [find(parameters, "tracking_target")?.value, find(parameters, "fps")?.value],
+    ([target, fps]) => {
+      const param = find(parameters, "fps");
+      if (!param) return;
+      // the parameter lists can arrive after setup (ModalPlugin's computed), so the slider's
+      // own hint is remembered on the parameter itself the first time it is seen
+      if (!("defaultHint" in param)) param.defaultHint = param.hint;
+      const lowFps = target === "ball" && Number(fps) < BALL_TRACKER_MIN_FPS;
+      param.hint = lowFps
+        ? t("modal.plugin.object_tracker.ball_tracker_low_fps_hint", { min: BALL_TRACKER_MIN_FPS })
+        : param.defaultHint;
+      param.hintWarning = lowFps;
+    },
+    { immediate: true }
+  );
   watch(
     () => [
       find(parameters, "tracking_target")?.value,
@@ -395,16 +427,6 @@ export function objectTrackerParams() {
 
   const parameters = ref([
     {
-      field: "slider",
-      min: 1,
-      max: 30,
-      value: defaultObjectTrackerFps(playerStore.videoFPS),
-      step: 1,
-      name: "fps",
-      text: t("modal.plugin.fps"),
-      dataTour: "bytetrack-fps",
-    },
-    {
       field: "select_options",
       name: "tracking_target",
       value: "player",
@@ -427,6 +449,16 @@ export function objectTrackerParams() {
       value: "bytetrack",
       items: OBJECT_TRACKER_TRACKER_ITEMS,
       text: t("modal.plugin.object_tracker.tracker"),
+    },
+    {
+      field: "slider",
+      min: 1,
+      max: 30,
+      value: defaultObjectTrackerFps(playerStore.videoFPS),
+      step: 1,
+      name: "fps",
+      text: t("modal.plugin.fps"),
+      dataTour: "bytetrack-fps",
     },
   ]);
 

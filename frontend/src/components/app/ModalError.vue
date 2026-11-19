@@ -20,13 +20,20 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { useErrorStore } from "@/stores/error";
 
 const dialog = ref(false);
 
 const errorStore = useErrorStore();
+const { t, te } = useI18n();
 
-const errorMessage = computed(() => errorStore.errorMessage);
+// Known error codes (e.g. quota_exceeded from an upload) get a translated message;
+// anything else is shown as the raw "component: code" line.
+const errorMessage = computed(() => {
+  const key = `modal.error.messages.${errorStore.error_code}`;
+  return errorStore.error_code && te(key) ? t(key) : errorStore.errorMessage;
+});
 
 const error = computed(() => errorStore.error);
 

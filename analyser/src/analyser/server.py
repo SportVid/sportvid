@@ -77,7 +77,8 @@ class AnalyserCacheWrapper:
 
                 logging.info(f"[AnalyserPluginManager] {run_id} Cache {result_hash}")
                 cached_data = self.cache.get(result_hash)
-                if cached_data is None:
+                if cached_data is None or not data_manager.exists(cached_data.get("data_id")):
+                    # never cached, or its data was removed since: run the plugin again
                     cached = False
                     break
 
@@ -313,29 +314,18 @@ class Commune(analyser_pb2_grpc.AnalyserServicer):
             return analyser_pb2.UploadDataResponse(success=False)
 
     def upload_file(self, request_iterator, context):
-        # try:
         data, hash = self.managers["data_manager"].load_file_from_stream(
             request_iterator
         )
-        # data, hash = self.managers["data_manager"].load_data_from_stream(
-        #   request_iterator
-        # )
-
+        if data is None:
+            # the content did not match the ID the client derived from it; the client retries
+            return analyser_pb2.UploadDataResponse(success=False, hash=hash or "")
         return analyser_pb2.UploadDataResponse(success=True, id=data.id, hash=hash)
-
-        # except Exception as e:
-        #     logging.error(f"[Analyser] {repr(e)}")
-        #     logging.error(traceback.format_exc())
-        #     context.set_code(grpc.StatusCode.DATA_LOSS)
-        #     context.set_details(f"Error transferring data with id {data.id}")
-        #     return analyser_pb2.UploadDataResponse(success=False)
 
     def check_data(self, request, context):
         try:
-            data = self.managers["data_manager"].check(request.id)
-            if data is not None:
-                return analyser_pb2.CheckDataResponse(exists=True)
-            return analyser_pb2.CheckDataResponse(exists=False)
+            exists = self.managers["data_manager"].exists(request.id)
+            return analyser_pb2.CheckDataResponse(exists=exists)
 
         except Exception as e:
             logging.error(f"[Analyser] {repr(e)}")

@@ -308,3 +308,54 @@ def test_camera_motion_params_need_a_ball_tracker():
     assert data["camera_motion_params"] == {}
     assert "camera_motion_params" in errors({"detector": "rfdetr", "ball_tracker": None,
                                              "camera_motion_params": {"mode": "on"}})
+
+
+def test_yolox_sn_player_sahi_preset_runs_the_top_tiles_with_the_border_rule():
+    p = validate({"detector": "yolox_sn_player_sahi", "tracker": "deep_eiou"})["detector_params"]
+    assert p["checkpoint"] == "/models/yolox/yolox_l-sahi-sn-player.pth" and p["model_path"] == "yolox-l"
+    assert p["test_size"] == [800, 1440] and p["fp16"] and p["conf_thresh"] == 0.35
+    s = p["sahi"]
+    assert s["enabled"] and s["full_frame"] and s["slice_size"] == [608, 1088] and s["tiles"] == [0, 1]
+    assert (s["merge"], s["match_metric"], s["match_threshold"], s["drop_border_px"]) == ("nms", "iou", 0.45, 3)
+    assert p["output_class_mapping"][0]["entity_type"] == "player"
+
+
+def test_yolox_sn_player_sahi_all_tiles():
+    p = validate({"detector": "yolox_sn_player_sahi",
+                  "detector_params": {"sahi": {"tiles": None}}})["detector_params"]
+    assert p["sahi"]["tiles"] is None and p["sahi"]["drop_border_px"] == 3
+
+
+def test_sahi_tiles_and_border_are_validated():
+    ok = validate({"detector": "yolox", "detector_params": {"sahi": {"enabled": True, "tiles": [1, 0], "drop_border_px": 2}}})
+    assert ok["detector_params"]["sahi"]["tiles"] == [1, 0] and ok["detector_params"]["sahi"]["drop_border_px"] == 2
+    # off unless set
+    sahi = validate({"detector": "yolox", "detector_params": {"sahi": {"enabled": True}}})["detector_params"]["sahi"]
+    assert sahi["tiles"] is None and sahi["drop_border_px"] is None
+    for bad in ({"tiles": []}, {"tiles": [-1]}, {"drop_border_px": -1}):
+        assert "detector_params" in errors({"detector": "yolox", "detector_params": {"sahi": bad}})
+
+
+def test_deep_eiou_cuts_at_crossings_and_relinks_by_default():
+    g = validate({"detector": "rfdetr", "tracker": "deep_eiou"})["tracker_params"]["gta_link"]
+    assert g["cut"]["enabled"] and g["relink"]["enabled"]
+    assert (g["cut"]["iou"], g["cut"]["min_frames"], g["cut"]["near_iou"], g["cut"]["min_absent"]) == (0.3, 10, 0.1, 10)
+    assert g["relink"]["team"] and g["relink"]["reassign"] and g["relink"]["anchor_min_frames"] == 1000
+    # ByteTrack's GTA-Link (off by default) connects as upstream
+    b = validate({"detector": "rfdetr", "tracker": "bytetrack"})["tracker_params"]["gta_link"]
+    assert not b["cut"]["enabled"] and not b["relink"]["enabled"]
+
+
+def test_partial_cut_and_relink_overrides_keep_the_preset():
+    g = validate({"detector": "rfdetr", "tracker": "deep_eiou", "tracker_params": {
+        "gta_link": {"cut": {"near_iou": None}, "relink": {"team": False}}}})["tracker_params"]["gta_link"]
+    assert g["cut"]["enabled"] and g["cut"]["near_iou"] is None and g["cut"]["min_frames"] == 10
+    assert g["relink"]["enabled"] and not g["relink"]["team"] and g["relink"]["reassign"]
+    assert g["model_path"] == REID_MODEL["model_path"]
+
+
+def test_cut_and_relink_reject_unknown_keys():
+    for bad in ({"cut": {"overlap": 0.3}}, {"relink": {"thres": 0.5}}, {"relink": {"speed": True}}):
+        assert "tracker_params" in errors({"detector": "rfdetr", "tracker": "deep_eiou",
+                                           "tracker_params": {"gta_link": bad}})
+

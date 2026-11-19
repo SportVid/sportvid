@@ -2,7 +2,7 @@ import re
 import json
 import uuid
 import logging
-import tempfile
+import shutil
 import tempfile
 import time
 
@@ -12,16 +12,17 @@ from django.conf import settings
 from rest_framework import serializers
 
 
-from backend.models import Video, PluginRun, TrackingData
+from backend.models import Video, PluginRun, TrackingData, CalibrationAssets
 from backend.permissions import readable, unreadable_references, writable
 from backend.plugin_catalogue import is_available
 from backend.utils.storage import release_used_storage
 from backend.plugin_manager import PluginManager
+from backend.plugin_uploads import new_upload_dir
 from backend.utils import download_url, download_file, media_url_to_file
 from backend.utils.cancellation import active_plugin_runs, cancel_plugin_runs
 
 from backend.serializers import PluginRunRequestSerializer
-from backend.utils.api import ApiView
+from backend.utils.api import ApiView, query_flag
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,7 @@ class PluginRunNew(ApiView):
             if not is_available(data["plugin"]):
                 return JsonResponse({"status": "error", "type": "plugin_unavailable"}, status=400)
 
-            output_dir = tempfile.mkdtemp(dir="/tmp")
+            output_dir = new_upload_dir()
             file_parameters = {}
 
             for key, uploaded_file in request.FILES.items():
@@ -84,24 +85,34 @@ class PluginRunNew(ApiView):
                 if download_result.get("status") != "ok":
                     # e.g. file_too_large (over the user's max_file_size): don't start the
                     # run without the file the user meant to pass
+                    shutil.rmtree(output_dir, ignore_errors=True)  # with the files stored before this one
                     return JsonResponse(download_result, status=413 if download_result.get("type") == "file_too_large" else 400)
                 file_parameters[m.group(1)] = {
                     "value": download_result["origin"],
-                    "path": download_result["path"],
+                    "path": str(download_result["path"]),  # the task payload is JSON
                 }
+
+            if not file_parameters:
+                shutil.rmtree(output_dir, ignore_errors=True)  # nothing was uploaded
 
             parameters = data["parameters"].copy()
             parameters["_files"] = file_parameters
 
             plugin_manager = PluginManager()
 
-            result = plugin_manager(
-                data["plugin"],
-                user=request.user,
-                video=video_db,
-                run_async=True,
-                parameters=parameters,
-            )
+            result = None
+            try:
+                result = plugin_manager(
+                    data["plugin"],
+                    user=request.user,
+                    video=video_db,
+                    run_async=True,
+                    parameters=parameters,
+                )
+            finally:
+                if not result:
+                    # no task will read the files (invalid parameters, enqueue failed)
+                    shutil.rmtree(output_dir, ignore_errors=True)
 
             if not result:
                 return JsonResponse(
@@ -177,7 +188,19 @@ class PluginRunDelete(ApiView):
                     for owner, size in size_by_owner.values():
                         release_used_storage(owner, size)
 
+            # The runs' calibrations go with them (Calibration.plugin_run cascades). An asset whose active calibration
+            # was among them falls back to its newest remaining one, so it keeps an active calibration if it has any.
+            affected_asset_ids = list(
+                CalibrationAssets.objects.filter(active_calibration__plugin_run__in=runs).values_list("id", flat=True)
+            )
+
             response, _ = runs.delete()
+
+            for asset in CalibrationAssets.objects.filter(id__in=affected_asset_ids):
+                newest = asset.calibrations.first()  # Calibration is ordered by -date
+                if newest is not None:
+                    asset.apply_calibration(newest)
+
             # After the delete, like video/delete: a task that misses the cancel finds its run gone.
             # Revokes the queued Celery tasks and tells the running ones' watchers to abort their analyser job.
             cancel_plugin_runs(active_runs, reason="user_delete")
@@ -199,7 +222,7 @@ class PluginRunList(ApiView):
                 analyses = readable(PluginRun, request.user).filter(video__id=video_id)
             else:
                 analyses = PluginRun.objects.filter(video__owner=request.user)
-            add_results = request.GET.get("add_results")
+            add_results = query_flag(request, "add_results")
 
             analyses = analyses.prefetch_related("video")
 

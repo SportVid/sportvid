@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 RAY = ROOT / "inference_ray"
 
 # Ray plugins switched off on purpose in a server config
-DISABLED = {"deploy.dev.yml": {"bytetrack"}}
+DISABLED = {}
 
 
 def ray_plugins():
@@ -51,6 +51,37 @@ def test_servers_deploy_every_local_plugin(name):
     assert not missing, f"{name} lacks {sorted(missing)}"
 
 
+# Generic building blocks kept without a deployment (plugin cleanup, 2026-11-17): model-free plugins on
+# generic data types (scalars, embeddings, clusters, video/audio). Deploy one before a task uses it.
+GENERIC_UNDEPLOYED_TASKS = {"aggregate_scalar", "invert_scalar"}
+GENERIC_UNUSED_RAY_PLUGINS = {
+    "aggregate_list_scalar_per_time", "aggregate_scalar_per_time", "cluster_size_filter", "clustering", "cosine_similarity", "dbscanclustering",
+    "min_max_norm", "scalar_threshold", "timeline_video_sampler", "video_to_audio", "video_to_video",
+}
+
+
+def backend_tasks():
+    import backend.tasks  # noqa: F401  (registers the plugins)
+    from backend.plugin_manager import PluginManager
+
+    return dict(PluginManager._plugins)
+
+
+@pytest.mark.django_db
+def test_every_backend_plugin_can_run_on_the_local_stack():
+    """A task whose Ray plugins are not deployed is never offered; it must not pile up unnoticed again."""
+    deployed = applications("deploy.cuda.yml")
+    undeployed = {name for name, cls in backend_tasks().items()
+                  if not set(getattr(cls, "ray_plugins", ())) <= deployed}
+    assert undeployed == GENERIC_UNDEPLOYED_TASKS
+
+
+@pytest.mark.django_db
+def test_every_ray_plugin_is_used_by_a_backend_plugin():
+    used = {name for cls in backend_tasks().values() for name in getattr(cls, "ray_plugins", ())}
+    assert ray_plugins() - used == GENERIC_UNUSED_RAY_PLUGINS
+
+
 def test_local_stack_ray_port():
     port = int(dotenv()["INFERENCE_RAY_PORT"])
     assert ray_config("deploy.yml")["http_options"]["port"] == port
@@ -90,3 +121,28 @@ def test_images_install_the_workspace():
 def test_analyser_config_only_uses_variables_from_the_env_file():
     text = "\n".join(l for l in (ROOT / "analyser" / "config.yml").read_text().splitlines() if not l.lstrip().startswith("#"))
     assert set(re.findall(r"\$\{(\w+)\}", text)) <= set(dotenv())
+
+
+COMPOSE_FILES = ["docker-compose.yml", "docker-compose.cuda.yml", "docker-compose.dev.yml", "docker-compose.prod.yml"]
+
+
+@pytest.mark.parametrize("name", COMPOSE_FILES)
+def test_every_stack_runs_one_beat_for_the_scheduled_tasks(name):
+    """CELERY_BEAT_SCHEDULE does nothing without a beat process; it runs the workers' image and mounts."""
+    services = yaml.safe_load((ROOT / name).read_text())["services"]
+    beat, worker = services["celery-beat"], services["celery-io"]
+    assert "beat" in beat["command"] and "worker" not in beat["command"]
+    # the schedule file must be writable: the image's working dir is a read-only bind mount for some users
+    assert "--schedule=/tmp/celerybeat-schedule" in beat["command"] and "/tmp" in beat["tmpfs"]
+    for key in ("image", "volumes", "env_file", "secrets", "working_dir"):
+        assert beat[key] == worker[key], key
+
+
+@pytest.mark.parametrize("env", ["dev", "prod"])
+def test_server_valkey_keeps_the_queue_across_restarts(env):
+    """Without it, `manage.sh … down` empties the broker and QUEUED runs wait forever."""
+    valkey = yaml.safe_load((ROOT / f"docker-compose.{env}.yml").read_text())["services"]["valkey"]
+    command = valkey["command"]
+    assert command[command.index("--appendonly") + 1] == "yes"
+    assert command[command.index("--dir") + 1] == "/data"
+    assert "${DATA_PATH}/valkey:/data" in valkey["volumes"]

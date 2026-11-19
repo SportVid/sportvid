@@ -16,7 +16,6 @@ services:
     shm_size: "4g" # NOTE: should be 30% of available system memory.
     environment:
       - HF_HOME=/models
-      - NUMBA_CACHE_DIR=/tmp
       - NVIDIA_VISIBLE_DEVICES=all
     env_file:
       - ./.env
@@ -152,6 +151,50 @@ services:
       - "--pool=threads"
       - "--concurrency=16"
       - "--prefetch-multiplier=1"
+      - "--loglevel"
+      - "${LOG_LEVEL:-DEBUG}"
+
+  # runs the scheduled tasks (CELERY_BEAT_SCHEDULE in settings.py); exactly one instance
+  celery-beat:
+    container_name: celery-beat
+    user: "1000:1000"
+    image: sportvid-celery:latest
+    build:
+      context: .
+    env_file:
+      - ./.env
+    secrets:
+      - django_settings
+    volumes:
+      - ${DATA_PATH}/media/:/media
+      - ${DATA_PATH}/predictions:/predictions
+      - ${DATA_PATH}/backend_cache:/cache
+      - ./inference_ray:/app/inference_ray
+      - ./analyser:/app/analyser
+      - ./packages:/app/packages
+      - ./backend/:/app/backend
+      - ./pyproject.toml:/app/pyproject.toml
+      - ./.python-version:/app/.python-version
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    tmpfs:
+      - /tmp
+      - /var
+    working_dir: /app/backend/src/backend/
+    command:
+      - "uv"
+      - "run"
+      - "--no-sync"
+      - "--package"
+      - "backend"
+      - "celery"
+      - "-A"
+      - "sportvid.celery:app"
+      - "beat"
+      - "--schedule=/tmp/celerybeat-schedule"
       - "--loglevel"
       - "${LOG_LEVEL:-DEBUG}"
 

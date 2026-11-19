@@ -38,13 +38,8 @@ export const useVideoUploadStore = defineStore("videoUpload", () => {
       }
     } catch (error) {
       const errorStore = useErrorStore();
-      if (error.response.data) {
-        if (error.response.data.hasOwnProperty("type")) {
-          errorStore.setError("video_upload", error.response.data.type);
-        }
-      } else {
-        errorStore.setError("video_upload", "unknown");
-      }
+      // no response (network error) or an error without a type still opens the dialog
+      errorStore.setError("video_upload", error.response?.data?.type || "unknown");
     } finally {
       finish();
     }

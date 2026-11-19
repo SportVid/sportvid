@@ -17,6 +17,7 @@ DETECTOR_CHOICES = [
     "yolox_dancetrack",
     "yolox_sportsmot",  # people / multi-sport (one person class)
     "yolox_sn_player",
+    "yolox_sn_player_sahi",
     "yolox_sn_ball",
     "yolox_sn_ball_zoom2",  # football (SoccerNet-GSR fine-tunes)
     "yolo11",
@@ -86,6 +87,32 @@ default_yolox_sn_player_params = {
     "output_class_mapping": {
         -1: {"entity_type": "unknown", "default_team": -1},
         0: {"entity_type": "player", "default_team": 3},
+    },
+}
+
+# YOLOX-L player model trained on 608x1088 tiles of SoccerNet-GSR (and its whole frames, letterboxed), for fixed wide
+# cameras whose far players are too small for `yolox_sn_player`. It runs sliced (SAHI): on 1920x1080 the grid is 2x2
+# tiles, each zoomed x1.32 to the model input, plus the whole frame, which keeps near players intact. 
+# Only the top row of tiles runs (tiles [0, 1]): a camera beside the pitch sees the far half in the upper half of the image. 
+# For a camera with far players in the lower half, set sahi.tiles to null (all four tiles: five passes per frame instead
+# of three). Boxes merge by NMS, so neighbouring players stay apart, and the partial box of a player cut by an inner
+# tile border is dropped (drop_border_px): the tiles overlap by more than a player's height, so the player is whole elsewhere.
+default_yolox_sn_player_sahi_params = {
+    **default_yolox_sn_player_params,
+    "batch_size": 2,  # tiles per forward pass: both tiles of a frame
+    "fp16": True,  # on CUDA only
+    "checkpoint": "/models/yolox/yolox_l-sahi-sn-player.pth",
+    "test_size": [800, 1440],  # each 608x1088 tile zoomed x1.32
+    "sahi": {
+        "enabled": True,
+        "slice_size": [608, 1088],
+        "overlap": [0.2, 0.2],
+        "full_frame": True,
+        "tiles": [0, 1],  # top-row only
+        "merge": "nms",
+        "match_metric": "iou",
+        "match_threshold": 0.45,  # the model's own NMS threshold
+        "drop_border_px": 3,
     },
 }
 
@@ -223,6 +250,7 @@ DETECTOR_DEFAULTS = {
     "yolox_dancetrack": default_yolox_dancetrack_params,
     "yolox_sportsmot": default_yolox_sportsmot_params,
     "yolox_sn_player": default_yolox_sn_player_params,
+    "yolox_sn_player_sahi": default_yolox_sn_player_sahi_params,
     "yolox_sn_ball": default_yolox_sn_ball_params,
     "yolox_sn_ball_zoom2": default_yolox_sn_ball_zoom2_params,
     "yolo11": default_yolo11_params,
@@ -247,9 +275,29 @@ default_gta_link_params = {
     "eps": 0.6,  # DBSCAN neighbourhood (cosine) when looking for identity switches
     "min_samples": 10,
     "max_k": 3,  # at most this many sub-tracklets per tracklet
-    "use_connect": True,  # upstream always runs the connect step
-    "spatial_factor": 1.0,  # scales the max exit / entry distance between merged tracklets
+    # scales the max exit / entry distance between merged tracklets; GTA-Link's connect step only (not the
+    # re-linker), and it never rejects a pair at >= 1
+    "spatial_factor": 1.0,
     "merge_dist_thres": 0.4,  # merge tracklets whose mean cosine distance is below this
+    # cut the split tracklets where players cross, before connecting them (inference_ray tracker/crossings.py)
+    "cut": {
+        "enabled": False,
+        "iou": 0.3,  # overlap rule: an episode of IoU > iou with another box ...
+        "min_frames": 10,  # ... lasting at least this many frames cuts at its start
+        "near_iou": 0.1,  # neighbour-change rule: a box overlapping by more than this vanishes / appears (null: off)
+        "min_absent": 10,  # ... and stays absent at least this many frames
+    },
+    # connect with the constrained re-linker instead of GTA-Link's connect step (inference_ray tracker/relink.py);
+    # its appearance threshold is merge_dist_thres
+    "relink": {
+        "enabled": False,
+        "team": True,  # pieces of confidently different teams (K=2 on the embeddings) never merge
+        "team_margin": 0.2,
+        "team_min_frames": 15,
+        "reassign": True,  # groups shorter than anchor_min_frames are dissolved, their pieces join the closest anchor
+        "anchor_min_frames": 1000,
+        "reassign_thres": 0.5,
+    },
 }
 # linear interpolation of short gaps (Deep-EIoU's SportsMOT post-processing, re-implemented)
 default_interpolation_params = {
@@ -275,7 +323,12 @@ default_deep_eiou_params = {
     "reid_amp": False,
     "proximity_thresh": 0.5,  # appearance only counts where the EIoU cost is at most this
     "appearance_thresh": 0.25,  # ... and the halved cosine distance at most this
-    "gta_link": {**default_gta_link_params, "enabled": True},
+    "gta_link": {
+        **default_gta_link_params,
+        "enabled": True,
+        "cut": {**default_gta_link_params["cut"], "enabled": True},
+        "relink": {**default_gta_link_params["relink"], "enabled": True},
+    },
     "interpolation": dict(default_interpolation_params),
 }
 
@@ -301,55 +354,17 @@ BALL_DETECTOR_OVERRIDES = {
 }
 BALL_DETECTOR_CHOICES = list(BALL_DETECTOR_OVERRIDES)
 
-# Kalman ball tracker (inference_ray plugins/tracker/ball_tracker.py).
-# Frame-based values are given at 30 fps and scaled to the decoding rate by the plugin. Below min_fps the ball
-# candidates are written untracked.
+# Kalman ball tracker (inference_ray plugins/tracker/ball_tracker.py). The plugin holds the defaults of all its
+# parameters (ball_tracker.DEFAULTS); a request may override these few, which every run records. Frame-based values
+# are given at 30 fps and scaled to the decoding rate by the plugin.
 default_kalman_ball_params = {
     "min_conf": 0.10,  # candidates below are ignored
-    "init_conf": 0.40,  # confidence needed to (re)acquire the ball
-    "linking": "global",  # global: tracklets + one best path over the clip | online: frame by frame
+    "init_conf": 0.40,  # confidence of a sure detection; weaker ones need support from the ball's path
     "gate_px": 60.0,  # association radius around the predicted position (px / frame)
-    "gate_growth_px": 20.0,  # + per frame without a match, scaled by the candidate's confidence
-    "max_missed": 15,  # frames without a match before the track is dropped
-    "switch_frames": 3,  # re-acquire elsewhere after this many frames with a confident candidate outside the gate
-    "max_gap": 10,  # fill gaps up to this many frames within a track segment
-    "outlier_px": 25.0,  # a weak detection this far off the smoothed path is dropped, unless supported
-    "corner_dv_px": 5.0,  # kick corner: velocity change (px / frame) where the path may change direction
-    "kick_vel_px": 30.0,  # expected kick speed (px / frame): widens the gate after a touch
-    "player_hint": True,  # ball at a player's foot -> a kick may happen there (needs a player tracker)
-    "foot_reach": 1.5,  # "at a player's foot": within this many player box widths of the foot point
-    "confirm_frames": 4,  # weak detections needed to confirm a provisional track
-    "tentative_gate_px": 30.0,  # association radius of a provisional track (px / frame)
-    "tentative_max_missed": 2,  # frames a provisional track may go unseen
-    "reacquire_px": 60.0,  # starting this close to the last known ball position: accepted
-    "reacquire_growth_px": 15.0,  # further away: must move, and start within a radius growing by this per frame
-    "reacquire_max_px": 400.0,  # ... up to this
-    "min_move_px": 20.0,  # "moving": distance covered along the longest recent smooth run
-    "tentative_resid_px": 6.0,  # ... which must fit a constant-velocity line within this RMS (px)
-    "tentative_skip_body": 0.75,  # provisional tracks ignore weak candidates on the upper part of a player box
-    # global linking
-    "tracklet_max_missed": 5,  # a tracklet ends after this many frames without a match
-    "min_tracklet_len": 2,  # shorter tracklets without a confident detection are discarded
-    "link_max_gap": 60,  # continuation link (same segment): at most this many frames between tracklets
-    "link_trim_max": 3,  # a continuation may drop this many weak trailing detections of its predecessor
-    "resume_max_gap": 900,  # resume link (ball at rest where it was lost): at most this many frames
-    "det_reward": 2.0,  # path score per detection
-    "miss_cost": 0.2,  # path cost per frame of a continuation gap
-    "resume_cost": 3.0,  # path cost of a resume link
-    "birth_cost": 6.0,  # path cost of starting a new segment elsewhere
-    "lr_scale": 2.0,  # weight of the detection confidence (log-likelihood ratio, neutral at init_conf)
-    "support_sigma_px": 60.0,  # a short, unconfirmed tracklet is linked only where the prediction is this precise
-    "motion_model": "cwna",  # cwna: continuous white-noise acceleration | pwca: piecewise-constant per frame
-    "accel_px": 4.0,  # Kalman process noise: ball acceleration std (px / frame^2)
-    "meas_px": 2.0,  # Kalman measurement noise of a conf=1 detection (px), scales with 1 / conf
-    "cam_fail_px": 20.0,  # with camera motion: extra position std (px / frame) where its estimate failed
-    "static_filter": True,  # drop ball candidates that never move (cones, spare balls, markings)
-    "static_radius_px": 12.0,  # "same spot": within this radius
-    "static_min_hits": 60,  # ... in at least this many frames
-    "static_min_span": 150,  # ... spanning at least this many frames
-    "static_cooccur": 0.0,  # > 0: drop a static spot only if another candidate is seen in this share of its frames
-    "static_cooccur_conf": 0.25,  # ... with at least this confidence
-    "min_fps": 10.0,  # below this decoding rate the ball is not tracked
+    "max_gap": 20,  # fill gaps up to this many frames within a track segment
+    "player_hint": False,  # ball at a player's foot -> a kick may happen there (needs a player tracker)
+    "decoy_tracklets": True,  # leave out spots where a still "ball" is seen for over a minute (cone, spare ball)
+    "min_fps": 10.0,  # below this decoding rate the ball is not tracked (the candidates are written untracked)
 }
 
 BALL_TRACKER_DEFAULTS = {"kalman": default_kalman_ball_params}
@@ -427,6 +442,12 @@ class SahiParamsSerializer(StrictSerializer):
         required=False, min_value=0.0, max_value=1.0
     )
     class_agnostic = serializers.BooleanField(required=False)
+    tiles = serializers.ListField(  # run only these tiles (row-major index in the grid); null -> all
+        required=False, allow_null=True, allow_empty=False, child=serializers.IntegerField(min_value=0)
+    )
+    drop_border_px = serializers.FloatField(  # drop tile boxes this close to an inner tile border; null -> off
+        required=False, allow_null=True, min_value=0.0
+    )
 
 
 # the values a run gets for every sahi key that neither the preset nor the request sets
@@ -441,6 +462,8 @@ SAHI_DEFAULTS = {
     "match_metric": "ios",  # ios: intersection over the smaller box, matches boxes cut by a tile border | iou
     "match_threshold": 0.5,
     "class_agnostic": False,
+    "tiles": None,
+    "drop_border_px": None,
 }
 
 
@@ -518,6 +541,24 @@ class DetectorParamsSerializer(serializers.Serializer):
         return attrs
 
 
+class GTALinkCutParamsSerializer(StrictSerializer):
+    enabled = serializers.BooleanField(required=False)
+    iou = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    min_frames = serializers.IntegerField(required=False, min_value=1)
+    near_iou = serializers.FloatField(required=False, allow_null=True, min_value=0.0, max_value=1.0)
+    min_absent = serializers.IntegerField(required=False, min_value=1)
+
+
+class GTALinkRelinkParamsSerializer(StrictSerializer):
+    enabled = serializers.BooleanField(required=False)
+    team = serializers.BooleanField(required=False)
+    team_margin = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
+    team_min_frames = serializers.IntegerField(required=False, min_value=1)
+    reassign = serializers.BooleanField(required=False)
+    anchor_min_frames = serializers.IntegerField(required=False, min_value=1)
+    reassign_thres = serializers.FloatField(required=False, min_value=0.0, max_value=2.0)
+
+
 class GTALinkParamsSerializer(StrictSerializer):
     enabled = serializers.BooleanField(required=False)
     amp = serializers.BooleanField(required=False)
@@ -526,12 +567,13 @@ class GTALinkParamsSerializer(StrictSerializer):
     eps = serializers.FloatField(required=False, min_value=0.0, max_value=2.0)
     min_samples = serializers.IntegerField(required=False, min_value=1)
     max_k = serializers.IntegerField(required=False, min_value=1)
-    use_connect = serializers.BooleanField(required=False)
     spatial_factor = serializers.FloatField(required=False, min_value=0.0)
     # at most 1: tracklets sharing a frame are 1 apart, and merging such a pair fails GTA-Link's spatial check
     merge_dist_thres = serializers.FloatField(
         required=False, min_value=0.0, max_value=1.0
     )
+    cut = GTALinkCutParamsSerializer(required=False)
+    relink = GTALinkRelinkParamsSerializer(required=False)
 
 
 class InterpolationParamsSerializer(StrictSerializer):
@@ -618,62 +660,16 @@ TRACKER_PARAM_SERIALIZERS = {
 }
 
 
-class KalmanBallTrackerParamsSerializer(serializers.Serializer):
+class KalmanBallTrackerParamsSerializer(StrictSerializer):
+    """The overridable ball tracker parameters (default_kalman_ball_params)."""
+
     min_conf = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
     init_conf = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
-    linking = serializers.ChoiceField(choices=["global", "online"], required=False)
     gate_px = serializers.FloatField(required=False, min_value=0.0)
-    gate_growth_px = serializers.FloatField(required=False, min_value=0.0)
-    max_missed = serializers.IntegerField(required=False, min_value=1)
-    switch_frames = serializers.IntegerField(required=False, min_value=1)
-    max_gap = serializers.IntegerField(required=False, min_value=0)
-    outlier_px = serializers.FloatField(required=False, min_value=0.0)
-    corner_dv_px = serializers.FloatField(required=False, min_value=0.0)
-    kick_vel_px = serializers.FloatField(required=False, min_value=0.0)
+    max_gap = serializers.IntegerField(required=False, min_value=1)
     player_hint = serializers.BooleanField(required=False)
-    foot_reach = serializers.FloatField(required=False, min_value=0.0)
-    confirm_frames = serializers.IntegerField(required=False, min_value=2)
-    tentative_gate_px = serializers.FloatField(required=False, min_value=0.0)
-    tentative_max_missed = serializers.IntegerField(required=False, min_value=0)
-    reacquire_px = serializers.FloatField(required=False, min_value=0.0)
-    reacquire_growth_px = serializers.FloatField(required=False, min_value=0.0)
-    reacquire_max_px = serializers.FloatField(required=False, min_value=0.0)
-    min_move_px = serializers.FloatField(required=False, min_value=0.0)
-    tentative_resid_px = serializers.FloatField(required=False, min_value=0.0)
-    tentative_skip_body = serializers.FloatField(
-        required=False, min_value=0.0, max_value=1.0
-    )
-    tracklet_max_missed = serializers.IntegerField(required=False, min_value=1)
-    min_tracklet_len = serializers.IntegerField(required=False, min_value=1)
-    link_max_gap = serializers.IntegerField(required=False, min_value=1)
-    link_trim_max = serializers.IntegerField(required=False, min_value=0)
-    resume_max_gap = serializers.IntegerField(required=False, min_value=1)
-    det_reward = serializers.FloatField(required=False, min_value=0.0)
-    miss_cost = serializers.FloatField(required=False, min_value=0.0)
-    resume_cost = serializers.FloatField(required=False, min_value=0.0)
-    birth_cost = serializers.FloatField(required=False, min_value=0.0)
-    lr_scale = serializers.FloatField(required=False, min_value=0.0)
-    support_sigma_px = serializers.FloatField(required=False, min_value=0.0)
-    motion_model = serializers.ChoiceField(choices=["cwna", "pwca"], required=False)
-    accel_px = serializers.FloatField(required=False, min_value=0.0)
-    meas_px = serializers.FloatField(required=False, min_value=1e-6)
-    cam_fail_px = serializers.FloatField(required=False, min_value=0.0)
-    static_filter = serializers.BooleanField(required=False)
-    static_radius_px = serializers.FloatField(required=False, min_value=0.0)
-    static_min_hits = serializers.IntegerField(required=False, min_value=1)
-    static_min_span = serializers.IntegerField(required=False, min_value=1)
-    static_cooccur = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
-    static_cooccur_conf = serializers.FloatField(required=False, min_value=0.0, max_value=1.0)
-    min_fps = serializers.FloatField(required=False, min_value=1.0)
-
-    def to_internal_value(self, data):
-        # a misspelt key would otherwise be dropped silently and its default used
-        unknown = sorted(set(data or {}) - set(self.fields))
-        if unknown:
-            raise serializers.ValidationError(
-                {"non_field_errors": [f"Unknown parameters: {unknown}."]}
-            )
-        return super().to_internal_value(data)
+    decoy_tracklets = serializers.BooleanField(required=False)
+    min_fps = serializers.FloatField(required=False, min_value=0.0)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
         min_conf = attrs.get("min_conf", default_kalman_ball_params["min_conf"])
@@ -904,7 +900,7 @@ class ObjectTrackerSerializer(serializers.Serializer):
         preset = cls._with_reid_preset(
             TRACKER_DEFAULTS[tracker], user_params.pop("reid_preset", None)
         )
-        return cls._merge_with_presets({tracker: preset}, tracker, user_params)
+        return cls._merge_with_presets({tracker: preset}, tracker, user_params, deep=True)
 
     @staticmethod
     def _with_reid_preset(
@@ -951,15 +947,21 @@ class ObjectTrackerSerializer(serializers.Serializer):
         presets: Mapping[str, Mapping[str, Any]],
         key: str,
         user_params: Mapping[str, Any] | None,
+        deep: bool = False,
     ) -> Dict[str, Any]:
-        merged = deepcopy(dict(presets[key]))
-        for k, v in dict(user_params or {}).items():
-            # nested groups (gta_link, interpolation) are merged key by key, so the preset's model files stay
-            if isinstance(v, Mapping) and isinstance(merged.get(k), Mapping):
-                merged[k] = {**merged[k], **dict(v)}
-            else:
-                merged[k] = v
-        return merged
+        """The preset with the user's values. Nested groups (gta_link, interpolation, sahi) are merged key by key, so
+        the preset's model files stay; with ``deep``, at every level (gta_link.cut, gta_link.relink)."""
+
+        def merge(base: Mapping[str, Any], user: Mapping[str, Any]) -> Dict[str, Any]:
+            out = dict(base)
+            for k, v in dict(user).items():
+                if isinstance(v, Mapping) and isinstance(out.get(k), Mapping):
+                    out[k] = merge(out[k], v) if deep else {**out[k], **dict(v)}
+                else:
+                    out[k] = v
+            return out
+
+        return merge(deepcopy(dict(presets[key])), user_params or {})
 
     @classmethod
     def _normalize_detector_params(

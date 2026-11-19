@@ -205,6 +205,25 @@ export const useTimelineStore = defineStore("timeline", () => {
       if (res.data.status === "ok") {
         const pluginRunResultStore = usePluginRunResultStore();
 
+        // The analysis view lists results without their data (stores/video.js). Timelines drawn
+        // from a result need it, so load it per run before the timelines reach the store.
+        const runsWithoutData = new Set();
+        res.data.entries.forEach((timeline) => {
+          if (timeline.type == "PLUGIN_RESULT" && "plugin_run_result_id" in timeline) {
+            const result = pluginRunResultStore.get(timeline.plugin_run_result_id);
+            if (result && result.data === undefined) {
+              runsWithoutData.add(result.plugin_run_id);
+            }
+          }
+        });
+        await Promise.all(
+          [...runsWithoutData].map((pluginRunId) =>
+            pluginRunResultStore
+              .forPluginRunWithData(pluginRunId, params.video_id)
+              .catch((e) => console.error("Failed to load timeline result data", e))
+          )
+        );
+
         res.data.entries.forEach((timeline) => {
           if (
             !("plugin" in timeline) &&

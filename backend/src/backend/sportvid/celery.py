@@ -1,7 +1,8 @@
 import os
+import threading
 from urllib.parse import quote
 from celery import Celery
-from celery.signals import before_task_publish, task_postrun, task_prerun
+from celery.signals import before_task_publish, task_postrun, task_prerun, worker_ready
 
 from backend.log_context import bind, current, unbind
 
@@ -62,3 +63,26 @@ def _unbind_request_id(task_id=None, **kwargs):
             unbind(token)
         except ValueError:  # bound in another context; nothing to undo here
             pass
+
+
+# Restarting only a worker (not the backend) also interrupts the runs it executed, so the
+# recovery that runs before gunicorn starts is repeated whenever a worker becomes ready.
+# In a thread: the worker has to keep answering the inspect() calls the recovery makes.
+WORKER_READY_WAIT_SECONDS = 60
+
+
+def _recover_plugin_runs():
+    from backend.plugin_runs import recover_plugin_runs, wait_for_workers
+
+    from django.db import connection
+
+    try:
+        wait_for_workers(WORKER_READY_WAIT_SECONDS)
+        recover_plugin_runs()
+    finally:
+        connection.close()  # this thread's own connection
+
+
+@worker_ready.connect
+def _recover_plugin_runs_when_ready(**kwargs):
+    threading.Thread(target=_recover_plugin_runs, name="recover-plugin-runs", daemon=True).start()

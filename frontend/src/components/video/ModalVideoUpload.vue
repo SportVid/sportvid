@@ -268,13 +268,8 @@ const SPORT_FIELD_DEFAULTS = {
 
 const sportDefaults = computed(() => SPORT_FIELD_DEFAULTS[video.value.sport] ?? null);
 
-const analysers = ref([
-  {
-    label: "Shot Detection",
-    disabled: true,
-    model: "shotdetection",
-  },
-]);
+// plugins the user can pick to run after the upload (thumbnail and camera motion always run)
+const analysers = ref([]);
 const selectedAnalysers = ref(analysers.value.filter((a) => !a.disabled).map((a) => a.model));
 watch(
   analysers,
