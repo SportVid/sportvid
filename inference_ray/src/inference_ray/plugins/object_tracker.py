@@ -55,27 +55,27 @@ class ObjectTracker(
     AnalyserPlugin,
     config=default_config,
     parameters={},
-    version="0.4",
+    version="0.5",
     requires=requires,
     provides=provides
 ):
     """ Detectors -> player tracker + ball tracker -> tracklets, in stages:
 
-    1. detection over the decoded video: the (player) detector, and the optional ball detector, a second
+    1. Detection over the decoded video: the (player) detector, and the optional ball detector, a second
        detector instance with its own parameters (``ball_detector`` / ``ball_detector_params``); either can run
        sliced (``sahi``, SAHI-style tiles, ``detector/slicing.py``);
-    2. routing by ``output_class_mapping``: the ``entity_type: ball`` classes never reach the player tracker. The
-       ball candidates come from the ball detector when it runs (the player detector's ball class is dropped),
+    2. Routing by ``output_class_mapping``: the ``entity_type: ball`` classes never reach the player tracker. 
+       The ball candidates come from the ball detector when it runs (the player detector's ball class is dropped),
        else from the player detector;
-    3. player tracking (``tracker``: ``bytetrack`` | ``deep_eiou``), frame by frame inside the detection loop
+    3. Player tracking (``tracker``: ``bytetrack`` | ``deep_eiou``), frame by frame inside the detection loop
        with the frame's pixels (appearance embeddings), then ``Tracker.finalize`` once over the whole clip
-       (GTA-Link, interpolation);
-    4. per-track class votes (``TrackClassMapper``) give each track its default team;
-    5. ball tracking (``ball_tracker``: ``kalman``) over the whole clip, with the player tracks as kick hints;
+       (GTA-Link, optionally cutting the tracklets at crossings and re-linking the pieces; interpolation);
+    4. Per-track class votes (``TrackClassMapper``) give each track its default team;
+    5. Ball tracking (``ball_tracker``: ``kalman``) over the whole clip, with the player tracks as kick hints;
        without a ball tracker, or below its ``min_fps``, the candidates are written untracked. For the ball
        tracker the camera motion is estimated in the detection loop (``camera_motion_params``,
        ``tracker/camera_motion.py``, the player detector's boxes masked) and compensated if the camera moves;
-    6. output: player tracks, the ball (entity id 0, team ``BALL``), and in detection-only runs (no tracker)
+    6. Output: player tracks, the ball (entity id 0, team ``BALL``), and in detection-only runs (no tracker)
        the other detections untracked (entity id 0).
     """
 
@@ -114,6 +114,7 @@ class ObjectTracker(
             "yolox_dancetrack": YoloX,
             "yolox_sportsmot": YoloX,
             "yolox_sn_player": YoloX,
+            "yolox_sn_player_sahi": YoloX,
             "yolox_sn_ball": YoloX,
             "yolox_sn_ball_zoom2": YoloX,
             "yolo11": YoloUltralytics,

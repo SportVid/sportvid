@@ -48,6 +48,10 @@ const OBJECT_TRACKER_DETECTOR_ITEMS = {
   yolox_dancetrack: { title: "YOLOX-X DanceTrack (dance)", value: "yolox_dancetrack" },
   yolox_sportsmot: { title: "YOLOX-X SportsMOT (team sports)", value: "yolox_sportsmot" },
   yolox_sn_player: { title: "YOLOX-L SoccerNet (Player)", value: "yolox_sn_player" },
+  yolox_sn_player_sahi: {
+    title: "YOLOX-L SoccerNet tiles (Player, far players, slow)",
+    value: "yolox_sn_player_sahi",
+  },
   yolox_sn_ball: { title: "YOLOX-L SoccerNet (Ball)", value: "yolox_sn_ball" },
   yolox_sn_ball_zoom2: { title: "YOLOX-L SoccerNet x2 (Ball, slow)", value: "yolox_sn_ball_zoom2" },
   yolo11: { title: "YOLO11-X COCO (Ultralytics)", value: "yolo11" },
@@ -63,6 +67,7 @@ const PLAYER_TARGET_DETECTORS = [
   "yolox_dancetrack",
   "yolox_sportsmot",
   "yolox_sn_player",
+  "yolox_sn_player_sahi",
   "yolo11",
   "yolo11_l",
   "yolo11_sn_player",
@@ -109,6 +114,7 @@ const DETECTOR_PARAM_VISIBILITY = {
   yolox_dancetrack: YOLOX_PARAMS,
   yolox_sportsmot: YOLOX_PARAMS,
   yolox_sn_player: YOLOX_PARAMS,
+  yolox_sn_player_sahi: YOLOX_PARAMS,
   yolox_sn_ball: YOLOX_PARAMS,
   yolox_sn_ball_zoom2: YOLOX_PARAMS,
   yolo11: YOLO_ULTRALYTICS_PARAMS,
@@ -128,6 +134,8 @@ const DETECTOR_PARAM_DEFAULTS = {
   yolox_dancetrack: { confidence_threshold: 0.2, nms_thresh: 0.65, batch_size: 1 },
   yolox_sportsmot: { confidence_threshold: 0.2, nms_thresh: 0.65, batch_size: 1 },
   yolox_sn_player: { confidence_threshold: 0.35, nms_thresh: 0.45, batch_size: 1 },
+  // batch_size = tiles per forward pass
+  yolox_sn_player_sahi: { confidence_threshold: 0.35, nms_thresh: 0.45, batch_size: 2 },
   // low floor on purpose: the backend's ball tracker gates weak candidates itself
   yolox_sn_ball: { confidence_threshold: 0.1, nms_thresh: 0.45, batch_size: 4 },
   yolox_sn_ball_zoom2: { confidence_threshold: 0.1, nms_thresh: 0.45, batch_size: 4 },
@@ -171,6 +179,7 @@ const OBJECT_TRACKER_CLASSES_BY_TARGET = {
     yolox_dancetrack: [0],
     yolox_sportsmot: [0],
     yolox_sn_player: [0],
+    yolox_sn_player_sahi: [0],
     yolo11: [0],
     yolo11_l: [0],
     yolo11_sn_player: [0],

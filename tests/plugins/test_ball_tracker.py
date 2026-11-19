@@ -1,5 +1,7 @@
-"""Kalman ball tracker (inference_ray plugins/tracker/ball_tracker.py): linking, camera motion, static filter,
-frame-rate gate, and its backend parameters; the camera motion estimate it compensates (tracker/camera_motion.py)."""
+"""Kalman ball tracker (inference_ray plugins/tracker/ball_tracker.py): linking, camera motion, frame-rate gate,
+and its backend parameters; the camera motion estimate it compensates (tracker/camera_motion.py)."""
+import logging
+
 import numpy as np
 import pytest
 
@@ -30,10 +32,9 @@ def straight_clip(n=120, gap=range(50, 56), pan=0.0):
     return dets, image
 
 
-@pytest.mark.parametrize("linking", ["global", "online"])
-def test_tracks_and_fills_a_gap(linking):
+def test_tracks_and_fills_a_gap():
     dets, truth = straight_clip()
-    state = BallTracker({"linking": linking}).process({"detections": dets})
+    state = BallTracker({}).process({"detections": dets})
     assert [s["ball_status"] for s in state[50:56]] == ["interpolated"] * 6
     assert np.abs(centres(state) - truth).max() < 1.0
     assert all(s["ball_sigma"] > 0 for s in state)
@@ -65,13 +66,58 @@ def test_identity_camera_motion_changes_nothing():
     assert np.allclose(centres(a), centres(b))
 
 
-def test_static_decoy_is_dropped_when_the_filter_is_on():
-    assert DEFAULTS["static_filter"] is False   # off by default, kept as an option for fixed cameras
-    dets, _ = straight_clip(n=300, gap=())
-    for frame in dets:
-        frame.append(det((1500.0, 300.0), conf=0.9))
-    state = BallTracker({"static_filter": True}).process({"detections": dets})
-    assert np.linalg.norm(centres(state) - [1500.0, 300.0], axis=1).min() > 50
+def test_removed_parameters_are_ignored_with_a_warning(caplog):
+    # online linking, the static-object filter and the pwca motion model were removed; runs recorded with them
+    # still run, with global linking
+    dets, _ = straight_clip()
+    with caplog.at_level(logging.WARNING):
+        old = BallTracker({"linking": "online", "static_filter": True, "motion_model": "pwca"}).process(
+            {"detections": dets})
+    assert "unknown tracker_params key(s) ignored: linking, motion_model, static_filter" in caplog.text
+    assert np.allclose(centres(old), centres(BallTracker({}).process({"detections": dets})), equal_nan=True)
+
+
+def decoy_clip(n=2400, pan=0.0, decoy=(900.0, 300.0)):
+    """A still decoy (a cone) detected in every frame at ``decoy`` (world position), and a ball rolling back and
+    forth, seen in runs of 30 frames with 10-frame gaps; ``pan`` as in ``straight_clip``."""
+    t = np.arange(n)
+    ball = np.c_[300 + 200 * np.sin(t / 60.0), 600 + 100 * np.cos(t / 45.0)]
+    shift = np.c_[pan * t, np.zeros(n)]
+    dets = [([det(ball[i] - shift[i], 0.6)] if i % 40 < 30 else []) + [det(np.asarray(decoy) - shift[i], 0.8)]
+            for i in range(n)]
+    return dets, ball - shift, np.asarray(decoy) - shift
+
+
+def on_decoy(state, decoy_xy):
+    c = centres(state)
+    return int((np.linalg.norm(c - decoy_xy, axis=1) < 3.0).sum())
+
+
+def test_decoy_spot_is_left_out_of_the_path():
+    dets, ball, decoy = decoy_clip()
+    off = BallTracker({"decoy_tracklets": False}).process({"detections": dets})
+    assert on_decoy(off, decoy) > len(dets) // 2            # without the rule the path sits on the decoy
+    on = BallTracker({}).process({"detections": dets})
+    assert on_decoy(on, decoy) == 0
+    seen = np.array([s["ball_status"] == "detected" for s in on])
+    assert np.abs(centres(on)[seen] - ball[seen]).max() < 1.0
+
+
+def test_decoy_spot_is_found_with_a_moving_camera():
+    pan = 0.2                                               # the decoy drifts 480 px across the clip
+    dets, ball, decoy = decoy_clip(pan=pan)
+    rel = np.tile(np.eye(3), (len(dets), 1, 1))
+    rel[1:, 0, 2] = pan
+    state = BallTracker({}).process({"detections": dets, "camera_motion": CameraMotion(rel)})
+    assert on_decoy(state, decoy) == 0
+
+
+def test_short_clips_have_no_decoys():
+    dets, _, decoy = decoy_clip(n=DEFAULTS["decoy_min_span"] - 1)
+    tracker = BallTracker({})
+    tracklets = tracker._build_tracklets([np.asarray(c) for c in tracker.preprocess({"detections": dets})], None)
+    assert tracker._drop_decoys(tracklets) == (tracklets, "")
+    assert BallTracker({}, fps=15).decoy_min_span == DEFAULTS["decoy_min_span"] // 2     # a duration: scaled
 
 
 def test_min_fps_gate():
@@ -81,14 +127,19 @@ def test_min_fps_gate():
 
 
 def test_backend_defaults_match_the_plugin():
-    assert default_kalman_ball_params == DEFAULTS
+    # the backend lists only the overridable parameters, with the plugin's defaults
+    assert default_kalman_ball_params == {k: DEFAULTS[k] for k in default_kalman_ball_params}
 
 
-def test_backend_validates_the_linking_and_motion_model():
-    ok = ObjectTrackerSerializer(data={"detector": "rfdetr",
-                                       "ball_tracker_params": {"linking": "online", "motion_model": "pwca"}})
+def test_backend_takes_only_the_overridable_parameters():
+    ok = ObjectTrackerSerializer(data={"detector": "rfdetr", "ball_tracker_params": {
+        "min_conf": 0.05, "init_conf": 0.5, "gate_px": 80, "max_gap": 15, "player_hint": True,
+        "decoy_tracklets": False, "min_fps": 12}})
     assert ok.is_valid(), ok.errors
-    for bad in ({"linking": "greedy"}, {"motion_model": "cv"}, {"static_cooccur": 1.5}):
+    assert ok.validated_data["ball_tracker_params"] == {
+        "min_conf": 0.05, "init_conf": 0.5, "gate_px": 80.0, "max_gap": 15, "player_hint": True,
+        "decoy_tracklets": False, "min_fps": 12.0}
+    for bad in ({"linking": "online"}, {"static_filter": True}, {"accel_px": 3.0}, {"max_gap": 0}, {"gate_px": -1}):
         s = ObjectTrackerSerializer(data={"detector": "rfdetr", "ball_tracker_params": bad})
         assert not s.is_valid() and "ball_tracker_params" in s.errors
 

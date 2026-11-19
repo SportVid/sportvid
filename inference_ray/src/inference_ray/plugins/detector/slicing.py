@@ -7,6 +7,11 @@ tile of about the model's input size is detected at (close to) native resolution
 shrunk to it (RF-DETR-L at 560 px turns a 13 px ball of a 1920 px frame into ~4 px). Tile boxes are shifted back
 into frame pixels, optionally joined by a whole-frame pass that keeps large objects intact, and merged across
 tiles. ``SlicedDetector`` wraps any detector wrapper of this package (``detector_params.sahi``).
+
+Two options target objects larger than the tile overlap allows to be cut cleanly, such as players: ``tiles`` runs only
+some tiles of the grid (e.g. the top row, where a fixed side camera sees the far half of the pitch), and
+``drop_border_px`` drops the partial box of an object cut by an inner tile border before the merge. Tiles that
+overlap by more than an object's size show it whole in a neighbouring tile or in the whole-frame pass.
 """
 
 from __future__ import annotations
@@ -40,11 +45,13 @@ class SliceConfig:
     overlap: tuple[float, float] = (0.2, 0.2)   # (h, w) overlap ratio of neighbouring tiles
     full_frame: bool = True                     # also detect on the whole frame (SAHI's standard prediction)
     tile_batch_size: int | None = None          # tiles per forward pass; None -> the detector's batch_size
+    tiles: tuple[int, ...] | None = None        # run only these tiles (row-major index in the grid); None -> all
     tile_classes: tuple[int, ...] | None = None # keep only these (raw) classes from the tiles; None -> all
     merge: str = "nmm"                          # nmm: union of matched boxes (SAHI default) | nms: keep the top box
     match_metric: str = "ios"                   # ios: intersection over the smaller box | iou
     match_threshold: float = 0.5
     class_agnostic: bool = False                # match boxes across classes
+    drop_border_px: float | None = None         # drop tile boxes within this many px of an inner tile border; None -> off
 
     @classmethod
     def from_cfg(cls, cfg: dict | None) -> SliceConfig | None:
@@ -68,16 +75,26 @@ class SliceConfig:
 
         tile_batch_size = cfg.get("tile_batch_size")
         tile_classes = cfg.get("tile_classes")
+        tiles = cfg.get("tiles")
+        if tiles is not None:
+            tiles = tuple(sorted({int(t) for t in tiles}))
+            if not tiles or tiles[0] < 0:
+                raise ValueError(f"sahi.tiles must be a non-empty list of tile indices, got {cfg.get('tiles')!r}.")
+        drop_border_px = cfg.get("drop_border_px")
+        if drop_border_px is not None and float(drop_border_px) < 0:
+            raise ValueError(f"sahi.drop_border_px must be >= 0, got {drop_border_px!r}.")
         return cls(
             slice_size=slice_size,
             overlap=overlap,
             full_frame=bool(cfg.get("full_frame", cls.full_frame)),
             tile_batch_size=int(tile_batch_size) if tile_batch_size else None,
+            tiles=tiles,
             tile_classes=tuple(int(c) for c in tile_classes) if tile_classes is not None else None,
             merge=merge,
             match_metric=metric,
             match_threshold=float(cfg.get("match_threshold", cls.match_threshold)),
             class_agnostic=bool(cfg.get("class_agnostic", cls.class_agnostic)),
+            drop_border_px=float(drop_border_px) if drop_border_px is not None else None,
         )
 
 
@@ -118,6 +135,19 @@ def shift_detection(det: dict, x0: int, y0: int) -> dict:
     """A copy of a tile detection moved into frame pixels."""
     box = np.asarray(det["xyxy"], dtype=np.float64).reshape(4) + (x0, y0, x0, y0)
     return dict(det, xyxy=box, xywh=xyxy_to_xywh(box))
+
+
+def at_inner_border(det: dict, tile: tuple[int, int, int, int], frame_hw: tuple[int, int], tol: float) -> bool:
+    """
+    Whether a tile detection (in frame pixels) lies within ``tol`` px of a border of its tile that is not on the frame
+    edge: the partial box of an object the border cuts. Backends clip boxes to their input, so such a box ends on
+    the border itself.
+    """
+    x0, y0, x1, y1 = np.asarray(det["xyxy"], dtype=np.float64).reshape(4)
+    tx0, ty0, tx1, ty1 = tile
+    h, w = frame_hw
+    return bool((tx0 > 0 and x0 <= tx0 + tol) or (ty0 > 0 and y0 <= ty0 + tol)
+                or (tx1 < w and x1 >= tx1 - tol) or (ty1 < h and y1 >= ty1 - tol))
 
 
 def _greedy_groups(boxes: np.ndarray, scores: np.ndarray, metric: str, threshold: float) -> Iterator[tuple[int, np.ndarray]]:
@@ -229,7 +259,10 @@ class SlicedDetector:
         n, h, w, _ = frames.shape
 
         grid = slice_grid(h, w, cfg.slice_size, cfg.overlap)
-        # frame-major: tile j of frame i sits at i * len(grid) + j
+        if cfg.tiles is not None and cfg.tiles[-1] >= len(grid):
+            raise ValueError(f"sahi.tiles {list(cfg.tiles)}: the grid of a {w}x{h} frame has {len(grid)} tiles.")
+        grid = [g for j, g in enumerate(grid) if cfg.tiles is None or j in cfg.tiles]
+        # frame-major: the k-th tile that runs of frame i sits at i * len(grid) + k
         tiles = np.stack([frames[i, y0:y1, x0:x1] for i in range(n) for x0, y0, x1, y1 in grid])
         tile_dets = self._detect_images(tiles, cfg.tile_batch_size or self.batch_size)
         full_dets = self._detect_images(frames, self.batch_size) if cfg.full_frame else [[] for _ in range(n)]
@@ -240,9 +273,11 @@ class SlicedDetector:
         results = []
         for i in range(n):
             dets = list(full_dets[i])
-            for (x0, y0, _, _), tile in zip(grid, tile_dets[i * len(grid):(i + 1) * len(grid)]):
-                dets.extend(shift_detection(d, x0, y0) for d in tile
-                            if cfg.tile_classes is None or d.get("cls_id") in cfg.tile_classes)
+            for box, tile in zip(grid, tile_dets[i * len(grid):(i + 1) * len(grid)]):
+                shifted = (shift_detection(d, box[0], box[1]) for d in tile
+                           if cfg.tile_classes is None or d.get("cls_id") in cfg.tile_classes)
+                dets.extend(d for d in shifted
+                            if cfg.drop_border_px is None or not at_inner_border(d, box, (h, w), cfg.drop_border_px))
             merged = merge_detections(dets, cfg)
             self.state.append(merged)
             self.img_id += 1

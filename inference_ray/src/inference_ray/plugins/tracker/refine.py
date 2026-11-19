@@ -2,7 +2,9 @@
 (``gta_link`` / ``interpolation``, each with ``enabled``).
 
 - ``GTALink``: GTA-Link (Sun et al., ACCV-W 2024, MIT, vendored in ``third_party/gta_link``) splits tracklets whose
-  appearance clusters into several identities and connects tracklets of the same identity.
+  appearance clusters into several identities and connects tracklets of the same identity. Optionally it cuts the
+  split tracklets at crossings (``crossings.py``, ``gta_link.cut``) and connects the pieces with the constrained
+  re-linker (``relink.py``, ``gta_link.relink``) instead of GTA-Link's connect step.
 - ``Interpolation``: linear interpolation of short gaps, re-implementing the behaviour of Deep-EIoU's
   ``tools/sport_interpolation.py`` (that repository has no license, so none of its code is used).
 """
@@ -47,11 +49,12 @@ class GTALink:
     tracklets over the whole clip (``refine``), as GTA-Link's ``generate_tracklets.py`` + ``refine_tracklets.py``.
 
     The boxes come from the tracker state instead of a MOT file; output IDs are renumbered 1..N in
-    sorted order and every score is 1 (upstream's ``save_results``); upstream always runs the connect step.
+    sorted order and every score is 1 (upstream's ``save_results``). The connect step (or the re-linker) always runs:
+    upstream's ``use_connect`` switch is not offered. ``spatial_factor`` applies to GTA-Link's connect step only.
     """
 
     DEFAULTS = {'use_split': True, 'min_len': 100, 'eps': 0.6, 'min_samples': 10, 'max_k': 3,
-                'use_connect': True, 'spatial_factor': 1.0, 'merge_dist_thres': 0.4}
+                'spatial_factor': 1.0, 'merge_dist_thres': 0.4}
 
     def __init__(self, cfg: Dict[str, Any], device: str):
         from .appearance import ReIDEncoder
@@ -59,11 +62,29 @@ class GTALink:
         model_path = cfg.pop('model_path')
         model_name = cfg.pop('model_name', 'osnet_ain_x1_0')
         amp = cfg.pop('amp', False)
+        self.cut, self.relink = self._parse_cut_relink(cfg.pop('cut', None), cfg.pop('relink', None),
+                                                       cfg.get('merge_dist_thres', self.DEFAULTS['merge_dist_thres']))
+        self._n_pieces = 0
         self.encoder = ReIDEncoder(model_path, device, model_name=model_name, amp=amp)
         self.cfg = SimpleNamespace(**{**self.DEFAULTS, **cfg})
-        if not (self.cfg.use_split or self.cfg.use_connect):
-            raise ValueError("gta_link: use_split and use_connect are both false; upstream requires at least one.")
         self.reset()
+
+    @staticmethod
+    def _parse_cut_relink(cut_cfg, relink_cfg, thres: float):
+        """``cut``: {enabled, iou, min_frames, near_iou, min_absent} (``crossings.cut``; near_iou None = overlap
+        rule only). ``relink``: {enabled, ``RelinkCfg`` fields}; its appearance threshold is ``merge_dist_thres``.
+        Returns (cut kwargs or None, RelinkCfg or None)."""
+        from .relink import RelinkCfg
+        cut = dict(cut_cfg or {})
+        cut = ({'thr': float(cut.get('iou', 0.3)), 'min_frames': int(cut.get('min_frames', 10)),
+                'near': None if cut.get('near_iou') is None else float(cut['near_iou']),
+                'min_absent': int(cut.get('min_absent', 1))} if cut.pop('enabled', False) else None)
+        rl = dict(relink_cfg or {})
+        if not rl.pop('enabled', False):
+            return cut, None
+        if 'thres' in rl:
+            raise ValueError("gta_link.relink: the appearance threshold is gta_link.merge_dist_thres, not relink.thres")
+        return cut, RelinkCfg(thres=float(thres), **rl)
 
     def reset(self):
         self.features = {}  # (frame, track_id) -> L2-normalised embedding
@@ -108,20 +129,37 @@ class GTALink:
             tracklets = rt.split_tracklets(tracklets, eps=c.eps, max_k=c.max_k,
                                            min_samples=c.min_samples, len_thres=c.min_len)
         n_split = len(tracklets)
-        dist = rt.get_distance_matrix(tracklets)
-        merged = rt.merge_tracklets(tracklets, {}, dist, seq_name='sportvid', max_x_range=max_x_range,
-                                    max_y_range=max_y_range, merge_dist_thres=c.merge_dist_thres)
-        logger.info("[gta_link] tracklets: %d in, %d after split, %d after connect.", n_in, n_split, len(merged))
-
-        out = {i + 1: list(zip(merged[tid].times, merged[tid].bboxes)) for i, tid in enumerate(sorted(merged))}
+        out = self.connect(tracklets, len(state), max_x_range, max_y_range)
+        logger.info("[gta_link] tracklets: %d in, %d after split, %s%d after %s.", n_in, n_split,
+                    f"{self._n_pieces} after the crossing cut, " if self.cut else "", len(out),
+                    "re-linking" if self.relink else "connect")
         return _frames_from_tracks(out, len(state))
+
+    def connect(self, tracklets: Dict[int, Any], num_frames: int, max_x_range, max_y_range) -> Dict[int, List]:
+        """The split tracklets -> {track id (from 1): [(frame, tlwh), ...]}: 
+        the optional crossing cut, then GTA-Link's connect step or the re-linker."""
+        from gta_link import refine_tracklets as rt
+        from .crossings import build_pieces, cut
+        from .relink import relink
+
+        if self.cut:
+            src = _frames_from_tracks({tid: list(zip(t.times, t.bboxes)) for tid, t in tracklets.items()}, num_frames)
+            feat = {(f, tid): x for tid, t in tracklets.items() for f, x in zip(t.times, t.features)}
+            pieces, self._n_pieces = cut(src, **self.cut)
+            tracklets = build_pieces(src, pieces, feat)
+        if self.relink:
+            return relink(tracklets, self.relink)
+        merged = rt.merge_tracklets(tracklets, {}, rt.get_distance_matrix(tracklets), seq_name='sportvid',
+                                    max_x_range=max_x_range, max_y_range=max_y_range,
+                                    merge_dist_thres=self.cfg.merge_dist_thres)
+        return {i + 1: list(zip(merged[tid].times, merged[tid].bboxes)) for i, tid in enumerate(sorted(merged))}
 
 
 class Interpolation:
     """Fills gaps shorter than ``n_dti`` frames in tracks with more than ``n_min`` boxes by linear interpolation of
-    the tlwh box, unless the box centre moves more than ``distance_thres`` px across the gap. A (frame, id) pair
-    that occurs more than once is dropped first (all its boxes). Existing boxes keep their score, interpolated
-    ones get 1 (Deep-EIoU's script writes -1 for every box)."""
+    the tlwh box, unless the box centre moves more than ``distance_thres`` px across the gap. 
+    A (frame, id) pair that occurs more than once is dropped first (all its boxes). 
+    Existing boxes keep their score, interpolated ones get 1 (Deep-EIoU's script writes -1 for every box)."""
 
     def __init__(self, cfg: Dict[str, Any]):
         self.n_min = int(cfg.get('n_min', 5))
