@@ -1,4 +1,4 @@
-FROM nginx:1.28.0-alpine-slim
+FROM nginx:1.30.7-alpine-slim
 
 # curl for in-container debugging (Range/SSE checks against nginx, bypassing the edge F5)
 RUN apk add --no-cache curl
