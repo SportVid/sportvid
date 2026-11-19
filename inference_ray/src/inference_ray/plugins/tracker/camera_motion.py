@@ -4,8 +4,8 @@ Camera motion between consecutive frames, estimated from the video and consumed 
 Per frame t a homography ``rel[t]`` maps frame t pixels to frame t-1 pixels (``rel[0]`` = identity); ``ok[t]``
 says whether that step was estimated or is a guess (a failed estimate, e.g. at a scene cut). Trackers warp their
 state step by step (``step``) and map positions between two frames only across a short gap (``between``), so
-estimation errors do not pile up in one global plane. Only a whole-clip pass such as the ball tracker's
-static-object filter needs a common plane (``to_mosaic``: frame 0).
+estimation errors do not pile up in one global plane. Only a whole-clip rule such as the ball tracker's decoy
+tracklets needs a common plane (``to_mosaic``: frame 0).
 
 Estimation (``StepEstimator``, one frame at a time; ``CameraMotionEstimator`` wraps it for the object tracker):
 

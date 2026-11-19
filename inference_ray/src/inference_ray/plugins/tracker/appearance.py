@@ -48,8 +48,8 @@ class ReIDEncoder:
 
     Preprocessing as Deep-EIoU's SportsMOT embeddings and GTA-Link's ``generate_tracklets.py``: a PIL crop of the
     RGB frame (boxes reaching outside the image are padded black), resize to 256x128 (224x224 for DeiT / ViT),
-    ImageNet normalisation, no feature normalisation (the trackers L2-normalise). Resizing is a per-crop PIL op;
-    ToTensor + Normalize run batched on the device.
+    ImageNet normalisation, no feature normalisation (the trackers L2-normalise). 
+    Resizing is a per-crop PIL op; ToTensor + Normalize run batched on the device.
     """
 
     def __init__(self, model_path: str, device: str = "cuda", model_name: str = "osnet_ain_x1_0",
