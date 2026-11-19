@@ -38,6 +38,11 @@ Er zählt nur Requests auf die Ray-Serve-Application des Plugins (`ray_apps` in
 `config.py`). Der allgemeine Request-Zähler ist nur weich, weil schon der Upload
 den `thumbnail_generator` aufruft.
 
+Alle Counter-Checks laufen über `window_increase()`. Das ist `increase()` plus der volle
+Wert aller Serien, die erst im Fenster entstanden sind. `increase()` allein übersieht
+den ersten Request oder den ersten Fehler nach einem Neustart von Ray, Backend oder
+Exporter (2026-11-19).
+
 Weiche Checks (`hard=False`) erzeugen nur WARN. Das betrifft die GPU, weil sie
 wahrscheinlich mit prod geteilt wird, und den allgemeinen Ray-Request-Zähler.
 Alle Checks stehen in `promql_checks.py`.

@@ -285,7 +285,8 @@ class CheckTests(unittest.TestCase):
         for q in prom.queries:
             self.assertNotIn("{w}", q)
             self.assertNotIn("{{", q)
-        self.assertIn('sum(increase(ray_serve_num_http_requests_total{environment="dev"}[400s]))', prom.queries)
+        self.assertTrue(any('sum(increase(ray_serve_num_http_requests_total{environment="dev"}[400s]))' in q
+                            for q in prom.queries))
         # Baseline-Fenster = BASELINE_WINDOW
         self.assertTrue(any(f"[{cfg.BASELINE_WINDOW}s" in q and "avg_over_time" in q for q in prom.queries))
 
@@ -321,8 +322,24 @@ class CheckTests(unittest.TestCase):
     def test_ray_app_query_rendered(self):
         prom = FakeProm()
         pc.run_checks(prom, pc.default_checks(["object_tracker", "object_tracker"]), 1000.0, 1400.0)
-        q = 'sum(increase(ray_serve_num_http_requests_total{environment="dev",application="object_tracker"}[400s]))'
-        self.assertEqual(prom.queries.count(q), 1)  # Duplikate entfernt
+        sel = 'ray_serve_num_http_requests_total{environment="dev",application="object_tracker"}'
+        self.assertEqual(len([q for q in prom.queries if sel in q]), 1)  # Duplikate entfernt
+
+    def test_counter_born_in_window_counted(self):
+        # 2026-11-19: erster Aufruf nach Ray-Neustart -> Serie entsteht erst im Lauf,
+        # increase() allein liefert 0. Der zweite Summand zaehlt neue Serien voll.
+        q = pc.window_increase('x_total{a="b"}').replace("{w}", "400")
+        self.assertEqual(
+            q,
+            '(sum(increase(x_total{a="b"}[400s])) or vector(0))'
+            ' + (sum(x_total{a="b"} unless x_total{a="b"} offset 400s) or vector(0))',
+        )
+
+    def test_all_counter_checks_catch_new_series(self):
+        # Gerade Fehler-Counter entstehen erst mit dem ersten Fehler
+        for c in pc.default_checks(["object_tracker"]):
+            if "increase(" in c.query:
+                self.assertIn(" unless ", c.query, c.name)
 
 
 class ReportTests(unittest.TestCase):

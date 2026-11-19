@@ -103,6 +103,27 @@ ENV = cfg.ENV_LABEL
 CONTAINERS = f'name=~"{cfg.DEV_CONTAINER_REGEX}"'
 
 
+def window_increase(selector: str) -> str:
+    """Anstieg eines Counters im Fenster, inkl. Serien, die erst im Fenster entstehen.
+
+    increase() allein uebersieht eine Serie, die waehrend des Laufs zum ersten Mal
+    auftaucht: Prometheus hat keinen Vorwert, der Sprung von "nicht vorhanden" auf 1
+    zaehlt nicht. Das passiert nach jedem Neustart (Ray, Backend, Exporter), weil die
+    Labelkombination erst beim ersten Ereignis entsteht. Am 2026-11-19 lieferte so
+    "Ray Serve Requests object_tracker" 0, obwohl der Tracker lief (erster Aufruf seit
+    dem Ray-Neustart am 16.11.). Fuer Fehler-Counter waere es schlimmer: Der erste
+    Fehler nach einem Neustart bliebe unsichtbar, und der Check meldete PASS.
+
+    Deshalb zusaetzlich: der volle Wert aller Serien, die zu Beginn des Fensters
+    (offset = Fensterlaenge) noch nicht existierten. Ihr gesamter Stand ist im
+    Fenster entstanden. Beide Summanden sind per `or vector(0)` nie leer.
+    """
+    return (
+        f"(sum(increase({selector}[{{w}}s])) or vector(0))"
+        f" + (sum({selector} unless {selector} offset {{w}}s) or vector(0))"
+    )
+
+
 def precheck_query(selector: str) -> str:
     # min: ein einziges ausgefallenes Target (z.B. einer der Ray-Ports) reicht fuer "nicht UP"
     return f"min({selector})"
@@ -118,10 +139,7 @@ def ray_app_checks(ray_apps: Iterable[str]) -> List[Check]:
     return [
         Check(
             name=f"Ray Serve Requests {app}",
-            query=(
-                "sum(increase(ray_serve_num_http_requests_total"
-                f'{{{ENV},application="{app}"}}[{{w}}s]))'
-            ),
+            query=window_increase(f'ray_serve_num_http_requests_total{{{ENV},application="{app}"}}'),
             expect=_gt0,
             expectation="> 0",
         )
@@ -133,7 +151,7 @@ def default_checks(ray_apps: Iterable[str] = ()) -> List[Check]:
     return ray_app_checks(ray_apps) + [
         Check(
             name="Ray Serve HTTP-Requests",
-            query=f"sum(increase(ray_serve_num_http_requests_total{{{ENV}}}[{{w}}s]))",
+            query=window_increase(f"ray_serve_num_http_requests_total{{{ENV}}}"),
             expect=_gt0,
             expectation="> 0",
             # Weich: zaehlt alle dev-Applications, auch die des Uploads (thumbnail_generator).
@@ -143,14 +161,14 @@ def default_checks(ray_apps: Iterable[str] = ()) -> List[Check]:
         ),
         Check(
             name="Ray Serve HTTP-Fehler",
-            query=f"sum(increase(ray_serve_num_http_error_requests_total{{{ENV}}}[{{w}}s]))",
+            query=window_increase(f"ray_serve_num_http_error_requests_total{{{ENV}}}"),
             expect=_eq0,
             expectation="== 0",
             empty_as_zero=True,
         ),
         Check(
             name="Ray Serve Deployment-Fehler",
-            query=f"sum(increase(ray_serve_deployment_error_counter_total{{{ENV}}}[{{w}}s]))",
+            query=window_increase(f"ray_serve_deployment_error_counter_total{{{ENV}}}"),
             expect=_eq0,
             expectation="== 0",
             empty_as_zero=True,
@@ -198,22 +216,21 @@ def default_checks(ray_apps: Iterable[str] = ()) -> List[Check]:
         ),
         Check(
             name="Celery Tasks erfolgreich",
-            query=f"sum(increase(celery_task_succeeded_total{{{ENV}}}[{{w}}s]))",
+            query=window_increase(f"celery_task_succeeded_total{{{ENV}}}"),
             expect=_gt0,
             expectation="> 0",
         ),
         Check(
             name="Celery Tasks fehlgeschlagen",
-            query=f"sum(increase(celery_task_failed_total{{{ENV}}}[{{w}}s]))",
+            query=window_increase(f"celery_task_failed_total{{{ENV}}}"),
             expect=_eq0,
             expectation="== 0",
             empty_as_zero=True,
         ),
         Check(
             name="Django 5xx",
-            query=(
-                "sum(increase(django_http_responses_total_by_status_total"
-                f'{{job="sportvid_backend_dev",status=~"5.."}}[{{w}}s]))'
+            query=window_increase(
+                'django_http_responses_total_by_status_total{job="sportvid_backend_dev",status=~"5.."}'
             ),
             expect=_eq0,
             expectation="== 0",
@@ -222,7 +239,7 @@ def default_checks(ray_apps: Iterable[str] = ()) -> List[Check]:
         ),
         Check(
             name="OOM-Kills dev (cAdvisor)",
-            query=f"sum(increase({cfg.OOM_METRIC}{{{CONTAINERS}}}[{{w}}s]))",
+            query=window_increase(f"{cfg.OOM_METRIC}{{{CONTAINERS}}}"),
             expect=_eq0,
             expectation="== 0",
             empty_as_zero=True,
