@@ -7,6 +7,7 @@ import os
 import tempfile
 import unittest
 from types import SimpleNamespace
+from unittest import mock
 
 import config as cfg
 import promql_checks as pc
@@ -328,7 +329,11 @@ class ReportTests(unittest.TestCase):
     def test_reports_written_and_overall(self):
         a = run("standard", FakeClient(), FakeProm())
         b = run("plugins", FakeClient(plugin_status="ERROR"), FakeProm())
-        with tempfile.TemporaryDirectory() as d:
+        # In GitHub Actions (tests.yml) ist GITHUB_STEP_SUMMARY gesetzt. Ohne das Entfernen
+        # landete dieser Fake-Report (FAIL, Jahr 2023, Werte 50) in der Job-Summary von
+        # "tests" und sah aus wie ein echter E2E-Lauf (2026-11-19).
+        with tempfile.TemporaryDirectory() as d, mock.patch.dict(os.environ):
+            os.environ.pop("GITHUB_STEP_SUMMARY", None)
             overall = run_e2e.write_reports([a, b], d)
             self.assertEqual(overall, pc.FAIL)
             md = open(os.path.join(d, "report.md"), encoding="utf-8").read()
