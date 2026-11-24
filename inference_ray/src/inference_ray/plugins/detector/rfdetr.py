@@ -62,7 +62,7 @@ class RFDetr():
             self.model.optimize_for_inference(
                 compile=False,
                 batch_size=detector_params.get("batch_size", 1),
-                dtype=torch.float16 if (self.device.startswith("cuda") and detector_params.get("fp16", False)) else torch.float32,
+                dtype=torch.float16 if (self.device.startswith("cuda") and detector_params.get("fp16", True)) else torch.float32,
             )
         except Exception:
             logging.warning("RF-DETR optimize_for_inference failed; continuing without optimized model.", exc_info=True)

@@ -38,7 +38,7 @@ default_yolox_params = {
     "conf_thresh": 0.2,
     "nms_thresh": 0.4,
     "classes": [0],
-    "fp16": False,
+    "fp16": True,  # on CUDA only
     "num_classes": 1,
     "decode": True,
     "model_path": "yolox-x",  # the model family; depth, width and the number of classes come from the checkpoint
@@ -77,7 +77,7 @@ default_yolox_sn_player_params = {
     "conf_thresh": 0.35,
     "nms_thresh": 0.45,
     "classes": [0],
-    "fp16": False,
+    "fp16": True,  # on CUDA only
     "num_classes": 1,
     "decode": True,
     "model_path": "yolox-l",
@@ -154,7 +154,7 @@ default_yolo11_params = {
         0,
         32,
     ],  # filters predictions to specified class set: 'person','sports_ball' for COCO dataset
-    "half": False,
+    "half": True,  # FP16, on CUDA only
     "imgsz": None,  # e.g. [640, 1280] or null to use img dims
     "max_det": 100,  # max amount of detections per frame
     "embed": None,  # specify layers from which to extract feature vectors or embeddings
@@ -195,7 +195,7 @@ default_rfdetr_params = {
     "classes": [1, 37],
     "resolution": 1280,
     "verbose": False,
-    "fp16": False,
+    "fp16": True,  # on CUDA only
     "model_path": "RFDETRLarge",
     "checkpoint": "/models/rf-detr/rfdetr-l-2026.pth",
     "output_class_mapping": {

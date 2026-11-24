@@ -34,18 +34,16 @@ class YoloUltralytics():
         self.model.to(self.device)
         
         self.batch_size = detector_params.get('batch_size', 1)
-        self.use_fp16 = bool(detector_params.get("fp16", False) and self.device.startswith("cuda"))
+        # `half` is the Ultralytics name (backend presets, UI); `fp16` as for the other detectors. CUDA only.
+        half = detector_params.get("half", detector_params.get("fp16", True))
+        self.use_fp16 = bool(half and self.device.startswith("cuda"))
         self.conf = detector_params.get("conf", 0.25)
         self.iou = detector_params.get("iou", 0.7)
         self.max_det = detector_params.get("max_det", 300)
         self.rect = detector_params.get("rect", True)
         self.verbose = detector_params.get("verbose", False)
-        
-        if self.use_fp16:
-            try:
-                self.model.model.half()
-            except Exception:
-                logging.warning("FP16 cast not applied to underlying Ultralytics model.")
+        # No cast of self.model here: Ultralytics builds its predictor on the first call and casts the network to
+        # the precision of that call's `quantize` argument, which would undo it (run_inference passes it).
 
     def _ensure_batched_hwc(self, frames):
         if isinstance(frames, np.ndarray):
@@ -135,6 +133,7 @@ class YoloUltralytics():
             iou=self.iou,
             max_det=self.max_det,
             verbose=self.verbose,
+            quantize=16 if self.use_fp16 else None,  # FP16 / FP32 (Ultralytics >= 8.4; replaces `half`)
         )
 
         for r in results:

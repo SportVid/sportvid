@@ -364,7 +364,7 @@ const plugins = ref([
           },
           {
             field: "checkbox",
-            value: false,
+            value: true,
             name: "half",
             text: t("modal.plugin.object_tracker.half"),
             group: "detector_params",

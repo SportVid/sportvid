@@ -159,7 +159,7 @@ class YoloX():
         logging.info("[inference] Checkpoint loaded successfully.")
 
         # fp16 after checkpoint load so the cast doesn't affect weight loading
-        self.fp16 = bool(cfg.get("fp16", False) and self.device.startswith("cuda"))
+        self.fp16 = bool(cfg.get("fp16", True) and self.device.startswith("cuda"))
         if self.fp16:
             self.model = self.model.half()
             logging.info("[inference] Model cast to fp16.")
