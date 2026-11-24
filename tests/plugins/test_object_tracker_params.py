@@ -208,6 +208,13 @@ def test_every_preset_validates_with_a_model_file_under_models(detector):
     assert p["checkpoint"].startswith("/models/") and p["output_class_mapping"]
 
 
+@pytest.mark.parametrize("detector", DETECTOR_CHOICES)
+def test_every_preset_runs_in_fp16_by_default(detector):
+    # FP16 on CUDA (the plugins fall back to FP32 on the CPU); Ultralytics names it `half`
+    p = validate({"detector": detector})["detector_params"]
+    assert p["half"] if detector.startswith("yolo11") else p["fp16"]
+
+
 def test_default_detector_is_yolox_sportsmot():
     data = validate({"tracker": "deep_eiou"})
     assert data["detector"] == "yolox_sportsmot"
