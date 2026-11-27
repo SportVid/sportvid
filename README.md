@@ -32,6 +32,34 @@ https://sportvid.github.io/
     sudo chmod -R u+rwX ./data/
     sudo chown -R 999:999 "data/shared/db"
     ```
+
+    The plugins load only the checkpoints below, by fixed path under `/models` (= `./data/models`; detector presets in `backend/src/backend/backend/serializers/object_tracker.py`, ReID presets in `serializers/reid_models.py`). [`config/models.sha256`](config/models.sha256) holds their checksums. Check a server or a freshly extracted bundle with:
+    ```sh
+    (cd ./data/models && sha256sum -c ../../config/models.sha256)
+    ```
+    A missing or outdated file fails only the runs that pick its preset. Files in `./data/models` that are not listed here are not used.
+
+    | File under `./data/models` | Preset | Size |
+    |---|---|---|
+    | `yolox/mixsort_yolox_sports_mix.pth.tar` | detector `yolox_sportsmot` (default player detector) | 793 MB |
+    | `yolox/bytetrack_x_mot17.pth.tar` | detector `yolox` | 793 MB |
+    | `yolox/bytetrack_l_mot17.pth.tar` | detector `yolox_l` | 434 MB |
+    | `yolox/bytetrack_x_dancetrack.pth.tar` | detector `yolox_dancetrack` | 793 MB |
+    | `yolox/yolox_l-sn-player-coco-ms08-16.pth` | detector `yolox_sn_player` | 434 MB |
+    | `yolox/yolox_l-sahi-sn-player.pth` | detector `yolox_sn_player_sahi` (SAHI, 2026-11-19) | 434 MB |
+    | `yolox/yolox_l-sahi-sn-ball-native.pth` | detector `yolox_sn_ball` (SAHI, 2026-11-19) | 434 MB |
+    | `yolox/yolox_l-sahi-sn-ball-zoom2.pth` | detector `yolox_sn_ball_zoom2` (SAHI) | 434 MB |
+    | `yolo_ultra/yolo11x.pt` | detector `yolo11` | 115 MB |
+    | `yolo_ultra/yolo11l.pt` | detector `yolo11_l` | 51 MB |
+    | `yolo_ultra/yolo11x-sn-player-s05.pt` | detector `yolo11_sn_player` | 114 MB |
+    | `rf-detr/rfdetr-l-2026.pth` | detector `rfdetr` | 136 MB |
+    | `rf-detr/rfdetr_l-sn-player.pth` | detector `rfdetr_sn_player` | 136 MB |
+    | `rf-detr/rfdetr_l-sn-ball.pth` | detector `rfdetr_sn_ball` | 136 MB |
+    | `reid/osnet_ain_ms_d_c.pth.tar` | ReID `osnet_ain` (default; also `osnet_reid`, `team_clustering`) | 56 MB |
+    | `reid/osnet_x1_0_ms_d_c.pth.tar` | ReID `osnet_x1_0` | 56 MB |
+    | `reid/osnet_ibn_ms_d_c.pth.tar` | ReID `osnet_ibn` | 56 MB |
+    | `reid/sports_model.pth.tar-60` | ReID `osnet_sportsmot` | 30 MB |
+    | `reid/model_soup.deit_l.pth` | ReID `deit_l_sportsreid` | 1547 MB |
 3. **Build and start:**
 
     Prepare:
